@@ -28,23 +28,29 @@ Refer to the [Nautobot UI Framework Documentation](../../../core/ui-component-fr
 
 - Remove custom html code from `{% block breadcrumbs %}` and `{% block title %}`.
 - Use the built-in template tags to render the breadcrumbs and title: `{% render_breadcrumbs %}` and `{% render_title %}`
+- Define custom title or/and breadcrumbs on your view
 
-Complete example:
+Complete example for extending `base.html`:
 
 ```html
+{% extends "base.html" %}
 {% load ui_framework %}
 
-{% block content %}
-<div class="row noprint">
-    <div class="col-md-12">
-        <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
-        {% render_breadcrumbs %}
-    </div>
-</div>
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
-<h1>{% block title %}{% render_title %}{% endblock %}</h1>
+{% block content %}
+{# Content here #}
 {% endblock %}
 ```
+
+!!! note
+    Please note that there is no need to use `{% block title %}` - it's already prepared in `base.html`.
+    When extending other templates that already extending `base.html`, for example `generic/object_list.html`
+    there is no need to add `{% render breadcrumbs %}`.
+
++/- 3.0.0
+    In v3 breadcrumbs and title are located outside of block content. Because of that, structure of template needs to be updated as described above.
+    To migrate such views in 3.0 you just need to remove custom breadcrumbs / title code from your template and define it on the view level.
 
 ## Generic views
 
@@ -131,21 +137,17 @@ class SomeGenericView(GenericView):
 {% load static %}
 {% load ui_framework %}
 
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
+
 {% block content %}
-    <div class="row noprint">
-        <div class="col-md-12">
-            <!-- you can remove the <ol> and {% block breadcrumbs %} - it's moved to default breadcrumbs template --->
-            {% render_breadcrumbs %}
-        </div>
-    </div>
-
-    <h1>{% block title %}{% render_title %}{% endblock %}</h1>
-
     <div class="row">
         Some data
     </div>
 {% endblock %}
 ```
+
+!!! note
+    `{% block title %}` is already added in the `base.html` template.
 
 !!! info
     Default `{% render_breadcrumbs %}` template will add the `<ol class="breadcrumbs">` tag, and both `{% block breadcrumbs %}` and `{% block extra_breadcrumbs %}` blocks.

@@ -1,0 +1,33 @@
+<div class="collapse show" id="{{ chart_container_id }}" style="width: {{ chart_width }}; height: {{ chart_height }};"></div>
+<!-- Safe JSON export from Django -->
+{% with "echarts-config-"|add:chart_container_id as chart_config_id %}
+    {{ chart_config|json_script:chart_config_id }}
+{% endwith %}
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            // Initialize the echarts instance based on the prepared dom
+            var myChart = window.echarts.init(document.getElementById("{{ chart_container_id }}"), null, { renderer: "{{ chart.renderer }}" });
+
+            // Get config from JSON script
+            var options = JSON.parse(
+                document.getElementById("echarts-config-{{ chart_container_id }}").textContent
+            );
+
+            // Get current theme
+            var currentTheme = document.documentElement.dataset.bsTheme || 'light';
+
+            // Display the chart using the configuration items and data just specified.
+            myChart.setOption({
+                ...options,
+                // Enable dark mode if the current theme is dark
+                darkMode: currentTheme === 'dark',
+                // Update colors based on theme
+                color: Array.isArray(options.color)
+                    ? options.color.map((colorObj) => colorObj?.[currentTheme] || colorObj?.light || colorObj)
+                    : options.color,
+            });
+        });
+    });
+</script>

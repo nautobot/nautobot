@@ -28,9 +28,10 @@ def flatten_dict(d, prefix="", separator="."):
     """
     Flatten nested dictionaries into a single level by joining key names with a separator.
 
-    :param d: The dictionary to be flattened
-    :param prefix: Initial prefix (if any)
-    :param separator: The character to use when concatenating key names
+    Args:
+        d (dict): The dictionary to be flattened
+        prefix (str): Initial prefix (if any)
+        separator (str): The character to use when concatenating key names
     """
     ret = {}
     for k, v in d.items():
@@ -46,8 +47,10 @@ def flatten_iterable(iterable):
     """
     Flatten a nested iterable such as a list of lists, keeping strings intact.
 
-    :param iterable: The iterable to be flattened
-    :returns: generator
+    Args:
+        iterable (Iterable): The iterable to be flattened
+
+    Yields: str
     """
     for i in iterable:
         if hasattr(i, "__iter__") and not isinstance(i, str):

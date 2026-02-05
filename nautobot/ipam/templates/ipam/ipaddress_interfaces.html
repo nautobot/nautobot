@@ -3,18 +3,17 @@
 {% load render_table from django_tables2 %}
 {% load static %}
 
+{% block drawer %}
+    {% table_config_form interface_table %}
+{% endblock %}
+
 {% block content %}
     <form method="post">
         {% csrf_token %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>Interfaces</strong>
-                <div class="pull-right noprint">
-                    {% if request.user.is_authenticated %}
-                        {% table_config_button_small interface_table %}
-                    {% endif %}
-                </div>
-                <div class="pull-right col-md-2 noprint">
+                <div class="float-end col-lg-2 d-print-none">
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>
@@ -24,7 +23,6 @@
     {% if interface_table.paginator.num_pages > 1 %}
         {% include "inc/paginator.html" with paginator=interface_table.paginator page=interface_table.page %}
     {% endif %}
-    {% table_config_form interface_table %}
 {% endblock content %}
 
 {% block javascript %}

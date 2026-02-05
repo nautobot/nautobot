@@ -3,118 +3,197 @@
 {% load helpers %}
 {% registry %}
 
-<nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
-    <div class="container-fluid">
-        <div class="navbar-header">
-            <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}" height="30" />
-            </a>
-        </div>
+{% with cookie_sidenav_collapsed=request.COOKIES|get_item:'sidenav_collapsed'|default_if_none:'false' %}
+    <nav id="sidenav"{% if cookie_sidenav_collapsed == 'true' %} class="nb-sidenav-collapsed"{% endif %}>
+        <button
+            aria-controls="sidenav"
+            aria-expanded="{% if cookie_sidenav_collapsed == 'true' %}false{% else %}true{% endif %}"
+            aria-label="Collapse sidenav"
+            class="bg-warning btn btm-sm btn-warning overflow-hidden p-4 position-absolute nb-sidenav-toggler"
+            data-bs-theme="dark"
+            type="button"
+        ></button>
 
-        <div id="navbar">
+        <a class="nb-sidenav-brand" href="{% url 'home' %}">
+            <img src="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon.svg' %}"/>
+        </a>
+        <a class="position-absolute nb-sidenav-brand" href="{% url 'home' %}">
+            <img src="{% custom_branding_or_static 'logo' 'img/nautobot_logo.svg' %}"/>
+        </a>
+
+        <ul class="list-unstyled my-0 overflow-x-hidden overflow-y-auto pt-10 w-100">
             {% if request.user.is_authenticated %}
-                <form action="{% url 'search' %}" method="get" class="navbar-form" id="navbar_search" role="search">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
-                        <span class="input-group-btn">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="mdi mdi-magnify"></i>
-                            </button>
-                        </span>
-                    </div>
-                </form>
-            {% endif %}
-
-            <ul class="nav navbar-nav">
-                {% if request.user.is_authenticated %}
-                    {% for tab_name, tab_details in registry.nav_menu.tabs.items %}
-                        {% if not tab_details.permissions or request.user|has_one_or_more_perms:tab_details.permissions %}
-                            <li class="dropdown">
-                                <a href="#dropdownMenu{{ forloop.counter }}" class="dropdown-toggle" data-tab-weight="{{ tab_details.weight }}" data-toggle="collapse" role="button" aria-haspopup="true" aria-expanded="false">
-                                    <img src="{% custom_branding_or_static 'nav_bullet' 'img/nautobot_chevron.svg' %}" height="20px" />
-                                    <span id="dropdown_title">{{ tab_name }}</span>
-                                    <span class="mdi mdi-chevron-down"></span>
-                                </a>
-                                <ul class="collapse nav-dropdown-menu" id="dropdownMenu{{ forloop.counter }}">
-                                    {% for group_name, group_details in tab_details.groups.items %}
-                                        {% if not group_details.permissions or request.user|has_one_or_more_perms:group_details.permissions %}
-                                            <li class="dropdown-header" data-group-weight="{{ group_details.weight }}">{{ group_name }}</li>
-                                            {% for item_link, item_details in group_details.items.items %}
-                                                {% if not item_details.permissions or request.user|has_one_or_more_perms:item_details.permissions %}
-                                                    <li {% if item_details.permissions and not request.user|has_perms:item_details.permissions %} class="disabled"{% endif %}>
-                                                        <a href="{{ item_link }}"
-                                                           data-item-weight="{{ item_details.weight }}">
-                                                            {{ item_details.name }}
-                                                        </a>
-                                                        {% if item_details.buttons.items|length > 0 %}
-                                                            <div class="buttons">
-                                                                {% for button_title, button_details in item_details.buttons.items %}
-                                                                    {% if not button_details.permissions or request.user|has_perms:button_details.permissions %}
-                                                                        {% comment %}
-                                                                            Use 'url xxx as variable' so that an invalid
-                                                                            link doesn't throw a NoReverseMatch exception.
-                                                                        {% endcomment %}
-                                                                        {% url button_details.link as button_url %}
-                                                                        {% if button_url %}
-                                                                            <a href="{{ button_url }}{{ button_details.querystring }}"
-                                                                               data-button-weight="{{ button_details.weight }}"
-                                                                               class="btn btn-xs btn-{{ button_details.button_class }}"
-                                                                               title="{{ button_title }}">
-                                                                                <i class="mdi {{ button_details.icon_class }}"></i>
-                                                                            </a>
-                                                                        {% else %}
-                                                                            <a class="btn btn-xs btn-danger"
-                                                                               title="ERROR: Invalid link!">
-                                                                                <i class="mdi mdi-alert"></i>
-                                                                            </a>
-                                                                        {% endif %}
-                                                                    {% endif %}
-                                                                {% endfor %}
-                                                            </div>
-                                                        {% endif %}
-                                                    </li>
-                                                {% endif %}
-                                            {% endfor %}
-                                            {% if not forloop.last %}
-                                                <li class="divider"></li>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    <li class="nav-divider"></li>
-                    <li class="dropdown">
-                        <a href="#adminDropdown" class="dropdown-toggle" data-toggle="collapse" role="button"
-                           aria-haspopup="true" aria-expanded="false">
-                            <i class="mdi mdi-account"></i>
-                            <span id="dropdown_title" title="{{ request.user }}">{{ request.user }}</span>
-                            <span class="mdi mdi-chevron-down"></span>
-                        </a>
-                        <ul class="collapse nav-dropdown-menu" id="adminDropdown">
-                            <li><a href="{% url 'about' %}"><i class="mdi mdi-information"></i> About</a></li>
-                            <li><a href="{% url 'user:profile' %}"><i class="mdi mdi-account-box"></i> Profile</a></li>
-                            {% if request.user.is_staff %}
-                                <li><a href="{% url 'worker_status' %}"><i class="mdi mdi-server-network"></i> Worker Status</a></li>
-                                <li><a href="{% url 'admin:index' %}"><i class="mdi mdi-cogs"></i> Admin</a></li>
-                            {% endif %}
-                            <li class="divider"></li>
-                            <li><a href="{% url 'logout' %}"><i class="mdi mdi-logout"></i> Log out</a></li>
-                        </ul>
-                    </li>
-                {% else %}
+                {% if nav_menu_version_control %}
                     <li>
-                        <a href="{% url settings.LOGIN_URL %}?next={{ request.get_full_path | urlencode }}">
-                            <i class="mdi mdi-login"></i> Log in
+                        {% url 'plugins:nautobot_version_control:branch_list' as branch_list_url %}
+                        <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_list_url }}">
+                            <img alt="branch icon" src="{% static 'nautobot-icons/branch.svg' %}">
+                            <span>Branches</span>
                         </a>
                     </li>
+                    <li>
+                        <form
+                            action="{% url 'plugins-api:nautobot_version_control-api:select-branch' %}"
+                            data-bs-theme="dark"
+                            id="sidenav-branch-picker"
+                            method="post"
+                        >
+                            <img alt="globe icon" src="{% static 'nautobot-icons/globe.svg' %}">
+                            {% csrf_token %}
+                            <input
+                                id="sidenav-branch-picker-return-url"
+                                name="return_url"
+                                type="hidden"
+                                value="{{ request.build_absolute_uri }}"
+                            >
+                            <select
+                                aria-label="Find a branch..."
+                                class="form-select nautobot-select2-api"
+                                data-allow-clear="false"
+                                data-url="{% url 'plugins-api:nautobot_version_control-api:branch-list' %}"
+                                display-field="name"
+                                id="sidenav-branch-picker-select"
+                                name="branch"
+                                placeholder="Find a branch..."
+                                search-field="name__ic"
+                                value-field="name"
+                            >
+                                <option selected="selected" value="{{ nav_menu_version_control.active_branch }}">
+                                    {{ nav_menu_version_control.active_branch }}
+                                </option>
+                            </select>
+                        </form>
+                    </li>
+                    <li>
+                        {% if nav_menu_version_control.active_branch == 'main' %}
+                            <button class="nb-sidenav-list-item nb-sidenav-list-item-flat" disabled type="button">
+                                <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
+                                <span>View diffs</span>
+                            </button>
+                        {% else %}
+                            {% url 'plugins:nautobot_version_control:branch_diffs' pk=nav_menu_version_control.active_branch as branch_diffs_url %}
+                            <a class="nb-sidenav-list-item nb-sidenav-list-item-flat" href="{{ branch_diffs_url }}">
+                                <img alt="list-unordered icon" src="{% static 'nautobot-icons/list-unordered.svg' %}">
+                                <span>View diffs</span>
+                            </a>
+                        {% endif %}
+                    </li>
+                    <li class="nb-sidenav-list-divider"></li>
+                    <li>
+                        <form
+                            action="{% url 'plugins-api:nautobot_version_control-api:select-time-travel-date' %}"
+                            class="nb-sidenav-list-item nb-sidenav-list-item-flat"
+                            data-bs-theme="dark"
+                            id="sidenav-timetravel-picker"
+                            method="post"
+                        >
+                            {# djlint:off B081 #}
+                            <img alt="history icon" data-toggle src="{% static 'nautobot-icons/history.svg' %}">
+                            {# djlint:on B081 #}
+                            {% csrf_token %}
+                            <input
+                                id="sidenav-timetravel-return-url"
+                                name="return_url"
+                                type="hidden"
+                                value="{{ request.build_absolute_uri }}"
+                            >
+                            <input
+                                id="timetravel-date-picker"
+                                class="bg-transparent border-0 form-control fw-medium text-uppercase"
+                                data-input
+                                name="version_control_time_travel_date"
+                                placeholder="Time Travel"
+                                value="{{ nav_menu_version_control.active_time_travel_date|default:"" }}"
+                            >
+                            <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
+                                <span class="mdi mdi-close"></span>
+                            </button>
+                        </form>
+                    </li>
+                    <li class="nb-sidenav-list-divider"></li>
                 {% endif %}
-            </ul>
-        </div>
-    </div>
-</nav>
-<!-- Collapsible button -->
-<button type="button" class="btn btn-xs btn-warning navbar-toggler" aria-label="Collapse navbar">
-    <span class="mdi mdi-chevron-up mdi-rotate-270 navbar-toggler-arrow"></span>
-</button>
+
+                <li>
+                    <button
+                        aria-controls="sidenav-flyout-favorites"
+                        aria-expanded="false"
+                        class="nb-sidenav-list-item"
+                        type="button"
+                    >
+                        <img alt="star icon" src="{% static 'nautobot-icons/star.svg' %}">
+                        <span>Favorites</span>
+                    </button>
+                    <div class="nb-sidenav-flyout" id="sidenav-flyout-favorites" hx-swap-oob="true">
+                        {% include "inc/nav_favorites.html" %}
+                    </div>
+                </li>
+
+                <li class="nb-sidenav-list-divider"></li>
+
+                {% with request.user.navbar_favorites_link_list as navbar_favorites_link_list %}
+                    {% for tab_name, tab_details in nav_menu.tabs.items %}
+                        <li data-section-name="{{ tab_name }}">
+                            <button
+                                aria-controls="sidenav-flyout-{{ forloop.counter }}"
+                                aria-expanded="false"
+                                class="nb-sidenav-list-item"
+                                type="button"
+                            >
+                                {% if '/' in tab_details.icon %}
+                                    {% comment %}If there is a `'/'` in the `icon`, consider it a file URL, not icon name.{% endcomment %}
+                                    <img alt="{{ tab_name }} icon" src="{% static tab_details.icon %}">
+                                {% elif tab_details.icon %}
+                                    {% comment %}If `icon` is given, treat it as icon name to be fetched from nautobot-icons library.{% endcomment %}
+                                    <img alt="{{ tab_details.icon }} icon" src="{% static 'nautobot-icons/'|add:tab_details.icon|add:'.svg' %}">
+                                {% else %}
+                                    {% comment %}If `icon` is missing, generate an "icon" depicting the first nav menu tab name letter inside a rounded rectangle.{% endcomment %}
+                                    <span class="nb-letter-icon">{{ tab_name|first|upper }}</span>
+                                {% endif %}
+                                <span>{{ tab_name }}</span>
+                            </button>
+
+                            <div class="nb-sidenav-flyout" id="sidenav-flyout-{{ forloop.counter }}"
+                                 hx-vals='{"tab_name": "{{ tab_name }}"}'
+                                 hx-swap-oob="true"
+                            >
+                                {% for group_name, group_details in tab_details.groups.items %}
+                                    <ul class="list-unstyled">
+                                        <li class="nb-sidenav-link-group" data-group-weight="{{ group_details.weight }}">
+                                            {{ group_name }}
+                                        </li>
+                                        {% for item_link, item_details in group_details.items.items %}
+                                            <li class="nb-sidenav-link-wrapper{% if item_details.permissions and not request.user|has_perms:item_details.permissions %} disabled{% endif %}">
+                                                <a class="nb-sidenav-link{% if item_details.is_active %} nb-sidenav-link-active{% endif %}"
+                                                   data-item-weight="{{ item_details.weight }}"
+                                                   href="{{ item_link }}">
+                                                    {{ item_details.name }}
+                                                </a>
+                                                <button
+                                                    class="nb-sidenav-favorite{% if item_link in navbar_favorites_link_list %} active{% endif %}"
+                                                    type="button"
+                                                    hx-post="{% if item_link in navbar_favorites_link_list %}{% url "user:navbar_favorites_delete" %}{% else %}{% url "user:navbar_favorites_add" %}{% endif %}"
+                                                    hx-vals='{"name": "{{ item_details.name }}", "link": "{{ item_link }}"}'
+                                                    hx-target="#sidenav-flyout-favorites"
+                                                    hx-select="#sidenav-flyout-favorites"
+                                                    hx-swap="outerHTML"
+                                                    hx-on::after-request="toggleFavorite(this, event)"
+                                                    hx-on::config-request="setRequestUrl(this, event)"
+                                                    data-add-url="{% url "user:navbar_favorites_add" %}"
+                                                    data-delete-url="{% url "user:navbar_favorites_delete" %}"
+                                                >
+                                                    <span class="visually-hidden">
+                                                        Add to favorites
+                                                    </span>
+                                                </button>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endfor %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                {% endwith %}
+            {% endif %}
+        </ul>
+    </nav>
+{% endwith %}

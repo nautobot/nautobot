@@ -21,8 +21,13 @@ By Nautobot convention, **integration** tests must be [tagged](https://docs.djan
 
 Nautobot's Python-based **migration** tests are built around the `django-test-migrations` library and its `MigratorTestCase` class, which has the tag `migration_test`, therefore any test cases inheriting from that class do not need to be explicitly tagged.
 
-!!! info
+!!! info "`invoke migration-test`"
     There are also a set of "holistic" migration tests executable by the `invoke migration-test` command; these "tests" consist of nothing more than historical SQL dumps (in the `development/datasets/` directory) of a fully populated database state that can be used to populate an empty database before running a `nautobot-server migrate` command and confirming that it raises no errors. This sort of test is fairly crude; in most cases writing a specific `MigratorTestCase` subclass is to be preferred.
+
+Test cases that depend on the presence of the `example_app` example Nautobot App to function properly must be tagged with the tag `example_app`. Similarly those that depend on the `example_app_with_view_override` must be tagged accordingly as well.
+
+!!! tip "Running tests without the example Apps"
+    Because in some cases the presence of the example App(s) can cause side effects in the function of Nautobot itself, an alternate Nautobot test config file is provided that omits these Apps. Running `invoke tests --config-file nautobot/core/tests/nautobot_config_without_example_apps.py` will use this alternate config file, and will additionally automatically skip over the tests that are tagged `example_app` and/or `example_app_with_view_override` since those would be expected to fail in the absence of the example Apps. This can be a useful way to run the majority of the test suite against a "clean" Nautobot installation if interference from the example Apps is a potential concern.
 
 ## Base Classes and Code Location
 

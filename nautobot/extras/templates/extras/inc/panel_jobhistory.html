@@ -4,24 +4,26 @@
             <a href="{% url 'extras:jobresult' pk=result.pk %}">
                 {{ result.job_model.name }}
             </a>
-            <span class="pull-right" title="{{ result.date_created }}">{% include 'extras/inc/job_label.html' %}</span>
+            <span class="float-end" data-bs-toggle="tooltip" data-bs-title="{{ result.date_created }}" data-bs-fallback-placements="[&quot;top&quot;]">
+                {% include 'extras/inc/job_label.html' %}
+            </span>
             <br>
             <small>
-                <span class="text-muted">{{ result.user }} - {{ result.date_done|date:settings.SHORT_DATETIME_FORMAT }}</span>
+                <span class="text-secondary">{{ result.user }} - {{ result.date_done|date:settings.SHORT_DATETIME_FORMAT }}</span>
             </small>
         </div>
         {% if forloop.last %}
-            <div class="list-group-item text-right">
+            <div class="list-group-item text-end">
                 <a href="{% url 'extras:jobresult_list' %}">View All History</a>
             </div>
         {% endif %}
     {% endfor %}
 {% elif perms.extras.view_jobresult %}
-    <div class="panel-body text-muted">
+    <div class="card-body text-secondary">
         None found
     </div>
 {% else %}
-    <div class="panel-body text-muted">
-        <i class="mdi mdi-lock"></i> No permission
+    <div class="card-body text-secondary">
+        <span class="mdi mdi-lock" aria-hidden="true"></span> No permission
     </div>
 {% endif %}

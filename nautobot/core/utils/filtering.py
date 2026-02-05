@@ -18,12 +18,18 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
 
 MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
+    "approval_workflow_definitions": "approval_workflows",
     "cables": "cable_terminations",
-    "metadata_types": "metadata",
-    "object_metadata": "metadata",
+    "data_compliance": "custom_validators",
     "location_types": "locations",
-    "static_group_associations": "dynamic_groups",
+    "metadata_types": "metadata",
+    "min_max_validation_rules": "custom_validators",
+    "object_metadata": "metadata",
+    "regular_expression_validation_rules": "custom_validators",
     "relationship_associations": "relationships",
+    "required_validation_rules": "custom_validators",
+    "static_group_associations": "dynamic_groups",
+    "unique_validation_rules": "custom_validators",
 }
 
 

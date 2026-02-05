@@ -23,7 +23,6 @@ from nautobot.core.api.utils import (
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -65,6 +64,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -137,12 +137,6 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
         return None
 
 
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(CableTerminationModelSerializerMixin)
-class CableTerminationSerializer(CableTerminationModelSerializerMixin):
-    pass
-
-
 class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
     connected_endpoint_type = serializers.SerializerMethodField(read_only=True)
     connected_endpoint = serializers.SerializerMethodField(read_only=True)
@@ -181,12 +175,6 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
             if obj._path is not None:
                 return obj._path.is_active
         return None
-
-
-# TODO: remove in 2.2
-@class_deprecated_in_favor_of(PathEndpointModelSerializerMixin)
-class ConnectedEndpointSerializer(PathEndpointModelSerializerMixin):
-    pass
 
 
 class ModularDeviceComponentTemplateSerializerMixin:
@@ -538,6 +526,7 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "parent_bay": {"required": False, "allow_null": True},
             "vc_position": {"label": "Virtual chassis position"},
             "vc_priority": {"label": "Virtual chassis priority"},
+            "clusters": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):
@@ -1154,4 +1143,12 @@ class ModuleFamilySerializer(NautobotModelSerializer):
 
     class Meta:
         model = ModuleFamily
+        fields = "__all__"
+
+
+class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
+    """Serializer for DeviceClusterAssignment model."""
+
+    class Meta:
+        model = DeviceClusterAssignment
         fields = "__all__"

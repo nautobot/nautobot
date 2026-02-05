@@ -3,73 +3,47 @@
 {% load helpers %}
 {% load form_helpers %}
 
+{% block title %}
+    {% with termination_a=form.instance.termination_a %}
+        {% if termination_a.module %}
+            Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+        {% else %}
+            Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+        {% endif %}
+    {% endwith %}
+{% endblock %}
+
 {% block content %}
-    <form method="post" class="form form-horizontal">
+    <form method="post" class="h-100 vstack">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}
         {% endfor %}
-        {% if form.non_field_errors %}
-            <div class="row">
-                <div class="col-md-6 col-md-offset-3">
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Errors</strong></div>
-                        <div class="panel-body">
-                            {{ form.non_field_errors }}
-                        </div>
+        <div class="row">
+            {% if form.non_field_errors %}
+                <div class="card border-danger">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Errors</strong>
+                    </div>
+                    <div class="card-body">
+                        {{ form.non_field_errors }}
                     </div>
                 </div>
-            </div>
-        {% endif %}
-        {% with termination_a=form.instance.termination_a %}
-            <h3>
-                {% block title %}
-                    {% if termination_a.module %}
-                        Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-                    {% else %}
-                        Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-                    {% endif %}
-                {% endblock %}
-            </h3>
-            <div class="row">
-                <div class="col-md-5">
-                    <div class="panel panel-default">
-                        <div class="panel-heading text-center">
+            {% endif %}
+            {% with termination_a=form.instance.termination_a %}
+                <div class="col-lg-5">
+                    <div class="card">
+                        <div class="card-header">
                             <strong>A Side</strong>
                         </div>
-                        <div class="panel-body">
+                        <div class="card-body">
                             {% if termination_a.device %}
                             {# Device component #}
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Location</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.device.location }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Rack</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.device.rack|default:"None" }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Device</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.device }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Type</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a|meta:"verbose_name"|bettertitle }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Name</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a }}</p>
-                                    </div>
-                                </div>
+                                {% include "inc/form_static_field.html" with label="Location" value=termination_a.device.location required=True %}
+                                {% include "inc/form_static_field.html" with label="Rack" value=termination_a.device.rack|default:"None" required=True %}
+                                {% include "inc/form_static_field.html" with label="Device" value=termination_a.device required=True %}
+                                {% include "inc/form_static_field.html" with label="Type" value=termination_a|meta:"verbose_name"|bettertitle required=True %}
+                                {% include "inc/form_static_field.html" with label="Name" value=termination_a required=True %}
                             {% elif termination_a.module %}
                             {# Module component #}
                                 {% if not termination_a.module.device %}
@@ -77,93 +51,38 @@
                                         This {{ termination_a|meta:"verbose_name"|bettertitle }} belongs
                                         to a module not installed in any device.
                                     </div>
-                                    <div class="form-group">
-                                        <label class="col-md-3 control-label required">Location</label>
-                                        <div class="col-md-9">
-                                            <p class="form-control-static">{{ termination_a.module.location }}</p>
-                                        </div>
-                                    </div>
+                                    {% include "inc/form_static_field.html" with label="Location" value=termination_a.module.location required=True %}
                                 {% else %}
-                                    <div class="form-group">
-                                        <label class="col-md-3 control-label required">Location</label>
-                                        <div class="col-md-9">
-                                            <p class="form-control-static">{{ termination_a.module.device.location }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-3 control-label required">Rack</label>
-                                        <div class="col-md-9">
-                                            <p class="form-control-static">{{ termination_a.module.device.rack|default:"None" }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-3 control-label required">Device</label>
-                                        <div class="col-md-9">
-                                            <p class="form-control-static">{{ termination_a.module.device }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="col-md-3 control-label required">Module</label>
-                                        <div class="col-md-9">
-                                            <p class="form-control-static">{{ termination_a.module.display }}</p>
-                                        </div>
-                                    </div>
+                                    {% include "inc/form_static_field.html" with label="Location" value=termination_a.module.device.location required=True %}
+                                    {% include "inc/form_static_field.html" with label="Rack" value=termination_a.module.device.rack|default:"None" required=True %}
+                                    {% include "inc/form_static_field.html" with label="Device" value=termination_a.module.device required=True %}
+                                    {% include "inc/form_static_field.html" with label="Module" value=termination_a.module.display required=True %}
                                 {% endif %}
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Type</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a|meta:"verbose_name"|bettertitle }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Name</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a }}</p>
-                                    </div>
-                                </div>
+                                {% include "inc/form_static_field.html" with label="Type" value=termination_a|meta:"verbose_name"|bettertitle required=True %}
+                                {% include "inc/form_static_field.html" with label="Name" value=termination_a required=True %}
                             {% else %}
                             {# Circuit termination #}
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Location</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.location }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Provider</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.circuit.provider }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Circuit</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.circuit.cid }}</p>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="col-md-3 control-label required">Side</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static">{{ termination_a.term_side }}</p>
-                                    </div>
-                                </div>
+                                {% include "inc/form_static_field.html" with label="Location" value=termination_a.location required=True %}
+                                {% include "inc/form_static_field.html" with label="Provider" value=termination_a.circuit.provider required=True %}
+                                {% include "inc/form_static_field.html" with label="Circuit" value=termination_a.circuit.cid required=True %}
+                                {% include "inc/form_static_field.html" with label="Side" value=termination_a.term_side required=True %}
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                <div class="col-md-2 text-center" style="padding-top: 90px;">
-                    <i class="mdi mdi-swap-horizontal-bold mdi-48px"></i>
+                <div class="col-lg-2 hstack justify-content-center my-16">
+                    <span aria-hidden="true" class="mdi mdi-swap-horizontal-bold mdi-48px"></span>
                 </div>
-                <div class="col-md-5">
-                    <div class="panel panel-default">
-                        <div class="panel-heading text-center">
+                <div class="col-lg-5">
+                    <div class="card">
+                        <div class="card-header text-center">
                             <strong>B Side</strong>
                         </div>
-                        <div class="panel-body">
+                        <div class="card-body">
                             {% if tabs %}
                                 <ul class="nav nav-tabs">
                                     {% for url, link in tabs %}
-                                        <li role="presentation"><a href="{{ url }}">{{ link }}</a></li>
+                                        <li class="nav-item" role="presentation"><a class="nav-link" href="{{ url }}">{{ link }}</a></li>
                                     {% endfor %}
                                 </ul>
                             {% endif %}
@@ -194,29 +113,26 @@
                             {% if 'termination_b_circuit' in form.fields %}
                                 {% render_field form.termination_b_circuit %}
                             {% endif %}
-                            <div class="form-group">
-                                <label class="col-md-3 control-label required">Type</label>
-                                <div class="col-md-9">
-                                    <p class="form-control-static">{{ termination_b_type|bettertitle }}</p>
-                                </div>
-                            </div>
+                            {% include "inc/form_static_field.html" with label="Type" value=termination_b_type|bettertitle required=True %}
                             {% render_field form.termination_b_id %}
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 col-md-offset-3">
+                <div class="col-lg-6 offset-lg-3">
                     {% include 'dcim/inc/cable_form.html' %}
                 </div>
-            </div>
-            <div class="form-group">
-                <div class="col-md-12 text-center">
-                    <button type="submit" name="_update" class="btn btn-primary">Connect</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
-                </div>
-            </div>
-        {% endwith %}
+            {% endwith %}
+        </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_update" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Connect
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+            -->Cancel
+            </a>
+        </div>
     </form>
 {% endblock %}
 

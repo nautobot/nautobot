@@ -4,34 +4,74 @@
 
 {% block extra_buttons %}
     {% if perms.dcim.change_moduletype %}
-        <div class="btn-group">
-            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="module-type-add-components-button">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
+        <div class="dropdown d-inline-flex">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="module-type-add-components-button">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="mdi mdi-chevron-down"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.dcim.add_consoleporttemplate %}
-                    <li><a href="{% url 'dcim:consoleporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleports">Console Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleports">
+                            <span class="mdi mdi-console" aria-hidden="true"></span> Console Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_consoleserverporttemplate %}
-                    <li><a href="{% url 'dcim:consoleserverporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleserverports">Console Server Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleserverporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=consoleserverports">
+                            <span class="mdi mdi-console-network-outline" aria-hidden="true"></span>Console Server Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_powerporttemplate %}
-                    <li><a href="{% url 'dcim:powerporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=powerports">Power Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:powerporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=powerports">
+                            <span class="mdi mdi-power-plug-outline" aria-hidden="true"></span> Power Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_poweroutlettemplate %}
-                    <li><a href="{% url 'dcim:poweroutlettemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=poweroutlets">Power Outlets</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:poweroutlettemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=poweroutlets">
+                            <span class="mdi mdi-power-socket" aria-hidden="true"></span> Power Outlets
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_interfacetemplate %}
-                    <li><a href="{% url 'dcim:interfacetemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=interfaces">Interfaces</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:interfacetemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=interfaces">
+                            <span class="mdi mdi-ethernet" aria-hidden="true"></span> Interfaces
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_frontporttemplate %}
-                    <li><a href="{% url 'dcim:frontporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=frontports">Front Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:frontporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=frontports">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Front Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_rearporttemplate %}
-                    <li><a href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=rearports">Rear Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:rearporttemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=rearports">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Rear Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_modulebaytemplate %}
-                    <li><a href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=modulebays">Module Bays</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:modulebaytemplate_add' %}?module_type={{ object.pk }}&return_url={{ object.get_absolute_url }}%3Ftab=modulebays">
+                            <span class="mdi mdi-tray" aria-hidden="true"></span> Module Bays
+                        </a>
+                    </li>
                 {% endif %}
             </ul>
         </div>
@@ -39,54 +79,54 @@
 {% endblock extra_buttons %}
 
 {% block extra_nav_tabs %}
-    <li role="presentation" {% if request.GET.tab == 'interfaces' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#interfaces" onclick="switch_tab(this.href)" aria-controls="interfaces" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'interfaces' %} active{% endif %}">
             Interfaces {% badge interface_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'frontports' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#frontports" onclick="switch_tab(this.href)" aria-controls="frontports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'frontports' %} active{% endif %}">
             Front Ports {% badge front_port_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'rearports' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#rearports" onclick="switch_tab(this.href)" aria-controls="rearports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'rearports' %} active{% endif %}">
             Rear Ports {% badge rear_port_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'consoleports' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#consoleports" onclick="switch_tab(this.href)" aria-controls="consoleports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleports' %} active{% endif %}">
             Console Ports {% badge consoleport_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'consoleserverports' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#consoleserverports" onclick="switch_tab(this.href)" aria-controls="consoleserverports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'consoleserverports' %} active{% endif %}">
             Console Server Ports {% badge consoleserverport_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'powerports' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#powerports" onclick="switch_tab(this.href)" aria-controls="powerports" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'powerports' %} active{% endif %}">
             Power Ports {% badge powerport_table.rows|length %}
         </a>
     </li>
-    <li role="presentation" {% if request.GET.tab == 'poweroutlets' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#poweroutlets" onclick="switch_tab(this.href)" aria-controls="poweroutlets" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'poweroutlets' %} active{% endif %}">
             Power Outlets {% badge poweroutlet_table.rows|length %}
         </a>
     </li>
-    <li role="presentation"{% if request.GET.tab == 'modulebays' %} class="active"{% endif %}>
-        <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-toggle="tab">
+    <li class="nav-item" role="presentation">
+        <a href="{{ object.get_absolute_url }}#modulebays" onclick="switch_tab(this.href)" aria-controls="modulebays" role="tab" data-bs-toggle="tab" class="nav-link{% if request.GET.tab == 'modulebays' %} active{% endif %}">
             Module Bays {% badge modulebay_table.rows|length %}
         </a>
     </li>
 {% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Chassis</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Manufacturer</td>
                 <td><a href="{% url 'dcim:moduletype_list' %}?manufacturer={{ object.manufacturer.name }}">{{ object.manufacturer }}</a></td>
@@ -116,15 +156,15 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Comments</strong>
         </div>
-        <div class="panel-body rendered-markdown">
+        <div class="card-body nb-rendered-markdown">
             {% if object.comments %}
                 {{ object.comments|render_markdown }}
             {% else %}
-                <span class="text-muted">None</span>
+                <span class="text-secondary">None</span>
             {% endif %}
         </div>
     </div>
@@ -156,6 +196,5 @@
     </div>
     <div role="tabpanel" class="tab-pane {% if request.GET.tab == 'modulebays' %}active{% else %}fade{% endif %}" id="modulebays">
         {% include 'dcim/inc/moduletype_component_table.html' with table=modulebay_table title='Module Bays' tab='modulebays' %}
-    </div>
     </div>
 {% endblock extra_tab_content %}

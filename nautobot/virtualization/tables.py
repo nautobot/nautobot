@@ -25,9 +25,12 @@ __all__ = (
 
 VMINTERFACE_BUTTONS = """
 {% if perms.ipam.add_ipaddress and perms.virtualization.change_vminterface %}
-    <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ request.path }}" class="btn btn-xs btn-success" title="Add IP address">
-        <i class="mdi mdi-plus-thick" aria-hidden="true"></i>
-    </a>
+    <li>
+        <a href="{% url 'ipam:ipaddress_add' %}?vminterface={{ record.pk }}&return_url={{ request.path }}" class="dropdown-item text-success">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
+            Add IP address
+        </a>
+    </li>
 {% endif %}
 """
 
@@ -79,11 +82,12 @@ class ClusterTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tenant = tables.Column(linkify=True)
-    cluster_type = tables.Column(linkify=True)
-    cluster_group = tables.Column(linkify=True)
+    cluster_type = tables.Column(linkify=True, verbose_name="Cluster Type")
+    cluster_group = tables.Column(linkify=True, verbose_name="Cluster Group")
     device_count = LinkedCountColumn(
         viewname="dcim:device_list",
-        url_params={"cluster": "pk"},
+        url_params={"clusters": "pk"},
+        reverse_lookup="clusters",
         verbose_name="Devices",
     )
     vm_count = LinkedCountColumn(

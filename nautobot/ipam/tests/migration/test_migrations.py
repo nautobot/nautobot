@@ -508,3 +508,92 @@ class IPAMDataMigration0031TestCase(MigratorTestCase):
             for ip in IPAddress.objects.iterator():
                 self.assertLessEqual(netaddr.IPAddress(ip.parent.network), netaddr.IPAddress(ip.host))
                 self.assertGreaterEqual(netaddr.IPAddress(ip.parent.broadcast), netaddr.IPAddress(ip.host))
+
+
+class NamespaceTenantCircularDependencyTestCase(MigratorTestCase):
+    """Test that our 3-phase migration approach resolves circular dependencies and supports rollback."""
+
+    migrate_from = ("ipam", "0029_ip_address_to_interface_uniqueness_constraints")  # Before namespace creation
+    migrate_to = ("ipam", "0054_namespace_tenant")  # After our complete sequence
+
+    def prepare(self):
+        """Create minimal data to test namespace-tenant migration sequence."""
+        # Create basic tenancy data in old state
+        TenantGroup = self.old_state.apps.get_model("tenancy", "TenantGroup")
+        Tenant = self.old_state.apps.get_model("tenancy", "Tenant")
+
+        self.tenant_group = TenantGroup.objects.create(name="Test Group")
+        self.tenant1 = Tenant.objects.create(name="Test Tenant 1", tenant_group=self.tenant_group)
+        self.tenant2 = Tenant.objects.create(name="Test Tenant 2", tenant_group=self.tenant_group)
+
+    def test_forward_migration_resolves_circular_dependency(self):
+        """Test that fresh database creation works with tenant on Namespace."""
+        Namespace = self.new_state.apps.get_model("ipam", "Namespace")
+        VRF = self.new_state.apps.get_model("ipam", "VRF")
+        Prefix = self.new_state.apps.get_model("ipam", "Prefix")
+
+        # Verify Global namespace exists
+        global_namespace = Namespace.objects.get(name="Global")
+        self.assertIsNotNone(global_namespace)
+
+        # Verify tenant field exists on Namespace
+        self.assertTrue(hasattr(global_namespace, "tenant"))
+
+        # Verify VRF and Prefix have namespace defaults working
+        vrf_field = VRF._meta.get_field("namespace")
+        prefix_field = Prefix._meta.get_field("namespace")
+        self.assertIsNotNone(vrf_field.default)
+        self.assertIsNotNone(prefix_field.default)
+
+    def test_namespace_tenant_field_added(self):
+        """Test that tenant field was properly added to Namespace model."""
+        Namespace = self.new_state.apps.get_model("ipam", "Namespace")
+
+        # Create a namespace with tenant assignment
+        test_namespace = Namespace.objects.create(
+            name="Test Namespace", tenant_id=self.tenant1.pk, description="Test namespace with tenant"
+        )
+
+        # Verify tenant field exists and works
+        self.assertEqual(test_namespace.tenant_id, self.tenant1.pk)
+        self.assertEqual(test_namespace.name, "Test Namespace")
+
+        # Verify tenant relationship works
+        retrieved_namespace = Namespace.objects.get(name="Test Namespace")
+        self.assertEqual(retrieved_namespace.tenant_id, self.tenant1.pk)
+
+
+class NamespaceTenantRollbackTestCase(MigratorTestCase):
+    """Test rolling back the namespace-tenant feature works safely."""
+
+    # For rollback testing: migrate_from is AFTER our changes, migrate_to is BEFORE
+    migrate_from = ("ipam", "0054_namespace_tenant")  # After our complete sequence
+    migrate_to = ("ipam", "0052_alter_ipaddress_index_together_and_more")  # Before our changes
+
+    def prepare(self):
+        """Create namespace data in the 'after' state to test rollback."""
+        # Create tenancy data first
+        TenantGroup = self.old_state.apps.get_model("tenancy", "TenantGroup")
+        Tenant = self.old_state.apps.get_model("tenancy", "Tenant")
+
+        self.tenant_group = TenantGroup.objects.create(name="Test Tenant Group")
+        self.tenant1 = Tenant.objects.create(name="Test Tenant 1", tenant_group=self.tenant_group)
+
+        # Create namespace with tenant assignment in the 'after' state
+        Namespace = self.old_state.apps.get_model("ipam", "Namespace")
+        self.test_namespace = Namespace.objects.create(
+            name="Test Namespace", tenant_id=self.tenant1.pk, description="Test namespace for rollback"
+        )
+
+    def test_rollback_migration_preserves_data_integrity(self):
+        """Test that rolling back preserves namespace data but removes tenant field."""
+        # In the rolled-back state, tenant field should be gone
+        Namespace = self.new_state.apps.get_model("ipam", "Namespace")
+        rolled_back_namespace = Namespace.objects.get(pk=self.test_namespace.pk)
+
+        # Verify core fields preserved
+        self.assertEqual(rolled_back_namespace.name, "Test Namespace")
+        self.assertEqual(rolled_back_namespace.description, "Test namespace for rollback")
+
+        # Verify tenant field no longer exists (rolled back)
+        self.assertFalse(hasattr(rolled_back_namespace, "tenant"))

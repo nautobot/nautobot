@@ -1,10 +1,17 @@
 {% comment %}disabled_message is not part of the default render context but a tab can define it if needed.{% endcomment %}
 {% if disabled_message %}
-    <li role="presentation" class="disabled">
-        <a href="#" title="{{ disabled_message }}">{{ label }}</a>
+    <li class="nav-item" role="presentation" title="{{ disabled_message }}">
+        <a aria-disabled="true" class="nav-link disabled">{{ label }}</a>
     </li>
 {% else %}
-    <li role="presentation"{% if request.GET.tab == tab_id or active_tab == tab_id %} class="active"{% endif %}>
-        <a href="{{ url }}">{{ label }}</a>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link{% if active_tab == tab_id or request.GET.tab == tab_id %} active{% endif %}"
+           {% if active_tab == tab_id or request.GET.tab == tab_id %} aria-current="page"{% endif %}
+           href="{{ url }}"
+           aria-controls="{{ tab_id }}"
+           role="tab"
+        >
+            {{ label }}
+        </a>
     </li>
 {% endif %}

@@ -28,9 +28,10 @@ def naturalize(value, max_length, integer_places=8):
         location00000010router00000004
         location00000010router00000019
 
-    :param value: The value to be naturalized
-    :param max_length: The maximum length of the returned string. Characters beyond this length will be stripped.
-    :param integer_places: The number of places to which each integer will be expanded. (Default: 8)
+    Args:
+        value (str): The value to be naturalized
+        max_length (int): The maximum length of the returned string. Characters beyond this length will be stripped.
+        integer_places (int): The number of places to which each integer will be expanded. (Default: 8)
     """
     if not value:
         return value
@@ -50,8 +51,9 @@ def naturalize_interface(value, max_length):
     Similar in nature to naturalize(), but takes into account a particular naming format adapted from the old
     InterfaceManager.
 
-    :param value: The value to be naturalized
-    :param max_length: The maximum length of the returned string. Characters beyond this length will be stripped.
+    Args:
+        value (str): The value to be naturalized
+        max_length (int): The maximum length of the returned string. Characters beyond this length will be stripped.
     """
     output = ""
     match = re.search(INTERFACE_NAME_REGEX, value)

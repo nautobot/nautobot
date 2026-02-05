@@ -183,6 +183,8 @@ def replace_deprecated_templates(path: str, dry_run: bool = False):
         path = os.path.dirname(path)
     else:
         only_filename = None
+    print("Finding deprecated templates to replace...")
+    count = 0
 
     for root, _, files in os.walk(path):
         for filename in files:
@@ -198,12 +200,18 @@ def replace_deprecated_templates(path: str, dry_run: bool = False):
                 fixed_content, was_updated = replace_template_references(content)
 
                 if was_updated:
+                    count += 1
                     if dry_run:
                         print(f"Detected deprecated template reference in {file_path}")
                         continue
                     with open(file_path, "w", encoding="utf-8") as f:
                         f.write(fixed_content)
                     print(f"Updated: {file_path}")
+    if not count:
+        print("No deprecated templates found.")
+    else:
+        print(f"Found {count} deprecated templates.")
+    return count
 
 
 def main():

@@ -1,4 +1,5 @@
 import json
+from unittest import skip
 import warnings
 
 from django.contrib.auth import get_user_model
@@ -14,15 +15,9 @@ from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoi
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
-    CustomFieldModelBulkEditFormMixin,
     CustomFieldModelFormMixin,
     JobButtonForm,
-    JobEditForm,
     JobHookForm,
-    RelationshipModelFormMixin,
-    StatusModelBulkEditFormMixin,
-    StatusModelFilterFormMixin,
-    TagsBulkEditFormMixin,
     WebhookForm,
 )
 from nautobot.extras.models import (
@@ -1096,29 +1091,30 @@ class WebhookFormTestCase(TestCase):
         )
 
 
+@skip(reason="Skipping until we have items that need to be deprecated again.")
 class DeprecatedAliasesTestCase(TestCase):
     """Test that deprecated class names still exist, but report a DeprecationWarning when used."""
 
     def test_deprecated_form_mixin_classes(self):
         # Importing these mixin classes doesn't directly warn, but subclassing them does.
-        from nautobot.extras.forms import CustomFieldBulkCreateForm
-        from nautobot.extras.forms.mixins import (
-            AddRemoveTagsForm,
-            CustomFieldBulkEditForm,
-            CustomFieldModelForm,
-            RelationshipModelForm,
-            StatusBulkEditFormMixin,
-            StatusFilterFormMixin,
-        )
+        # from nautobot.extras.forms import CustomFieldBulkCreateForm
+        # from nautobot.extras.forms.mixins import (
+        #     AddRemoveTagsForm,
+        #     CustomFieldBulkEditForm,
+        #     CustomFieldModelForm,
+        #     RelationshipModelForm,
+        #     StatusBulkEditFormMixin,
+        #     StatusFilterFormMixin,
+        # )
 
         for deprecated_form_class, replacement_form_class in (
-            (AddRemoveTagsForm, TagsBulkEditFormMixin),
-            (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
-            (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
-            (CustomFieldModelForm, CustomFieldModelFormMixin),
-            (RelationshipModelForm, RelationshipModelFormMixin),
-            (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
-            (StatusFilterFormMixin, StatusModelFilterFormMixin),
+            # (AddRemoveTagsForm, TagsBulkEditFormMixin),
+            # (CustomFieldBulkEditForm, CustomFieldModelBulkEditFormMixin),
+            # (CustomFieldBulkCreateForm, CustomFieldModelBulkEditFormMixin),
+            # (CustomFieldModelForm, CustomFieldModelFormMixin),
+            # (RelationshipModelForm, RelationshipModelFormMixin),
+            # (StatusBulkEditFormMixin, StatusModelBulkEditFormMixin),
+            # (StatusFilterFormMixin, StatusModelFilterFormMixin),
         ):
             with self.subTest(msg=f"Replace {deprecated_form_class.__name__} with {replacement_form_class.__name__}"):
                 # Subclassing the deprecated class should raise a DeprecationWarning
@@ -1145,41 +1141,6 @@ class DeprecatedAliasesTestCase(TestCase):
                         pass
 
                     self.assertEqual(len(warn_list), 0)
-
-
-class JobEditFormTestCase(TestCase):
-    def test_update_job_with_approval_required_and_has_has_sensitive_variables_is_true(self):
-        form_data = {
-            "grouping_override": True,
-            "grouping": "Overridden grouping",
-            "name_override": True,
-            "name": "Overridden name",
-            "description_override": True,
-            "description": "This is an overridden description.",
-            "enabled": True,
-            "approval_required_override": True,
-            "approval_required": True,
-            "dryrun_default_override": True,
-            "dryrun_default": True,
-            "hidden_override": True,
-            "hidden": True,
-            "soft_time_limit_override": True,
-            "soft_time_limit": 350.1,
-            "time_limit_override": True,
-            "time_limit": 650,
-            "has_sensitive_variables": True,
-            "has_sensitive_variables_override": True,
-            "task_queues": [],
-            "task_queues_override": True,
-        }
-        form = JobEditForm(data=form_data)
-
-        self.assertFalse(form.is_valid())
-        error_msg = json.loads(form.errors.as_json())
-        self.assertEqual(
-            error_msg["approval_required"][0]["message"],
-            "A job that may have sensitive variables cannot be marked as requiring approval",
-        )
 
 
 class ConfigContextFormTestCase(TestCase):

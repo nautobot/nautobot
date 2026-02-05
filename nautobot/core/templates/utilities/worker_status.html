@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 {% load helpers %}
+{% load ui_framework %}
+
+{% block breadcrumbs_wrapper %}{% render_breadcrumbs %}{% endblock %}
 
 {% block extra_styles %}
     <style>
@@ -9,26 +12,20 @@
     </style>
 {% endblock %}
 
-{% block header %}
-    <h1>
-        {% block title %}Nautobot Worker Status{% endblock %}
-    </h1>
-{% endblock %}
-
 {% block content %}
     <div class="row">
-        <div class="col-md-12">
-            <div class="panel panel-default">
-                <div class="panel-heading">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
                     <strong>Worker Queues</strong>
                 </div>
-                <table class="table table-hover panel-body attr-table">
+                <table class="table table-hover card-body attr-table">
                     {% for queue_name, workers in worker_status.queue_worker_count.items %}
                         <tr>
-                            <td><span class="label label-primary">{{ queue_name }}</span></td>
+                            <td><span class="badge bg-primary">{{ queue_name }}</span></td>
                             <td>
                                 {% for worker in workers %}
-                                    <span class="label label-default">{{ worker }}</span>
+                                    <span class="badge bg-default">{{ worker }}</span>
                                 {% empty %}
                                     No workers found.
                                 {% endfor %}
@@ -39,12 +36,12 @@
             </div>
         </div>
         {% for worker in worker_status.workers %}
-            <div class="col-md-6">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
                         <strong>{{ worker.hostname }}</strong>
                     </div>
-                    <table id="accordion" class="table table-hover panel-body attr-table">
+                    <table id="accordion" class="table table-hover card-body attr-table">
                         <tbody>
                             <tr>
                                 <td>Uptime</td>
@@ -54,21 +51,28 @@
                                 <td>Queues</td>
                                 <td colspan="2">
                                     {% for queue in worker.queues %}
-                                        <span class="label label-primary">{{ queue }}</span>
+                                        <span class="badge bg-primary">{{ queue }}</span>
                                     {% endfor %}
                                 </td>
                             </tr>
                             <tr>
-                                <th colspan="{{ worker.running_tasks_table.columns|length }}">
-                                    <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                            name="running-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                            data-target=".collapseme-running-tasks-{{ worker.hostname|slugify }}">
-                                        Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
+                                <th class="position-relative" colspan="{{ worker.running_tasks_table.columns|length }}">
+                                    <button
+                                        aria-controls="collapseme-running-tasks-{{ worker.hostname|slugify }}"
+                                        aria-expanded="false"
+                                        class="btn float-none fs-4 stretched-link nb-collapse-toggle"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#collapseme-running-tasks-{{ worker.hostname|slugify }}"
+                                        name="running-tasks-{{ worker.hostname|slugify }}"
+                                        type="button"
+                                    >
+                                        <span class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->Running Tasks {% badge worker.running_tasks_table.rows|length show_empty=True %}
                                     </button>
                                 </th>
                             </tr>
                         </tbody>
-                        <tbody class="collapseme-running-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tbody class="collapse nb-transition-none" id="collapseme-running-tasks-{{ worker.hostname|slugify }}">
                             <tr>
                                 {% for column in worker.running_tasks_table.columns %}
                                     <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
@@ -83,7 +87,7 @@
                             {% empty %}
                                 {% if worker.running_tasks_table.empty_text %}
                                     <tr>
-                                        <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-muted">
+                                        <td colspan="{{ worker.running_tasks_table.columns|length }}" class="text-center text-secondary">
                                             &mdash; {{ worker.running_tasks_table.empty_text }} &mdash;
                                         </td>
                                     </tr>
@@ -92,16 +96,23 @@
                         </tbody>
                         <tbody>
                             <tr>
-                                <th colspan="{{ worker.pending_tasks_table.columns|length }}">
-                                    <button type="button" class="btn-link accordion-toggle mdi mdi-chevron-right"
-                                            name="pending-tasks-{{ worker.hostname|slugify }}" data-toggle="collapse"
-                                            data-target=".collapseme-pending-tasks-{{ worker.hostname|slugify }}">
-                                        Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
+                                <th class="position-relative" colspan="{{ worker.pending_tasks_table.columns|length }}">
+                                    <button
+                                        aria-controls="collapseme-pending-tasks-{{ worker.hostname|slugify }}"
+                                        aria-expanded="false"
+                                        class="btn float-none fs-4 stretched-link nb-collapse-toggle"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#collapseme-pending-tasks-{{ worker.hostname|slugify }}"
+                                        name="pending-tasks-{{ worker.hostname|slugify }}"
+                                        type="button"
+                                    >
+                                        <span class="mdi mdi-chevron-down me-4"></span><!--
+                                    -->Pending Tasks {% badge worker.pending_tasks_table.rows|length show_empty=True %}
                                     </button>
                                 </th>
                             </tr>
                         </tbody>
-                        <tbody class="collapseme-pending-tasks-{{ worker.hostname|slugify }} collapse" data-parent="#accordion" aria-expanded="false">
+                        <tbody class="collapse" id="collapseme-pending-tasks-{{ worker.hostname|slugify }}">
                             <tr>
                                 {% for column in worker.pending_tasks_table.columns %}
                                     <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
@@ -116,7 +127,7 @@
                             {% empty %}
                                 {% if worker.pending_tasks_table.empty_text %}
                                     <tr>
-                                        <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-muted">
+                                        <td colspan="{{ worker.pending_tasks_table.columns|length }}" class="text-center text-secondary">
                                             &mdash; {{ worker.pending_tasks_table.empty_text }} &mdash;
                                         </td>
                                     </tr>
@@ -139,14 +150,4 @@
                 {% endwith %}
         {% endfor %}
     </div>
-{% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script>
-    // Toggle v -. >
-        $("#accordion .accordion-toggle").click(function() {
-            $(this).toggleClass("mdi-chevron-down mdi-chevron-right");
-        });
-    </script>
 {% endblock %}

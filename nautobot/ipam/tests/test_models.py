@@ -5,9 +5,9 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import connection, IntegrityError
 from django.db.models import ProtectedError
-from django.test import TestCase
 import netaddr
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
@@ -34,7 +34,7 @@ class IPAddressToInterfaceTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.namespace = Namespace.objects.first()
+        cls.namespace = Namespace.objects.create(name="IPAM Models Test Namespace")
         cls.status = Status.objects.get(name="Active")
         cls.prefix = Prefix.objects.create(prefix="192.0.2.0/24", status=cls.status, namespace=cls.namespace)
         cls.test_device = Device.objects.create(

@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.utils import timezone
 
@@ -286,6 +286,7 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    @tag("example_app")
     def test_app_dynamic_jobs(self):
         """
         Test that get_job() correctly reloads dynamic jobs when `NautobotAppConfig.provides_dynamic_jobs` is True.
@@ -645,6 +646,26 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(logs.filter(message="I should NOT be logged to the database").exists())
         self.assertTrue(logs.filter(message="I should be logged to the database").exists())
 
+    def test_log_counts_by_level(self):
+        """
+        Test that related JobLogEntry counts are stored for JobResult list summary.
+        """
+        module = "log_counts_by_level"
+        name = "TestLogCountsByLevel"
+        job_result = create_job_result_and_run_job(module, name)
+
+        self.assertGreater(job_result.job_log_entries.count(), 0)
+        self.assertIsNotNone(job_result.debug_log_count)
+        self.assertEqual(job_result.debug_log_count, 0)
+        self.assertIsNotNone(job_result.success_log_count)
+        self.assertEqual(job_result.success_log_count, 1)
+        self.assertIsNotNone(job_result.info_log_count)
+        self.assertEqual(job_result.info_log_count, 3)
+        self.assertIsNotNone(job_result.warning_log_count)
+        self.assertEqual(job_result.warning_log_count, 2)
+        self.assertIsNotNone(job_result.error_log_count)
+        self.assertEqual(job_result.error_log_count, 3)
+
     def test_object_vars(self):
         """
         Test that Object variable fields behave as expected.
@@ -906,9 +927,9 @@ class JobFileOutputTest(TransactionTestCase):
         with self.assertRaises(models.FileAttachment.DoesNotExist):
             models.FileAttachment.objects.get(filename="extras.FileAttachment/bytes/filename/mimetype/output.txt")
 
-    # It would be great to also test the output-to-filesystem case when using JOB_FILE_IO_STORAGE=FileSystemStorage;
-    # unfortunately with FileField(storage=callable), the callable gets evaluated only at declaration time, not at
-    # usage/runtime, so override_settings(JOB_FILE_IO_STORAGE) doesn't work the way you'd hope it would.
+    # It would be great to also test the output-to-filesystem case when using FileSystemStorage; unfortunately with
+    # FileField(storage=callable), the callable gets evaluated only at declaration time, not at usage/runtime,
+    # so override_settings(STORAGES["nautobotjobfiles"]["BACKEND"]) doesn't work the way you'd hope it would.
 
     def test_output_file_too_large(self):
         module = "file_output"
@@ -1261,10 +1282,10 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         status = models.Status.objects.get_for_model(Location).first()
         loc = Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
         models.ObjectChange.objects.all().delete()
-        tag = models.Tag.objects.create(name="A Test Tag")
-        tag.content_types.add(ContentType.objects.get_for_model(Location))
+        tag_instance = models.Tag.objects.create(name="A Test Tag")
+        tag_instance.content_types.add(ContentType.objects.get_for_model(Location))
         with web_request_context(user=self.user):
-            loc.tags.add(tag)
+            loc.tags.add(tag_instance)
         job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
         self.assertIsNotNone(job_result)
         expected_log_messages = [

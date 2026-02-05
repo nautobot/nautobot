@@ -60,7 +60,24 @@ Nautobot makes use of the [`django-prometheus`](https://github.com/korfuri/djang
 - Django middleware latency histograms
 - Other Django related metadata metrics
 
-For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance.
+Additionally, there are a number of metrics custom to Nautobot specifically:
+
+| Name                                 | Description                                                                | Type    | Exposed By |
+|--------------------------------------|----------------------------------------------------------------------------|---------|------------|
+| `health_check_database_info`         | Result of the last database health check                                   | Gauge   | Web Server |
+| `health_check_redis_backend_info`    | Result of the last redis health check                                      | Gauge   | Web Server |
+| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps     | Gauge   | Web Server |
+| `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | Worker     |
+| `nautobot_worker_finished_jobs`      | The amount of jobs that were finished (incl. status label)                 | Counter | Worker     |
+| `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
+| `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
+
+!!! note
+    Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.
+
+These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to do perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
+
+For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance. For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
 
 ## Multi Processing Notes
 
@@ -68,6 +85,3 @@ When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI w
 
 !!! warning
     If having accurate long-term metrics in a multi-process environment is crucial to your deployment, it's recommended you use the `uwsgi` library instead of `gunicorn`. The issue lies in the way `gunicorn` tracks worker processes (vs `uwsgi`) which helps manage the metrics files created by the above configurations. If you're using Nautobot with gunicorn in a containerized environment following the one-process-per-container methodology, then you will likely not need to change to `uwsgi`. More details can be found in  [issue #3779](https://github.com/netbox-community/netbox/issues/3779#issuecomment-590547562).
-
-!!! note
-    Metrics from the Celery worker are not available from Nautobot at this time.  However, additional tools such as [flower](https://flower.readthedocs.io/en/latest/) can be used to monitor the Celery workers until these metrics are exposed through Nautobot.

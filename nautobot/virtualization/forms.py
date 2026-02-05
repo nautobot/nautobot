@@ -1,5 +1,4 @@
 from django import forms
-from django.core.exceptions import ValidationError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -8,7 +7,6 @@ from nautobot.core.forms import (
     BulkEditNullBooleanSelect,
     BulkRenameForm,
     CommentField,
-    ConfirmationForm,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableNameField,
@@ -26,7 +24,7 @@ from nautobot.dcim.form_mixins import (
     LocatableModelFormMixin,
 )
 from nautobot.dcim.forms import INTERFACE_MODE_HELP_TEXT, InterfaceCommonForm
-from nautobot.dcim.models import Device, Location, Platform, Rack, SoftwareImageFile, SoftwareVersion
+from nautobot.dcim.models import Device, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     LocalContextFilterForm,
@@ -117,6 +115,13 @@ class ClusterGroupBulkEditForm(NautobotBulkEditForm):
 class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all())
     cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        query_params={
+            "location": "$location",
+        },
+    )
     comments = CommentField()
 
     class Meta:
@@ -127,9 +132,21 @@ class ClusterForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
             "cluster_group",
             "tenant",
             "location",
+            "devices",
             "comments",
             "tags",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance.present_in_database:
+            self.initial["devices"] = self.instance.devices.values_list("id", flat=True)
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        instance.devices.set(self.cleaned_data["devices"])
+        return instance
 
 
 class ClusterBulkEditForm(
@@ -141,6 +158,8 @@ class ClusterBulkEditForm(
     cluster_type = DynamicModelChoiceField(queryset=ClusterType.objects.all(), required=False)
     cluster_group = DynamicModelChoiceField(queryset=ClusterGroup.objects.all(), required=False)
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    add_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    remove_devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
     comments = CommentField(widget=SmallTextarea, label="Comments")
 
     class Meta:
@@ -167,62 +186,6 @@ class ClusterFilterForm(NautobotFilterForm, LocatableModelFilterFormMixin, Tenan
         null_option="None",
     )
     tags = TagFilterField(model)
-
-
-class ClusterAddDevicesForm(BootstrapMixin, forms.Form):
-    location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        required=False,
-        query_params={"content_type": "virtualization.cluster"},
-    )
-    rack = DynamicModelChoiceField(
-        queryset=Rack.objects.all(),
-        required=False,
-        null_option="None",
-        query_params={
-            "location": "$location",
-        },
-    )
-    devices = DynamicModelMultipleChoiceField(
-        queryset=Device.objects.all(),
-        query_params={
-            "location": "$location",
-            "rack": "$rack",
-            "cluster": "null",
-        },
-    )
-
-    class Meta:
-        fields = [
-            "location",
-            "rack",
-            "devices",
-        ]
-
-    def __init__(self, cluster, *args, **kwargs):
-        self.cluster = cluster
-
-        super().__init__(*args, **kwargs)
-
-        self.fields["devices"].choices = []
-
-    def clean(self):
-        super().clean()
-
-        # If the Cluster is assigned to a Location, all Devices must exist within that Location
-        if self.cluster.location is not None:
-            for device in self.cleaned_data.get("devices", []):
-                if device.location and self.cluster.location not in device.location.ancestors(include_self=True):
-                    raise ValidationError(
-                        {
-                            "devices": f"{device} belongs to a location ({device.location}) that "
-                            f"does not fall within this cluster's location ({self.cluster.location})."
-                        }
-                    )
-
-
-class ClusterRemoveDevicesForm(ConfirmationForm):
-    pk = forms.ModelMultipleChoiceField(queryset=Device.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 #
@@ -521,9 +484,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         if self.instance is not None and self.instance.present_in_database:
             self.fields["virtual_machine"].disabled = True
 
-        virtual_machine = VirtualMachine.objects.get(
-            pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
-        )
+        if isinstance(self.data.get("virtual_machine"), VirtualMachine):
+            virtual_machine = self.data.get("virtual_machine")
+        else:
+            virtual_machine = VirtualMachine.objects.get(
+                pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+            )
 
         # Add current location to VLANs query params
         location = virtual_machine.location
@@ -532,7 +498,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+class VMInterfaceCreateForm(
+    form_from_model(VMInterface, ["tags"]),
+    BootstrapMixin,
+    InterfaceCommonForm,
+    RoleNotRequiredModelFormMixin,
+):
     model = VMInterface
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
@@ -597,15 +568,18 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequired
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+        if isinstance(self.initial.get("virtual_machine"), VirtualMachine):
+            virtual_machine = self.initial["virtual_machine"]
+            vm_id = virtual_machine.pk
+        else:
+            vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+            if isinstance(vm_id, list):
+                vm_id = vm_id[0]
+            virtual_machine = VirtualMachine.objects.get(pk=vm_id)
 
         # Restrict parent interface assignment by VM
         self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
-
-        virtual_machine = VirtualMachine.objects.get(
-            pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
-        )
 
         # Add current location to VLANs query params
         location = virtual_machine.location

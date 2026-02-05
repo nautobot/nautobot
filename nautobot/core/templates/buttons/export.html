@@ -1,7 +1,7 @@
 {% if export_url %}
     {% if list_element %}
         {% if export_templates %}
-            <li class="text-center">Export Templates</li>
+            <li class="dropdown-header fs-5">Export Templates</li>
         {% endif %}
         {% if include_yaml_option %}
             <li>
@@ -11,8 +11,8 @@
                     <input type="hidden" name="query_string" value="{{ query_string }}">
                     <input type="hidden" name="_schedule_type" value="immediately">
                     <input type="hidden" name="export_format" value="yaml">
-                    <button type="submit">
-                        <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as YAML
+                    <button class="dropdown-item" type="submit">
+                        <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML
                     </button>
                 </form>
             </li>
@@ -24,8 +24,8 @@
                 <input type="hidden" name="query_string" value="{{ query_string }}">
                 <input type="hidden" name="_schedule_type" value="immediately">
                 <input type="hidden" name="export_format" value="csv">
-                <button type="submit">
-                    <span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> Export as CSV
+                <button class="dropdown-item" type="submit">
+                    <span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV
                 </button>
             </form>
         </li>
@@ -38,9 +38,9 @@
                         <input type="hidden" name="export_template" value="{{ et.pk }}">
                         <input type="hidden" name="query_string" value="{{ query_string }}">
                         <input type="hidden" name="_schedule_type" value="immediately">
-                        <button type="submit"
+                        <button class="dropdown-item" type="submit"
                                 {% if et.description %}title="{{ et.description }}"{% endif %}
-                        ><span class="mdi mdi-database-export text-muted" aria-hidden="true"></span> {{ et.name }}</button>
+                        ><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> {{ et.name }}</button>
                     </form>
                 </li>
             {% endfor %}
@@ -52,7 +52,7 @@
                     <span class="mdi mdi-database-export" aria-hidden="true"></span>
                     Export
                 </button>
-                <form id="export_default" style="display: inline-block" action="{{ export_url }}" method="post">
+                <form id="export_default" class="d-inline-block" action="{{ export_url }}" method="post">
                     {% csrf_token %}
                     <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                     <input type="hidden" name="query_string" value="{{ query_string }}">
@@ -60,14 +60,13 @@
                            value="{% if include_yaml_option %}yaml{% else %}csv{% endif %}">
                     <input type="hidden" name="_schedule_type" value="immediately">
                 </form>
-                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
+                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-right">
+                <ul class="dropdown-menu dropdown-menu-end">
                     {% if include_yaml_option %}
                         <li>
-                            <button type="submit" class="btn btn-link" form="export_default">Export as YAML</button>
+                            <button type="submit" class="dropdown-item" form="export_default">Export as YAML</button>
                         </li>
                         <li>
                             <form action="{{ export_url }}" method="post">
@@ -75,16 +74,16 @@
                                 <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                                 <input type="hidden" name="query_string" value="{{ query_string }}">
                                 <input type="hidden" name="_schedule_type" value="immediately">
-                                <button type="submit" class="btn btn-link">Export as CSV</button>
+                                <button type="submit" class="dropdown-item">Export as CSV</button>
                             </form>
                         </li>
                     {% else %}
                         <li>
-                            <button type="submit" class="btn btn-link" form="export_default">CSV format</button>
+                            <button type="submit" class="dropdown-item" form="export_default">CSV format</button>
                         </li>
                     {% endif %}
                     {% if export_templates %}
-                        <li class="divider"></li>
+                        <li class="dropdown-divider"></li>
                         {% for et in export_templates %}
                             <li>
                                 <form action="{{ export_url }}" method="post">
@@ -93,7 +92,7 @@
                                     <input type="hidden" name="export_template" value="{{ et.pk }}">
                                     <input type="hidden" name="query_string" value="{{ query_string }}">
                                     <input type="hidden" name="_schedule_type" value="immediately">
-                                    <button type="submit" class="btn btn-link"
+                                    <button type="submit" class="dropdown-item"
                                             {% if et.description %}title="{{ et.description }}"{% endif %}
                                     >{{ et.name }}</button>
                                 </form>
@@ -103,7 +102,7 @@
                 </ul>
             </div>
         {% else %}
-            <form style="display: inline-block" action="{{ export_url }}" method="post">
+            <form class="d-inline-block" action="{{ export_url }}" method="post">
                 {% csrf_token %}
                 <input type="hidden" name="content_type" value="{{ content_type.pk }}">
                 <input type="hidden" name="query_string" value="{{ query_string }}">

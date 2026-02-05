@@ -4,11 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Circuits",
-        weight=500,
+        icon=NavigationIconChoices.CIRCUITS,
+        weight=NavigationWeightChoices.CIRCUITS,
         groups=(
             NavMenuGroup(
                 name="Circuits",

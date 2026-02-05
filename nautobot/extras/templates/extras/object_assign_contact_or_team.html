@@ -9,9 +9,9 @@
 {% endblock %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Contact Association</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Contact Association</strong></div>
+        <div class="card-body">
             {% render_field form.contact %}
             {% render_field form.team %}
             {% render_field form.role %}
@@ -23,9 +23,18 @@
 {% endblock %}
 
 {% block buttons %}
-    <button type="submit" name="_create" class="btn btn-primary">Assign</button>
-    <button type="submit" name="_addanother" class="btn btn-primary">Assign and Add Another</button>
-    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Assign
+    </button>
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Assign and Add Another
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
 {% endblock %}
 
 {% block javascript %}

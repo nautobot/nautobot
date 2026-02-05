@@ -3,9 +3,9 @@
 {% load form_helpers %}
 
 {% block form %}
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Wireless Network</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Wireless Network</strong></div>
+        <div class="card-body">
             {% render_field form.name %}
             {% render_field form.ssid %}
             {% render_field form.description %}
@@ -16,9 +16,9 @@
             {% render_field form.enabled %}
         </div>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading"><strong>Controller Managed Device Group Assignment</strong></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><strong>Controller Managed Device Group Assignment</strong></div>
+        <div class="card-body overflow-auto">
             {% if controller_managed_device_groups.errors %}
                 <div class="text-danger">
                     Please correct the error(s) below:

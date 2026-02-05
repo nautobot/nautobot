@@ -35,7 +35,7 @@ class BreadcrumbItemsTestCase(TestCase):
         item = ViewNameBreadcrumbItem(view_name="home", label="Home")
         context = Context({})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(url, "/")
         self.assertEqual(label, "Home")
@@ -50,7 +50,7 @@ class BreadcrumbItemsTestCase(TestCase):
         )
         context = Context({})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/?name=test")
         self.assertEqual(label, "Filtered Locations Types")
@@ -65,7 +65,7 @@ class BreadcrumbItemsTestCase(TestCase):
         )
         context = Context({"object": self.location_type})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(
             url, f"/dcim/location-types/{self.location_type.pk}/?{urlencode({'name': self.location_type.name})}"
@@ -79,7 +79,7 @@ class BreadcrumbItemsTestCase(TestCase):
             label=lambda context: f"Hi, {context['user']}!",
         )
         context = Context({"user": "Frodo"})
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, "/")
         self.assertEqual(label, "Hi, Frodo!")
 
@@ -148,7 +148,7 @@ class BreadcrumbItemsTestCase(TestCase):
                 item = ModelBreadcrumbItem(**test_case["kwargs"])
                 context = Context({"object": self.location_type, "model_type": Device, "device_name": "abc"})
 
-                url, label = item.as_pair(context)
+                url, label = next(item.as_pair(context))
 
                 self.assertEqual(url, test_case["expected_url"])
                 self.assertEqual(label, test_case["expected_label"])
@@ -157,7 +157,7 @@ class BreadcrumbItemsTestCase(TestCase):
         item = ModelBreadcrumbItem(model_key="object", label="custom LaBeL")
         context = Context({"object": self.location_type})
 
-        _, label = item.as_pair(context)
+        _, label = next(item.as_pair(context))
         self.assertEqual(label, "custom LaBeL")
 
     def test_model_item_from_context(self):
@@ -165,7 +165,7 @@ class BreadcrumbItemsTestCase(TestCase):
         item = ModelBreadcrumbItem(model_key="object")
         context = Context({"object": self.location_type})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(url, "/dcim/location-types/")
         self.assertEqual(label, "Location Types")
@@ -175,7 +175,7 @@ class BreadcrumbItemsTestCase(TestCase):
         item = InstanceBreadcrumbItem(instance_key="object")
         context = Context({"object": self.location_type})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(url, f"/dcim/location-types/{self.location_type.pk}/")
         self.assertEqual(label, str(self.location_type))
@@ -192,7 +192,7 @@ class BreadcrumbItemsTestCase(TestCase):
 
         for item in items:
             with self.subTest():
-                _, label = item.as_pair(context)
+                _, label = next(item.as_pair(context))
                 self.assertEqual(label, "Custom Label")
 
     def test_no_reverse_match(self):
@@ -200,7 +200,7 @@ class BreadcrumbItemsTestCase(TestCase):
         item = ViewNameBreadcrumbItem(view_name="nonexistent")
         context = Context({})
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
 
         self.assertEqual(url, "")
         self.assertEqual(label, "")
@@ -210,12 +210,12 @@ class BreadcrumbItemsTestCase(TestCase):
         context = Context({})
         item = InstanceBreadcrumbItem(instance_key="missing_key")
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, "")
         self.assertEqual(label, "")
 
         item = ModelBreadcrumbItem(model_key="missing_key")
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, "")
         self.assertEqual(label, "")
 
@@ -223,7 +223,7 @@ class BreadcrumbItemsTestCase(TestCase):
         context = Context({"object": LocationType.objects.create(name="custom name")})
         item = InstanceBreadcrumbItem()
 
-        _, label = item.as_pair(context)
+        _, label = next(item.as_pair(context))
         self.assertEqual(label, "custom name")
 
     def test_instance_item_is_working_with_directly_passed_instance(self):
@@ -231,7 +231,7 @@ class BreadcrumbItemsTestCase(TestCase):
         instance = LocationType.objects.create(name="cUsToM CoUnTrY")
         item = InstanceBreadcrumbItem(instance=instance)
 
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, f"/dcim/location-types/{instance.pk}/")
         self.assertEqual(label, "cUsToM CoUnTrY")
 
@@ -244,17 +244,17 @@ class BreadcrumbItemsTestCase(TestCase):
         context = Context({"object": location, "status": status})
 
         item = InstanceBreadcrumbItem(instance=context_object_attr("location_type"))
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, f"/dcim/location-types/{location_type.pk}/")
-        self.assertEqual(label, "Country → State")
+        self.assertEqual(label, "State")
 
         item = BaseBreadcrumbItem(label=context_object_attr("name", context_key="status"))
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, "")
         self.assertEqual(label, status.name)
 
         item = InstanceBreadcrumbItem(instance=context_object_attr("location_type.parent"))
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, f"/dcim/location-types/{parent_location_type.pk}/")
         self.assertEqual(label, "Country")
 
@@ -263,7 +263,7 @@ class BreadcrumbItemsTestCase(TestCase):
         context = Context({"object": LocationType.objects.create(name="custom name", parent=parent_location_type)})
         item = InstanceParentBreadcrumbItem()
 
-        _, label = item.as_pair(context)
+        _, label = next(item.as_pair(context))
         self.assertEqual(label, "cUsToM CoUnTrY")
 
     def test_instance_parent_is_create_proper_url(self):
@@ -273,12 +273,12 @@ class BreadcrumbItemsTestCase(TestCase):
         context = Context({"object": location_type})
 
         item = InstanceParentBreadcrumbItem()
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, f"/dcim/location-types/?parent={parent_location_type.pk}")
         self.assertEqual(label, "Country")
 
         item = InstanceParentBreadcrumbItem(parent_query_param="location", parent_lookup_key="name")
-        url, label = item.as_pair(context)
+        url, label = next(item.as_pair(context))
         self.assertEqual(url, "/dcim/location-types/?location=Country")
         self.assertEqual(label, "Country")
 
@@ -296,8 +296,8 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
 
         # Should have defaults for list and details
-        self.assertEqual(len(breadcrumbs.items["list"]), 2)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["list"]), 0)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
         # Verify adding items
         new_item = BaseBreadcrumbItem()
@@ -306,7 +306,7 @@ class BreadcrumbsTestCase(TestCase):
         self.assertEqual(len(breadcrumbs.items["list"]), 1)
         self.assertEqual(breadcrumbs.items["list"][0], new_item)
 
-        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 1)
         self.assertEqual(breadcrumbs.items["detail"][0], new_item)
 
         self.assertEqual(len(breadcrumbs.items["custom_action"]), 1)
@@ -325,7 +325,7 @@ class BreadcrumbsTestCase(TestCase):
 
         # Other defaults should still exist
         self.assertIn("detail", breadcrumbs.items)
-        self.assertEqual(len(breadcrumbs.items["detail"]), 3)
+        self.assertEqual(len(breadcrumbs.items["detail"]), 2)
 
     def test_get_items_from_action_static_method(self):
         """Test the _get_items_from_action static method."""
@@ -355,7 +355,6 @@ class BreadcrumbsTestCase(TestCase):
         breadcrumbs = Breadcrumbs()
         expected_items = [
             ("/dcim/location-types/", "Location Types"),
-            (f"/dcim/location-types/{self.location_type.pk}/", str(self.location_type)),
         ]
 
         # Test with an action that doesn't exist but detail=True
@@ -366,17 +365,17 @@ class BreadcrumbsTestCase(TestCase):
         items = breadcrumbs.get_breadcrumbs_items(context)
 
         # Should get 2 items from detail fallback
-        self.assertEqual(len(items), 2)
+        self.assertEqual(len(items), 1)
         self.assertEqual(items, expected_items)
 
     def test_render_method(self):
         """Test the render method."""
         breadcrumbs = Breadcrumbs()
-        context = Context({"view_action": "list", "model": Device})
+        context = Context({"detail": True, "model": Device})
 
         html = breadcrumbs.render(context)
 
-        expected_html = """<ol class="breadcrumb"><li><a href="/dcim/devices/">Devices</a></li></ol>"""
+        expected_html = """<nav aria-label="Breadcrumbs" class="mt-1"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/dcim/devices/">Devices</a></li></ol></nav>"""
         self.assertHTMLEqual(html, expected_html)
 
     def test_get_extra_context(self):

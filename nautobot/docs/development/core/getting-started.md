@@ -180,6 +180,7 @@ Available tasks:
   check-migrations             Check for missing migrations.
   check-schema                 Render the REST API schema and check for problems.
   cli                          Launch a bash shell inside the running Nautobot (or other) Docker container.
+  compress-images              Check whether included images are well-optimized, and optionally compress them if desirable.
   createsuperuser              Create a new Nautobot superuser account (default: "admin"), will prompt for password.
   debug                        Start Nautobot and its dependencies in debug mode.
   destroy                      Destroy all containers and volumes.
@@ -188,6 +189,7 @@ Available tasks:
   docker-push                  Tags and pushes docker images to the appropriate repos, intended for release use only.
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.
+  eslint                       Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag.
   hadolint                     Check Dockerfile for hadolint compliance and other style issues.
   lint                         Run all linters.
   loaddata                     Load data from file.
@@ -197,10 +199,12 @@ Available tasks:
   migrate                      Perform migrate operation in Django.
   migration-test               Test database migration from a given dataset to latest Nautobot schema.
   nbshell                      Launch an interactive Nautobot shell.
+  npm                          Execute any given npm command inside `project-static` directory.
   open-docs-web                Navigate to the mkdocs interface in your web browser.
   open-nautobot-web            Navigate to the Nautobot interface in your web browser.
   open-selenium-vnc            Navigate to the selenium VNC browser view.
   post-upgrade                 Performs Nautobot common post-upgrade operations using a single entrypoint.
+  prettier                     Run Prettier to perform JavaScript code formatting. By default only validate the formatting, optionally apply it with `--fix` flag.
   pylint                       Perform static analysis of Nautobot code.
   restart                      Gracefully restart containers.
   ruff                         Run ruff to perform code formatting and linting.
@@ -209,6 +213,9 @@ Available tasks:
   start                        Start Nautobot and its dependencies in detached mode.
   stop                         Stop Nautobot and its dependencies.
   tests                        Run Nautobot automated tests.
+  ui-build                     Build Nautobot UI from source.
+  ui-code-check                Check Nautobot UI source code style and formatting.
+  ui-code-format               Format Nautobot UI source code.
   version                      Show the version of Nautobot Python package or bump it when a valid bump rule is provided.
   vscode                       Visual Studio Code specific environment helpers.
   yamllint                     Run yamllint to validate formatting applies to YAML standards.
@@ -228,15 +235,17 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background
-* `invoke logs [-s servicename]` - View the logs of the containers (or a specific container/service, such as `invoke logs -s nautobot`)
+* `invoke start [-s servicename] [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or specific containers/services, such as `invoke start -s redis -s db`) to run in the background
+* `invoke logs [-s servicename] [-s servicename]` - View the logs of the containers (or specific containers/services, such as `invoke logs -s nautobot -s celery_worker`)
+    * You can add `-f` or `--follow` to follow the logs in real time.
+    * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
 * `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
-* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
 !!! note
-    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke start -s mkdocs`.
+    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke serve-docs`.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.

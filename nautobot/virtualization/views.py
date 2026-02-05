@@ -1,8 +1,4 @@
-from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils.html import mark_safe
 from django.utils.http import urlencode
 from rest_framework.decorators import action
@@ -12,11 +8,9 @@ from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
-from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.models import Device
 from nautobot.dcim.tables import DeviceTable
 from nautobot.dcim.utils import render_software_version_and_image_files
 from nautobot.extras.models import ConfigContext
@@ -114,133 +108,22 @@ class ClusterUIViewSet(NautobotUIViewSet):
             ),
             object_detail.ObjectsTablePanel(
                 weight=100,
-                section=SectionChoices.RIGHT_HALF,
+                section=SectionChoices.FULL_WIDTH,
                 table_class=DeviceTable,
-                table_filter="cluster",
+                table_filter="clusters",
                 table_title="Host Devices",
                 enable_bulk_actions=True,
-                add_button_route=None,
-                form_id="device_form",
-                footer_buttons=[
-                    object_detail.FormButton(
-                        form_id="device_form",
-                        link_name="virtualization:cluster_remove_devices",
-                        label="Remove Devices",
-                        weight=100,
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
-                    ),
-                    object_detail.Button(
-                        link_name="virtualization:cluster_add_devices",
-                        label="Add Devices",
-                        weight=200,
-                        color=ButtonActionColorChoices.ADD,
-                        icon="mdi-plus",
-                        size="xs",
-                    ),
-                ],
+                exclude_columns=["cluster_count"],
             ),
             object_detail.ObjectsTablePanel(
-                weight=100,
+                weight=200,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.VirtualMachineTable,
                 table_filter="cluster",
-                add_button_route=None,
+                exclude_columns=["cluster"],
             ),
         )
     )
-
-
-class ClusterAddDevicesView(generic.ObjectEditView):
-    queryset = Cluster.objects.all()
-    form = forms.ClusterAddDevicesForm
-    template_name = "virtualization/cluster_add_devices.html"
-
-    def get(self, request, *args, **kwargs):
-        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = self.form(cluster, initial=normalize_querydict(request.GET, form_class=self.form))
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "cluster": cluster,
-                "form": form,
-                "return_url": reverse("virtualization:cluster", kwargs={"pk": kwargs["pk"]}),
-            },
-        )
-
-    def post(self, request, *args, **kwargs):
-        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = self.form(cluster, request.POST)
-
-        if form.is_valid():
-            device_pks = form.cleaned_data["devices"]
-            with transaction.atomic():
-                # Assign the selected Devices to the Cluster
-                for device in Device.objects.filter(pk__in=device_pks):
-                    device.cluster = cluster
-                    device.save()
-
-            messages.success(
-                request,
-                f"Added {len(device_pks)} devices to cluster {cluster}",
-            )
-            return redirect(cluster.get_absolute_url())
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "cluster": cluster,
-                "form": form,
-                "return_url": cluster.get_absolute_url(),
-            },
-        )
-
-
-class ClusterRemoveDevicesView(generic.ObjectEditView):
-    queryset = Cluster.objects.all()
-    form = forms.ClusterRemoveDevicesForm
-    template_name = "generic/object_bulk_remove.html"
-
-    def post(self, request, *args, **kwargs):
-        cluster = get_object_or_404(self.queryset, pk=kwargs["pk"])
-
-        if "_confirm" in request.POST:
-            form = self.form(request.POST)
-            if form.is_valid():
-                device_pks = form.cleaned_data["pk"]
-                with transaction.atomic():
-                    # Remove the selected Devices from the Cluster
-                    for device in Device.objects.filter(pk__in=device_pks):
-                        device.cluster = None
-                        device.save()
-
-                messages.success(
-                    request,
-                    f"Removed {len(device_pks)} devices from cluster {cluster}",
-                )
-                return redirect(cluster.get_absolute_url())
-
-        else:
-            form = self.form(initial={"pk": request.POST.getlist("pk")})
-
-        selected_objects = Device.objects.filter(pk__in=form.initial["pk"])
-        device_table = DeviceTable(list(selected_objects), orderable=False)
-
-        return render(
-            request,
-            self.template_name,
-            {
-                "form": form,
-                "parent_obj": cluster,
-                "table": device_table,
-                "obj_type_plural": "devices",
-                "return_url": cluster.get_absolute_url(),
-            },
-        )
 
 
 #
@@ -308,6 +191,8 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 table_class=VRFDeviceAssignmentTable,
                 table_filter="virtual_machine",
                 exclude_columns=["related_object_type", "related_object_name"],
+                related_list_url_name="ipam:vrf_list",
+                related_field_name="virtual_machines",
             ),
             object_detail.ObjectFieldsPanel(
                 weight=200,
@@ -379,6 +264,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
         detail=True,
         url_path="config-context",
         url_name="configcontext",
+        custom_view_base_action="view",
         custom_view_additional_permissions=["extras.view_configcontext"],
     )
     def config_context(self, request, pk):
@@ -405,7 +291,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
             "source_contexts": ConfigContext.objects.restrict(request.user, "view").get_for_object(instance),
             "format": data_format,
             "template": "extras/object_configcontext.html",
-            "base_template": "virtualization/virtualmachine.html",
+            "base_template": "generic/object_retrieve.html",
         }
 
         return Response(context)

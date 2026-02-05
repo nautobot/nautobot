@@ -60,12 +60,12 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
         # Fill Circuit creation form
         self.fill_select2_field("provider", self.provider.name)
-        self.browser.fill("cid", cid)
+        self.fill_input("cid", cid)
         self.fill_select2_field("circuit_type", self.circuit_type.name)
         self.fill_select2_field("status", "")  # pick first status
-        self.browser.fill("install_date", "2025-01-01")
-        self.browser.fill("commit_rate", 192)
-        self.browser.fill("description", "My Precious Circuit")
+        self.fill_input("install_date", "2025-01-01")
+        self.fill_input("commit_rate", 192)
+        self.fill_input("description", "My Precious Circuit")
         self.fill_select2_field("tenant_group", "Family Inc.")
         self.fill_select2_field("tenant", "Tenant 1")
 
@@ -85,14 +85,14 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
         circuit = Circuit.objects.get(cid=cid)
         self.assertIn(self.live_server_url + reverse("circuits:circuit", kwargs={"pk": circuit.pk}), self.browser.url)
 
-        self.assertPanelValue("Circuit", "Circuit ID", cid)
-        self.assertPanelValue("Circuit", "Status", "Active")
-        self.assertPanelValue("Circuit", "Provider", self.provider.name)
-        self.assertPanelValue("Circuit", "Circuit Type", self.circuit_type.name)
-        self.assertPanelValue("Circuit", "Tenant", self.tenant.name)
-        self.assertPanelValue("Circuit", "Date Installed", "Jan. 1, 2025")
-        self.assertPanelValue("Circuit", "Commit Rate (Kbps)", "192")
-        self.assertPanelValue("Circuit", "Description", description)
+        self.assertPanelValue("CIRCUIT", "Circuit ID", cid)
+        self.assertPanelValue("CIRCUIT", "Status", "Active")
+        self.assertPanelValue("CIRCUIT", "Provider", self.provider.name)
+        self.assertPanelValue("CIRCUIT", "Circuit Type", self.circuit_type.name)
+        self.assertPanelValue("CIRCUIT", "Tenant", self.tenant.name)
+        self.assertPanelValue("CIRCUIT", "Date Installed", "Jan. 1, 2025")
+        self.assertPanelValue("CIRCUIT", "Commit Rate (Kbps)", "192")
+        self.assertPanelValue("CIRCUIT", "Description", description)
 
     def test_circuit_create_termination(self):
         circuit = self.create_circuit("Circuit-test-termination")
@@ -105,7 +105,7 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
                 self.assertIn(details_url, self.browser.url)
 
                 # Find and click add termination button
-                termination_panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "Termination - {side} Side")]'
+                termination_panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "TERMINATION - {side} SIDE")]'
                 self.browser.find_by_xpath(f'{termination_panel_xpath}//a[normalize-space()="Add"]').click()
 
                 port_speed = ord(side)
@@ -116,17 +116,17 @@ class CircuitTestCase(SeleniumTestCase, ObjectsListMixin, ObjectDetailsMixin):
 
                 # Fill termination creation form
                 self.fill_select2_field("location", self.location.name)
-                self.browser.fill("port_speed", port_speed)
-                self.browser.fill("upstream_speed", upstream_speed)
-                self.browser.fill("xconnect_id", xconnect_id)
-                self.browser.fill("pp_info", pp_info)
-                self.browser.fill("description", description)
+                self.fill_input("port_speed", port_speed)
+                self.fill_input("upstream_speed", upstream_speed)
+                self.fill_input("xconnect_id", xconnect_id)
+                self.fill_input("pp_info", pp_info)
+                self.fill_input("description", description)
                 self.click_edit_form_create_button()
 
                 self.assertTrue(self.browser.is_text_present(f"Created circuit termination Termination {side}"))
 
                 # Assert that value are properly set
-                panel_label = f"Termination - {side} Side"
+                panel_label = f"TERMINATION - {side} SIDE"
                 self.assertPanelValue(panel_label, "Location", self.location.name)
                 self.assertPanelValue(panel_label, "Speed", port_speed)
                 self.assertPanelValue(panel_label, "Speed", upstream_speed)

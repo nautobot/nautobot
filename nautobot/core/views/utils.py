@@ -45,7 +45,7 @@ def check_filter_for_display(filters, field_name, values):
     Return any additional context data for the template.
 
     Args:
-        filters (OrderedDict): The output of `.get_filters()` of a desired FilterSet
+        filters (dict): The filters of a desired FilterSet
         field_name (str): The name of the filter to get a label for and lookup values
         values (list[str]): List of strings that may be PKs to look up
 
@@ -282,7 +282,7 @@ def prepare_cloned_fields(instance):
     applicable.
     """
     form_class = get_form_for_model(instance)
-    form = form_class() if form_class is not None else None
+    form = form_class(instance=instance) if form_class is not None else None
     params = []
     for field_name in getattr(instance, "clone_fields", []):
         field = instance._meta.get_field(field_name)
@@ -306,12 +306,17 @@ def prepare_cloned_fields(instance):
         if field_value is False:
             field_value = ""
 
-        # This is likely an m2m field
-        if isinstance(field_value, list):
+        # Handle M2M fields or lists
+        if hasattr(field_value, "all") and callable(field_value.all):
+            # This is a manager for a M2M relationship
+            for related_obj in field_value.all():
+                item_value = getattr(related_obj, "pk", str(related_obj))  # pk or str()
+                params.append((field_name, item_value))
+        # This is likely a list from another type of field
+        elif isinstance(field_value, list):
             for fv in field_value:
                 item_value = getattr(fv, "pk", str(fv))  # pk or str()
                 params.append((field_name, item_value))
-
         # Omit empty values
         elif field_value not in (None, ""):
             params.append((field_name, field_value))
@@ -586,9 +591,9 @@ def get_bulk_queryset_from_view(
 
     queryset = view_class.queryset.restrict(user, action)
 
-    # The filterset_class is determined from model on purpose, as filterset_class the view as a param, will not work
-    # with a job. It is better to be consistent with each with sending the same params that will
-    # always be available from to the confirmation page and to the job.
+    # The filterset_class is determined from model on purpose versus getting it from the view itself. This is
+    # because the filterset_class on the view as a param, will not work with a job. It is better to be consistent
+    # with each with sending the same params that will always be available from to the confirmation page and to the job.
     filterset_class = get_filterset_for_model(model)
 
     if not filterset_class:

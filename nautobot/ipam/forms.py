@@ -72,10 +72,10 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
+class NamespaceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     class Meta:
         model = Namespace
-        fields = ["name", "description", "location", "tags"]
+        fields = ["name", "description", "tenant", "location", "tags"]
 
 
 class NamespaceBulkEditForm(
@@ -84,18 +84,21 @@ class NamespaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Namespace
         nullable_fields = [
             "description",
+            "tenant",
             "location",
         ]
 
 
-class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm, TenancyFilterForm):
     model = Namespace
+    field_order = ["q", "name", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
 

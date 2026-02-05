@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from django.db.models import Sum
 from django.template import Context
 from django.test import RequestFactory
 from django.urls import reverse
@@ -9,8 +10,15 @@ from django.urls import reverse
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
+from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.testing import TestCase
+from nautobot.core.ui.choices import EChartsTypeChoices
+from nautobot.core.ui.echarts import (
+    EChartsBase,
+    queryset_to_nested_dict_keys_as_series,
+    queryset_to_nested_dict_records_as_series,
+)
 from nautobot.core.ui.object_detail import (
     _ObjectDetailAdvancedTab,
     _ObjectDetailMainTab,
@@ -23,10 +31,11 @@ from nautobot.core.ui.object_detail import (
     Panel,
     SectionChoices,
 )
-from nautobot.dcim.models import Device, DeviceRedundancyGroup
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.ipam.models import Prefix
 
 
 class DataTablePanelTest(TestCase):
@@ -232,6 +241,272 @@ class ObjectsTablePanelTest(TestCase):
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
 
 
+class EChartsBaseTests(TestCase):
+    def setUp(self):
+        self.data_normalized = {"x": ["A", "B"], "series": [{"name": "S1", "data": [1, 2]}]}
+        self.data_nested = {
+            "Series1": {"x1": 10, "x2": 20},
+            "Series2": {"x1": 30, "x2": 40},
+        }
+        self.chart = EChartsBase()
+
+    def test_transform_data_internal_format(self):
+        data = {"x": ["A", "B"], "series": [{"name": "S1", "data": [1, 2]}]}
+        result = self.chart._transform_data(data)
+        self.assertEqual(result, data)
+
+    def test_transform_data_empty_dict(self):
+        result = self.chart._transform_data({})
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_transform_data_none_input(self):
+        result = self.chart._transform_data(None)
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_transform_data_nested_format(self):
+        data = {"Series1": {"x1": 5, "x2": 10}, "Series2": {"x1": 7, "x2": 14}}
+        expected = {
+            "x": ["x1", "x2"],
+            "series": [{"name": "Series1", "data": [5, 10]}, {"name": "Series2", "data": [7, 14]}],
+        }
+        result = self.chart._transform_data(data)
+        self.assertEqual(result, expected)
+
+    def test_transform_data_nested_format_mismatched_keys(self):
+        data = {"Series1": {"x1": 5, "x2": 10}, "Series2": {"x2": 14, "x3": 20}}
+        result = self.chart._transform_data(data)
+        # Should use union of all x labels and fill missing with 0
+        self.assertEqual(result["x"], ["x1", "x2", "x3"])
+        series1_data = next(s["data"] for s in result["series"] if s["name"] == "Series1")
+        series2_data = next(s["data"] for s in result["series"] if s["name"] == "Series2")
+        self.assertEqual(series1_data, [5, 10, 0])
+        self.assertEqual(series2_data, [0, 14, 20])
+
+    def test_transform_data_non_dict_input(self):
+        result = self.chart._transform_data([1, 2, 3])
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_get_config_basic(self):
+        chart = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            header="Test Chart",
+            description="Test Description",
+            data=self.data_normalized,
+        )
+
+        config = chart.get_config()
+        self.assertEqual(config["title"]["text"], "Test Chart")
+        self.assertEqual(config["title"]["subtext"], "Test Description")
+        self.assertEqual(config["tooltip"], {})
+        self.assertEqual(
+            config["toolbox"],
+            {
+                "show": True,
+                "feature": {
+                    "dataView": {"readOnly": True, "show": True},
+                    "saveAsImage": {"name": "Test Chart", "show": True},
+                },
+            },
+        )
+        self.assertEqual(config["series"], [{"name": "S1", "data": [1, 2], "type": "bar"}])
+        self.assertEqual(config["xAxis"]["data"], ["A", "B"])
+
+    def test_get_config_with_raw_nested_data(self):
+        chart = EChartsBase(data=self.data_nested)
+        config = chart.get_config()
+        self.assertEqual(len(config["series"]), 2)
+        self.assertEqual(
+            config["series"],
+            [
+                {"name": "Series1", "data": [10, 20], "type": "bar"},
+                {"name": "Series2", "data": [30, 40], "type": "bar"},
+            ],
+        )
+        self.assertEqual(config["xAxis"]["data"], ["x1", "x2"])
+
+    def test_get_config_empty_data(self):
+        chart = EChartsBase(data={})
+        config = chart.get_config()
+        self.assertEqual(config["series"], [])
+        self.assertEqual(config["xAxis"]["data"], [])
+
+    def test_get_config_additional_config(self):
+        chart = EChartsBase(
+            data=self.data_normalized,
+        )
+        config = chart.get_config()
+        self.assertNotIn("grid", config)
+
+        chart = EChartsBase(data=self.data_normalized, additional_config={"grid": {"show": True}})
+        config = chart.get_config()
+        self.assertIn("grid", config)
+        self.assertEqual(config["grid"]["show"], True)
+
+    def test_get_config_with_legend(self):
+        legend = {"orient": "vertical", "right": 10, "top": "center"}
+        chart = EChartsBase(data=self.data_normalized, legend=legend)
+        config = chart.get_config()
+        self.assertEqual(config["legend"], legend)
+
+    def test_get_config_combined_charts(self):
+        chart2 = EChartsBase(data={"x": ["A"], "series": [{"name": "S2", "data": [3]}]})
+        chart1 = EChartsBase(data=self.data_normalized, combined_with=chart2)
+
+        config = chart1.get_config()
+        self.assertEqual(len(config["series"]), 2)
+        self.assertEqual(config["series"][0]["name"], "S1")
+        self.assertEqual(config["series"][1]["name"], "S2")
+
+    def test_get_config_combined_charts_with_complex_data(self):
+        chart2 = EChartsBase(
+            chart_type=EChartsTypeChoices.LINE,
+            data={
+                "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            },
+        )
+        chart1 = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data={
+                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+            },
+            combined_with=chart2,
+        )
+        config = chart1.get_config()
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0], {"name": "Compliant", "type": "bar", "data": [5, 12, 8]})
+        self.assertEqual(config["series"][1], {"name": "Non Compliant", "type": "bar", "data": [10, 20, 15]})
+        self.assertEqual(
+            config["series"][2],
+            {"name": "Compliant", "type": "line", "data": [5, 12, 8], "smooth": False, "lineStyle": {}},
+        )
+        self.assertEqual(
+            config["series"][3],
+            {"name": "Non Compliant", "type": "line", "data": [10, 20, 15], "smooth": False, "lineStyle": {}},
+        )
+
+    def test_get_config_with_context_callable_and_combined_chart(self):
+        def main_data(ctx):
+            return {
+                "Compliant": {"aaa1": ctx.get("aaa1_count", 0), "dns1": 13, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            }
+
+        def combined_data(ctx):
+            return {
+                "Compliant": {"aaa": 5, "dns": ctx.get("dns_count", 0), "ntp1": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp1": 15},
+            }
+
+        ctx = Context({"aaa1_count": 5, "dns_count": 12})
+        combined_chart = EChartsBase(chart_type=EChartsTypeChoices.LINE, data=combined_data)
+        main_chart = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data=main_data,
+            combined_with=combined_chart,
+        )
+        config = main_chart.get_config(context=ctx)
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0]["data"][0], 5)  # aaa1_count
+        self.assertEqual(config["series"][2]["data"][1], 12)  # dns_count
+
+    def test_get_config_with_context_callable(self):
+        def dynamic_data(ctx):
+            return {"data": {"Devices": ctx.get("device_count", 0)}}
+
+        ctx = Context({"device_count": 42})
+        chart = EChartsBase(chart_type=EChartsTypeChoices.PIE, data=dynamic_data)
+        config = chart.get_config(context=ctx)
+        # check that after getting config data doesn't change it's still dynami_data function
+        self.assertEqual(chart.data, dynamic_data)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 42)
+        ctx = Context({"device_count": 45})
+        config = chart.get_config(context=ctx)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 45)
+
+    def test_get_config_with_context_ignored_when_data_is_not_callable(self):
+        ctx = Context({"some": "value"})
+        chart = EChartsBase(data=self.data_normalized)
+        config = chart.get_config(context=ctx)
+        self.assertEqual(config["series"][0]["data"], [1, 2])
+
+
+class QuerySetToNestedDictTests(TestCase):
+    def setUp(self):
+        self.qs = Location.objects.annotate(
+            device_count=count_related(Device, "location"), prefix_count=count_related(Prefix, "locations")
+        )
+
+    def test_records_as_series_basic_grouping(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data[location_name]["device_count"], location_name_device_count)
+        self.assertEqual(data[location_name]["prefix_count"], location_name_prefix_count)
+
+    def test_keys_as_series_basic_series(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data["device_count"][location_name], location_name_device_count)
+        self.assertEqual(data["prefix_count"][location_name], location_name_prefix_count)
+
+    def test_records_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_records_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data[location_status]["device_count"], device_count_total)
+
+    def test_keys_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_keys_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data["device_count"][location_status], device_count_total)
+
+    def test_records_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # "Nestable" and Not Nestable instead of True and False
+        self.assertIn("Nestable", data)
+        self.assertIn("Not Nestable", data)
+
+    def test_keys_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # In this case "Nestable" and Not Nestable instead of True and False
+        self.assertIn("Nestable", data["device_count"])
+        self.assertIn("Not Nestable", data["device_count"])
+
+    def test_records_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_records_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {})
+
+    def test_keys_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {"device_count": {}})
+
+
 class ObjectDetailContentExtraTabsTest(TestCase):
     """
     Test suite for verifying the behavior of ObjectDetailContent when rendering default and extra tabs.
@@ -244,7 +519,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         self.factory = RequestFactory()
         self.request = self.factory.get("/")
         self.request.user = self.user
-        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata"]
+        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata", "data_compliance"]
 
     def test_default_extra_tabs_exist(self):
         """
@@ -384,6 +659,7 @@ class ObjectDetailContentExtraTabsTest(TestCase):
         request.user = self.user
         context_data = {
             "request": request,
+            "user": self.user,
             "object": cloud_resource_type,
             "settings": {},
             "csrf_token": "",

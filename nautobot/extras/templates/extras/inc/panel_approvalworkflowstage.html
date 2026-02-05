@@ -1,0 +1,34 @@
+{% load helpers %}
+{% load approvals %}
+
+
+{% if approval_workflow_stages and perms.extras.view_approvalworkflowstage %}
+    {% for instance in approval_workflow_stages %}
+        {% with approval_workflow=instance.approval_workflow %}
+            <div class="list-group-item">
+                {{ instance.state|render_approval_workflow_state }}
+                <a href="{{ approval_workflow.get_absolute_url }}" >{{ instance }} </a> <br />
+                {{ approval_workflow.object_under_review_content_type.name|bettertitle }}
+                {{ approval_workflow.object_under_review|hyperlinked_object }}
+                <br />
+                <small>
+                    <span class="text-secondary">{{ approval_workflow.user }} -</span>
+                    <span class="text-secondary">{{ approval_workflow.created|date:settings.SHORT_DATETIME_FORMAT }}</a>
+                </small>
+            </div>
+        {% endwith %}
+        {% if forloop.last %}
+            <div class="list-group-item text-end">
+                <a href="{% url 'extras:approver_dashboard' %}">View All Approval Workflow Stages Pending Approval</a>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% elif perms.extras.view_approvalworkflowstage %}
+    <div class="card-body text-secondary">
+        No Pending Approval Workflows found
+    </div>
+{% else %}
+    <div class="card-body text-secondary">
+        <span class="mdi mdi-lock"></span> No Permission
+    </div>
+{% endif %}

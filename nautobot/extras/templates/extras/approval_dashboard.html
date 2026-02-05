@@ -1,0 +1,15 @@
+{% extends 'generic/object_list.html' %}
+{% load helpers %}
+
+{% block buttons %}
+    <div class="btn-group" role="group">
+        <a class="btn btn-primary{% if approval_view %} bg-primary nb-text-body-bg{% endif %}"
+           href="{% url 'extras:approver_dashboard' %}">
+            <span class="mdi mdi-checkbox-multiple-outline" aria-hidden="true"></span> My Approvals
+        </a>
+        <a class="btn btn-primary{% if not approval_view %} bg-primary nb-text-body-bg{% endif %}"
+           href="{% url 'extras:approvee_dashboard' %}">
+            <span class="mdi mdi-help-box-multiple-outline" aria-hidden="true"></span> My Requests
+        </a>
+    </div>
+{% endblock %}

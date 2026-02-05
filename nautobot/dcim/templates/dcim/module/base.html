@@ -4,34 +4,74 @@
 
 {% block extra_buttons %}
     {% if perms.dcim.change_module %}
-        <div class="btn-group">
-            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="caret"></span>
+        <div class="dropdown d-inline-flex">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add Components <span class="mdi mdi-chevron-down"></span>
             </button>
             <ul class="dropdown-menu">
                 {% if perms.dcim.add_consoleport %}
-                    <li><a href="{% url 'dcim:consoleport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleports' pk=object.pk %}">Console Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleports' pk=object.pk %}">
+                            <span class="mdi mdi-console" aria-hidden="true"></span> Console Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_consoleserverport %}
-                    <li><a href="{% url 'dcim:consoleserverport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleserverports' pk=object.pk %}">Console Server Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:consoleserverport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleserverports' pk=object.pk %}">
+                            <span class="mdi mdi-console-network-outline" aria-hidden="true"></span> Console Server Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_powerport %}
-                    <li><a href="{% url 'dcim:powerport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_powerports' pk=object.pk %}">Power Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:powerport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_powerports' pk=object.pk %}">
+                            <span class="mdi mdi-power-plug-outline" aria-hidden="true"></span> Power Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_poweroutlet %}
-                    <li><a href="{% url 'dcim:poweroutlet_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_poweroutlets' pk=object.pk %}">Power Outlets</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:poweroutlet_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_poweroutlets' pk=object.pk %}">
+                            <span class="mdi mdi-power-socket" aria-hidden="true"></span> Power Outlets
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_interface %}
-                    <li><a href="{% url 'dcim:interface_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_interfaces' pk=object.pk %}">Interfaces</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:interface_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_interfaces' pk=object.pk %}">
+                            <span class="mdi mdi-ethernet" aria-hidden="true"></span> Interfaces
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_frontport %}
-                    <li><a href="{% url 'dcim:frontport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_frontports' pk=object.pk %}">Front Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:frontport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_frontports' pk=object.pk %}">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Front Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_rearport %}
-                    <li><a href="{% url 'dcim:rearport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_rearports' pk=object.pk %}">Rear Ports</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:rearport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_rearports' pk=object.pk %}">
+                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Rear Ports
+                        </a>
+                    </li>
                 {% endif %}
                 {% if perms.dcim.add_modulebay %}
-                    <li><a href="{% url 'dcim:modulebay_add' %}?parent_module={{ object.pk }}&return_url={% url 'dcim:module_modulebays' pk=object.pk %}">Module Bays</a></li>
+                    <li>
+                        <a class="dropdown-item"
+                           href="{% url 'dcim:modulebay_add' %}?parent_module={{ object.pk }}&return_url={% url 'dcim:module_modulebays' pk=object.pk %}">
+                            <span class="mdi mdi-tray" aria-hidden="true"></span> Module Bays
+                        </a>
+                    </li>
                 {% endif %}
             </ul>
         </div>
@@ -40,56 +80,56 @@
 
 {% block extra_nav_tabs %}
     {% if modulebay_count %}
-        <li role="presentation" {% if active_tab == 'module-bays' %} class="active"{% endif %}>
-            <a href="{% url 'dcim:module_modulebays' pk=object.pk %}">Modules {% badge module_count %}</a>
+        <li class="nav-item" role="presentation">
+            <a href="{% url 'dcim:module_modulebays' pk=object.pk %}" class="nav-link{% if active_tab == 'module-bays' %} active{% endif %}">Modules {% badge module_count %}</a>
         </li>
     {% endif %}
     {% with interface_count=object.interfaces.count %}
         {% if interface_count %}
-            <li role="presentation" {% if active_tab == 'interfaces' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_interfaces' pk=object.pk %}">Interfaces {% badge interface_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_interfaces' pk=object.pk %}" class="nav-link{% if active_tab == 'interfaces' %} active{% endif %}">Interfaces {% badge interface_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with frontport_count=object.front_ports.count %}
         {% if frontport_count %}
-            <li role="presentation" {% if active_tab == 'front-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_frontports' pk=object.pk %}">Front Ports {% badge frontport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_frontports' pk=object.pk %}" class="nav-link{% if active_tab == 'front-ports' %} active{% endif %}">Front Ports {% badge frontport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with rearport_count=object.rear_ports.count %}
         {% if rearport_count %}
-            <li role="presentation" {% if active_tab == 'rear-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_rearports' pk=object.pk %}">Rear Ports {% badge rearport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_rearports' pk=object.pk %}" class="nav-link{% if active_tab == 'rear-ports' %} active{% endif %}">Rear Ports {% badge rearport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with consoleport_count=object.console_ports.count %}
         {% if consoleport_count %}
-            <li role="presentation" {% if active_tab == 'console-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_consoleports' pk=object.pk %}">Console Ports {% badge consoleport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_consoleports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-ports' %} active{% endif %}">Console Ports {% badge consoleport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with consoleserverport_count=object.console_server_ports.count %}
         {% if consoleserverport_count %}
-            <li role="presentation" {% if active_tab == 'console-server-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_consoleserverports' pk=object.pk %}">Console Server Ports {% badge consoleserverport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_consoleserverports' pk=object.pk %}" class="nav-link{% if active_tab == 'console-server-ports' %} active{% endif %}">Console Server Ports {% badge consoleserverport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with powerport_count=object.power_ports.count %}
         {% if powerport_count %}
-            <li role="presentation" {% if active_tab == 'power-ports' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_powerports' pk=object.pk %}">Power Ports {% badge powerport_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_powerports' pk=object.pk %}" class="nav-link{% if active_tab == 'power-ports' %} active{% endif %}">Power Ports {% badge powerport_count %}</a>
             </li>
         {% endif %}
     {% endwith %}
     {% with poweroutlet_count=object.power_outlets.count %}
         {% if poweroutlet_count %}
-            <li role="presentation" {% if active_tab == 'power-outlets' %} class="active"{% endif %}>
-                <a href="{% url 'dcim:module_poweroutlets' pk=object.pk %}">Power Outlets {% badge poweroutlet_count %}</a>
+            <li class="nav-item" role="presentation">
+                <a href="{% url 'dcim:module_poweroutlets' pk=object.pk %}" class="nav-link{% if active_tab == 'power-outlets' %} active{% endif %}">Power Outlets {% badge poweroutlet_count %}</a>
             </li>
         {% endif %}
     {% endwith %}

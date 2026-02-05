@@ -86,7 +86,6 @@ class InstalledAppsView(GenericView):
     """
 
     table = InstalledAppsTable
-    breadcrumbs = Breadcrumbs(items={"*": [ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps")]})
     view_titles = Titles(titles={"*": "Installed Apps"})
 
     def get(self, request):
@@ -96,7 +95,7 @@ class InstalledAppsView(GenericView):
         for app_config in app_configs:
             if app_data := extract_app_data(app_config, marketplace_data):
                 data.append(app_data)
-        table = self.table(data, user=request.user)
+        table = self.table(data, user=request.user, configurable=True)
 
         paginate = {
             "paginator_class": EnhancedPaginator,
@@ -142,11 +141,6 @@ class InstalledAppDetailView(GenericView):
         items={
             "*": [
                 ViewNameBreadcrumbItem(view_name="apps:apps_list", label="Installed Apps"),
-                ViewNameBreadcrumbItem(
-                    view_name="apps:app_detail",
-                    reverse_kwargs=lambda context: {"app": context["app_data"]["package"]},
-                    label=lambda context: context["app_data"]["name"],
-                ),
             ]
         }
     )
@@ -250,9 +244,6 @@ class MarketplaceView(GenericView):
     View for listing all available Apps.
     """
 
-    breadcrumbs = Breadcrumbs(
-        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:apps_marketplace", label="Apps Marketplace")]}
-    )
     view_titles = Titles(titles={"generic": "Apps Marketplace"})
 
     def get(self, request):

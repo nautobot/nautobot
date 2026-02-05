@@ -68,6 +68,7 @@ class DeviceType(OptimizedNautobotObjectType):
     all_power_ports = graphene.List("nautobot.dcim.graphql.types.PowerPortType")
     all_power_outlets = graphene.List("nautobot.dcim.graphql.types.PowerOutletType")
     all_rear_ports = graphene.List("nautobot.dcim.graphql.types.RearPortType")
+    cluster = graphene.Field("nautobot.virtualization.graphql.types.ClusterType")
     common_vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
     primary_ip = graphene.Field("nautobot.ipam.graphql.types.IPAddressType")

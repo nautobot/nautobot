@@ -39,7 +39,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
-from nautobot.dcim.constants import RACK_U_HEIGHT_MAXIMUM
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -222,9 +223,6 @@ class InterfaceCommonForm(forms.Form):
         # Untagged interfaces cannot be assigned tagged VLANs
         if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
-
-        if mode != InterfaceModeChoices.MODE_TAGGED and tagged_vlans:
-            raise forms.ValidationError({"tagged_vlans": f"Clear tagged_vlans to set mode to {self.mode}"})
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
@@ -412,7 +410,6 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
             "tenant",
             "description",
             "asn",
-            "description",
             "time_zone",
         ]
 
@@ -531,6 +528,17 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     )
     comments = CommentField()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial value for u_height from Constance config when creating a new rack
+        if not self.instance.present_in_database and not kwargs.get("data"):
+            # Only set initial if this is a new form (not submitted data)
+            config_default = get_settings_or_config("RACK_DEFAULT_U_HEIGHT", fallback=RACK_U_HEIGHT_DEFAULT)
+            self.fields["u_height"].initial = config_default
+            # Override the form's initial dict to ensure it displays the Constance config value
+            # (unconditionally set it, even if already present from model default)
+            self.initial["u_height"] = config_default
+
     class Meta:
         model = Rack
         fields = [
@@ -567,6 +575,7 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         }
 
     def clean(self):
+        super().clean()
         cleaned_data = self.cleaned_data
         location = cleaned_data.get("location")
 
@@ -588,7 +597,6 @@ class RackForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                         "would conflict with same-named devices in this rack."
                     }
                 )
-        return super().clean()
 
 
 class RackBulkEditForm(
@@ -1479,7 +1487,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
 
 
 class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
-    type = forms.ChoiceField(choices=InterfaceTypeChoices, widget=StaticSelect2())
+    type = forms.ChoiceField(choices=add_blank_choice(InterfaceTypeChoices), widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1555,7 +1563,7 @@ class FrontPortTemplateForm(ModularComponentTemplateForm):
 
 
 class FrontPortTemplateCreateForm(ModularComponentTemplateCreateForm):
-    type = forms.ChoiceField(choices=PortTypeChoices, widget=StaticSelect2())
+    type = forms.ChoiceField(choices=add_blank_choice(PortTypeChoices), widget=StaticSelect2())
     rear_port_template_set = forms.MultipleChoiceField(
         choices=[],
         label="Rear ports",
@@ -1665,7 +1673,7 @@ class RearPortTemplateForm(ModularComponentTemplateForm):
 
 class RearPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     positions = forms.IntegerField(
@@ -2139,9 +2147,9 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
         queryset=ClusterGroup.objects.all(),
         required=False,
         null_option="None",
-        initial_params={"clusters": "$cluster"},
+        initial_params={"clusters__in": "$clusters"},
     )
-    cluster = DynamicModelChoiceField(
+    clusters = DynamicModelMultipleChoiceField(
         queryset=Cluster.objects.all(),
         required=False,
         query_params={"cluster_group": "$cluster_group"},
@@ -2187,7 +2195,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
             "primary_ip6",
             "secrets_group",
             "cluster_group",
-            "cluster",
+            "clusters",
             "tenant_group",
             "tenant",
             "vrfs",
@@ -2265,6 +2273,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
                 self.initial["location"] = self.instance.parent_bay.device.location_id
                 self.initial["rack"] = self.instance.parent_bay.device.rack_id
 
+            self.initial["clusters"] = self.instance.clusters.values_list("id", flat=True)
             self.initial["vrfs"] = self.instance.vrfs.values_list("id", flat=True)
 
         else:
@@ -2301,6 +2310,7 @@ class DeviceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm, LocalC
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.vrfs.set(self.cleaned_data["vrfs"])
+        instance.clusters.set(self.cleaned_data["clusters"])
         return instance
 
 
@@ -2333,7 +2343,12 @@ class DeviceBulkEditForm(
     rack_group = DynamicModelChoiceField(
         queryset=RackGroup.objects.all(), required=False, query_params={"location": "$location"}
     )
-    cluster = DynamicModelChoiceField(queryset=Cluster.objects.all(), required=False)
+    add_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Add to clusters"
+    )
+    remove_clusters = DynamicModelMultipleChoiceField(
+        queryset=Cluster.objects.all(), required=False, label="Remove from clusters"
+    )
     comments = CommentField(widget=SmallTextarea, label="Comments")
     tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
@@ -2356,7 +2371,6 @@ class DeviceBulkEditForm(
             "rack",
             "position",
             "face",
-            "cluster",
             "comments",
             "secrets_group",
             "device_redundancy_group",
@@ -2617,6 +2631,8 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 pass
 
     def clean(self):
+        super().clean()
+
         cleaned_data = self.cleaned_data
         if cleaned_data["parent_module_bay_device"] and cleaned_data["parent_module_bay_module"]:
             raise forms.ValidationError("Multiple parent module bays selected.")
@@ -2755,6 +2771,7 @@ class ModularComponentCreateForm(ModularComponentForm):
     module = DynamicModelChoiceField(
         queryset=Module.objects.all(), required=False, query_params={"module_family": "$module_family"}
     )
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
 
 class ComponentEditForm(NautobotModelForm):
@@ -2833,7 +2850,7 @@ class ConsolePortForm(ModularComponentEditForm):
         ]
 
 
-class ConsolePortCreateForm(ModularComponentCreateForm):
+class ConsolePortCreateForm(form_from_model(ConsolePort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -2896,7 +2913,7 @@ class ConsoleServerPortForm(ModularComponentEditForm):
         ]
 
 
-class ConsoleServerPortCreateForm(ModularComponentCreateForm):
+class ConsoleServerPortCreateForm(form_from_model(ConsoleServerPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(ConsolePortTypeChoices),
         required=False,
@@ -2964,7 +2981,7 @@ class PowerPortForm(ModularComponentEditForm):
         ]
 
 
-class PowerPortCreateForm(ModularComponentCreateForm):
+class PowerPortCreateForm(form_from_model(PowerPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerPortTypeChoices),
         required=False,
@@ -3073,7 +3090,7 @@ class PowerOutletForm(ModularComponentEditForm):
         ]
 
 
-class PowerOutletCreateForm(ModularComponentCreateForm):
+class PowerOutletCreateForm(form_from_model(PowerOutlet, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
         choices=add_blank_choice(PowerOutletTypeChoices),
         required=False,
@@ -3285,10 +3302,15 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         return instance
 
 
-class InterfaceCreateForm(ModularComponentCreateForm, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+class InterfaceCreateForm(
+    form_from_model(Interface, ["tags"]),
+    ModularComponentCreateForm,
+    InterfaceCommonForm,
+    RoleNotRequiredModelFormMixin,
+):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3417,7 +3439,7 @@ class InterfaceBulkCreateForm(
 ):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3455,7 +3477,7 @@ class ModuleInterfaceBulkCreateForm(
 ):
     model = Interface
     type = forms.ChoiceField(
-        choices=InterfaceTypeChoices,
+        choices=add_blank_choice(InterfaceTypeChoices),
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3657,10 +3679,9 @@ class FrontPortForm(ModularComponentEditForm):
         }
 
 
-# TODO: Merge with FrontPortTemplateCreateForm to remove duplicate logic
-class FrontPortCreateForm(ModularComponentCreateForm):
+class FrontPortCreateForm(form_from_model(FrontPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     rear_port_set = forms.MultipleChoiceField(
@@ -3786,9 +3807,9 @@ class RearPortForm(ModularComponentEditForm):
         }
 
 
-class RearPortCreateForm(ModularComponentCreateForm):
+class RearPortCreateForm(form_from_model(RearPort, ["tags"]), ModularComponentCreateForm):
     type = forms.ChoiceField(
-        choices=PortTypeChoices,
+        choices=add_blank_choice(PortTypeChoices),
         widget=StaticSelect2(),
     )
     positions = forms.IntegerField(
@@ -3867,7 +3888,7 @@ class DeviceBayForm(ComponentEditForm):
         ]
 
 
-class DeviceBayCreateForm(ComponentCreateForm):
+class DeviceBayCreateForm(form_from_model(DeviceBay, ["tags"]), ComponentCreateForm):
     field_order = ("device", "name_pattern", "label_pattern", "description", "tags")
 
 
@@ -4094,7 +4115,7 @@ class InventoryItemForm(ComponentEditForm):
         ]
 
 
-class InventoryItemCreateForm(ComponentCreateForm):
+class InventoryItemCreateForm(form_from_model(InventoryItem, ["tags"]), ComponentCreateForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     parent = DynamicModelChoiceField(
         queryset=InventoryItem.objects.all(),
@@ -4500,6 +4521,7 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     color = forms.CharField(max_length=6, required=False, widget=ColorSelect())  # RGB color code
     device = DynamicModelMultipleChoiceField(
         queryset=Device.objects.all(),
+        to_field_name="name",
         required=False,
         label="Device",
         query_params={
@@ -4645,7 +4667,7 @@ class BaseVCMemberFormSet(forms.BaseModelFormSet):
                 vc_position_list.append(vc_position)
 
 
-class DeviceVCMembershipForm(forms.ModelForm):
+class DeviceVCMembershipForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         model = Device
         fields = [
@@ -5116,7 +5138,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         queryset=InterfaceRedundancyGroup.objects.all(),
         widget=forms.MultipleHiddenInput,
     )
-    protocol = forms.ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices, required=False)
+    protocol = forms.ChoiceField(choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices), required=False)
     description = forms.CharField(required=False)
     virtual_ip = DynamicModelChoiceField(queryset=IPAddress.objects.all(), required=False)
     secrets_group = DynamicModelChoiceField(queryset=SecretsGroup.objects.all(), required=False)
@@ -5132,7 +5154,7 @@ class InterfaceRedundancyGroupBulkEditForm(
         ]
 
 
-class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.ModelForm):
+class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMixin):
     """Filter form to filter searches."""
 
     model = InterfaceRedundancyGroup
@@ -5162,7 +5184,6 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     class Meta:
         """Meta attributes."""
 
-        model = InterfaceRedundancyGroup
         # Define the fields above for ordering and widget purposes
         fields = [
             "q",

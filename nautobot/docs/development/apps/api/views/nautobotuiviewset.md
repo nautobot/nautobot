@@ -168,49 +168,70 @@ If you do not provide your own templates in the `yourapp/templates/yourapp` fold
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
 
-### Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
+## Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
 
 Django REST Framework provides the ability to decorate a method on a ViewSet with `@action(detail=True)` to add the method as a view to the ViewSetRouter. This method must return a fully rendered HTML view.
 
-Below is an example of adding a custom action view to an App's ViewSet. A few considerations to keep in mind:
+Below is an example of adding a custom action view to an App's UIViewSet. A few considerations to keep in mind:
 
 * The method name is the `action` in Django REST Framework terms.
 * The `action` will be used for [template lookup](#template-naming-for-nautobotuiviewset)
 * The `action` will be used for URL naming and construction (`plugins:<app>:<model>_<action>`, `/plugins/<app>/<model>/<uuid>/<action>/`).
 * The `action` will be used as a custom permission that users must have (`<app>.<action>_<model>`)
+    * This default permission (which is often undesirable) can be overridden by specifying `custom_view_base_action` and/or `custom_view_additional_permissions` as parameters to the `action()` decorator. See [below](#overriding-permissions-for-custom-actions) for examples of overriding the default permission.
 
-In the below example:
+In the following example:
 
-* The expected template must be named `yourapp/yourappmodel_customview.html`
-* The reversible URL name will be `plugins:yourapp:yourappmodel_customview`
-* The URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
-* Users will need `yourapp.customview_yourappmodel` permission to access this view.
+* The expected template must be named `yourapp/yourappmodel_custom_action.html`
+* The reversible URL name will be `plugins:yourapp:yourappmodel_custom_action`
+* The URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/custom_action/`
+    * Since Nautobot's convention for URL patterns is to use dashes rather than underscores, you may want to add `url_path="custom-action"` to the `@action()` call, as shown in later examples in this document.
+* Users will need `yourapp.custom_action_yourappmodel` permission (or, put another way, the `custom_action` action permission for `yourapp.yourappmodel` records) to access this view.
+    * Again, keep reading if you want to use standard `view`/`change`/`create`/`delete` permissions for custom actions instead.
 
 ```python
-from nautobot.apps.views import NautobotUIViewSet
-from rest_framework.decorators import action
-from rest_framework.response import Response
-
-from yourapp import filters, forms, models, tables
-from yourapp.api import serializers
-
 class YourAppModelUIViewSet(NautobotUIViewSet):
-    bulk_update_form_class = forms.YourAppModelBulkEditForm
-    filterset_class = filters.YourAppModelFilterSet
-    filterset_form_class = forms.YourAppModelFilterForm
-    form_class = forms.YourAppModelForm
-    queryset = models.YourAppModel.objects.all()
-    serializer_class = serializers.YourAppModelSerializer
-    table_class = tables.YourAppModelTable
+    # ...
 
     @action(detail=True)
-    def customview(self, request, *args, **kwargs):
-        """Context passed to template for rendering.
-
-        Expected URL pattern will be `/plugins/yourapp/yourappmodel/<uuid>/customview/`
-        """
+    def custom_action(self, request, *args, **kwargs):
+        """Perform some custom action on a given YourAppModel record."""
+        # Context passed to template for rendering.
         context = {
             "some_key": "some value",
         }
         return Response(context)
+```
+
+### Overriding Permissions for Custom Actions
+
+In most cases, custom view actions should not require the creation of custom ObjectPermission definitions to grant access to them, but should instead make use of existing permissions. In these cases, you should use the `custom_view_base_action` parameter (and optionally `custom_view_additional_permissions` as well, if more than a single permission should apply) when declaring the action. Examples follow:
+
+```python title="Require dcim.change_virtualchassis permission rather than dcim.add_member_virtualchassis"
+class VirtualChassisUIViewSet:
+    # ...
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="add-member",
+        url_name="add_member",
+        custom_view_base_action="change",
+    )
+    def add_member(self, request, pk=None):
+        # ...
+```
+
+```python title="Require both dcim.view_devicetype and dcim.view_interfacetemplate permissions"
+class DeviceTypeUIViewSet:
+    # ...
+
+    @action(
+        detail=True,
+        methods=["get"],
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interfacetemplate"],
+    )
+    def interfaces(self, request, *args, **kwargs):
+        # ...
 ```

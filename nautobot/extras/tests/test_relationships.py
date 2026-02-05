@@ -17,6 +17,7 @@ from nautobot.core.forms import (
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.forms import DeviceForm
 from nautobot.dcim.models import (
@@ -185,8 +186,12 @@ class RelationshipBaseTest:
     def tearDown(self):
         """Ensure that relationship caches are cleared to avoid leakage into other tests."""
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source', branch_aware=True)}(*)"
+            )
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination', branch_aware=True)}(*)"
+            )
 
 
 class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):

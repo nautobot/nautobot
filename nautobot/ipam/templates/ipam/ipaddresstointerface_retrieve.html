@@ -1,22 +1,24 @@
 {% extends 'generic/object_retrieve.html' %}
+{# TODO: this file is unused as far as I can tell. Remove it? #}
 {% load helpers %}
 {% load render_table from django_tables2 %}
 
 {% block masthead %}
     <h1>
-        <span class="hover_copy"><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-text="{{ object }}">
-            <span class="mdi mdi-content-copy"></span>
+        <span><span id="copy_title">{{ object }}</span><button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="{{ object }}">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
         </button>
         </span>
     </h1>
 {% endblock masthead %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>IP Address to Interface</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>IP Address</td>
                 <td>{{ object.ip_address|hyperlinked_object }}</td>

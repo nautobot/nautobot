@@ -36,11 +36,15 @@ from .models import (
     VRFPrefixAssignment,
 )
 
-AVAILABLE_LABEL = mark_safe('<span class="label label-success">Available</span>')
+AVAILABLE_LABEL = mark_safe('<span class="badge bg-success">Available</span>')
 
 UTILIZATION_GRAPH = """
 {% load helpers %}
-{% if record.present_in_database %}{% utilization_graph record.get_utilization %}{% else %}&mdash;{% endif %}
+{% if record.present_in_database %}
+    {% utilization_graph record.get_utilization %}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
 """
 
 
@@ -51,7 +55,7 @@ PREFIX_COPY_LINK = """
 {% if not table.hide_hierarchy_ui %}
 {% tree_hierarchy_ui_representation record.ancestors.count|as_range table.hide_hierarchy_ui base_tree_depth|default:0 %}
 {% endif %}
-<span class="hover_copy">
+<span>
   <a href="\
 {% if record.present_in_database %}\
 {% url 'ipam:prefix' pk=record.pk %}\
@@ -62,8 +66,9 @@ PREFIX_COPY_LINK = """
 {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
 {% endif %}\
 " id="copy_{{record.id}}">{{ record.prefix }}</a>
-  <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-    <span class="mdi mdi-content-copy"></span>
+  <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+    <span class="visually-hidden">Copy</span>
   </button>
 </span>
 """
@@ -72,7 +77,7 @@ PREFIX_ROLE_LINK = """
 {% if record.role %}
     <a href="{% url 'ipam:prefix_list' %}?role={{ record.role.name }}">{{ record.role }}</a>
 {% else %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
@@ -94,11 +99,12 @@ IPADDRESS_LINK = """
 
 IPADDRESS_COPY_LINK = """
 {% if record.present_in_database %}
-    <span class="hover_copy">
+    <span>
         <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">
             {{ record.address }}</a>
-        <button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.id}}">
-            <span class="mdi mdi-content-copy"></span>
+        <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
         </button>
     </span>
 {% elif perms.ipam.add_ipaddress %}
@@ -124,7 +130,7 @@ vminterface={{ request.GET.vminterface }}{% endif %}\
 """
 
 IPADDRESS_ASSIGN_COPY_LINK = """
-<span class="hover_copy">
+<span>
 <a href="\
 {% url 'ipam:ipaddress_edit' pk=record.pk %}\
 ?{% if request.GET.interface %}\
@@ -134,8 +140,9 @@ vminterface={{ request.GET.vminterface }}\
 {% endif %}\
 &return_url={{ request.GET.return_url }}" id="copy_{{record.pk}}">\
 {{ record }}\
-</a><button type="button" class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#copy_{{record.pk}}">
-    <span class="mdi mdi-content-copy"></span>
+</a><button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.pk}}">
+    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+    <span class="visually-hidden">Copy</span>
 </button>
 </span>
 """
@@ -154,7 +161,7 @@ VRF_TARGETS = """
 {% for rt in value.all %}
     <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endfor %}
 """
 
@@ -176,7 +183,7 @@ VLAN_PREFIXES = """
 {% for prefix in record.prefixes.all %}
     <a href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endfor %}
 """
 
@@ -202,11 +209,13 @@ VLANGROUP_ADD_VLAN = """
 class NamespaceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    tenant = TenantColumn()
     tags = TagColumn(url_name="ipam:namespace_list")
+    actions = ButtonsColumn(Namespace)
 
     class Meta(BaseTable.Meta):
         model = Namespace
-        fields = ("pk", "name", "description", "location")
+        fields = ("pk", "name", "description", "tenant", "location", "actions")
 
 
 #
@@ -243,11 +252,11 @@ class VRFTable(StatusTableMixin, BaseTable):
 class VRFDeviceAssignmentTable(BaseTable):
     """Table for displaying VRF Device Assignments with RD."""
 
-    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf__name")
     namespace = tables.Column(
         verbose_name="Namespace",
         linkify=lambda record: record.vrf.namespace.get_absolute_url(),
-        accessor="vrf.namespace.name",
+        accessor="vrf__namespace__name",
     )
     related_object_type = tables.TemplateColumn(
         template_code="""
@@ -283,10 +292,10 @@ class VRFDeviceAssignmentTable(BaseTable):
 class VRFPrefixAssignmentTable(BaseTable):
     """Table for displaying VRF Prefix Assignments."""
 
-    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf.name")
+    vrf = tables.Column(verbose_name="VRF", linkify=lambda record: record.vrf.get_absolute_url(), accessor="vrf__name")
     prefix = tables.Column(linkify=True)
-    rd = tables.Column(accessor="vrf.rd", verbose_name="RD")
-    tenant = TenantColumn(accessor="vrf.tenant")
+    rd = tables.Column(accessor="vrf__rd", verbose_name="RD")
+    tenant = TenantColumn(accessor="vrf__tenant")
 
     class Meta(BaseTable.Meta):
         model = VRFPrefixAssignment
@@ -366,7 +375,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
-    rir = tables.Column(linkify=True)
+    rir = tables.Column(linkify=True, verbose_name="RIR")
     children = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
@@ -374,6 +383,11 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     cloud_networks_count = LinkedCountColumn(
         viewname="cloud:cloudnetwork_list", url_params={"prefixes": "pk"}, verbose_name="Cloud Networks"
+    )
+    tunnel_endpoints_count = LinkedCountColumn(
+        viewname="vpn:vpntunnelendpoint_list",
+        url_params={"protected_prefixes": "pk"},
+        verbose_name="VPN Tunnel Endpoints",
     )
     actions = ButtonsColumn(Prefix)
 
@@ -390,6 +404,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "tenant",
             "location_count",
             "cloud_networks_count",
+            "tunnel_endpoints_count",
             "vlan",
             "role",
             "rir",
@@ -412,7 +427,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "actions",
         )
         row_attrs = {
-            "class": lambda record: "success" if not record.present_in_database else "",
+            "class": lambda record: "table-success" if not record.present_in_database else "",
         }
 
 
@@ -446,6 +461,7 @@ class PrefixDetailTable(PrefixTable):
             "role",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -455,12 +471,12 @@ class PrefixDetailTable(PrefixTable):
             "status",
             "children",
             "vrf_count",
-            "utilization",
             "tenant",
             "location_count",
             "vlan",
             "role",
             "description",
+            "actions",
         )
 
 
@@ -497,6 +513,7 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         distinct=True,
         verbose_name="Virtual Machines",
     )
+    actions = ButtonsColumn(IPAddress)
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -514,9 +531,10 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "interface_parent_count",
             "vm_interface_count",
             "vm_interface_parent_count",
+            "actions",
         )
         row_attrs = {
-            "class": lambda record: "success" if not isinstance(record, IPAddress) else "",
+            "class": lambda record: "table-success" if not isinstance(record, IPAddress) else "",
         }
 
 
@@ -543,6 +561,7 @@ class IPAddressDetailTable(IPAddressTable):
             "dns_name",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -555,6 +574,7 @@ class IPAddressDetailTable(IPAddressTable):
             "assigned",
             "dns_name",
             "description",
+            "actions",
         )
 
 
@@ -649,7 +669,7 @@ class IPAddressInterfaceTable(InterfaceTable):
             "connection",
         ]
         row_attrs = {
-            "style": cable_status_color_css,
+            "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
 
@@ -742,7 +762,7 @@ class VLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "description",
         )
         row_attrs = {
-            "class": lambda record: "success" if not isinstance(record, VLAN) else "",
+            "class": lambda record: "table-success" if not isinstance(record, VLAN) else "",
         }
 
 

@@ -159,6 +159,20 @@ class DeviceStatusChoices(ChoiceSet):
     )
 
 
+class DeviceUniquenessChoices(ChoiceSet):
+    LOCATION_TENANT_NAME = "location_tenant_name"
+    NAME = "name"
+    NONE = "none"
+
+    DEFAULT = LOCATION_TENANT_NAME
+
+    CHOICES = [
+        (LOCATION_TENANT_NAME, "Location + Tenant + Name"),
+        (NAME, "Device name must be globally unique"),
+        (NONE, "No enforced uniqueness"),
+    ]
+
+
 #
 # ConsolePorts
 #
@@ -764,6 +778,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_VIRTUAL = "virtual"
     TYPE_BRIDGE = "bridge"
     TYPE_LAG = "lag"
+    TYPE_TUNNEL = "tunnel"
 
     # Ethernet
     TYPE_100ME_FX = "100base-fx"
@@ -932,6 +947,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_VIRTUAL, "Virtual"),
                 (TYPE_BRIDGE, "Bridge"),
                 (TYPE_LAG, "Link Aggregation Group (LAG)"),
+                (TYPE_TUNNEL, "Tunnel"),
             ),
         ),
         (
@@ -1249,6 +1265,9 @@ class PortTypeChoices(ChoiceSet):
     TYPE_LX5_APC = "lx5-apc"
     TYPE_SPLICE = "splice"
     TYPE_CS = "cs"
+    TYPE_CS_PC = "cs-pc"
+    TYPE_CS_UPC = "cs-upc"
+    TYPE_CS_APC = "cs-apc"
     TYPE_SN = "sn"
     TYPE_SMA_905 = "sma-905"
     TYPE_SMA_906 = "sma-906"
@@ -1305,6 +1324,9 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_SC_APC, "SC/APC"),
                 (TYPE_ST, "ST"),
                 (TYPE_CS, "CS"),
+                (TYPE_CS_PC, "CS/PC"),
+                (TYPE_CS_UPC, "CS/UPC"),
+                (TYPE_CS_APC, "CS/APC"),
                 (TYPE_SN, "SN"),
                 (TYPE_SMA_905, "SMA 905"),
                 (TYPE_SMA_906, "SMA 906"),

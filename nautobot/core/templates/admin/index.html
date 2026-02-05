@@ -3,7 +3,7 @@
 
 {% block breadcrumbs %}
     <ol class="breadcrumb">
-        <li>{% trans 'Admin Home' %}</li>
+        <li class="breadcrumb-item active" aria-current="page">{% trans 'Admin Home' %}</li>
     </ol>
 {% endblock %}
 
@@ -14,19 +14,19 @@
             <ul class="dropdown-menu" role="menu">
                 {% for app in app_list %}
                     <li>
-                        <a href="#"><strong>{% render_app_name app %}</strong></a>
+                        <a class="dropdown-item" href="#"><strong>{% render_app_name app %}</strong></a>
                     </li>
                     {% for model in app.models %}
                         <li>
                             {% if model.admin_url %}
-                                <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                                <a class="dropdown-item" href="{{ model.admin_url }}">{{ model.name }}</a>
                             {% else %}
                                 {{ model.name }}
                             {% endif %}
                         </li>
                     {% endfor %}
                     {% if not forloop.last %}
-                        <li role="presentation" class="divider"></li>
+                        <li><hr class="dropdown-divider"></li>
                     {% endif %}
                 {% endfor %}
             </ul>
@@ -37,7 +37,7 @@
 
 {% block content %}
     <div class="row">
-        <div id="content-main" class="col-sm-12">
+        <div id="content-main" class="col-md-12">
 
             <div class="tabbable">
                 {% for app in app_list %}
@@ -54,13 +54,13 @@
                                     {% endif %}
 
                                     {% if model.add_url or model.admin_url%}
-                                        <div class="pull-right">
+                                        <div class="float-end">
                                             {% if model.add_url %}
-                                                <a href="{{ model.add_url }}" class="btn btn-xs btn-primary"><span class="glyphicon glyphicon-plus"></span>
+                                                <a href="{{ model.add_url }}" class="btn btn-sm btn-primary"><span class="glyphicon glyphicon-plus"></span>
                                                     {% trans 'Add' %}</a>
                                             {% endif %}
                                             {% if model.admin_url %}
-                                                <a href="{{ model.admin_url }}" class="btn btn-xs btn-warning"><span class="glyphicon glyphicon-edit"></span>
+                                                <a href="{{ model.admin_url }}" class="btn btn-sm btn-warning"><span class="glyphicon glyphicon-edit"></span>
                                                     {% trans 'Edit' %}</a>
                                             {% endif %}
                                         </div>

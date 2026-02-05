@@ -2,12 +2,12 @@
     {% include 'django/forms/widgets/number.html' %}
     {% if widget.choices %}
         <span class="input-group-btn">
-            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                <span class="caret"></span>
+            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <span class="mdi mdi-chevron-down"></span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-right">
+            <ul class="dropdown-menu dropdown-menu-end">
                 {% for value, label in widget.choices %}
-                    <li><a href="#" data-name="{{ widget.name }}" data-value="{{ value }}" class="set_value">{{ label }}</a></li>
+                    <li><a href="#" data-name="{{ widget.name }}" data-value="{{ value }}" class="set_value dropdown-item">{{ label }}</a></li>
                 {% endfor %}
             </ul>
         </span>

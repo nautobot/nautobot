@@ -5,47 +5,45 @@
 {% block title %}Delete {{ total_objs_to_delete }} {{ obj_type_plural|bettertitle }}?{% endblock %}
 
 {% block content %}
-    <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-            <div class="panel panel-danger" id="confirm-bulk-deletion">
-                <div class="panel-heading"><strong>Confirm Bulk Deletion</strong></div>
-                <div class="panel-body">
-                    <p><strong>Warning:</strong> The following operation will delete {{ total_objs_to_delete }} {{ obj_type_plural }}. {% if not delete_all %}Please carefully review the {{ obj_type_plural }} to be deleted and confirm below.{% endif %}</p>
-                    {% block message_extra %}{% endblock %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if table %}
-        <div class="row">
-            <div class="col-md-8 col-md-offset-2">
-                <div class="panel panel-default">
-                    <div class="table-responsive">
-                        {% render_table table 'inc/table.html' %}
+    <form action="" method="post" class="vstack h-100">
+        {% csrf_token %}
+        {% if delete_all %}
+            <input type="hidden" name="_all" value="true"  />
+        {% endif %}
+        {% for field in form.hidden_fields %}
+            {{ field }}
+        {% endfor %}
+        <div class="row align-content-start justify-content-center flex-fill">
+            <div class="col-lg-8 col-md-10 d-flex justify-content-center">
+                <div class="card border-danger" id="confirm-bulk-deletion">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Confirm Bulk Deletion</strong>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Warning:</strong> The following operation will delete {{ total_objs_to_delete }} {{ obj_type_plural }}. {% if not delete_all %}Please carefully review the {{ obj_type_plural }} to be deleted and confirm below.{% endif %}</p>
+                        {% block message_extra %}{% endblock %}
                     </div>
                 </div>
             </div>
-        </div>
-    {% endif %}
-
-    <div class="row">
-        <div class="col-md-6 col-md-offset-3">
-            <form action="" method="post" class="form">
-
-                {% csrf_token %}
-                {% if delete_all %}
-                    <input type="hidden" name="_all" value="true"  />
-                {% endif %}
-                {% for field in form.hidden_fields %}
-                    {{ field }}
-                {% endfor %}
-
-                <div class="text-center">
-                    <button type="submit" name="_confirm" class="btn btn-danger">Delete these {{ total_objs_to_delete }} {{ obj_type_plural }}</button>
-                    <a href="{{ return_url }}" class="btn btn-default">Cancel</a>
+            {% if table %}
+                <div class="col-lg-8 col-md-10">
+                    <div class="card">
+                        <div class="table-responsive">
+                            {% render_table table 'inc/table.html' %}
+                        </div>
+                    </div>
                 </div>
-            </form>
+            {% endif %}
         </div>
-    </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_confirm" class="btn btn-danger">
+                <span aria-hidden="true" class="mdi mdi-trash-can-outline me-4"></span><!--
+                -->Delete these {{ total_objs_to_delete }} {{ obj_type_plural }}
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
+        </div>
+    </form>
 {% endblock %}

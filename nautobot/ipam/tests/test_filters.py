@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases, TestCase
@@ -17,6 +18,7 @@ from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
     IPAddressToInterfaceFilterSet,
+    NamespaceFilterSet,
     PrefixFilterSet,
     PrefixLocationAssignmentFilterSet,
     RIRFilterSet,
@@ -52,6 +54,15 @@ from nautobot.virtualization.models import (
     VirtualMachine,
     VMInterface,
 )
+
+
+class NamespaceTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    """Namespace FilterSet tests"""
+
+    queryset = Namespace.objects.all()
+    filterset = NamespaceFilterSet
+    tenancy_related_name = "namespaces"
+    generic_filter_tests = (("name",),)
 
 
 class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -177,6 +188,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         ["status", "status__id"],
         ["status", "status__name"],
         ["type"],
+        ["vpn_tunnel_endpoints", "vpn_tunnel_endpoints__id"],
     )
 
     def test_filters_generic(self):
@@ -219,6 +231,43 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
         self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+    def test_ancestors(self):
+        prefixes = (
+            Prefix.objects.create(prefix="10.0.0.0/8", status=Status.objects.get_for_model(Prefix).first()),
+            Prefix.objects.create(prefix="10.0.0.0/16", status=Status.objects.get_for_model(Prefix).first()),
+            Prefix.objects.create(prefix="10.0.0.0/24", status=Status.objects.get_for_model(Prefix).first()),
+        )
+        params = {"ancestors": [str(prefixes[2].pk)]}
+        filterset = self.filterset(params, self.queryset)
+        ancestors = [ancestor.id for ancestor in prefixes[2].ancestors()]
+        self.assertQuerysetEqualAndNotEmpty(filterset.qs, self.queryset.filter(id__in=ancestors))
+
+    def test_prefix(self):
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        params = {"prefix": "192.0.2.0/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"prefix": "192.0.2.1/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+
+    def test_prefix_exact(self):
+        Prefix.objects.create(
+            prefix="192.0.2.0/29",
+            type=PrefixTypeChoices.TYPE_POOL,
+            namespace=Namespace.objects.first(),
+            status=Status.objects.get_for_model(Prefix).first(),
+        )
+        params = {"prefix_exact": "192.0.2.0/29"}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+        params = {"prefix_exact": "192.0.2.1/29"}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
 
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
@@ -508,7 +557,11 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     queryset = IPAddress.objects.all()
     filterset = IPAddressFilterSet
     tenancy_related_name = "ip_addresses"
-    generic_filter_tests = (["nat_inside", "nat_inside__id"],)
+    generic_filter_tests = (
+        ["nat_inside", "nat_inside__id"],
+        ["services", "services__id"],
+        ["services", "services__name"],
+    )
 
     @classmethod
     def setUpTestData(cls):
@@ -700,6 +753,15 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
             nat_inside=ip1,
         )
 
+        services = (
+            Service.objects.create(name="Service 1", protocol="TCP", ports=[80]),
+            Service.objects.create(name="Service 2", protocol="UDP", ports=[53]),
+            Service.objects.create(name="Service 3", protocol="TCP", ports=[443]),
+        )
+        services[0].ip_addresses.add(ip0)
+        services[1].ip_addresses.add(ip1)
+        services[2].ip_addresses.add(ip2)
+
     def test_search(self):
         ipv4_octets = self.ipv4_address.host.split(".")
         ipv6_hextets = self.ipv6_address.host.split(":")
@@ -771,6 +833,34 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
         )
+
+    def test_prefix_exact(self):
+        ipv4_parent = self.queryset.filter(ip_version=4).first().address.supernet()[-1]
+        ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
+
+        params = {"prefix_exact": [str(ipv4_parent), str(ipv6_parent)]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
+        )
+
+        # Get the first usable IP address in the subnet (not the network address)
+        ipv4_parent = self.queryset.filter(ip_version=4).first().address
+        ipv6_parent = self.queryset.filter(ip_version=6).first().address
+
+        params = {"prefix_exact": [str(ipv4_parent)]}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+
+        params = {"prefix_exact": [str(ipv6_parent)]}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+
+        params = {"prefix_exact": ["10.1.1.1"]}
+        with self.assertRaises(ValidationError) as exc:
+            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
+        self.assertTrue("Invalid prefix_exact value (missing mask)" in str(exc.exception))
 
     def test_filter_address(self):
         """Check IPv4 and IPv6, with and without a mask"""

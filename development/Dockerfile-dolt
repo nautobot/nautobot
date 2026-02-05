@@ -1,0 +1,9 @@
+FROM dolthub/dolt-sql-server:1.58.2
+
+RUN apt update && apt install -y curl mariadb-client && \
+    apt-get autoremove -y && \
+    apt-get clean all && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN dolt config --global --add user.name nautobot
+RUN dolt config --global --add user.email opensource@networktocode.COM

@@ -1,4 +1,11 @@
-from .change_logging import ChangeLoggedModel, ObjectChange
+from .change_logging import ChangeLoggedModel, ObjectChange  # isort:skip
+from .approvals import (  # isort: skip
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageResponse,
+)
 from .contacts import Contact, ContactAssociation, Team
 from .customfields import ComputedField, CustomField, CustomFieldChoice, CustomFieldModel
 from .datasources import GitRepository
@@ -36,10 +43,15 @@ from .models import (
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .roles import Role, RoleField
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
-from .statuses import Status, StatusField, StatusModel
+from .statuses import Status, StatusField
 from .tags import Tag, TaggedItem
 
 __all__ = (
+    "ApprovalWorkflow",
+    "ApprovalWorkflowDefinition",
+    "ApprovalWorkflowStage",
+    "ApprovalWorkflowStageDefinition",
+    "ApprovalWorkflowStageResponse",
     "ChangeLoggedModel",
     "ComputedField",
     "ConfigContext",
@@ -91,7 +103,6 @@ __all__ = (
     "StaticGroupAssociation",
     "Status",
     "StatusField",
-    "StatusModel",
     "Tag",
     "TaggedItem",
     "Team",

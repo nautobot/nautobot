@@ -348,6 +348,10 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
 class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
     model = ObjectPermission
+    validation_excluded_fields = [
+        "groups",  # M2M field, excluded by default
+        "users",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):

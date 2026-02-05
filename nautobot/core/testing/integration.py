@@ -7,7 +7,9 @@ from django.db.models import Model
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.functional import classproperty
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.expected_conditions import element_to_be_clickable
 from selenium.webdriver.support.wait import WebDriverWait
 from splinter.browser import Browser
 from splinter.exceptions import ElementDoesNotExist
@@ -64,13 +66,14 @@ class ObjectsListMixin:
         """
         Click bulk delete from dropdown menu on bottom of the items table list.
         """
-        self.browser.execute_script(
-            "document.querySelector('#bulk-action-buttons button[type=\"submit\"]').scrollIntoView()"
-        )
+        self.scroll_element_into_view(css='#bulk-action-buttons button[type="submit"]')
         self.browser.find_by_xpath(
             '//*[@id="bulk-action-buttons"]//button[@type="submit"]/following-sibling::button[1]'
         ).click()
-        self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]').click()
+        bulk_delete_button = self.browser.find_by_css('#bulk-action-buttons button[name="_delete"]')
+        bulk_delete_button.is_visible(wait_time=5)
+        self.scroll_element_into_view(element=bulk_delete_button)
+        bulk_delete_button.click()
 
     def click_bulk_delete_all(self):
         """
@@ -90,6 +93,12 @@ class ObjectsListMixin:
         """
         self.click_button('#select_all_box button[name="_edit"]')
 
+    def click_add_item(self):
+        """
+        Click add item button on top of the items table list.
+        """
+        self.click_button("#add-button")
+
     def click_table_link(self, row=1, column=2):
         """By default, tries to click column next to checkbox to go to the details page."""
         self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[{column}]/a').click()
@@ -102,7 +111,7 @@ class ObjectsListMixin:
         objects_table_container = self.browser.find_by_xpath('//*[@id="object_list_form"]')
         try:
             objects_table = objects_table_container.find_by_tag("tbody")
-            return len(objects_table.find_by_tag("tr"))
+            return len(objects_table.find_by_xpath(".//tr[not(count(td[@colspan])=1)]"))
         except ElementDoesNotExist:
             return 0
 
@@ -123,13 +132,59 @@ class ObjectDetailsMixin:
         By default, it's not using the exact match, because on the UI we're often adding
         additional tags, relationships or units.
         """
-        panel_xpath = f'//*[@id="main"]//div[@class="panel-heading"][contains(normalize-space(), "{panel_label}")]/following-sibling::table'
+        panel_xpath = f'//*[@id="main"]//div[contains(@class, "card-header") and contains(normalize-space(), "{panel_label}")]/following-sibling::div[contains(@class, "collapse")]/table'
         value = self.browser.find_by_xpath(f'{panel_xpath}//td[text()="{field_label}"]/following-sibling::td[1]').text
 
         if exact_match:
             self.assertEqual(value, str(expected_value))
         else:
             self.assertIn(str(expected_value), value)
+
+    def find_and_open_panel_v2(self, panel_label):
+        """
+        Finds panel with given title and expand it if needed. Works with v2 template panels.
+
+        TODO: remove after all panels will be moved to UI Components Framework or new Bootstrap 5 templates.
+        """
+        panel_xpath = f'//*[@id="main"]//div[@class="card-header"][contains(normalize-space(), "{panel_label}")]'
+        expand_button_xpath = f"{panel_xpath}/button[normalize-space()='Expand All Groups']"
+        expand_button = self.browser.find_by_xpath(expand_button_xpath)
+        if not expand_button.is_empty():
+            expand_button.click()
+        return self.browser.find_by_xpath(f"{panel_xpath}/../table")
+
+    def switch_tab(self, tab_name):
+        """Finds and click tab based on tab name from the tab link."""
+        self.get_tab_link(tab_name).click()
+
+    def get_tab_link(self, tab_name):
+        """
+        Finds tab link either in dropdown menu, cloned menu or standard tabs list
+        depending on the browser size and tabs count.
+
+        Please note, that if tab will be placed in dropdown menu this function will left this menu open.
+        """
+        tabs_container_xpath = '//div[@data-nb-tests-id="object-details-header-tabs"]'
+        toggle_button_xpath = f'{tabs_container_xpath}//button[@data-bs-toggle="dropdown"]'
+        toggle_button = self.browser.find_by_xpath(toggle_button_xpath, wait_time=5)
+        if toggle_button:
+            # Our tab might be hidden
+            tab_xpath = (
+                f'{tabs_container_xpath}//ul[@data-clone="true"]/li/a[contains(normalize-space(), "{tab_name}")]'
+            )
+            visible_tab = self.browser.find_by_xpath(tab_xpath, wait_time=5)
+            if visible_tab:
+                return visible_tab
+
+            # If hidden, click toggle to show the dropdown menu
+            toggle_button.click()
+            tab_xpath = f'{toggle_button_xpath}/following-sibling::ul//a[contains(normalize-space(), "{tab_name}")]'
+            return self.browser.find_by_xpath(tab_xpath, wait_time=5)
+
+        tab_xpath = (
+            f'//ul[@data-nb-tests-id="object-details-header-tabs-ul"]//a[contains(normalize-space(), "{tab_name}")]'
+        )
+        return self.browser.find_by_xpath(tab_xpath, wait_time=5)
 
 
 class BulkOperationsMixin:
@@ -173,7 +228,7 @@ class BulkOperationsMixin:
         if is_select:
             self.fill_select2_field(field_name, value)
         else:
-            self.browser.fill(field_name, value)
+            self.fill_input(field_name, value)
 
     def assertBulkDeleteConfirmMessageIsValid(self, expected_count):
         """
@@ -184,7 +239,7 @@ class BulkOperationsMixin:
         button_text = self.browser.find_by_xpath('//button[@name="_confirm" and @type="submit"]').text
         self.assertIn(f"Delete these {expected_count}", button_text)
 
-        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="panel-body"]').text
+        message_text = self.browser.find_by_id("confirm-bulk-deletion").find_by_xpath('//div[@class="card-body"]').text
         self.assertIn(f"The following operation will delete {expected_count}", message_text)
 
     def assertIsBulkDeleteJob(self):
@@ -205,6 +260,44 @@ class BulkOperationsMixin:
         """
         job_status = self.wait_for_job_result()
         self.assertEqual(job_status, "Completed")
+
+
+class SidenavSection:
+    """
+    Helper class which represents a Sidenav section and simplify moving around sidenav, expanding section and clicking
+    proper navigation link.
+    """
+
+    def __init__(self, browser, section_name):
+        self.browser = browser
+        self.section_name = section_name
+        self.section_xpath = f"//*[@id='sidenav']//li[@data-section-name='{self.section_name}']"
+        self.section = self.browser.find_by_xpath(self.section_xpath)
+
+    @property
+    def button(self):
+        return self.section.find_by_xpath(f"{self.section_xpath}/button")
+
+    @property
+    def flyout(self):
+        return self.section.find_by_xpath(f"{self.section_xpath}/div[@class='nb-sidenav-flyout']")
+
+    @property
+    def is_expanded(self):
+        return self.button["aria-expanded"] == "true"
+
+    def toggle(self):
+        if not self.is_expanded:
+            self.button.click()
+
+    def find_link(self, link_name):
+        return self.section.find_by_xpath(
+            f"{self.section_xpath}/div[@class='nb-sidenav-flyout']//a[@class='nb-sidenav-link' and normalize-space()='{link_name}']"
+        )
+
+    def click_link(self, link_name):
+        link = self.find_link(link_name)
+        link.click()
 
 
 # In CI, sometimes the FQDN of SELENIUM_HOST gets used, other times it seems to be just the hostname?
@@ -265,23 +358,31 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         if self.browser.is_text_present("Please enter a correct username and password."):
             self.fail(f"Unable to login in with username {username}")
 
+        self.logged_in = True
+
     def logout(self):
         self.browser.visit(f"{self.live_server_url}/logout")
+
+    def find_sidenav_section(self, tab_name):
+        """
+        Helper function to find sidenav section known as "tab_name". In `nav_menu` we still have tabs/groups naming.
+        """
+        return SidenavSection(self.browser, tab_name)
 
     def click_navbar_entry(self, parent_menu_name, child_menu_name):
         """
         Helper function to click on a parent menu and child menu in the navigation bar.
         """
-        parent_menu_xpath = f"//*[@id='navbar']//a[@class='dropdown-toggle' and normalize-space()='{parent_menu_name}']"
-        parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
-        if not parent_menu["aria-expanded"] == "true":
-            parent_menu.click()
-        child_menu_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]"
+        section_xpath = f"//*[@id='sidenav']//li[@data-section-name='{parent_menu_name}']"
+        sidenav_button = self.browser.find_by_xpath(f"{section_xpath}/button", wait_time=5)
+        if not sidenav_button["aria-expanded"] == "true":
+            sidenav_button.click()
+        child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[contains(@class, 'nb-sidenav-link') and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
         child_menu.click()
 
-        WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
+        WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
 
@@ -313,7 +414,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             search_box_class = "select2-search select2-search--dropdown"
 
         self.browser.find_by_xpath(f"//select[@id='id_{field_name}']//following-sibling::span").click()
-        self.browser.execute_script(f"""document.querySelector('#id_{field_name}').scrollIntoView()""")
+        self.scroll_element_into_view(css=f"#id_{field_name}")
         search_box = self.browser.find_by_xpath(f"//*[@class='{search_box_class}']//input", wait_time=5)
         for _ in search_box.first.type(value, slowly=True):
             pass
@@ -357,16 +458,44 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         search_box.first.type(Keys.ENTER)
 
     def click_button(self, query_selector):
-        btn = self.browser.find_by_css(query_selector, wait_time=5)
+        self.browser.is_element_present_by_css(query_selector, wait_time=5)
         # Button might be visible but on the edge and then impossible to click due to vertical/horizontal scrolls
-        self.browser.execute_script(f"document.querySelector('{query_selector}').scrollIntoView()")
+        self.scroll_element_into_view(css=query_selector)
+        # Scrolling may be asynchronous, wait until it's actually clickable.
+        WebDriverWait(self.browser.driver, 30).until(element_to_be_clickable((By.CSS_SELECTOR, query_selector)))
+        btn = self.browser.find_by_css(query_selector)
         btn.click()
+
+    def fill_input(self, input_name, input_value):
+        """
+        Helper function to fill an input field. Solves issue with element could not be scrolled into view for some pages.
+        """
+        self.browser.is_element_present_by_name(input_name, wait_time=5)
+        element = self.browser.find_by_name(input_name)
+        self.scroll_element_into_view(element=element)
+        element.is_visible(wait_time=5)
+        self.browser.execute_script("arguments[0].focus();", element.first._element)
+        self.browser.fill(input_name, input_value)
 
     def login_as_superuser(self):
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
         self.logged_in = True
+
+    def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
+        """
+        Scroll element into view. Element can be expressed either as Splinter `ElementList`, `ElementAPI`, CSS query selector or XPath.
+        """
+        if css:
+            element = self.browser.find_by_css(css)
+        elif xpath:
+            element = self.browser.find_by_xpath(xpath)
+
+        self.browser.execute_script(
+            f"arguments[0].scrollIntoView({{ behavior: 'instant', block: '{block}' }});",
+            element.first._element if hasattr(element, "__iter__") else element._element,
+        )
 
 
 class BulkOperationsTestCases:

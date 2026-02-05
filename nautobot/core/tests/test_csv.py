@@ -96,7 +96,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip4__host",
                 "primary_ip6__parent__namespace__name",
                 "primary_ip6__host",
-                "cluster__name",
                 "virtual_chassis__name",
                 "controller_managed_device_group__name",
                 "device_redundancy_group__name",
@@ -123,7 +122,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "rack",
                 "primary_ip4",
                 "primary_ip6",
-                "cluster",
                 "virtual_chassis",
                 "controller_managed_device_group",
                 "device_redundancy_group",
@@ -151,13 +149,13 @@ class CSVParsingRelatedTestCase(TestCase):
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_NO_OBJECT)
             self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT)
 
+        expected_location_nested_lookup_values = {
+            f"location__{'parent__' * depth}name": CSV_NO_OBJECT
+            for depth in range(2, Location.objects.max_tree_depth() + 1)
+        }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
             location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
-            expected_location_nested_lookup_values = {
-                f"location__{'parent__' * depth}name": CSV_NO_OBJECT
-                for depth in range(2, Location.objects.max_tree_depth() + 1)
-            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             self.assertEqual(
                 location_lookup_value,
                 {
@@ -228,7 +226,6 @@ class CSVParsingRelatedTestCase(TestCase):
                 "primary_ip4__host": CSV_NO_OBJECT,
                 "primary_ip6__parent__namespace__name": CSV_NO_OBJECT,
                 "primary_ip6__host": CSV_NO_OBJECT,
-                "cluster__name": CSV_NO_OBJECT,
                 "virtual_chassis__name": CSV_NO_OBJECT,
                 "controller_managed_device_group__name": CSV_NO_OBJECT,
                 "device_redundancy_group__name": CSV_NO_OBJECT,

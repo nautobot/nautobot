@@ -9,7 +9,7 @@ from django.db.models import Prefetch, QuerySet
 from django.db.models.fields.related import ForeignKey, RelatedField
 from django.db.models.fields.reverse_related import ManyToOneRel
 from django.urls import reverse
-from django.utils.html import escape, format_html, format_html_join
+from django.utils.html import format_html, format_html_join
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
@@ -29,15 +29,14 @@ logger = logging.getLogger(__name__)
 
 class BaseTable(django_tables2.Table):
     """
-    Default table for object lists
-
-    :param user: Personalize table display for the given user (optional). Has no effect if AnonymousUser is passed.
+    Default table for object lists.
     """
 
     class Meta:
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
         }
+        default = helpers.HTML_NONE
 
     def __init__(
         self,
@@ -48,6 +47,7 @@ class BaseTable(django_tables2.Table):
         hide_hierarchy_ui=False,
         order_by=None,
         data_transform_callback=None,
+        configurable=False,
         **kwargs,
     ):
         """
@@ -57,7 +57,7 @@ class BaseTable(django_tables2.Table):
             *args (list, optional): Passed through to django_tables2.Table
             table_changes_pending (bool): TODO
             saved_view (SavedView, optional): TODO
-            user (User, optional): TODO
+            user (User, optional): Personalize table display for the given user (optional)
             hide_hierarchy_ui (bool): Whether to display or hide hierarchy indentation of nested objects.
             order_by (list, optional): Field(s) to sort by
             data_transform_callback (function, optional): A function that takes the given `data` as an input and
@@ -114,6 +114,8 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, **kwargs)
+
+        self.configurable = configurable
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
@@ -369,12 +371,17 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         default = kwargs.pop("default", "")
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
-            kwargs["attrs"] = {"td": {"class": "min-width"}}
+            kwargs["attrs"] = {
+                "input": {"class": "form-check-input nb-form-check-input-sm mt-2"},
+                "td": {"class": "nb-w-0"},
+            }
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
     def header(self):
-        return mark_safe('<input type="checkbox" class="toggle" title="Toggle all" />')
+        return mark_safe(
+            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2" title="Toggle all" />'
+        )
 
 
 class BooleanColumn(django_tables2.Column):
@@ -391,30 +398,55 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     """
     Render edit, delete, and changelog buttons for an object.
 
-    :param model: Model class to use for calculating URL view names
-    :param prepend_template: Additional template content to render in the column (optional)
-    :param return_url_extra: String to append to the return URL (e.g. for specifying a tab) (optional)
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        prepend_template (Optional[str]): Additional template content to render in the column
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
     buttons = ("changelog", "edit", "delete")
-    attrs = {"td": {"class": "text-right text-nowrap noprint"}}
+    attrs = {
+        "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
+        "tf": {"class": "nb-w-0"},
+        "th": {"class": "nb-actionable nb-w-0"},
+    }
     # Note that braces are escaped to allow for string formatting prior to template rendering
-    template_code = """
-    {{% if "changelog" in buttons %}}
-        <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
-            <i class="mdi mdi-history"></i>
-        </a>
-    {{% endif %}}
-    {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-warning" title="Edit">
-            <i class="mdi mdi-pencil"></i>
-        </a>
-    {{% endif %}}
-    {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
-            <i class="mdi mdi-trash-can-outline"></i>
-        </a>
-    {{% endif %}}
+    template_code = """\
+{{% if record.present_in_database %}}
+    <div class="dropdown">
+        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+            <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {prepend_template}
+            {{% if "changelog" in buttons %}}
+                <li>
+                    <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
+                        <span class="mdi mdi-history" aria-hidden="true"></span>
+                        Change Log
+                    </a>
+                </li>
+            {{% endif %}}
+            {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
+                <li>
+                    <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
+                        <span class="mdi mdi-pencil" aria-hidden="true"></span>
+                        Edit
+                    </a>
+                </li>
+            {{% endif %}}
+            {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
+                <li>
+                    <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
+                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                        Delete
+                    </a>
+                </li>
+            {{% endif %}}
+        </ul>
+    </div>
+{{% endif %}}
     """
 
     def __init__(
@@ -423,15 +455,10 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         *args,
         pk_field="pk",
         buttons=None,
-        prepend_template=None,
+        prepend_template="",
         return_url_extra="",
         **kwargs,
     ):
-        if prepend_template:
-            prepend_template = prepend_template.replace("{", "{{")
-            prepend_template = prepend_template.replace("}", "}}")
-            self.template_code = prepend_template + self.template_code
-
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
         edit_route = get_route_for_model(model, "edit")
@@ -445,6 +472,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             delete_route=delete_route,
             pk_field=pk_field,
             buttons=buttons,
+            prepend_template=prepend_template,
         )
 
         super().__init__(template_code=template_code, *args, **kwargs)
@@ -455,6 +483,67 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                 "return_url_extra": return_url_extra,
             }
         )
+
+    def header(self):  # pylint: disable=invalid-overridden-method
+        return ""
+
+
+class ApprovalButtonsColumn(django_tables2.TemplateColumn):
+    """
+    Render detail, changelog, approve, deny, and comment buttons for an approval workflow stage.
+
+    Args:
+        model (type(Model)): Model class to use for calculating URL view names
+        return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
+    """
+
+    buttons = ("detail", "changelog", "comment", "approve", "deny")
+    attrs = {"td": {"class": "d-print-none text-end text-nowrap"}}
+    template_name = "extras/inc/approval_buttons_column.html"
+
+    def __init__(
+        self,
+        model,
+        *args,
+        buttons=None,
+        return_url_extra="",
+        **kwargs,
+    ):
+        app_label = model._meta.app_label
+        changelog_route = get_route_for_model(model, "changelog")
+        approval_route = "extras:approvalworkflowstage_approve"
+        comment_route = "extras:approvalworkflowstage_comment"
+        deny_route = "extras:approvalworkflowstage_deny"
+
+        super().__init__(template_name=self.template_name, *args, **kwargs)
+
+        self.extra_context.update(
+            {
+                "buttons": buttons or self.buttons,
+                "return_url_extra": return_url_extra,
+                "changelog_route": changelog_route,
+                "approval_route": approval_route,
+                "comment_route": comment_route,
+                "deny_route": deny_route,
+                "have_permission": f"perms.{app_label}.change_{model._meta.model_name}",
+            }
+        )
+
+    def render(self, record, table, value, bound_column, **kwargs):
+        active_buttons = self.extra_context.get("buttons", self.buttons)
+        needs_approval_check = "approve" in active_buttons or "deny" in active_buttons
+
+        can_approve = False
+
+        request = table.context.get("request")
+        if needs_approval_check and request and request.user:
+            can_approve = (
+                request.user.is_superuser
+                or record.approval_workflow_stage_definition.approver_group.user_set.filter(id=request.user.id).exists()
+            )
+
+        self.extra_context["can_approve"] = can_approve
+        return super().render(record, table, value, bound_column, **kwargs)
 
     def header(self):  # pylint: disable=invalid-overridden-method
         return ""
@@ -471,7 +560,7 @@ class ChoiceFieldColumn(django_tables2.Column):
             name = bound_column.name
             css_class = getattr(record, f"get_{name}_class")()
             label = getattr(record, f"get_{name}_display")()
-            return format_html('<span class="label label-{}">{}</span>', css_class, label)
+            return format_html('<span class="badge bg-{}">{}</span>', css_class, label)
         return self.default
 
 
@@ -481,7 +570,7 @@ class ColorColumn(django_tables2.Column):
     """
 
     def render(self, value):
-        return format_html('<span class="label color-block" style="background-color: #{}">&nbsp;</span>', value)
+        return format_html('<span class="label nb-color-block" style="background-color: #{}">&nbsp;</span>', value)
 
 
 class ColoredLabelColumn(django_tables2.TemplateColumn):
@@ -491,7 +580,13 @@ class ColoredLabelColumn(django_tables2.TemplateColumn):
 
     template_code = """
     {% load helpers %}
-    {% if value %}<label class="label" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">{{ value }}</label>{% else %}&mdash;{% endif %}
+    {% if value %}
+        <span class="badge" style="color: {{ value.color|fgcolor }}; background-color: #{{ value.color }}">
+            {{ value }}
+        </span>
+    {% else %}
+        <span class="text-secondary">&mdash;</span>
+    {% endif %}
     """
 
     def __init__(self, *args, **kwargs):
@@ -589,11 +684,11 @@ class LinkedCountColumn(django_tables2.Column):
                 {k: (getattr(record, v) or settings.FILTERS_NULL_CHOICE_VALUE) for k, v in self.url_params.items()}
             )
         if value > 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         if related_record is not None:
             return helpers.hyperlinked_object(related_record, self.display_field)
         if value == 1:
-            return format_html('<a href="{}" class="badge">{}</a>', url, value)
+            return format_html('<a href="{}" class="badge bg-primary">{}</a>', url, value)
         return helpers.placeholder(value)
 
 
@@ -606,7 +701,7 @@ class TagColumn(django_tables2.TemplateColumn):
     {% for tag in value.all %}
         {% include 'utilities/templatetags/tag.html' %}
     {% empty %}
-        <span class="text-muted">&mdash;</span>
+        <span class="text-secondary">&mdash;</span>
     {% endfor %}
     """
 
@@ -622,9 +717,9 @@ class ContentTypesColumn(django_tables2.ManyToManyColumn):
     performance hit to querysets for table views. If this becomes an issue,
     set `sort_items=False`.
 
-    :param sort_items: Whether to sort by `(app_label, name)`. (default: True)
-    :param truncate_words:
-        Number of words at which to truncate, or `None` to disable. (default: None)
+    Args:
+        sort_items (bool): Whether to sort by `(app_label, name)`.
+        truncate_words (Optional[int]): Number of words at which to truncate, or `None` to disable.
     """
 
     def __init__(self, sort_items=True, truncate_words=None, *args, **kwargs):
@@ -669,29 +764,33 @@ class CustomFieldColumn(django_tables2.Column):
     Display custom fields in the appropriate format.
     """
 
-    # Add [] to empty_values so when there is no choice populated for multiselect_cf i.e. [], "—" is returned automatically.
-    empty_values = (None, "", [])
-
     def __init__(self, customfield, *args, **kwargs):
         self.customfield = customfield
         kwargs["accessor"] = Accessor(f"_custom_field_data__{customfield.key}")
         kwargs["verbose_name"] = customfield.label
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
+            # Add [] to empty_values so when there is no choice populated i.e. [], "—" is returned automatically.
+            kwargs.setdefault("empty_values", (None, "", []))
 
         super().__init__(*args, **kwargs)
 
     def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN:
-            template = helpers.render_boolean(value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT:
-            template = format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in value))
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT:
-            template = format_html('<span class="label label-default">{}</span>', value)
-        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL:
-            template = format_html('<a href="{}">{}</a>', value, value)
-        else:
-            template = escape(value)
+        # TODO: this logic could be unified with _ObjectCustomFieldsPanel.render_value
+        if self.customfield.type == choices.CustomFieldTypeChoices.TYPE_BOOLEAN and value is not None:
+            value = helpers.render_boolean(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_JSON and value is not None:
+            value = helpers.render_json(value, pretty_print=True)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MARKDOWN and value is not None:
+            value = helpers.render_markdown(value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_MULTISELECT and value:
+            value = format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in value))
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_SELECT and value is not None:
+            value = format_html('<span class="badge bg-secondary">{}</span>', value)
+        elif self.customfield.type == choices.CustomFieldTypeChoices.TYPE_URL and value:
+            value = format_html('<a href="{}">{}</a>', value, value)
+        # else (TEXT, INTEGER, DATE) or None value -- no need to do special rendering
 
-        return template
+        return value
 
 
 class RelationshipColumn(django_tables2.Column):
@@ -723,7 +822,7 @@ class RelationshipColumn(django_tables2.Column):
         # Handle Symmetric Relationships
         # List `value` could be empty here [] after the filtering from above
         if len(value) < 1:
-            return "—"
+            return helpers.HTML_NONE
 
         v = value[0]
         peer = v.get_peer(record)

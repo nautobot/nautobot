@@ -89,7 +89,7 @@ services:
     profiles:
       - mkdocs
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
-    entrypoint: "mkdocs serve -a '0.0.0.0:8001'"
+    entrypoint: "mkdocs serve --livereload -a '0.0.0.0:8001'"
     healthcheck:
       disable: true
     tty: true

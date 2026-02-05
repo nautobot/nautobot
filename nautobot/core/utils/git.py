@@ -41,10 +41,10 @@ def swap_status_initials(data):
 
 def convert_git_diff_log_to_list(logs):
     """
-    Convert Git diff log into a list splitted by \\n
+    Convert Git diff log into a list splitted by `\\n`
 
-    Example:
-        >>> git_log = "M\tindex.html\nR\tsample.txt"
+    Examples:
+        >>> git_log = "M\\tindex.html\\nR\\tsample.txt"
         >>> print(convert_git_diff_log_to_list(git_log))
         ["Modification - index.html", "Renaming - sample.txt"]
     """

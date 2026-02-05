@@ -36,16 +36,18 @@ from nautobot.core.models.utils import (
     serialize_object_v2,
 )
 from nautobot.core.models.validators import EnhancedURLValidator, ExclusionValidator, ValidRegexValidator
+from nautobot.data_validation.custom_validators import ComplianceError, DataComplianceRule
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContextModel,
     CustomFieldModel,
     RelationshipModel,
     StatusField,
-    StatusModel,
 )
 from nautobot.extras.models.mixins import (
+    ApprovableModelMixin,
     ContactMixin,
+    DataComplianceModelMixin,
     DynamicGroupMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
@@ -58,6 +60,7 @@ from nautobot.ipam.fields import VarbinaryIPField
 from nautobot.ipam.models import get_default_namespace, get_default_namespace_pk
 
 __all__ = (
+    "ApprovableModelMixin",
     "AttributeSetter",
     "AutoSlugField",
     "BaseManager",
@@ -65,6 +68,7 @@ __all__ = (
     "ChangeLoggedModel",
     "CollateAsChar",
     "ColorField",
+    "ComplianceError",
     "CompositeKeyQuerySetMixin",
     "ConfigContextModel",
     "ConfigContextSchemaValidationMixin",
@@ -72,6 +76,8 @@ __all__ = (
     "ContentTypeRelatedQuerySet",
     "CustomFieldModel",
     "CustomValidator",
+    "DataComplianceModelMixin",
+    "DataComplianceRule",
     "DynamicGroupMixin",
     "DynamicGroupsModelMixin",
     "EmptyGroupByJSONBAgg",
@@ -92,7 +98,6 @@ __all__ = (
     "RestrictedQuerySet",
     "SavedViewMixin",
     "StatusField",
-    "StatusModel",
     "TagsField",
     "TagsManager",
     "TreeManager",

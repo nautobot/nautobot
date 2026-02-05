@@ -6,10 +6,10 @@
 {% block content %}
     {% include 'inc/ajax_loader.html' %}
     <div class="row">
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Device Facts</strong></div>
-                <table class="table panel-body">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><strong>Device Facts</strong></div>
+                <table class="table card-body">
                     <tr>
                         <th>Hostname</th>
                         <td id="hostname"></td>
@@ -41,24 +41,24 @@
                 </table>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="panel panel-default">
-                <div class="panel-heading"><strong>Environment</strong></div>
-                <table class="table panel-body">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header"><strong>Environment</strong></div>
+                <table class="table card-body">
                     <tr id="cpu">
-                        <th colspan="2"><i class="mdi mdi-gauge"></i> CPU</th>
+                        <th colspan="2"><span class="mdi mdi-gauge"></span> CPU</th>
                     </tr>
                     <tr id="memory">
-                        <th colspan="2"><i class="mdi mdi-chip"></i> Memory</th>
+                        <th colspan="2"><span class="mdi mdi-chip"></span> Memory</th>
                     </tr>
                     <tr id="temperature">
-                        <th colspan="2"><i class="mdi mdi-thermometer"></i> Temperature</th>
+                        <th colspan="2"><span class="mdi mdi-thermometer"></span> Temperature</th>
                     </tr>
                     <tr id="fans">
-                        <th colspan="2"><i class="mdi mdi-fan"></i> Fans</th>
+                        <th colspan="2"><span class="mdi mdi-fan"></span> Fans</th>
                     </tr>
                     <tr id="power">
-                        <th colspan="2"><i class="mdi mdi-power"></i> Power</th>
+                        <th colspan="2"><span class="mdi mdi-power"></span> Power</th>
                     </tr>
                 </table>
             </div>
@@ -101,11 +101,11 @@
                             memory.after("<tr><td>Available</td><td>" + json['get_environment']['memory']['available_ram'] + "</td></tr>");
                         }
                         $.each(json['get_environment']['temperature'], function(name, obj) {
-                            var style = "success";
+                            var style = "table-success";
                             if (obj['is_alert']) {
-                                style = "warning";
+                                style = "table-warning";
                             } else if (obj['is_critical']) {
-                                style = "danger";
+                                style = "table-danger";
                             }
                             var row="<tr class=\"" + style +"\"><td>" + name + "</td><td>" + obj['temperature'] + "°C</td></tr>";
                             $("#temperature").after(row)
@@ -113,18 +113,18 @@
                         $.each(json['get_environment']['fans'], function(name, obj) {
                             var row;
                             if (obj['status']) {
-                                row = `<tr class="success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
+                                row = `<tr class="table-success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
                             } else {
-                                row = `<tr class="error"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
+                                row = `<tr class="table-danger"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
                             }
                             $("#fans").after(row)
                         });
                         $.each(json['get_environment']['power'], function(name, obj) {
                             var row;
                             if (obj['status']) {
-                                row = `<tr class="success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
+                                row = `<tr class="table-success"><td>${name}</td><td>{{ True | render_boolean }}</td></tr>`;
                             } else {
-                                row = `<tr class="danger"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
+                                row = `<tr class="table-danger"><td>${name}</td><td>{{ False | render_boolean }}</td></tr>`;
                             }
                             $("#power").after(row)
                         });
