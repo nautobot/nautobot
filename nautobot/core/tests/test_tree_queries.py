@@ -1,7 +1,9 @@
-from unittest.mock import patch
+from copy import deepcopy
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
+from django.test import override_settings
 from django.test.utils import CaptureQueriesContext
 
 from nautobot.core.testing import TestCase
@@ -274,16 +276,11 @@ class TreeModelCachedDescendantsPKsTests(TestCase):
         loc = Location.objects.without_tree_fields().exclude(children__isnull=True).first()
         self.assertIsNotNone(loc)
 
-        # Mock CACHES setting without TIMEOUT key (as in Redis Sentinel documentation example)
-        caches_without_timeout = {
-            "default": {
-                "BACKEND": "django_redis.cache.RedisCache",
-                "LOCATION": "redis://localhost:6379/0",
-            }
-        }
+        # Copy existing CACHES and remove TIMEOUT key to avoid state leakage
+        caches_without_timeout = deepcopy(settings.CACHES)
+        caches_without_timeout["default"].pop("TIMEOUT", None)
 
-        with patch("nautobot.core.models.tree_queries.settings") as mock_settings:
-            mock_settings.CACHES = caches_without_timeout
+        with override_settings(CACHES=caches_without_timeout):
             # This should not raise KeyError, should use default timeout of 300
             try:
                 loc.cacheable_descendants_pks()
