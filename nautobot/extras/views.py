@@ -967,21 +967,16 @@ class ObjectConfigContextView(generic.ObjectView):
 
 class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
     def __init__(self, *, extra_columns=None, **kwargs):
-        self.extra_columns = extra_columns or []
+        super().__init__(extra_columns=extra_columns, **kwargs)
 
-        # Inject extra columns directly into the table_class.base_columns before initialization
-        table_class = kwargs.get("table_class")
-        if table_class:
-            for name, column in self.extra_columns:
-                # Add to base_columns only if not already present
-                if name not in table_class.base_columns:
-                    table_class.base_columns[name] = column
 
-        super().__init__(**kwargs)
-
+class ConfigContextSchemaDataPanel(object_detail.Panel):
     def get_extra_context(self, context: Dict[str, Any]):
-        # No need to mutate columns here anymore
-        return super().get_extra_context(context)
+        extra = super().get_extra_context(context)
+        obj = context.get("object")
+        extra["data"] = getattr(obj, "data_schema", None)
+        extra["format"] = context.get("data_format", "json")
+        return extra
 
 
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
@@ -1009,12 +1004,12 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                 ],
                 hide_if_unset=["owner"],
             ),
-            object_detail.Panel(
+            ConfigContextSchemaDataPanel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 label="Data Schema",
                 header_extra_content_template_path="extras/inc/configcontext_format.html",
-                body_content_template_path="extras/inc/configcontextschema_data.html",
+                body_content_template_path="extras/inc/json_data.html",
             ),
         )
 

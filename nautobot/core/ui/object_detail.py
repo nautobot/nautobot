@@ -821,6 +821,7 @@ class ObjectsTablePanel(Panel):
         table_class=None,
         table_filter=None,
         table_attribute=None,
+        extra_columns=None,
         distinct=False,
         select_related_fields=None,
         prefetch_related_fields=None,
@@ -867,6 +868,7 @@ class ObjectsTablePanel(Panel):
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
+            extra_columns (list, optional): Extra columns to pass through to the table constructor.
             distinct (bool, optional): If True, apply `.distinct()` to the table queryset.
             select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
             prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
@@ -908,6 +910,7 @@ class ObjectsTablePanel(Panel):
                 table_class,
                 table_filter,
                 table_attribute,
+                extra_columns,
                 distinct,
                 select_related_fields,
                 prefetch_related_fields,
@@ -930,6 +933,7 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
         self.table_filter = table_filter
         self.table_attribute = table_attribute
+        self.extra_columns = extra_columns
         self.distinct = distinct
         self.select_related_fields = select_related_fields
         self.prefetch_related_fields = prefetch_related_fields
@@ -1053,12 +1057,14 @@ class ObjectsTablePanel(Panel):
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             if self.distinct:
                 body_content_table_queryset = body_content_table_queryset.distinct()
-            body_content_table = body_content_table_class(
-                body_content_table_queryset,
-                hide_hierarchy_ui=self.hide_hierarchy_ui,
-                user=request.user,
-                configurable=self.show_table_config_button,
-            )
+            table_kwargs = {
+                "hide_hierarchy_ui": self.hide_hierarchy_ui,
+                "user": request.user,
+                "configurable": self.show_table_config_button,
+            }
+            if self.extra_columns is not None:
+                table_kwargs["extra_columns"] = self.extra_columns
+            body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)
             if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
                 # to redirect the user back to the correct tab after editing/deleteing an object
@@ -1071,7 +1077,7 @@ class ObjectsTablePanel(Panel):
 
         if self.include_columns:
             for column in self.include_columns:
-                if column not in body_content_table.base_columns:
+                if column not in body_content_table.columns:
                     raise ValueError(f"You are specifying a non-existent column `{column}`")
                 body_content_table.columns.show(column)
 
