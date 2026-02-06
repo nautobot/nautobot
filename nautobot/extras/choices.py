@@ -367,8 +367,8 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 
     CHOICES = (
         (TYPE_OUTPUT, "Output"),
-        (TYPE_STDOUT, "Stdout"),
-        (TYPE_STDERR, "Stderr"),
+        (TYPE_STDOUT, "Standard output"),
+        (TYPE_STDERR, "Standard error"),
     )
 
 

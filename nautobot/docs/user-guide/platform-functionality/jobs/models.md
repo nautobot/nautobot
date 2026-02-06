@@ -42,7 +42,7 @@ Records of this type store the following data:
 
 ## Job Console Entry
 
-Console output produced during the execution of a Job is stored as `JobConsoleEntry` objects. These entries are created incrementally as output is generated, allowing consumers to retrieve and display console output in near real time (for example, simulating tail -f behavior while a job is still running).
+Console output produced during the execution of a Job is stored as `JobConsoleEntry` objects. These entries are created incrementally as output is generated, allowing consumers to retrieve and display console output in near real time (for example, simulating `tail -f` behavior while a job is still running).
 
 Records of this type store the following data:
 

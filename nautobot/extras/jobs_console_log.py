@@ -14,6 +14,15 @@ from nautobot.extras.models import JobConsoleEntry, JobResult
 logger = logging.getLogger(__name__)
 
 
+class JobConsoleLogSubprocessError(subprocess.SubprocessError):
+    """Raised when a job console log subprocess fails."""
+
+    def __init__(self, message=None, returncode=None, stderr=None):
+        super().__init__(message)
+        self.returncode = returncode
+        self.stderr = stderr
+
+
 def store_job_output_line(job_result: JobResult, data: str, output_type: str = "output", timestamp=None):
     """
     Store output from a job console log execution as a new line in the database.
@@ -44,13 +53,13 @@ class StreamReader:
     Reads from a process stream and stores output to database.
     """
 
-    def __init__(self, output_type: str, store_func):
+    def __init__(self, output_type: str, store_func: callable):
         """
         Initialize stream reader.
 
         Args:
             output_type (str): 'stdout' or 'stderr'
-            store_func: Function to call to store each line
+            store_func (callable): Function to call to store each line
         """
         self.output_type = output_type
         self.store_func = store_func
@@ -144,10 +153,18 @@ class JobConsoleLogExecutor:
     def _handle_failure(self):
         """Handle job failure by raising exception with stderr."""
         if self.return_code != 0:
-            last_entry = JobConsoleEntry.objects.filter(
+            stderr_lines = JobConsoleEntry.objects.filter(
                 job_result=self.job_result, output_type=JobConsoleEntryOutputTypeChoices.TYPE_STDERR
-            ).last()
-            raise Exception(last_entry.text.rstrip() if last_entry else last_entry)  # pylint: disable=broad-exception-raised
+            ).values_list("text", flat=True)
+
+            stderr = "\n".join(line.rstrip() for line in stderr_lines)
+            message = list(stderr_lines)[-1].rstrip() if stderr_lines else None
+
+            raise JobConsoleLogSubprocessError(
+                message=message or "Job console log subprocess failed",
+                returncode=self.return_code,
+                stderr=stderr,
+            )
 
     def execute(self) -> Dict[str, Any]:
         """
