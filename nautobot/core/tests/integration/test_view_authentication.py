@@ -28,6 +28,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                 if url in [
                     "/admin/login/",
                     "/api/plugins/example-app/webhook/",
+                    "/api/plugins/example-app/error/",
                     "/health/",
                     "/login/",
                     "/media-failure/",
