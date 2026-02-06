@@ -2175,17 +2175,26 @@ class DynamicGroupTestCase(
 
         body = extract_page_body(response.content.decode(response.charset))
 
-        def assert_panel(label, content_html):
+        def assert_panel(title, panel_id):
             panel = (
-                '<div class="panel panel-default">'
-                f'<div class="panel-heading"><strong>{label}</strong></div>'
-                f'<div class="panel-body">{content_html}</div>'
-                "</div>"
+                f'<div class="card-header bg-default-subtle border-default">'
+                f"  <strong>{title}</strong>"
+                f"  <a "
+                f'     class="btn stretched-link nb-collapse-toggle" '
+                f'     data-bs-toggle="collapse" '
+                f'     panel-id="{panel_id}" '
+                f'     href="#{panel_id}" '
+                f'     role="button" '
+                f'     aria-expanded="true" '
+                f'     aria-controls="{panel_id}">'
+                f'    <span class="mdi mdi-chevron-down"></span>'
+                f"  </a>"
+                f"</div>"
             )
             self.assertInHTML(panel, body)
 
-        assert_panel("Filter", '<span class="text-muted">&mdash;</span>')
-        assert_panel("Filter Query Logic", '<pre><span class="text-muted">&mdash;</span></pre>')
+        assert_panel("FILTER", "filter")
+        assert_panel("FILTER QUERY LOGIC", "filter-query-logic")
 
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
