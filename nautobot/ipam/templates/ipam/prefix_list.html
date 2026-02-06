@@ -41,6 +41,18 @@
         margin-bottom: -.75rem;
         vertical-align: bottom;
     }
+
+    .nb-subtree.nb-subtree-ancestor-next-sibling::before {
+        content: "│";
+    }
+
+    .nb-subtree.nb-subtree-next-sibling::before {
+        content: "├";
+    }
+
+    .nb-subtree.nb-subtree-no-next-sibling::before {
+        content: "└";
+    }
 </style>
 <script>
     const collapseSubtree = (event) => {

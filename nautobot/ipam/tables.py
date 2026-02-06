@@ -61,18 +61,19 @@ PREFIX_COPY_LINK = """
                         {% if ancestors|index:ancestor_depth|filter_getattr:"next_sibling" is None %}
                             <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
                         {% else %}
-                            <span class="nb-subtree nb-subtree-ancestor-next-sibling">│</span>
+                            <span class="nb-subtree nb-subtree-ancestor-next-sibling"></span>
                         {% endif %}
                     {% endwith %}
                 {% elif record.next_sibling is not None %}
-                    <span class="nb-subtree nb-subtree-next-sibling">├</span>
+                    <span class="nb-subtree nb-subtree-next-sibling"></span>
                 {% else %}
-                    <span class="nb-subtree nb-subtree-no-next-sibling">└</span>
+                    <span class="nb-subtree nb-subtree-no-next-sibling"></span>
                 {% endif %}
             {% endfor %}
-            {% if record.children.exists %}
+            {% if record.descendants_count %}
                 <span class="nb-subtree nb-subtree-expandable mdi mdi-chevron-right"
                       hx-get="{% url 'ipam:prefix_children' pk=record.pk %}"
+                      hx-indicator="closest .table-responsive"
                       hx-select=".table-responsive tr"
                       hx-swap="afterend"
                       hx-select-oob="none"
@@ -83,23 +84,35 @@ PREFIX_COPY_LINK = """
             {% endif %}
         {% endwith %}
     {% endif %}
+    <a href="\
+       {% if record.present_in_database %}\
+           {% url 'ipam:prefix' pk=record.pk %}\
+       {% else %}\
+           {% url 'ipam:prefix_add' %}\
+           ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
+           {% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
+           {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
+       {% endif %}\
+       " id="copy_{{record.id}}">
+        {{ record.prefix }}
+    </a>
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
+    {% if not table.hide_hierarchy_ui %}
+        <span class="float-end">
+            {% if record.descendants_count %}
+                <a class="mdi mdi-magnify-plus-outline"
+                   href="{% url 'ipam:prefix_list' %}?descendants_of={{ record.pk }}"
+                   aria-hidden="true"
+                   title="Filter to this prefix and its descendants"
+                >
+                </a>
+            {% endif %}
+        </span>
+    {% endif %}
 {% endspaceless %}
-<span>
-  <a href="\
-{% if record.present_in_database %}\
-{% url 'ipam:prefix' pk=record.pk %}\
-{% else %}\
-{% url 'ipam:prefix_add' %}\
-?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
-{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-{% endif %}\
-" id="copy_{{record.id}}">{{ record.prefix }}</a>
-  <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
-    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-    <span class="visually-hidden">Copy</span>
-  </button>
-</span>
 """
 
 PREFIX_ROLE_LINK = """

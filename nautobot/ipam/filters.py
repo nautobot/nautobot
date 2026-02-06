@@ -243,7 +243,12 @@ class PrefixFilterSet(
         prefers_id=True,
         to_field_name="network",
         method="filter_ancestors",
-        label="Prefixes which are ancestors of this prefix (ID or host string)",
+        label="Prefixes which are ancestors of this prefix (ID or network string)",
+    )
+    descendants_of = django_filters.ModelChoiceFilter(
+        queryset=Prefix.objects.all(),
+        method="filter_descendants",
+        label="Prefix (ID) and its descendants",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
@@ -386,6 +391,11 @@ class PrefixFilterSet(
         prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
         ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
         return queryset.filter(pk__in=ancestor_ids)
+
+    def filter_descendants(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(pk__in=value.descendants(include_self=True).values_list("pk", flat=True))
 
     def generate_query_filter_max_depth(self, value):
         if value < 1:

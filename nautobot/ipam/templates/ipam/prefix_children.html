@@ -13,19 +13,30 @@
                 </tr>
             {% endfor %}
         </tbody>
-        {% if table.page.paginator.num_pages > 1 %}
+        {% if table.page.paginator.num_pages > 1 and table.page.number < table.page.paginator.num_pages %}
             <tfoot>
                 <tr>
                     {% if "pk" in table.columns %}
-                        <td></td>
-                        <td colspan="{{ table.columns|length|add:-1 }}" class="nb-prefix table-warning">
+                        <td class="table-info"></td>
+                        <td colspan="{{ table.columns|length|add:-1 }}" class="nb-prefix table-info">
                     {% else %}
-                        <td colspan="{{ table.columns|length }}" class="nb-prefix table-warning">
+                        <td colspan="{{ table.columns|length }}" class="nb-prefix table-info">
                     {% endif %}
                         {% for i in table.context.tree_depth|add:1|as_range %}
                             <span class="nb-subtree"></span>
                         {% endfor %}
-                        ... and {{ table.context.additional_count }} more children not shown due to pagination ...
+                        &hellip; and
+                        <a href="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
+                           hx-get="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
+                           hx-indicator="closest .table-responsive"
+                           hx-select=".table-responsive tr"
+                           hx-swap="outerHTML"
+                           hx-select-oob="none"
+                           hx-target="closest tr"
+                        >
+                            {{ table.context.additional_count }} more
+                        </a>
+                        &hellip;
                     </td>
                 </tr>
             </tfoot>
