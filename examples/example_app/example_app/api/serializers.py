@@ -25,9 +25,10 @@ class ExampleModelSerializer(NautobotModelSerializer):
         model = ExampleModel
         fields = "__all__"
 
+
 class ErrorSerializer(Serializer):
     """Serializer for the error view.
 
     This is necessary, because otherwise the REST API schema check test fails.
     """
-    pass
+

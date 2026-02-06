@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from example_app.api.serializers import AnotherExampleModelSerializer, ExampleModelSerializer, ErrorSerializer
+from example_app.api.serializers import AnotherExampleModelSerializer, ErrorSerializer, ExampleModelSerializer
 from example_app.filters import AnotherExampleModelFilterSet, ExampleModelFilterSet
 from example_app.models import AnotherExampleModel, ExampleModel
 
