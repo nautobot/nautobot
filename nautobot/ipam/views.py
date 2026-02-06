@@ -338,6 +338,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
+    non_filter_params = list(NautobotUIViewSet.non_filter_params) + ["expanded_prefix"]
+
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -610,6 +612,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     def children(self, request, *args, **kwargs):
         instance = self.get_object()
         child_prefixes = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
         saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
         prefix_table = tables.PrefixDetailTable(
@@ -629,12 +632,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
         }
         RequestConfig(request, paginate).configure(prefix_table)
 
-        from django.contrib.contenttypes.models import ContentType
-
         return Response(
             {
                 "instance": instance,
                 "request": request,
+                "return_url": return_url,
                 "table_inc_template": "ipam/prefix_children.html",
                 "template": "panel_table.html",
                 "table": prefix_table,

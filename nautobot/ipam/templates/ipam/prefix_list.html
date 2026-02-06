@@ -30,8 +30,9 @@
 {% block javascript %}
 {{ block.super }}
 <style>
-    .nb-subtree:not(.nb-subtree-expandable) {
+    .nb-subtree::before {
         color: var(--bs-border-color);
+        content: " ";
         display: inline-block;
         padding-left: .25rem;
         min-width: 1rem;
@@ -42,15 +43,29 @@
         vertical-align: bottom;
     }
 
-    .nb-subtree.nb-subtree-ancestor-next-sibling::before {
+    .nb-subtree.nb-subtree-expandable:before {
+        color: var(--bs-secondary);
+        font-size: 1rem;
+        vertical-align: middle;
+    }
+
+    .nb-subtree.nb-subtree-expandable:before {
+        content: "▷";
+    }
+
+    .nb-subtree.nb-subtree-expandable.nb-subtree-expanded:before {
+        content: "▼";
+    }
+
+    .nb-subtree.nb-subtree-ancestor-next-sibling:before {
         content: "│";
     }
 
-    .nb-subtree.nb-subtree-next-sibling::before {
+    .nb-subtree.nb-subtree-next-sibling:before {
         content: "├";
     }
 
-    .nb-subtree.nb-subtree-no-next-sibling::before {
+    .nb-subtree.nb-subtree-no-next-sibling:before {
         content: "└";
     }
 </style>
@@ -58,23 +73,33 @@
     const collapseSubtree = (event) => {
         const ancestorsCount = event.target.closest("td").getElementsByClassName("nb-subtree").length;
         const tr = event.target.closest("tr");
+        const url = new URL(window.location.href);
         while (tr.nextElementSibling !== null &&
             tr.nextElementSibling.getElementsByClassName("nb-prefix").length > 0 &&
             tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getElementsByClassName("nb-subtree").length > ancestorsCount
         ) {
+            url.searchParams.delete("expanded_prefix", tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getAttribute("data-pk"));
             tr.nextElementSibling.remove();
         }
-        event.target.classList.replace("mdi-chevron-down", "mdi-chevron-right");
+        event.target.classList.toggle("nb-subtree-expanded", false);
         event.target.setAttribute("hx-get", event.target.getAttribute("_hx-get"));
         htmx.process(event.target);
+        url.searchParams.delete("expanded_prefix", event.target.closest("td").getAttribute("data-pk"));
+        window.history.replaceState(null, "", url);
     };
 
-    const afterExpansion = (span) => {
-        span.classList.replace("mdi-chevron-right", "mdi-chevron-down");
+    const afterExpansion = (span, addExpandedPrefix) => {
+        span.classList.toggle("nb-subtree-expanded", true);
         span.setAttribute("_hx-get", span.getAttribute("hx-get"));
         span.removeAttribute("hx-get");
         htmx.process(span);
-        span.addEventListener("click", collapseSubtree)
+        span.addEventListener("click", collapseSubtree);
+        if (addExpandedPrefix) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("expanded_prefix", span.closest("td").getAttribute("data-pk"));  // to avoid dupes
+            url.searchParams.append("expanded_prefix", span.closest("td").getAttribute("data-pk"));
+            window.history.replaceState(null, "", url);
+        }
     }
 
     const maybeAddExpansionCaret = (td) => {
@@ -82,14 +107,14 @@
         const carets = td.getElementsByClassName("nb-subtree-expandable");
         if (carets.length > 0) {
             const caret = carets[0];
-            caret.setAttribute("hx-on:htmx:after-on-load", "afterExpansion(this)");
+            caret.setAttribute("hx-on:htmx:after-on-load", "afterExpansion(this, true)");
             const tr = td.closest("tr");
             if (tr.nextElementSibling !== null &&
                 tr.nextElementSibling.getElementsByClassName("nb-prefix").length > 0 &&
                 tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getElementsByClassName("nb-subtree").length > ancestorsCount
             ) {
                 // already expanded to show subtree
-                afterExpansion(caret);
+                afterExpansion(caret, false);
             }
         }
     };
@@ -101,6 +126,11 @@
                 maybeAddExpansionCaret(td);
             });
             htmx.process(content);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.getAll("expanded_prefix").forEach((pk) => {
+                htmx.find(`td[data-pk="${pk}"] .nb-subtree-expandable:not(.nb-subtree-expanded)`)?.click();
+            });
         }
     });
 </script>

@@ -71,12 +71,12 @@ PREFIX_COPY_LINK = """
                 {% endif %}
             {% endfor %}
             {% if record.descendants_count %}
-                <span class="nb-subtree nb-subtree-expandable mdi mdi-chevron-right"
-                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}"
+                <span class="nb-subtree nb-subtree-expandable"
+                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
                       hx-indicator="closest .table-responsive"
                       hx-select=".table-responsive tr"
-                      hx-swap="afterend"
                       hx-select-oob="none"
+                      hx-swap="afterend"
                       hx-target="closest tr"
                 ></span>
             {% else %}
