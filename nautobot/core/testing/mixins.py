@@ -18,7 +18,7 @@ from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import utils
 from nautobot.core.utils import permissions
 from nautobot.extras import management, models as extras_models
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobResultStatusChoices, RelationshipSideChoices
 from nautobot.ipam.models import default_namespace_pk
 from nautobot.users import models as users_models
 
@@ -102,6 +102,28 @@ class NautobotTestCaseMixin:
         for attr in fields:
             if hasattr(instance, attr) and attr not in model_dict:
                 model_dict[attr] = getattr(instance, attr)
+            elif attr.startswith("cf_"):
+                # Handle custom fields specifically
+                model_dict[attr] = instance._custom_field_data.get(attr[3:])
+            elif attr.startswith("cr_"):
+                # Handle relationship associations specifically
+                relationship_key, peer_side = attr[3:].rsplit("__", 1)
+                relationship = extras_models.Relationship.objects.get(key=relationship_key)
+                if relationship.has_many(peer_side):
+                    model_dict[attr] = sorted(
+                        getattr(assoc, f"{peer_side}_id")
+                        for assoc in extras_models.RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{f"{RelationshipSideChoices.OPPOSITE[peer_side]}_id": instance.pk},
+                        )
+                    )
+                else:
+                    model_dict[attr] = extras_models.RelationshipAssociation.objects.filter(
+                        relationship=relationship,
+                        **{f"{RelationshipSideChoices.OPPOSITE[peer_side]}_id": instance.pk},
+                    ).first()
+                    if model_dict[attr] is not None:
+                        model_dict[attr] = getattr(model_dict[attr], f"{peer_side}_id")
 
         for key, value in list(model_dict.items()):
             try:
@@ -251,7 +273,7 @@ class NautobotTestCaseMixin:
         # Omit any dictionary keys which are not instance attributes or have been excluded
         relevant_data = {}
         for k, v in data.items():
-            if hasattr(instance, k) and k not in exclude:
+            if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
