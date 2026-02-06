@@ -6,12 +6,9 @@ import inspect
 import json
 import logging
 import os
-from queue import Empty, Queue
-import subprocess
 import sys
 import tempfile
 from textwrap import dedent
-import threading
 from typing import final
 import warnings
 
@@ -54,6 +51,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
+from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
@@ -1389,71 +1387,11 @@ def run_job(self, job_class_path, *args, **kwargs):
 
 @nautobot_task(bind=False)
 def run_console_log_job_and_return_job_result(job_result_pk, *args, **kwargs):
-    """Pass the job to Subprocess."""
-    cmd = ["nautobot-server", "runjob_with_job_result", f"{job_result_pk}", "--console_log"]
-
-    queue_stdout = Queue()
-    queue_stderr = Queue()
-
-    def read_stream(stream, queue):
-        """Read from stream line by line and push to queue."""
-        for line in iter(stream.readline, ""):
-            if line:
-                queue.put(line)
-        stream.close()
-
-    with subprocess.Popen(  # noqa: S603 cmd built from trusted internal values
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-        bufsize=1,
-    ) as process:
-        read_stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, queue_stdout))
-        read_stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, queue_stderr))
-        read_stdout_thread.start()
-        read_stderr_thread.start()
-
-        print(" === STDOUT ===")
-        while process.poll() is None:
-            try:
-                line = queue_stdout.get_nowait()
-                if line is not None:
-                    print(line, end="")
-            except Empty:
-                pass
-        print(" === END STDOUT ===")
-
-        print(" === STDERR ===")
-        while process.poll() is None:
-            try:
-                line = queue_stderr.get_nowait()
-                if line is not None:
-                    print(line, end="")
-            except Empty:
-                pass
-        print(" === END STDERR ===")
-
-        return_code = process.wait()
-        read_stdout_thread.join()
-        read_stderr_thread.join()
-
-        if return_code != 0:
-            trace_stderr_lines = []
-            # Read traceback
-            if process.poll() is not None:
-                while True:
-                    try:
-                        line = queue_stderr.get_nowait()
-                        if line is None:
-                            break
-                        trace_stderr_lines.append(line.rstrip())
-                        print(line, end="")
-                    except Empty:
-                        break
-            if trace_stderr_lines:
-                print(sanitize("\n".join(trace_stderr_lines)))
-                raise Exception(f"Command failed with code {process.returncode}")  # pylint: disable=broad-exception-raised
+    """
+    Execute job with real-time console output.
+    """
+    executor = JobConsoleLogExecutor(job_result_pk)
+    return executor.execute()
 
 
 def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):

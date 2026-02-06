@@ -1476,27 +1476,16 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
 class RunConsoleLogJobTestCase(TestCase):
     """Test run_console_log_job_and_return_job_result"""
 
-    @mock.patch("nautobot.extras.jobs.subprocess.Popen")
-    def test_task_runs_subprocess_with_console_log_flag(self, mock_popen):
-        process = mock.MagicMock()
-        process.stdout.readline.return_value = ""
-        process.stderr.readline.return_value = ""
-
-        mock_popen.return_value.__enter__.return_value = process
-
-        job_result_pk = "123"
-
-        run_console_log_job_and_return_job_result.run(job_result_pk)
-
-        mock_popen.assert_called_once_with(
-            [
-                "nautobot-server",
-                "runjob_with_job_result",
-                f"{job_result_pk}",
-                "--console_log",
-            ],
-            stdout=mock_popen.call_args.kwargs["stdout"],
-            stderr=mock_popen.call_args.kwargs["stderr"],
-            universal_newlines=True,
-            bufsize=1,
+    @mock.patch("nautobot.extras.jobs.JobConsoleLogExecutor.execute")
+    def test_task_runs_job_console_log_execute(self, mock_job_console_log_execute):
+        job = Job.objects.first()
+        job_result = JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            date_done=timezone.now(),
+            status=JobResultStatusChoices.STATUS_SUCCESS,
         )
+
+        run_console_log_job_and_return_job_result.run(job_result.pk)
+
+        mock_job_console_log_execute.assert_called_once()

@@ -36,6 +36,7 @@ from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    JobConsoleEntryOutputTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -1080,6 +1081,38 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         ]:
             self.count_logs_by_level()
         super().save(*args, **kwargs)
+
+
+#
+# Job Console Entry
+#
+
+
+class JobConsoleEntry(BaseModel):
+    """
+    Stores console logs of a particular job execution.
+
+    New log is inserted dynamically when a new chunk / line is received which means you can
+    simulate tail behavior by periodically reading from this collection.
+
+    """
+
+    job_result = models.ForeignKey(to="extras.JobResult", on_delete=models.CASCADE, related_name="job_console_entries")
+    timestamp = models.DateTimeField(
+        auto_now_add=True, help_text="Timestamp when this output has been produced / received"
+    )
+    output_type = models.CharField(
+        max_length=10,
+        help_text="Type of the output (e.g. stdout, stderr, output)",
+        choices=JobConsoleEntryOutputTypeChoices,
+        default=JobConsoleEntryOutputTypeChoices.TYPE_OUTPUT,
+    )
+    text = models.TextField(help_text="Actual line of output data")
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+
+    class Meta:
+        ordering = ["timestamp"]
 
 
 #
