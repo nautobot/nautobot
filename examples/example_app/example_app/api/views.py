@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from example_app.api.serializers import AnotherExampleModelSerializer, ErrorSerializer, ExampleModelSerializer
+from example_app.api.serializers import AnotherExampleModelSerializer, ExampleModelSerializer
 from example_app.filters import AnotherExampleModelFilterSet, ExampleModelFilterSet
 from example_app.models import AnotherExampleModel, ExampleModel
 
@@ -55,7 +55,6 @@ class ErrorView(GenericAPIView):
     This is useful for testing purposes."""
 
     permission_classes = [AllowAny]
-    serializer_class = ErrorSerializer
 
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
         raise Exception("Oh no!")  # pylint: disable=broad-exception-raised
