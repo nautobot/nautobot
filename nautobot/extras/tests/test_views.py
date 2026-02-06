@@ -2275,6 +2275,23 @@ class DynamicGroupTestCase(
         self.assertEqual(instance.filter["tagged_vlans"], [str(VLAN.objects.first().pk)])
         self.assertEqual(instance.filter["untagged_vlan"], [str(VLAN.objects.last().pk)])
 
+        # Check that the members of the dynamic group are correctly calculated
+        # We expect a queryset of Interface objects with the specified filter values
+        filtered_qs = Interface.objects.filter(
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            tagged_vlans=VLAN.objects.first().pk,
+            untagged_vlan=VLAN.objects.last().pk,
+        ).distinct()
+
+        group_members = instance.update_cached_members()
+        # The interface queryset and the group members should match
+        self.assertEqual(
+            set(group_members.values_list("pk", flat=True)),
+            set(filtered_qs.values_list("pk", flat=True)),
+            msg=f"DynamicGroup members mismatch.\nExpected: {list(filtered_qs.values_list('pk', flat=True))}\nReturned: {list(group_members.values_list('pk', flat=True))}",
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
