@@ -56,7 +56,10 @@ from nautobot.core.utils.lookup import (
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
-from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
+from nautobot.core.utils.requests import (
+    is_single_choice_field,
+    normalize_querydict,
+)
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     ObjectBulkCreateViewMixin,
@@ -73,6 +76,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
+    check_filter_for_display,
     common_detail_view_context,
     get_obj_from_context,
     prepare_cloned_fields,
@@ -1320,7 +1324,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
                 if content_type := instance.content_types.first():
                     scope_filter_context = self.get_scope_filter_context(
-                        content_type.model_class(), instance.scope_filter_prefixed, instance=instance
+                        content_type.model_class(), instance.scope_filter_prefixed
                     )
                     context.update(**scope_filter_context)
 
@@ -1353,6 +1357,8 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
     def get_scope_filter_context(self, model_class, scope_filter_data):
         """
         Function responsible for generating context for scope filter form.
+
+        `scope_filter_data` can be both: value from DB or plain request.POST
         """
         filterset_class = get_filterset_for_model(model_class)
         filterset = filterset_class(
@@ -1360,19 +1366,18 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             queryset=model_class.objects.all(),
             prefix="scope",
         )
-
         filterset_form = get_form_for_model(model_class, form_prefix="Filter")
         filterset_form_instance = filterset_form(scope_filter_data, prefix="scope")
-
-        # display_filter_params = [
-        #     check_filter_for_display(filterset.filters, field_name, values)
-        #     for field_name, values in scope_filter.items()
-        # ]
-
+        display_filter_params = [
+            check_filter_for_display(filterset.filters, field_name[6:], values)
+            for field_name, values in scope_filter_data.items()
+            if field_name.startswith("scope")
+        ]
         dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
         return {
-            # "filter_params": display_filter_params,
+            "filterset": filterset,
+            "filter_params": display_filter_params,
             "dynamic_filter_form": dynamic_filter_form,
             "filter_form": filterset_form_instance,
             "content_type_selected": True,
@@ -1390,7 +1395,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             raise ValidationError(choices.errors)
 
         # Process the data for scope filter
-        filter_form = ctx["filter_form"]
+        filter_form = ctx["filterset"].form
         if filter_form.is_valid():
             obj.set_scope_filter(filter_form.cleaned_data)
             obj.save()
