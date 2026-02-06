@@ -618,8 +618,8 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "outer_unit": RackDimensionUnitChoices.UNIT_MILLIMETER,
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Rack)],
-            "cf_rack-colors": ["red", "green", "blue"],
-            "cr_backup-location__destination": [cls.locations[0].pk],
+            "cf_rack_colors": ["red", "green", "blue"],
+            "cr_backup_locations__destination": [cls.locations[0].pk],
         }
 
         cls.bulk_edit_data = {
@@ -2358,7 +2358,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tags": [t.pk for t in Tag.objects.get_for_model(Device)],
             "local_config_context_data": None,
             "cf_crash_counter": -1,
-            "cr_router-id": None,
+            "cr_router_id__destination": None,
             "software_version": software_versions[1].pk,
             "software_image_files": [f.pk for f in valid_software_image_files],
         }
@@ -2883,7 +2883,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "status": statuses[1].pk,
             "tags": [t.pk for t in Tag.objects.get_for_model(Module)],
             "cf_crash_counter": -1,
-            "cr_router-id": None,
+            "cr_router_id__destination": None,
         }
 
         cls.bulk_edit_data = {
