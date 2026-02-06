@@ -55,4 +55,4 @@ class ErrorView(GenericAPIView):
     permission_classes = [AllowAny]
 
     def get(self, request, format=None):  # pylint: disable=redefined-builtin
-        raise Exception("Oh no!")
+        raise Exception("Oh no!")  # pylint: disable=broad-exception-raised
