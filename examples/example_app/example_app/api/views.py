@@ -47,6 +47,7 @@ class ExampleModelWebhook(APIView):
             f.write(json.dumps(self.request.data, indent=4))
         return Response({"message": "Submitted"})
 
+
 class ErrorView(GenericAPIView):
     """This view always emits a HTTP 500 error.
 
