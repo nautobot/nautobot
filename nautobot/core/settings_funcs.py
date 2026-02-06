@@ -109,7 +109,7 @@ def setup_structlog_logging(
     """
     django_logging["version"] = 1
     django_logging["disable_existing_loggers"] = True
-    if "test" in sys.argv:
+    if "test" in sys.argv and not getattr(settings, "_TESTING_STRUCTLOG", False):
         django_logging["handlers"] = {
             "null_handler": {
                 "level": "INFO",

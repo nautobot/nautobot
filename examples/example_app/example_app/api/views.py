@@ -45,3 +45,13 @@ class ExampleModelWebhook(APIView):
         ) as f:
             f.write(json.dumps(self.request.data, indent=4))
         return Response({"message": "Submitted"})
+
+class ErrorView(APIView):
+    """This view always emits a HTTP 500 error.
+
+    This is useful for testing purposes."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+        raise Exception("Oh no!")
