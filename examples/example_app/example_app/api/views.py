@@ -48,6 +48,7 @@ class ExampleModelWebhook(APIView):
         return Response({"message": "Submitted"})
 
 
+@extend_schema(exclude=True)
 class ErrorView(GenericAPIView):
     """This view always emits a HTTP 500 error.
 

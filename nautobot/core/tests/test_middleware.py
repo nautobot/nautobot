@@ -1,3 +1,4 @@
+from copy import deepcopy
 from unittest.mock import patch
 
 from django.conf import settings
@@ -6,7 +7,7 @@ from django.test import override_settings
 from nautobot.core.settings_funcs import setup_structlog_logging
 from nautobot.core.testing import TestCase
 
-override_middleware = settings.MIDDLEWARE
+override_middleware = deepcopy(settings.MIDDLEWARE)
 django_structlog_middleware = "django_structlog.middlewares.RequestMiddleware"
 try:
     index_of_prometheus_after_middleware = override_middleware.index(
@@ -18,7 +19,13 @@ except ValueError:
 
 
 class MiddlewareTestCase(TestCase):
-    @override_settings(MIDDLEWARE=override_middleware, _TESTING_STRUCTLOG=True, DEBUG=False)
+    @override_settings(
+        _TESTING_STRUCTLOG=True,
+        DEBUG=False,
+        MIDDLEWARE=override_middleware,
+        LOGGING=deepcopy(settings.LOGGING),
+        INSTALLED_APPS=deepcopy(settings.INSTALLED_APPS),
+    )
     def test_exception_handling_middleware(self):
         """Test that stack traces are also included for API view 500s.
 
