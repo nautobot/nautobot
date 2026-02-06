@@ -1,0 +1,1 @@
+Updated dependency `django` to `~4.2.28` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
