@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.serializers import Serializer
 
 from nautobot.apps.api import NautobotModelSerializer
 
@@ -23,3 +24,10 @@ class ExampleModelSerializer(NautobotModelSerializer):
     class Meta:
         model = ExampleModel
         fields = "__all__"
+
+class ErrorSerializer(Serializer):
+    """Serializer for the error view.
+
+    This is necessary, because otherwise the REST API schema check test fails.
+    """
+    pass
