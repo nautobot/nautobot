@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from drf_spectacular.utils import extend_schema
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -46,7 +47,7 @@ class ExampleModelWebhook(APIView):
             f.write(json.dumps(self.request.data, indent=4))
         return Response({"message": "Submitted"})
 
-class ErrorView(APIView):
+class ErrorView(GenericAPIView):
     """This view always emits a HTTP 500 error.
 
     This is useful for testing purposes."""
