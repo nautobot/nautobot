@@ -178,13 +178,24 @@ function initializeVLANModeSelection(context) {
 
         // Find the container div for the field row
         // In filter drawer: .nb-form-group contains the field directly
-        // In regular forms: .mb-10.d-md-flex contains the field (via .col-md-9 wrapper)
-        const $rowUntagged = $untagged.closest(".nb-form-group").length 
-            ? $untagged.closest(".nb-form-group")
-            : $untagged.closest(".mb-10");
-        const $rowTagged = $tagged.closest(".nb-form-group").length 
-            ? $tagged.closest(".nb-form-group")
-            : $tagged.closest(".mb-10");
+        // In regular forms: field is inside .col-md-9, which is inside the row container
+        function findFieldRow($field) {
+            // First try .nb-form-group (filter drawer context)
+            const $nbFormGroup = $field.closest(".nb-form-group");
+            if ($nbFormGroup.length) {
+                return $nbFormGroup;
+            }
+            // Otherwise, find .col-md-9 parent and then its parent (regular form context)
+            const $colMd9 = $field.closest(".col-md-9");
+            if ($colMd9.length) {
+                return $colMd9.parent();
+            }
+            // Fallback: return empty jQuery object (setRowVisible will handle it)
+            return $();
+        }
+        
+        const $rowUntagged = findFieldRow($untagged);
+        const $rowTagged = findFieldRow($tagged);
 
         function setRowVisible($row, visible) {
             const el = $row && $row.length ? $row[0] : null;
