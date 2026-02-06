@@ -603,7 +603,10 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         "Check/Fix IPAM Parents",
                     ),
                 )
-        return super().get_extra_context(request, instance)
+        extra_context = super().get_extra_context(request, instance)
+        if self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            extra_context["table_expandable"] = True
+        return extra_context
 
     @action(
         detail=True,
@@ -640,6 +643,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "table_inc_template": "ipam/prefix_children.html",
                 "template": "panel_table.html",
                 "table": prefix_table,
+                "table_expandable": True,
                 "tree_depth": instance.ancestors().count() + 1,
                 "additional_count": max(0, child_prefixes.count() - (paginate["per_page"] * prefix_table.page.number)),
             }

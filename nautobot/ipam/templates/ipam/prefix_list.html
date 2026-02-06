@@ -29,46 +29,6 @@
 
 {% block javascript %}
 {{ block.super }}
-<style>
-    .nb-subtree::before {
-        color: var(--bs-border-color);
-        content: " ";
-        display: inline-block;
-        padding-left: .25rem;
-        min-width: 1rem;
-        font-family: var(--bs-font-monospace);
-        font-size: 2rem;
-        margin-top: -.75rem;
-        margin-bottom: -.75rem;
-        vertical-align: bottom;
-    }
-
-    .nb-subtree.nb-subtree-expandable:before {
-        color: var(--bs-secondary);
-        font-size: 1rem;
-        vertical-align: middle;
-    }
-
-    .nb-subtree.nb-subtree-expandable:before {
-        content: "▷";
-    }
-
-    .nb-subtree.nb-subtree-expandable.nb-subtree-expanded:before {
-        content: "▼";
-    }
-
-    .nb-subtree.nb-subtree-ancestor-next-sibling:before {
-        content: "│";
-    }
-
-    .nb-subtree.nb-subtree-next-sibling:before {
-        content: "├";
-    }
-
-    .nb-subtree.nb-subtree-no-next-sibling:before {
-        content: "└";
-    }
-</style>
 <script>
     const collapseSubtree = (event) => {
         const ancestorsCount = event.target.closest("td").getElementsByClassName("nb-subtree").length;

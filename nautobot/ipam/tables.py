@@ -70,17 +70,19 @@ PREFIX_COPY_LINK = """
                     <span class="nb-subtree nb-subtree-no-next-sibling"></span>
                 {% endif %}
             {% endfor %}
-            {% if record.descendants_count %}
-                <span class="nb-subtree nb-subtree-expandable"
-                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
-                      hx-indicator="closest .table-responsive"
-                      hx-select=".table-responsive tr"
-                      hx-select-oob="none"
-                      hx-swap="afterend"
-                      hx-target="closest tr"
-                ></span>
-            {% else %}
-                <span class="nb-subtree"></span>
+            {% if table_expandable|default:False %}
+                {% if record.descendants_count %}
+                    <span class="nb-subtree nb-subtree-expandable"
+                          hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
+                          hx-indicator="closest .table-responsive"
+                          hx-select=".table-responsive tr"
+                          hx-select-oob="none"
+                          hx-swap="afterend"
+                          hx-target="closest tr"
+                    ></span>
+                {% else %}
+                    <span class="nb-subtree"></span>
+                {% endif %}
             {% endif %}
         {% endwith %}
     {% endif %}
