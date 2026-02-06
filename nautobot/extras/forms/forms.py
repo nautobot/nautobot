@@ -812,12 +812,6 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         if self.initial.get("key"):
             self.fields["key"].disabled = True
 
-    def clean(self):
-        cleaned_data = super().clean()
-        print(cleaned_data)
-        print(self.data)
-        return cleaned_data
-
 
 class CustomFieldFilterForm(NautobotFilterForm):
     model = CustomField
