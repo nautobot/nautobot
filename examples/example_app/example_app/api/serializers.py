@@ -31,4 +31,3 @@ class ErrorSerializer(Serializer):
 
     This is necessary, because otherwise the REST API schema check test fails.
     """
-
