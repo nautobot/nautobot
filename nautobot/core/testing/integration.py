@@ -380,7 +380,8 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         child_menu_xpath = f"{section_xpath}/div[@class='nb-sidenav-flyout']//a[contains(@class, 'nb-sidenav-link') and normalize-space()='{child_menu_name}']"
         child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
         old_url = self.browser.url
-        child_menu.click()
+        # Use JS click to handle dynamically positioned flyout menus that may not be scrollable into view
+        self.browser.execute_script("arguments[0].click();", child_menu.first._element)
 
         WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
