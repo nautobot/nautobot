@@ -1,6 +1,7 @@
 import flatpickr from 'flatpickr';
 import { getCookie, removeCookie, setCookie } from './cookie.js';
 
+const FLYOUT_MAX_HEIGHT_RATIO = 0.85;
 const SIDENAV_COLLAPSED_KEY = 'sidenav_collapsed';
 
 /**
@@ -25,6 +26,54 @@ export const toggleSidenav = () => {
     removeCookie(SIDENAV_COLLAPSED_KEY);
     window.localStorage?.removeItem(SIDENAV_COLLAPSED_KEY);
   }
+};
+
+/**
+ * Position a flyout menu near its trigger nav item, centered on the item's midpoint.
+ * Caps the flyout height to `FLYOUT_MAX_HEIGHT_RATIO` of the viewport so it always has room to center,
+ * and clamps to viewport bounds so the flyout never overflows above or below the screen.
+ * @param {HTMLElement} listItem - The clicked nav item element.
+ * @param {HTMLElement} flyout - The flyout menu element.
+ * @returns {void} Do not return any value, modify flyout inline styles in-place.
+ */
+const positionFlyout = (listItem, flyout) => {
+  // Reset position so we can measure the flyout's natural content height
+  flyout.style.top = '0px';
+  flyout.style.maxHeight = '';
+
+  // Wait one frame for layout to calculate the flyout's rendered height
+  requestAnimationFrame(() => {
+    const itemRect = listItem.getBoundingClientRect();
+    const flyoutHeight = flyout.scrollHeight;
+    const viewportHeight = window.innerHeight;
+
+    // The flyout is position:absolute inside its <li> parent.
+    // Calculate the offset between the parent's top and the viewport top
+    // So we can convert viewport coordinates to the flyout's coordinate space.
+    const parentRect = flyout.offsetParent ? flyout.offsetParent.getBoundingClientRect() : { top: 0 };
+    const offset = parentRect.top;
+
+    // Cap the flyout height so it always has room to center
+    const maxHeight = Math.min(flyoutHeight, viewportHeight * FLYOUT_MAX_HEIGHT_RATIO);
+
+    // Center the flyout on the clicked item's midpoint (in viewport coords)
+    const itemMid = itemRect.top + listItem.offsetHeight / 2;
+    let top = itemMid - maxHeight / 2;
+
+    // Clamp to viewport bounds
+    if (top + maxHeight > viewportHeight) {
+      top = viewportHeight - maxHeight;
+    }
+    if (top < 0) {
+      top = 0;
+    }
+
+    // Convert from viewport coordinates to the flyout's offset parent coordinates
+    const localTop = top - offset;
+
+    flyout.style.maxHeight = `${maxHeight}px`;
+    flyout.style.top = `${localTop}px`;
+  });
 };
 
 /**
@@ -57,6 +106,11 @@ export const initializeSidenav = () => {
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
 
       sidenavListItem.setAttribute('aria-expanded', String(!expanded));
+
+      if (!expanded) {
+        const sidenavFlyout = document.getElementById(controls);
+        positionFlyout(sidenavListItem, sidenavFlyout);
+      }
 
       const onClickDocument = (documentClickEvent) => {
         const { target: documentClickTarget } = documentClickEvent;

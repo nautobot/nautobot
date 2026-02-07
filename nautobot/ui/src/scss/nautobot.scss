@@ -1663,6 +1663,10 @@ body {
       > :last-child { /* Sidenav list item name and chevron icon wrapper */
         @include fade-out;
       }
+
+      &::after { /* Overlay: shift left edge to match collapsed sidebar width */
+        inset: 0 0 0 $sidenav-width-collapsed;
+      }
     }
 
     .nb-sidenav-toggler::before { /* Sidenav toggler chevron icon */
@@ -1715,11 +1719,13 @@ body {
     display: flex;
     flex-direction: column;
     flex-wrap: wrap;
-    height: 100%;
+    height: auto;
     left: 0;
+    max-height: 100%;
+    overflow-y: auto;
     padding-block: map.get($spacers, 20);
     position: absolute;
-    top: 0;
+    top: 0; /* default, JS will override */
     width: max-content;
     z-index: -1;
     min-width: $sidenav-link-width;
