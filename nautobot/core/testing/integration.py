@@ -386,6 +386,14 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         WebDriverWait(self.browser, 30).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear
         self.assertTrue(self.browser.is_element_present_by_tag("body", wait_time=5), "Page failed to load")
+        # Wait for page to fully load (ensures HTMX has initialized via DOMContentLoaded)
+        WebDriverWait(self.browser, 30).until(
+            lambda driver: driver.execute_script("return document.readyState === 'complete'")
+        )
+        # Wait for any HTMX deferred loading to complete (e.g. list view tables loaded via hx-trigger="load")
+        WebDriverWait(self.browser, 30).until(
+            lambda driver: driver.execute_script("return !document.querySelector('.htmx-request')")
+        )
 
     def click_list_view_add_button(self):
         """
