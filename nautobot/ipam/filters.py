@@ -18,6 +18,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
@@ -339,7 +340,14 @@ class PrefixFilterSet(
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def _strip_values(self, values):
-        return [value.strip() for value in values if value.strip()]
+        result = []
+        for value in values:
+            value = value.strip()
+            if is_uuid(value):
+                result.append(Prefix.objects.get(pk=value).prefix)
+            elif value:
+                result.append(value)
+        return result
 
     def filter_prefix(self, queryset, name, value):
         prefixes = self._strip_values(value)

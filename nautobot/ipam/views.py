@@ -446,6 +446,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                             BulkEditButton(form_id="prefix_form", model=Prefix),
                             BulkDeleteButton(form_id="prefix_form", model=Prefix),
                         ],
+                        related_field_name="within",
                     ),
                 ),
             ),
