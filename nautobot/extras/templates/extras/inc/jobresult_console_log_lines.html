@@ -1,6 +1,10 @@
 {% for entry in entries %}
-    <div class="console-line console-{{ entry.output_type }}" data-timestamp="{{ entry.timestamp.isoformat }}">
-        <span class="timestamp">[{{ entry.timestamp|date:"H:i:s.u"|slice:":12" }}]</span>
-        <span class="text">{{ entry.text }}</span>
-    </div>
+    <span
+        class="console-line console-{{ entry.output_type }} d-block"
+        data-timestamp="{{ entry.timestamp.isoformat }}"
+        style="margin-inline-start: 1em; text-indent: -1em"
+    >
+        <span>[{{ entry.timestamp|date:"H:i:s.u"|slice:":12" }}]</span>
+        <span>{{ entry.text }}</span>
+    </span>
 {% endfor %}

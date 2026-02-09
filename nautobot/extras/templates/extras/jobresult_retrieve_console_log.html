@@ -1,58 +1,75 @@
 {% extends base_template %}
 
+{% block extra_styles %}
+    <style>
+        #main-content {
+            overflow-y: hidden;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-    <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
+    <div class="card h-100 mb-0">
+        <div class="card-header">
+            <div class="float-start">
                 <strong>Console Log</strong>
                 {% if is_running %}
-                    <small class="text-secondary">(polling every 2s...)</small>
+                    <small class="align-middle text-secondary" id="job-status-message">(refreshing every 2s...)</small>
                 {% endif %}
             </div>
-            <div>
+            <div class="float-end">
                 <span id="job-status">{% include 'extras/inc/job_label.html' with result=object %}</span>
             </div>
         </div>
 
-        <div id="console-output"
-             style="background: #ffffff; color: rgb(0, 0, 0); padding: 10px; height: 600px; overflow-y: auto; font-family: monospace;">
-            {% include "extras/inc/jobresult_console_log_lines.html" %}
+        <pre class="font-monospace h-100 mb-0 overflow-y-auto" id="console-output" style="white-space: normal;">
+            <code class="hljs bg-body h-100">
+                {% include "extras/inc/jobresult_console_log_lines.html" %}
+            </code>
+        </pre>
 
-            {% if is_running %}
-                <div
-                    id="htmx-poller"
-                    hx-get="{% url 'extras:jobresult_console-log' pk=object.pk %}"
-                    hx-trigger="every 2s"
-                    hx-swap="beforeend"
-                    hx-target="#console-output"
-                    hx-vals='js:{last_timestamp: getLastTimestamp()}'>
-                </div>
-            {% endif %}
-        </div>
+        {% if is_running %}
+            <div
+                class="d-none"
+                id="htmx-poller"
+                hx-get="{% url 'extras:jobresult_console-log' pk=object.pk %}"
+                hx-trigger="every 2s"
+                hx-swap="beforeend"
+                hx-target="#console-output code"
+                hx-vals="js:{last_timestamp: window.nb.jobResult.getLastTimestamp()}"
+            ></div>
+        {% endif %}
     </div>
 
     <script>
-        function getLastTimestamp() {
-            const lastLine = document.querySelector(
-                '.console-line[data-timestamp]:last-of-type'
-            );
-            return lastLine?.getAttribute('data-timestamp') ?? '{{ last_timestamp }}';
-        }
-        function scrollToBottom() {
-            const container = document.getElementById('console-output');
-            if (container) {
-                container.scrollTop = container.scrollHeight;
-            }
-        }
+        (() => {
+            const getContentContainer = () => document.querySelector('#console-output code');
 
-// Initial scroll to bottom on page load
-        document.addEventListener('DOMContentLoaded', scrollToBottom);
-
-// Scroll to bottom after HTMX updates
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            if (event.detail.target.id === 'console-output') {
-                scrollToBottom();
+            const getLastTimestamp = () => {
+                const lastLine = document.querySelector('.console-line[data-timestamp]:last-of-type');
+                return lastLine?.getAttribute('data-timestamp') ?? '{{ last_timestamp }}';
             }
-        });
+
+            window.nb = window.nb || {};
+            window.nb.jobResult = { getLastTimestamp };
+
+            const scrollToBottom = () => {
+                const contentContainer = getContentContainer();
+                if (contentContainer) {
+                    contentContainer.scrollTop = contentContainer.scrollHeight;
+                }
+            }
+
+            // Initial scroll to bottom on page load
+            document.addEventListener('DOMContentLoaded', scrollToBottom);
+
+            // Scroll to bottom after HTMX updates
+            document.body.addEventListener('htmx:afterSwap', (event) => {
+                const contentContainer = getContentContainer();
+                if (event.target === contentContainer) {
+                    scrollToBottom();
+                }
+            });
+        })();
     </script>
 {% endblock %}
