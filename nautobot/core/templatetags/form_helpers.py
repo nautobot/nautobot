@@ -4,13 +4,14 @@ register = template.Library()
 
 
 @register.inclusion_tag("utilities/render_field.html")
-def render_field(field, bulk_nullable=False):
+def render_field(field, bulk_nullable=False, container_class=None):
     """
     Render a single form field from template
     """
     return {
         "field": field,
         "bulk_nullable": bulk_nullable,
+        "container_class": container_class,
     }
 
 
