@@ -231,7 +231,6 @@
 
         const prepopulateFilterSelectsFromURL = (() => {
             const { defaultFilterForm } = getFilterForms();
-            {#console.log(defaultFilterForm)#}
             const urlParams = new URLSearchParams(window.location.search);
             // Only target Select2 controls inside the default filter form.
             [...defaultFilterForm.querySelectorAll('select.nautobot-select2-multi-value-char')].forEach((el) => {
@@ -255,8 +254,17 @@
             });
         });
 
-        {# Function to re-initialize select2 selects after htmx re-renders part of template. #}
+        /**
+         * Function to re-initialize select2 selects after htmx re-renders part of template.
+         * @param event
+         */
         const initializeScopeFilter = event => {
+            const filterTabs = document.getElementById('nb-scope-filter-form-container').querySelector('#filter-tabs')
+            if (!filterTabs) {
+                // If there is no `filterTabs` rendered from HTMX response, do nothing because there is an empty message
+                // instead of rendered scope filter form.
+                return
+            }
             window.nb.select2.initializeSelect2Fields(event.target)
             prepopulateFilterSelectsFromURL()
         }

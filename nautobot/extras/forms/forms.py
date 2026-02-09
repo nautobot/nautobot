@@ -780,9 +780,8 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         widget=StaticSelect2Multiple(
             attrs={
                 "hx-trigger": "change",
-                "hx-post": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
                 "hx-swap": "none",
-                "id": "id_content_types",
             }
         ),
     )

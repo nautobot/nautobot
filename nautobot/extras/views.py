@@ -1341,11 +1341,11 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         return context
 
     @staticmethod
-    def get_content_type_model_class(post_data):
+    def get_content_type_model_class(data):
         """
         This function will validate ContentType from POST and then return proper model class
         """
-        content_type_form = forms.CustomFieldContentTypesForm(data=post_data)
+        content_type_form = forms.CustomFieldContentTypesForm(data=data)
         if content_type_form.is_valid():
             if content_type_form.cleaned_data["content_types"].exists():
                 content_type = content_type_form.cleaned_data["content_types"][0]
@@ -1354,21 +1354,26 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         raise ValidationError(content_type_form.errors)
 
-    def get_scope_filter_context(self, model_class, scope_filter_data):
+    def get_scope_filter_context(self, model_class, scope_filter_data=None):
         """
         Function responsible for generating context for scope filter form.
 
         `scope_filter_data` can be both: value from DB or plain request.POST
         """
+        if not scope_filter_data:
+            scope_filter_data = {}
+
         filterset_class = get_filterset_for_model(model_class)
         filterset = filterset_class(
             data=scope_filter_data,
             queryset=model_class.objects.all(),
             prefix="scope",
         )
-        filterset_form = get_form_for_model(model_class, form_prefix="Filter")
-        filterset_form_instance = filterset_form(scope_filter_data, prefix="scope")
+        filterset_form_class = get_form_for_model(model_class, form_prefix="Filter")
+        filterset_form = filterset_form_class(scope_filter_data, prefix="scope")
         display_filter_params = [
+            # To avoid input name collision between scope filter fields and standard custom field form
+            # we're prefixing all the fields and need to remove this prefix below to properly check fields
             check_filter_for_display(filterset.filters, field_name[6:], values)
             for field_name, values in scope_filter_data.items()
             if field_name.startswith("scope")
@@ -1379,7 +1384,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             "filterset": filterset,
             "filter_params": display_filter_params,
             "dynamic_filter_form": dynamic_filter_form,
-            "filter_form": filterset_form_instance,
+            "filter_form": filterset_form,
             "content_type_selected": True,
         }
 
@@ -1406,8 +1411,8 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=False,
-        methods=["POST"],
-        url_path="scope_filter_fields",
+        methods=["GET"],
+        url_path="scope-filter-fields",
         url_name="scope_filter_fields",
         custom_view_base_action="change",
     )
@@ -1417,9 +1422,9 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         """
         context = {}
 
-        model_class = self.get_content_type_model_class(request.POST)
+        model_class = self.get_content_type_model_class(request.GET)
         if model_class:
-            context = self.get_scope_filter_context(model_class, request.POST)
+            context = self.get_scope_filter_context(model_class)
 
         # It's rendering the whole template, but due to `hx-swap-oob` in template
         # HTMX will swap only part of the page
