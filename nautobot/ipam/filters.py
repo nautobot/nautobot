@@ -5,6 +5,7 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import django_filters
+from drf_spectacular.utils import extend_schema_field
 import netaddr
 
 from nautobot.cloud.models import CloudNetwork
@@ -245,10 +246,12 @@ class PrefixFilterSet(
         method="filter_ancestors",
         label="Prefixes which are ancestors of this prefix (ID or network string)",
     )
-    descendants_of = django_filters.ModelChoiceFilter(
-        queryset=Prefix.objects.all(),
-        method="filter_descendants",
-        label="Prefix (ID) and its descendants",
+    descendants_of = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelChoiceFilter(
+            queryset=Prefix.objects.all(),
+            method="filter_descendants",
+            label="Prefix (ID) and its descendants",
+        )
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
