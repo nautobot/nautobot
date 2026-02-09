@@ -68,3 +68,66 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v3.1.0a1 (2026-02-10)
+
+### Breaking Changes in v3.1.0a1
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Removed support for settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`. These are all now incorporated into the Django standard `STORAGES` settings variable.
+- [#8459](https://github.com/nautobot/nautobot/issues/8459) - Dropped support for PostgreSQL versions 12 and 13 as a consequence of upgrading to Django 5.2.
+
+### Security in v3.1.0a1
+
+- [#8459](https://github.com/nautobot/nautobot/issues/8459) - Updated dependency `social-auth-app-django` to 5.6.0 in order to pick up the official fix for `CVE-2025-61783`, and removed the local patch previously implemented in Nautobot for that vulnerability.
+- [#8507](https://github.com/nautobot/nautobot/issues/8507) - Updated dependency `django` to `>=5.2.11,<5.3` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
+
+### Added in v3.1.0a1
+
+- [#7018](https://github.com/nautobot/nautobot/issues/7018) - Added support for per-user configuration of preferred language/locale through the User Preferences UI. Currently this configuration applies primarily to date/time display in the UI.
+- [#7957](https://github.com/nautobot/nautobot/issues/7957) - Added `port_type` field to Interface and InterfaceTemplate models to track physical connector type.
+- [#8410](https://github.com/nautobot/nautobot/issues/8410) - Added `scope_filter` field to `CustomField` model.
+- [#8427](https://github.com/nautobot/nautobot/issues/8427) - Added checks for `CustomField.scope_filter` to show/hide custom fields on object detail view based on scope filters.
+- [#8457](https://github.com/nautobot/nautobot/issues/8457) - Implemented table column config drag and drop.
+- [#8458](https://github.com/nautobot/nautobot/issues/8458) - Added initial support for running jobs in a subprocess and asynchronously capturing console output.
+- [#8461](https://github.com/nautobot/nautobot/issues/8461) - Implemented table column config saved ordering on unselected columns.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Added `max_depth` filter support to the Prefix list view.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Added `max_depth` and `namespace` filters to the Prefix basic filter form.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Added support for the settings/Constance variables `PREFIX_LIST_DEFAULT_MAX_DEPTH` and `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`. Configuring either or both of these may improve the performance of the Prefix list view at scale.
+- [#8498](https://github.com/nautobot/nautobot/issues/8498) - Added saving output (stdout/stderr) line by line to `JobConsoleEntry` table.
+
+### Changed in v3.1.0a1
+
+- [#8446](https://github.com/nautobot/nautobot/issues/8446) - Changed object list views to render in two passes with HTMX, improving initial load times.
+- [#8446](https://github.com/nautobot/nautobot/issues/8446) - Changed rendering of table sorting indicator arrows from client-side to server-side rendering.
+- [#8450](https://github.com/nautobot/nautobot/issues/8450) - Converted table column config to checkboxes.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Enhanced the "Max Length" dropdown in the Prefix list view to allow deselecting a previously selected value.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Changed Prefix list view behavior so that filtering by the filters `ip_version`, `max_depth`, `namespace`, `prefix_length__lte`, and/or `type=container` (in the absence of any other filters) will not prevent the indentation of prefixes based on their nesting depth.
+
+### Deprecated in v3.1.0a1
+
+- [#8459](https://github.com/nautobot/nautobot/issues/8459) - Following upstream Django patterns, the test helper method `assertQuerysetEqualAndNotEmpty` has been renamed to `assertQuerySetEqualAndNotEmpty`. The old method name is still available but is deprecated and will be removed in a future release.
+
+### Removed in v3.1.0a1
+
+- [#7018](https://github.com/nautobot/nautobot/issues/7018) - As a consequence of upgrading to Django 5.2, necessarily removed support for customizing date/time display in the UI through `nautobot_config.py` settings `DATE_FORMAT`, `DATETIME_FORMAT`, `TIME_FORMAT`, `SHORT_DATE_FORMAT`, and `SHORT_DATETIME_FORMAT`. Formatting of date/time information is now controlled by the application-level `LANGUAGE_CODE` setting and/or by per-user language preferences.
+
+### Fixed in v3.1.0a1
+
+- [#7018](https://github.com/nautobot/nautobot/issues/7018) - Fixed rendering of "last sync time" and "last synced by" columns in Git Repository list view.
+- [#8315](https://github.com/nautobot/nautobot/issues/8315) - Fixed bug in Interface template causing emdash to not be used for Port Type if no value was set.
+- [#8349](https://github.com/nautobot/nautobot/issues/8349) - Fixed unit tests failing after upgrading to django 5.2.
+- [#8422](https://github.com/nautobot/nautobot/issues/8422) - Fixed incompatibilities with `django_celery_beat` v2.8.1.
+- [#8468](https://github.com/nautobot/nautobot/issues/8468) - Fixed dynamic-group filter calculation for cases where the filter is using `exclude=True`.
+- [#8479](https://github.com/nautobot/nautobot/issues/8479) - Fixed missing text on the trace action button.
+
+### Dependencies in v3.1.0a1
+
+- [#8459](https://github.com/nautobot/nautobot/issues/8459) - Updated dependency `django` to `>=5.2.10,<5.3`.
+- [#8459](https://github.com/nautobot/nautobot/issues/8459) - Updated dependency `django-celery-beat` to `==2.8.1` for compatibility with Django 5.2; pinned to an exact version due to Nautobot's use of some internals of this dependency.
+
+### Housekeeping in v3.1.0a1
+
+- [#8327](https://github.com/nautobot/nautobot/issues/8327) - Updated `pyproject.toml` to be compatible with PEP 621.
+- [#8327](https://github.com/nautobot/nautobot/issues/8327) - Updated Nautobot development environment to require Poetry 2.x.
+- [#8377](https://github.com/nautobot/nautobot/issues/8377) - Fixed a bad merge in `pyproject.toml`.
+- [#8502](https://github.com/nautobot/nautobot/issues/8502) - Improved the Docker build process and tagging in CI.
