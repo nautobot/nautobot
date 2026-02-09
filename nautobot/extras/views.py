@@ -13,9 +13,10 @@ from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
-from django.template.loader import get_template, TemplateDoesNotExist
+from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -133,6 +134,7 @@ from .models import (
     ImageAttachment,
     Job as JobModel,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobQueue,
     JobResult,
@@ -2842,6 +2844,68 @@ class JobResultUIViewSet(
         RequestConfig(request, paginate).configure(log_table)
 
         return HttpResponse(log_table.as_html(request))
+
+    @action(detail=True, url_path="console-log", url_name="console-log", custom_view_base_action="view")
+    def console_log(self, request, pk=None):
+        """Display real-time console logs with live streaming for running jobs."""
+        job_result = self.get_object()
+
+        # Handle HTMX polling for new log entries
+        if request.headers.get("HX-Request"):
+            return self._handle_console_poll(request, job_result)
+
+        entries = JobConsoleEntry.objects.filter(job_result=job_result)
+
+        # Get last entry timestamp for polling initialization
+        last_entry = entries.last()
+
+        context = {
+            "object": job_result,
+            "result": job_result,
+            "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
+            "verbose_name_plural": job_result._meta.verbose_name_plural,
+            "list_url": "extras:jobresult_list",
+            "active_tab": "console_log",
+            "entries": entries,
+            "base_template": "extras/jobresult_retrieve.html",
+            "is_running": self._is_job_running(job_result),
+            "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
+        }
+
+        return render(request, "extras/jobresult_retrieve_console_log.html", context)
+
+    def _is_job_running(self, job_result) -> bool:
+        """Check if job has finished execution."""
+        return job_result.status == JobResultStatusChoices.STATUS_STARTED
+
+    def _handle_console_poll(self, request, job_result) -> HttpResponse:
+        """Handle HTMX polling request and return new log entries as HTML."""
+        last_timestamp_str = request.GET.get("last_timestamp", "")
+        new_entries = JobConsoleEntry.objects.none()
+
+        # Fetch new entries since last timestamp
+        if last_timestamp_str:
+            try:
+                last_timestamp = parse_datetime(last_timestamp_str)
+                if last_timestamp:
+                    new_entries = JobConsoleEntry.objects.filter(
+                        job_result=job_result, timestamp__gt=last_timestamp
+                    ).order_by("timestamp")
+            except (ValueError, TypeError):
+                msg = "Invalid timestamp: {}"
+                messages.error(request, format_html(msg, last_timestamp_str))
+
+        # Render new console lines using template
+        html_content = render_to_string("extras/inc/jobresult_console_log_lines.html", {"entries": new_entries})
+
+        # If job is not running, send out-of-band updates to stop polling
+        if not self._is_job_running(job_result):
+            completion_html = render_to_string(
+                "extras/inc/jobresult_console_log_completion.html", {"job_result": job_result}
+            )
+            html_content += completion_html
+
+        return HttpResponse(html_content, content_type="text/html; charset=utf-8")
 
 
 #

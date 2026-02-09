@@ -1,0 +1,6 @@
+{% for entry in entries %}
+    <div class="console-line console-{{ entry.output_type }}" data-timestamp="{{ entry.timestamp.isoformat }}">
+        <span class="timestamp">[{{ entry.timestamp|date:"H:i:s.u"|slice:":12" }}]</span>
+        <span class="text">{{ entry.text }}</span>
+    </div>
+{% endfor %}
