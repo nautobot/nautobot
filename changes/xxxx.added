@@ -1,0 +1,6 @@
+Enhanced Prefix list view to support dynamic expansion/collapsing of prefix subtrees.
+Added support for `descendants_of` filter on Prefix list view.
+Added option for `ButtonsColumn` in tables to be passed an explicit `return_url` in the render context in order to override its default behavior.
+Added `index` and `filter_getattr` template filters to the `helpers` module.
+Added `Prefix.next_sibling` property.
+Added `/ipam/prefixes/<uuid>/children/` URL endpoint in support of enhanced Prefix list view functionality.
