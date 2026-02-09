@@ -526,8 +526,21 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
+    def _strip_prefix_values(self, values):
+        """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""
+        prefixes = []
+        for prefix in values:
+            prefix = prefix.strip()
+            if not prefix:
+                continue
+            if is_uuid(prefix):
+                prefixes.append(Prefix.objects.get(pk=prefix).prefix)
+            else:
+                prefixes.append(prefix)
+        return prefixes
+
     def search_by_prefix(self, queryset, name, value):
-        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        prefixes = self._strip_prefix_values(value)
         return queryset.net_host_contained(*prefixes)
 
     def filter_address(self, queryset, name, value):
