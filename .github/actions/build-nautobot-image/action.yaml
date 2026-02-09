@@ -22,68 +22,137 @@
 # ```
 ---
 name: "Build Nautobot Image"
-description: "Builds and pushes Nautobot image"
+description: "Build (and optionally push) a Docker image for Nautobot"
+
 inputs:
-  branch:
-    description: "Branch Name Used In Tag"
-    required: true
-  image:
-    description: "Produced Image Name"
-    required: true
-  tag-latest:
-    description: "Whether To Tag As Latest"
-    required: true
-  tag-latest-for-branch:
-    description: "Whether To Tag As Latest For Branch"
-    required: true
-  tag-latest-for-py:
-    description: "Whether To Tag As Latest For Python Version"
-    required: true
-  platforms:
-    description: "Platforms To Build For"
-    required: false
-    default: "linux/amd64,linux/arm64"
-  push:
-    description: "Whether To Push"
+  images:
+    description: "Full image name(s), comma-separated (e.g. networktocode/nautobot,ghcr.io/nautobot/nautobot)"
     required: true
   python-version:
-    description: "Python Version"
+    description: "Python version for the build matrix"
+    required: true
+  nautobot-version:
+    description: "Nautobot version to install (either PEP440 or branch name)"
     required: true
   target:
-    description: "Target Stage Name"
+    description: "Dockerfile target stage"
     required: true
+    default: "final"
+  push:
+    description: "Whether to push the image"
+    required: false
+    default: false
+  platforms:
+    description: "Target platforms"
+    required: false
+    default: "linux/amd64,linux/arm64"
+  cache-scope:
+    description: "GHA cache scope prefix"
+    required: false
+    default: ""
+  default-python-version:
+    description: "Default Python version to use for 'latest' tag"
+    required: true
+  set-latest:
+    description: "Whether to set the 'latest' and stable tag for releases"
+    required: false
+    default: "false"
+  poetry-parallel:
+    description: "Whether to set POETRY_INSTALLER_PARALLEL to true"
+    required: false
+    default: "false"
+
+outputs:
+  tags:
+    description: "Generated Docker tags"
+    value: "${{ steps.dockermeta.outputs.tags }}"
+  labels:
+    description: "Generated Docker labels"
+    value: "${{ steps.dockermeta.outputs.labels }}"
+  digest:
+    description: "Image digest"
+    value: "${{ steps.build.outputs.digest }}"
+
 runs:
   using: "composite"
   steps:
-    - name: "Setup Metadata"
-      id: "metadata"
-      uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
+    - name: "Clean nautobot-version Input in Case of Leading 'v' and Valid Version Check"
+      id: "cleannautobotversion"
+      shell: "python"
+      run: |
+        import os
+        import sys
+        from packaging.version import Version, InvalidVersion
+        nautobot_version = "${{ inputs.nautobot-version }}"
+        if nautobot_version.startswith("v"):
+            candidate_version = nautobot_version[1:]
+        else:
+            candidate_version = nautobot_version
+        try:
+            v = Version(candidate_version)
+            clean_version = candidate_version
+        except InvalidVersion:
+            clean_version = nautobot_version  # keep original if not valid version
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            fh.write(f"clean-version={clean_version}\n")
+
+    - name: "Determine if Nautobot Version is Pre-release"
+      id: "prereleasecheck"
+      shell: "python"
+      run: |
+        import os
+        import sys
+        from packaging.version import Version, InvalidVersion
+
+        nautobot_version = "${{ steps.cleannautobotversion.outputs.clean-version }}"
+
+        try:
+            v = Version(nautobot_version)
+            is_prerelease = v.is_prerelease
+        except InvalidVersion:
+            is_prerelease = True  # assume branch names are not stable releases
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            fh.write(f"is-prerelease={str(is_prerelease).lower()}\n")
+
+    - name: "Docker Metadata"
+      id: "dockermeta"
+      uses: "docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051" # v5.10.0
       with:
-        images: "${{ inputs.image }}"
+        images: "${{ inputs.images }}"
         flavor: |
-          latest=false
+          latest=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' && inputs.python-version == inputs.default-python-version }}
         tags: |
-          type=raw,value=${{ inputs.branch }}-py${{ inputs.python-version }}
-          type=raw,value=latest,enable=${{ inputs.tag-latest }}
-          type=raw,value=${{ inputs.branch }},enable=${{ inputs.tag-latest-for-branch }}
-          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ inputs.tag-latest-for-py }}
+          type=raw,value=${{ steps.cleannautobotversion.outputs.clean-version }}-py${{ inputs.python-version }}
+          type=raw,value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ inputs.python-version == inputs.default-python-version }}
+          type=pep440,pattern={{major}}.{{minor}}-py${{ inputs.python-version }},value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' }}
+          type=pep440,pattern={{major}}.{{minor}},value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.python-version == inputs.default-python-version }}
+          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' }}
+          type=raw,value=stable,enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' && inputs.python-version == inputs.default-python-version }}
+          type=raw,value=stable-py${{ inputs.python-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' }}
         labels: |
           org.opencontainers.image.title=Nautobot
-    - name: "Build Dev"
-      env:
-        INVOKE_NAUTOBOT_PYTHON_VER: "${{ inputs.python-version }}"
-      uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
+
+    - name: "Log tags"
+      shell: "bash"
+      run: |
+        echo "=== Tags for ${{ inputs.image }} (py${{ inputs.python-version }}) ==="
+        echo "${{ steps.dockermeta.outputs.tags }}"
+
+    - name: "Build and possibly Push"
+      id: "build"
+      uses: "docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83" # v6.18.0
       with:
         push: "${{ inputs.push }}"
         target: "${{ inputs.target }}"
-        file: "docker/Dockerfile"
         platforms: "${{ inputs.platforms }}"
-        tags: "${{ steps.metadata.outputs.tags }}"
-        labels: "${{ steps.metadata.outputs.labels }}"
-        cache-from: "type=gha,scope=nautobot-${{ inputs.branch }}-${{ inputs.python-version }}"
-        cache-to: "type=gha,mode=max,scope=nautobot-${{ inputs.branch }}-${{ inputs.python-version }}"
+        file: "docker/Dockerfile"
+        tags: "${{ steps.dockermeta.outputs.tags }}"
+        labels: "${{ steps.dockermeta.outputs.labels }}"
+        cache-from: "type=gha,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}"
+        cache-to: "type=gha,mode=max,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}"
         context: "."
         build-args: |
+          INVOKE_NAUTOBOT_PYTHON_VER: ${{ inputs.python-version }}
           PYTHON_VER=${{ inputs.python-version }}
-          DEPENDENCIES_BASE_BRANCH=${{ inputs.branch }}
-          POETRY_INSTALLER_PARALLEL=true
+          POETRY_INSTALLER_PARALLEL=${{ inputs.poetry-parallel }}
