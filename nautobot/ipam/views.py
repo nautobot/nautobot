@@ -338,7 +338,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
-    non_filter_params = list(NautobotUIViewSet.non_filter_params) + ["expanded_prefix"]
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_prefix"]
 
     queryset = Prefix.objects.select_related(
         "parent",
@@ -533,7 +533,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
         # - type=container (*only*)
         # - within_include
         if all(
-            key in [
+            key
+            in [
                 "descendants_of",
                 "ip_version",
                 "max_depth",
@@ -541,7 +542,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "prefix_length__lte",
                 "type",
                 "within_include",
-            ] for key in self.filter_params
+            ]
+            for key in self.filter_params
         ) and ("type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
             self.hide_hierarchy_ui = False
 
@@ -551,7 +553,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
             if default_max_depth > 0:
                 if first_root := queryset.first():
                     default_max_depth += first_root.ancestors().count()
-            if "max_depth" not in self.filter_params and "type" not in self.filter_params and default_container_only and default_max_depth > 0:
+            if (
+                "max_depth" not in self.filter_params
+                and "type" not in self.filter_params
+                and default_container_only
+                and default_max_depth > 0
+            ):
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
                 param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})

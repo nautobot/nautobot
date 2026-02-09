@@ -427,7 +427,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True, verbose_name="RIR")
-    descendants = tables.Column(accessor="descendants_count", orderable=False, attrs={"td": {"class": "nb-descendants-count"}})
+    descendants = tables.Column(accessor="descendants_count", orderable=False)
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"

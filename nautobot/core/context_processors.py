@@ -48,10 +48,12 @@ def settings(request):
 
 class NavMenuDict(dict):
     """Because this is a large dictionary, it tends to flood the Django debug toolbar with its contents."""
+
     def __repr__(self):
         if django_settings.DEBUG:
             return "<NavMenu dict>"
         return super().__repr__()
+
 
 def nav_menu(request):
     """

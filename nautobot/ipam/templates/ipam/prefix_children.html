@@ -22,23 +22,23 @@
                     {% else %}
                         <td colspan="{{ table.columns|length }}" class="nb-prefix table-info">
                     {% endif %}
-                        {% for i in table.context.tree_depth|add:1|as_range %}
-                            <span class="nb-subtree"></span>
-                        {% endfor %}
-                        &hellip; and
-                        <a href="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
-                           hx-get="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
-                           hx-indicator="closest .table-responsive"
-                           hx-select=".table-responsive tr"
-                           hx-swap="outerHTML"
-                           hx-select-oob="none"
-                           hx-target="closest tr"
-                        >
-                            {{ table.context.additional_count }} more
-                        </a>
-                        &hellip;
-                    </td>
-                </tr>
+                    {% for i in table.context.tree_depth|add:1|as_range %}
+                        <span class="nb-subtree"></span>
+                    {% endfor %}
+                    &hellip; and
+                    <a href="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
+                       hx-get="{% url 'ipam:prefix_children' pk=table.context.instance.pk %}{% django_querystring page=table.page.number|add:1 %}"
+                       hx-indicator="closest .table-responsive"
+                       hx-select=".table-responsive tr"
+                       hx-swap="outerHTML"
+                       hx-select-oob="none"
+                       hx-target="closest tr"
+                    >
+                        {{ table.context.additional_count }} more
+                    </a>
+                    &hellip;
+                </td>
+            </tr>
             </tfoot>
         {% endif %}
     </table>

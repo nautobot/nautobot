@@ -663,6 +663,7 @@ def index(indexable, i):
 def filter_getattr(obj, attr):
     return getattr(obj, attr, None)
 
+
 @library.filter()
 @register.filter()
 def settings_or_config(key, app_name=None):
