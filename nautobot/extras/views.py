@@ -2868,6 +2868,8 @@ class JobResultUIViewSet(
             "active_tab": "console_log",
             "entries": entries,
             "base_template": "extras/jobresult_retrieve.html",
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_action": "detail",
             "is_running": self._is_job_running(job_result),
             "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
         }
