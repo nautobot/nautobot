@@ -105,7 +105,7 @@ PREFIX_COPY_LINK = """
     {% if not table.hide_hierarchy_ui %}
         <span class="float-end">
             {% if record.descendants_count %}
-                <a class="mdi mdi-magnify-plus-outline"
+                <a class="mdi mdi-table-filter"
                    href="{% url 'ipam:prefix_list' %}?descendants_of={{ record.pk }}"
                    aria-hidden="true"
                    title="Filter to this prefix and its descendants"
