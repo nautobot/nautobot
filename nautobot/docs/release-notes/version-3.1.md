@@ -115,7 +115,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 - [#7018](https://github.com/nautobot/nautobot/issues/7018) - Fixed rendering of "last sync time" and "last synced by" columns in Git Repository list view.
 - [#8315](https://github.com/nautobot/nautobot/issues/8315) - Fixed bug in Interface template causing emdash to not be used for Port Type if no value was set.
-- [#8349](https://github.com/nautobot/nautobot/issues/8349) - Fixed unit tests failing after upgrading to django 5.2.
+- [#8349](https://github.com/nautobot/nautobot/issues/8349) - Fixed unit tests failing after upgrading to Django 5.2.
 - [#8422](https://github.com/nautobot/nautobot/issues/8422) - Fixed incompatibilities with `django_celery_beat` v2.8.1.
 - [#8468](https://github.com/nautobot/nautobot/issues/8468) - Fixed dynamic-group filter calculation for cases where the filter is using `exclude=True`.
 - [#8479](https://github.com/nautobot/nautobot/issues/8479) - Fixed missing text on the trace action button.
