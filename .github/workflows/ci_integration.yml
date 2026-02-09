@@ -236,25 +236,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12"]
+        python-version: [ "3.10", "3.11", "3.12" ]
+    env:
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.12"
+      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "false" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
-      - name: "Configuration"
-        id: "config"
-        shell: "bash"
-        run: |
-          export BRANCH="${{ github.ref_name }}"
-          export TAG_LATEST="false"
-          export TAG_LATEST_FOR_BRANCH="false"
-          export TAG_LATEST_FOR_PY="false"
-
-          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
-            export TAG_LATEST_FOR_BRANCH="true"
-          fi
-
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "tag-latest=$TAG_LATEST" >> $GITHUB_OUTPUT
-          echo "tag-latest-for-branch=$TAG_LATEST_FOR_BRANCH" >> $GITHUB_OUTPUT
-          echo "tag-latest-for-py=$TAG_LATEST_FOR_PY" >> $GITHUB_OUTPUT
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - name: "Set up QEMU"
@@ -267,29 +253,49 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final`"
-        if: |
-          steps.config.outputs.tag-latest-for-branch == 'true'
+
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Build Only Test (prod - final target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot"
-          platforms: "linux/amd64"
-          push: "false"
+          images: "ghcr.io/nautobot/nautobot"
           python-version: "${{ matrix.python-version }}"
-          tag-latest: "${{ steps.config.outputs.tag-latest }}"
-          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
-          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          platforms: "linux/amd64"
+          push: false
           target: "final"
-      - name: "Build and Push `final-dev`"
+          poetry-parallel: true
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+
+      - name: "Determine if we should build multi-arch dev image if python-version is default, return platforms string"
+        id: "devplatforms"
+        run: |
+          if [[ "${{ matrix.python-version }}" == "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}" ]]; then
+            echo "platforms=linux/amd64,linux/arm64" >> $GITHUB_OUTPUT
+          else
+            echo "platforms=linux/amd64" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Build and Push (dev - final-dev target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
-          branch: "${{ steps.config.outputs.branch }}"
-          image: "ghcr.io/nautobot/nautobot-dev"
-          platforms: "linux/amd64"
-          push: "true"
+          images: "ghcr.io/nautobot/nautobot-dev"
           python-version: "${{ matrix.python-version }}"
-          tag-latest: "${{ steps.config.outputs.tag-latest }}"
-          tag-latest-for-branch: "${{ steps.config.outputs.tag-latest-for-branch }}"
-          tag-latest-for-py: "${{ steps.config.outputs.tag-latest-for-py }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          platforms: "${{ steps.devplatforms.outputs.platforms }}"
+          push: true
           target: "final-dev"
+          poetry-parallel: true
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"

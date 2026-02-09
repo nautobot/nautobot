@@ -47,6 +47,8 @@ jobs:
         python-version: [ "3.10", "3.11", "3.12" ]
     env:
       INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.12"
+      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "false" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -67,64 +69,37 @@ jobs:
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: "Build and Push (prod - final target)"
+        uses: "./.github/actions/build-nautobot-image"
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
-          flavor: |
-            latest=false
-          tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
-            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build"
-        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
-        with:
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
           target: "final"
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
-          labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=false
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+
+      - name: "Build and Push (dev - final-dev target)"
+        uses: "./.github/actions/build-nautobot-image"
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=false
-          tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.12 }}
-            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.12 }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build Dev Containers"
-        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
-        with:
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
           target: "final-dev"
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
-          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=false
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
 
   slack-notify:
     if: "${{ ! github.event.release.draft }}"
