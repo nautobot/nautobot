@@ -265,7 +265,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             for prefix in self._get_queryset().all():
                 self.assertBodyContains(response, str(prefix.pk))
             # Indentation should be present in table rendering
-            self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+            self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
         with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
@@ -281,7 +281,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
                 # Check for message in base page
@@ -296,10 +296,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
         with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
-            with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+            with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
                 # Check for message in base page
                 response = self.client.get(list_url)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
@@ -312,9 +312,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
-            with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+            with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
                 # Check for message in base page
                 response = self.client.get(list_url)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
@@ -327,10 +327,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
         with self.subTest("With both settings, both should apply"):
-            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=4):
                 # Check for message in base page
                 response = self.client.get(list_url)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
@@ -348,9 +348,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
-            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=-1):
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=0):
                 # Check for message in base page - not present since both configs are explicitly disabled
                 response = self.client.get(list_url)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
@@ -360,9 +360,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 for prefix in self._get_queryset().all():
                     self.assertBodyContains(response, str(prefix.pk))
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
-        with self.subTest("Settings do not apply when explicit filters are present"):
+        with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
                 # Check for message in base page - not present since an explicit filter is applied
                 prefix_status = Status.objects.get_for_model(Prefix).first()
@@ -374,24 +374,72 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 for prefix in self._get_queryset().all():
                     if prefix.status == prefix_status:
                         self.assertBodyContains(response, str(prefix.pk))
+                        self.assertBodyContains(
+                            response,
+                            '<a aria-hidden="true" class="mdi mdi-table-filter" href="/ipam/prefixes/?descendants_of={prefix.pk}" title="Filter to this prefix and its descendants">',
+                            html=True,
+                            count=0,
+                        )
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
-                # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True, count=0)
+                # Indentation and subtree filtering should NOT be present in table rendering due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, "nb-subtree", count=0)
 
-                # Check for message in base page - not present since an explicit filter is applied
+        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for message in base page - present since filter is applied that preserves hierarchy
                 response = self.client.get(list_url + "?ip_version=4")
-                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
-                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
                 # Check for filtered prefix list in table
                 response = self.client.get(list_url + "?ip_version=4", headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
-                    if prefix.ip_version == 4:
+                    if (
+                        prefix.ip_version == 4
+                        and prefix.parent is None
+                        and prefix.type == PrefixTypeChoices.TYPE_CONTAINER
+                    ):
                         self.assertBodyContains(response, str(prefix.pk))
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, "nb-subtree")
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        """Override base ListObjectsViewTestCase.test_table_with_indentation_is_removed_on_filter_or_sort for Prefix."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is removed on most filters"):
+            queryset = (
+                self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+            )
+            filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+            response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(
+                f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is present on hierarchy-preserving filter alone"):
+            response = self.client.get(f"{self._get_url('list')}?ip_version=4", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is not present on mixed filtering"):
+            response = self.client.get(
+                f"{self._get_url('list')}?ip_version=4&status=Active", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):

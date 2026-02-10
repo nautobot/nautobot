@@ -233,19 +233,19 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
     def test_max_depth(self):
-        params = {"max_depth": 0}
+        params = {"max_depth": 1}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__isnull=False)
         )
-        params = {"max_depth": 1}
+        params = {"max_depth": 2}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__isnull=False)
         )
-        params = {"max_depth": 2}
+        params = {"max_depth": 3}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__parent__isnull=False)
         )
-        params = {"max_depth": None}
+        params = {"max_depth": 0}
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ancestors(self):

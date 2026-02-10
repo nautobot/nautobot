@@ -1121,7 +1121,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         """Test that 'exclude' filters work properly in dynamic groups."""
         dg = DynamicGroup(
             name="shallow prefixes only",
-            filter={"max_depth": 1},
+            filter={"max_depth": 2},
             content_type=ContentType.objects.get_for_model(Prefix),
         )
         dg.validated_save()

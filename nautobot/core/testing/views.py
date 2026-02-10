@@ -37,7 +37,6 @@ from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFo
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.jobs import JobResult
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -959,10 +958,11 @@ class ViewTestCases:
                 self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
 
         def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+            # TODO: see updated implementation in nautobot.ipam.tests.test_views.PrefixTestCase, generalize it here
             self.user.is_superuser = True
             self.user.save()
 
-            if not issubclass(self.model, (TreeModel)) and self.model is not Prefix:
+            if not issubclass(self.model, (TreeModel)):
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
