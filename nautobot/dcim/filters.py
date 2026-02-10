@@ -1642,7 +1642,7 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
         fields = ["id", "name", "failover_strategy", "tags"]
 
 
-class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
+class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
     q = SearchFilter(filter_predicates={"name": "icontains"})

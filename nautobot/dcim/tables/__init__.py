@@ -3,6 +3,7 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
+from nautobot.extras.tables import StatusTableMixin
 
 from .cables import CableTable
 from .devices import (
@@ -186,7 +187,7 @@ class PowerConnectionTable(BaseTable):
         fields = ("device", "name", "pdu", "outlet", "reachable")
 
 
-class InterfaceConnectionTable(BaseTable):
+class InterfaceConnectionTable(StatusTableMixin, BaseTable):
     device_a = tables.Column(accessor=Accessor("parent"), linkify=True, verbose_name="Device A", orderable=False)
     interface_a = tables.Column(accessor=Accessor("name"), linkify=True, verbose_name="Interface A")
     device_b = tables.Column(
@@ -205,4 +206,5 @@ class InterfaceConnectionTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Interface
-        fields = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
+        fields = ("device_a", "interface_a", "device_b", "interface_b", "status", "reachable")
+        default_columns = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
