@@ -77,7 +77,7 @@ jobs:
           else
             echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: "Build and Push (prod - final target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
