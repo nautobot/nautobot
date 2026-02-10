@@ -436,8 +436,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
-                        table_class=tables.PrefixTable,
-                        table_attribute="default_descendants",
+                        context_table_key="prefix_table",
                         add_button_route=None,
                         include_paginator=True,
                         header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
@@ -461,8 +460,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
-                        table_class=tables.IPAddressTable,
-                        table_attribute="all_ips",
+                        context_table_key="ip_table",
                         add_button_route=None,
                         include_paginator=True,
                         header_extra_content_template_path="ipam/inc/prefix_header_extra_content_table.html",
