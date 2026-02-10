@@ -131,6 +131,8 @@ class ObjectDetailContent:
 class Component:
     """Common base class for renderable components (tabs, panels, etc.)."""
 
+    required_permissions = []
+
     def __init__(
         self,
         *,
@@ -146,7 +148,8 @@ class Component:
                 The component will only be rendered if the user has these permissions.
         """
         self.weight = weight
-        self.required_permissions = required_permissions or []
+        if required_permissions is not None:
+            self.required_permissions = required_permissions
 
     def should_render(self, context: Context):
         """
@@ -599,18 +602,28 @@ class Panel(Component):
     WEIGHT_RELATIONSHIPS_PANEL = 500
     WEIGHT_TAGS_PANEL = 600
 
+    label = ""
+    css_class = "default"
+    section = SectionChoices.FULL_WIDTH
+    body_id = None
+    body_content_template_path = None
+    header_extra_content_template_path = None
+    footer_content_template_path = None
+    template_path = "components/panel/panel.html"
+    body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
+
     def __init__(
         self,
         *,
-        label="",
-        css_class="default",
-        section=SectionChoices.FULL_WIDTH,
+        label=None,
+        css_class=None,
+        section=None,
         body_id=None,
         body_content_template_path=None,
         header_extra_content_template_path=None,
         footer_content_template_path=None,
-        template_path="components/panel/panel.html",
-        body_wrapper_template_path="components/panel/body_wrapper_generic.html",
+        template_path=None,
+        body_wrapper_template_path=None,
         **kwargs,
     ):
         """
@@ -629,15 +642,24 @@ class Panel(Component):
             body_wrapper_template_path (str): Template path to render the panel body, including both its "wrapper"
                 (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
         """
-        self.label = label
-        self.css_class = css_class
-        self.section = section
-        self.body_id = body_id
-        self.body_content_template_path = body_content_template_path
-        self.header_extra_content_template_path = header_extra_content_template_path
-        self.footer_content_template_path = footer_content_template_path
-        self.template_path = template_path
-        self.body_wrapper_template_path = body_wrapper_template_path
+        if label is not None:
+            self.label = label
+        if css_class is not None:
+            self.css_class = css_class
+        if section is not None:
+            self.section = section
+        if body_id is not None:
+            self.body_id = body_id
+        if body_content_template_path is not None:
+            self.body_content_template_path = body_content_template_path
+        if header_extra_content_template_path is not None:
+            self.header_extra_content_template_path = header_extra_content_template_path
+        if footer_content_template_path is not None:
+            self.footer_content_template_path = footer_content_template_path
+        if template_path is not None:
+            self.template_path = template_path
+        if body_wrapper_template_path is not None:
+            self.body_wrapper_template_path = body_wrapper_template_path
         super().__init__(**kwargs)
 
     def render(self, context: Context):

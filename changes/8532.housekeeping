@@ -1,0 +1,1 @@
+Changed the Python API for the Panel and Component components to allow default values to be set directly as class attributes.
