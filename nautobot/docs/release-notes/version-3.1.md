@@ -69,6 +69,12 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.0a2 (2026-02-10)
+
+### Housekeeping in v3.1.0a2
+
+- [#8538](https://github.com/nautobot/nautobot/issues/8538) - Fixed missing end of conditional in release CI.
+
 ## v3.1.0a1 (2026-02-10)
 
 ### Breaking Changes in v3.1.0a1
