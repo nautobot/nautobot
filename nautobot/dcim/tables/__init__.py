@@ -187,7 +187,7 @@ class PowerConnectionTable(BaseTable):
         fields = ("device", "name", "pdu", "outlet", "reachable")
 
 
-class InterfaceConnectionTable(StatusTableMixin, BaseTable):
+class InterfaceConnectionTable(BaseTable):
     device_a = tables.Column(accessor=Accessor("parent"), linkify=True, verbose_name="Device A", orderable=False)
     interface_a = tables.Column(accessor=Accessor("name"), linkify=True, verbose_name="Interface A")
     device_b = tables.Column(
@@ -206,5 +206,5 @@ class InterfaceConnectionTable(StatusTableMixin, BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Interface
-        fields = ("device_a", "interface_a", "device_b", "interface_b", "status", "reachable")
+        fields = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
         default_columns = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
