@@ -602,7 +602,7 @@ class Panel(Component):
     WEIGHT_RELATIONSHIPS_PANEL = 500
     WEIGHT_TAGS_PANEL = 600
 
-    label = ""
+    label = None
     css_class = "default"
     section = SectionChoices.FULL_WIDTH
     body_id = None
@@ -699,6 +699,8 @@ class Panel(Component):
 
     def render_label(self, context: Context):
         """Render the label of this panel, if any."""
+        if self.label is None:
+            return ""
         return self.label.upper()
 
     def render_header_extra_content(self, context: Context):
