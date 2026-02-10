@@ -94,8 +94,8 @@ PREFIX_COPY_LINK = """
            ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
            {% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
            {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-       {% endif %}\
-       " id="copy_{{record.id}}">
+       {% endif %}"
+       id="copy_{{record.id}}">
         {{ record.prefix }}
     </a>
     <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">

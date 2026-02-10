@@ -1,3 +1,4 @@
+from django.urls import reverse
 import netaddr
 
 from nautobot.core.testing.integration import ObjectDetailsMixin, SeleniumTestCase
@@ -15,33 +16,90 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         super().setUp()
         self.login_as_superuser()
 
-    def test_child_relationship_visible(self):
-        """
-        Test that 10.0.0.0/24 is shown under 10.0.0.0/16
-        """
         status = Status.objects.get_for_model(Prefix).first()
-        namespace = Namespace.objects.create(name="Prefix Hierarchy Test test_child_relationship_visible")
+        self.namespace = Namespace.objects.create(name="Prefix Hierarchy Test test_child_relationship_visible")
         Prefix(
             prefix=netaddr.IPNetwork("10.0.0.0/16"),
             status=status,
             type=PrefixTypeChoices.TYPE_CONTAINER,
-            namespace=namespace,
+            namespace=self.namespace,
         ).validated_save()
         Prefix(
             prefix=netaddr.IPNetwork("10.0.0.0/24"),
             status=status,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+            namespace=self.namespace,
+        ).validated_save()
+        Prefix(
+            prefix=netaddr.IPNetwork("10.0.0.0/30"),
+            status=status,
             type=PrefixTypeChoices.TYPE_NETWORK,
-            namespace=namespace,
+            namespace=self.namespace,
         ).validated_save()
 
-        # Navigate to Namespace Prefixes list view
+    def test_parent_child_relationship_visible_in_namespace_detail_view(self):
+        """
+        Test the rendering in the Namespace "Prefixes" sub-tab.
+        """
+        # Navigate to Namespace Prefixes detail view tab
         self.browser.visit(self.live_server_url)
         self.click_navbar_entry("IPAM", "Namespaces")
-        self.browser.links.find_by_text(namespace.name).click()
+        self.browser.links.find_by_text(self.namespace.name).click()
         self.switch_tab("Prefixes")
 
-        self.assertEqual(len(self.browser.find_by_tag("tr")[1].find_by_text("10.0.0.0/16")), 1)  # 10.0.0.0/16 is first
-        self.assertEqual(len(self.browser.find_by_tag("tr")[2].find_by_text("10.0.0.0/24")), 1)  # 10.0.0.0/24 is second
+        # 10.0.0.0/16 is first...
+        self.assertEqual(self.browser.find_by_tag("tr")[1].find_by_tag("a").first.text, "10.0.0.0/16")
+        # 10.0.0.0/24 is second...
+        self.assertEqual(self.browser.find_by_tag("tr")[2].find_by_tag("a").first.text, "10.0.0.0/24")
+        # ...and it is indented appropriately as a subtree element
         self.assertTrue(
-            self.browser.find_by_tag("tr")[2].find_by_tag("i").first.has_class("mdi-circle-small")
-        )  # 10.0.0.0/24 is indented via an <i> tag
+            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-no-next-sibling")
+        )
+        # 10.0.0.0/30 is third...
+        self.assertEqual(self.browser.find_by_tag("tr")[3].find_by_tag("a").first.text, "10.0.0.0/30")
+        # ...and it is indented appropriately as a subtree element
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-no-next-sibling")
+        )
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-no-next-sibling")
+        )
+
+    def test_parent_child_relationship_navigable_in_list_view(self):
+        self.browser.visit(
+            f"{self.live_server_url}{reverse('ipam:prefix_list')}?namespace={self.namespace.pk}&max_depth=1"
+        )
+
+        self.assertEqual(len(self.browser.find_by_tag("tr")), 2)  # header + 1 prefix
+        # 10.0.0.0/16 is first...
+        self.assertEqual(self.browser.find_by_tag("tr")[1].find_by_tag("a").first.text, "10.0.0.0/16")
+        # ...and it has an expandable caret
+        self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("span").first.has_class("nb-subtree-expandable"))
+        self.browser.find_by_tag("tr")[1].find_by_tag("span").first.click()
+        self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("span").first.has_class("nb-subtree-expanded"))
+        self.assertEqual(len(self.browser.find_by_tag("tr")), 3)  # header + 2 prefixes
+
+        # 10.0.0.0/24 is second...
+        self.assertEqual(self.browser.find_by_tag("tr")[2].find_by_tag("a").first.text, "10.0.0.0/24")
+        # ...and it is indented appropriately as a subtree element
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-no-next-sibling")
+        )
+        # ...and it has an expandable caret
+        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].has_class("nb-subtree-expandable"))
+        self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].click()
+        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].has_class("nb-subtree-expanded"))
+        self.assertEqual(len(self.browser.find_by_tag("tr")), 4)  # header + 3 prefixes
+
+        # 10.0.0.0/30 is third...
+        self.assertEqual(self.browser.find_by_tag("tr")[3].find_by_tag("a").first.text, "10.0.0.0/30")
+        # ...and it is indented appropriately as a subtree element
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-no-next-sibling")
+        )
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-no-next-sibling")
+        )
+        # ...and it does NOT have an expandable caret
+        self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree"))
+        self.assertFalse(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree-expandable"))
