@@ -1,6 +1,8 @@
 import flatpickr from 'flatpickr';
 import { getCookie, removeCookie, setCookie } from './cookie.js';
 
+const FAVORITES_CONTAINER_CLASS = 'nb-favorites-container';
+
 const SIDENAV_COLLAPSED_KEY = 'sidenav_collapsed';
 
 /**
@@ -120,4 +122,65 @@ export const initializeSidenav = () => {
       wrap: true,
     });
   }
+
+  /*
+   * Persist favorites reorder after drag-and-drop. Captures the original order on dragstart and
+   * compares after dragend to avoid unnecessary requests. Uses setTimeout(0) to defer DOM reading
+   * until after draggable.js has moved elements, since initializeSidenav registers before initializeDraggable.
+   */
+  let originalFavoritesOrder = null;
+
+  document.addEventListener('dragstart', (event) => {
+    const draggable = event.target.closest('.nb-draggable');
+    const container = draggable?.closest(`.${FAVORITES_CONTAINER_CLASS}`);
+    if (container) {
+      originalFavoritesOrder = [...container.querySelectorAll('.nb-draggable[data-link]')].map((el) => el.dataset.link);
+    }
+  });
+
+  document.addEventListener('dragend', (event) => {
+    const draggable = event.target.closest('.nb-draggable');
+    if (!draggable) {
+      return;
+    }
+    const container = draggable.closest(`.${FAVORITES_CONTAINER_CLASS}`);
+    if (!container) {
+      return;
+    }
+
+    setTimeout(() => {
+      const orderedLinks = [...container.querySelectorAll('.nb-draggable[data-link]')].map((el) => el.dataset.link);
+      const { reorderUrl } = container.dataset;
+      if (!reorderUrl || orderedLinks.length === 0) {
+        originalFavoritesOrder = null;
+        return;
+      }
+
+      // Skip the request if the order hasn't changed.
+      if (
+        originalFavoritesOrder &&
+        orderedLinks.length === originalFavoritesOrder.length &&
+        orderedLinks.every((link, index) => link === originalFavoritesOrder[index])
+      ) {
+        originalFavoritesOrder = null;
+        return;
+      }
+      originalFavoritesOrder = null;
+
+      const csrfToken = getCookie('csrftoken');
+      fetch(reorderUrl, {
+        body: JSON.stringify({ ordered_links: orderedLinks }),
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        method: 'POST',
+      })
+        .then((response) => {
+          if (!response.ok) {
+            window.location.reload();
+          }
+        })
+        .catch(() => {
+          window.location.reload();
+        });
+    }, 0);
+  });
 };

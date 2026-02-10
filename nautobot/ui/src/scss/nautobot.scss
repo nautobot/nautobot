@@ -1821,6 +1821,27 @@ body {
     }
   }
 
+  .nb-favorites-drag-handle {
+    @include fade-out;
+    @include transition($transition-base);
+    align-items: center;
+    cursor: move;
+    display: flex;
+    flex: none;
+    padding-inline: map.get($spacers, 4);
+  }
+
+  .nb-favorites-container {
+    position: relative; /* Needed for drop indicator */
+
+    > .nb-sidenav-link-wrapper {
+      &:hover > .nb-favorites-drag-handle,
+      &:has(:focus-visible) > .nb-favorites-drag-handle {
+        @include fade-in;
+      }
+    }
+  }
+
   .nb-sidenav-link-group {
     color: $nav-gray-3;
     font-weight: $font-weight-medium;

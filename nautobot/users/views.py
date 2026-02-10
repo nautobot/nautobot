@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import json
 import logging
 
 from django.conf import settings
@@ -9,7 +10,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -232,7 +233,6 @@ class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
                 navbar_favorites.append(form.cleaned_data)
-                navbar_favorites = sorted(navbar_favorites, key=lambda d: d.get("name", ""))
                 request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
 
                 return render(
@@ -260,6 +260,35 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
                 )
 
         return redirect(self.get_return_url(request))
+
+
+class UserNavbarFavoritesReorderView(GenericView):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            ordered_links = data.get("ordered_links", [])
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if not isinstance(ordered_links, list):
+            return JsonResponse({"error": "ordered_links must be a list"}, status=400)
+
+        current_favorites = request.user.get_config("navbar_favorites", [])
+        favorites_by_link = {fav.get("link"): fav for fav in current_favorites}
+
+        reordered, seen = [], set()
+        for link in ordered_links:
+            if link in favorites_by_link and link not in seen:
+                reordered.append(favorites_by_link[link])
+                seen.add(link)
+        # Safety net: append any favorites not in the ordered list
+        for fav in current_favorites:
+            if fav.get("link") not in seen:
+                reordered.append(fav)
+                seen.add(fav.get("link"))
+
+        request.user.set_config("navbar_favorites", reordered, commit=True)
+        return JsonResponse({"status": "ok"})
 
 
 class ChangePasswordView(GenericView):
