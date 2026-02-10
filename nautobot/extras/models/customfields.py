@@ -979,18 +979,33 @@ class CustomField(
             delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
+        """
+        Add `cf_` prefix to the key for forms and filters usage
+        """
         return "cf_" + str(self.key)
 
     @property
     def filter_field(self):
+        """
+        Property to get prefixed field key for forms and filters usage.
+
+        Example:
+            key=test_field; this will return cf_test_field
+        """
         return self.add_prefix_to_cf_key()
 
     @property
     def scope_filter_model_class(self):
+        """
+        Property to fetch model class from first content types assigned to this field.
+        """
         return self.content_types.all()[0].model_class()
 
     @property
     def scope_filter_prefixed(self):
+        """
+        Property to get the scope filter data with `scope-` prefix for forms usage.
+        """
         if self.scope_filter:
             return {f"scope-{name}": value for name, value in self.scope_filter.items()}
 

@@ -21,7 +21,7 @@ const valueFieldGetter = () => (
  * @returns {void} Do not return any value, modify DOM in-place.
  */
 const insertFirst = (element, parent) => {
-  parent.hasChildNodes() ? parent.insertBefore(element, parent.firstElementChild) : parent.appendChild(element);
+  parent.insertBefore(element, parent.firstElementChild)
 };
 
 /**
@@ -29,7 +29,7 @@ const insertFirst = (element, parent) => {
  * @param label
  * @returns {HTMLButtonElement}
  */
-const removeButton = (label) => {
+const createRemoveButton = (label) => {
   const button = document.createElement('button');
   button.classList.toggle('nb-dynamic-filter-remove', true);
   button.setAttribute('type', 'button');
@@ -140,7 +140,7 @@ const manageDynamicFilter = ({action, name, text, value}) => {
     const children = document.createElement('span');
     children.classList.toggle('nb-multi-badge-items', true);
 
-    group.appendChild(removeButton('Remove All'));
+    group.appendChild(createRemoveButton('Remove All'));
     group.insertAdjacentText('beforeend', `${text}:`);
     group.appendChild(children);
 

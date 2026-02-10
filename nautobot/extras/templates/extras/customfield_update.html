@@ -25,7 +25,7 @@
             {% render_field form.content_types %}
         </div>
     </div>
-    <div class="card" id="nb-scope-filter-form-container" hx-swap-oob="true" hx-on::after-settle="initializeScopeFilter(event)">
+    <div class="card" id="nb-scope-filter-form-container" hx-on::after-settle="initializeScopeFilter(event)">
         <div class="card-header"><strong>Scope filter</strong></div>
         {% if content_type_selected %}
             <div class="card-body">
