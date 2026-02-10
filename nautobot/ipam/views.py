@@ -532,6 +532,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
         prefix_table = tables.PrefixDetailTable(
             child_prefixes,
             exclude=["namespace"],
+            user=request.user,
             data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
@@ -583,7 +584,10 @@ class PrefixUIViewSet(NautobotUIViewSet):
         )
 
         ip_table = tables.IPAddressTable(
-            ipaddresses, exclude=["parent__namespace"], data_transform_callback=data_transform_callback
+            ipaddresses,
+            exclude=["parent__namespace"],
+            user=request.user,
+            data_transform_callback=data_transform_callback,
         )
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_table.columns.show("pk")
