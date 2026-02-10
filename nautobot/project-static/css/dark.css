@@ -23,12 +23,12 @@ html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, li
 html[data-theme="dark"] #select2-id_color-container,      /* Colored choices, like statuses */
 html[data-theme="dark"] .hljs,                            /* highlight.js maintains its own dark theme */
 html[data-theme="dark"] .editor-container,                /* Monaco editor maintains its own dark theme */
-html[data-theme="dark"] [data-cable-color] {              /* Cable colors */
+html[data-theme="dark"] .cable {              /* Cable colors */
   filter: invert(1) hue-rotate(180deg);
 }
 
 /* Counter-invert cable children to keep text readable */
-html[data-theme="dark"] [data-cable-color] > * {
+html[data-theme="dark"] .cable > * {
   filter: invert(1) hue-rotate(180deg);
 }
 
