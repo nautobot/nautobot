@@ -2845,8 +2845,14 @@ class JobResultUIViewSet(
 
         return HttpResponse(log_table.as_html(request))
 
-    @action(detail=True, url_path="console-log", url_name="console-log", custom_view_base_action="view")
-    def console_log(self, request, pk=None):
+    @action(
+        detail=True,
+        url_path="job-console-entries",
+        url_name="job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_interfacetemplate"],
+    )
+    def job_console_entries(self, request, pk=None):
         """Display real-time console logs with live streaming for running jobs."""
         job_result = self.get_object()
 
@@ -2890,9 +2896,7 @@ class JobResultUIViewSet(
             try:
                 last_timestamp = parse_datetime(last_timestamp_str)
                 if last_timestamp:
-                    new_entries = JobConsoleEntry.objects.filter(
-                        job_result=job_result, timestamp__gt=last_timestamp
-                    ).order_by("timestamp")
+                    new_entries = JobConsoleEntry.objects.filter(job_result=job_result, timestamp__gt=last_timestamp)
             except (ValueError, TypeError):
                 msg = "Invalid timestamp: {}"
                 messages.error(request, format_html(msg, last_timestamp_str))

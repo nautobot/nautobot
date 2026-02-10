@@ -14,7 +14,7 @@
             <div class="float-start">
                 <strong>Console Log</strong>
                 {% if is_running %}
-                    <small class="align-middle text-secondary" id="job-status-message">(refreshing every 2s...)</small>
+                    <small class="align-middle text-secondary" id="job-status-message">(updating every 2 seconds...)</small>
                 {% endif %}
             </div>
             <div class="float-end">
@@ -22,17 +22,19 @@
             </div>
         </div>
 
-        <pre class="font-monospace h-100 mb-0 overflow-y-auto" id="console-output" style="white-space: normal;">
+        {% spaceless %}
+        <pre class="h-100 mb-0 overflow-y-auto" id="console-output">
             <code class="hljs bg-body h-100">
                 {% include "extras/inc/jobresult_console_log_lines.html" %}
             </code>
         </pre>
+        {% endspaceless %}
 
         {% if is_running %}
             <div
                 class="d-none"
                 id="htmx-poller"
-                hx-get="{% url 'extras:jobresult_console-log' pk=object.pk %}"
+                hx-get="{% url 'extras:jobresult_job_console_entries' pk=object.pk %}"
                 hx-trigger="every 2s"
                 hx-swap="beforeend"
                 hx-target="#console-output code"
