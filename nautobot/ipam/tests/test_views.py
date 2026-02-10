@@ -386,7 +386,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 self.assertBodyContains(response, "nb-subtree", count=0)
 
         with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
-            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
                 # Check for message in base page - present since filter is applied that preserves hierarchy
                 response = self.client.get(list_url + "?ip_version=4")
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
