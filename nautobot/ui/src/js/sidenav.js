@@ -28,6 +28,46 @@ export const toggleSidenav = () => {
 };
 
 /**
+ * Position a flyout menu near its trigger nav item, centered on the item's midpoint.
+ * Clamps to viewport bounds so the flyout never overflows above or below the screen.
+ * @param {HTMLElement} listItem - The clicked nav item element.
+ * @param {HTMLElement} flyout - The flyout menu element.
+ * @returns {void} Do not return any value, modify flyout inline styles in-place.
+ */
+const positionFlyout = (listItem, flyout) => {
+  // Reset position so we can measure the flyout's natural content height
+  flyout.style.top = '0px';
+
+  // Wait one frame for layout to calculate the flyout's rendered height
+  requestAnimationFrame(() => {
+    const itemRect = listItem.getBoundingClientRect();
+    const flyoutHeight = flyout.scrollHeight;
+    const viewportHeight = window.innerHeight;
+
+    // The flyout is position:absolute inside #sidenav (position:fixed, top:0).
+    // Calculate the offset between #sidenav's top and the viewport top
+    // So we can convert viewport coordinates to the flyout's coordinate space.
+    const parentRect = flyout.offsetParent ? flyout.offsetParent.getBoundingClientRect() : { top: 0 };
+    const offset = parentRect.top;
+
+    // Center the flyout on the clicked item's midpoint (in viewport coords)
+    const itemMid = itemRect.top + listItem.offsetHeight / 2;
+    let top = itemMid - flyoutHeight / 2;
+
+    // Clamp to viewport bounds
+    if (top + flyoutHeight > viewportHeight) {
+      top = viewportHeight - flyoutHeight;
+    }
+    if (top < 0) {
+      top = 0;
+    }
+
+    // Convert from viewport coordinates to the flyout's offset parent coordinates
+    flyout.style.top = `${top - offset}px`;
+  });
+};
+
+/**
  * Initialize sidenav mechanisms, i.e. expand/collapse, fly-outs, and optionally version control branch picker.
  * @returns {void} Do not return any value, attach event listeners.
  */
@@ -57,6 +97,11 @@ export const initializeSidenav = () => {
       const expanded = sidenavListItem.getAttribute('aria-expanded') === 'true';
 
       sidenavListItem.setAttribute('aria-expanded', String(!expanded));
+
+      if (!expanded) {
+        const sidenavFlyout = document.getElementById(controls);
+        positionFlyout(sidenavListItem, sidenavFlyout);
+      }
 
       const onClickDocument = (documentClickEvent) => {
         const { target: documentClickTarget } = documentClickEvent;
