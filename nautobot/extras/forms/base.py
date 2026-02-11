@@ -7,6 +7,7 @@ from .mixins import (
     CustomFieldModelFilterFormMixin,
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
+    EmbeddedActionsFormMixin,
     NoteModelBulkEditFormMixin,
     NoteModelFormMixin,
     RelationshipModelBulkEditFormMixin,
@@ -31,6 +32,7 @@ class NautobotModelForm(
     DataValidationModelFormMixin,
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
+    EmbeddedActionsFormMixin,
     NoteModelFormMixin,
     RelationshipModelFormMixin,
 ):
