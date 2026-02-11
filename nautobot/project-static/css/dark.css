@@ -23,42 +23,8 @@ html[data-theme="dark"] #select2-id_color-results,        /* Colored choices, li
 html[data-theme="dark"] #select2-id_color-container,      /* Colored choices, like statuses */
 html[data-theme="dark"] .hljs,                            /* highlight.js maintains its own dark theme */
 html[data-theme="dark"] .editor-container,                /* Monaco editor maintains its own dark theme */
-html[data-theme="dark"] .cable {              /* Cable colors */
+html[data-theme="dark"] .cable-color {                    /* Cable colors */
   filter: invert(1) hue-rotate(180deg);
-}
-
-/* Counter-invert cable children to keep text readable */
-html[data-theme="dark"] .cable > * {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* Pure CSS cable color overrides for dark mode */
-
-/* White - Connected */
-html[data-theme="dark"] .cable[data-cable-color="#909090"][data-cable-status="Connected"] {
-  border-left-color: white !important;
-  border-left-width: 4px !important;
-}
-
-/* White - Not Connected */
-html[data-theme="dark"] .cable[data-cable-color="#909090"]:not([data-cable-status="Connected"]) {
-  border-left-color: white !important;
-  border-left-style: dashed !important;
-  border-left-width: 4px !important;
-}
-
-/* Black - Connected */
-html[data-theme="dark"] [data-cable-color="#111111"][data-cable-status="Connected"] {
-  border-left-color: #9e9e9e !important;
-  border-left-style: double !important;
-  border-left-width: 6px !important;
-}
-
-/* Black - Not Connected */
-html[data-theme="dark"] [data-cable-color="#111111"]:not([data-cable-status="Connected"]) {
-  border-left-color: #9e9e9e !important;
-  border-left-style: dashed !important;
-  border-left-width: 6px !important;
 }
 
 /* Labels in API Swagger docs */
