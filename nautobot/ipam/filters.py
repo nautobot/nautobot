@@ -18,6 +18,7 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
@@ -339,7 +340,14 @@ class PrefixFilterSet(
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def _strip_values(self, values):
-        return [value.strip() for value in values if value.strip()]
+        result = []
+        for value in values:
+            value = value.strip()
+            if is_uuid(value):
+                result.append(Prefix.objects.get(pk=value).prefix)
+            elif value:
+                result.append(value)
+        return result
 
     def filter_prefix(self, queryset, name, value):
         prefixes = self._strip_values(value)
@@ -518,8 +526,21 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
+    def _strip_prefix_values(self, values):
+        """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""
+        prefixes = []
+        for prefix in values:
+            prefix = prefix.strip()
+            if not prefix:
+                continue
+            if is_uuid(prefix):
+                prefixes.append(Prefix.objects.get(pk=prefix).prefix)
+            else:
+                prefixes.append(prefix)
+        return prefixes
+
     def search_by_prefix(self, queryset, name, value):
-        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        prefixes = self._strip_prefix_values(value)
         return queryset.net_host_contained(*prefixes)
 
     def filter_address(self, queryset, name, value):
