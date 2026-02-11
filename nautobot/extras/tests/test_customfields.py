@@ -482,6 +482,61 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertTrue(should_render)
         self.assertEqual(cm.output, [expected_warning])
 
+    def test_set_scope_filter_invalid_form_raises_validation_error(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertRaises(ValidationError) as cm:
+            cf.set_scope_filter({"asn": "invalid str"})
+
+        self.assertEqual(cm.exception.message_dict, {"asn": ["Enter a whole number."]})
+
+    def test_set_scope_filter_drops_empty_values(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter(
+            {
+                "name": "",
+                "asn": None,
+                "tags": [],
+                "contacts": (),
+            }
+        )
+
+        self.assertEqual(cf.scope_filter, {})
+
+    def test_set_scope_filter_model_choice_stores_pk(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location_a = Location.objects.get(name="Location A")
+        location_b = Location.objects.get(name="Location B")
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter({"location": [location_a, location_b]})
+
+        self.assertEqual(cf.scope_filter, {"location": [location_a.pk, location_b.pk]})
+
+    def test_set_scope_filter_overrides_previous_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.scope_filter = {"name": ["Old Value"]}
+
+        cf.set_scope_filter({"asn": [123]})
+
+        self.assertEqual(cf.scope_filter, {"asn": [123]})
+
     def test_all_custom_field_types_are_tested(self):
         """Ensure every CustomFieldTypeChoices value is covered by field test data."""
 

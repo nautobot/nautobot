@@ -156,7 +156,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
+    <script src="{% static 'jquery/jquery.formset.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script src="{% versioned_static 'js/filter_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script type="text/javascript">
         const slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
@@ -192,12 +192,11 @@
          */
         const initializeScopeFilter = event => {
             const filterTabs = document.getElementById('nb-scope-filter-form-container').querySelector('#filter-tabs')
-            if (!filterTabs) {
-                // If there is no `filterTabs` rendered from HTMX response, do nothing because there is an empty message
-                // instead of rendered scope filter form.
-                return
+            // If there is no `filterTabs` rendered from HTMX response, do nothing because there is an empty message
+            // instead of rendered scope filter form.
+            if (filterTabs) {
+                window.nb.select2.initializeSelect2Fields(event.target)
             }
-            window.nb.select2.initializeSelect2Fields(event.target)
         }
 
         /**
