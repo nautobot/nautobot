@@ -569,36 +569,45 @@ function initializeTags(context, dropdownParent=null){
 }
 
 function initializeVLANModeSelection(context){
-    this_context = $(context);
-    if( this_context.find('select#id_mode').length > 0 ) { // Not certain for the length check here as if none is find it should not apply the onChange
-        this_context.find('select#id_mode').on('change', function () {
+    const this_context = $(context);
+    // This ensures we only target the mode select fields that are single select (add/edit form)
+    const modeSelectors = 'select[name="mode"]:not([multiple]), select[name$="-mode"]:not([multiple])';
+    this_context.find(modeSelectors).each(function () {
+        const $modeSelect = $(this);
+        $modeSelect.on('change', function () {
+            const $form = $(this).closest('form');
+            const $untagged = $form.find('select[name="untagged_vlan"], select[name$="-untagged_vlan"]').first();
+            const $tagged = $form.find('select[name="tagged_vlans"], select[name$="-tagged_vlans"]').first();
+            if ($untagged.length === 0 || $tagged.length === 0) {
+                return;
+            }
             if ($(this).val() == '') {
-                $('select#id_untagged_vlan').val('');
-                $('select#id_untagged_vlan').trigger('change');
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().hide();
-                $('select#id_tagged_vlans').parent().parent().hide();
+                $untagged.val('');
+                $untagged.trigger('change');
+                $tagged.val([]);
+                $tagged.trigger('change');
+                $untagged.parent().parent().hide();
+                $tagged.parent().parent().hide();
             }
             else if ($(this).val() == 'access') {
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().hide();
+                $tagged.val([]);
+                $tagged.trigger('change');
+                $untagged.parent().parent().show();
+                $tagged.parent().parent().hide();
             }
             else if ($(this).val() == 'tagged') {
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().show();
+                $untagged.parent().parent().show();
+                $tagged.parent().parent().show();
             }
             else if ($(this).val() == 'tagged-all') {
-                $('select#id_tagged_vlans').val([]);
-                $('select#id_tagged_vlans').trigger('change');
-                $('select#id_untagged_vlan').parent().parent().show();
-                $('select#id_tagged_vlans').parent().parent().hide();
+                $tagged.val([]);
+                $tagged.trigger('change');
+                $untagged.parent().parent().show();
+                $tagged.parent().parent().hide();
             }
         });
-        this_context.find('select#id_mode').trigger('change');
-    }
+        $modeSelect.trigger('change');
+    });
 }
 
 function initializeMultiValueChar(context, dropdownParent=null){

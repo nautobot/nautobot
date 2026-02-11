@@ -3170,6 +3170,16 @@ class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormM
     speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    duplex = forms.MultipleChoiceField(choices=InterfaceDuplexChoices, required=False, widget=StaticSelect2Multiple())
+    mode = forms.MultipleChoiceField(
+        choices=InterfaceModeChoices,
+        required=False,
+        label="802.1Q Mode",
+        help_text=INTERFACE_MODE_HELP_TEXT,
+        widget=StaticSelect2Multiple(),
+    )
+    tagged_vlans = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Tagged VLANs")
+    untagged_vlan = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Untagged VLAN")
     mac_address = forms.CharField(required=False, label="MAC address")
     tags = TagFilterField(model)
 
