@@ -967,6 +967,10 @@ table.attr-table td:nth-child(1) {
   content: "│";
 }
 
+.nb-subtree.nb-subtree-ancestor-no-next-sibling:before {
+  content: " ";
+}
+
 .nb-subtree.nb-subtree-next-sibling:before {
   content: "├";
 }
@@ -1299,6 +1303,7 @@ textarea {
       > :is(tbody, thead, tfoot):last-child { /* Bottommost table section group. */
         > :last-child { /* Bottommost row. */
           @include remove-row-border-bottom;
+          overflow-y: clip;
         }
       }
 

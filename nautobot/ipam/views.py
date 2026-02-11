@@ -525,22 +525,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
         queryset = super().filter_queryset(queryset)
         # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
-        # - descendants_of
-        # - ip_version
-        # - max_depth
-        # - namespace
-        # - prefix_length__lte
-        # - type=container (*only*)
-        # - within_include
         if all(
             key
             in [
-                "descendants_of",
                 "ip_version",
                 "max_depth",
                 "namespace",
+                "prefix_and_descendants",
                 "prefix_length__lte",
-                "type",
+                "type",  # *only* for type=container, see below
                 "within_include",
             ]
             for key in self.filter_params

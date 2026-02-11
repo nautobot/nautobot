@@ -54,47 +54,39 @@ PREFIX_COPY_LINK = """
 {% load helpers %}
 {% spaceless %}
     {% if not table.hide_hierarchy_ui %}
-        {% with record.ancestors as ancestors %}
-            {% for i in ancestors.count|as_range %}
-                {% if not forloop.last %}
-                    {% with i|add:1 as ancestor_depth %}
-                        {% if ancestors|index:ancestor_depth|filter_getattr:"next_sibling" is None %}
-                            <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
-                        {% else %}
-                            <span class="nb-subtree nb-subtree-ancestor-next-sibling"></span>
-                        {% endif %}
-                    {% endwith %}
-                {% elif record.next_sibling is not None %}
-                    <span class="nb-subtree nb-subtree-next-sibling"></span>
-                {% else %}
-                    <span class="nb-subtree nb-subtree-no-next-sibling"></span>
-                {% endif %}
-            {% endfor %}
-            {% if table_expandable|default:False %}
-                {% if record.descendants_count %}
-                    <span class="nb-subtree nb-subtree-expandable"
-                          hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
-                          hx-indicator="closest .table-responsive"
-                          hx-select=".table-responsive tr"
-                          hx-select-oob="none"
-                          hx-swap="afterend"
-                          hx-target="closest tr"
-                    ></span>
-                {% else %}
-                    <span class="nb-subtree"></span>
-                {% endif %}
+        {% for ancestor in record.ancestors|slice:"1:" %}
+            {% if not record.present_in_database %}
+                <span class="nb-subtree"></span>
+            {% elif ancestor.next_sibling is not None %}
+                <span class="nb-subtree nb-subtree-ancestor-next-sibling"></span>
+            {% else %}
+                <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
             {% endif %}
-        {% endwith %}
+        {% endfor %}
+        {% if record.parent_id is not None %}
+            {% if record.next_sibling is not None %}
+                <span class="nb-subtree nb-subtree-next-sibling"></span>
+            {% else %}
+                <span class="nb-subtree nb-subtree-no-next-sibling"></span>
+            {% endif %}
+        {% endif %}
+        {% if table_expandable|default:False %}
+            {% if record.present_in_database and record.descendants_count %}
+                <span class="nb-subtree nb-subtree-expandable"
+                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
+                      hx-indicator="closest .table-responsive"
+                      hx-select=".table-responsive tr"
+                      hx-select-oob="none"
+                      hx-swap="afterend"
+                      hx-target="closest tr"
+                ></span>
+            {% else %}
+                {# placeholder for alignment with expandable rows #}
+                <span class="nb-subtree"></span>
+            {% endif %}
+        {% endif %}
     {% endif %}
-    <a href="\
-       {% if record.present_in_database %}\
-           {% url 'ipam:prefix' pk=record.pk %}\
-       {% else %}\
-           {% url 'ipam:prefix_add' %}\
-           ?prefix={{ record }}&namespace={{ object.namespace.pk }}\
-           {% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}\
-           {% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}\
-       {% endif %}"
+    <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}&namespace={{ object.namespace.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}"
        id="copy_{{record.id}}">
         {{ record.prefix }}
     </a>
@@ -102,11 +94,11 @@ PREFIX_COPY_LINK = """
         <span aria-hidden="true" class="mdi mdi-content-copy"></span>
         <span class="visually-hidden">Copy</span>
     </button>
-    {% if not table.hide_hierarchy_ui %}
+    {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
         <span class="float-end">
             {% if record.descendants_count %}
                 <a class="mdi mdi-table-filter"
-                   href="{% url 'ipam:prefix_list' %}?descendants_of={{ record.pk }}"
+                   href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}"
                    aria-hidden="true"
                    title="Filter to this prefix and its descendants"
                 >
@@ -427,7 +419,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
     namespace = tables.Column(linkify=True)
     vlan = tables.Column(linkify=True, verbose_name="VLAN")
     rir = tables.Column(linkify=True, verbose_name="RIR")
-    descendants = tables.Column(accessor="descendants_count", orderable=False)
+    descendants = tables.Column(accessor="descendants_count", orderable=False, empty_values=("", 0, None, [], ()))
     date_allocated = tables.DateTimeColumn()
     location_count = LinkedCountColumn(
         viewname="dcim:location_list", url_params={"prefixes": "pk"}, display_field="name", verbose_name="Locations"

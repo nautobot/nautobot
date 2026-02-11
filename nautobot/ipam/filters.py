@@ -5,7 +5,6 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 import django_filters
-from drf_spectacular.utils import extend_schema_field
 import netaddr
 
 from nautobot.cloud.models import CloudNetwork
@@ -246,12 +245,12 @@ class PrefixFilterSet(
         method="filter_ancestors",
         label="Prefixes which are ancestors of this prefix (ID or network string)",
     )
-    descendants_of = extend_schema_field({"type": "string", "format": "uuid"})(
-        django_filters.ModelChoiceFilter(
-            queryset=Prefix.objects.all(),
-            method="filter_descendants",
-            label="Prefix (ID) and its descendants",
-        )
+    prefix_and_descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        prefers_id=True,
+        to_field_name="network",
+        method="filter_prefix_and_descendants",
+        label="Prefixes which are the given Prefix (ID or network string) and its descendants",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
@@ -395,10 +394,12 @@ class PrefixFilterSet(
         ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
         return queryset.filter(pk__in=ancestor_ids)
 
-    def filter_descendants(self, queryset, name, value):
+    def filter_prefix_and_descendants(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.filter(pk__in=value.descendants(include_self=True).values_list("pk", flat=True))
+        prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
+        descendant_ids = [descendant.id for prefix in prefixes for descendant in prefix.descendants(include_self=True)]
+        return queryset.filter(pk__in=descendant_ids)
 
     def generate_query_filter_max_depth(self, value):
         if value < 1:

@@ -1,5 +1,4 @@
 {% load helpers %}
-{% load querystring from django_tables2 %}
 
 <div id="{{ paginator_id|default:'paginator' }}"
      class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary"
@@ -29,7 +28,7 @@
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ page.paginator.per_page }}" selected="selected"
                         {% if htmx_enabled|default:False %}
-                            hx-get="{% querystring 'per_page'=page.paginator.per_page without 'page' %}"
+                            hx-get="{% django_querystring per_page=page.paginator.per_page page=None %}"
                         {% endif %}
                 >
                     {{ page.paginator.per_page }}
@@ -39,7 +38,7 @@
                 <option value="{{ n }}"
                         {% if page.paginator.per_page == n %} selected="selected"{% endif %}
                         {% if htmx_enabled|default:False %}
-                            hx-get="{% querystring 'per_page'=n without 'page' %}"
+                            hx-get="{% django_querystring per_page=n page=None %}"
                         {% endif %}
                 >
                     {{ n }}
@@ -54,9 +53,9 @@
             <ul class="pagination mb-0">
                 {% if page.has_previous %}
                     <li class="page-item">
-                        <a aria-label="Previous" class="page-link" href="{% querystring 'page'=page.previous_page_number %}"
+                        <a aria-label="Previous" class="page-link" href="{% django_querystring page=page.previous_page_number %}"
                            {% if htmx_enabled|default:False %}
-                               hx-get="{% querystring 'page'=page.previous_page_number %}"
+                               hx-get="{% django_querystring page=page.previous_page_number %}"
                            {% endif %}
                         >
                             <span aria-hidden="true">&laquo;</span>
@@ -66,9 +65,9 @@
                 {% for p in page.smart_pages %}
                     {% if p %}
                         <li class="page-item {% if page.number == p %} active{% endif %}">
-                            <a class="page-link" href="{% querystring 'page'=p %}"
+                            <a class="page-link" href="{% django_querystring page=p %}"
                                {% if htmx_enabled|default:False %}
-                                   hx-get="{% querystring 'page'=p %}"
+                                   hx-get="{% django_querystring page=p %}"
                                {% endif %}
                             >
                                 {{ p }}
@@ -80,9 +79,9 @@
                 {% endfor %}
                 {% if page.has_next %}
                     <li class="page-item">
-                        <a aria-label="Next" class="page-link" href="{% querystring 'page'=page.next_page_number %}"
+                        <a aria-label="Next" class="page-link" href="{% django_querystring page=page.next_page_number %}"
                            {% if htmx_enabled|default:False %}
-                               hx-get="{% querystring 'page'=page.next_page_number %}"
+                               hx-get="{% django_querystring page=page.next_page_number %}"
                            {% endif %}
                         >
                             <span aria-hidden="true">&raquo;</span>

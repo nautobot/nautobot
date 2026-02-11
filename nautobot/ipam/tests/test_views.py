@@ -374,16 +374,12 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 for prefix in self._get_queryset().all():
                     if prefix.status == prefix_status:
                         self.assertBodyContains(response, str(prefix.pk))
-                        self.assertBodyContains(
-                            response,
-                            '<a aria-hidden="true" class="mdi mdi-table-filter" href="/ipam/prefixes/?descendants_of={prefix.pk}" title="Filter to this prefix and its descendants">',
-                            html=True,
-                            count=0,
-                        )
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
-                # Indentation and subtree filtering should NOT be present in table rendering due to an applied filter that alters hierarchy
+                # Indentation and subtree filtering should NOT be present in table rendering,
+                # due to an applied filter that alters hierarchy
                 self.assertBodyContains(response, "nb-subtree", count=0)
+                self.assertBodyContains(response, "mdi-table-filter", count=0)
 
         with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
@@ -404,6 +400,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
                 self.assertBodyContains(response, "nb-subtree")
+                self.assertBodyContains(response, "mdi-table-filter")
 
     def test_table_with_indentation_is_removed_on_filter_or_sort(self):
         """Override base ListObjectsViewTestCase.test_table_with_indentation_is_removed_on_filter_or_sort for Prefix."""
@@ -535,6 +532,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertInHTML(prefixes_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
+
+    def test_prefix_children_action(self):
+        self.add_permissions("ipam.view_prefix")
+        pfx_with_children = Prefix.objects.filter(children__isnull=False).first()
+        self.assertIsNotNone(pfx_with_children)
+        url = reverse("ipam:prefix_children", kwargs={"pk": pfx_with_children.pk})
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "ipam/prefix_children.html")
+        for child in pfx_with_children.children.all():
+            self.assertBodyContains(response, str(child.pk))
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):

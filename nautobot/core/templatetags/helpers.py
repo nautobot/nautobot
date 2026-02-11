@@ -654,18 +654,6 @@ def get_item(d, key):
 
 @library.filter()
 @register.filter()
-def index(indexable, i):
-    return indexable[i]
-
-
-@library.filter()
-@register.filter()
-def filter_getattr(obj, attr):
-    return getattr(obj, attr, None)
-
-
-@library.filter()
-@register.filter()
 def settings_or_config(key, app_name=None):
     """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
     if app_name:

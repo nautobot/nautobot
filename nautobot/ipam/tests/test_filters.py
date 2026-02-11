@@ -285,6 +285,17 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
         self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
 
+    def test_prefix_and_descendants(self):
+        pfx1 = Prefix.objects.filter(children__isnull=False).first()
+        pfx2 = Prefix.objects.filter(children__isnull=True).first()
+        self.assertIsNotNone(pfx1)
+        self.assertIsNotNone(pfx2)
+        params = {"prefix_and_descendants": [pfx1.pk, pfx2.pk]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            pfx1.descendants(include_self=True) | pfx2.descendants(include_self=True),
+        )
+
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
     queryset = PrefixLocationAssignment.objects.all()
