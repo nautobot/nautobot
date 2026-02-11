@@ -278,8 +278,9 @@ def branch(context, *, branch=None, create=False, parent=None):  # pylint: disab
         "cache": "Whether to use Docker's cache when building the image. (Default: enabled)",
         "poetry_parallel": "Enable/disable poetry to install packages in parallel. (Default: True)",
         "pull": "Whether to pull Docker images when building the image. (Default: disabled)",
-        "service": "If specified, only build this service.",
-    }
+        "service": "If specified, only build these services; can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+    },
+    iterable=["service"],
 )
 def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False, service=None):
     """Build Nautobot docker image."""
@@ -294,7 +295,8 @@ def build(context, force_rm=False, cache=True, poetry_parallel=True, pull=False,
     if pull:
         command += " --pull"
 
-    print(f"Building Nautobot with Python {context.nautobot.python_ver}...")
+    service = " ".join(service) if service else None
+    print(f"Building {service or 'all services'} with Python {context.nautobot.python_ver}...")
 
     docker_compose(context, command, service=service, env={"DOCKER_BUILDKIT": "1", "COMPOSE_DOCKER_CLI_BUILD": "1"})
 
@@ -493,35 +495,59 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
-@task(help={"service": "If specified, only affect this service."})
+@task(
+    help={
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+    },
+    iterable=["service"],
+)
 def debug(context, service=None):
-    """Start Nautobot and its dependencies in debug mode."""
-    print(f"Starting {service or 'Nautobot'} in debug mode...")
+    """Start all services, or specified service(s) and their dependencies, in debug mode."""
+    service = " ".join(service) if service else ""
+    print(f"Starting {service or 'all services'} in debug mode...")
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
         docker_compose(context, "up", service=service)
 
 
-@task(help={"service": "If specified, only affect this service."})
+@task(
+    help={
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+    },
+    iterable=["service"],
+)
 def start(context, service=None):
-    """Start Nautobot and its dependencies in detached mode."""
-    print(f"Starting {service or 'Nautobot'} in detached mode...")
+    """Start all services, or specified service(s) and their dependencies, in detached mode."""
+    service = " ".join(service) if service else ""
+    print(f"Starting {service or 'all services'} in detached mode...")
     docker_compose(context, "up --detach", service=service)
     dump_service_ports_to_disk(context)
 
 
-@task(help={"service": "If specified, only affect this service."})
+@task(
+    help={
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+    },
+    iterable=["service"],
+)
 def restart(context, service=None):
-    """Gracefully restart containers."""
-    print(f"Restarting {service or 'Nautobot'}...")
+    """Gracefully restart specified or all services."""
+    service = " ".join(service) if service else ""
+    print(f"Restarting {service or 'all services'}...")
     docker_compose(context, "restart", service=service)
 
 
-@task(help={"service": "If specified, only affect this service."})
+@task(
+    help={
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+    },
+    iterable=["service"],
+)
 def stop(context, service=None):
-    """Stop Nautobot and its dependencies."""
-    print(f"Stopping {service or 'Nautobot'}...")
+    """Stop specified or all services, if service is not specified, remove all containers."""
+    service = " ".join(service) if service else ""
+    print(f"Stopping {service or 'all services'}...")
     if not service:
         docker_compose(context, "--profile '*' down --remove-orphans")
     else:
@@ -583,13 +609,14 @@ def vscode(context, workspace_launch=True):
 
 @task(
     help={
-        "service": "If specified, only display logs for this service (default: all)",
+        "service": "If specified, only display logs for the specified service(s) (default: all); can be provided multiple times (i.e. -s nautobot -s celery_worker)",
         "follow": "Flag to follow logs (default: False)",
         "tail": "Tail N number of lines (default: all)",
-    }
+    },
+    iterable=["service"],
 )
-def logs(context, service="", follow=False, tail=0):
-    """View the logs of a docker compose service."""
+def logs(context, service=None, follow=False, tail=0):
+    """View the logs of all docker compose services or a specified subset."""
     command = "logs"
 
     if follow:
@@ -597,6 +624,7 @@ def logs(context, service="", follow=False, tail=0):
     if tail:
         command += f" --tail={tail}"
 
+    service = " ".join(service) if service else None
     docker_compose(context, command, service=service)
 
 
@@ -888,7 +916,7 @@ def serve_docs(context):
     if is_truthy(context.nautobot.local):
         run_command(context, "mkdocs serve --livereload")
     else:
-        start(context, service="mkdocs")
+        start(context, service=["mkdocs"])
 
 
 @task(iterable=["path"])
@@ -1075,7 +1103,7 @@ def tests(
 
     if tag and "integration" in tag and not is_truthy(context.nautobot.local):
         # Integration tests require selenium to be up and running!
-        start(context, service="selenium")
+        start(context, service=["selenium"])
 
     if tag and "migration_test" in tag:
         # Migration tests hit the database pretty hard, so running them in parallel tends to not work out
@@ -1143,7 +1171,7 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
     else:
         # DB must be running, else will fail with errors like:
         # dropdb: error: could not connect to database template1: could not connect to server: No such file or directory
-        start(context, service="db")
+        start(context, service=["db"])
         source_file = os.path.basename(dataset)
         docker_compose(context, f"cp '{dataset}' db:/tmp/{source_file}")
         run_command(context, command=f"tar zxvf /tmp/{source_file}", service="db")
