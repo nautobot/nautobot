@@ -66,11 +66,14 @@ def register_secrets_provider(provider):
     if not issubclass(provider, SecretsProvider):
         raise TypeError(f"{provider} must be a subclass of extras.secrets.SecretsProvider")
     if provider.slug in registry["secrets_providers"]:
-        logger.info(
+        if registry["secrets_providers"][provider.slug] == provider:
+            # Repeat registration of the exact same provider is harmless
+            return
+        # else, this is a problem:
+        raise KeyError(
             f'Cannot register {provider} as slug "{provider.slug}" is already registered '
             f"by {registry['secrets_providers'][provider.slug]}"
         )
-        return
     registry["secrets_providers"][provider.slug] = provider
 
 

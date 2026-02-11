@@ -23,7 +23,7 @@ class MiddlewareTestCase(TestCase):
         _TESTING_STRUCTLOG=True,
         DEBUG=False,
         MIDDLEWARE=override_middleware,
-        # LOGGING=deepcopy(settings.LOGGING),
+        LOGGING=deepcopy(settings.LOGGING),
         INSTALLED_APPS=deepcopy(settings.INSTALLED_APPS),
     )
     def test_exception_handling_middleware(self):

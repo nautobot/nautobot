@@ -109,7 +109,7 @@ def setup_structlog_logging(
     """
     django_logging["version"] = 1
     django_logging["disable_existing_loggers"] = True
-    # TODO: Remove this branch. It's currently unuse din core but may be impactful to app testing.
+    # TODO: Remove this branch. It's currently unused in core but may be impactful to app testing.
     if "test" in sys.argv and not getattr(settings, "_TESTING_STRUCTLOG", False):
         django_logging["handlers"] = {
             "null_handler": {

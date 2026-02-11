@@ -49,6 +49,8 @@ class RegistryTest(TestCase):
         class DuplicateSecretsProvider(EnvironmentVariableSecretsProvider):
             pass
 
+        with self.assertRaises(KeyError):
+            register_secrets_provider(DuplicateSecretsProvider)
 
     def test_lookup_by_field(self):
         """Assert lookup_by_field returns the expected values"""
