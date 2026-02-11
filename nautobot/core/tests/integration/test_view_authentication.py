@@ -25,14 +25,18 @@ class AuthenticationEnforcedTestCase(TestCase):
                     response = self.client.post(url, follow=True)
 
                 # Is a view that *should* be open to unauthenticated users?
-                if url in [
-                    "/admin/login/",
-                    "/health/",
-                    "/login/",
-                    "/media-failure/",
-                    "/robots.txt",
-                    "/template.css",
-                ] or "example-app" in url:
+                if (
+                    url
+                    in [
+                        "/admin/login/",
+                        "/health/",
+                        "/login/",
+                        "/media-failure/",
+                        "/robots.txt",
+                        "/template.css",
+                    ]
+                    or "example-app" in url
+                ):
                     self.assertHttpStatus(response, 200, msg=url)
                 elif response.status_code == 200:
                     # UI views generally should redirect unauthenticated users to the appropriate login page
