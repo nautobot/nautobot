@@ -24,6 +24,7 @@ from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
+from nautobot.extras.filter_utils import build_filter_dict_from_filterset
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
 
@@ -525,53 +526,13 @@ class DynamicGroup(PrimaryModel):
         if invalid_filter_exist:
             raise ValidationError(error_message)
 
-        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
-        # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.filterset_class
         filterset_class.form_prefix = "filter"
-        filterset = filterset_class(form_data)
 
-        # Use the auto-generated filterset form perform creation of the filter dictionary.
-        filterset_form = filterset.form
-
-        # Get the declared form for any overloaded form field definitions.
-        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
-
-        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
-        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
-        # filterset form, but will also catch errors in case a user-created dict is provided instead.
-        if not filterset_form.is_valid():
-            raise ValidationError(filterset_form.errors)
-
-        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
-        # empty/null value fields.
-        new_filter = {}
-        for field_name in filter_fields:
-            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
-            field_value = filterset_form.cleaned_data[field_name]
-
-            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
-            # and literal FilterSet fields (ex: MultiValueCharFilter).
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = [getattr(item, field_to_query) for item in field_value]
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = getattr(field_value, field_to_query, None)
-
-            else:
-                new_value = field_value
-
-            # Don't store empty values like `None`, [], etc.
-            if new_value in (None, "", [], {}):
-                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
-                continue
-
-            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
-            new_filter[field_name] = new_value
-
-        self.filter = new_filter
+        new_filter_dict = build_filter_dict_from_filterset(
+            filterset_class, form_data, filter_fields, logs_prefix=self.name
+        )
+        self.filter = new_filter_dict
 
     set_filter.alters_data = True
 
