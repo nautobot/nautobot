@@ -19,24 +19,25 @@ class AuthenticationEnforcedTestCase(TestCase):
         for url_pattern in url_patterns:
             with self.subTest(url_pattern=url_pattern):
                 url = get_url_for_url_pattern(url_pattern)
+
+                if "/plugins/example-app/" in url and not url.startswith("/plugins/example-app/docs/"):
+                    # We're generally not interested in whether the example-app enforces authentication
+                    continue
+
                 response = self.client.get(url, follow=True)
 
                 if response.status_code == 405:  # Method not allowed
                     response = self.client.post(url, follow=True)
 
                 # Is a view that *should* be open to unauthenticated users?
-                if (
-                    url
-                    in [
-                        "/admin/login/",
-                        "/health/",
-                        "/login/",
-                        "/media-failure/",
-                        "/robots.txt",
-                        "/template.css",
-                    ]
-                    or "example-app" in url
-                ):
+                if url in [
+                    "/admin/login/",
+                    "/health/",
+                    "/login/",
+                    "/media-failure/",
+                    "/robots.txt",
+                    "/template.css",
+                ]:
                     self.assertHttpStatus(response, 200, msg=url)
                 elif response.status_code == 200:
                     # UI views generally should redirect unauthenticated users to the appropriate login page
