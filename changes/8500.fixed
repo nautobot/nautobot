@@ -1,0 +1,1 @@
+Fixed `KeyError` when `CACHES` setting does not include an explicit `TIMEOUT` key.
