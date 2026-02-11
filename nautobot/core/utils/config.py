@@ -1,6 +1,6 @@
 """Helper code for loading values that may be defined in settings.py/nautobot_config.py *or* in django-constance."""
 
-import contextlib
+import json
 import logging
 
 from constance import config
@@ -22,8 +22,16 @@ def get_settings_or_config(variable_name, fallback=None):
     if hasattr(settings, variable_name):
         return getattr(settings, variable_name)
     # django-constance 4.x removed some built-in error handling here, so we have to do it ourselves now
-    with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError):
+    try:
         return getattr(config, variable_name)
+    except (ObjectDoesNotExist, OperationalError, ProgrammingError):
+        pass
+    except json.JSONDecodeError as err:
+        logger.warning(
+            "Constance value for %r could not be decoded (%s); falling back to defaults",
+            variable_name,
+            err,
+        )
     logger.warning(
         'Configuration "%s" is not in settings, and could not read from the Constance database table '
         "(perhaps not initialized yet?)",

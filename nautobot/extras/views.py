@@ -1951,7 +1951,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
-        methods=["get"],
+        methods=["post"],
         url_path="sync",
         url_name="sync",
         custom_view_base_action="change",
@@ -1962,7 +1962,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
-        methods=["get"],
+        methods=["post"],
         url_path="dry-run",
         url_name="dryrun",
         custom_view_base_action="change",
