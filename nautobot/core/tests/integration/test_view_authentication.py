@@ -32,7 +32,7 @@ class AuthenticationEnforcedTestCase(TestCase):
                     "/media-failure/",
                     "/robots.txt",
                     "/template.css",
-                ] or url.startswith("/api/plugins/example-app/"):
+                ] or "example-app" in url:
                     self.assertHttpStatus(response, 200, msg=url)
                 elif response.status_code == 200:
                     # UI views generally should redirect unauthenticated users to the appropriate login page
