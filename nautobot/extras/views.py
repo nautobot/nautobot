@@ -2876,15 +2876,20 @@ class JobResultUIViewSet(
             "base_template": "extras/jobresult_retrieve.html",
             "breadcrumbs": self.get_breadcrumbs(),
             "view_action": "detail",
-            "is_running": self._is_job_running(job_result),
+            "job_is_pending": self._is_job_pending(job_result),
             "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
         }
 
         return render(request, "extras/jobresult_retrieve_console_log.html", context)
 
-    def _is_job_running(self, job_result) -> bool:
+    def _is_job_pending(self, job_result) -> bool:
         """Check if job has finished execution."""
-        return job_result.status == JobResultStatusChoices.STATUS_STARTED
+        job_result.refresh_from_db()
+        return job_result.status not in [
+            JobResultStatusChoices.STATUS_FAILURE,
+            JobResultStatusChoices.STATUS_REVOKED,
+            JobResultStatusChoices.STATUS_SUCCESS,
+        ]
 
     def _handle_console_poll(self, request, job_result) -> HttpResponse:
         """Handle HTMX polling request and return new log entries as HTML."""
@@ -2901,11 +2906,14 @@ class JobResultUIViewSet(
                 msg = "Invalid timestamp: {}"
                 messages.error(request, format_html(msg, last_timestamp_str))
 
+        if not new_entries.exists() and self._is_job_pending(job_result):
+            return HttpResponse(status=204)
+
         # Render new console lines using template
         html_content = render_to_string("extras/inc/jobresult_console_log_lines.html", {"entries": new_entries})
 
         # If job is not running, send out-of-band updates to stop polling
-        if not self._is_job_running(job_result):
+        if not self._is_job_pending(job_result):
             completion_html = render_to_string(
                 "extras/inc/jobresult_console_log_completion.html", {"job_result": job_result}
             )

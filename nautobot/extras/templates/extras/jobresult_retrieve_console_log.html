@@ -23,14 +23,14 @@
         </div>
 
         {% spaceless %}
-        <pre class="h-100 mb-0 overflow-y-auto" id="console-output">
-            <code class="hljs bg-body h-100">
+        <pre class="bg-body h-100 mb-0 overflow-y-auto" id="console-output">
+            <code class="h-100">
                 {% include "extras/inc/jobresult_console_log_lines.html" %}
             </code>
         </pre>
         {% endspaceless %}
 
-        {% if is_running %}
+        {% if job_is_pending %}
             <div
                 class="d-none"
                 id="htmx-poller"
