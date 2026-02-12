@@ -40,22 +40,30 @@
                 <div class="flex-grow-1 nb-w-0">{{ field }}</div>
                 {% if should_render_embedded_create %}
                     {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
-                        <span class="flex-grow-0 flex-shrink-0" data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
-                            <button class="btn btn-primary flex-grow-0 flex-shrink-0" type="button">
-                                <span class="mdi mdi-plus-thick"></span>
-                                <span class="visually-hidden">Add a new {{ verbose_name }}</span>
-                            </button>
-                        </span>
+                        <button
+                            class="btn btn-primary flex-grow-0 flex-shrink-0"
+                            data-bs-title="Add a new {{ verbose_name }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-trigger="hover"
+                            type="button"
+                        >
+                            <span class="mdi mdi-plus-thick"></span>
+                            <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                        </button>
                     {% endwith %}
                 {% endif %}
                 {% if should_render_embedded_search %}
                     {% with verbose_name_plural=field.field.queryset.model|meta:"verbose_name_plural" %}
-                        <span class="flex-grow-0 flex-shrink-0" data-bs-title="Search {{ verbose_name_plural }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
-                            <button class="btn btn-secondary" type="button">
-                                <span class="mdi mdi-filter"></span>
-                                <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
-                            </button>
-                        </span>
+                        <button
+                            class="btn btn-secondary flex-grow-0 flex-shrink-0"
+                            data-bs-title="Search {{ verbose_name_plural }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-trigger="hover"
+                            type="button"
+                        >
+                            <span class="mdi mdi-filter"></span>
+                            <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
+                        </button>
                     {% endwith %}
                 {% endif %}
             {% else %}
