@@ -23,11 +23,13 @@
         </div>
 
         {% spaceless %}
-        <pre class="bg-body h-100 mb-0 overflow-y-auto" id="console-output" hx-on::load="this.scrollTop = this.scrollHeight">
-            <code class="h-100">
-                {% include "extras/inc/jobresult_console_log_lines.html" %}
-            </code>
-        </pre>
+            <div class="card-body overflow-hidden">
+            <pre class="h-100 mb-0 overflow-y-auto" id="console-output" hx-on:load="this.scrollTop = this.scrollHeight">
+                <code class="h-100">
+                    {% include "extras/inc/jobresult_console_log_lines.html" %}
+                </code>
+            </pre>
+            </div>
         {% endspaceless %}
 
         {% if job_is_pending %}
@@ -38,7 +40,7 @@
                 hx-trigger="every 2s"
                 hx-select="#console-lines-wrapper > *"
                 hx-select-oob="#job-status, #job-status-message:outerHTML, #htmx-poller:outerHTML"
-                hx-swap="beforeend scroll:bottom"
+                hx-swap="beforeend scroll:#console-output:bottom"
                 hx-target="#console-output code"
                 hx-vals="js:{last_timestamp: window.nb.jobResult.getLastTimestamp()}"
             ></div>
