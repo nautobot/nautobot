@@ -42,6 +42,7 @@ from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
+    JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -71,6 +72,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -3486,6 +3488,17 @@ class JobResultTestCase(
             grouping="run",
             message="This is a test",
         )
+        cls.job_result_pending = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        cls.console_entry_1 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending, timestamp=timezone.now(), text="Starting job execution..."
+        )
+        cls.console_entry_2 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending, timestamp=timezone.now(), text="Processing data..."
+        )
+        cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        JobConsoleEntry.objects.create(
+            job_result=cls.job_result_completed, timestamp=timezone.now(), text="Job completed successfully"
+        )
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -3506,6 +3519,136 @@ class JobResultTestCase(
         self.assertBodyContains(response, "This is a test")
 
     # TODO test with constrained permissions on both JobResult and JobLogEntry records
+
+    def test_get_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_console_entries_with_permission(self):
+        """Test full page load with permission shows console log page."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Console Log")
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should show polling message for pending jobs
+        self.assertBodyContains(response, "updating every 2 seconds...")
+
+    def test_get_console_entries_completed_job(self):
+        """Test full page load for completed job (no polling)."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Console Log")
+        self.assertBodyContains(response, "Job completed successfully")
+        # Should NOT show polling message for completed jobs
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("updating every 2 seconds...", response_raw_content)
+        self.assertNotIn("htmx-poller", response_raw_content)
+
+    def test_htmx_poll_without_permission(self):
+        """Test HTMX polling without permission."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 403)
+
+    def test_htmx_poll_no_new_entries_pending_job(self):
+        """Test HTMX polling with no new entries for pending job returns 204."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Use timestamp of last entry
+        last_timestamp = self.console_entry_2.timestamp.isoformat()
+        response = self.client.get(url, {"last_timestamp": last_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 204)
+
+    def test_htmx_poll_with_new_entries(self):
+        """Test HTMX polling returns new console entries as HTML."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Use timestamp before last entry
+        old_timestamp = self.console_entry_1.timestamp.isoformat()
+
+        response = self.client.get(url, {"last_timestamp": old_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Processing data...")
+        self.assertBodyContains(response, "console-lines-wrapper")
+        # Should include job status update
+        self.assertBodyContains(response, 'id="job-status"')
+
+    def test_htmx_poll_completed_job_with_new_entries(self):
+        """Test HTMX polling for completed job includes completion elements."""
+        # Update job to completed status
+        self.job_result_pending.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result_pending.save()
+
+        # Create a new entry after the existing ones
+        JobConsoleEntry.objects.create(
+            job_result=self.job_result_pending, timestamp=timezone.now(), text="Final cleanup complete"
+        )
+
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        old_timestamp = self.console_entry_2.timestamp.isoformat()
+
+        response = self.client.get(url, {"last_timestamp": old_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Final cleanup complete")
+        # Should include elements for deletion (job-status-message, htmx-poller)
+        self.assertBodyContains(response, 'id="job-status-message"')
+        self.assertBodyContains(response, 'id="htmx-poller"')
+
+    def test_htmx_poll_invalid_timestamp(self):
+        """Test HTMX polling with invalid timestamp format."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        response = self.client.get(url, {"last_timestamp": "invalid-timestamp"}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 204)
+
+    def test_htmx_poll_no_timestamp_parameter(self):
+        """Test HTMX polling without timestamp parameter."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+
+        # Should return 204 for pending job with no new entries
+        self.assertHttpStatus(response, 204)
+
+    def test_response_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Test regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # Test HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
 
 
 class JobTestCase(

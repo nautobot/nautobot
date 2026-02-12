@@ -2851,7 +2851,7 @@ class JobResultUIViewSet(
         url_path="job-console-entries",
         url_name="job_console_entries",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["dcim.view_interfacetemplate"],
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
     )
     def job_console_entries(self, request, pk=None):
         """Display real-time console logs with live streaming for running jobs."""
