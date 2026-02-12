@@ -4,7 +4,7 @@
     <div class="cable-info">&nbsp;</div>
     {% with color=cable.color|default:'606060' status=cable.status.name %}
         <div class="cable-color"
-             style="border-color: {{ color|fgcolor }}; background: {% if status == 'Connected' %}#{{ color }}{% else %}repeating-linear-gradient(#{{ color }}, #{{color}} 16px, transparent 16px, transparent 32px){% endif %}; border-style: none {% if status == 'Connected' %}solid{% else %}dashed{% endif %}"
+             style="border-color: #9a9a9a; background: {% if status == 'Connected' %}#{{ color }}{% else %}repeating-linear-gradient(#{{ color }}, #{{color}} 19px, #9a9a9a 19px, #9a9a9a 20px, transparent 20px, transparent 32px, #9a9a9a 32px, #9a9a9a 33px){% endif %}; border-style: none solid"
         >
             &nbsp;
         </div>
