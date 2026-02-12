@@ -86,7 +86,8 @@ When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI w
 The downside of this is that you will have to ensure that this directory is cleaned up on a regular basis, as the Prometheus client library will create a separate file for each metric in each worker process, and these files are not automatically removed which in turn can lead to degradation of performance over time. You can use a cron job or similar scheduled task to periodically clean up this directory, for example:
 
 1. Create a Python script that scans the multiproc directory and removes files belonging to PIDs that are no longer running.
-   ```
+
+   ```python
    import os
    import re
    import shutil
@@ -131,7 +132,8 @@ The downside of this is that you will have to ensure that this directory is clea
    ```
 
 2. Schedule this script to run at regular intervals using uWSGI's `timer` feature.
-   ```
+
+   ```python
    import uwsgi
    def cleanup_timer(signum):
        cleanup_prometheus_orphans(os.getenv('prometheus_multiproc_dir'))
@@ -142,8 +144,9 @@ The downside of this is that you will have to ensure that this directory is clea
        uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
    ```
 
-3. Copy the file to a specific path (eg. /opt/nautobot/media/prometheus_cleanup.py) and import it from uwsgi.ini file.
-   ```
+3. Copy the file to a specific path (eg. `/opt/nautobot/media/prometheus_cleanup.py`) and import it from uwsgi.ini file.
+
+   ```ini
    pythonpath = /opt/nautobot/media
    py-import = prometheus_cleanup
    ```
@@ -152,4 +155,3 @@ Relevant documentation:
 
 - [Prometheus client library multi-process mode](https://prometheus.github.io/client_python/multiprocess/)
 - [Django Prometheus multi-process mode documentation](https://github.com/django-commons/django-prometheus/blob/master/documentation/exports.md)
-
