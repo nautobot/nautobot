@@ -83,5 +83,73 @@ For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on you
 
 When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI workers) the Prometheus client library requires the use of a shared directory to collect metrics from all worker processes. To configure this, first create or designate a local directory to which the worker processes have read and write access, and then configure your WSGI service (e.g. uWSGI) to define this path as the `prometheus_multiproc_dir` environment variable.
 
-!!! warning
-    If having accurate long-term metrics in a multi-process environment is crucial to your deployment, it's recommended you use the `uwsgi` library instead of `gunicorn`. The issue lies in the way `gunicorn` tracks worker processes (vs `uwsgi`) which helps manage the metrics files created by the above configurations. If you're using Nautobot with gunicorn in a containerized environment following the one-process-per-container methodology, then you will likely not need to change to `uwsgi`. More details can be found in  [issue #3779](https://github.com/netbox-community/netbox/issues/3779#issuecomment-590547562).
+The downside of this is that you will have to ensure that this directory is cleaned up on a regular basis, as the Prometheus client library will create a separate file for each metric in each worker process, and these files are not automatically removed which in turn can lead to degradation of performance over time. You can use a cron job or similar scheduled task to periodically clean up this directory, for example:
+
+1. Create a Python script that scans the multiproc directory and removes files belonging to PIDs that are no longer running.
+   ```
+   import os
+   import re
+   import shutil
+   from prometheus_client import multiprocess
+
+   def cleanup_prometheus_orphans(metrics_dir):
+       """
+       Scans the multiproc directory and removes files
+       belonging to PIDs that are no longer running.
+       """
+       if not os.path.exists(metrics_dir):
+           return
+
+       # Pattern to find PIDs in filenames (e.g., gauge_multiproc_123.db)
+       pid_pattern = re.compile(r'.+_(\d+)\.db$')
+
+       # Get list of currently running PIDs
+       active_pids = set()
+       for pid in os.listdir('/proc'):
+           if pid.isdigit():
+               active_pids.add(int(pid))
+
+       for filename in os.listdir(metrics_dir):
+           match = pid_pattern.match(filename)
+           if match:
+               file_pid = int(match.group(1))
+
+               # If the PID from the file is not in the active PID list
+               if file_pid not in active_pids:
+                   file_path = os.path.join(metrics_dir, filename)
+                   try:
+                       # 1. Tell the client to "forget" the process
+                       multiprocess.mark_process_dead(file_pid)
+                       # 2. Delete the physical file
+                       os.remove(file_path)
+                       print(f"Cleaned up orphaned metric file: {filename}")
+                   except OSError as e:
+                       print(f"Error deleting {filename}: {e}")
+
+   # Usage
+   # cleanup_prometheus_orphans(os.environ.get('prometheus_multiproc_dir'))
+   ```
+
+2. Schedule this script to run at regular intervals using uWSGI's `timer` feature.
+   ```
+   import uwsgi
+   def cleanup_timer(signum):
+       cleanup_prometheus_orphans(os.getenv('prometheus_multiproc_dir'))
+
+   # Register only on the first worker to avoid multiple workers trying to clean up at the same time
+   if uwsgi.worker_id() == 0:
+       uwsgi.register_signal(99, "", cleanup_timer)
+       uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
+   ```
+
+3. Copy the file to a specific path (eg. /opt/nautobot/media/prometheus_cleanup.py) and import it from uwsgi.ini file.
+   ```
+   pythonpath = /opt/nautobot/media
+   py-import = prometheus_cleanup
+   ```
+
+Relevant documentation:
+
+- [Prometheus client library multi-process mode](https://prometheus.github.io/client_python/multiprocess/)
+- [Django Prometheus multi-process mode documentation](https://github.com/django-commons/django-prometheus/blob/master/documentation/exports.md)
+
