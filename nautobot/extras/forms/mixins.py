@@ -39,7 +39,6 @@ __all__ = (  # noqa:RUF022
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
     "DynamicGroupModelFormMixin",
-    "EmbeddedActionsFormMixin",
     "NoteModelBulkEditFormMixin",
     "NoteModelFormMixin",
     "RelationshipModelBulkEditFormMixin",
@@ -193,51 +192,6 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
             for dynamic_group in current_groups.difference(self.cleaned_data.get("dynamic_groups")):
                 dynamic_group.remove_members([obj])
         return obj
-
-
-class EmbeddedActionsFormMixin(forms.Form):
-    """
-    Mixin to derive dynamic model choice fields embedded actions availability from form meta attributes.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for mutually_exclusive_attributes in [
-            ("embedded_create", "exclude_embedded_create"),
-            ("embedded_search", "exclude_embedded_search"),
-        ]:
-            self.validate_mutually_exclusive_attributes(self.Meta, *mutually_exclusive_attributes)
-
-        for name, field in self.fields.items():
-            if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
-                for action in ["create", "search"]:
-                    has_field_embedded_action = self.has_field_embedded_action(action, field, name)
-                    setattr(field, f"embedded_{action}", has_field_embedded_action)
-
-    def has_field_embedded_action(self, action, field, name):
-        """
-        Check whether an embedded `action` should be enabled on given `field`.
-        """
-        field_embedded_action = getattr(field, f"embedded_{action}", None)
-        form_meta_embedded_action = getattr(self.Meta, f"embedded_{action}", None)
-        form_meta_exclude_embedded_action = getattr(self.Meta, f"exclude_embedded_{action}", None)
-
-        if field_embedded_action is not None:
-            return field_embedded_action
-        if form_meta_embedded_action is not None:
-            return name in form_meta_embedded_action
-        if form_meta_exclude_embedded_action is not None:
-            return name not in form_meta_exclude_embedded_action
-        return True
-
-    def validate_mutually_exclusive_attributes(self, obj, *attributes):
-        """
-        Validate that only one or none of the listed `attributes` is defined on given `obj`.
-        """
-        existing_attributes = [attribute for attribute in attributes if getattr(obj, attribute, None) is not None]
-        if len(existing_attributes) > 1:
-            raise AttributeError(f"Only one of the following attributes can be defined on {obj} at once: {attributes}.")
 
 
 class NoteFormBase(forms.Form):
