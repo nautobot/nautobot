@@ -3,6 +3,7 @@ from decimal import Decimal
 import unittest
 import zoneinfo
 
+from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -277,6 +278,83 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     def _get_queryset(self):
         return super()._get_queryset().filter(location_type__name="Campus")
+
+    @override_settings(PAGINATE_COUNT=1000)
+    def test_list_objects_default_filters(self):
+        """Test the LOCATION_LIST_DEFAULT_MAX_DEPTH setting/Constance config."""
+        self.add_permissions("dcim.view_location")
+        list_url = self.get_list_url()
+
+        # Hide the 'parent' column so it doesn't cause test failures due to unexpected PKs appearing
+        self.user.set_config("tables.LocationTable.columns", ["name", "status"], commit=True)
+
+        with self.subTest("By default, all locations are listed"):
+            response = self.client.get(list_url, headers={"HX-Request": True})
+            for location in self._get_queryset().all():
+                self.assertBodyContains(response, str(location.pk))
+            # Indentation should be present in table rendering
+            self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
+            with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered location list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for loc in self._get_queryset().all():
+                    if loc.parent is None or loc.parent.parent is None:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
+                # Check for message in base page
+                response = self.client.get(list_url)
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered location list in table
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for loc in self._get_queryset().all():
+                    if loc.parent is None or loc.parent.parent is None or loc.parent.parent.parent is None:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+
+        with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
+            with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=1):
+                # Check for message in base page - not present since an explicit filter is applied
+                loc_status = Status.objects.get_for_model(Location).first()
+                response = self.client.get(list_url + f"?status={loc_status.name}")
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH", count=0)
+                # Check for filtered location list in table
+                response = self.client.get(list_url + f"?status={loc_status.name}", headers={"HX-Request": True})
+                for loc in self._get_queryset().all():
+                    if loc.status == loc_status:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True, count=0)
+
+        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
+            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for message in base page - present since an explicit filter is applied that preserves hierarchy
+                root = Location.objects.first()
+                response = self.client.get(list_url + f"?subtree={root.pk}")
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                # Check for filtered location list in table
+                response = self.client.get(list_url + f"?subtree={root.pk}", headers={"HX-Request": True})
+                for loc in self._get_queryset().all():
+                    if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(
