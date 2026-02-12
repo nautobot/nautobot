@@ -210,7 +210,7 @@ class EmbeddedActionsFormMixin(forms.Form):
             self.validate_mutually_exclusive_attributes(self.Meta, *mutually_exclusive_attributes)
 
         for name, field in self.fields.items():
-            if isinstance(field, DynamicModelChoiceField) or isinstance(field, DynamicModelMultipleChoiceField):
+            if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
                 for action in ["create", "search"]:
                     has_field_embedded_action = self.has_field_embedded_action(action, field, name)
                     setattr(field, f"embedded_{action}", has_field_embedded_action)
@@ -237,7 +237,7 @@ class EmbeddedActionsFormMixin(forms.Form):
         """
         existing_attributes = [attribute for attribute in attributes if getattr(obj, attribute, None) is not None]
         if len(existing_attributes) > 1:
-            raise Exception(f"Only one of the following attributes can be defined on {obj} at once: {attributes}.")
+            raise AttributeError(f"Only one of the following attributes can be defined on {obj} at once: {attributes}.")
 
 
 class NoteFormBase(forms.Form):
