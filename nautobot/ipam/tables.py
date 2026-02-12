@@ -69,6 +69,8 @@ PREFIX_COPY_LINK = """
             {% else %}
                 <span class="nb-subtree nb-subtree-no-next-sibling"></span>
             {% endif %}
+        {% elif not record.present_in_database %}
+            <span class="nb-subtree"></span>
         {% endif %}
         {% if table_expandable|default:False %}
             {% if record.present_in_database and record.descendants_count %}

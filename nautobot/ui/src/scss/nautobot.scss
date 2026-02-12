@@ -934,49 +934,52 @@ table.attr-table td:nth-child(1) {
   width: 25%;
 }
 
-.nb-subtree::before {
-  color: var(--bs-border-color);
-  content: " ";
-  display: inline-block;
-  font-family: var(--bs-font-monospace);
-  font-size: 2rem;
-  margin-bottom: -.75rem;
-  margin-top: -.75rem;
-  min-width: 1.5rem;
-  padding-left: .25rem;
-  vertical-align: bottom;
-}
+.nb-subtree {
+  $subtree-icon-height: 5.625rem; /* 90px */
+  $subtree-icon-width: 1.25rem; /* 20px */
+  $subtree-ancestor-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/></svg>";
+  $subtree-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
+  $subtree-no-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$nav-gray-3}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$nav-gray-3}'/></svg>";
 
-.nb-subtree.nb-subtree-expandable:before {
-  color: var(--bs-secondary);
-  cursor: pointer;
-  font-family: "Material Design Icons";
-  font-size: 1.25rem;
-  vertical-align: middle;
-}
+  &:before {
+    content: "";
+    padding-left: $subtree-icon-width;
+    padding-top: map.get($spacers, 10);
+    padding-bottom: map.get($spacers, 12);
+  }
 
-.nb-subtree.nb-subtree-expandable:before {
-  content: "󰅂";
-}
+  &.nb-subtree-expandable {
+    &:before {
+      color: var(--bs-secondary);
+      cursor: pointer;
+      font-family: "Material Design Icons";
+      font-size: 1rem;
+      padding-left: 0;
+      line-height: 0;
+      vertical-align: middle;
+      content: "󰅂";  /* mdi-chevron-right */
+    }
 
-.nb-subtree.nb-subtree-expandable.nb-subtree-expanded:before {
-  content: "󰅀";
-}
+    &.nb-subtree-expanded:before {
+      content: "󰅀";  /* mdi-chevron-down */
+    }
+  }
 
-.nb-subtree.nb-subtree-ancestor-next-sibling:before {
-  content: "│";
-}
+  &.nb-subtree-ancestor-next-sibling:before {
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-ancestor-next-sibling-icon-svg}"))};
+  }
 
-.nb-subtree.nb-subtree-ancestor-no-next-sibling:before {
-  content: " ";
-}
+  &.nb-subtree-ancestor-no-next-sibling:before {
+    content: "";
+  }
 
-.nb-subtree.nb-subtree-next-sibling:before {
-  content: "├";
-}
+  &.nb-subtree-next-sibling:before {
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-next-sibling-icon-svg}"))};
+  }
 
-.nb-subtree.nb-subtree-no-next-sibling:before {
-  content: "└";
+  &.nb-subtree-no-next-sibling:before {
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-no-next-sibling-icon-svg}"))};
+  }
 }
 
 /* Buttons */

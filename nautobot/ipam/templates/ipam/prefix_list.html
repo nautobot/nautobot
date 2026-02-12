@@ -34,9 +34,8 @@
             const ancestorsCount = event.target.closest("td").getElementsByClassName("nb-subtree").length;
             const tr = event.target.closest("tr");
             const url = new URL(window.location.href);
-            while (tr.nextElementSibling !== null &&
-                tr.nextElementSibling.getElementsByClassName("nb-prefix").length > 0 &&
-                tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getElementsByClassName("nb-subtree").length > ancestorsCount
+            while (
+                tr.nextElementSibling?.querySelectorAll(".nb-prefix .nb-subtree").length > ancestorsCount
             ) {
                 url.searchParams.delete("expanded_prefix", tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getAttribute("data-pk"));
                 tr.nextElementSibling.remove();
@@ -69,9 +68,8 @@
                 const caret = carets[0];
                 caret.setAttribute("hx-on:htmx:after-on-load", "afterExpansion(this, true)");
                 const tr = td.closest("tr");
-                if (tr.nextElementSibling !== null &&
-                    tr.nextElementSibling.getElementsByClassName("nb-prefix").length > 0 &&
-                    tr.nextElementSibling.getElementsByClassName("nb-prefix")[0].getElementsByClassName("nb-subtree").length > ancestorsCount
+                if (
+                    tr.nextElementSibling?.querySelectorAll(".nb-prefix .nb-subtree").length > ancestorsCount
                 ) {
                 // already expanded to show subtree
                     afterExpansion(caret, false);
