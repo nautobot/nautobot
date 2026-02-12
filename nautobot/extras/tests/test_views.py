@@ -3495,6 +3495,11 @@ class JobResultTestCase(
         cls.console_entry_2 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Processing data..."
         )
+        cls.console_entry_3 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending,
+            timestamp=timezone.now(),
+            text="Restricted entry - requires special permission",
+        )
         cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         JobConsoleEntry.objects.create(
             job_result=cls.job_result_completed, timestamp=timezone.now(), text="Job completed successfully"
@@ -3531,6 +3536,7 @@ class JobResultTestCase(
     def test_get_console_entries_without_permission(self):
         """Test that users without permission get 403."""
         url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
         response = self.client.get(url)
         self.assertHttpStatus(response, [403, 404])
 
@@ -3546,6 +3552,34 @@ class JobResultTestCase(
         self.assertBodyContains(response, "Processing data...")
         # Should show polling message for pending jobs
         self.assertBodyContains(response, "updating every 2 seconds...")
+        self.assertBodyContains(response, "htmx-poller")
+
+    def test_get_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        from django.contrib.contenttypes.models import ContentType
+
+        from nautobot.users.models import ObjectPermission
+
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobConsoleEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.console_entry_1.id, self.console_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
 
     def test_get_console_entries_completed_job(self):
         """Test full page load for completed job (no polling)."""
@@ -3573,7 +3607,7 @@ class JobResultTestCase(
         self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
 
         # Use timestamp of last entry
-        last_timestamp = self.console_entry_2.timestamp.isoformat()
+        last_timestamp = self.console_entry_3.timestamp.isoformat()
         response = self.client.get(url, {"last_timestamp": last_timestamp}, HTTP_HX_REQUEST="true")
 
         self.assertHttpStatus(response, 204)
@@ -3625,7 +3659,7 @@ class JobResultTestCase(
 
         response = self.client.get(url, {"last_timestamp": "invalid-timestamp"}, HTTP_HX_REQUEST="true")
 
-        self.assertHttpStatus(response, 204)
+        self.assertHttpStatus(response, 400)
 
     def test_htmx_poll_no_timestamp_parameter(self):
         """Test HTMX polling without timestamp parameter."""

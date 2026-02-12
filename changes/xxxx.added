@@ -1,2 +1,0 @@
-Added `Console Log` tab to Job Result detial view.
-Added `console_log` action to `JobResultUIViewSet` to stream output from SQL into the UI in realtime.

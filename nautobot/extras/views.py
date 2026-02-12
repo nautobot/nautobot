@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
@@ -2861,7 +2861,7 @@ class JobResultUIViewSet(
         if request.headers.get("HX-Request"):
             response = self._handle_console_poll(request, job_result)
         else:
-            entries = JobConsoleEntry.objects.filter(job_result=job_result)
+            entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
 
             # Get last entry timestamp for polling initialization
             last_entry = entries.last()
@@ -2899,11 +2899,17 @@ class JobResultUIViewSet(
         if last_timestamp_str:
             try:
                 last_timestamp = parse_datetime(last_timestamp_str)
-                if last_timestamp:
-                    new_entries = JobConsoleEntry.objects.filter(job_result=job_result, timestamp__gt=last_timestamp)
-            except (ValueError, TypeError):
+                # Raise ValueError if the input is well formatted but not a valid datetime.
+                # Return None if the input isn't well formatted.
+                if not last_timestamp:
+                    raise ValueError
+            except ValueError:
                 msg = "Invalid timestamp: {}"
-                messages.error(request, format_html(msg, last_timestamp_str))
+                return HttpResponseBadRequest(format_html(msg, last_timestamp_str))
+
+            new_entries = JobConsoleEntry.objects.restrict(user=request.user).filter(
+                job_result=job_result, timestamp__gt=last_timestamp
+            )
 
         job_is_pending = self._is_job_pending(job_result)
 
