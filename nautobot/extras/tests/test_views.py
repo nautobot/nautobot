@@ -3556,10 +3556,6 @@ class JobResultTestCase(
 
     def test_get_console_entries_with_constrained_permission(self):
         """Test that constrained permissions filter console entries correctly."""
-        from django.contrib.contenttypes.models import ContentType
-
-        from nautobot.users.models import ObjectPermission
-
         url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult")
 
