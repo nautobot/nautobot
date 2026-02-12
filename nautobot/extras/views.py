@@ -1971,47 +1971,6 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-class JobListView(generic.ObjectListView):
-    """
-    Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
-    """
-
-    queryset = JobModel.objects.all()
-    table = tables.JobTable
-    filterset = filters.JobFilterSet
-    filterset_form = forms.JobFilterForm
-    action_buttons = ()
-    non_filter_params = (
-        *generic.ObjectListView.non_filter_params,
-        "display",
-    )
-    template_name = "extras/job_list.html"
-
-    def alter_queryset(self, request):
-        queryset = super().alter_queryset(request)
-        # Default to hiding "hidden" and non-installed jobs
-        filter_params = self.get_filter_params(request)
-        if "hidden" not in filter_params:
-            queryset = queryset.filter(hidden=False)
-        if "installed" not in filter_params:
-            queryset = queryset.filter(installed=True)
-        return queryset
-
-    def extra_context(self):
-        # Determine user's preferred display
-        if self.request.GET.get("display") in ["list", "tiles"]:
-            display = self.request.GET.get("display")
-            if self.request.user.is_authenticated:
-                self.request.user.set_config("extras.job.display", display, commit=True)
-        elif self.request.user.is_authenticated:
-            display = self.request.user.get_config("extras.job.display", "list")
-        else:
-            display = "list"
-
-        return {
-            "table_inc_template": "extras/inc/job_tiles.html" if display == "tiles" else "extras/inc/job_table.html",
-            "display": display,
-        }
 
 
 class JobRunView(ObjectPermissionRequiredMixin, View):
@@ -2263,17 +2222,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         )
 
 
-class JobUIViewSet(
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectEditViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectBulkUpdateViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectNotesViewMixin,
-    ObjectDataComplianceViewMixin,
-):
+class JobUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.JobBulkEditForm
     queryset = JobModel.objects.all()
     serializer_class = serializers.JobSerializer
@@ -2282,6 +2231,7 @@ class JobUIViewSet(
     filterset_class = filters.JobFilterSet
     filterset_form_class = forms.JobFilterForm
     action_buttons = ()
+    non_filter_params = (*ObjectListViewMixin.non_filter_params, "display")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -2350,6 +2300,37 @@ class JobUIViewSet(
         obj = super().get_object()
         get_job(obj.class_path, reload=True)
         return obj
+
+    def alter_queryset(self, request):
+        queryset = super().alter_queryset(request)
+        # Default to hiding "hidden" and non-installed jobs
+        filter_params = self.get_filter_params(request)
+        if "hidden" not in filter_params:
+            queryset = queryset.filter(hidden=False)
+        if "installed" not in filter_params:
+            queryset = queryset.filter(installed=True)
+        return queryset
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        # Determine user's preferred display
+        if self.request.GET.get("display") in ["list", "tiles"]:
+            display = self.request.GET.get("display")
+            if self.request.user.is_authenticated:
+                self.request.user.set_config("extras.job.display", display, commit=True)
+        elif self.request.user.is_authenticated:
+            display = self.request.user.get_config("extras.job.display", "list")
+        else:
+            display = "list"
+        context.update(
+            {
+                "table_inc_template": "extras/inc/job_tiles.html"
+                if display == "tiles"
+                else "extras/inc/job_table.html",
+                "display": display,
+            }
+        )
+        return context
 
 
 class JobQueueUIViewSet(NautobotUIViewSet):
