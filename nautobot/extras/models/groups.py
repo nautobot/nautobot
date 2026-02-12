@@ -22,9 +22,9 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
-from nautobot.extras.filter_utils import build_filter_dict_from_filterset
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
 from nautobot.extras.utils import extras_features, FeatureQuery
 
