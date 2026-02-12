@@ -196,6 +196,10 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
 
 
 class EmbeddedActionsFormMixin(forms.Form):
+    """
+    Mixin to derive dynamic choice fields embedded actions availability from form meta attributes.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -212,6 +216,9 @@ class EmbeddedActionsFormMixin(forms.Form):
                     setattr(field, f"embedded_{action}", has_field_embedded_action)
 
     def has_field_embedded_action(self, action, field, name):
+        """
+        Check whether an embedded `action` should be enabled on given `field`.
+        """
         field_embedded_action = getattr(field, f"embedded_{action}", None)
         form_meta_embedded_action = getattr(self.Meta, f"embedded_{action}", None)
         form_meta_exclude_embedded_action = getattr(self.Meta, f"exclude_embedded_{action}", None)
@@ -225,6 +232,9 @@ class EmbeddedActionsFormMixin(forms.Form):
         return True
 
     def validate_mutually_exclusive_attributes(self, obj, *attributes):
+        """
+        Validate that only one or none of the listed `attributes` is defined on given `obj`.
+        """
         existing_attributes = [attribute for attribute in attributes if getattr(obj, attribute, None) is not None]
         if len(existing_attributes) > 1:
             raise Exception(f"Only one of the following attributes can be defined on {obj} at once: {attributes}.")
