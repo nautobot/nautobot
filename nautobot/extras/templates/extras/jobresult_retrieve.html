@@ -51,7 +51,7 @@
             <li class="nav-item" role="presentation">
                 <a
                     href="{% url 'extras:jobresult_job_console_entries' pk=object.pk %}"
-                    class="nav-link{% if active_tab == 'console_log' %} active{% endif %}"
+                    class="nav-link{% if active_tab == 'job_console_entries' %} active{% endif %}"
                 >
                     Console Log
                 </a>
@@ -136,7 +136,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    {% if active_tab != 'console_log' %}
+    {% if active_tab != 'job_console_entries' %}
         {% include 'extras/inc/jobresult_js.html' with result=result %}
     {% endif %}
     <script src="{% versioned_static 'js/log_level_filtering.js' %}"></script>

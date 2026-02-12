@@ -13,7 +13,7 @@
         <div class="card-header">
             <div class="float-start">
                 <strong>Console Log</strong>
-                {% if is_running %}
+                {% if job_is_pending %}
                     <small class="align-middle text-secondary" id="job-status-message">(updating every 2 seconds...)</small>
                 {% endif %}
             </div>
@@ -23,7 +23,7 @@
         </div>
 
         {% spaceless %}
-        <pre class="bg-body h-100 mb-0 overflow-y-auto" id="console-output">
+        <pre class="bg-body h-100 mb-0 overflow-y-auto" id="console-output" hx-on::load="this.scrollTop = this.scrollHeight">
             <code class="h-100">
                 {% include "extras/inc/jobresult_console_log_lines.html" %}
             </code>
@@ -36,7 +36,9 @@
                 id="htmx-poller"
                 hx-get="{% url 'extras:jobresult_job_console_entries' pk=object.pk %}"
                 hx-trigger="every 2s"
-                hx-swap="beforeend"
+                hx-select="#console-lines-wrapper > *"
+                hx-select-oob="#job-status, #job-status-message:outerHTML, #htmx-poller:outerHTML"
+                hx-swap="beforeend scroll:bottom"
                 hx-target="#console-output code"
                 hx-vals="js:{last_timestamp: window.nb.jobResult.getLastTimestamp()}"
             ></div>
@@ -45,7 +47,7 @@
 
     <script>
         (() => {
-            const getContentContainer = () => document.querySelector('#console-output code');
+            const getContentContainer = () => document.querySelector('#console-output');
 
             const getLastTimestamp = () => {
                 const lastLine = document.querySelector('.console-line[data-timestamp]:last-of-type');
@@ -64,14 +66,6 @@
 
             // Initial scroll to bottom on page load
             document.addEventListener('DOMContentLoaded', scrollToBottom);
-
-            // Scroll to bottom after HTMX updates
-            document.body.addEventListener('htmx:afterSwap', (event) => {
-                const contentContainer = getContentContainer();
-                if (event.target === contentContainer) {
-                    scrollToBottom();
-                }
-            });
         })();
     </script>
 {% endblock %}

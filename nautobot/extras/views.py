@@ -16,6 +16,7 @@ from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
 from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
@@ -2792,7 +2793,7 @@ class JobResultUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
+        if self.action in ["retrieve", "job_console_entries"]:
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
@@ -2858,38 +2859,36 @@ class JobResultUIViewSet(
 
         # Handle HTMX polling for new log entries
         if request.headers.get("HX-Request"):
-            return self._handle_console_poll(request, job_result)
+            response = self._handle_console_poll(request, job_result)
+        else:
+            entries = JobConsoleEntry.objects.filter(job_result=job_result)
 
-        entries = JobConsoleEntry.objects.filter(job_result=job_result)
+            # Get last entry timestamp for polling initialization
+            last_entry = entries.last()
 
-        # Get last entry timestamp for polling initialization
-        last_entry = entries.last()
+            context = self.get_extra_context(request, job_result)
+            context.update(
+                {
+                    "object": job_result,
+                    "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
+                    "verbose_name_plural": job_result._meta.verbose_name_plural,
+                    "list_url": "extras:jobresult_list",
+                    "entries": entries,
+                    "base_template": "extras/jobresult_retrieve.html",
+                    "breadcrumbs": self.get_breadcrumbs(),
+                    "view_action": "detail",
+                    "job_is_pending": self._is_job_pending(job_result),
+                    "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
+                }
+            )
+            response = render(request, "extras/jobresult_retrieve_console_log.html", context)
 
-        context = {
-            "object": job_result,
-            "result": job_result,
-            "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
-            "verbose_name_plural": job_result._meta.verbose_name_plural,
-            "list_url": "extras:jobresult_list",
-            "active_tab": "console_log",
-            "entries": entries,
-            "base_template": "extras/jobresult_retrieve.html",
-            "breadcrumbs": self.get_breadcrumbs(),
-            "view_action": "detail",
-            "job_is_pending": self._is_job_pending(job_result),
-            "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
-        }
-
-        return render(request, "extras/jobresult_retrieve_console_log.html", context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def _is_job_pending(self, job_result) -> bool:
         """Check if job has finished execution."""
-        job_result.refresh_from_db()
-        return job_result.status not in [
-            JobResultStatusChoices.STATUS_FAILURE,
-            JobResultStatusChoices.STATUS_REVOKED,
-            JobResultStatusChoices.STATUS_SUCCESS,
-        ]
+        return job_result.status in JobResultStatusChoices.UNREADY_STATES
 
     def _handle_console_poll(self, request, job_result) -> HttpResponse:
         """Handle HTMX polling request and return new log entries as HTML."""
@@ -2906,18 +2905,17 @@ class JobResultUIViewSet(
                 msg = "Invalid timestamp: {}"
                 messages.error(request, format_html(msg, last_timestamp_str))
 
-        if not new_entries.exists() and self._is_job_pending(job_result):
+        job_is_pending = self._is_job_pending(job_result)
+
+        if not new_entries.exists() and job_is_pending:
             return HttpResponse(status=204)
 
-        # Render new console lines using template
-        html_content = render_to_string("extras/inc/jobresult_console_log_lines.html", {"entries": new_entries})
-
-        # If job is not running, send out-of-band updates to stop polling
-        if not self._is_job_pending(job_result):
-            completion_html = render_to_string(
-                "extras/inc/jobresult_console_log_completion.html", {"job_result": job_result}
-            )
-            html_content += completion_html
+        context = {
+            "entries": new_entries,
+            "job_result": job_result,
+            "job_is_pending": job_is_pending,
+        }
+        html_content = render_to_string("extras/inc/jobresult_console_log_response.html", context)
 
         return HttpResponse(html_content, content_type="text/html; charset=utf-8")
 
