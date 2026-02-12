@@ -24,22 +24,22 @@
                 {% endfor %}
             {% endif %}
         {% endfor %}
-        <select name="per_page" id="per_page" class="form-select">
+        <select name="per_page"
+                id="per_page"
+                class="form-select"
+                {% if htmx_enabled|default:False %}
+                    hx-trigger="change"
+                    hx-get="{% django_querystring page=None per_page=None %}"
+                {% endif %}
+        >
             {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ page.paginator.per_page }}" selected="selected"
-                        {% if htmx_enabled|default:False %}
-                            hx-get="{% django_querystring per_page=page.paginator.per_page page=None %}"
-                        {% endif %}
-                >
+                <option value="{{ page.paginator.per_page }}" selected="selected">
                     {{ page.paginator.per_page }}
                 </option>
             {% endif %}
             {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
                 <option value="{{ n }}"
                         {% if page.paginator.per_page == n %} selected="selected"{% endif %}
-                        {% if htmx_enabled|default:False %}
-                            hx-get="{% django_querystring per_page=n page=None %}"
-                        {% endif %}
                 >
                     {{ n }}
                 </option>
