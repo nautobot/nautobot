@@ -1428,45 +1428,65 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="_termination_a_device_id",
         label="Device (ID)",
     )
-    device = django_filters.ModelMultipleChoiceFilter(
-        queryset=Device.objects.all(),
-        to_field_name="name",
-        method="filter_device",
-        field_name="device",
-        label="Device (name)",
+    device = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Device.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device",
+            label="Device (name)",
+        )
     )
-    rack_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        method="filter_device",
-        field_name="device__rack",
-        label="Rack (ID)",
+    rack_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (ID)",
+        )
     )
-    rack = django_filters.ModelMultipleChoiceFilter(
-        queryset=Rack.objects.all(),
-        to_field_name="name",
-        method="filter_device",
-        field_name="device__rack",
-        label="Rack (name)",
+    rack = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (name)",
+        )
     )
-    location_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Location.objects.all(), method="filter_device", field_name="device__location", label="Location (ID)"
+    location_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            method="filter_device",
+            field_name="device__location",
+            label="Location (ID)",
+        )
     )
-    location = django_filters.ModelMultipleChoiceFilter(
-        queryset=Location.objects.all(),
-        to_field_name="name",
-        method="filter_device",
-        field_name="device__location",
-        label="Location (name)",
+    location = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__location",
+            label="Location (name)",
+        )
     )
-    tenant_id = django_filters.ModelMultipleChoiceFilter(
-        queryset=Tenant.objects.all(), method="filter_device", field_name="device__tenant", label="Tenant (ID)"
+    tenant_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (ID)",
+        )
     )
-    tenant = django_filters.ModelMultipleChoiceFilter(
-        queryset=Tenant.objects.all(),
-        to_field_name="name",
-        method="filter_device",
-        field_name="device__tenant",
-        label="Tenant (name)",
+    tenant = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (name)",
+        )
     )
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
@@ -1498,7 +1518,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        has_null = any([v == "null" for v in value])
+        has_null = any(v == "null" for v in value)
         value = [v for v in value if v != "null"]
         if value and has_null:
             return queryset.filter(
