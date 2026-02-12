@@ -8,11 +8,12 @@ def render_field(context, field, bulk_nullable=False):
     """
     Render a single form field from template
     """
-    embedded_create = getattr(field.field, "embedded_create", False)
-    embedded_search = getattr(field.field, "embedded_search", False)
+    field_instance = getattr(field, "field", None)
+    embedded_create = getattr(field_instance, "embedded_create", False)
+    embedded_search = getattr(field_instance, "embedded_search", False)
     is_embedded = context.request.GET.get("embedded", None) == "true"
     has_embedded_create_permissions = context.request.user.has_perms(
-        getattr(field.field, "embedded_create_permissions", [])
+        getattr(field_instance, "embedded_create_permissions", [])
     )
 
     return {
