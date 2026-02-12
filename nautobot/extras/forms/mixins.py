@@ -197,7 +197,7 @@ class DynamicGroupModelFormMixin(forms.ModelForm):
 
 class EmbeddedActionsFormMixin(forms.Form):
     """
-    Mixin to derive dynamic choice fields embedded actions availability from form meta attributes.
+    Mixin to derive dynamic model choice fields embedded actions availability from form meta attributes.
     """
 
     def __init__(self, *args, **kwargs):
