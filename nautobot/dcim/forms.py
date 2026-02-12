@@ -4515,11 +4515,13 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
-    rack_id = DynamicModelMultipleChoiceField(
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(), to_field_name="name", required=False, null_option="None"
+    )
+    rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
+        to_field_name="name",
         required=False,
-        label="Rack",
         null_option="None",
         query_params={"location": "$location"},
     )
