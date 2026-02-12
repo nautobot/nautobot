@@ -1,8 +1,9 @@
 from django.test import tag, TestCase
 
 from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
-from nautobot.core.forms.fields import DynamicModelChoiceMixin
+from nautobot.core.forms.fields import DynamicModelChoiceField, DynamicModelChoiceMixin, DynamicModelMultipleChoiceField
 from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.extras.forms import EmbeddedActionsFormMixin
 
 
 # TODO(timizuo): All Form Test cases should inherit from FormTestCases
@@ -30,3 +31,19 @@ class FormTestCases:
                         invalid_query_params,
                         f"{invalid_query_params} are invalid query_params fields for {self.form_class.__name__}.{field_name}",
                     )
+
+        def test_form_dynamic_model_choice_fields_embedded_actions(self):
+            if not issubclass(self.form_class, EmbeddedActionsFormMixin):
+                self.skipTest(f"{self.form_class.__name__} is not subclass of EmbeddedActionsFormMixin")
+
+            form = self.form_class()  # pylint: disable=not-callable
+            for name, field in form.fields.items():
+                if not isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
+                    continue
+                with self.subTest(f"Assert {self.form_class.__name__}.{name} embedded actions are set."):
+                    for action in ("create", "search"):
+                        # Test only if given attribute is not None, it being `True` or `False` is subject to individual form and field configuration.
+                        self.assertIsNotNone(
+                            getattr(field, f"embedded_{action}", None),
+                            f"{self.form_class.__name__}.{name} does not have `embedded_{action}` attribute set.",
+                        )

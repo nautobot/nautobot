@@ -29,16 +29,17 @@ __all__ = (
 class NautobotModelForm(
     BootstrapMixin,
     # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
+    EmbeddedActionsFormMixin,
+    # EmbeddedActionsFormMixin position is critical here almost at the top to affect all dynamic model choice form fields
     DataValidationModelFormMixin,
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
-    EmbeddedActionsFormMixin,
     NoteModelFormMixin,
     RelationshipModelFormMixin,
 ):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all of BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, and
+    codebase where all of BootstrapMixin, EmbeddedActionsFormMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, and
     NoteModelFormMixin are needed.
     """
 
