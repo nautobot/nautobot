@@ -218,11 +218,10 @@ class EmbeddedActionsFormMixin(forms.Form):
 
         if field_embedded_action is not None:
             return field_embedded_action
-        else:
-            if form_meta_embedded_action is not None:
-                return name in form_meta_embedded_action
-            elif form_meta_exclude_embedded_action is not None:
-                return name not in form_meta_exclude_embedded_action
+        if form_meta_embedded_action is not None:
+            return name in form_meta_embedded_action
+        if form_meta_exclude_embedded_action is not None:
+            return name not in form_meta_exclude_embedded_action
         return True
 
     def validate_mutually_exclusive_attributes(self, obj, *attributes):
