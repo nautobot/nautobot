@@ -171,7 +171,7 @@ const manageDynamicFilter = ({action, name, text, value}) => {
     input.setAttribute('type', 'hidden');
     input.setAttribute('value', value);
 
-    badge.appendChild(removeButton('Remove'));
+    badge.appendChild(createRemoveButton('Remove'));
     badge.insertAdjacentText('beforeend', text);
     badge.appendChild(input);
 

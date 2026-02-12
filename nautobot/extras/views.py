@@ -1363,20 +1363,26 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         if not scope_filter_data:
             scope_filter_data = {}
 
+        # We need to drop empty values, because some type of fields (e.g. NaturalKeyOrPKMultipleChoiceFilter) don't accept empty list or str
+        scope_filter_data_filtered = {
+            field_name: values
+            for field_name, values in scope_filter_data.items()
+            if field_name.startswith("scope") and values not in ("", None, [], [""])
+        }
+
         filterset_class = get_filterset_for_model(model_class)
         filterset = filterset_class(
-            data=scope_filter_data,
+            data=scope_filter_data_filtered,
             queryset=model_class.objects.all(),
             prefix="scope",
         )
         filterset_form_class = get_form_for_model(model_class, form_prefix="Filter")
-        filterset_form = filterset_form_class(scope_filter_data, prefix="scope")
+        filterset_form = filterset_form_class(scope_filter_data_filtered, prefix="scope")
         display_filter_params = [
             # To avoid input name collision between scope filter fields and standard custom field form
             # we're prefixing all the fields and need to remove this prefix below to properly check fields
             check_filter_for_display(filterset.filters, field_name[6:], values)
-            for field_name, values in scope_filter_data.items()
-            if field_name.startswith("scope")
+            for field_name, values in scope_filter_data_filtered
         ]
         dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
