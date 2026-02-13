@@ -1452,7 +1452,7 @@ name = "example-app"
 version = "1.0.0"
 description = "Nautobot example app that does a whole lot of nothing."
 optional = false
-python-versions = ">=3.10,<3.14"
+python-versions = ">=3.10,<3.15"
 groups = ["dev"]
 files = []
 develop = true
@@ -2773,11 +2773,28 @@ textfsm = ">=1.1.3"
 
 [[package]]
 name = "netutils"
+version = "1.15.1"
+description = "Common helper functions useful in network automation."
+optional = false
+python-versions = "<4.0,>=3.8"
+groups = ["main"]
+markers = "python_version >= \"3.12\""
+files = [
+    {file = "netutils-1.15.1-py3-none-any.whl", hash = "sha256:c42886d456f9b21bee395628b100dc2cd4b68fcc223f33c669672c3468d6b4dc"},
+    {file = "netutils-1.15.1.tar.gz", hash = "sha256:67a932a77067cbe18b65e7a9f3a3e85c4bff3e4c2c3abbe0286967ba87064793"},
+]
+
+[package.extras]
+optionals = ["jsonschema (>=4.17.3,<5.0.0)", "legacycrypt (==0.3)", "napalm (>=4.0.0,<5.0.0)"]
+
+[[package]]
+name = "netutils"
 version = "1.16.0"
 description = "Common helper functions useful in network automation."
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
+markers = "python_version < \"3.12\""
 files = [
     {file = "netutils-1.16.0-py3-none-any.whl", hash = "sha256:fd87fc4a202d6941908e9e3c42505b1177ef6477b423b09c09021cc98139e02f"},
     {file = "netutils-1.16.0.tar.gz", hash = "sha256:e2d1977489410a6b17efa55e1b15806b187d36ebbae2c9e5a5a913e3af0e7a69"},
@@ -5436,5 +5453,5 @@ sso = ["social-auth-core"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.10,<3.14"
-content-hash = "c41131c635409e23f672ec285adfe9225af4121a52f67e8ad663465bcec080b5"
+python-versions = ">=3.10,<3.15"
+content-hash = "8cc832275e5e69a16ecc1dedfe0a5cac9c546874dd8e8d46accc0a6850638fda"
