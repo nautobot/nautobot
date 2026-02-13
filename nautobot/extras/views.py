@@ -17,15 +17,11 @@ from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
-from django.utils.cache import patch_vary_headers
-from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-<<<<<<< HEAD
-from django.utils.timezone import get_current_timezone, now
-=======
->>>>>>> 77b02de29 (Revoked the changes as per Ken suggestion)
+from django.utils.timezone import get_current_timezone
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -35,11 +31,12 @@ from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.events import publish_event
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
-from nautobot.core.models.utils import pretty_print_query
+from nautobot.core.models.utils import pretty_print_query, serialize_object_v2
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.perms import can_cancel
@@ -2621,7 +2618,7 @@ class JobApprovalRequestView(generic.ObjectView):
     job's execution, rather than initial job form input.
     """
 
-    queryset = ScheduledJob.objects.needs_approved()
+    queryset = ScheduledJob.objects.all()
     template_name = "extras/job_approval_request.html"
     additional_permissions = ("extras.view_job",)
 
@@ -3054,6 +3051,8 @@ class ScheduledJobUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
+        if self.action != "retrieve":
+            return context
         if instance is None:
             return context
         job_class = get_job(instance.task)
@@ -3066,6 +3065,7 @@ class ScheduledJobUIViewSet(
             {
                 "labels": labels,
                 "job_class_found": (job_class is not None),
+                "default_time_zone": get_current_timezone(),
             }
         )
 
@@ -3073,7 +3073,7 @@ class ScheduledJobUIViewSet(
 
 
 class ScheduledJobApprovalQueueListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.needs_approved()
+    queryset = ScheduledJob.objects.all()
     table = tables.ScheduledJobApprovalQueueTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
