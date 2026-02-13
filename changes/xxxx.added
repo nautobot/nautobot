@@ -1,1 +1,3 @@
 Added tables of "Sibling Prefixes" and "Child Prefixes" to Prefix detail view.
+Added `TreeModel.siblings` convenience property.
+Added table of "Sibling Locations" to Location detail view.

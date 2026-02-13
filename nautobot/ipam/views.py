@@ -375,7 +375,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             return {
                 **super().get_extra_context(context),
-                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id}",
+                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id or 'null'}",
             }
 
     object_detail_content = object_detail.ObjectDetailContent(
