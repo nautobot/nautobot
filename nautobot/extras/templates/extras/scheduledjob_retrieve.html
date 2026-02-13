@@ -13,6 +13,17 @@
     {% endif %}
 {% endblock extra_buttons %}
 
+{% block content %}
+    {% if not job_class_found %}
+        <div class="alert alert-danger">
+            <span class="mdi mdi-alert"></span>
+            This job source for this scheduled job is no longer installed.
+            This scheduled job will fail to run unless reinstalled at the original location.
+        </div>
+    {% endif %}
+    {{ block.super }}
+{% endblock content %}
+
 {% block content_left_page %}
     <div class="card">
         <div class="card-header">
@@ -34,7 +45,7 @@
             <tr>
                 <td>Task</td>
                 <td>
-                    <code>{{ object.task }}
+                    <code>{{ object.task }}</code>
                 </td>
             </tr>
             <tr>
@@ -95,8 +106,7 @@
                     {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% if default_time_zone != object.time_zone %}
                         {{ object.time_zone }}
-                        
-{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
+                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                     {% endif %}
                 </td>
             </tr>
@@ -107,8 +117,7 @@
                         {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                         {% if default_time_zone != object.time_zone %}
                             {{ object.time_zone }}
-                            
-{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
+                            <br>{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                         {% endif %}
                     {% else %}
                         {{ object.last_run_at|placeholder }}
@@ -151,4 +160,4 @@
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>
-{% endblock content_right_page %}</code>
+{% endblock content_right_page %}
