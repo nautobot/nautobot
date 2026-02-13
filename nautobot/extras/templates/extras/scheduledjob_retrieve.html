@@ -6,30 +6,19 @@
 {% load plugins %}
 {% load tz %}
 
-{% block buttons %}
+{% block extra_buttons %}
     {% plugin_buttons object %}
     {% if user|can_delete:object %}
         {% delete_button object %}
     {% endif %}
-{% endblock buttons %}
-
-{% block content %}
-    {% if not job_class_found %}
-        <div class="alert alert-danger">
-            <i class="mdi mdi-alert"></i>
-            This job source for this scheduled job is no longer installed.
-            This scheduled job will fail to run unless reinstalled at the original location.
-        </div>
-    {% endif %}
-    {{ block.super }}
-{% endblock content %}
+{% endblock extra_buttons %}
 
 {% block content_left_page %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduled Job</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Name</td>
                 <td>
@@ -45,7 +34,7 @@
             <tr>
                 <td>Task</td>
                 <td>
-                    <code>{{ object.task }}</code>
+                    <code>{{ object.task }}
                 </td>
             </tr>
             <tr>
@@ -76,11 +65,11 @@
             </tr>
         </table>
     </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Scheduling</strong>
         </div>
-        <table class="table table-hover panel-body attr-table">
+        <table class="table table-hover card-body attr-table">
             <tr>
                 <td>Enabled?</td>
                 <td>{{ object.enabled | render_boolean }}</td>
@@ -106,7 +95,8 @@
                     {{ object.start_time|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                     {% if default_time_zone != object.time_zone %}
                         {{ object.time_zone }}
-                        <br>{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
+                        
+{{ object.start_time|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                     {% endif %}
                 </td>
             </tr>
@@ -117,7 +107,8 @@
                         {{ object.last_run_at|timezone:object.time_zone|date:settings.SHORT_DATETIME_FORMAT }}
                         {% if default_time_zone != object.time_zone %}
                             {{ object.time_zone }}
-                            <br>{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
+                            
+{{ object.last_run_at|timezone:default_time_zone|date:settings.SHORT_DATETIME_FORMAT }} {{ default_time_zone }}
                         {% endif %}
                     {% else %}
                         {{ object.last_run_at|placeholder }}
@@ -132,14 +123,15 @@
             </tr>
         </table>
     </div>
-{% endblock %}
+{% endblock content_left_page %}
+
 {% block content_right_page %}
     {% if job_class_found %}
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card">
+            <div class="card-header">
                 <strong>User Inputs</strong>
             </div>
-            <table class="table table-hover panel-body attr-table">
+            <table class="table table-hover card-body attr-table">
                 {% for key, value in object.kwargs.items %}
                     <tr>
                         <td>{{ labels|get_item:key }}</td>
@@ -151,12 +143,12 @@
             </table>
         </div>
     {% endif %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Celery Keyword Arguments</strong>
         </div>
-        <div class="panel-body">
+        <div class="card-body">
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>
-{% endblock %}
+{% endblock content_right_page %}</code>
