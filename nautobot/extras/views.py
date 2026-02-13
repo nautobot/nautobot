@@ -2232,6 +2232,7 @@ class JobUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.JobFilterForm
     action_buttons = ()
     non_filter_params = (*ObjectListViewMixin.non_filter_params, "display")
+    base_template = "generic/object_retrieve.html"
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -2313,23 +2314,26 @@ class JobUIViewSet(NautobotUIViewSet):
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        # Determine user's preferred display
-        if self.request.GET.get("display") in ["list", "tiles"]:
-            display = self.request.GET.get("display")
-            if self.request.user.is_authenticated:
-                self.request.user.set_config("extras.job.display", display, commit=True)
-        elif self.request.user.is_authenticated:
-            display = self.request.user.get_config("extras.job.display", "list")
-        else:
-            display = "list"
-        context.update(
-            {
-                "table_inc_template": "extras/inc/job_tiles.html"
-                if display == "tiles"
-                else "extras/inc/job_table.html",
-                "display": display,
-            }
-        )
+
+        if self.action == "list":
+            # Determine user's preferred display
+            if self.request.GET.get("display") in ["list", "tiles"]:
+                display = self.request.GET.get("display")
+                if self.request.user.is_authenticated:
+                    self.request.user.set_config("extras.job.display", display, commit=True)
+            elif self.request.user.is_authenticated:
+                display = self.request.user.get_config("extras.job.display", "list")
+            else:
+                display = "list"
+                context.update(
+                    {
+                        "table_inc_template": "extras/inc/job_tiles.html"
+                        if display == "tiles"
+                        else "extras/inc/job_table.html",
+                        "display": display,
+                    }
+                )
+
         return context
 
 
