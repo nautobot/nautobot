@@ -206,3 +206,4 @@ class InterfaceConnectionTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = Interface
         fields = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
+        default_columns = ("device_a", "interface_a", "device_b", "interface_b", "reachable")

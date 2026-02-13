@@ -1,0 +1,4 @@
+Updated development npm dependency `autoprefixer` to `^10.4.24`.
+Updated development npm dependency `mini-css-extract-plugin` to `^2.10.0`.
+Updated development npm dependency `prettier` to `^3.8.1`.
+Updated development npm dependency `sass-loader` to `^16.0.7`.
