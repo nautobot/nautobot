@@ -627,18 +627,25 @@ jobs:
           registry: "ghcr.io"
           username: "${{ github.actor }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
-      - name: "Build `final`"
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+      - name: "Build Only Test (prod - final target)"
         uses: "./.github/actions/build-nautobot-image"
         with:
-          branch: "${{ github.head_ref }}"
-          image: "ghcr.io/nautobot/nautobot"
-          platforms: "linux/amd64"
-          push: "false"
+          images: "ghcr.io/nautobot/nautobot"
           python-version: "3.13"
-          tag-latest: "false"
-          tag-latest-for-branch: "false"
-          tag-latest-for-py: "false"
+          platforms: "linux/amd64" # only build for amd64 in PRs to save on time/resources
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          push: false
           target: "final"
+          default-python-version: "3.13"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
   all-tests-passed:
     runs-on: "ubuntu-24.04"
     steps:
