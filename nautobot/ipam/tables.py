@@ -74,14 +74,15 @@ PREFIX_COPY_LINK = """
         {% endif %}
         {% if table_expandable|default:False %}
             {% if record.present_in_database and record.descendants_count %}
-                <span class="nb-subtree nb-subtree-expandable"
-                      hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
-                      hx-indicator="closest .table-responsive"
-                      hx-select=".table-responsive tr"
-                      hx-select-oob="none"
-                      hx-swap="afterend"
-                      hx-target="closest tr"
-                ></span>
+                <button class="nb-subtree nb-subtree-expandable"
+                        hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
+                        hx-indicator="closest .table-responsive"
+                        hx-select=".table-responsive tr"
+                        hx-select-oob="none"
+                        hx-swap="afterend"
+                        hx-target="closest tr"
+                        type="button"
+                ></button>
             {% else %}
                 {# placeholder for alignment with expandable rows #}
                 <span class="nb-subtree"></span>
