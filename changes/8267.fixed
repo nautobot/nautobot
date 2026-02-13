@@ -1,0 +1,1 @@
+Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.

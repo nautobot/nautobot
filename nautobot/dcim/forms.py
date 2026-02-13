@@ -4515,11 +4515,13 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(), to_field_name="name", required=False, null_option="None"
+    )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
+        to_field_name="name",
         required=False,
-        label="Rack",
         null_option="None",
         query_params={"location": "$location"},
     )
@@ -5186,9 +5188,10 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
         queryset=SecretsGroup.objects.all(),
         required=False,
     )
-    protocol = forms.ChoiceField(
-        choices=InterfaceRedundancyGroupProtocolChoices,
+    protocol = forms.MultipleChoiceField(
+        choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices),
         required=False,
+        widget=StaticSelect2Multiple(),
     )
 
     class Meta:
@@ -5845,7 +5848,6 @@ class VirtualDeviceContextFilterForm(
         "device",
         "status",
         "tenant",
-        "has_tenant",
         "has_primary_ip",
         "tags",
     ]
@@ -5864,11 +5866,6 @@ class VirtualDeviceContextFilterForm(
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
-    has_tenant = forms.NullBooleanField(
-        required=False,
-        label="Has Tenant",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
