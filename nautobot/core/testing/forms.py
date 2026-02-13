@@ -1,9 +1,9 @@
 from django.test import tag, TestCase
 
 from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
+from nautobot.core.forms import EmbeddedActionsFormMixin
 from nautobot.core.forms.fields import DynamicModelChoiceField, DynamicModelChoiceMixin, DynamicModelMultipleChoiceField
 from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.extras.forms import EmbeddedActionsFormMixin
 
 
 # TODO(timizuo): All Form Test cases should inherit from FormTestCases
