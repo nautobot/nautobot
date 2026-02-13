@@ -46,6 +46,15 @@ def settings(request):
     }
 
 
+class NavMenuDict(dict):
+    """Because this is a large dictionary, it tends to flood the Django debug toolbar with its contents."""
+
+    def __repr__(self):
+        if django_settings.DEBUG:
+            return "<NavMenu dict>"
+        return super().__repr__()
+
+
 def nav_menu(request):
     """
     Expose nav menu data for navigation and global search.
@@ -79,7 +88,7 @@ def nav_menu(request):
         except (NoReverseMatch, ValueError):
             pass
 
-    nav_menu_object = {"tabs": {}}
+    nav_menu_object = NavMenuDict({"tabs": {}})
 
     if htmx_current_url := request.headers.get("HX-Current-URL"):
         current_url = urlparse(htmx_current_url).path
