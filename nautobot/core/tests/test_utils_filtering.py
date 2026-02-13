@@ -1,4 +1,3 @@
-
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
