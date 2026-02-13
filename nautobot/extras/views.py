@@ -10,12 +10,14 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
-from django.template.loader import get_template, TemplateDoesNotExist
+from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
+from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -133,6 +135,7 @@ from .models import (
     ImageAttachment,
     Job as JobModel,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobQueue,
     JobResult,
@@ -2790,7 +2793,7 @@ class JobResultUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
+        if self.action in ["retrieve", "job_console_entries"]:
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
@@ -2842,6 +2845,84 @@ class JobResultUIViewSet(
         RequestConfig(request, paginate).configure(log_table)
 
         return HttpResponse(log_table.as_html(request))
+
+    @action(
+        detail=True,
+        url_path="job-console-entries",
+        url_name="job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
+    )
+    def job_console_entries(self, request, pk=None):
+        """Display real-time console logs with live streaming for running jobs."""
+        job_result = self.get_object()
+
+        # Handle HTMX polling for new log entries
+        if request.headers.get("HX-Request"):
+            response = self._handle_console_poll(request, job_result)
+        else:
+            entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+            # Get last entry timestamp for polling initialization
+            last_entry = entries.last()
+
+            context = self.get_extra_context(request, job_result)
+            context.update(
+                {
+                    "object": job_result,
+                    "verbose_name": helpers.bettertitle(job_result._meta.verbose_name),
+                    "verbose_name_plural": job_result._meta.verbose_name_plural,
+                    "list_url": "extras:jobresult_list",
+                    "entries": entries,
+                    "breadcrumbs": self.get_breadcrumbs(),
+                    "view_action": "detail",
+                    "job_is_pending": self._is_job_pending(job_result),
+                    "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
+                }
+            )
+            response = render(request, "extras/jobresult_retrieve_console_log.html", context)
+
+        patch_vary_headers(response, ["HX-Request"])
+        return response
+
+    def _is_job_pending(self, job_result) -> bool:
+        """Check if job has finished execution."""
+        return job_result.status in JobResultStatusChoices.UNREADY_STATES
+
+    def _handle_console_poll(self, request, job_result) -> HttpResponse:
+        """Handle HTMX polling request and return new log entries as HTML."""
+        last_timestamp_str = request.GET.get("last_timestamp", "")
+        new_entries = JobConsoleEntry.objects.none()
+
+        # Fetch new entries since last timestamp
+        if last_timestamp_str:
+            try:
+                last_timestamp = parse_datetime(last_timestamp_str)
+                # Raise ValueError if the input is well formatted but not a valid datetime.
+                # Return None if the input isn't well formatted.
+                if not last_timestamp:
+                    raise ValueError
+            except ValueError:
+                msg = "Invalid timestamp: {}"
+                return HttpResponseBadRequest(format_html(msg, last_timestamp_str))
+
+            new_entries = JobConsoleEntry.objects.restrict(user=request.user).filter(
+                job_result=job_result, timestamp__gt=last_timestamp
+            )
+
+        job_is_pending = self._is_job_pending(job_result)
+
+        if not new_entries.exists() and job_is_pending:
+            return HttpResponse(status=204)
+
+        context = {
+            "entries": new_entries,
+            "job_result": job_result,
+            "job_is_pending": job_is_pending,
+        }
+        html_content = render_to_string("extras/inc/jobresult_console_log_response.html", context)
+
+        return HttpResponse(html_content, content_type="text/html; charset=utf-8")
 
 
 #
