@@ -400,6 +400,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
     attrs = {"td": {"class": "text-right text-nowrap noprint"}}
     # Note that braces are escaped to allow for string formatting prior to template rendering
     template_code = """
+    {{% if record.present_in_database %}}
     {{% if "changelog" in buttons %}}
         <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="btn btn-default btn-xs" title="Change log">
             <i class="mdi mdi-history"></i>
@@ -414,6 +415,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="btn btn-xs btn-danger" title="Delete">
             <i class="mdi mdi-trash-can-outline"></i>
         </a>
+    {{% endif %}}
     {{% endif %}}
     """
 
