@@ -56,6 +56,7 @@ def check_filter_for_display(filters, field_name, values):
             - values: (list) List of dictionaries with the same `name` and `display` keys
     """
     values = values if isinstance(values, (list, tuple)) else [values]
+    values = [v if v != "null" else None for v in values]
 
     resolved_filter = {
         "name": field_name,

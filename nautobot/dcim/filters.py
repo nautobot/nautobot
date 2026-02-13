@@ -1428,15 +1428,66 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="_termination_a_device_id",
         label="Device (ID)",
     )
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
-    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
-    location = MultiValueCharFilter(
-        method="filter_device", field_name="device__location__name", label="Location (name)"
+    device = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Device.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device",
+            label="Device (name)",
+        )
     )
-    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
+    rack_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (ID)",
+        )
+    )
+    rack = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (name)",
+        )
+    )
+    location_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            method="filter_device",
+            field_name="device__location",
+            label="Location (ID)",
+        )
+    )
+    location = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__location",
+            label="Location (name)",
+        )
+    )
+    tenant_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (ID)",
+        )
+    )
+    tenant = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (name)",
+        )
+    )
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
@@ -1467,9 +1518,23 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        queryset = queryset.filter(
-            Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
-        )
+        has_null = any(v == "null" for v in value)
+        value = [v for v in value if v != "null"]
+        if value and has_null:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__in": value})
+                | Q(**{f"_termination_b_{name}__in": value})
+                | Q(**{f"_termination_a_{name}__isnull": True})
+                | Q(**{f"_termination_b_{name}__isnull": True})
+            )
+        elif value:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
+            )
+        elif has_null:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__isnull": True}) | Q(**{f"_termination_b_{name}__isnull": True})
+            )
         return queryset
 
     def generate_query_filter_device_id(self, value):
