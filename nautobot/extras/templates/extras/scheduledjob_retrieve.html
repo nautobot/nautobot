@@ -6,13 +6,6 @@
 {% load plugins %}
 {% load tz %}
 
-{% block extra_buttons %}
-    {% plugin_buttons object %}
-    {% if user|can_delete:object %}
-        {% delete_button object %}
-    {% endif %}
-{% endblock extra_buttons %}
-
 {% block content %}
     {% if not job_class_found %}
         <div class="alert alert-danger">
@@ -23,6 +16,16 @@
     {% endif %}
     {{ block.super }}
 {% endblock content %}
+
+{% block extra_nav_tabs %}
+    {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.exists %}
+        {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
+            <li class="nav-item" role="presentation">
+                <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %}">Approval Workflow</a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endblock extra_nav_tabs %}
 
 {% block content_left_page %}
     <div class="card">
@@ -63,15 +66,9 @@
                 <td>{{ object.approval_required | render_boolean }}</td>
             </tr>
             <tr>
-                <td>Approver</td>
+                <td>Decision Date</td>
                 <td>
-                    {{ object.approved_by_user | placeholder }}
-                </td>
-            </tr>
-            <tr>
-                <td>Approved At</td>
-                <td>
-                    {{ object.approved_at | placeholder }}
+                    {{ object.decision_date | placeholder }}
                 </td>
             </tr>
         </table>
@@ -132,8 +129,7 @@
             </tr>
         </table>
     </div>
-{% endblock content_left_page %}
-
+{% endblock %}
 {% block content_right_page %}
     {% if job_class_found %}
         <div class="card">
@@ -147,7 +143,9 @@
                         <td>{% if value is None %}–{% else %}<code>{{ value }}</code>{% endif %}</td>
                     </tr>
                 {% empty %}
-                    <tr><td>—</td></tr>
+                    <tr>
+                        <td><span class="text-secondary">&mdash;</span></td>
+                    </tr>
                 {% endfor %}
             </table>
         </div>
@@ -160,4 +158,4 @@
             {% include 'extras/inc/json_data.html' with data=object.celery_kwargs format="json" %}
         </div>
     </div>
-{% endblock content_right_page %}
+{% endblock %}

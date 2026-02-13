@@ -3051,10 +3051,8 @@ class ScheduledJobUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action != "retrieve":
-            return context
-        if instance is None:
-            return context
+
+        # Add job class labels
         job_class = get_job(instance.task)
         labels = {}
         if job_class is not None:
@@ -3066,6 +3064,26 @@ class ScheduledJobUIViewSet(
                 "labels": labels,
                 "job_class_found": (job_class is not None),
                 "default_time_zone": get_current_timezone(),
+            }
+        )
+
+        # Add approval workflow table
+        approval_workflows = instance.associated_approval_workflows.all()
+        approval_workflows_count = approval_workflows.count()
+        approval_workflow_table = tables.ApprovalWorkflowTable(
+            data=approval_workflows,
+            user=request.user,
+            exclude=["object_under_review", "object_under_review_content_type"],
+        )
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(approval_workflow_table)
+
+        context.update(
+            {
+                "approval_workflows_count": approval_workflows_count,
+                "approval_workflow_table": approval_workflow_table,
             }
         )
 
