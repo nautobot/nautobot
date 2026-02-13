@@ -83,7 +83,11 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            "python_ver": "3.14",
+            # Sticking with 3.13 rather than 3.14 as our default for now, because Django 5.2's test runner doesn't
+            # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+            # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+            # https://code.djangoproject.com/ticket/36531
+            "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),

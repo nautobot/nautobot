@@ -327,7 +327,11 @@ jobs:
       - "djhtml"
       - "djlint"
   tests-mysql-plus-coverage:
-    name: "Unit tests (MySQL and Python 3.14) plus test coverage reporting"
+    # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+    # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+    # https://code.djangoproject.com/ticket/36531
+    name: "Unit tests (MySQL and Python 3.13) plus test coverage reporting"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -362,7 +366,11 @@ jobs:
         with:
           poetry-install-options: "--extras=mysql --extras=remote_storage"
           poetry-version: "2.1.4"
-          python-version: "3.14"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
+          python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
       - name: "Generate coverage comment"
@@ -398,7 +406,11 @@ jobs:
       - "djhtml"
       - "djlint"
   # tests-doltsql:
-  #   name: "Unit tests (DoltSQL and Python 3.14)"
+  #   # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+  #   # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+  #   # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+  #   # https://code.djangoproject.com/ticket/36531
+  #   name: "Unit tests (DoltSQL and Python 3.13)"
   #   runs-on: "ubuntu-24.04"
   #   env:
   #     INVOKE_NAUTOBOT_LOCAL: "True"
@@ -430,7 +442,11 @@ jobs:
   #       with:
   #         poetry-install-options: "--extras mysql"
   #         poetry-version: "2.1.4"
-  #         python-version: "3.14"
+  #         # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+  #         # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+  #         # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+  #         # https://code.djangoproject.com/ticket/36531
+  #         python-version: "3.13"
   #     - name: "Run unittest"
   #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-parallel"
   #   needs:
@@ -565,7 +581,11 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.14"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
+          python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
