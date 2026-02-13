@@ -2874,7 +2874,6 @@ class JobResultUIViewSet(
                     "verbose_name_plural": job_result._meta.verbose_name_plural,
                     "list_url": "extras:jobresult_list",
                     "entries": entries,
-                    "base_template": "extras/jobresult_retrieve.html",
                     "breadcrumbs": self.get_breadcrumbs(),
                     "view_action": "detail",
                     "job_is_pending": self._is_job_pending(job_result),
