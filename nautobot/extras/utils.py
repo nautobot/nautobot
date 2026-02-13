@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import logging
 import re
+import socket
 import sys
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -33,6 +34,7 @@ from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
+    JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
 from nautobot.extras.constants import (
@@ -41,6 +43,7 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
 
 if TYPE_CHECKING:
@@ -668,12 +671,123 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
+def detect_current_kubernetes_image():
+    """Using the kubernetes API, detect the current image for the pod we are running in."""
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    with open(settings.KUBERNETES_TOKEN_PATH, "r", encoding="utf-8") as token_file:
+        token = token_file.read().strip()
+    configuration.api_key_prefix["authorization"] = "Bearer"
+    configuration.api_key["authorization"] = token
+    namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    hostname = socket.gethostname()
+    with kubernetes.client.ApiClient(configuration) as api_client:
+        api_instance = kubernetes.client.CoreV1Api(api_client)
+        try:
+            pods = api_instance.list_namespaced_pod(namespace, field_selector=f"metadata.name={hostname}")
+        except kubernetes.client.ApiException as err:
+            if err.status == 403:
+                raise KubernetesJobManifestError(
+                    "Permission error listing namespaced pod. Please verify the service account has the proper Role and RoleBinding."
+                ) from err
+            raise KubernetesJobManifestError("Error listing namespaced pod.") from err
+        if pods.items:
+            return pods.items[0].spec.containers[0].image
+        return None
+
+
+def easy_mode_kubernetes_job_manifest():
+    """Generate a kubernetes job manifest for a Nautobot job."""
+    container_image = detect_current_kubernetes_image()
+    if not container_image:
+        raise KubernetesJobManifestError("No container image found")
+    manifest = {
+        "apiVersion": "batch/v1",
+        "kind": "Job",
+        "metadata": {
+            "name": settings.KUBERNETES_JOB_POD_NAME,
+        },
+        "spec": {
+            "backoffLimit": 0,
+            "ttlSecondsAfterFinished": 5,
+            "template": {
+                "spec": {
+                    "restartPolicy": "Never",
+                    "containers": [
+                        {
+                            "name": "nautobot-job",
+                            "image": container_image,
+                            "tty": True,
+                            "ports": [
+                                {
+                                    "containerPort": 8080,
+                                    "protocol": "TCP",
+                                }
+                            ],
+                            "envFrom": [
+                                {
+                                    "configMapRef": {
+                                        "name": "nautobot-env",
+                                    }
+                                }
+                            ],
+                            "env": [
+                                {
+                                    "name": "NAUTOBOT_DB_PASSWORD",
+                                    "valueFrom": {
+                                        "secretKeyRef": {
+                                            "name": "nautobot-postgresql",
+                                            "key": "password",
+                                        }
+                                    },
+                                },
+                                {
+                                    "name": "NAUTOBOT_REDIS_PASSWORD",
+                                    "valueFrom": {
+                                        "secretKeyRef": {
+                                            "name": "nautobot-redis",
+                                            "key": "redis-password",
+                                        }
+                                    },
+                                },
+                            ],
+                            "volumeMounts": [
+                                {
+                                    "name": "nautobot-media",
+                                    "mountPath": "/opt/nautobot/media",
+                                }
+                            ],
+                        }
+                    ],
+                    "volumes": [
+                        {
+                            "name": "nautobot-media",
+                            "persistentVolumeClaim": {
+                                "claimName": "nautobot-media",
+                            },
+                        }
+                    ],
+                }
+            },
+        },
+    }
+    return manifest
+
+
+def get_kubernetes_job_manifest():
+    """Get the kubernetes job manifest."""
+    if settings.KUBERNETES_JOB_MANIFEST:
+        return copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    return easy_mode_kubernetes_job_manifest()
+
+
 def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
     """
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_manifest = get_kubernetes_job_manifest()
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     pod_token = settings.KUBERNETES_TOKEN_PATH
 
@@ -701,7 +815,22 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         with kubernetes.client.ApiClient(configuration) as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
-            api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+            try:
+                api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
+            except kubernetes.client.ApiException as err:
+                if err.status == 403:
+                    job_result.log(
+                        f"Permission denied creating a job in namespace {pod_namespace}. Please verify the service account has the proper Role and RoleBinding.",
+                        level_choice="error",
+                    )
+                else:
+                    job_result.log(
+                        f"Error creating job in namespace {pod_namespace}: {err}",
+                        level_choice="error",
+                    )
+                job_result.set_status(JobResultStatusChoices.STATUS_FAILURE)
+                job_result.save()
+                return
 
     transaction.on_commit(create_kubernetes_job)
     return job_result
