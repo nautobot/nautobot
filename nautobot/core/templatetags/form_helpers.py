@@ -11,7 +11,7 @@ def render_field(context, field, bulk_nullable=False):
     field_instance = getattr(field, "field", None)
     embedded_create = getattr(field_instance, "embedded_create", False)
     embedded_search = getattr(field_instance, "embedded_search", False)
-    is_embedded = context.request.GET.get("embedded", None) == "true"
+    is_embedded = context.request.headers.get("HX-Request", False) == "true"
     has_embedded_create_permissions = context.request.user.has_perms(
         getattr(field_instance, "embedded_create_permissions", [])
     )
