@@ -1645,7 +1645,6 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
 class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
-    q = SearchFilter(filter_predicates={"name": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),

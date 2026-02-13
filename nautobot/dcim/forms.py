@@ -5176,9 +5176,10 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
         queryset=SecretsGroup.objects.all(),
         required=False,
     )
-    protocol = forms.ChoiceField(
+    protocol = forms.MultipleChoiceField(
         choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices),
         required=False,
+        widget=StaticSelect2Multiple()
     )
 
     class Meta:
