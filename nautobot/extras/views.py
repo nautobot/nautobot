@@ -2667,6 +2667,9 @@ class ScheduledJobUIViewSet(
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
+        if self.action != "retrieve" and not instance:
+            return context
+
         # Add job class labels
         job_class = get_job(instance.task)
         labels = {}
