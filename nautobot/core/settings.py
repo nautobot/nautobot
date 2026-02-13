@@ -133,12 +133,18 @@ if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JO
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# Default filters for Location list view
+if (
+    "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
+
 # `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
 # Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
 if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
     LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
-
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
@@ -806,6 +812,14 @@ CONSTANCE_CONFIG = {
         ),
         field_type=int,
     ),
+    "LOCATION_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Location list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -921,6 +935,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": [
         "JOB_CREATE_FILE_MAX_SIZE",
+        "LOCATION_LIST_DEFAULT_MAX_DEPTH",
         "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
         "PREFIX_LIST_DEFAULT_MAX_DEPTH",
     ],

@@ -1,0 +1,3 @@
+Added `max_depth` filter support to the Location list view.
+Added `max_depth` filter to the Location basic filter form.
+Added support for the setting/Constance variable `LOCATION_LIST_DEFAULT_MAX_DEPTH`. Configuring this may improve the performance of the Location list view at scale.

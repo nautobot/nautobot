@@ -416,7 +416,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "max_depth", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
@@ -424,6 +424,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    max_depth = forms.IntegerField(required=False, help_text="Maximum nesting depth within parent locations")
     tags = TagFilterField(model)
 
 
