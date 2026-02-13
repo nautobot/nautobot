@@ -1367,7 +1367,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         scope_filter_data_filtered = {
             field_name: values
             for field_name, values in scope_filter_data.items()
-            if field_name.startswith("scope") and values not in ("", None, [], [""])
+            if field_name.startswith("scope") and values not in ("", None, [], [""], ())
         }
 
         filterset_class = get_filterset_for_model(model_class)
@@ -1382,7 +1382,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             # To avoid input name collision between scope filter fields and standard custom field form
             # we're prefixing all the fields and need to remove this prefix below to properly check fields
             check_filter_for_display(filterset.filters, field_name[6:], values)
-            for field_name, values in scope_filter_data_filtered
+            for field_name, values in scope_filter_data_filtered.items()
         ]
         dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
 
