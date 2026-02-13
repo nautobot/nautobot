@@ -1,1 +1,1 @@
-Updated the logic that determines which nav menu item is marked 'active' to always prefer exact url matches before falling back to introspecting the view and model.
+Updated the logic that determines which nav menu item is marked "active" to always prefer exact URL matches before falling back to introspecting the view and model.
