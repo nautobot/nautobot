@@ -5179,7 +5179,7 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     protocol = forms.MultipleChoiceField(
         choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices),
         required=False,
-        widget=StaticSelect2Multiple()
+        widget=StaticSelect2Multiple(),
     )
 
     class Meta:
