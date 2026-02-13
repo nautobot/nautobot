@@ -74,9 +74,11 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         # 10.0.0.0/16 is first...
         self.assertEqual(self.browser.find_by_tag("tr")[1].find_by_tag("a").first.text, "10.0.0.0/16")
         # ...and it has an expandable caret
-        self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("span").first.has_class("nb-subtree-expandable"))
-        self.browser.find_by_tag("tr")[1].find_by_tag("span").first.click()
-        self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("span").first.has_class("nb-subtree-expanded"))
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[1].find_by_tag("button").first.has_class("nb-subtree-expandable")
+        )
+        self.browser.find_by_tag("tr")[1].find_by_tag("button").first.click()
+        self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("button").first.has_class("nb-subtree-expanded"))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 3)  # header + 2 prefixes
 
         # 10.0.0.0/24 is second...
@@ -86,9 +88,11 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
             self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-no-next-sibling")
         )
         # ...and it has an expandable caret
-        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].has_class("nb-subtree-expandable"))
-        self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].click()
-        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("span")[1].has_class("nb-subtree-expanded"))
+        self.assertTrue(
+            self.browser.find_by_tag("tr")[2].find_by_tag("button").first.has_class("nb-subtree-expandable")
+        )
+        self.browser.find_by_tag("tr")[2].find_by_tag("button").first.click()
+        self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("button").first.has_class("nb-subtree-expanded"))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 4)  # header + 3 prefixes
 
         # 10.0.0.0/30 is third...
