@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
@@ -31,7 +32,7 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("job-results", views.JobResultUIViewSet)
-router.register("jobs/scheduled-jobs", views.ScheduledJobUIViewSet)
+router.register("scheduled-jobs", views.ScheduledJobUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-changes", views.ObjectChangeUIViewSet)
 router.register("notes", views.NoteUIViewSet)
@@ -80,6 +81,22 @@ urlpatterns = [
     ),
     # Jobs
     path("jobs/", views.JobListView.as_view(), name="job_list"),
+    path("jobs/scheduled-jobs/", RedirectView.as_view(url="/extras/scheduled-jobs/"), name="scheduledjob_list_legacy"),
+    path(
+        "jobs/scheduled-jobs/<uuid:pk>/",
+        RedirectView.as_view(url="/extras/scheduled-jobs/%(pk)s/"),
+        name="scheduledjob_legacy",
+    ),
+    path(
+        "jobs/scheduled-jobs/<uuid:pk>/delete/",
+        RedirectView.as_view(url="/extras/scheduled-jobs/%(pk)s/delete/"),
+        name="scheduledjob_delete_legacy",
+    ),
+    path(
+        "jobs/scheduled-jobs/delete/",
+        RedirectView.as_view(url="/extras/scheduled-jobs/delete/"),
+        name="scheduledjob_bulk_delete_legacy",
+    ),
     path(
         "jobs/<uuid:pk>/",
         views.JobView.as_view(),
