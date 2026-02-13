@@ -81,89 +81,90 @@ For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on you
 
 ## Multi Processing Notes
 
-When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI workers) the Prometheus client library requires the use of a shared directory to collect metrics from all worker processes. To configure this, first create or designate a local directory to which the worker processes have read and write access, and then configure your WSGI service (e.g. uWSGI) to define this path as the `prometheus_multiproc_dir` environment variable. Since the files stored in the designated directory are not meant to be long-lived, it is recommended to use a temporary directory such as `/tmp/nautobot_prometheus` or an `emptyDir` in Kubernetes environments for this purpose. This directory must be wiped between process runs (before startup is recommended). Another approach is to use a "script" to do it through a uwsgi hook before Workers accept requests. As an example:
+When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI workers) the Prometheus client library requires the use of a shared directory to collect metrics from all worker processes. To configure this, first create or designate a local directory to which the worker processes have read and write access, and then configure your WSGI service (e.g. uWSGI) to define this path as the `prometheus_multiproc_dir` environment variable.
 
-```
+Since the files stored in the designated directory are not meant to be long-lived, it is recommended to use a temporary directory such as `/tmp/nautobot_prometheus` or an `emptyDir` in Kubernetes environments for this purpose. This directory must be wiped between process runs (before startup is recommended). Another approach is to use a "script" to do it through a uwsgi hook before Workers accept requests. As an example:
+
+```ini
 ; uwsgi.ini
 ; Before first worker starts accept request
 hook-accepting1 = exec:bash -c 'if [[ $prometheus_multiproc_dir ]]; then rm $prometheus_multiproc_dir/*.db; else echo "No prometheus multi_proc_dir"; fi'
 ```
 
-
 The downside of this is that you will have to ensure that this directory is cleaned up on a regular basis, as the Prometheus client library will create a separate file for each metric type within each worker process, and these files are not automatically removed which in turn, under certain conditions, may lead to degradation of performance over time. You can use a cron job or similar scheduled task to periodically clean up this directory, for example:
 
 1. Create a Python script that scans the multiproc directory and removes files belonging to PIDs that are no longer running.
 
-   ```python
-   import os
-   import re
-   import shutil
-   import time
-   import uwsgi
-   from prometheus_client import multiprocess
+    ```python
+    import os
+    import re
+    import shutil
+    import time
+    import uwsgi
+    from prometheus_client import multiprocess
 
     # Minimum age of files to consider for cleanup (e.g., 1 hour)
     MIN_AGE_SECONDS = 3600
 
-   def cleanup_orphaned_prom_metric_files(metrics_dir):
-       """
-       Scans the multiproc directory and removes files
-       belonging to PIDs that are no longer running.
-       """
-       if not os.path.exists(metrics_dir):
-           return
+    def cleanup_orphaned_prom_metric_files(metrics_dir):
+        """
+        Scans the multiproc directory and removes files
+        belonging to PIDs that are no longer running.
+        """
+        if not os.path.exists(metrics_dir):
+            return
 
-       # Pattern to find PIDs in filenames (e.g., gauge_multiproc_123.db)
-       pid_pattern = re.compile(r'.+_(\d+)\.db$')
+        # Pattern to find PIDs in filenames (e.g., gauge_multiproc_123.db)
+        pid_pattern = re.compile(r'.+_(\d+)\.db$')
 
-       # Get list of currently running PIDs
-       active_pids = set()
-       for pid in os.listdir('/proc'):
-           if pid.isdigit():
-               active_pids.add(int(pid))
+        # Get list of currently running PIDs
+        active_pids = set()
+        for pid in os.listdir('/proc'):
+            if pid.isdigit():
+                active_pids.add(int(pid))
 
-       for filename in os.listdir(metrics_dir):
-           match = pid_pattern.match(filename)
-           if match:
-             try:
-               file_pid = int(match.group(1))
-             except ValueError:
-               continue
+        for filename in os.listdir(metrics_dir):
+            match = pid_pattern.match(filename)
+            if match:
+                try:
+                    file_pid = int(match.group(1))
+                except ValueError:
+                    continue
 
-               # If the PID from the file is not in the active PID list
-               # Only consider files older than 1 hour to avoid race conditions
-               file_path = os.path.join(metrics_dir, filename)
-               file_mtime = os.path.getmtime(file_path)
-               file_age_seconds = time.time() - file_mtime
-               if (file_pid not in active_pids) and (file_age_seconds > MIN_AGE_SECONDS):
-                   try:
-                       # 1. Tell the client to "forget" the process
-                       multiprocess.mark_process_dead(file_pid)
-                       # 2. Delete the physical file
-                       os.remove(file_path)
-                       print(f"Cleaned up orphaned metric file: {filename}")
-                   except OSError as e:
-                       print(f"Error deleting {filename}: {e}")
+                # If the PID from the file is not in the active PID list
+                # Only consider files older than 1 hour to avoid race conditions
+                file_path = os.path.join(metrics_dir, filename)
+                file_mtime = os.path.getmtime(file_path)
+                file_age_seconds = time.time() - file_mtime
+                if (file_pid not in active_pids) and (file_age_seconds > MIN_AGE_SECONDS):
+                    try:
+                        # 1. Tell the client to "forget" the process
+                        multiprocess.mark_process_dead(file_pid)
+                        # 2. Delete the physical file
+                        os.remove(file_path)
+                        print(f"Cleaned up orphaned metric file: {filename}")
+                    except OSError as e:
+                        print(f"Error deleting {filename}: {e}")
 
-   # Schedule this script to run at regular intervals using uWSGI's `timer` feature.
-   def cleanup_timer(signum):
-       cleanup_orphaned_prom_metric_files(os.getenv('prometheus_multiproc_dir'))
+    # Schedule this script to run at regular intervals using uWSGI's `timer` feature.
+    def cleanup_timer(signum):
+        cleanup_orphaned_prom_metric_files(os.getenv('prometheus_multiproc_dir'))
 
-   # Register only on the first worker to avoid multiple workers trying to clean up at the same time
-   if uwsgi.worker_id() == 0:
-       uwsgi.register_signal(99, "", cleanup_timer)
-       uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
+    # Register only on the first worker to avoid multiple workers trying to clean up at the same time
+    if uwsgi.worker_id() == 0:
+        uwsgi.register_signal(99, "", cleanup_timer)
+        uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
 
-   ```
+    ```
 
 2. Copy the file to a specific path (eg. `/opt/nautobot/media/prometheus_cleanup.py`) and import it from uwsgi.ini file.
 
-   ```ini
-   pythonpath = /opt/nautobot/media
-   py-import = prometheus_cleanup
-   ```
+    ```ini
+    pythonpath = /opt/nautobot/media
+    py-import = prometheus_cleanup
+    ```
 
-The implementation described above is a mere example. The same functionality can be achieved with a different approach, for example by using a separate script that is executed by a cron job or similar scheduled task instead of using uWSGI's `timer` feature. The important part is to ensure that the cleanup process is running at regular intervals to prevent the accumulation of orphaned metric files.
+The implementation described above is a mere example. The same functionality can be achieved with a different approach, for example by using a separate script that is executed by a cron job or similar scheduled task instead of using uWSGI's `timer` feature. Another interesting approach would be to introduce uWSGI mules ([documentation](https://uwsgi.readthedocs.io/en/latest/Mules.html)) to avoid interrupting the main uwsgi process. The important part is to ensure that the cleanup process is running at regular intervals to prevent the accumulation of orphaned metric files.
 
 Relevant documentation:
 
