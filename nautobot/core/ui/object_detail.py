@@ -79,7 +79,12 @@ class ObjectDetailContent:
     A legacy `ObjectView` can similarly define its own `object_detail_content` attribute as well.
     """
 
-    def __init__(self, *, panels=(), layout=LayoutChoices.DEFAULT, extra_buttons=None, extra_tabs=None):
+    layout = LayoutChoices.DEFAULT
+    panels = ()
+    _extra_buttons = []
+    extra_tabs = []
+
+    def __init__(self, *, panels=None, layout=None, extra_buttons=None, extra_tabs=None):
         """
         Create an ObjectDetailContent with a "main" tab and all standard "extras" tabs (advanced, contacts, etc.).
 
@@ -92,10 +97,18 @@ class ObjectDetailContent:
             extra_tabs (list): Optional list of `Tab` instances. Standard `extras` Tabs (advanced, contacts,
                 dynamic-groups, metadata, etc.) do not need to be specified as they will be automatically included.
         """
+        if layout is not None:
+            self.layout = layout
+        if panels is not None:
+            self.panels = panels
+        if extra_buttons is not None:
+            self.extra_buttons = extra_buttons
+        if extra_tabs is not None:
+            self.extra_tabs = extra_tabs
         tabs = [
             _ObjectDetailMainTab(
-                layout=layout,
-                panels=panels,
+                layout=self.layout,
+                panels=self.panels,
             ),
             # Inject "standard" extra tabs
             _ObjectDetailAdvancedTab(),
@@ -104,9 +117,7 @@ class ObjectDetailContent:
             _ObjectDetailMetadataTab(),
             _ObjectDetailDataComplianceTab(),
         ]
-        if extra_tabs is not None:
-            tabs.extend(extra_tabs)
-        self.extra_buttons = extra_buttons or []
+        tabs.extend(self.extra_tabs)
         self.tabs = tabs
 
     @property
@@ -133,12 +144,7 @@ class Component:
 
     required_permissions = []
 
-    def __init__(
-        self,
-        *,
-        weight,
-        required_permissions=None,
-    ):
+    def __init__(self, **kwargs):
         """Initialize common Component properties.
 
         Args:
@@ -147,9 +153,10 @@ class Component:
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
                 The component will only be rendered if the user has these permissions.
         """
-        self.weight = weight
-        if required_permissions is not None:
-            self.required_permissions = required_permissions
+        for name, value in kwargs.items():
+            setattr(self, name, value)
+        if not hasattr(self, "weight"):
+            raise TypeError("weight is required")
 
     def should_render(self, context: Context):
         """
@@ -193,22 +200,18 @@ class Component:
 class Button(Component):
     """Base class for UI framework definition of a single button within an Object Detail (Object Retrieve) page."""
 
-    def __init__(
-        self,
-        *,
-        label,
-        color=ButtonColorChoices.DEFAULT,
-        link_name=None,
-        icon=None,
-        template_path="components/button/default.html",
-        javascript_template_path=None,
-        attributes=None,
-        size=None,
-        link_includes_pk=True,
-        context_object_key=None,
-        render_on_tab_id="main",
-        **kwargs,
-    ):
+    color = ButtonColorChoices.DEFAULT
+    template_path = "components/button/default.html"
+    render_on_tab_id = "main"
+    link_name = None
+    icon = None
+    javascript_template_path = None
+    attributes = None
+    size = None
+    link_includes_pk = True
+    context_object_key = None
+
+    def __init__(self, **kwargs):
         """
         Initialize a Button component.
 
@@ -228,18 +231,9 @@ class Button(Component):
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
             render_on_tab_id (str, optional): The (only) tab that this button should appear on.
         """
-        self.label = label
-        self.color = color
-        self.link_name = link_name
-        self.icon = icon
-        self.template_path = template_path
-        self.javascript_template_path = javascript_template_path
-        self.attributes = attributes
-        self.size = size
-        self.link_includes_pk = link_includes_pk
-        self.context_object_key = context_object_key
-        self.render_on_tab_id = render_on_tab_id
         super().__init__(**kwargs)
+        if not hasattr(self, "label"):
+            raise TypeError("label is required")
 
     def get_link(self, context: Context):
         """
@@ -292,15 +286,19 @@ class Button(Component):
 class DropdownButton(Button):
     """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
 
-    def __init__(self, children: list[Button], template_path="components/button/dropdown.html", **kwargs):
+    template_path = "components/button/dropdown.html"
+    children: list[Button]
+
+    def __init__(self, **kwargs):
         """Initialize a DropdownButton component.
 
         Args:
             children (list[Button]): Elements of the dropdown menu associated to this DropdownButton.
             template_path (str): Dropdown-specific template file.
         """
-        self.children = children
-        super().__init__(template_path=template_path, **kwargs)
+        super().__init__(**kwargs)
+        if not hasattr(self, "children"):
+            raise TypeError("children is required")
 
     def get_extra_context(self, context: Context):
         """Add the children of this DropdownButton to the other Button context."""
@@ -311,14 +309,11 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
-    def __init__(
-        self,
-        form_id: str,
-        link_name: str,
-        render_on_tab_id="__all__",
-        template_path="components/button/formbutton.html",
-        **kwargs,
-    ):
+    render_on_tab_id = "__all__"
+    template_path = "components/button/formbutton.html"
+    form_id: str
+
+    def __init__(self, **kwargs):
         """
         Initialize a FormButton instance.
 
@@ -328,16 +323,13 @@ class FormButton(Button):
                 `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
                 and override the `get_link()` method.
         """
-        self.form_id = form_id
-        self.link_name = link_name
-
-        if not self.link_name:
-            raise ValueError("FormButton requires a 'link_name'.")
-
-        if not self.form_id:
-            raise ValueError("FormButton requires 'form_id' to be set in ObjectsTablePanel.")
-
-        super().__init__(link_name=link_name, render_on_tab_id=render_on_tab_id, template_path=template_path, **kwargs)
+        super().__init__(**kwargs)
+        if not hasattr(self, "form_id"):
+            raise TypeError("form_id is required")
+        if not hasattr(self, "link_name"):
+            raise TypeError("link_name is required")
+        if not hasattr(self, "form_id"):
+            raise TypeError("form_id is required")
 
     def get_extra_context(self, context: Context):
         return {
@@ -347,15 +339,12 @@ class FormButton(Button):
 
 
 class ExtraDetailViewActionButton(Button):
-    def __init__(
-        self,
-        action: str,
-        permission_check: Callable,
-        link_name: str,
-        label: str | None = None,
-        template_path="components/button/extradetailviewactionbutton.html",
-        **kwargs,
-    ):
+    template_path = "components/button/extradetailviewactionbutton.html"
+    action: str
+    permission_check: Callable
+    label = None
+
+    def __init__(self, **kwargs):
         """Represents an extra action button for detail views.
 
         Args:
@@ -367,11 +356,13 @@ class ExtraDetailViewActionButton(Button):
                 `reverse()` call when the button is rendered.
             template_path (str): Dropdown-specific template file.
         """
-        self.action = action
-        self.permission_check = permission_check
-        if not callable(permission_check):
-            raise TypeError(f"permission_check must be callable, got {type(permission_check).__name__}")
-        super().__init__(template_path=template_path, label=label, link_name=link_name, **kwargs)
+        super().__init__(**kwargs)
+        if not hasattr(self, "action"):
+            raise TypeError("action is required")
+        if not hasattr(self, "permission_check"):
+            raise TypeError("permission_check is required")
+        if not callable(self.permission_check):
+            raise TypeError(f"permission_check must be callable, got {type(self.permission_check).__name__}")
 
     def should_render(self, context: Context) -> bool:
         """Check if button should be rendered based on permissions."""
@@ -403,17 +394,12 @@ class ExtraDetailViewActionButton(Button):
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
-    def __init__(
-        self,
-        *,
-        tab_id,
-        label,
-        panels=(),
-        layout=LayoutChoices.DEFAULT,
-        label_wrapper_template_path="components/tab/label_wrapper.html",
-        content_wrapper_template_path="components/tab/content_wrapper.html",
-        **kwargs,
-    ):
+    layout = LayoutChoices.DEFAULT
+    panels = ()
+    label_wrapper_template_path = "components/tab/label_wrapper.html"
+    content_wrapper_template_path = "components/tab/content_wrapper.html"
+
+    def __init__(self, **kwargs):
         """Initialize a Tab component.
 
         Args:
@@ -424,13 +410,11 @@ class Tab(Component):
             label_wrapper_template_path (str): Template path to use for rendering the tab label to HTML.
             content_wrapper_template_path (str): Template path to use for rendering the tab contents to HTML.
         """
-        self.tab_id = tab_id
-        self.label = label
-        self.panels = panels
-        self.layout = layout
-        self.label_wrapper_template_path = label_wrapper_template_path
-        self.content_wrapper_template_path = content_wrapper_template_path
         super().__init__(**kwargs)
+        if not hasattr(self, "tab_id"):
+            raise TypeError("tab_id is required")
+        if not hasattr(self, "label"):
+            raise TypeError("label is required")
 
     LAYOUT_TEMPLATE_PATHS = {
         LayoutChoices.TWO_OVER_ONE: "components/layout/two_over_one.html",
@@ -527,19 +511,14 @@ class DistinctViewTab(Tab):
         hide_if_empty (bool, optional): Do not render this tab if the related_object_attribute is an empty queryset.
     """
 
-    def __init__(
-        self,
-        *,
-        url_name,
-        label_wrapper_template_path="components/tab/label_wrapper_distinct_view.html",
-        related_object_attribute="",
-        hide_if_empty=False,
-        **kwargs,
-    ):
-        self.url_name = url_name
-        self.related_object_attribute = related_object_attribute
-        self.hide_if_empty = hide_if_empty
-        super().__init__(label_wrapper_template_path=label_wrapper_template_path, **kwargs)
+    label_wrapper_template_path = "components/tab/label_wrapper_distinct_view.html"
+    related_object_attribute = ""
+    hide_if_empty = False
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not hasattr(self, "url_name"):
+            raise TypeError("url_name is required")
 
     def get_extra_context(self, context: Context):
         return {"url": reverse(self.url_name, kwargs={"pk": get_obj_from_context(context).pk})}
@@ -612,20 +591,7 @@ class Panel(Component):
     template_path = "components/panel/panel.html"
     body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
 
-    def __init__(
-        self,
-        *,
-        label=None,
-        css_class=None,
-        section=None,
-        body_id=None,
-        body_content_template_path=None,
-        header_extra_content_template_path=None,
-        footer_content_template_path=None,
-        template_path=None,
-        body_wrapper_template_path=None,
-        **kwargs,
-    ):
+    def __init__(self, **kwargs):
         """
         Initialize a Panel component that can be rendered as a self-contained HTML fragment.
 
@@ -642,24 +608,6 @@ class Panel(Component):
             body_wrapper_template_path (str): Template path to render the panel body, including both its "wrapper"
                 (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
         """
-        if label is not None:
-            self.label = label
-        if css_class is not None:
-            self.css_class = css_class
-        if section is not None:
-            self.section = section
-        if body_id is not None:
-            self.body_id = body_id
-        if body_content_template_path is not None:
-            self.body_content_template_path = body_content_template_path
-        if header_extra_content_template_path is not None:
-            self.header_extra_content_template_path = header_extra_content_template_path
-        if footer_content_template_path is not None:
-            self.footer_content_template_path = footer_content_template_path
-        if template_path is not None:
-            self.template_path = template_path
-        if body_wrapper_template_path is not None:
-            self.body_wrapper_template_path = body_wrapper_template_path
         super().__init__(**kwargs)
 
     def render(self, context: Context):
@@ -755,18 +703,14 @@ class DataTablePanel(Panel):
     A panel that renders a table generated directly from a list of dicts, without using a django_tables2 Table class.
     """
 
-    def __init__(
-        self,
-        *,
-        context_data_key,
-        columns=None,
-        context_columns_key=None,
-        column_headers=None,
-        context_column_headers_key=None,
-        body_wrapper_template_path="components/panel/body_wrapper_table.html",
-        body_content_template_path="components/panel/body_content_data_table.html",
-        **kwargs,
-    ):
+    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
+    body_content_template_path = "components/panel/body_content_data_table.html"
+    columns = None
+    context_columns_key = None
+    column_headers = None
+    context_column_headers_key = None
+
+    def __init__(self, **kwargs):
         """
         Instantiate a DataTablePanel.
 
@@ -783,21 +727,13 @@ class DataTablePanel(Panel):
             context_column_headers_key (str, optional): The key in the render context that stores the column headers.
                 Mutually exclusive with `column_headers`.
         """
-        self.context_data_key = context_data_key
-        if columns and context_columns_key:
+        super().__init__(**kwargs)
+        if not hasattr(self, "context_data_key"):
+            raise TypeError("context_data_key is required")
+        if self.columns and self.context_columns_key:
             raise ValueError("You can only specify one of `columns` or `context_columns_key`.")
-        self.columns = columns
-        self.context_columns_key = context_columns_key
-        if column_headers and context_column_headers_key:
+        if self.column_headers and self.context_column_headers_key:
             raise ValueError("You can only specify one of `column_headers` or `context_column_headers_key`.")
-        self.column_headers = column_headers
-        self.context_column_headers_key = context_column_headers_key
-
-        super().__init__(
-            body_wrapper_template_path=body_wrapper_template_path,
-            body_content_template_path=body_content_template_path,
-            **kwargs,
-        )
 
     def get_columns(self, context: Context):
         if self.columns:
@@ -838,41 +774,38 @@ class ObjectsTablePanel(Panel):
     Please check the Args list for further details.
     """
 
-    def __init__(
-        self,
-        *,
-        context_table_key=None,
-        table_class=None,
-        table_filter=None,
-        table_attribute=None,
-        distinct=False,
-        select_related_fields=None,
-        prefetch_related_fields=None,
-        order_by_fields=None,
-        # TODO: Is `table_title` redundant with the base Panel's `label`?
-        table_title=None,
-        max_display_count=None,
-        paginate=True,
-        show_table_config_button=True,
-        include_columns=None,
-        exclude_columns=None,
-        add_button_route="default",
-        add_permissions=None,
-        hide_hierarchy_ui=False,
-        related_field_name=None,
-        related_list_url_name=None,
-        enable_related_link=True,
-        enable_bulk_actions=False,
-        tab_id=None,
-        body_wrapper_template_path="components/panel/body_wrapper_table.html",
-        body_content_template_path="components/panel/body_content_objects_table.html",
-        header_extra_content_template_path="components/panel/header_extra_content_table.html",
-        footer_content_template_path="components/panel/footer_content_table.html",
-        footer_buttons=None,
-        form_id=None,
-        include_paginator=False,
-        **kwargs,
-    ):
+    context_table_key = None
+    table_class = None
+    table_filter = None
+    table_attribute = None
+    distinct = False
+    select_related_fields = None
+    prefetch_related_fields = None
+    order_by_fields = None
+    # TODO: Is `table_title` redundant with the base Panel's `label`
+    table_title = None
+    max_display_count = None
+    paginate = True
+    show_table_config_button = True
+    include_columns = None
+    exclude_columns = None
+    add_button_route = "default"
+    add_permissions = []
+    hide_hierarchy_ui = False
+    related_field_name = None
+    related_list_url_name = None
+    enable_related_link = True
+    enable_bulk_actions = False
+    tab_id = None
+    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
+    body_content_template_path = "components/panel/body_content_objects_table.html"
+    header_extra_content_template_path = "components/panel/header_extra_content_table.html"
+    footer_content_template_path = "components/panel/footer_content_table.html"
+    footer_buttons = None
+    form_id = None
+    include_paginator = False
+
+    def __init__(self, **kwargs):
         """Instantiate an ObjectsTable panel.
 
         Args:
@@ -927,16 +860,17 @@ class ObjectsTablePanel(Panel):
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
             include_paginator (bool, optional): If True, renders a paginator in the panel footer.
         """
-        if context_table_key and any(
+        super().__init__(**kwargs)
+        if self.context_table_key and any(
             [
-                table_class,
-                table_filter,
-                table_attribute,
-                distinct,
-                select_related_fields,
-                prefetch_related_fields,
-                order_by_fields,
-                hide_hierarchy_ui,
+                self.table_class,
+                self.table_filter,
+                self.table_attribute,
+                self.distinct,
+                self.select_related_fields,
+                self.prefetch_related_fields,
+                self.order_by_fields,
+                self.hide_hierarchy_ui,
             ]
         ):
             raise ValueError(
@@ -944,45 +878,12 @@ class ObjectsTablePanel(Panel):
                 "table (table_class, table_filter, table_attribute, distinct, select_related_fields, "
                 "prefetch_related_fields, order_by_fields, hide_hierarchy_ui)."
             )
-        self.context_table_key = context_table_key
-        self.table_class = table_class
-        if table_filter and table_attribute:
+        if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
-        if table_class and not (table_filter or table_attribute):
+        if self.table_class and not (self.table_filter or self.table_attribute):
             raise ValueError("You must specify either `table_filter` or `table_attribute`")
-        if table_attribute and not related_field_name:
+        if self.table_attribute and not self.related_field_name:
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
-        self.table_filter = table_filter
-        self.table_attribute = table_attribute
-        self.distinct = distinct
-        self.select_related_fields = select_related_fields
-        self.prefetch_related_fields = prefetch_related_fields
-        self.order_by_fields = order_by_fields
-        self.table_title = table_title
-        self.max_display_count = max_display_count
-        self.paginate = paginate
-        self.show_table_config_button = show_table_config_button
-        self.include_columns = include_columns
-        self.exclude_columns = exclude_columns
-        self.add_button_route = add_button_route
-        self.add_permissions = add_permissions or []
-        self.hide_hierarchy_ui = hide_hierarchy_ui
-        self.related_field_name = related_field_name
-        self.related_list_url_name = related_list_url_name
-        self.enable_related_link = enable_related_link
-        self.enable_bulk_actions = enable_bulk_actions
-        self.tab_id = tab_id
-        self.footer_buttons = footer_buttons
-        self.form_id = form_id
-        self.include_paginator = include_paginator
-
-        super().__init__(
-            body_wrapper_template_path=body_wrapper_template_path,
-            body_content_template_path=body_content_template_path,
-            header_extra_content_template_path=header_extra_content_template_path,
-            footer_content_template_path=footer_content_template_path,
-            **kwargs,
-        )
 
     def _get_table_add_url(self, context: Context):
         """Generate the URL for the "Add" button in the table panel.
@@ -1170,17 +1071,14 @@ class ObjectsTablePanel(Panel):
 class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values, as seen in most object detail views."""
 
-    def __init__(
-        self,
-        *,
-        data=None,
-        context_data_key=None,
-        hide_if_unset=(),
-        value_transforms=None,
-        key_transforms=None,
-        body_wrapper_template_path="components/panel/body_wrapper_key_value_table.html",
-        **kwargs,
-    ):
+    data = None
+    context_data_key = "data"
+    hide_if_unset = ()
+    value_transforms = {}
+    key_transforms = {}
+    body_wrapper_template_path = "components/panel/body_wrapper_key_value_table.html"
+
+    def __init__(self, **kwargs):
         """
         Instantiate a KeyValueTablePanel.
 
@@ -1199,14 +1097,9 @@ class KeyValueTablePanel(Panel):
             key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
                 For example: {'content_types': 'Content Type'}.
         """
-        if data and context_data_key:
+        super().__init__(**kwargs)
+        if self.data and self.context_data_key:
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
-        self.data = data
-        self.context_data_key = context_data_key or "data"
-        self.hide_if_unset = hide_if_unset
-        self.value_transforms = value_transforms or {}
-        self.key_transforms = key_transforms or {}
-        super().__init__(body_wrapper_template_path=body_wrapper_template_path, **kwargs)
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -1447,17 +1340,14 @@ class EChartsPanel(Panel, EChartsBase):
 class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes and their values."""
 
-    def __init__(
-        self,
-        *,
-        fields="__all__",
-        additional_fields=(),
-        exclude_fields=(),
-        context_object_key=None,
-        ignore_nonexistent_fields=False,
-        label=None,
-        **kwargs,
-    ):
+    fields = "__all__"
+    additional_fields = ()
+    exclude_fields = ()
+    context_object_key = None
+    ignore_nonexistent_fields = False
+    data = None
+
+    def __init__(self, **kwargs):
         """
         Instantiate an ObjectFieldsPanel.
 
@@ -1477,16 +1367,11 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
         """
-        self.fields = fields
-        if additional_fields and fields != "__all__":
+        super().__init__(**kwargs)
+        if self.additional_fields and self.fields != "__all__":
             raise ValueError("additional_fields may only be used in combination with fields='__all__'")
-        self.additional_fields = additional_fields
-        if exclude_fields and fields != "__all__":
+        if self.exclude_fields and self.fields != "__all__":
             raise ValueError("exclude_fields may only be used in combination with fields='__all__'")
-        self.exclude_fields = exclude_fields
-        self.context_object_key = context_object_key
-        self.ignore_nonexistent_fields = ignore_nonexistent_fields
-        super().__init__(data=None, label=label, **kwargs)
 
     def render_label(self, context: Context):
         """Default to rendering the provided object's `verbose_name` if no more specific `label` was defined."""
@@ -1633,8 +1518,10 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
     The special grouping `""` may be used to indicate top-level key/value pairs that don't belong to a group.
     """
 
-    def __init__(self, *, body_id, **kwargs):
-        super().__init__(body_id=body_id, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not hasattr(self, "body_id"):
+            raise TypeError("body_id is required")
 
     def render_header_extra_content(self, context: Context):
         """Add a "Collapse All Groups" button to the header."""
@@ -1709,14 +1596,11 @@ class BaseTextPanel(Panel):
         MARKDOWN = "markdown"
         CODE = "code"
 
-    def __init__(
-        self,
-        *,
-        render_as=RenderOptions.MARKDOWN,
-        body_content_template_path="components/panel/body_content_text.html",
-        render_placeholder=True,
-        **kwargs,
-    ):
+    render_as = RenderOptions.MARKDOWN
+    body_content_template_path = "components/panel/body_content_text.html"
+    render_placeholder = True
+
+    def __init__(self, **kwargs):
         """
         Instantiate BaseTextPanel.
 
@@ -1727,9 +1611,7 @@ class BaseTextPanel(Panel):
                 Can be overridden for custom use cases.
             kwargs (dict): Additional keyword arguments passed to `Panel.__init__`.
         """
-        self.render_as = render_as
-        self.render_placeholder = render_placeholder
-        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+        super().__init__(**kwargs)
 
     def render_body_content(self, context: Context):
         value = self.get_value(context)
@@ -1756,10 +1638,7 @@ class ObjectTextPanel(BaseTextPanel):
         kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
     """
 
-    def __init__(self, *, object_field=None, **kwargs):
-        self.object_field = object_field
-
-        super().__init__(**kwargs)
+    object_field = None
 
     def get_value(self, context: Context):
         obj = get_obj_from_context(context)
@@ -1776,23 +1655,17 @@ class TextPanel(BaseTextPanel):
         kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
     """
 
-    def __init__(self, *, context_field="text", **kwargs):
-        self.context_field = context_field
-        super().__init__(**kwargs)
+    context_field = "text"
 
     def get_value(self, context: Context):
         return context.get(self.context_field, "")
 
 
 class StatsPanel(Panel):
-    def __init__(
-        self,
-        *,
-        filter_name,
-        related_models=None,
-        body_content_template_path="components/panel/stats_panel_body.html",
-        **kwargs,
-    ):
+    related_models = None
+    body_content_template_path = "components/panel/stats_panel_body.html"
+
+    def __init__(self, **kwargs):
         """
         Instantiate a `StatsPanel`.
 
@@ -1802,10 +1675,9 @@ class StatsPanel(Panel):
             related_models (str): a list of model classes and/or tuples of (model_class, query_string).
                 e.g. `[Device, Prefix, (Circuit, "circuit_terminations__location__in")]`
         """
-
-        self.filter_name = filter_name
-        self.related_models = related_models
-        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+        super().__init__(**kwargs)
+        if not hasattr(self, "filter_name"):
+            raise TypeError("filter_name is required")
 
     def should_render(self, context: Context):
         """Always should render this panel as the permission is reinforced in python with .restrict(request.user, "view")"""
@@ -1860,13 +1732,9 @@ class StatsPanel(Panel):
 
 
 class AsyncStatsPanel(Panel):
-    def __init__(
-        self,
-        *,
-        api_url_name,
-        body_content_template_path="components/panel/async_stats_panel_body.html",
-        **kwargs,
-    ):
+    body_content_template_path = "components/panel/async_stats_panel_body.html"
+
+    def __init__(self, **kwargs):
         """
         Instantiate an `AsyncStatsPanel`.
 
@@ -1879,8 +1747,9 @@ class AsyncStatsPanel(Panel):
                 at minimum, a list of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
                 Refer to `StatsSerializer` and `LocationViewSet.stats` for an example implementation.
         """
-        self.api_url_name = api_url_name
-        super().__init__(body_content_template_path=body_content_template_path, **kwargs)
+        super().__init__(**kwargs)
+        if not hasattr(self, "api_url_name"):
+            raise TypeError("api_url_name is required")
 
     def should_render(self, context: Context):
         """Always render this panel."""
@@ -1896,29 +1765,20 @@ class AsyncStatsPanel(Panel):
 class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object custom fields."""
 
-    def __init__(
-        self,
-        *,
-        advanced_ui=False,
-        weight=Panel.WEIGHT_CUSTOM_FIELDS_PANEL,
-        label="Custom Fields",
-        section=SectionChoices.LEFT_HALF,
-        **kwargs,
-    ):
+    advanced_ui = False
+    weight = Panel.WEIGHT_CUSTOM_FIELDS_PANEL
+    label = "Custom Fields"
+    section = SectionChoices.LEFT_HALF
+    body_id = ""
+
+    def __init__(self, **kwargs):
         """Instantiate an `_ObjectCustomFieldsPanel`.
 
         Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
         """
-        self.advanced_ui = advanced_ui
-        super().__init__(
-            data=None,
-            body_id=f"custom_fields_{advanced_ui}",
-            weight=weight,
-            label=label,
-            section=section,
-            **kwargs,
-        )
+        super().__init__(**kwargs)
+        self.body_id = (f"custom_fields_{self.advanced_ui}",)
 
     def should_render(self, context: Context):
         """Render only if any custom fields are present."""
@@ -1973,29 +1833,20 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
 class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object computed field values."""
 
-    def __init__(
-        self,
-        *,
-        advanced_ui=False,
-        weight=Panel.WEIGHT_COMPUTED_FIELDS_PANEL,
-        label="Computed Fields",
-        section=SectionChoices.LEFT_HALF,
-        **kwargs,
-    ):
+    advanced_ui = False
+    weight = Panel.WEIGHT_COMPUTED_FIELDS_PANEL
+    label = "Computed Fields"
+    section = SectionChoices.LEFT_HALF
+    body_id = ""
+
+    def __init__(self, **kwargs):
         """Instantiate this panel.
 
         Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
         """
-        self.advanced_ui = advanced_ui
-        super().__init__(
-            data=None,
-            body_id=f"computed_fields_{advanced_ui}",
-            weight=weight,
-            label=label,
-            section=section,
-            **kwargs,
-        )
+        super().__init__(**kwargs)
+        self.body_id = (f"computed_fields_{self.advanced_ui}",)
 
     def should_render(self, context: Context):
         """Render only if any relevant computed fields are defined."""
@@ -2020,22 +1871,10 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
 
-    def __init__(
-        self,
-        *,
-        advanced_ui=False,
-        weight=Panel.WEIGHT_RELATIONSHIPS_PANEL,
-        label="Relationships",
-        section=SectionChoices.LEFT_HALF,
-        **kwargs,
-    ):
-        """Instantiate this panel.
-
-        Args:
-            advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
-        """
-        self.advanced_ui = advanced_ui
-        super().__init__(data=None, weight=weight, label=label, section=section, **kwargs)
+    advanced_ui = False
+    weight = Panel.WEIGHT_RELATIONSHIPS_PANEL
+    label = "Relationships"
+    section = SectionChoices.LEFT_HALF
 
     def should_render(self, context: Context):
         """Render only if any relevant relationships are defined."""
@@ -2081,23 +1920,10 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
 class _ObjectTagsPanel(Panel):
     """Panel displaying an object's tags as a space-separated list of color-coded tag names."""
 
-    def __init__(
-        self,
-        *,
-        weight=Panel.WEIGHT_TAGS_PANEL,
-        label="Tags",
-        section=SectionChoices.LEFT_HALF,
-        body_content_template_path="components/panel/body_content_tags.html",
-        **kwargs,
-    ):
-        """Instantiate an `_ObjectTagsPanel`."""
-        super().__init__(
-            weight=weight,
-            label=label,
-            section=section,
-            body_content_template_path=body_content_template_path,
-            **kwargs,
-        )
+    weight = Panel.WEIGHT_TAGS_PANEL
+    label = "Tags"
+    section = SectionChoices.LEFT_HALF
+    body_content_template_path = "components/panel/body_content_tags.html"
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2115,22 +1941,10 @@ class _ObjectTagsPanel(Panel):
 class _ObjectCommentPanel(ObjectTextPanel):
     """Panel displaying an object's comments as a Markdown formatted panel."""
 
-    def __init__(
-        self,
-        *,
-        label="Comments",
-        section=SectionChoices.LEFT_HALF,
-        weight=Panel.WEIGHT_COMMENTS_PANEL,
-        object_field="comments",
-        **kwargs,
-    ):
-        super().__init__(
-            weight=weight,
-            label=label,
-            section=section,
-            object_field=object_field,
-            **kwargs,
-        )
+    label = "Comments"
+    section = SectionChoices.LEFT_HALF
+    weight = Panel.WEIGHT_COMMENTS_PANEL
+    object_field = "comments"
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2141,24 +1955,20 @@ class _ObjectCommentPanel(ObjectTextPanel):
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="main",
-        label="",  # see render_label()
-        weight=Tab.WEIGHT_MAIN_TAB,
-        panels=(),
-        **kwargs,
-    ):
-        panels = list(panels)
-        # Inject standard panels (custom fields, relationships, tags, etc.) as appropriate
-        panels.append(_ObjectCommentPanel())
-        panels.append(_ObjectCustomFieldsPanel())
-        panels.append(_ObjectComputedFieldsPanel())
-        panels.append(_ObjectRelationshipsPanel())
-        panels.append(_ObjectTagsPanel())
+    tab_id = "main"
+    label = ""  # see render_label()
+    weight = Tab.WEIGHT_MAIN_TAB
+    panels = ()
 
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.panels = list(self.panels)
+        # Inject standard panels (custom fields, relationships, tags, etc.) as appropriate
+        self.panels.append(_ObjectCommentPanel())
+        self.panels.append(_ObjectCustomFieldsPanel())
+        self.panels.append(_ObjectComputedFieldsPanel())
+        self.panels.append(_ObjectRelationshipsPanel())
+        self.panels.append(_ObjectTagsPanel())
 
     def render_label(self, context: Context):
         """Use the `verbose_name` of the given instance's Model as the tab label by default."""
@@ -2168,24 +1978,11 @@ class _ObjectDetailMainTab(Tab):
 class _ObjectDataProvenancePanel(ObjectFieldsPanel):
     """Built-in class for a Panel displaying data provenance information on the Advanced tab."""
 
-    def __init__(
-        self,
-        *,
-        weight=150,
-        label="Data Provenance",
-        section=SectionChoices.LEFT_HALF,
-        fields=("created", "last_updated", "created_by", "last_updated_by", "api_url"),
-        ignore_nonexistent_fields=True,
-        **kwargs,
-    ):
-        super().__init__(
-            weight=weight,
-            label=label,
-            section=section,
-            fields=fields,
-            ignore_nonexistent_fields=ignore_nonexistent_fields,
-            **kwargs,
-        )
+    weight = 150
+    label = "Data Provenance"
+    section = SectionChoices.LEFT_HALF
+    fields = ("created", "last_updated", "created_by", "last_updated_by", "api_url")
+    ignore_nonexistent_fields = True
 
     def get_data(self, context: Context):
         data = super().get_data(context)
@@ -2211,17 +2008,14 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
 class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="advanced",
-        label="Advanced",
-        weight=Tab.WEIGHT_ADVANCED_TAB,
-        panels=None,
-        **kwargs,
-    ):
-        if not panels:
-            panels = (
+    tab_id = "advanced"
+    label = "Advanced"
+    weight = Tab.WEIGHT_ADVANCED_TAB
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.panels:
+            self.panels = (
                 ObjectFieldsPanel(
                     label="Object Details",
                     section=SectionChoices.LEFT_HALF,
@@ -2235,23 +2029,18 @@ class _ObjectDetailAdvancedTab(Tab):
                 _ObjectRelationshipsPanel(advanced_ui=True),
             )
 
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
-
 
 class _ObjectDetailContactsTab(Tab):
     """Built-in class for a Tab displaying information about contact/team associations."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="contacts",
-        label="Contacts",
-        weight=Tab.WEIGHT_CONTACTS_TAB,
-        panels=None,
-        **kwargs,
-    ):
-        if panels is None:
-            panels = (
+    tab_id = "contacts"
+    label = "Contacts"
+    weight = Tab.WEIGHT_CONTACTS_TAB
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.panels:
+            self.panels = (
                 ObjectsTablePanel(
                     weight=100,
                     table_class=AssociatedContactsTable,
@@ -2266,7 +2055,6 @@ class _ObjectDetailContactsTab(Tab):
                     table_title="Contacts/Teams",
                 ),
             )
-        super().__init__(tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2287,17 +2075,15 @@ class _ObjectDetailContactsTab(Tab):
 class _ObjectDetailDataComplianceTab(DistinctViewTab):
     """Built-in class for a Tab displaying information about data compliance."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="data_compliance",
-        label="Data Compliance",
-        weight=Tab.WEIGHT_DATACOMPLIANCE_TAB,
-        panels=None,
-        **kwargs,
-    ):
-        if panels is None:
-            panels = (
+    url_name = ""
+    tab_id = "data_compliance"
+    label = "Data Compliance"
+    weight = Tab.WEIGHT_DATACOMPLIANCE_TAB
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.panels:
+            self.panels = (
                 ObjectsTablePanel(
                     weight=100,
                     table_class=DataComplianceTable,
@@ -2308,7 +2094,6 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
                     include_paginator=True,
                 ),
             )
-        super().__init__(url_name="", tab_id=tab_id, label=label, weight=weight, panels=panels, **kwargs)
 
     def get_extra_context(self, context: Context):
         return {"url": get_obj_from_context(context).get_data_compliance_url()}
@@ -2327,16 +2112,9 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
 class DynamicGroupsTextPanel(BaseTextPanel):
     """Panel displaying a note about caching of dynamic groups."""
 
-    def __init__(
-        self,
-        *,
-        weight,
-        render_as=BaseTextPanel.RenderOptions.MARKDOWN,
-        label="Dynamic Group caching",
-        css_class="warning",
-        **kwargs,
-    ):
-        super().__init__(weight=weight, render_as=render_as, label=label, css_class=css_class, **kwargs)
+    render_as = BaseTextPanel.RenderOptions.MARKDOWN
+    label = "Dynamic Group caching"
+    css_class = "warning"
 
     def get_value(self, context):
         dg_list_url = reverse("extras:dynamicgroup_list")
@@ -2358,18 +2136,15 @@ class DynamicGroupsTextPanel(BaseTextPanel):
 class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="dynamic_groups",
-        label="Dynamic Groups",
-        weight=Tab.WEIGHT_GROUPS_TAB,
-        panels=None,
-        required_permissions=("extras.view_dynamic_group",),
-        **kwargs,
-    ):
-        if panels is None:
-            panels = (
+    tab_id = "dynamic_groups"
+    label = "Dynamic Groups"
+    weight = Tab.WEIGHT_GROUPS_TAB
+    required_permissions = ("extras.view_dynamic_group",)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.panels:
+            self.panels = (
                 DynamicGroupsTextPanel(weight=100),
                 ObjectsTablePanel(
                     weight=200,
@@ -2380,14 +2155,6 @@ class _ObjectDetailGroupsTab(Tab):
                     related_field_name="member_id",
                 ),
             )
-        super().__init__(
-            tab_id=tab_id,
-            label=label,
-            weight=weight,
-            panels=panels,
-            required_permissions=required_permissions,
-            **kwargs,
-        )
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2409,18 +2176,15 @@ class _ObjectDetailGroupsTab(Tab):
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
 
-    def __init__(
-        self,
-        *,
-        tab_id="object_metadata",
-        label="Object Metadata",
-        weight=Tab.WEIGHT_METADATA_TAB,
-        panels=None,
-        required_permissions=("extras.view_objectmetadata",),
-        **kwargs,
-    ):
-        if panels is None:
-            panels = (
+    tab_id = "object_metadata"
+    label = "Object Metadata"
+    weight = Tab.WEIGHT_METADATA_TAB
+    required_permissions = ("extras.view_objectmetadata",)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.panels:
+            self.panels = (
                 ObjectsTablePanel(
                     weight=100,
                     table_class=ObjectMetadataTable,
@@ -2432,14 +2196,6 @@ class _ObjectDetailMetadataTab(Tab):
                     table_title="Object Metadata",
                 ),
             )
-        super().__init__(
-            tab_id=tab_id,
-            label=label,
-            weight=weight,
-            panels=panels,
-            required_permissions=required_permissions,
-            **kwargs,
-        )
 
     def should_render(self, context: Context):
         if not super().should_render(context):
