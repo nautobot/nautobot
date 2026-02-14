@@ -1009,6 +1009,7 @@ class ObjectsTablePanel(Panel):
             body_content_table.columns.show("pk")
 
         more_queryset_count = 0
+        body_content_table.request = request
         if self.paginate:
             per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)
             paginate = {"paginator_class": EnhancedPaginator, "per_page": per_page}

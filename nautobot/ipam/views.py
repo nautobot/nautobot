@@ -338,6 +338,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_prefix"]
+
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -521,36 +523,59 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        if not self.filter_params:
-            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
+        # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
+        if all(
+            key
+            in [
+                "ip_version",
+                "max_depth",
+                "namespace",
+                "prefix_and_descendants",
+                "prefix_length__lte",
+                "type",  # *only* for type=container, see below
+                "within_include",
+            ]
+            for key in self.filter_params
+        ) and ("type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
+            self.hide_hierarchy_ui = False
+
+        if not self.hide_hierarchy_ui:
+            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
             default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
-            if default_container_only and default_max_depth >= 0:
+            if default_max_depth > 0:
+                if first_root := queryset.first():
+                    default_max_depth += first_root.ancestors().count()
+            if (
+                "max_depth" not in self.filter_params
+                and "type" not in self.filter_params
+                and default_container_only
+                and default_max_depth > 0
+            ):
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+                param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
                 if not self.request.headers.get("HX-Request"):
                     messages.info(
                         self.request,
                         format_html(
                             "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{max_depth}</code> "
+                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting "
                             "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
-                            max_depth=default_max_depth,
                         ),
                     )
-            elif default_max_depth >= 0:
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
+            elif "max_depth" not in self.filter_params and default_max_depth > 0:
+                param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
                 if not self.request.headers.get("HX-Request"):
                     messages.info(
                         self.request,
                         format_html(
                             "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{max_depth}</code>.",
-                            max_depth=default_max_depth,
+                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting."
                         ),
                     )
-            elif default_container_only:
+            elif "type" not in self.filter_params and default_container_only:
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
                 if not self.request.headers.get("HX-Request"):
                     messages.info(
@@ -561,17 +586,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         ),
                     )
 
-        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
-        # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
-        # - ip_version
-        # - max_depth
-        # - namespace
-        # - prefix_length__lte
-        # - type=container (*only*)
-        if all(
-            key in ["ip_version", "max_depth", "namespace", "prefix_length__lte", "type"] for key in self.filter_params
-        ) and ("type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
-            self.hide_hierarchy_ui = False
         return queryset
 
     def get_extra_context(self, request, instance):
@@ -589,7 +603,51 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         "Check/Fix IPAM Parents",
                     ),
                 )
-        return super().get_extra_context(request, instance)
+        extra_context = super().get_extra_context(request, instance)
+        if self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            extra_context["table_expandable"] = True
+        return extra_context
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        child_prefixes = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        prefix_table = tables.PrefixDetailTable(
+            child_prefixes,
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "table_inc_template": "ipam/prefix_children.html",
+                "template": "panel_table.html",
+                "table": prefix_table,
+                "table_expandable": True,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, child_prefixes.count() - (paginate["per_page"] * prefix_table.page.number)),
+            }
+        )
 
     @action(
         detail=True,

@@ -1157,6 +1157,10 @@ class Prefix(PrimaryModel):
 
         return query
 
+    @property
+    def next_sibling(self):
+        return self.siblings().filter(network__gt=self.network).first()
+
     def get_available_prefixes(self):
         """
         Return all available Prefixes within this prefix as an IPSet.

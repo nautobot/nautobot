@@ -1132,6 +1132,22 @@ class LocationFilterSetTestCase(
     def setUpTestData(cls):
         common_test_data(cls)
 
+    def test_max_depth(self):
+        params = {"max_depth": 0}  # no-op
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+        params = {"max_depth": None}  # no-op
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+
+        params = {"max_depth": 1}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__isnull=False)
+        )
+
+        params = {"max_depth": 2}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__isnull=False)
+        )
+
     def test_subtree(self):
         params = {"subtree": [self.loc1.name, self.nested_loc.pk]}
         expected = Location.objects.get(name=self.loc1.name).descendants(include_self=True)

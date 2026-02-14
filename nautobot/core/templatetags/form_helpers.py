@@ -3,14 +3,24 @@ from django import template
 register = template.Library()
 
 
-@register.inclusion_tag("utilities/render_field.html")
-def render_field(field, bulk_nullable=False):
+@register.inclusion_tag("utilities/render_field.html", takes_context=True)
+def render_field(context, field, bulk_nullable=False):
     """
     Render a single form field from template
     """
+    field_instance = getattr(field, "field", None)
+    embedded_create = getattr(field_instance, "embedded_create", False)
+    embedded_search = getattr(field_instance, "embedded_search", False)
+    is_embedded = context.request.GET.get("embedded", None) == "true"
+    has_embedded_create_permissions = context.request.user.has_perms(
+        getattr(field_instance, "embedded_create_permissions", [])
+    )
+
     return {
         "field": field,
         "bulk_nullable": bulk_nullable,
+        "should_render_embedded_create": embedded_create and not is_embedded and has_embedded_create_permissions,
+        "should_render_embedded_search": embedded_search and not is_embedded,
     }
 
 

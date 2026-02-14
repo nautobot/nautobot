@@ -204,6 +204,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         queryset=LocationType.objects.all(),
         to_field_name="name",
     )
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Locations",
+    )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
@@ -211,6 +216,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Parent location (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location(s) and descendants thereof (name or ID)",
@@ -322,6 +328,19 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
             "shipping_address",
             "tags",
         ]
+
+    def generate_query_filter_max_depth(self, value):
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
+        return Q(**{param: False})
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None or value < 1:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
 
     def generate_query__child_location_type(self, value):
         """Helper method used by DynamicGroups and by _child_location_type() method."""

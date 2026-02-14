@@ -1,0 +1,4 @@
+Added `Console Log` tab to Job Result detial view.
+Added `job_console_entries` action to `JobResultUIViewSet` to stream output from SQL into the UI in realtime.
+Modified `runjob_with_job_result.py` command to `run_job` instead of `execute_job`.
+Improved `job_result.js` and `jog_level_filtering.js`.
