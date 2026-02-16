@@ -59,6 +59,10 @@ As a consequence of the [dependency update to Django 5.2](#django-52), support f
 
 Users can now specify their preferred language/locale through the User Preferences UI. Currently this configuration applies primarily to date/time display in the UI.
 
+#### Python 3.14 Support
+
+Added official support for Python 3.14.
+
 ### Deprecated
 
 #### `assertQuerysetEqualAndNotEmpty()` Test Method
