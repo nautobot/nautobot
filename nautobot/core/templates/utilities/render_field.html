@@ -40,19 +40,20 @@
                 <div class="flex-grow-1 nb-w-0">{{ field }}</div>
                 {% if should_render_embedded_create %}
                     {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
-                    <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
-                        <button
-                            class="btn btn-primary flex-grow-0 flex-shrink-0"
-                            data-bs-toggle="modal"
-                            data-bs-target="#embedded_action_modal"
-                            hx-get="{% url field.field.queryset.model|viewname:'add' %}"
-                            hx-target="#embedded_action_modal .modal-content"
-                            type="button"
-                        >
-                            <span class="mdi mdi-plus-thick"></span>
-                            <span class="visually-hidden">Add a new {{ verbose_name }}</span>
-                        </button>
-                    </span>
+                        <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                            <button
+                                class="btn btn-primary flex-grow-0 flex-shrink-0"
+                                data-bs-toggle="modal"
+                                data-bs-target="#embedded_action_modal"
+                                hx-get="{% url field.field.queryset.model|viewname:'add' %}"
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleCreateStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-target="#embedded_action_modal .modal-content"
+                                type="button"
+                            >
+                                <span class="mdi mdi-plus-thick"></span>
+                                <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                            </button>
+                        </span>
                     {% endwith %}
                 {% endif %}
                 {% if should_render_embedded_search %}
