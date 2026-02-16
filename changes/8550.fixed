@@ -1,0 +1,2 @@
+Fixed "Rack" selection on basic filter form for Cables being incorrectly mapped to `rack=<UUID>` instead of `rack=<name>`.
+Fixed Cable filterset support for `rack=null` and `tenant=null` filters.
