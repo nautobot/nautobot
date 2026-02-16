@@ -296,6 +296,8 @@ class NautobotTestCaseMixin:
 
         return self.assertQuerysetEqual(qs, values, *args, **kwargs)
 
+    assertQuerySetEqualAndNotEmpty = assertQuerysetEqualAndNotEmpty
+
     class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
         """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""
 
