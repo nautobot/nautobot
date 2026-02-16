@@ -190,7 +190,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Dependencies in v2.4.27
 
-- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency celery to ~5.6.2.
+- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency `celery` to ~5.6.2.
 - [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `mysqlclient` to `~2.2.8`.
 - [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `social-auth-core` to `~4.8.5`.
 
