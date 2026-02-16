@@ -78,7 +78,7 @@
                                 -->Add Filter
                                 </button>
                                 <hr class="border-top my-20">
-                                {% include "inc/dynamic_filter_items.html" with field_prefix="scope" %}
+                                {% include "inc/dynamic_filter_items.html" %}
                             </div>
                         </div>
                     {% endif %}
@@ -209,6 +209,10 @@
             dynamicFilterForm: document.querySelector('#advanced-filter'),
         });
 
+        const isEventFromDefaultFilterFormField = (defaultFilterForm, event) => (
+            event.target.closest(`#${defaultFilterForm?.id}`) !== null
+        )
+
         /**
          * Function to reinitialize select2 fields after changes on filter form.
          * filter_form.js will call this function when re-initialization is needed.
@@ -224,13 +228,11 @@
          * @param input
          * @param name
          */
-        const setInputName = (input, name) => {
-            input.setAttribute('name', `scope-${name}`);
-        }
+        const getInputName = (name) => (`scope-${name}`)
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.addEventListener('submit', () => {
-                const { dynamicFilterForm } = getFilterForms();
+            document.addEventListener('submit', (event) => {
+                const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
 
                 /*
                  * Just before the form submission automatically add filter selected in "Advanced" tab (if any)
@@ -239,7 +241,14 @@
                  */
                 const add = dynamicFilterForm.querySelector('button.nb-dynamic-filter-add');
                 add.click();
-            });
+
+                defaultFilterForm
+                    .querySelectorAll('input[name], select[name], textarea[name]')
+                    .forEach(el => {
+                        el.dataset.originalName = el.name
+                        el.removeAttribute('name')
+                    })
+            }, {capture: true});
         });
     </script>
 {% endblock javascript %}

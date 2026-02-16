@@ -71,7 +71,7 @@ const syncDefaultToDynamic = (name) => {
   const {defaultFilterForm} = getFilterForms();
 
   const field = defaultFilterForm.querySelector(`[name="${name}"]`);
-  const text = field?.closest('.nb-form-group')?.querySelector('label')?.innerText?.trim();
+  const text = defaultFilterForm.querySelector(`label[for="${field.id}"]`)?.innerText?.trim();
   /*
    * `manageDynamicFilter` takes an array of `{ text: string, value: string }` objects as `value`, so
    * regardless of field being a textbox, a single or multiple choice combobox, conversion is required:
@@ -167,7 +167,7 @@ const manageDynamicFilter = ({action, name, text, value}) => {
     badge.setAttribute('data-nb-value', value);
 
     const input = document.createElement('input');
-    setInputName(input, name)
+    input.setAttribute('name', name);
     input.setAttribute('type', 'hidden');
     input.setAttribute('value', value);
 
@@ -208,7 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const name = type.selectedOptions[0].value;
+      const prefix = field.dataset.nbPrefix;
+      const defaultName = type.selectedOptions[0].value;
+      const name = prefix ? `${prefix}-${defaultName}` : defaultName;
       const label = field.selectedOptions[0].innerText.trim();
       const suffix = type.selectedOptions[0].innerText.trim();
       const text = /\(\w+\)/.test(suffix) ? `${label} ${suffix}` : label;
@@ -247,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Need to wrap `document` with jQuery to be able to listen to Select2 `change` event.
   $(document).on('change', (event) => {
     const {defaultFilterForm} = getFilterForms();
-    const isDefaultFilterFormField = event.target.form === defaultFilterForm;
+    const isDefaultFilterFormField = isEventFromDefaultFilterFormField(defaultFilterForm, event)
     if (isDefaultFilterFormField) {
       syncDefaultToDynamic(event.target.name);
     }

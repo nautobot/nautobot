@@ -1364,11 +1364,16 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             scope_filter_data = {}
 
         # We need to drop empty values, because some type of fields (e.g. NaturalKeyOrPKMultipleChoiceFilter) don't accept empty list or str
-        scope_filter_data_filtered = {
-            field_name: values
-            for field_name, values in scope_filter_data.items()
-            if field_name.startswith("scope") and values not in ("", None, [], [""], ())
-        }
+        # TODO: Remove this code after fix on NaturalKeyOrPKMultipleChoiceFilter and other
+        scope_filter_data_filtered = scope_filter_data.copy()
+        for key in list(scope_filter_data_filtered.keys()):
+            if key.startswith("scope-"):
+                if hasattr(scope_filter_data_filtered, "getlist"):
+                    values = scope_filter_data_filtered.getlist(key)
+                else:
+                    values = scope_filter_data_filtered.get(key)
+                if values in ("", None, [], [""], ()):
+                    scope_filter_data_filtered.pop(key)
 
         filterset_class = get_filterset_for_model(model_class)
         filterset = filterset_class(
@@ -1379,12 +1384,11 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         filterset_form_class = get_form_for_model(model_class, form_prefix="Filter")
         filterset_form = filterset_form_class(scope_filter_data_filtered, prefix="scope")
         display_filter_params = [
-            # To avoid input name collision between scope filter fields and standard custom field form
-            # we're prefixing all the fields and need to remove this prefix below to properly check fields
-            check_filter_for_display(filterset.filters, field_name[6:], values)
+            # To avoid input name collision between scope filter fields and standard custom field form we're prefixing all the fields
+            check_filter_for_display(filterset.filters, field_name, values, prefix="scope")
             for field_name, values in scope_filter_data_filtered.items()
         ]
-        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)
+        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, filter_fields_prefix="scope")
 
         return {
             "filterset": filterset,

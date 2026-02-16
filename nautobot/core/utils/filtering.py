@@ -256,6 +256,7 @@ def build_filter_dict_from_filterset(
     # empty/null value fields.
     new_filter = {}
     allowed_fields = filter_fields or filterset_form.fields.keys()
+
     for field_name in allowed_fields:
         field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
         field_value = filterset_form.cleaned_data[field_name]
@@ -272,7 +273,7 @@ def build_filter_dict_from_filterset(
             if not field_value:
                 continue
             field_to_query = field.to_field_name or "pk"
-            new_value = getattr(field_value, field_to_query, None)
+            new_value = [getattr(item, field_to_query) for item in field_value]
 
         else:
             new_value = field_value

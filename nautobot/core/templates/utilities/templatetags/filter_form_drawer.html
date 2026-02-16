@@ -83,6 +83,10 @@
             dynamicFilterForm: document.querySelector('#dynamic-filter-form'),
         });
 
+        const isEventFromDefaultFilterFormField = (defaultFilterForm, event) => (
+            event.target.form === defaultFilterForm
+        )
+
         /**
          * Function to reinitialize select2 fields after changes on filter form.
          * filter_form.js will call this function when re-initialization is needed.

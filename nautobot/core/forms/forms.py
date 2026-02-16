@@ -400,6 +400,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             # Configure fields: Add css class and set choices for lookup_field
             self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
             self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
+            if self.filter_fields_prefix:
+                self.fields["lookup_field"].widget.attrs["data-nb-prefix"] = self.filter_fields_prefix
 
             # Update lookup_type and lookup_value fields to match expected field types derived from data
             # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.
@@ -446,9 +448,10 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         return sorted(filterset_without_lookup, key=lambda x: x[1])
 
 
-def dynamic_formset_factory(filterset, data=None, **kwargs):
+def dynamic_formset_factory(filterset, data=None, filter_fields_prefix=None, **kwargs):
     filter_form = DynamicFilterForm
     filter_form.filterset = filterset
+    filter_form.filter_fields_prefix = filter_fields_prefix
 
     params = {
         "can_delete_extra": False,

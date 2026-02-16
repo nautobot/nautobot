@@ -783,6 +783,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
                 "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
                 "hx-select": "#nb-scope-filter-form-container",
                 "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
             }
         ),
     )
