@@ -42,6 +42,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
@@ -548,6 +549,9 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                     form.save_note(instance=obj, user=request.user)
 
                 self.successful_post(request, obj, object_created, logger)
+
+                if self.request.headers.get("HX-Request", False):
+                    return redirect(reverse(get_route_for_model(obj, "detail", api=True), args=[obj.pk]))
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
