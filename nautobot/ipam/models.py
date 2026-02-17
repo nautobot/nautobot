@@ -1158,6 +1158,10 @@ class Prefix(PrimaryModel):
         return query
 
     @property
+    def default_siblings(self):
+        return self.siblings(include_self=False)
+
+    @property
     def next_sibling(self):
         return self.siblings().filter(network__gt=self.network).first()
 

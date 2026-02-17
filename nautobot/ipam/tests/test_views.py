@@ -507,7 +507,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertInHTML(add_ip_button, content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_prefix_child_prefixes_table_list(self):
+    def test_prefix_descendant_prefixes_table_list(self):
         instance = Prefix.objects.create(
             prefix="5.5.10.0/23",
             namespace=self.namespace,
@@ -528,7 +528,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.0/30", strip_tags(content))
-        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Child Prefixes <span class="badge bg-primary">1</span></a></li>'
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Descendant Prefixes <span class="badge bg-primary">1</span></a></li>'
         self.assertInHTML(prefixes_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
