@@ -1281,7 +1281,7 @@ class DeviceRedundancyGroupTable(BaseTable):
 #
 
 
-class InterfaceRedundancyGroupTable(BaseTable):
+class InterfaceRedundancyGroupTable(StatusTableMixin, BaseTable):
     """Table for list view."""
 
     pk = ToggleColumn()
@@ -1298,6 +1298,15 @@ class InterfaceRedundancyGroupTable(BaseTable):
 
         model = InterfaceRedundancyGroup
         fields = (
+            "pk",
+            "name",
+            "status",
+            "description",
+            "protocol",
+            "protocol_group_id",
+            "interfaces",
+        )
+        default_columns = (
             "pk",
             "name",
             "description",
