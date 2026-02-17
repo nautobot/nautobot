@@ -8,6 +8,7 @@ Some devices house child devices which share physical resources, like space and 
 
 * A parent device (which has device bays)
 * A child device (which must be installed within a device bay)
+* A parent-child device (which can both host device bays and be installed in a device bay)
 * Neither
 
 !!! note

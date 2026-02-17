@@ -14,6 +14,11 @@ Device names must be unique within a location, unless the device has been assign
 
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
 
+Devices installed in device bays can be nested across multiple levels; see [Device Types](devicetype.md) and [Device Bays](devicebay.md).
+
+!!! note
+    Updating a parent device location or rack will cascade saves to nested child devices, which can increase save time in deep hierarchies.
+
 +/- 2.0.0
     In Nautobot 1.x, it was not possible to delete an IPAddress or an Interface that was serving as the primary IP address (`primary_ip4`/`primary_ip6`) for a Device. As of Nautobot 2.0, this is now permitted; doing so will clear out the Device's corresponding primary IP value.
 
