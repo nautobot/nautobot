@@ -520,9 +520,9 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        cf.set_scope_filter({"location": [location_a, location_b]})
+        cf.set_scope_filter({"parent": [location_a, location_b]})
 
-        self.assertEqual(cf.scope_filter, {"location": [location_a.pk, location_b.pk]})
+        self.assertEqual(cf.scope_filter, {"parent": ["Location A", "Location B"]})
 
     def test_set_scope_filter_overrides_previous_value(self):
         obj_type = ContentType.objects.get_for_model(Location)
