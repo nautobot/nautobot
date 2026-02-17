@@ -189,12 +189,18 @@ table.report th a {
     border: 3px solid #30C030;
 }
 .cable-trace .cable {
-    border-left-style: solid;
-    border-left-width: 4px;
-    margin: 12px 0 12px 50%;
+    margin: 12px 0;
+    display: flex;
+}
+.cable-trace .cable-color {
+    border-left-width: 1px;
+    border-right-width: 1px;
+    width: 12px;
+}
+.cable-trace .cable .cable-info {
     padding: 24px;
     text-align: left;
-    width: 50%;
+    width: calc(50% - 6px);
 }
 .cable-trace .trace-end {
     margin-top: 48px;
