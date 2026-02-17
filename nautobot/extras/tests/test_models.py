@@ -2412,7 +2412,7 @@ class JobLogsDBConnectionTest(TransactionTestCase):
         try:
             job_result.log("Hello")
         except (InterfaceError, OperationalError) as ex:
-            self.fail(f"Job Logs DB Connection regression error. Caused by execption: {ex}")
+            self.fail(f"Job Logs DB Connection regression error. Caused by exception: {ex}")
 
         # Confirm the log entry was created
         log = JobLogEntry.objects.get(job_result=job_result)
@@ -2463,7 +2463,6 @@ class JobLogsDBConnectionTest(TransactionTestCase):
 
         # If the connection was reopend, a new close at value should be present.
         new_conn_close_at = conn.close_at
-        self.assertNotAlmostEqual(new_conn_close_at, original_conn_close_at, delta=0)
         self.assertGreater(new_conn_close_at, original_conn_close_at)
 
 

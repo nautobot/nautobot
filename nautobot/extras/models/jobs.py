@@ -1052,7 +1052,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # Some failure scenarios, such as a DB connection closed by the server, cannot be easily detected.
             # In these cases, we manually clear the connection and retry.
             except (InterfaceError, OperationalError):
-                conn.close()
+                # Explicitly clear the connection socket due to MySQL not playing nicely with conn.close()
+                conn.connection = None
+                conn.ensure_connection()
                 log.save(using=JOB_LOGS)
 
     log.alters_data = True
