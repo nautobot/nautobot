@@ -13,7 +13,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
-from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -27,6 +26,7 @@ from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import ButtonClassChoices, JobResultStatusChoices, ObjectChangeActionChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+from nautobot.extras.customfields import enqueue_custom_field_job
 from nautobot.extras.models import (
     ComputedField,
     ContactAssociation,
@@ -43,7 +43,6 @@ from nautobot.extras.models import (
     Relationship,
 )
 from nautobot.extras.querysets import NotesQuerySet
-from nautobot.extras.tasks import delete_custom_field_data, provision_field
 from nautobot.extras.utils import refresh_job_model_from_job_class
 
 # thread safe change context state variable
@@ -450,12 +449,10 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
     The name of this function is misleading as this signal applies to *added* content-types as well.
     """
+    from nautobot.core.jobs import DeleteCustomFieldData, ProvisionField  # avoid module-level circular import
 
     change_context = change_context_state.get()
-    if change_context is None:
-        context = None
-    else:
-        context = change_context.as_dict(instance=instance)
+    user = change_context.get_user(instance) if change_context is not None else None
 
     if action == "pre_remove":
         # Existing content types may be removed from the custom field, delete their data if so.
@@ -468,9 +465,12 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
         if not removed_pk_set:
             return
 
-        if context:
-            context["context_detail"] = "delete custom field data from existing content types"
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, removed_pk_set, context))
+        enqueue_custom_field_job(
+            DeleteCustomFieldData,
+            user,
+            field_key=instance.key,
+            content_types=list(removed_pk_set),
+        )
 
     elif action == "pre_clear":
         # In this case, the provided pk_set is always empty, so we need to look at the current values instead:
@@ -478,9 +478,12 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
         if not cleared_pk_set:
             return
 
-        if context:
-            context["context_detail"] = "delete custom field data from existing content types"
-        transaction.on_commit(lambda: delete_custom_field_data.delay(instance.key, cleared_pk_set, context))
+        enqueue_custom_field_job(
+            DeleteCustomFieldData,
+            user,
+            field_key=instance.key,
+            content_types=list(cleared_pk_set),
+        )
 
     elif action == "post_add":
         # Unlike the above _remove case, in the _add case pk_set is the *new* content-types only,
@@ -490,9 +493,12 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
             return
 
         # New content types have been added to the custom field, provision them
-        if context:
-            context["context_detail"] = "provision custom field data for new content types"
-        transaction.on_commit(lambda: provision_field.delay(instance.pk, pk_set, context))
+        enqueue_custom_field_job(
+            ProvisionField,
+            user,
+            field=str(instance.pk),
+            content_types=list(pk_set),
+        )
 
 
 m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
