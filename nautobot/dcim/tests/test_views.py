@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+import signal
 import unittest
 import zoneinfo
 
@@ -2419,6 +2420,47 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML(parent_device.display, response_body)
         self.assertInHTML(str(device_bay), response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_view_handles_parent_bay_loop(self):
+        """Ensure the device detail view does not hang on parent bay loops."""
+
+        def alarm_handler(_signum, _frame):
+            raise AssertionError("Timed out rendering device detail view")
+
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            model="Device Type Loop Guard",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
+        status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+
+        device = Device.objects.create(
+            name="LoopDevice",
+            device_type=device_type,
+            location=location,
+            status=status,
+            role=role,
+        )
+        device_bay = DeviceBay.objects.create(device=device, name="Bay1")
+
+        # Bypass validation to create a loop in the database
+        DeviceBay.objects.filter(pk=device_bay.pk).update(installed_device=device)
+
+        previous_handler = signal.signal(signal.SIGALRM, alarm_handler)
+        try:
+            signal.alarm(10)
+            url = reverse("dcim:device", kwargs={"pk": device.pk})
+            response = self.client.get(url)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous_handler)
+
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_detail_with_rack(self):
