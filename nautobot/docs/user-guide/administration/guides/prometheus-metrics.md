@@ -140,8 +140,9 @@ The downside of this is that you will have to ensure that this directory is clea
                     try:
                         # 1. Tell the client to "forget" the process
                         multiprocess.mark_process_dead(file_pid)
-                        # 2. Delete the physical file
-                        os.remove(file_path)
+                        # 2. Delete the physical file, ignore if it was already removed
+                        with suppress(FileNotFoundError):
+                           os.remove(file_path)
                         print(f"Cleaned up orphaned metric file: {filename}")
                     except OSError as e:
                         print(f"Error deleting {filename}: {e}")
