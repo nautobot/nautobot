@@ -29,7 +29,9 @@ function updateLogTable(result_id, qs) {
     if (!qs){
         qs = window.sessionStorage.getItem(session_key) || "";
     }
-    update_log_table(qs, '/extras/job-results/' + result_id + '/log-table/');
+    if (typeof update_log_table !== 'undefined') {
+      update_log_table(qs, '/extras/job-results/' + result_id + '/log-table/');
+    }
 }
 
 $(document).ready(function(){
