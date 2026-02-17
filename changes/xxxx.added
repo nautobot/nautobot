@@ -1,0 +1,1 @@
+- Added Role-based precedence for `console_log` (Author -> Admin -> Runner).

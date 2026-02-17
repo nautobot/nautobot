@@ -1087,6 +1087,7 @@ class JobTable(BaseTable):
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
+    console_log = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
     dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
@@ -1136,6 +1137,7 @@ class JobTable(BaseTable):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log",
             "description",
             "dryrun_default",
             "hidden",

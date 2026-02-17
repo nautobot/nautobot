@@ -423,6 +423,7 @@ class BaseJob:
         return {
             "name": cls.name,
             "grouping": cls.grouping,
+            "console_log": cls.console_log,
             "description": cls.description,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
@@ -498,6 +499,15 @@ class BaseJob:
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
         form.fields["_profile"].widget.attrs["class"] = "form-check-input"
+        # TBD: not sure if I should define it here or it should be a ScriptVariable attributes
+        form.fields["_console_log"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Console Log execution",
+            help_text="When enabled, the job runs in a subprocess and streams stdout/stderr "
+            "to the console in real time.",
+        )
+        form.fields["_console_log"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -531,16 +541,20 @@ class BaseJob:
             help_text="The job queue to route this job to",
             label="Job queue",
         )
-
         dryrun_default = cls.dryrun_default
+        console_log = cls.console_log
         if job_model is not None:
             form.fields["_job_queue"].initial = job_model.default_job_queue.pk
             if job_model.dryrun_default_override:
                 dryrun_default = job_model.dryrun_default
+            if job_model.console_log_override:
+                console_log = job_model.console_log
 
+        form.fields["_console_log"].initial = console_log
         if cls.supports_dryrun and (not initial or "dryrun" not in initial):
             # Set initial "dryrun" checkbox state based on the Meta parameter
             form.fields["dryrun"].initial = dryrun_default
+
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 

@@ -1416,6 +1416,8 @@ class JobEditForm(NautobotModelForm):
             "name",
             "grouping_override",
             "grouping",
+            "console_log_override",
+            "console_log",
             "description_override",
             "description",
             "dryrun_default_override",
@@ -1494,6 +1496,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
+    console_log = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to running with console log argument set to true",
+    )
     hidden = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
@@ -1560,6 +1567,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
+    clear_console_log_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of console log will be reverted to the default values defined in each Job's source code",
+    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1640,6 +1651,10 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    console_log = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(

@@ -25,6 +25,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "grouping",
     "name",
     "description",
+    "console_log",
     "dryrun_default",
     "hidden",
     "soft_time_limit",

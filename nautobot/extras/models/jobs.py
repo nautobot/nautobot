@@ -162,6 +162,9 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
+    console_log = models.BooleanField(
+        default=False, help_text="Whether the job defaults to running with console log argument set to true"
+    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
@@ -215,6 +218,10 @@ class Job(PrimaryModel):
     name_override = models.BooleanField(
         default=False,
         help_text="If set, the configured name will remain even if the underlying Job source code changes",
+    )
+    console_log_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured description will remain even if the underlying Job source code changes",
     )
     description_override = models.BooleanField(
         default=False,
@@ -829,6 +836,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         *job_args,
         celery_kwargs: Optional[dict] = None,
         profile: bool = False,
+        console_log: bool = False,
         schedule: Optional["ScheduledJob"] = None,
         job_queue: Optional["JobQueue"] = None,
         task_queue: Optional[str] = None,  # deprecated!
@@ -923,8 +931,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if celery_kwargs is not None:
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
-
-        console_log = job_model.job_class.console_log
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by

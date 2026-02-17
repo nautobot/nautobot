@@ -2050,7 +2050,16 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         return redirect(return_url or "extras:scheduledjob_list")
 
     def _handle_immediate_execution(
-        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+        self,
+        request,
+        job_model,
+        job_class,
+        job_form,
+        profile,
+        ignore_singleton_lock,
+        job_queue,
+        console_log,
+        return_url,
     ):
         """Handle immediate job execution."""
         job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
@@ -2060,6 +2069,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             profile=profile,
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
+            console_log=console_log,
             **job_class.serialize_data(job_kwargs),
         )
 
@@ -2072,7 +2082,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 ),
             )
             return redirect(return_url)
-
+        request.session["console_log"] = console_log
         return redirect("extras:jobresult", pk=job_result.pk)
 
     def get(self, request, class_path=None, pk=None):
@@ -2178,6 +2188,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
+            console_log = job_form.cleaned_data.pop("_console_log")
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
@@ -2218,6 +2229,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             profile,
                             ignore_singleton_lock,
                             job_queue,
+                            console_log,
                             return_url,
                         )
                     # Step 1: Check if approval is required
@@ -2239,6 +2251,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         profile,
                         ignore_singleton_lock,
                         job_queue,
+                        console_log,
                         return_url,
                     )
 
@@ -2306,6 +2319,7 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
+                    "console_log",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
@@ -2797,12 +2811,13 @@ class JobResultUIViewSet(
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
-
+            console_log = request.session.pop("console_log", None)
             context.update(
                 {
                     "job": job_class,
                     "associated_record": None,
                     "result": instance,
+                    "console_log_from_run": console_log,
                 }
             )
 
