@@ -927,6 +927,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # the job must be added before calling `apply()`
             job_result.celery_kwargs = job_celery_kwargs
             job_result.date_started = timezone.now()
+            job_result.status = JobResultStatusChoices.STATUS_STARTED
             job_result.save()
 
             # setup synchronous task logging
