@@ -182,6 +182,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Fixed in v2.4.27
 
+- [#8267](https://github.com/nautobot/nautobot/issues/8267) - Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.
 - [#8319](https://github.com/nautobot/nautobot/issues/8319) - Fixed the creation of Interface Dynamic Groups by Duplex, 802.1Q Mode and Tagged/Untagged VLANs.
 - [#8453](https://github.com/nautobot/nautobot/issues/8453) - Fixed an issue where a link on a Prefix's Child Prefixes tab was not working as expected.
 - [#8478](https://github.com/nautobot/nautobot/issues/8478) - Fixed an issue where a link on a Prefix's IP Addresses tab was not working as expected.
