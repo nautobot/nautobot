@@ -9,6 +9,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -22,11 +23,16 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
+from . import filters, tables
+from .api import serializers
 from .forms import (
     AdvancedProfileSettingsForm,
     LoginForm,
@@ -34,6 +40,8 @@ from .forms import (
     NavbarFavoritesRemoveForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
+    TokenBulkEditForm,
+    TokenFilterForm,
     TokenForm,
 )
 from .models import Token
@@ -323,6 +331,49 @@ class ChangePasswordView(GenericView):
 #
 # API tokens
 #
+
+
+class TokenUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = TokenBulkEditForm
+    filterset_class = filters.TokenFilterSet
+    filterset_form_class = TokenFilterForm
+    form_class = TokenForm
+    serializer_class = serializers.TokenSerializer
+    table_class = tables.TokenTable
+    queryset = Token.objects.all()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ],
+    )
+
+    def form_save(self, form, **kwargs):
+        """
+        Save token form data while enforcing ownership.
+
+        ``Token.user`` is required, but the form doesn't expose a ``user`` field.
+        Ensure a newly created token is always owned by the current user.
+        """
+        obj = form.save(commit=False)
+        if not obj.user_id:
+            obj.user = self.request.user
+        obj.save()
+        form.save_m2m()
+        return obj
+
+    def get_queryset(self):
+        """
+        Limit visibility to tokens owned by the authenticated user.
+        """
+        queryset = super().get_queryset()
+        if isinstance(self.request.user, AnonymousUser):
+            return queryset.none()
+        return queryset.filter(user=self.request.user)
 
 
 class TokenListView(GenericView):

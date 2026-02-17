@@ -240,6 +240,7 @@ class Token(BaseModel):
 
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tokens")
     created = models.DateTimeField(auto_now_add=True)
+    last_updated = models.DateTimeField(auto_now=True)
     expires = models.DateTimeField(blank=True, null=True)
     key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")
@@ -248,6 +249,7 @@ class Token(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    is_saved_view_model = True
 
     class Meta:
         ordering = ["created"]
