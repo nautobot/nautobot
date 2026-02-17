@@ -166,6 +166,51 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.27 (2026-02-17)
+
+### Security in v2.4.27
+
+- [#8504](https://github.com/nautobot/nautobot/issues/8504) - Updated dependency `django` to `~4.2.28` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
+- [#8539](https://github.com/nautobot/nautobot/issues/8539) - Updated dependency `cryptography` to `46.0.5` to mitigate CVE-2026-26007.
+- [#8544](https://github.com/nautobot/nautobot/issues/8544) - Updated dependency `pillow` to `^12.1.1` to mitigate CVE-2026-25990.
+
+### Added in v2.4.27
+
+- [#8484](https://github.com/nautobot/nautobot/issues/8484) - Added polish type variants to CS connector in PortTypeChoices
+- [#8511](https://github.com/nautobot/nautobot/issues/8511) - Added missing bulk edit buttons to the IP Addresses and Child Prefix tabs on the Prefix detail view.
+- [#8525](https://github.com/nautobot/nautobot/issues/8525) - Added missing table action buttons to the Child Prefixes and IP Addresses tabs on the respective Prefix detail view tabs.
+
+### Fixed in v2.4.27
+
+- [#8267](https://github.com/nautobot/nautobot/issues/8267) - Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.
+- [#8319](https://github.com/nautobot/nautobot/issues/8319) - Fixed the creation of Interface Dynamic Groups by Duplex, 802.1Q Mode and Tagged/Untagged VLANs.
+- [#8453](https://github.com/nautobot/nautobot/issues/8453) - Fixed an issue where a link on a Prefix's Child Prefixes tab was not working as expected.
+- [#8478](https://github.com/nautobot/nautobot/issues/8478) - Fixed an issue where a link on a Prefix's IP Addresses tab was not working as expected.
+- [#8500](https://github.com/nautobot/nautobot/issues/8500) - Fixed `KeyError` when `CACHES` setting does not include an explicit `TIMEOUT` key.
+- [#8522](https://github.com/nautobot/nautobot/issues/8522) - Adjusted the foreground color contrast threshold used for color labels to improve readability.
+
+### Dependencies in v2.4.27
+
+- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency `celery` to ~5.6.2.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `mysqlclient` to `~2.2.8`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `social-auth-core` to `~4.8.5`.
+
+### Housekeeping in v2.4.27
+
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated development dependency `coverage` to `~7.13.4`.
+- [#8508](https://github.com/nautobot/nautobot/issues/8508) - Changed many invoke commands to accept multiple services as arguments.
+
+## v2.4.26 (2026-02-02)
+
+### Security in v2.4.26
+
+- [#8428](https://github.com/nautobot/nautobot/issues/8428) - Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Fixed in v2.4.26
+
+- [#7076](https://github.com/nautobot/nautobot/issues/7076) - Fixed various font sizes that are used by the admin interface.
+- [#8404](https://github.com/nautobot/nautobot/issues/8404) - Fixed the ability to re-run a Kubernetes Job.
+
 ## v2.4.25 (2026-01-09)
 
 ### Security in v2.4.25
