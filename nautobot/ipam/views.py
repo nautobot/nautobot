@@ -369,6 +369,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
         }
     )
 
+    class PrefixSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            """Override the body_content_table_list_url as it derives from obj.parent.pk instead of obj.pk."""
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id or 'null'}",
+            }
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             ui.PrefixObjectFieldsPanel(
@@ -400,12 +409,33 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=100,
                 table_class=tables.PrefixTable,
                 table_attribute="default_ancestors",
-                table_title="Parent Prefixes",
+                table_title="Ancestor Prefixes",
                 exclude_columns=["namespace"],
                 related_field_name="ancestors",
                 add_button_route=None,
                 paginate=False,
-                show_table_config_button=False,
+            ),
+            PrefixSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=130,
+                table_class=tables.PrefixTable,
+                table_attribute="default_siblings",
+                table_title="Sibling Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=160,
+                table_class=tables.PrefixTable,
+                table_attribute="children",
+                table_title="Child Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -455,7 +485,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
-                label="Child Prefixes",
+                label="Descendant Prefixes",
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(

@@ -1002,7 +1002,22 @@ class ObjectsTablePanel(Panel):
 
         return body_content_table_add_url
 
+    def get_table_config_form_context(self, context: Context):
+        """
+        Get the context for the given table config form but do not actually render it yet.
+
+        This allows for the `render_table_config_forms` templatetag to intelligently discard duplicate forms
+        in the case where a single view has multiple instances of the same table (e.g. Prefix detail view).
+        """
+        if not self.should_render(context):
+            return None
+        if not self.show_table_config_button:
+            return None
+        context = self.get_extra_context(context)
+        return table_config_form(context["body_content_table"])
+
     def render_table_config_form(self, context: Context):
+        """Unused in core at this time, replaced by get_table_config_form_context()."""
         if not self.should_render(context):
             return ""
         if not self.show_table_config_button:

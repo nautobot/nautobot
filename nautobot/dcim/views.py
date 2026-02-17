@@ -409,6 +409,14 @@ class LocationUIViewSet(NautobotUIViewSet):
     )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
 
+    class LocationSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('dcim:location_list')}?parent={obj.parent_id or 'null'}",
+            }
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -462,6 +470,18 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 api_url_name="dcim-api:location-stats",
             ),
+            LocationSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=150,
+                table_title="Sibling Locations",
+                table_class=tables.LocationTable,
+                table_attribute="siblings",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                add_button_route=None,
+                hide_hierarchy_ui=True,
+                max_display_count=10,
+            ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
@@ -481,12 +501,13 @@ class LocationUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                table_title="Children",
+                table_title="Child Locations",
                 table_class=tables.LocationTable,
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
                 hide_hierarchy_ui=True,
+                max_display_count=10,
             ),
         )
     )
