@@ -432,7 +432,6 @@ class ExtraDetailViewActionButton(Button):
 
     def render_label(self, context: Context) -> str:
         """Generate button label."""
-        # TODO: Make sure this works
         return f"{bettertitle(self.action)} {bettertitle(context['verbose_name'])}"
 
     def render(self, context: Context):
