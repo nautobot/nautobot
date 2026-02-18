@@ -295,7 +295,7 @@ class Button(Component):
 class DropdownButton(Button):
     """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
 
-    children: list[Button] = None
+    children: list[Button] = []
     template_path = "components/button/dropdown.html"
 
     def __init__(self, **kwargs):
@@ -324,7 +324,7 @@ class DropdownButton(Button):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "children", None) is None:
+        if not getattr(self, "children", None):
             raise TypeError("children is required")
 
     def get_extra_context(self, context: Context):
@@ -392,9 +392,9 @@ class ExtraDetailViewActionButton(Button):
         """Represents an extra action button for detail views.
 
         Keyword Args:
-            action: The action name (used for URL routing and button ID)
-            permission_check: callable to check if button should render
-            label: Optional custom label (if None, uses "Action ObjectName")
+            action (str): The action name (used for URL routing and button ID)
+            permission_check (callable): callable to check if button should render
+            label (str or callable): Optional custom label (if None, uses "Action ObjectName")
             color (ButtonColorChoices, optional): The color (class) of this button.
             link_name (str): View name to link to action, for example "extras:approvalworkflow_cancel".
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
@@ -428,7 +428,7 @@ class ExtraDetailViewActionButton(Button):
     def should_render(self, context: Context) -> bool:
         """Check if button should be rendered based on permissions."""
         obj = get_obj_from_context(context, self.context_object_key)
-        return bool(self.get_link(context) and self.permission_check(context["user"], obj))
+        return bool(self.get_link(context) and self.permission_check(context["user"], obj))  # pylint: disable=not-callable
 
     def render_label(self, context: Context) -> str:
         """Generate button label."""
@@ -447,7 +447,7 @@ class ExtraDetailViewActionButton(Button):
         """Add the label of ExtraDetailViewActionButton to the other Button context."""
         return {
             **super().get_extra_context(context),
-            "label": self.label(context) if callable(self.label) else self.label,
+            "label": self.label(context) if callable(self.label) else self.label,  # pylint: disable=not-callable
         }
 
 
@@ -675,15 +675,15 @@ class Panel(Component):
     WEIGHT_RELATIONSHIPS_PANEL = 500
     WEIGHT_TAGS_PANEL = 600
 
-    label = None
-    css_class = "default"
-    section = SectionChoices.FULL_WIDTH
-    body_id = None
     body_content_template_path = None
-    header_extra_content_template_path = None
-    footer_content_template_path = None
-    template_path = "components/panel/panel.html"
+    body_id = None
     body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
+    css_class = "default"
+    footer_content_template_path = None
+    header_extra_content_template_path = None
+    label = None
+    section = SectionChoices.FULL_WIDTH
+    template_path = "components/panel/panel.html"
 
     def render(self, context: Context):
         """
@@ -873,21 +873,21 @@ class ObjectsTablePanel(Panel):
     distinct = False
     enable_bulk_actions = False
     enable_related_link = True
-    exclude_columns = None
+    exclude_columns = []
     footer_buttons = None
     footer_content_template_path = "components/panel/footer_content_table.html"
     form_id = None
     header_extra_content_template_path = "components/panel/header_extra_content_table.html"
     hide_hierarchy_ui = False
-    include_columns = None
+    include_columns = []
     include_paginator = False
     max_display_count = None
-    order_by_fields = None
+    order_by_fields = []
     paginate = True
-    prefetch_related_fields = None
+    prefetch_related_fields = []
     related_field_name = None
     related_list_url_name = None
-    select_related_fields = None
+    select_related_fields = []
     show_table_config_button = True
     tab_id = None
     table_attribute = None
@@ -1099,7 +1099,7 @@ class ObjectsTablePanel(Panel):
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             if self.distinct:
                 body_content_table_queryset = body_content_table_queryset.distinct()
-            body_content_table = body_content_table_class(
+            body_content_table = body_content_table_class(  # pylint: disable=not-callable
                 body_content_table_queryset,
                 hide_hierarchy_ui=self.hide_hierarchy_ui,
                 user=request.user,
@@ -1208,9 +1208,9 @@ class KeyValueTablePanel(Panel):
             data (dict): The dictionary of key/value data to display in this panel.
                 May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
             context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
-            hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
+            hide_if_unset (list, optional): Keys that should be omitted from the display entirely if they have a falsey value,
                 instead of displaying the usual em-dash placeholder text.
-            value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
+            value_transforms (dict, optional): Dictionary of `{key: [list of transform functions]}`, used to specify custom
                 rendering of specific key values without needing to implement a new subclass for this purpose.
                 Many of the `templatetags.helpers` functions are suitable for this purpose; examples:
 
@@ -1235,7 +1235,7 @@ class KeyValueTablePanel(Panel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if self.data and self.context_data_key:
+        if self.data and self.context_data_key != "data":
             raise ValueError("The data and context_data_key parameters are mutually exclusive")
 
     def should_render(self, context: Context):
@@ -1518,12 +1518,9 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 exist on the provided object; otherwise an exception will be raised at render time.
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
-            data (dict): The dictionary of key/value data to display in this panel.
-                May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
-            context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
-            hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
+            hide_if_unset (list, optional): Keys that should be omitted from the display entirely if they have a falsey value,
                 instead of displaying the usual em-dash placeholder text.
-            value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
+            value_transforms (dict, optional): Dictionary of `{key: [list of transform functions]}`, used to specify custom
                 rendering of specific key values without needing to implement a new subclass for this purpose.
                 Many of the `templatetags.helpers` functions are suitable for this purpose; examples:
 
@@ -1888,7 +1885,7 @@ class TextPanel(BaseTextPanel):
 
 
 class StatsPanel(Panel):
-    related_models = None
+    related_models = []
     body_content_template_path = "components/panel/stats_panel_body.html"
     filter_name = None
 
