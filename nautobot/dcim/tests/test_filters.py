@@ -3335,7 +3335,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         tenants = Tenant.objects.all()[:3]
 
         cls.locations = Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))[:3]
-        racks = (
+        cls.racks = (
             Rack.objects.get(name="Rack 1"),
             Rack.objects.get(name="Rack 2"),
             Rack.objects.get(name="Rack 3"),
@@ -3361,7 +3361,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 status=device_status,
                 tenant=tenants[0],
                 location=cls.locations[0],
-                rack=racks[0],
+                rack=cls.racks[0],
                 position=2,
             ),
             Device.objects.create(
@@ -3371,7 +3371,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 status=device_status,
                 tenant=tenants[1],
                 location=cls.locations[1],
-                rack=racks[1],
+                rack=cls.racks[1],
                 position=1,
             ),
             Device.objects.create(
@@ -3381,8 +3381,16 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 status=device_status,
                 tenant=tenants[2],
                 location=cls.locations[2],
-                rack=racks[2],
+                rack=cls.racks[2],
                 position=2,
+            ),
+            Device.objects.create(
+                name="Device 7",
+                device_type=device_types[0],
+                role=device_role,
+                status=device_status,
+                location=cls.locations[0],
+                # no rack
             ),
         )
 
@@ -3394,39 +3402,40 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Interface.objects.get(device__name="Device 4"),
             Interface.objects.get(device__name="Device 5"),
             Interface.objects.get(device__name="Device 6"),
+            Interface.objects.get(device__name="Device 7"),
             Interface.objects.create(
                 device=devices[0],
-                name="Test Interface 7",
-                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-                status=interface_status,
-            ),
-            Interface.objects.create(
-                device=devices[1],
                 name="Test Interface 8",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
-                device=devices[2],
+                device=devices[1],
                 name="Test Interface 9",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
-                device=devices[3],
+                device=devices[2],
                 name="Test Interface 10",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
-                device=devices[4],
+                device=devices[3],
                 name="Test Interface 11",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
             Interface.objects.create(
-                device=devices[5],
+                device=devices[4],
                 name="Test Interface 12",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
+            ),
+            Interface.objects.create(
+                device=devices[5],
+                name="Test Interface 13",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                 status=interface_status,
             ),
@@ -3474,7 +3483,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             ),
             Cable.objects.create(
                 termination_a=interfaces[6],
-                termination_b=interfaces[9],
+                termination_b=interfaces[12],
                 label="Cable 4",
                 type=CableTypeChoices.TYPE_CAT5E,
                 status=cls.status_planned,
@@ -3486,6 +3495,16 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 termination_a=interfaces[7],
                 termination_b=interfaces[10],
                 label="Cable 5",
+                type=CableTypeChoices.TYPE_CAT5E,
+                status=cls.status_planned,
+                color="f44336",
+                length=40,
+                length_unit=CableLengthUnitChoices.UNIT_FOOT,
+            ),
+            Cable.objects.create(
+                termination_a=interfaces[8],
+                termination_b=interfaces[11],
+                label="Cable 6",
                 type=CableTypeChoices.TYPE_CAT6,
                 status=cls.status_planned,
                 color="e91e63",
@@ -3495,7 +3514,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             Cable.objects.create(
                 termination_a=console_port,
                 termination_b=console_server_port,
-                label="Cable 6",
+                label="Cable 7",
                 type=CableTypeChoices.TYPE_CAT6,
                 status=cls.status_decommissioning,
                 color="e91e63",
@@ -3509,7 +3528,9 @@ class CableTestCase(FilterTestCases.FilterTestCase):
     def test_length_unit(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"length_unit": [CableLengthUnitChoices.UNIT_FOOT]}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(length_unit=CableLengthUnitChoices.UNIT_FOOT)
+        )
 
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
@@ -3596,31 +3617,88 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_rack(self):
         # TODO: Not a generic_filter_test because this is a method filter.
-        racks = Rack.objects.all()[:2]
         with self.subTest("rack_id"):
-            params = {"rack_id": [racks[0].pk, racks[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            params = {"rack_id": [self.racks[0].pk, self.racks[1].pk]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__rack__in=[self.racks[0], self.racks[1]])
+                | self.queryset.filter(_termination_b_device__rack__in=[self.racks[0], self.racks[1]]),
+            )
+            params = {"rack_id": ["null"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__rack__isnull=True)
+                | self.queryset.filter(_termination_b_device__rack__isnull=True),
+            )
         with self.subTest("rack"):
-            params = {"rack": [racks[0].name, racks[1].name]}
+            params = {"rack": [self.racks[0].name, self.racks[1].name]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__rack__in=[self.racks[0], self.racks[1]])
+                | self.queryset.filter(_termination_b_device__rack__in=[self.racks[0], self.racks[1]]),
+            )
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
+            params = {"rack": ["null"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__rack__isnull=True)
+                | self.queryset.filter(_termination_b_device__rack__isnull=True),
+            )
+
+    def test_location(self):
+        # TODO: Not a generic_filter_test because this is a method filter.
+        with self.subTest("location"):
+            params = {"location": [self.locations[0].name, self.locations[1].name]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__location__in=[self.locations[0], self.locations[1]])
+                | self.queryset.filter(_termination_b_device__location__in=[self.locations[0], self.locations[1]]),
+            )
+        with self.subTest("location_id"):
+            params = {"location_id": [self.locations[0].pk, self.locations[1].pk]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(_termination_a_device__location__in=[self.locations[0], self.locations[1]])
+                | self.queryset.filter(_termination_b_device__location__in=[self.locations[0], self.locations[1]]),
+            )
 
     def test_tenant(self):
         # TODO: Not a generic_filter_test because this is a method filter.
         tenants = list(Tenant.objects.filter(devices__isnull=False))[:2]
         with self.subTest("tenant_id"):
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertQuerySetEqual(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
                     Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
                 ),
             )
+            params = {"tenant_id": [tenants[0].pk, "null"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(
+                    Q(_termination_a_device__tenant=tenants[0])
+                    | Q(_termination_b_device__tenant=tenants[0])
+                    | Q(_termination_a_device__tenant__isnull=True)
+                    | Q(_termination_b_device__tenant__isnull=True)
+                ),
+            )
         with self.subTest("tenant"):
             params = {"tenant": [tenants[0].name, tenants[1].name]}
-            self.assertQuerySetEqual(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
                     Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
+                ),
+            )
+            params = {"tenant": [tenants[0].name, "null"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(
+                    Q(_termination_a_device__tenant=tenants[0])
+                    | Q(_termination_b_device__tenant=tenants[0])
+                    | Q(_termination_a_device__tenant__isnull=True)
+                    | Q(_termination_b_device__tenant__isnull=True)
                 ),
             )
 
@@ -3632,22 +3710,42 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         type_console_server_port = "dcim.consoleserverport"
         with self.subTest("termination_a_type: interface, console_port"):
             params = {"termination_a_type": [type_interface, type_console_port]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_a_type__model__in=["interface", "consoleport"]),
+            )
         with self.subTest("termination_a_type: interface"):
             params = {"termination_a_type": [type_interface]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_a_type__model__in=["interface"]),
+            )
         with self.subTest("termination_b_type: interface, console_server_port"):
             params = {"termination_b_type": [type_interface, type_console_server_port]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 6)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_b_type__model__in=["interface", "consoleserverport"]),
+            )
         with self.subTest("termination_b_type: interface"):
             params = {"termination_b_type": [type_interface]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_b_type__model__in=["interface"]),
+            )
         with self.subTest("termination_type: interface"):
             params = {"termination_type": [type_interface]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_a_type__model__in=["interface"])
+                | self.queryset.filter(termination_b_type__model__in=["interface"]),
+            )
         with self.subTest("termination_type: console_port, console_server_port"):
             params = {"termination_type": [type_console_port, type_console_server_port]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(termination_a_type__model__in=["consoleport", "consoleserverport"])
+                | self.queryset.filter(termination_b_type__model__in=["consoleport", "consoleserverport"]),
+            )
 
 
 class PowerPanelTestCase(FilterTestCases.FilterTestCase):

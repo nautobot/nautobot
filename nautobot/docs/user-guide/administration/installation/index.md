@@ -85,7 +85,6 @@ Whether you are getting started for the first time, looking to build a local lab
     * Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
     * Click to install apps from Nautobot Cloud Marketplace
     * Cloud-based database snapshots
-    * One-click deployments of Ansible AWX too
 
     ### Nautobot Cloud Cons
 

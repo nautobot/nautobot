@@ -226,7 +226,7 @@ class DynamicGroup(PrimaryModel):
                 new_modelform_field.widget = modelform_field.widget
                 modelform_field = new_modelform_field
 
-            # FIXME(jathan); Figure out how we can do this autoamtically from the FilterSet so we
+            # FIXME(jathan); Figure out how we can do this automatically from the FilterSet so we
             # don't have to munge it here.
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
@@ -552,7 +552,7 @@ class DynamicGroup(PrimaryModel):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
 
-        This form is used to popoulate and validate the filter dictionary.
+        This form is used to populate and validate the filter dictionary.
 
         If a form cannot be created for some reason (such as on a new instance when rendering the UI
         "add" view), this will return `None`.
