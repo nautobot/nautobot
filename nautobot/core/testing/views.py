@@ -1008,7 +1008,6 @@ class ViewTestCases:
             for name in column_names:
                 column = table.base_columns[name]
                 with self.subTest(column_name=name):
-
                     if hasattr(column, "order_by") and column.order_by:
                         continue
                     if name in ["actions", "pk"]:
