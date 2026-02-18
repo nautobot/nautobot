@@ -321,6 +321,7 @@ class CustomFieldModel(models.Model):
         super().clean()
 
         custom_fields = {cf.key: cf for cf in CustomField.objects.get_for_model(self)}
+        custom_fields_should_render = {cf.key: cf.should_render(self) for cf in custom_fields.values()}
 
         # Validate all field values
         for field_key, value in self._custom_field_data.items():
@@ -329,13 +330,14 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
+                if custom_fields_should_render[field_key]:
+                    self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
         # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
-            if cf.key not in self._custom_field_data:
+            if cf.key not in self._custom_field_data and custom_fields_should_render[cf.key]:
                 if cf.default is not None:
                     self._custom_field_data[cf.key] = cf.default
                 elif cf.required:
