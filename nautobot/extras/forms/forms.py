@@ -1394,12 +1394,6 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
-    def __init__(self, *args, **kwargs):
-        # This allows the test_has_timestamps_and_buttons to pass
-        if kwargs.get("instance"):
-            kwargs.pop("instance")
-        super().__init__(*args, **kwargs)
-
 
 class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(

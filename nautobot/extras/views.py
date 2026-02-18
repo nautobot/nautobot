@@ -2325,14 +2325,14 @@ class JobUIViewSet(NautobotUIViewSet):
                 display = self.request.user.get_config("extras.job.display", "list")
             else:
                 display = "list"
-                context.update(
-                    {
-                        "table_inc_template": "extras/inc/job_tiles.html"
-                        if display == "tiles"
-                        else "extras/inc/job_table.html",
-                        "display": display,
-                    }
-                )
+            context.update(
+                {
+                    "table_inc_template": "extras/inc/job_tiles.html"
+                    if display == "tiles"
+                    else "extras/inc/job_table.html",
+                    "display": display,
+                }
+            )
 
         return context
 
