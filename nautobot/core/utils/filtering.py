@@ -273,7 +273,10 @@ def build_filter_dict_from_filterset(
             if not field_value:
                 continue
             field_to_query = field.to_field_name or "pk"
-            new_value = [getattr(item, field_to_query) for item in field_value]
+            if isinstance(field_value, list):
+                new_value = [getattr(item, field_to_query) for item in field_value]
+            else:
+                new_value = getattr(field_value, field_to_query, None)
 
         else:
             new_value = field_value
