@@ -495,9 +495,13 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
+        template_name = self.template_name
+        if self.request.headers.get("HX-Request", False):
+            template_name = "components/htmx/object_embedded_create.html"
+
         return render(
             request,
-            self.template_name,
+            template_name,
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
