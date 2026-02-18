@@ -2123,7 +2123,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     )
 
             template_name = "extras/job.html"
-            job_form = job_class.as_form(initial=initial)
+            job_data_form = job_class.as_form(initial=initial)
+            job_execution_form = job_class.as_execution_form(initial=initial)
+
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -2143,7 +2145,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             template_name,  # 2.0 TODO: extras/job_submission.html
             {
                 "job_model": job_model,
-                "job_form": job_form,
+                "job_data_form": job_data_form,
+                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )
@@ -2152,7 +2155,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         job_model = self._get_job_model_or_404(class_path, pk)
 
         job_class = get_job(job_model.class_path, reload=True)
-        job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        job_data_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
 
         return_url = request.POST.get("_return_url")
@@ -2171,8 +2175,14 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+        elif (
+            job_data_form is not None
+            and job_data_form.is_valid()
+            and job_execution_form is not None
+            and job_execution_form.is_valid()
+            and schedule_form.is_valid()
+        ):
+            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
             if job_queue is None:
                 job_queue = job_model.default_job_queue
 
@@ -2185,11 +2195,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     ),
                 )
 
-            dryrun = job_form.cleaned_data.get("dryrun", False)
+            dryrun = job_data_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
-            profile = job_form.cleaned_data.pop("_profile")
-            console_log = job_form.cleaned_data.get("_console_log", False)
-            ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
+            profile = job_execution_form.cleaned_data.get("_profile")
+            console_log = job_execution_form.cleaned_data.get("_console_log", False)
+            ignore_singleton_lock = job_execution_form.cleaned_data.get("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             with transaction.atomic():
@@ -2202,8 +2212,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     job_queue=job_queue,
                     profile=profile,
+                    console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
-                    **job_class.serialize_data(job_form.cleaned_data),
+                    **job_class.serialize_data(job_data_form.cleaned_data),
                 )
                 scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
                 is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
@@ -2225,7 +2236,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             request,
                             job_model,
                             job_class,
-                            job_form,
+                            job_data_form,
                             profile,
                             ignore_singleton_lock,
                             job_queue,
@@ -2247,7 +2258,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         request,
                         job_model,
                         job_class,
-                        job_form,
+                        job_data_form,
                         profile,
                         ignore_singleton_lock,
                         job_queue,
@@ -2273,7 +2284,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             template_name,
             {
                 "job_model": job_model,
-                "job_form": job_form,
+                "job_data_form": job_data_form,
+                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )

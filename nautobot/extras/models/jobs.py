@@ -1587,6 +1587,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         start_time: Optional[datetime] = None,
         interval: str = JobExecutionType.TYPE_IMMEDIATELY,
         crontab: str = "",
+        console_log: bool = False,
         profile: bool = False,
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
@@ -1608,6 +1609,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             interval (JobExecutionType): The interval type for the job execution.
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
             crontab (str): The crontab string for the schedule. Defaults to "".
+            console_log (bool): Flag indicating whether to run the job in console log mode. Default to False.
             profile (bool): Flag indicating whether to profile the job. Defaults to False.
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
@@ -1641,6 +1643,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "nautobot_job_profile": profile,
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
+            "nautobot_job_console_log": console_log,
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

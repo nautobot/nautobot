@@ -31,7 +31,7 @@ class NautobotScheduleEntry(ModelEntry):
 
         # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
-        if model.kwargs.pop("_console_log", False):
+        if model.celery_kwargs.get("nautobot_job_console_log", False):
             self.task = "nautobot.extras.jobs.run_console_log_job_and_return_job_result"
         else:
             self.task = "nautobot.extras.jobs.run_job"
