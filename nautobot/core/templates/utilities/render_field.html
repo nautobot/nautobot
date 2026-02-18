@@ -38,6 +38,19 @@
         <div class="col-md-9{% if should_render_embedded_create or should_render_embedded_search %} align-items-start d-flex gap-8 flex-wrap{% endif %}">
             {% if should_render_embedded_create or should_render_embedded_search %}
                 <div class="flex-grow-1 nb-w-0">{{ field }}</div>
+                {% captureas embedded_action_query_params %}
+                    {% for attr, value in field.field.widget.attrs.items %}
+                        {% if attr == 'data-query-param-content_type' or attr == 'data-query-param-content_types' %}
+                            {% for qp in value|split:'["'|join:''|split:'&quot;]'|join:''|split:',' %}
+                                {% with ct_id=qp|content_type_id %}
+                                    {% if ct_id is not None %}
+                                        {{ attr|split:'data-query-param-'|join:'' }}={{ ct_id }}&
+                                    {% endif %}e
+                                {% endwith %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                {% endcaptureas %}
                 {% if should_render_embedded_create %}
                     {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
                         <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
@@ -45,7 +58,7 @@
                                 class="btn btn-primary flex-grow-0 flex-shrink-0"
                                 data-bs-toggle="modal"
                                 data-bs-target="#embedded_action_modal"
-                                hx-get="{% url field.field.queryset.model|viewname:'add' %}"
+                                hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_action_query_params %}?{{ embedded_action_query_params }}{% endif %}"
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleCreateStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"

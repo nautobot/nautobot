@@ -2,6 +2,7 @@ from unittest import mock
 
 from constance.test import override_config
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.templatetags.static import static
 from django.test import override_settings, tag
@@ -188,6 +189,14 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
         # Assert detail views get validated as well
         self.assertEqual(helpers.validated_api_viewname(location, "detail"), "dcim-api:location-detail")
+
+    def test_content_type_id(self):
+        self.assertEqual(
+            helpers.content_type_id("dcim.location"), ContentType.objects.get_for_model(models.Location).id
+        )
+        self.assertEqual(
+            helpers.content_type_id("dcim.locationtype"), ContentType.objects.get_for_model(models.LocationType).id
+        )
 
     def test_bettertitle(self):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")

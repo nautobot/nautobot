@@ -12,6 +12,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.staticfiles.finders import find
 from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
@@ -370,6 +371,25 @@ def validated_api_viewname(model, action):
             reverse(viewname_str)
         return viewname_str
     except NoReverseMatch:
+        return None
+
+
+@library.filter()
+@register.filter()
+def content_type_id(ct):
+    """
+    Return ContentType ID for the given `ct` content type string in `{app_label}.{model}` format.
+
+    Args:
+        ct (str): content type string in `{app_label}.{model}` format
+
+    Returns:
+        (int): ContentType ID
+    """
+    try:
+        app_label, model = ct.split(".")
+        return ContentType.objects.get(app_label=app_label, model=model).id
+    except (AttributeError, ObjectDoesNotExist, ValueError):
         return None
 
 
