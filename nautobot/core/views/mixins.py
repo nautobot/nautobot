@@ -864,10 +864,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             self.filterset = self.filterset_class(self.filter_params, queryset)
             queryset = self.filterset.qs
             if not self.filterset.is_valid():
-                messages.error(
-                    self.request,
-                    format_html("Invalid filters were specified: {}", self.filterset.errors),
-                )
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not self.request.headers.get("HX-Request", False):
+                    messages.error(
+                        self.request,
+                        format_html("Invalid filters were specified: {}", self.filterset.errors),
+                    )
                 queryset = queryset.none()
 
             # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
@@ -890,10 +892,12 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             try:
                 return et.render_to_response(queryset)
             except Exception as e:
-                messages.error(
-                    request,
-                    f"There was an error rendering the selected export template ({et.name}): {e}",
-                )
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not request.headers.get("HX-Request", False):
+                    messages.error(
+                        request,
+                        f"There was an error rendering the selected export template ({et.name}): {e}",
+                    )
 
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):

@@ -231,6 +231,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
+        htmx_request = self.request.headers.get("HX-Request", False)
 
         skip_user_and_global_default_saved_view = False
         if self.filterset is not None:
@@ -275,10 +276,12 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             filterset = self.filterset(filter_params, self.queryset)  # pylint:disable=not-callable  # only if not None
             self.queryset = filterset.qs
             if not filterset.is_valid():
-                messages.error(
-                    request,
-                    format_html("Invalid filters were specified: {}", filterset.errors),
-                )
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not htmx_request:
+                    messages.error(
+                        request,
+                        format_html("Invalid filters were specified: {}", filterset.errors),
+                    )
                 self.queryset = self.queryset.none()
 
             # If a valid filterset is applied, we have to hide the hierarchy indentation in the UI for tables that support hierarchy indentation.
@@ -313,10 +316,12 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             try:
                 return et.render_to_response(self.queryset)
             except Exception as e:
-                messages.error(
-                    request,
-                    f"There was an error rendering the selected export template ({et.name}): {e}",
-                )
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not htmx_request:
+                    messages.error(
+                        request,
+                        f"There was an error rendering the selected export template ({et.name}): {e}",
+                    )
 
         # Check for YAML export support
         elif "export" in request.GET and hasattr(model, "to_yaml"):  # 3.0 TODO: remove, irrelevant after #4746
@@ -346,10 +351,11 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 # User should be able to see any saved view that he has the list view access to.
                 current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
             except ObjectDoesNotExist:
-                messages.error(request, f"Saved view {current_saved_view_pk} not found")
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not htmx_request:
+                    messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
-        htmx_request = self.request.headers.get("HX-Request", False)
         if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
@@ -377,10 +383,13 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             table_config_form = TableConfigForm(table=table)
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
-                messages.warning(
-                    request,
-                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
-                )
+                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
+                if not htmx_request:
+                    messages.warning(
+                        request,
+                        'Requested "per_page" is too large. '
+                        f"No more than {max_page_size} items may be displayed at a time.",
+                    )
 
         valid_actions = self.validate_action_buttons(request)
 
