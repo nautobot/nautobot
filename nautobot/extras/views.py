@@ -2759,13 +2759,6 @@ class JobResultButton(object_detail.Button):
         """Resolve the link for this button."""
         if callable(self.link_name):
             return self.link_name(context)
-
-        obj = context.get("object")
-        if obj:
-            try:
-                return reverse(self.link_name, kwargs={"pk": obj.pk})
-            except Exception:
-                return None
         return None
 
     def render(self, context):
@@ -2875,6 +2868,7 @@ class JobResultUIViewSet(
                 label="Export Logs",
                 color=ButtonActionColorChoices.EXPORT,
                 icon="mdi-database-export",
+                required_permissions=["extras.view_joblogentry"],
                 link_name=lambda ctx: (
                     reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
                 ),
