@@ -11,7 +11,6 @@ class TokenTable(BaseTable):
     description = tables.Column()
     write_enabled = BooleanColumn(verbose_name="Write Enabled")
     created = tables.DateTimeColumn()
-    last_updated = tables.DateTimeColumn()
     expires = tables.DateTimeColumn()
     actions = ButtonsColumn(Token)
 
@@ -25,7 +24,6 @@ class TokenTable(BaseTable):
             "description",
             "write_enabled",
             "created",
-            "last_updated",
             "expires",
             "actions",
         )
@@ -35,7 +33,6 @@ class TokenTable(BaseTable):
             "description",
             "write_enabled",
             "created",
-            "last_updated",
             "expires",
             "actions",
         )
