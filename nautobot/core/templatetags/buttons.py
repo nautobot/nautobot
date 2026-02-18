@@ -297,15 +297,18 @@ def consolidate_detail_view_action_buttons(context):
     object_edit_url = action_url(instance, "edit")
     object_delete_url = action_url(instance, "delete")
     object_clone_url = action_url(instance, "add")
+
     render_edit_button = bool(object_edit_url and can_change(context["user"], instance))
     render_delete_button = bool(object_delete_url and can_delete(context["user"], instance))
     render_clone_button = bool(
         hasattr(instance, "clone_fields") and object_clone_url and can_add(context["user"], instance)
     )
+    # Get extra action buttons from model-level lookup
+    extra_action_buttons = lookup.get_extra_detail_view_action_buttons_for_model(instance._meta.model)
 
     detail_view_action_button_count = sum([render_edit_button, render_delete_button, render_clone_button])
 
-    if detail_view_action_button_count == 0:
+    if detail_view_action_button_count == 0 and not extra_action_buttons:
         return {
             "detail_view_action_buttons": detail_view_action_buttons,
         }
@@ -354,7 +357,7 @@ def consolidate_detail_view_action_buttons(context):
             )
 
     # Render a generic "Actions" dropdown button if the edit button is not present
-    elif detail_view_action_button_count >= 1:
+    elif detail_view_action_button_count >= 1 or extra_action_buttons:
         detail_view_action_buttons.append(
             format_html(
                 """
@@ -384,8 +387,20 @@ def consolidate_detail_view_action_buttons(context):
                 button_class=clone_button_classes,
             )
         )
+
+    for extra_action_button in extra_action_buttons:
+        rendered_action_button = extra_action_button.render(context)
+        if not rendered_action_button:
+            continue
+        detail_view_action_buttons.append(rendered_action_button)
+
+    # delete button should be rendered as a last one
     if render_delete_button:
-        if render_clone_button:
+        # Add a divider before the Delete button when there are multiple actions,
+        # or when there are exactly two actions and Edit is not one of them.
+        # If Edit is rendered, we do not create the Actions dropdown;
+        # instead, we show a standalone Edit dropdown.
+        if len(detail_view_action_buttons) >= 2 or (len(detail_view_action_buttons) == 2 and not render_edit_button):
             detail_view_action_buttons.append(format_html('<li class="dropdown-divider"></li>'))
         detail_view_action_buttons.append(
             format_html(

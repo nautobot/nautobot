@@ -6,12 +6,11 @@
 
 {% block form_fields %}
     {% render_field form.name %}
-    {% render_field form.slug %}
     {% render_field form.manufacturer %}
 
-    <div class="mb-10 d-flex justify-content-center{% if form.network_driver.errors %} has-error{% endif %}">
-        <label class="col-lg-3 col-form-label" for="id_network_driver">Network driver</label>
-        <div class="col-lg-9">
+    <div class="mb-10 d-md-flex justify-content-center{% if form.network_driver.errors %} has-error{% endif %}">
+        <label class="col-md-3 col-form-label" for="id_network_driver">Network driver</label>
+        <div class="col-md-9">
             {{ form.network_driver }}
             <span class="form-text">
                 The <a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">normalized network driver</a> to use when interacting with devices

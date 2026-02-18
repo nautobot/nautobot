@@ -891,6 +891,59 @@ def serve_docs(context):
         start(context, service="mkdocs")
 
 
+@task(iterable=["path"])
+def compress_images(context, path=None, fix=False):
+    """Check whether included images are well-optimized, and optionally compress them if desirable."""
+    try:
+        from PIL import Image
+    except ImportError:
+        raise Exit("Pillow (PIL) must be installed, perhaps you need to use 'poetry run invoke'?")
+
+    if not path:
+        path = ["nautobot", "examples"]
+
+    unoptimized = 0
+    for root_dir in path:
+        for root, dirnames, filenames in os.walk(root_dir):
+            if "node_modules" in dirnames:
+                dirnames.remove("node_modules")
+            if "dist" in dirnames:
+                dirnames.remove("dist")
+            for filename in [f for f in filenames if f.endswith(".png")]:
+                filepath = os.path.join(root, filename)
+                img = Image.open(filepath)
+                if img.format != "PNG":
+                    print(f"{filepath} isn't actually a PNG file??")
+                    unoptimized += 1
+                elif img.mode == "RGBA":  # 24-bit color with alpha channel
+                    # Does it actually *use* the alpha channel for transparency?
+                    extrema = img.getextrema()
+                    # Is the minimum [0] alpha [3] value for any pixel in the image less than full opacity (255)?
+                    if extrema[3][0] == 255:
+                        # no actual transparency, we can strip the alpha channel and convert it to indexed mode
+                        if fix:
+                            # Note that converting directly from RGBA to P mode will always use a "web-safe" palette,
+                            # rather than an appropriately adaptive palette. Hence why we do it in two steps.
+                            img = img.convert(mode="RGB")
+                            img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                            img.save(filepath, optimize=True)
+                            print(f"Optimized {filepath}")
+                        else:
+                            print(f"{filepath} has an unnecessary alpha channel.")
+                            unoptimized += 1
+                elif img.mode == "RGB":
+                    if fix:
+                        img = img.convert(mode="P", palette=Image.Palette.ADAPTIVE)
+                        img.save(filepath, optimize=True)
+                        print(f"Optimized {filepath}")
+                    else:
+                        print(f"{filepath} is not indexed color mode.")
+                        unoptimized += 1
+
+    if unoptimized > 0:
+        raise Exit(f"Found {unoptimized} image files that are not optimized", code=1)
+
+
 @task
 def hadolint(context):
     """Check Dockerfile for hadolint compliance and other style issues."""
@@ -1042,7 +1095,7 @@ def tests(
         command = f"nautobot-server test {label}"
     command += f" --config={config_file}"
     # booleans
-    if context.nautobot.get("cache_test_fixtures", False) or cache_test_fixtures:
+    if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
     if keepdb:
         command += " --keepdb"

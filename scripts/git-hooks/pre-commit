@@ -35,6 +35,9 @@ fi
 echo "Checking Markdown files..."
 invoke markdownlint || EXIT=1
 
+echo "Checking for images needing compression..."
+poetry run invoke compress-images || EXIT=1
+
 echo "Checking that docs build successfully..."
 invoke build-and-check-docs || EXIT=1
 

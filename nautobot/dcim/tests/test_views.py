@@ -210,10 +210,8 @@ class LocationTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewT
 
 class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Location
-    # One query for the natural slug, one for `LocationViewSet.get_extra_context`, and additional for distinct (which may be fixable?)
-    # See: https://github.com/nautobot/nautobot/pull/7530#discussion_r2432836062
-    # and https://github.com/nautobot/nautobot/pull/7530#discussion_r2432620239 for additional context
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 3}
+    # One query for the max_tree_depth to calculate the natural slug, one for the RackGroup filtering.
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -442,39 +440,12 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
 
-    def test_get_extra_context(self):
-        child_1, child_2 = Location.objects.filter(name__startswith="Leaf ")
-        parent_location = child_1.parent
-        child_1.location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
-        status = Status.objects.get_for_model(Prefix).first()
-        prefix_1 = Prefix.objects.create(network="192.0.2.0", prefix_length=25, status=status)
-        prefix_2 = Prefix.objects.create(network="192.0.2.128", prefix_length=25, status=status)
-        prefix_1.locations.set([child_1, child_2])
-        prefix_2.locations.set([child_1, child_2])
-
-        self.add_permissions("dcim.view_location")
-        self.add_permissions("ipam.view_prefix")
-
-        url = parent_location.get_absolute_url()
-        context = self.client.get(url).context
-        prefix_count = (
-            Prefix.objects.filter(location__in=parent_location.descendants(include_self=True)).distinct().count()
-        )
-
-        # Ensure that the context contains "stats" and the expected stat for prefix_list
-        self.assertIn("stats", context)
-        found = False
-        for stat in context["stats"].values():
-            if stat[0] == "ipam:prefix_list":
-                self.assertEqual(stat[1], prefix_count)
-                found = True
-        self.assertTrue(found, "ipam:prefix_list stat not found in context['stats']")
-
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = RackGroup
     sort_on_field = "name"
-    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+    # One for max_depth lookup, one for retrieving descendants in order to find all related Racks
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 2}
 
     @classmethod
     def setUpTestData(cls):
@@ -498,6 +469,11 @@ class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTest
             "description": "Updated description",
             "location": location.pk,
         }
+
+    def setUp(self):
+        super().setUp()
+        # Ensure that the related-racks table is renderable in the detail view.
+        self.add_permissions("dcim.view_rack")
 
 
 class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):

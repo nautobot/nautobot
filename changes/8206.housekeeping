@@ -1,1 +1,0 @@
-Removed `card-body` from `body_wrapper_generic_table.html`, because it doesn't work when the class is a table.

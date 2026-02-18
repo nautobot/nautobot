@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
@@ -97,3 +98,171 @@ class QuerySetCountTests(TestCase):
                 found_cte = True
         if not found_cte:
             self.fail("`TreeQuerySet.count` failed to re-add tree fields ot the queryset after removing them")
+
+
+class TreeModelCachedDescendantsPKsTests(TestCase):
+    """Tests for the custom `TreeModel.cached_descendants_pks` method."""
+
+    def setUp(self):
+        super().setUp()
+        cache.delete_pattern("*cacheable_descendants_pks*")
+
+    def tearDown(self):
+        cache.delete_pattern("*cacheable_descendants_pks*")
+        super().tearDown()
+
+    def test_cache_usage(self):
+        loc = Location.objects.without_tree_fields().exclude(children__isnull=True).first()
+        self.add_permissions("dcim.view_location")
+        # Force initial population of user permissions cache
+        Location.objects.restrict(self.user, "view")
+
+        for kwargs in [
+            {"include_self": True},
+            {"include_self": False},
+            {"include_self": True, "restrict_to_user": self.user},
+            {"include_self": False, "restrict_to_user": self.user},
+        ]:
+            with self.subTest(**kwargs):
+                # Different kwargs, so should not hit the cache
+                with self.assertNumQueries(1):
+                    cacheable_descendants_pks = loc.cacheable_descendants_pks(**kwargs)
+                self.assertNotEqual(cacheable_descendants_pks, [])
+                # Same kwargs, should hit the cache
+                with self.assertNumQueries(0):
+                    cached_descendants_pks = loc.cacheable_descendants_pks(**kwargs)
+                self.assertEqual(cacheable_descendants_pks, cached_descendants_pks)
+
+    def test_cache_cleared_on_create(self):
+        parent = Location.objects.filter(parent__isnull=False, children__isnull=False).first()
+        self.assertIsNotNone(parent)
+        grandparent = parent.parent
+
+        with self.assertNumQueries(1):
+            parent.cacheable_descendants_pks()
+        with self.assertNumQueries(1):
+            grandparent.cacheable_descendants_pks()
+
+        existing_child = parent.children.first()
+        with self.assertNumQueries(1):
+            existing_child.cacheable_descendants_pks()
+        new_child = Location.objects.create(
+            name="New child location",
+            status=existing_child.status,
+            location_type=existing_child.location_type,
+            parent=parent,
+        )
+
+        # Parent and grandparent caches should be cleared for recalculation
+        with self.assertNumQueries(1):
+            pks = parent.cacheable_descendants_pks()
+            self.assertIn(new_child.pk, pks)
+        with self.assertNumQueries(1):
+            pks = grandparent.cacheable_descendants_pks()
+            self.assertIn(new_child.pk, pks)
+        # Existing child is not affected by this and cache should not be cleared
+        with self.assertNumQueries(0):
+            existing_child.cacheable_descendants_pks()
+
+    def test_cache_cleared_on_parent_change(self):
+        loc = Location.objects.without_tree_fields().exclude(parent__isnull=True).exclude(children__isnull=True).first()
+        self.assertIsNotNone(loc)
+        old_parent = loc.parent
+
+        with self.assertNumQueries(1):
+            initial_old_parent_descendants_pks = old_parent.cacheable_descendants_pks()
+        self.assertIn(loc.pk, initial_old_parent_descendants_pks)
+
+        with self.assertNumQueries(1):
+            initial_descendants_pks = loc.cacheable_descendants_pks()
+
+        new_parent = (
+            Location.objects.filter(location_type=old_parent.location_type)
+            .exclude(pk__in=[old_parent.pk, loc.pk])
+            .first()
+        )
+        self.assertIsNotNone(new_parent)
+        with self.assertNumQueries(1):
+            initial_new_parent_descendants_pks = new_parent.cacheable_descendants_pks()
+        self.assertNotIn(loc.pk, initial_new_parent_descendants_pks)
+
+        loc.parent = new_parent
+        loc.save()
+
+        # Old parent cache should be cleared for recalculation
+        with self.assertNumQueries(1):
+            old_parent_descendants_pks = old_parent.cacheable_descendants_pks()
+        self.assertNotIn(loc.pk, old_parent_descendants_pks)
+        self.assertNotEqual(old_parent_descendants_pks, initial_old_parent_descendants_pks)
+
+        # New parent cache should be cleared for recalculation
+        with self.assertNumQueries(1):
+            new_parent_descendants_pks = new_parent.cacheable_descendants_pks()
+        self.assertIn(loc.pk, new_parent_descendants_pks)
+        self.assertNotEqual(new_parent_descendants_pks, initial_new_parent_descendants_pks)
+
+        # loc descendants are not affected by this, its cache does not need to be cleared
+        with self.assertNumQueries(0):
+            descendants_pks = loc.cacheable_descendants_pks()
+        self.assertEqual(descendants_pks, initial_descendants_pks)
+
+    def test_cache_not_cleared_if_parent_does_not_change(self):
+        loc = Location.objects.without_tree_fields().exclude(parent__isnull=True).exclude(children__isnull=True).first()
+        self.assertIsNotNone(loc)
+        parent = loc.parent
+
+        with self.assertNumQueries(1):
+            initial_parent_descendants_pks = parent.cacheable_descendants_pks()
+        self.assertIn(loc.pk, initial_parent_descendants_pks)
+
+        with self.assertNumQueries(1):
+            initial_descendants_pks = loc.cacheable_descendants_pks()
+
+        loc.name = "Some New Name"
+        loc.save()
+
+        with self.assertNumQueries(0):
+            parent_descendants_pks = parent.cacheable_descendants_pks()
+        self.assertIn(loc.pk, parent_descendants_pks)
+        self.assertEqual(initial_parent_descendants_pks, parent_descendants_pks)
+
+        with self.assertNumQueries(0):
+            descendants_pks = loc.cacheable_descendants_pks()
+        self.assertEqual(initial_descendants_pks, descendants_pks)
+
+    def test_cached_cleared_on_delete(self):
+        parent = Location.objects.filter(parent__isnull=False, children__isnull=False).first()
+        self.assertIsNotNone(parent)
+        grandparent = parent.parent
+
+        with self.assertNumQueries(1):
+            parent.cacheable_descendants_pks()
+        with self.assertNumQueries(1):
+            grandparent.cacheable_descendants_pks()
+
+        existing_child = parent.children.first()
+        with self.assertNumQueries(1):
+            existing_child.cacheable_descendants_pks()
+        new_child = Location.objects.create(
+            name="New child location",
+            status=existing_child.status,
+            location_type=existing_child.location_type,
+            parent=parent,
+        )
+
+        with self.assertNumQueries(1):
+            pks = parent.cacheable_descendants_pks()
+            self.assertIn(new_child.pk, pks)
+        with self.assertNumQueries(1):
+            pks = grandparent.cacheable_descendants_pks()
+            self.assertIn(new_child.pk, pks)
+
+        new_child.delete()
+
+        # Ancestor caches should be cleared for recalculation
+        with self.assertNumQueries(1):
+            pks = parent.cacheable_descendants_pks()
+            self.assertNotIn(new_child.pk, pks)
+        with self.assertNumQueries(1):
+            pks = grandparent.cacheable_descendants_pks()
+            self.assertNotIn(new_child.pk, pks)

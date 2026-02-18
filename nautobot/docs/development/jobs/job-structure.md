@@ -612,7 +612,7 @@ register_jobs(ExportText)
 The `create_file()` method accepts a filename and file contents (as `str` or `bytes`). Files are saved alongside the JobResult and remain available until the JobResult is deleted.
 
 !!! note
-    The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`JOB_FILE_IO_STORAGE`](../../user-guide/administration/configuration/settings.md#job_file_io_storage) settings.
+    The maximum file size and storage backend for output files are controlled by the [`JOB_CREATE_FILE_MAX_SIZE`](../../user-guide/administration/configuration/settings.md#job_create_file_max_size) and [`STORAGES["nautobotjobfiles"]`](../../user-guide/administration/configuration/settings.md#storages) settings.
 
 ### The `run()` Method
 

@@ -1,25 +1,26 @@
 {% load static %}
 {% load helpers %}
 {% load plugins %}
+{% include 'inc/media_failure.html' %}
 <link rel="stylesheet" id="template-theme"
       href="{% url 'template_css' %}">
 <link rel="stylesheet"
       href="{% static 'dist/css/nautobot.css' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=dist/css/nautobot.css'">
+      onerror="nb.media.handleFailure(this)">
 <link rel="stylesheet"
       href="{% static 'dist/css/materialdesignicons.css' %}"
-      onerror="window.location='{% url 'media_failure' %}?filename=dist/css/materialdesignicons.css'">
+      onerror="nb.media.handleFailure(this)">
 {% with cookie_theme=request.COOKIES|get_item:'theme' %}
     {% if not cookie_theme or cookie_theme == 'light' %}
         <link rel="stylesheet"
               href="{% static 'dist/css/github.min.css' %}"
-              onerror="window.location='{% url 'media_failure' %}?filename=dist/css/github.min.css'"
+              onerror="nb.media.handleFailure(this)"
               {% if not cookie_theme %}media="not (prefers-color-scheme: dark)"{% endif %}>
     {% endif %}
     {% if not cookie_theme or cookie_theme == 'dark' %}
         <link rel="stylesheet"
               href="{% static 'dist/css/github-dark.min.css' %}"
-              onerror="window.location='{% url 'media_failure' %}?filename=dist/css/github-dark.min.css'"
+              onerror="nb.media.handleFailure(this)"
               {% if not cookie_theme %}media="(prefers-color-scheme: dark)"{% endif %}>
     {% endif %}
 {% endwith %}

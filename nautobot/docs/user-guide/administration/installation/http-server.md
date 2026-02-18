@@ -266,7 +266,14 @@ This addition brings attention to SELinux, which is especially pertinent in envi
 
 ### Static Media Failure
 
-If you get a *Static Media Failure; The following static media file failed to load: css/base.css*, verify that the permissions on the `$NAUTOBOT_ROOT` directory are correctly set and that the `nginx` account is a member of the `nautobot` group, as described above.
+If you get a *Static Media Failure; \[...] static media file(s) failed to load.*, check the following:
+
+- `nautobot-server collectstatic` was run during the most recent upgrade. This installs the most recent iteration of each static file into the static root path.
+- The HTTP service (e.g. NGINX) is configured to serve files from the `STATIC_ROOT` path.
+- The permissions on the `$NAUTOBOT_ROOT` directory are correctly set and the `nginx` account is a member of the `nautobot` group, as described above.
+- Files that failed to load exist in the static root directory and are readable by the HTTP process.
+
+If all of the above are true and the issue still persists, you can check which static files failed to load and their respective HTTP responses (or lack thereof). To do that, open browser developer tools (Safari requires "Show features for web developers" to be enabled in Advanced Settings) using `Ctrl + Shift + J` keyboard shortcut in most browsers (`Cmd + Shift + J` on macOS). In the newly opened pane or window, choose "Console" or "Network" tab to troubleshoot further. If errors don't show up, refresh the page while keeping the Developer Tools open.
 
 ### 502 Bad Gateway
 

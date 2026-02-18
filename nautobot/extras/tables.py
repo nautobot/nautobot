@@ -374,11 +374,11 @@ class ApprovalWorkflowStageTable(BaseTable):
     actions_needed = tables.TemplateColumn(
         template_code="""
         {% if record.remaining_approvals == 1 %}
-        {{ record.remaining_approvals }} more approval needed
+            {{ record.remaining_approvals }} more approval needed
         {% elif record.remaining_approvals == 0 %}
-        <span class="text-secondary">&mdash;</span>
+            <span class="text-secondary">&mdash;</span>
         {% else %}
-        {{ record.remaining_approvals }} more approvals needed
+            {{ record.remaining_approvals }} more approvals needed
         {% endif %}
         """,
         orderable=False,

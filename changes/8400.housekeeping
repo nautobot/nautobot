@@ -1,0 +1,3 @@
+Updated development dependency `pymarkdownlnt` to `~0.9.35`.
+Updated development dependency `ruff` to `~0.14.14`.
+Updated development dependency `coverage` to `~7.13.2`.

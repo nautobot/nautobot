@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from nautobot.core.templatetags import helpers
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, InterfaceTemplate, Location, LocationType, Manufacturer
 from nautobot.dcim.tables.devices import DeviceModuleInterfaceTable, InterfaceTable
@@ -52,7 +53,6 @@ class InterfaceTableRenderMixin:
 
     def test_render_speed_duplex_with_none(self):
         """Test that the table handles None speed value and renders an emdash."""
-        emdash = "\u2014"
         interface = Interface.objects.create(
             device=self.device,
             name="eth1",
@@ -67,8 +67,8 @@ class InterfaceTableRenderMixin:
         rendered_speed = bound_row.get_cell("speed")
         rendered_duplex = bound_row.get_cell("duplex")
 
-        self.assertEqual(rendered_speed, emdash)
-        self.assertEqual(rendered_duplex, emdash)
+        self.assertEqual(rendered_speed, helpers.HTML_NONE)
+        self.assertEqual(rendered_duplex, helpers.HTML_NONE)
 
     def test_render_speed_various(self):
         """Test that the table correctly humanizes various speed values."""
@@ -146,7 +146,6 @@ class InterfaceTemplateTableTestCase(TestCase):
         self.assertEqual(rendered_duplex, "Full")
 
     def test_render_speed_duplex_with_none(self):
-        emdash = "\u2014"
         interface_template = InterfaceTemplate.objects.create(
             device_type=self.device_type,
             name="tmpl-eth1",
@@ -156,5 +155,5 @@ class InterfaceTemplateTableTestCase(TestCase):
         bound_row = table.rows[0]
         rendered_speed = bound_row.get_cell("speed")  # pylint: disable=no-member
         rendered_duplex = bound_row.get_cell("duplex")  # pylint: disable=no-member
-        self.assertEqual(rendered_speed, emdash)
-        self.assertEqual(rendered_duplex, emdash)
+        self.assertEqual(rendered_speed, helpers.HTML_NONE)
+        self.assertEqual(rendered_duplex, helpers.HTML_NONE)

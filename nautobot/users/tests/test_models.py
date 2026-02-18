@@ -1,4 +1,8 @@
+from datetime import date, timedelta
+from unittest import mock
+
 from django.contrib.auth import get_user_model
+from django.test.utils import override_settings
 
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.users.models import ObjectPermission, Token
@@ -121,3 +125,82 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
 
         # Clear a non-existing value; should fail silently
         self.user.clear_config("invalid")
+
+
+@override_settings(PLUGINS=["nautobot_version_control"])
+class UserHasPermTest(ModelTestCases.BaseModelTestCase):
+    model = User
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser")
+        self.add_permissions("dcim.add_device", "dcim.view_device")
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_time_travel_blocks_non_view_permission(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
+
+            get_time_travel_datetime.return_value = (date.today() + timedelta(days=1)).isoformat()
+
+            perm = "dcim.add_device"
+            result = self.user.has_perm(perm)
+            self.assertFalse(result)
+            mock_super_has_perm.assert_not_called()
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_time_travel_blocks_non_view_permission_for_superuser(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
+
+            get_time_travel_datetime.return_value = date.today() + timedelta(days=1)
+            perm = "dcim.add_device"
+            self.user.is_superuser = True
+            self.user.save()
+
+            self.assertTrue(self.user.is_superuser)
+
+            result = self.user.has_perm(perm)
+            self.assertFalse(result)
+            mock_super_has_perm.assert_not_called()
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_time_travel_allows_view_permission(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
+
+            get_time_travel_datetime.return_value = date.today() + timedelta(days=1)
+            perm = "dcim.view_device"
+            result = self.user.has_perm(perm)
+            self.assertTrue(result)
+            mock_super_has_perm.assert_called_once_with(perm, None)
+
+    @mock.patch("django.contrib.auth.models.AbstractUser.has_perm")
+    def test_no_time_travel_does_not_block_permissions(self, mock_super_has_perm):
+        with mock.patch.dict(
+            "sys.modules",
+            {
+                "nautobot_version_control.utils": mock.MagicMock(),
+            },
+        ):
+            from nautobot_version_control.utils import get_time_travel_datetime  # pylint: disable=import-error
+
+            get_time_travel_datetime.return_value = None
+            perm = "dcim.add_device"
+            result = self.user.has_perm(perm)
+            self.assertTrue(result)
+            mock_super_has_perm.assert_called_once_with(perm, None)

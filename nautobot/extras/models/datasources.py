@@ -37,7 +37,8 @@ class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
         queryset = cache.get(cache_key)
         if queryset is None:
             queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
-            cache.set(cache_key, queryset)
+            # cache invalidated explicitly by nautobot.extras.signals.invalidate_gitrepository_provided_contents_cache
+            cache.set(cache_key, queryset, timeout=None)
         return queryset
 
 

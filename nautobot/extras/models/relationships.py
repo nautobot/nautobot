@@ -479,10 +479,12 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(source_hidden=hidden)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         if not get_queryset:
             listing = list(queryset)
-            cache.set(list_cache_key, listing)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
             return listing
         return queryset
 
@@ -525,10 +527,12 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(destination_hidden=hidden)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(cache_key, queryset, timeout=None)
         if not get_queryset:
             listing = list(queryset)
-            cache.set(list_cache_key, listing)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
             return listing
         return queryset
 
@@ -560,6 +564,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         for ct in ContentType.objects.all():
             label = f"{ct.app_label}.{ct.model}"
             for hidden in ["None", "True", "False"]:
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
                 cache.set(
                     construct_cache_key(
                         self,
@@ -570,6 +575,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                         listing=True,
                     ),
                     listings["source"][label][hidden],
+                    timeout=None,
                 )
                 cache.set(
                     construct_cache_key(
@@ -581,6 +587,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                         listing=True,
                     ),
                     listings["destination"][label][hidden],
+                    timeout=None,
                 )
 
 

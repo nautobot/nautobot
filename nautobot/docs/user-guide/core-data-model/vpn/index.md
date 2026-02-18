@@ -8,8 +8,8 @@ Nautobot provides a set of models for representing Virtual Private Networks (VPN
 ## High-Level Architecture of VPN Models
 
 The following diagram represents the logic behind VPN Models at a high level.
-![VPN Models](../../../media/models/vpn_models_high_level_light.png#only-light)
-![VPN Models](../../../media/models/vpn_models_high_level_dark.png#only-dark)
+![VPN Models](../../../media/models/vpn_models_high_level_light.png#only-light){ .on-glb }
+![VPN Models](../../../media/models/vpn_models_high_level_dark.png#only-dark){ .on-glb }
 
 ## Entity Relationship Diagrams
 
@@ -153,26 +153,26 @@ erDiagram
 #### Site-to-site IPSec VPN tunnel (transport mode)
 
 Probably the simplest scenario for creating an IPSec VPN tunnel between two endpoints. No tunnel interface is assumed in this scenario.
-![VPN Models](../../../media/models/vpn_models_use_case_01_light.png#only-light)
-![VPN Models](../../../media/models/vpn_models_use_case_01_dark.png#only-dark)
+![VPN Models](../../../media/models/vpn_models_use_case_01_light.png#only-light){ .on-glb }
+![VPN Models](../../../media/models/vpn_models_use_case_01_dark.png#only-dark){ .on-glb }
 
 #### Site-to-site IPSec VPN tunnel (tunnel mode)
 
 Another scenario with an IPSec VPN tunnel between two endpoints but this time a tunnel interface is used.
-![VPN Models](../../../media/models/vpn_models_use_case_02_light.png#only-light)
-![VPN Models](../../../media/models/vpn_models_use_case_02_dark.png#only-dark)
+![VPN Models](../../../media/models/vpn_models_use_case_02_light.png#only-light){ .on-glb }
+![VPN Models](../../../media/models/vpn_models_use_case_02_dark.png#only-dark){ .on-glb }
 
 #### Single hub-and-spoke VPN
 
 Implementation of a hub-and-spoke topology (e.g. DMVPN) with RTR99 as the hub. The difference between this and site-to-site VPN tunnels is that, in this case, the hub only receives inbound VPN requests from the spokes. As such, its tunnel endpoint is re-used among tunnels and also does not need to define destination IP/FQDN.
-![VPN Models](../../../media/models/vpn_models_use_case_03_light.png#only-light)
-![VPN Models](../../../media/models/vpn_models_use_case_03_dark.png#only-dark)
+![VPN Models](../../../media/models/vpn_models_use_case_03_light.png#only-light){ .on-glb }
+![VPN Models](../../../media/models/vpn_models_use_case_03_dark.png#only-dark){ .on-glb }
 
 #### Multiple hub-and-spoke VPNs
 
 Virtually the same as above, mentioned here to illustrate the separation between VPN groupings.
-![VPN Models](../../../media/models/vpn_models_use_case_04_light.png#only-light)
-![VPN Models](../../../media/models/vpn_models_use_case_04_dark.png#only-dark)
+![VPN Models](../../../media/models/vpn_models_use_case_04_light.png#only-light){ .on-glb }
+![VPN Models](../../../media/models/vpn_models_use_case_04_dark.png#only-dark){ .on-glb }
 
 ### GraphQL query examples
 

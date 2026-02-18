@@ -1,1 +1,0 @@
-Update grid resizing in Bootstrap migration script, making it is more constrained but idempotent.

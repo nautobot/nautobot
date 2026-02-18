@@ -110,6 +110,7 @@ The data payload associated with events of any of the above topics has the follo
 
 * `nautobot.jobs.approval.approved` - A scheduled job that requires approval has been approved.
 * `nautobot.jobs.approval.denied` - A scheduled job that requires approval has been denied.
+* `nautobot.jobs.approval.canceled` - A scheduled job that requires approval has been canceled.
 
 The data payload associated with events of any of the above topics has the following keys:
 

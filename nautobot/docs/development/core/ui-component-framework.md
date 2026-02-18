@@ -19,7 +19,8 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![UI Framework Example](../../media/development/core/ui-component-framework/ui-framework-example.png){ .on-glb }
+- ![UI Framework Example](../../media/development/core/ui-component-framework/ss_ui-framework-example_light.png#only-light){ .on-glb }
+![UI Framework Example](../../media/development/core/ui-component-framework/ss_ui-framework-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -65,6 +66,20 @@ Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `Obj
 - `Panel`s in the "main" tab or any extra tabs
 - Extra `Button`s to display at the top of the page (beyond the default "actions" dropdown)
 
+### ExtraDetailViewActionButton
+
+Each object detail view (whether based on a `NautobotUIViewSet` or a legacy `ObjectView`) that implements the UI Framework does so by defining an `extra_detail_view_action_buttons` attribute. This attribute should be a list of `ExtraDetailViewActionButton` instances, which provide a clean, declarative way to add extra action buttons to your detail views.
+The `ExtraDetailViewActionButton` class automatically handles URL generation, permission checking, and HTML rendering for you, reducing boilerplate code while maintaining consistency across your application.
+
+Extra detail view action buttons are rendered as part of the consolidated action button system, which is implemented by the consolidate_detail_view_action_buttons template tag.
+
+This tag is responsible for assembling all action buttons shown on an object detail view, including:
+
+- Built-in actions (Edit, Clone, Delete)
+- Model-defined ExtraDetailViewActionButton instances
+
+Only buttons that pass their respective permission checks are rendered.
+
 ### Tabs
 
 A `Tab` is one of the major building blocks of your UI. The user can toggle between tabs, each of which displays distinct page content, typically consisting of one or more `Panel`s. Multiple tabs can be rendered in a single HTML response (for example, the "main" and "advanced" tabs are both part of the same page; toggling between them is a client-side action only and does not require Nautobot to reload or re-render the page), while to optimize performance, certain other tabs may correspond to distinct `View`s that are retrieved and rendered on request. The UI Framework supports both patterns.
@@ -76,7 +91,8 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Basic Panel Layout](../../media/development/core/ui-component-framework/basic-panel-layout.png){ .on-glb }
+- ![Basic Panel Layout](../../media/development/core/ui-component-framework/ss_basic-panel-layout_light.png#only-light){ .on-glb }
+![Basic Panel Layout](../../media/development/core/ui-component-framework/ss_basic-panel-layout_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -106,7 +122,8 @@ object_detail_content = ObjectDetailContent(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Buttons Example](../../media/development/core/ui-component-framework/buttons-example.png){ .on-glb }
+- ![Buttons Example](../../media/development/core/ui-component-framework/ss_buttons-example_light.png#only-light){ .on-glb }
+![Buttons Example](../../media/development/core/ui-component-framework/ss_buttons-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -293,8 +310,10 @@ panels = ui.ObjectFieldsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example.png){ .on-glb }
-- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/object-fields-panel-example_2.png){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_light.png#only-light){ .on-glb }
+![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_dark.png#only-dark){ .on-glb }
+- ![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_2_light.png#only-light){ .on-glb }
+![ObjectFieldsPanel Example](../../media/development/core/ui-component-framework/ss_object-fields-panel-example_2_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -380,9 +399,11 @@ GroupedKeyValueTablePanel(
 <!-- pyml disable-num-lines 7 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-1.png){ .on-glb }
+- ![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-1_light.png#only-light){ .on-glb }
+![GroupedKeyValueTablePanel Example 1](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-1_dark.png#only-dark){ .on-glb }
 
-- ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/grouped-key-value-table-panel-example-2.png){ .on-glb }
+- ![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-2_light.png#only-light){ .on-glb }
+![GroupedKeyValueTablePanel Example 2](../../media/development/core/ui-component-framework/ss_grouped-key-value-table-panel-example-2_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -417,8 +438,10 @@ StatsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/stats-panel-example-code.png){ .on-glb }
-- ![StatsPanel Example](../../media/development/core/ui-component-framework/stats-panel-example.png){ .on-glb }
+- ![StatsPanel Code Example](../../media/development/core/ui-component-framework/ss_stats-panel-example-code_light.png#only-light){ .on-glb }
+![StatsPanel Code Example](../../media/development/core/ui-component-framework/ss_stats-panel-example-code_dark.png#only-dark){ .on-glb }
+- ![StatsPanel Example](../../media/development/core/ui-component-framework/ss_stats-panel-example_light.png#only-light){ .on-glb }
+![StatsPanel Example](../../media/development/core/ui-component-framework/ss_stats-panel-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -431,7 +454,8 @@ StatsPanel(
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards" style="width: 300px;" markdown>
 
-- ![Text Panels Family](../../media/development/core/ui-component-framework/text-panels-family.png){ .on-glb }
+- ![Text Panels Family](../../media/development/core/ui-component-framework/ss_text-panels-family_light.png#only-light){ .on-glb }
+![Text Panels Family](../../media/development/core/ui-component-framework/ss_text-panels-family_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -489,7 +513,8 @@ Note:
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Table Panels Family](../../media/development/core/ui-component-framework/table-panels-family.png){ .on-glb }
+- ![Table Panels Family](../../media/development/core/ui-component-framework/ss_table-panels-family_light.png#only-light){ .on-glb }
+![Table Panels Family](../../media/development/core/ui-component-framework/ss_table-panels-family_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -662,7 +687,8 @@ class SecretUIViewSet(...):
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![Button Example](../../media/development/core/ui-component-framework/button-example.png){ .on-glb }
+- ![Button Example](../../media/development/core/ui-component-framework/ss_button-example_light.png#only-light){ .on-glb }
+![Button Example](../../media/development/core/ui-component-framework/ss_button-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
@@ -710,7 +736,8 @@ class DeviceView(generic.ObjectView):
 <!-- pyml disable-num-lines 5 no-inline-html -->
 <div class="grid cards example-images" markdown>
 
-- ![DropdownButton Example](../../media/development/core/ui-component-framework/dropdown-button-example.png){ .on-glb }
+- ![DropdownButton Example](../../media/development/core/ui-component-framework/ss_dropdown-button-example_light.png#only-light){ .on-glb }
+![DropdownButton Example](../../media/development/core/ui-component-framework/ss_dropdown-button-example_dark.png#only-dark){ .on-glb }
 
 </div>
 
