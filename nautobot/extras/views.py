@@ -2188,7 +2188,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
             profile = job_form.cleaned_data.pop("_profile")
-            console_log = job_form.cleaned_data.pop("_console_log")
+            console_log = job_form.cleaned_data.get("_console_log", False)
             ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 

@@ -50,7 +50,7 @@ class JobTest(TestCase):
     def test_as_form_no_job_model(self):
         """Job.as_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
         form = BaseJob.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["_console_log", "_job_queue", "_profile"])
 
     def test_field_default(self):
         """
@@ -79,7 +79,9 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["var1", "var2", "var23", "_console_log", "_job_queue", "_profile"]
+        )
 
     def test_no_field_order(self):
         """
@@ -89,7 +91,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_console_log", "_job_queue", "_profile"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -101,7 +103,7 @@ class JobTest(TestCase):
         form = job_class.as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
+            ["testvar1", "b_testvar2", "a_testvar3", "_console_log", "_job_queue", "_profile"],
         )
 
     def test_dryrun_default(self):
@@ -1069,7 +1071,9 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
+        self.assertSequenceEqual(
+            list(form.fields.keys()), ["object_pk", "object_model_name", "_console_log", "_job_queue", "_profile"]
+        )
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -1132,7 +1136,7 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_console_log", "_job_queue", "_profile"])
 
     def test_hidden(self):
         module = "job_hook_receiver"
@@ -1360,21 +1364,19 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
-    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
     def test_console_log_true_uses_console_log_task(
         self,
         mock_run_job,
         mock_console_log_task,
-        mock_get_meta,
     ):
         job_kwargs = {"foo": "bar"}
-        mock_get_meta.return_value = True
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
             synchronous=False,
+            console_log=True,
             **job_kwargs,
         )
 
@@ -1382,20 +1384,17 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         mock_run_job.apply_async.assert_not_called()
 
         job_result.refresh_from_db()
-        # when console log is true job_result is updated before run task
-        self.assertEqual(job_result.task_kwargs, job_kwargs)
 
-    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
-    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_get_meta):
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task):
         job_kwargs = {"foo": "bar"}
-        mock_get_meta.return_value = False
 
         job_result = JobResult.enqueue_job(
             job_model=self.job_model,
             user=self.user,
             synchronous=False,
+            console_log=False,
             **job_kwargs,
         )
 
@@ -1405,72 +1404,6 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
         job_result.refresh_from_db()
         # when console log is false job_result is not updated before run task
         self.assertEqual(job_result.task_kwargs, {})
-
-    @mock.patch("nautobot.extras.jobs.run_job")
-    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
-    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
-    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
-    def test_synchronous_console_log_true_does_not_redirect_output(
-        self,
-        mock_redirect_stderr,
-        mock_redirect_stdout,
-        mock_get_meta,
-        mock_run_job,
-    ):
-        mock_run_job.apply.return_value = mock.MagicMock(
-            status="COMPLETED",
-            result=None,
-            traceback=None,
-        )
-        mock_get_meta.return_value = True
-
-        job_kwargs = {"foo": "bar"}
-        JobResult.enqueue_job(
-            job_model=self.job_model,
-            user=self.user,
-            synchronous=True,
-            **job_kwargs,
-        )
-
-        # redirect should NOT be used
-        mock_redirect_stdout.assert_not_called()
-        mock_redirect_stderr.assert_not_called()
-
-        # job executed synchronously
-        mock_run_job.apply.assert_called_once()
-
-    @mock.patch("nautobot.extras.jobs.run_job")
-    @mock.patch("nautobot.extras.jobs.BaseJob._get_meta_attr_and_assert_type")
-    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stdout")
-    @mock.patch("nautobot.extras.models.jobs.contextlib.redirect_stderr")
-    def test_synchronous_console_log_false_does_redirect_output(
-        self,
-        mock_redirect_stderr,
-        mock_redirect_stdout,
-        mock_get_meta,
-        mock_run_job,
-    ):
-        mock_run_job.apply.return_value = mock.MagicMock(
-            status="COMPLETED",
-            result=None,
-            traceback=None,
-        )
-
-        job_kwargs = {"foo": "bar"}
-        mock_get_meta.return_value = False
-        JobResult.enqueue_job(
-            job_model=self.job_model,
-            user=self.user,
-            synchronous=True,
-            **job_kwargs,
-        )
-
-        # redirect should be used
-        mock_redirect_stdout.assert_called_once()
-        mock_redirect_stderr.assert_called_once()
-
-        # job executed synchronously
-        mock_run_job.apply.assert_called_once()
 
 
 class RunConsoleLogJobTestCase(TestCase):
@@ -1485,7 +1418,10 @@ class RunConsoleLogJobTestCase(TestCase):
             date_done=timezone.now(),
             status=JobResultStatusChoices.STATUS_SUCCESS,
         )
-
-        run_console_log_job_and_return_job_result.run(job_result.pk)
-
+        # temporary override nadpisuje request context task
+        run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
+        try:
+            run_console_log_job_and_return_job_result.run()
+        finally:
+            run_console_log_job_and_return_job_result.pop_request()
         mock_job_console_log_execute.assert_called_once()

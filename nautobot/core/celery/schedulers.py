@@ -31,7 +31,10 @@ class NautobotScheduleEntry(ModelEntry):
 
         # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
-        self.task = "nautobot.extras.jobs.run_job"
+        if model.kwargs.pop("_console_log", False):
+            self.task = "nautobot.extras.jobs.run_console_log_job_and_return_job_result"
+        else:
+            self.task = "nautobot.extras.jobs.run_job"
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,
             # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed

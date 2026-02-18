@@ -1399,12 +1399,12 @@ def run_job(self, job_class_path, *args, **kwargs):
         _cleanup_job(job, event_payload, status, kwargs)
 
 
-@nautobot_task(bind=False)
-def run_console_log_job_and_return_job_result(job_result_pk, *args, **kwargs):
+@nautobot_task(bind=True)
+def run_console_log_job_and_return_job_result(self, *args, **kwargs):
     """
     Execute job with real-time console output.
     """
-    executor = JobConsoleLogExecutor(job_result_pk)
+    executor = JobConsoleLogExecutor(self.request.id)
     return executor.execute()
 
 

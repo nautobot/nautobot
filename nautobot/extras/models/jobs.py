@@ -950,24 +950,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
 
             try:
-                # Only redirect stdout/stderr if console_log is False
-                if console_log:
+                redirect_logger = get_logger("celery.redirected")
+                proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+                with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
                     eager_result = run_job.apply(
                         args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
                     )
-                else:
-                    redirect_logger = get_logger("celery.redirected")
-                    proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-                    with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                        eager_result = run_job.apply(
-                            args=[job_model.class_path, *job_args],
-                            kwargs=job_kwargs,
-                            task_id=str(job_result.id),
-                            **job_celery_kwargs,
-                        )
             finally:
                 # Cancel the scheduled SIGALRM if it hasn't fired already
                 signal.alarm(0)
@@ -998,11 +989,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         else:
             if console_log:
-                job_result.task_kwargs = job_kwargs
-                job_result.save()
                 transaction.on_commit(
                     lambda: run_console_log_job_and_return_job_result.apply_async(
-                        args=[str(job_result.pk)],
+                        args=[*job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
