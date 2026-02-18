@@ -123,6 +123,7 @@ class BaseTextPanelTest(TestCase):
     def test_init_passes_args_and_kwargs(self, panel_init_mock):
         custom_template_path = "custom_template_path.html"
 
+        panel_init_mock.return_value = None
         BaseTextPanel(weight=100, body_content_template_path=custom_template_path)
 
         panel_init_mock.assert_called_once_with(weight=100, body_content_template_path=custom_template_path)

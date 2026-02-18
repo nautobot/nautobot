@@ -143,19 +143,22 @@ class Component:
     """Common base class for renderable components (tabs, panels, etc.)."""
 
     required_permissions = []
+    weight = None
 
     def __init__(self, **kwargs):
         """Initialize common Component properties.
 
-        Args:
+        Keyword Args:
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
                 The component will only be rendered if the user has these permissions.
         """
         for name, value in kwargs.items():
+            if not hasattr(self, name):
+                raise TypeError(f"invalid argument: {name}")
             setattr(self, name, value)
-        if not hasattr(self, "weight"):
+        if getattr(self, "weight", None) is None:
             raise TypeError("weight is required")
 
     def should_render(self, context: Context):
@@ -200,39 +203,45 @@ class Component:
 class Button(Component):
     """Base class for UI framework definition of a single button within an Object Detail (Object Retrieve) page."""
 
+    attributes = None
     color = ButtonColorChoices.DEFAULT
-    template_path = "components/button/default.html"
-    render_on_tab_id = "main"
-    link_name = None
+    context_object_key = None
     icon = None
     javascript_template_path = None
-    attributes = None
-    size = None
+    label = None
     link_includes_pk = True
-    context_object_key = None
+    link_name = None
+    render_on_tab_id = "main"
+    size = None
+    template_path = "components/button/default.html"
 
     def __init__(self, **kwargs):
         """
         Initialize a Button component.
 
-        Args:
+        Keyword Args:
             label (str): The text of this button, not including any icon.
-            color (ButtonColorChoices): The color (class) of this button.
+            color (ButtonColorChoices, optional): The color (class) of this button.
             link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
                 `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
                 and override the `get_link()` method.
             context_object_key (str, optional): The key in the render context that will contain the linked object.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
-            template_path (str): Template to render for this button.
+            template_path (str, optional): Template to render for this button. Defaults to "components/button/default.html".
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "main".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "label"):
+        if getattr(self, "label", None) is None:
             raise TypeError("label is required")
 
     def get_link(self, context: Context):
@@ -286,18 +295,36 @@ class Button(Component):
 class DropdownButton(Button):
     """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
 
+    children: list[Button] = None
     template_path = "components/button/dropdown.html"
-    children: list[Button]
 
     def __init__(self, **kwargs):
         """Initialize a DropdownButton component.
 
-        Args:
+        Keyword Args:
             children (list[Button]): Elements of the dropdown menu associated to this DropdownButton.
-            template_path (str): Dropdown-specific template file.
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices, optional): The color (class) of this button.
+            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+                This link will be reversed and will automatically include the current object's PK as a parameter to the
+                `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
+                and override the `get_link()` method.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button. Defaults to "components/button/dropdown.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "main".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "children"):
+        if getattr(self, "children", None) is None:
             raise TypeError("children is required")
 
     def get_extra_context(self, context: Context):
@@ -309,27 +336,44 @@ class DropdownButton(Button):
 
 
 class FormButton(Button):
+    form_id: str = None
+    link_name: str = None
     render_on_tab_id = "__all__"
     template_path = "components/button/formbutton.html"
-    form_id: str
 
     def __init__(self, **kwargs):
         """
         Initialize a FormButton instance.
 
-        Args:
-            link_name (str, optional): View name to link to, for example "dcim:locationtype_retrieve".
+        Keyword Args:
+            link_name (str): View name to link to, for example "dcim:locationtype_retrieve".
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
                 `reverse()` call when the button is rendered. For more complex link construction, you can subclass this
                 and override the `get_link()` method.
+            form_id (str): The ID of the form to submit when this button is clicked.
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices, optional): The color (class) of this button.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button. Defaults to "components/button/formbutton.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "__all__".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "form_id"):
-            raise TypeError("form_id is required")
-        if not hasattr(self, "link_name"):
-            raise TypeError("link_name is required")
-        if not hasattr(self, "form_id"):
-            raise TypeError("form_id is required")
+
+        if getattr(self, "link_name", None) is None:
+            raise TypeError("FormButton requires a 'link_name'.")
+
+        if getattr(self, "form_id", None) is None:
+            raise TypeError("FormButton requires 'form_id'.")
 
     def get_extra_context(self, context: Context):
         return {
@@ -339,27 +383,44 @@ class FormButton(Button):
 
 
 class ExtraDetailViewActionButton(Button):
+    action: str = None
+    label: str | Callable = None
+    permission_check: Callable = None
     template_path = "components/button/extradetailviewactionbutton.html"
-    action: str
-    permission_check: Callable
-    label = None
 
     def __init__(self, **kwargs):
         """Represents an extra action button for detail views.
 
-        Args:
+        Keyword Args:
             action: The action name (used for URL routing and button ID)
             permission_check: callable to check if button should render
             label: Optional custom label (if None, uses "Action ObjectName")
+            color (ButtonColorChoices, optional): The color (class) of this button.
             link_name (str): View name to link to action, for example "extras:approvalworkflow_cancel".
                 This link will be reversed and will automatically include the current object's PK as a parameter to the
                 `reverse()` call when the button is rendered.
-            template_path (str): Dropdown-specific template file.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button. Defaults to "components/button/extradetailviewactionbutton.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "main".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
+        if kwargs.get("label", None) is None:
+            kwargs["label"] = self.render_label
         super().__init__(**kwargs)
-        if not hasattr(self, "action"):
+        if getattr(self, "action", None) is None:
             raise TypeError("action is required")
-        if not hasattr(self, "permission_check"):
+        if getattr(self, "link_name", None) is None:
+            raise TypeError("link_name is required")
+        if getattr(self, "permission_check", None) is None:
             raise TypeError("permission_check is required")
         if not callable(self.permission_check):
             raise TypeError(f"permission_check must be callable, got {type(self.permission_check).__name__}")
@@ -371,8 +432,7 @@ class ExtraDetailViewActionButton(Button):
 
     def render_label(self, context: Context) -> str:
         """Generate button label."""
-        if self.label:
-            return self.label
+        # TODO: Make sure this works
         return f"{bettertitle(self.action)} {bettertitle(context['verbose_name'])}"
 
     def render(self, context: Context):
@@ -387,33 +447,39 @@ class ExtraDetailViewActionButton(Button):
         """Add the label of ExtraDetailViewActionButton to the other Button context."""
         return {
             **super().get_extra_context(context),
-            "label": self.render_label(context),
+            "label": self.label(context) if callable(self.label) else self.label,
         }
 
 
 class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
+    content_wrapper_template_path = "components/tab/content_wrapper.html"
+    label = None
+    label_wrapper_template_path = "components/tab/label_wrapper.html"
     layout = LayoutChoices.DEFAULT
     panels = ()
-    label_wrapper_template_path = "components/tab/label_wrapper.html"
-    content_wrapper_template_path = "components/tab/content_wrapper.html"
+    tab_id = None
 
     def __init__(self, **kwargs):
         """Initialize a Tab component.
 
-        Args:
+        Keyword Args:
             tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
             label (str): User-facing label to display for this tab.
-            panels (tuple): Set of `Panel` components to potentially display within this tab.
-            layout (str): One of the [LayoutChoices](./ui.md#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
-            label_wrapper_template_path (str): Template path to use for rendering the tab label to HTML.
-            content_wrapper_template_path (str): Template path to use for rendering the tab contents to HTML.
+            panels (tuple, optional): Set of `Panel` components to potentially display within this tab.
+            layout (str, optional): One of the [LayoutChoices](./ui.md#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
+            label_wrapper_template_path (str, optional): Template path to use for rendering the tab label to HTML.
+            content_wrapper_template_path (str, optional): Template path to use for rendering the tab contents to HTML.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "tab_id"):
+        if getattr(self, "tab_id", None) is None:
             raise TypeError("tab_id is required")
-        if not hasattr(self, "label"):
+        if getattr(self, "label", None) is None:
             raise TypeError("label is required")
 
     LAYOUT_TEMPLATE_PATHS = {
@@ -504,20 +570,30 @@ class DistinctViewTab(Tab):
     """
     A Tab that doesn't render inline on the same page, but instead links to a distinct view of its own when clicked.
 
-    Args:
+    Keyword Args:
         url_name (str): The name of the URL pattern to link to, which will be reversed to generate the URL.
-        label_wrapper_template_path (str, optional): Template path to render the tab label to HTML.
         related_object_attribute (str, optional): The name of the related object attribute to count for the tab label.
         hide_if_empty (bool, optional): Do not render this tab if the related_object_attribute is an empty queryset.
+        tab_id (str): HTML ID for the tab content element, used to link the tab label and its content together.
+        label (str): User-facing label to display for this tab.
+        panels (tuple, optional): Set of `Panel` components to potentially display within this tab.
+        layout (str, optional): One of the [LayoutChoices](./ui.md#nautobot.apps.ui.LayoutChoices) values, describing the layout of panels within this tab.
+        label_wrapper_template_path (str, optional): Template path to use for rendering the tab label to HTML.
+        content_wrapper_template_path (str, optional): Template path to use for rendering the tab contents to HTML.
+        weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+            rendered "first", usually towards the top left of the page.
+        required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+            The component will only be rendered if the user has these permissions.
     """
 
+    hide_if_empty = False
     label_wrapper_template_path = "components/tab/label_wrapper_distinct_view.html"
     related_object_attribute = ""
-    hide_if_empty = False
+    url_name = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not hasattr(self, "url_name"):
+        if getattr(self, "url_name", None) is None:
             raise TypeError("url_name is required")
 
     def get_extra_context(self, context: Context):
@@ -573,7 +649,25 @@ class DistinctViewTab(Tab):
 
 
 class Panel(Component):
-    """Base class for defining an individual display panel within a Layout within a Tab."""
+    """Base class for defining an individual display panel within a Layout within a Tab.
+
+    Keyword Args:
+        label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+        css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+        section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+        body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+        header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+            if any, not including its label if any.
+        footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+        template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+        body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+            (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+        weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+            rendered "first", usually towards the top left of the page.
+        required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+            The component will only be rendered if the user has these permissions.
+    """
 
     WEIGHT_COMMENTS_PANEL = 200
     WEIGHT_CUSTOM_FIELDS_PANEL = 300
@@ -590,25 +684,6 @@ class Panel(Component):
     footer_content_template_path = None
     template_path = "components/panel/panel.html"
     body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
-
-    def __init__(self, **kwargs):
-        """
-        Initialize a Panel component that can be rendered as a self-contained HTML fragment.
-
-        Args:
-            label (str): Label to display for this panel. Optional; if an empty string, the panel will have no label.
-            css_class (str): Panel variant to render as, e.g. "default", "warning", "info".
-            section (str): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
-            body_id (str): HTML element `id` to attach to the rendered body wrapper of the panel.
-            body_content_template_path (str): Template path to render the content contained *within* the panel body.
-            header_extra_content_template_path (str): Template path to render extra content into the panel header,
-                if any, not including its label if any.
-            footer_content_template_path (str): Template path to render content into the panel footer, if any.
-            template_path (str): Template path to render the Panel as a whole. Generally you won't override this.
-            body_wrapper_template_path (str): Template path to render the panel body, including both its "wrapper"
-                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
-        """
-        super().__init__(**kwargs)
 
     def render(self, context: Context):
         """
@@ -703,18 +778,19 @@ class DataTablePanel(Panel):
     A panel that renders a table generated directly from a list of dicts, without using a django_tables2 Table class.
     """
 
-    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
     body_content_template_path = "components/panel/body_content_data_table.html"
-    columns = None
-    context_columns_key = None
+    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
     column_headers = None
+    columns = None
     context_column_headers_key = None
+    context_columns_key = None
+    context_data_key = None
 
     def __init__(self, **kwargs):
         """
         Instantiate a DataTablePanel.
 
-        Args:
+        Keyword Args:
             context_data_key (str): The key in the render context that stores the data used to populate the table.
             columns (list, optional): Ordered list of data keys used to order the columns of the rendered table.
                 Mutually exclusive with `context_columns_key`.
@@ -726,9 +802,24 @@ class DataTablePanel(Panel):
                 Mutually exclusive with `context_column_headers_key`.
             context_column_headers_key (str, optional): The key in the render context that stores the column headers.
                 Mutually exclusive with `column_headers`.
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "context_data_key"):
+        if getattr(self, "context_data_key", None) is None:
             raise TypeError("context_data_key is required")
         if self.columns and self.context_columns_key:
             raise ValueError("You can only specify one of `columns` or `context_columns_key`.")
@@ -774,41 +865,41 @@ class ObjectsTablePanel(Panel):
     Please check the Args list for further details.
     """
 
-    context_table_key = None
-    table_class = None
-    table_filter = None
-    table_attribute = None
-    distinct = False
-    select_related_fields = None
-    prefetch_related_fields = None
-    order_by_fields = None
-    # TODO: Is `table_title` redundant with the base Panel's `label`
-    table_title = None
-    max_display_count = None
-    paginate = True
-    show_table_config_button = True
-    include_columns = None
-    exclude_columns = None
     add_button_route = "default"
     add_permissions = []
+    body_content_template_path = "components/panel/body_content_objects_table.html"
+    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
+    context_table_key = None
+    distinct = False
+    enable_bulk_actions = False
+    enable_related_link = True
+    exclude_columns = None
+    footer_buttons = None
+    footer_content_template_path = "components/panel/footer_content_table.html"
+    form_id = None
+    header_extra_content_template_path = "components/panel/header_extra_content_table.html"
     hide_hierarchy_ui = False
+    include_columns = None
+    include_paginator = False
+    max_display_count = None
+    order_by_fields = None
+    paginate = True
+    prefetch_related_fields = None
     related_field_name = None
     related_list_url_name = None
-    enable_related_link = True
-    enable_bulk_actions = False
+    select_related_fields = None
+    show_table_config_button = True
     tab_id = None
-    body_wrapper_template_path = "components/panel/body_wrapper_table.html"
-    body_content_template_path = "components/panel/body_content_objects_table.html"
-    header_extra_content_template_path = "components/panel/header_extra_content_table.html"
-    footer_content_template_path = "components/panel/footer_content_table.html"
-    footer_buttons = None
-    form_id = None
-    include_paginator = False
+    table_attribute = None
+    table_class = None
+    table_filter = None
+    # TODO: Is `table_title` redundant with the base Panel's `label`
+    table_title = None
 
     def __init__(self, **kwargs):
         """Instantiate an ObjectsTable panel.
 
-        Args:
+        Keyword Args:
             context_table_key (str): The key in the render context that will contain an already-populated-and-configured
                 Table (`BaseTable`) instance. Mutually exclusive with `table_class`, `table_filter`, `table_attribute`.
             table_class (obj): The table class that will be instantiated and rendered e.g. CircuitTable, DeviceTable.
@@ -859,6 +950,21 @@ class ObjectsTablePanel(Panel):
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
             include_paginator (bool, optional): If True, renders a paginator in the panel footer.
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
         if self.context_table_key and any(
@@ -1072,18 +1178,18 @@ class ObjectsTablePanel(Panel):
 class KeyValueTablePanel(Panel):
     """A panel that displays a two-column table of keys and values, as seen in most object detail views."""
 
-    data = None
-    context_data_key = "data"
-    hide_if_unset = ()
-    value_transforms = {}
-    key_transforms = {}
     body_wrapper_template_path = "components/panel/body_wrapper_key_value_table.html"
+    context_data_key = "data"
+    data = None
+    hide_if_unset = ()
+    key_transforms = {}
+    value_transforms = {}
 
     def __init__(self, **kwargs):
         """
         Instantiate a KeyValueTablePanel.
 
-        Args:
+        Keyword Args:
             data (dict): The dictionary of key/value data to display in this panel.
                 May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
             context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
@@ -1097,6 +1203,21 @@ class KeyValueTablePanel(Panel):
                 - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
             key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
                 For example: {'content_types': 'Content Type'}.
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
         if self.data and self.context_data_key:
@@ -1296,11 +1417,26 @@ class EChartsPanel(Panel, EChartsBase):
         """
         Initialize an ECharts panel.
 
-        Args:
+        Keyword Args:
             chart_kwargs (dict): Kwargs to pass to EChartsBase constructor.
             width (str): CSS width for the chart container (default: "100%").
             height (str): CSS height for the chart container (default: "32rem").
             chart_container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         self.width = width
         self.height = height
@@ -1341,18 +1477,18 @@ class EChartsPanel(Panel, EChartsBase):
 class ObjectFieldsPanel(KeyValueTablePanel):
     """A panel that renders a table of object instance attributes and their values."""
 
-    fields = "__all__"
     additional_fields = ()
-    exclude_fields = ()
     context_object_key = None
-    ignore_nonexistent_fields = False
     data = None
+    exclude_fields = ()
+    fields = "__all__"
+    ignore_nonexistent_fields = False
 
     def __init__(self, **kwargs):
         """
         Instantiate an ObjectFieldsPanel.
 
-        Args:
+        Keyword Args:
             fields (str, list): The ordered list of fields to display, or `"__all__"` to display fields automatically.
                 Note that ManyToMany fields and reverse relations are **not** included in `"__all__"` at this time, nor
                 are any hidden fields, nor the specially handled `id`, `created`, `last_updated` fields on most models.
@@ -1367,6 +1503,33 @@ class ObjectFieldsPanel(KeyValueTablePanel):
                 exist on the provided object; otherwise an exception will be raised at render time.
             label (str): If omitted, the provided object's `verbose_name` will be rendered as the label
                 (see `render_label()`).
+            data (dict): The dictionary of key/value data to display in this panel.
+                May be `None` if it will be derived dynamically by `get_data()` or from `context_data_key` instead.
+            context_data_key (str): The render context key that will contain the data, if `data` wasn't provided.
+            hide_if_unset (list): Keys that should be omitted from the display entirely if they have a falsey value,
+                instead of displaying the usual em-dash placeholder text.
+            value_transforms (dict): Dictionary of `{key: [list of transform functions]}`, used to specify custom
+                rendering of specific key values without needing to implement a new subclass for this purpose.
+                Many of the `templatetags.helpers` functions are suitable for this purpose; examples:
+
+                - `[render_markdown, placeholder]` - render the given text as Markdown, or render a placeholder if blank
+                - `[humanize_speed, placeholder]` - convert the given kbps value to Mbps or Gbps for display
+            key_transforms (dict, optional): A mapping of original field names to custom display names to be used when rendering keys
+                For example: {'content_types': 'Content Type'}.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
         if self.additional_fields and self.fields != "__all__":
@@ -1519,9 +1682,11 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
     The special grouping `""` may be used to indicate top-level key/value pairs that don't belong to a group.
     """
 
+    body_id = None
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not hasattr(self, "body_id"):
+        if getattr(self, "body_id", None) is None:
             raise TypeError("body_id is required")
 
     def render_header_extra_content(self, context: Context):
@@ -1578,7 +1743,29 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 
 
 class BaseTextPanel(Panel):
-    """A panel that renders a single value as text, Markdown, JSON, or YAML."""
+    """A panel that renders a single value as text, Markdown, JSON, or YAML.
+
+    Keyword Args:
+        render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+        render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+        body_content_template_path (str): The path of the template to use for the body content.
+            Can be overridden for custom use cases.
+        label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+        css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+        section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+        body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+        header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+            if any, not including its label if any.
+        footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+        template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+        body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+            (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+        weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+            rendered "first", usually towards the top left of the page.
+        required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+            The component will only be rendered if the user has these permissions.
+    """
 
     class RenderOptions(Enum):
         """Options available for text panels for different type of rendering a given input.
@@ -1601,19 +1788,6 @@ class BaseTextPanel(Panel):
     body_content_template_path = "components/panel/body_content_text.html"
     render_placeholder = True
 
-    def __init__(self, **kwargs):
-        """
-        Instantiate BaseTextPanel.
-
-        Args:
-            render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
-            render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
-            body_content_template_path (str): The path of the template to use for the body content.
-                Can be overridden for custom use cases.
-            kwargs (dict): Additional keyword arguments passed to `Panel.__init__`.
-        """
-        super().__init__(**kwargs)
-
     def render_body_content(self, context: Context):
         value = self.get_value(context)
 
@@ -1634,9 +1808,27 @@ class ObjectTextPanel(BaseTextPanel):
     """
     Panel that renders text, Markdown, JSON or YAML from the given field on the given object in the context.
 
-    Args:
+    Keyword Args:
         object_field (str): The name of the object field to be rendered. None by default.
-        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
+        render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+        render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+        body_content_template_path (str): The path of the template to use for the body content.
+            Can be overridden for custom use cases.
+        label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+        css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+        section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+        body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+        header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+            if any, not including its label if any.
+        footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+        template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+        body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+            (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+        weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+            rendered "first", usually towards the top left of the page.
+        required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+            The component will only be rendered if the user has these permissions.
     """
 
     object_field = None
@@ -1651,9 +1843,27 @@ class ObjectTextPanel(BaseTextPanel):
 class TextPanel(BaseTextPanel):
     """Panel that renders text, Markdown, JSON or YAML from the given value in the context.
 
-    Args:
-        context_field (str): source field from context with value for `TextPanel`.
-        kwargs (dict): Additional keyword arguments passed to `BaseTextPanel.__init__`.
+    Keyword Args:
+        context_field (str, optional): source field from context with value for `TextPanel`. Defaults to "text".
+        render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
+        render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
+        body_content_template_path (str): The path of the template to use for the body content.
+            Can be overridden for custom use cases.
+        label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+        css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+        section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+        body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+        header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+            if any, not including its label if any.
+        footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+        template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+        body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+            (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+        weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+            rendered "first", usually towards the top left of the page.
+        required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+            The component will only be rendered if the user has these permissions.
     """
 
     context_field = "text"
@@ -1665,19 +1875,35 @@ class TextPanel(BaseTextPanel):
 class StatsPanel(Panel):
     related_models = None
     body_content_template_path = "components/panel/stats_panel_body.html"
+    filter_name = None
 
     def __init__(self, **kwargs):
         """
         Instantiate a `StatsPanel`.
 
-        Args:
+        Keyword Args:
             filter_name (str): a valid query filter append to the anchor tag for each stat button. e.g. the `tenant`
                 query parameter in the url `/circuits/circuits/?tenant=f4b48e9d-56fc-4090-afa5-dcbe69775b13`.
-            related_models (str): a list of model classes and/or tuples of (model_class, query_string).
+            related_models (str, optional): a list of model classes and/or tuples of (model_class, query_string).
                 e.g. `[Device, Prefix, (Circuit, "circuit_terminations__location__in")]`
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "filter_name"):
+        if getattr(self, "filter_name", None) is None:
             raise TypeError("filter_name is required")
 
     def should_render(self, context: Context):
@@ -1734,6 +1960,7 @@ class StatsPanel(Panel):
 
 class AsyncStatsPanel(Panel):
     body_content_template_path = "components/panel/async_stats_panel_body.html"
+    api_url_name = None
 
     def __init__(self, **kwargs):
         """
@@ -1743,13 +1970,28 @@ class AsyncStatsPanel(Panel):
         tabulation may be time-consuming) makes a separate AJAX call to the given `api_url_name` to retrieve the stats,
         and populates the panel client-side with the response.
 
-        Args:
+        Keyword Args:
             api_url_name (str): The API URL to call, e.g. `"dcim-api:location_stats"`. This API is expected to return,
                 at minimum, a list of dicts, where each child dict has keys `title`, `count`, and `ui_url`.
                 Refer to `StatsSerializer` and `LocationViewSet.stats` for an example implementation.
+            label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
+            css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
+            section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
+            body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
+            header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
+                if any, not including its label if any.
+            footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
+            template_path (str, optional): Template path to render the Panel as a whole. Generally you won't override this.
+            body_wrapper_template_path (str, optional): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not hasattr(self, "api_url_name"):
+        if getattr(self, "api_url_name", None) is None:
             raise TypeError("api_url_name is required")
 
     def should_render(self, context: Context):
@@ -1775,8 +2017,12 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
     def __init__(self, **kwargs):
         """Instantiate an `_ObjectCustomFieldsPanel`.
 
-        Args:
+        Keyword Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
+            weight (int, optional): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page. Defaults to 300.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
         self.body_id = (f"custom_fields_{self.advanced_ui}",)
@@ -1843,8 +2089,12 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
     def __init__(self, **kwargs):
         """Instantiate this panel.
 
-        Args:
+        Keyword Args:
             advanced_ui (bool): Whether this is on the "main" tab (False) or the "advanced" tab (True)
+            weight (int, optional): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page. Defaults to 400.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
         self.body_id = (f"computed_fields_{self.advanced_ui}",)
