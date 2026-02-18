@@ -1363,6 +1363,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         `scope_filter_data` can be both: value from DB or plain request.POST
         """
+        prefix = "scope"
         if not scope_filter_data:
             scope_filter_data = {}
 
@@ -1382,16 +1383,17 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         filterset = filterset_class(
             data=scope_filter_data_filtered,
             queryset=model_class.objects.all(),
-            prefix="scope",
+            prefix=prefix,
         )
         filterset_form_class = get_form_for_model(model_class, form_prefix="Filter")
-        filterset_form = filterset_form_class(scope_filter_data_filtered, prefix="scope")
+        filterset_form = filterset_form_class(scope_filter_data_filtered, prefix=prefix)
         display_filter_params = [
             # To avoid input name collision between scope filter fields and standard custom field form we're prefixing all the fields
-            check_filter_for_display(filterset.filters, field_name, values, prefix="scope")
+            check_filter_for_display(filterset.filters, field_name, values, prefix=prefix)
             for field_name, values in scope_filter_data_filtered.items()
+            if field_name.startswith(f"{prefix}-")
         ]
-        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, filter_fields_prefix="scope")
+        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, filter_fields_prefix=prefix)
 
         return {
             "filterset": filterset,
