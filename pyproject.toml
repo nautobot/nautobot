@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.1.0a2"
+version = "3.1.0a3"
 description = "Source of truth and network automation platform."
 authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
@@ -18,15 +18,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     # Background task processing
     "celery (>=5.6.2,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.4,<46.1)",
+    "cryptography (>=46.0.5,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.11,<5.3)",
     # Adds AJAX capabilities to django-tables2
@@ -100,7 +101,7 @@ dependencies = [
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library
-    "Pillow (>=12.0.0,<12.1)",
+    "Pillow (>=12.1.1,<13)",
     # Custom prometheus metrics
     "prometheus-client (>=0.23.1,<0.24)",
     # PostgreSQL database adapter
@@ -122,14 +123,14 @@ dependencies = [
 all = [
     "django-auth-ldap (>=5.2.0,<5.3)",
     "django-storages (>=1.14.6,<1.15)",
-    "mysqlclient (>=2.2.7,<2.3)",
+    "mysqlclient (>=2.2.8,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.8.3,<4.9)",
+    "social-auth-core[saml] (>=4.8.5,<4.9)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.2.0,<5.3)" ]
 # MySQL database adapter
-mysql = [ "mysqlclient (>=2.2.7,<2.3)" ]
+mysql = [ "mysqlclient (>=2.2.8,<2.3)" ]
 # NAPALM automation library
 napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
@@ -137,7 +138,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.8.3,<4.9)" ]
+sso = [ "social-auth-core[saml] (>=4.8.5,<4.9)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -225,7 +226,7 @@ yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.2"
+coverage = "~7.13.4"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid

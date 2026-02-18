@@ -428,22 +428,24 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                     </a>
                 </li>
             {{% endif %}}
-            {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
-                <li>
-                    <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
-                        <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                        Edit
-                    </a>
-                </li>
-            {{% endif %}}
-            {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
-                <li>
-                    <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ request.path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
-                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                        Delete
-                    </a>
-                </li>
-            {{% endif %}}
+            {{% with request.path|default:"" as request_path %}}
+                {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
+                    <li>
+                        <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
+                            <span class="mdi mdi-pencil" aria-hidden="true"></span>
+                            Edit
+                        </a>
+                    </li>
+                {{% endif %}}
+                {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
+                    <li>
+                        <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
+                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                            Delete
+                        </a>
+                    </li>
+                {{% endif %}}
+            {{% endwith %}}
         </ul>
     </div>
 {{% endif %}}
