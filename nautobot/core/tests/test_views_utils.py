@@ -87,6 +87,23 @@ class CheckFilterForDisplayTest(TestCase):
                 expected_output,
             )
 
+        with self.subTest("Test prefixed field is still processed correctly"):
+            expected_output = {
+                "name": "scope-has_interfaces",
+                "display": "Has interfaces",
+                "values": [{"name": "example_field_value", "display": "example_field_value"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(
+                    device_filter_set_filters,
+                    "scope-has_interfaces",
+                    ["example_field_value"],
+                    prefix="scope",
+                ),
+                expected_output,
+            )
+
         # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
         # with self.subTest("Test get value display (also legacy filter ModelMultipleChoiceFilter)"):
         #     example_obj = DeviceType.objects.first()

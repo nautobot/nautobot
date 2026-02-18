@@ -4,7 +4,7 @@ register = template.Library()
 
 
 @register.inclusion_tag("utilities/render_field.html", takes_context=True)
-def render_field(context, field, bulk_nullable=False):
+def render_field(context, field, bulk_nullable=False, container_class=None):
     """
     Render a single form field from template
     """
@@ -21,6 +21,7 @@ def render_field(context, field, bulk_nullable=False):
         "bulk_nullable": bulk_nullable,
         "should_render_embedded_create": embedded_create and not is_embedded and has_embedded_create_permissions,
         "should_render_embedded_search": embedded_search and not is_embedded,
+        "container_class": container_class,
     }
 
 
