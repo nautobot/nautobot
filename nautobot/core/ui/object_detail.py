@@ -1760,13 +1760,12 @@ class BaseTextPanel(Panel):
     Keyword Args:
         render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
         render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
-        body_content_template_path (str): The path of the template to use for the body content.
+        body_content_template_path (str, optional): The path of the template to use for the body content.
             Can be overridden for custom use cases.
         label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
-        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -1796,8 +1795,8 @@ class BaseTextPanel(Panel):
         MARKDOWN = "markdown"
         CODE = "code"
 
-    render_as = RenderOptions.MARKDOWN
     body_content_template_path = "components/panel/body_content_text.html"
+    render_as = RenderOptions.MARKDOWN
     render_placeholder = True
 
     def render_body_content(self, context: Context):
@@ -1824,13 +1823,12 @@ class ObjectTextPanel(BaseTextPanel):
         object_field (str): The name of the object field to be rendered. None by default.
         render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
         render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
-        body_content_template_path (str): The path of the template to use for the body content.
+        body_content_template_path (str, optional): The path of the template to use for the body content.
             Can be overridden for custom use cases.
         label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
-        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -1859,13 +1857,12 @@ class TextPanel(BaseTextPanel):
         context_field (str, optional): source field from context with value for `TextPanel`. Defaults to "text".
         render_as (RenderOptions): One of BaseTextPanel.RenderOptions to define rendering function.
         render_placeholder (bool): Whether to render placeholder text if given value is "falsy".
-        body_content_template_path (str): The path of the template to use for the body content.
+        body_content_template_path (str, optional): The path of the template to use for the body content.
             Can be overridden for custom use cases.
         label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
-        body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -1885,9 +1882,9 @@ class TextPanel(BaseTextPanel):
 
 
 class StatsPanel(Panel):
-    related_models = []
     body_content_template_path = "components/panel/stats_panel_body.html"
     filter_name = None
+    related_models = []
 
     def __init__(self, **kwargs):
         """
@@ -1971,8 +1968,8 @@ class StatsPanel(Panel):
 
 
 class AsyncStatsPanel(Panel):
-    body_content_template_path = "components/panel/async_stats_panel_body.html"
     api_url_name = None
+    body_content_template_path = "components/panel/async_stats_panel_body.html"
 
     def __init__(self, **kwargs):
         """
@@ -2021,10 +2018,10 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object custom fields."""
 
     advanced_ui = False
-    weight = Panel.WEIGHT_CUSTOM_FIELDS_PANEL
+    body_id = ""
     label = "Custom Fields"
     section = SectionChoices.LEFT_HALF
-    body_id = ""
+    weight = Panel.WEIGHT_CUSTOM_FIELDS_PANEL
 
     def __init__(self, **kwargs):
         """Instantiate an `_ObjectCustomFieldsPanel`.
@@ -2093,10 +2090,10 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
     """A panel that renders a table of object computed field values."""
 
     advanced_ui = False
-    weight = Panel.WEIGHT_COMPUTED_FIELDS_PANEL
+    body_id = ""
     label = "Computed Fields"
     section = SectionChoices.LEFT_HALF
-    body_id = ""
+    weight = Panel.WEIGHT_COMPUTED_FIELDS_PANEL
 
     def __init__(self, **kwargs):
         """Instantiate this panel.
@@ -2135,9 +2132,9 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
 
     advanced_ui = False
-    weight = Panel.WEIGHT_RELATIONSHIPS_PANEL
     label = "Relationships"
     section = SectionChoices.LEFT_HALF
+    weight = Panel.WEIGHT_RELATIONSHIPS_PANEL
 
     def should_render(self, context: Context):
         """Render only if any relevant relationships are defined."""
@@ -2183,10 +2180,10 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
 class _ObjectTagsPanel(Panel):
     """Panel displaying an object's tags as a space-separated list of color-coded tag names."""
 
-    weight = Panel.WEIGHT_TAGS_PANEL
+    body_content_template_path = "components/panel/body_content_tags.html"
     label = "Tags"
     section = SectionChoices.LEFT_HALF
-    body_content_template_path = "components/panel/body_content_tags.html"
+    weight = Panel.WEIGHT_TAGS_PANEL
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2205,9 +2202,9 @@ class _ObjectCommentPanel(ObjectTextPanel):
     """Panel displaying an object's comments as a Markdown formatted panel."""
 
     label = "Comments"
+    object_field = "comments"
     section = SectionChoices.LEFT_HALF
     weight = Panel.WEIGHT_COMMENTS_PANEL
-    object_field = "comments"
 
     def should_render(self, context: Context):
         if not super().should_render(context):
@@ -2218,10 +2215,10 @@ class _ObjectCommentPanel(ObjectTextPanel):
 class _ObjectDetailMainTab(Tab):
     """Base class for a main display tab containing an overview of object fields and similar data."""
 
-    tab_id = "main"
     label = ""  # see render_label()
-    weight = Tab.WEIGHT_MAIN_TAB
     panels = ()
+    tab_id = "main"
+    weight = Tab.WEIGHT_MAIN_TAB
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2241,11 +2238,11 @@ class _ObjectDetailMainTab(Tab):
 class _ObjectDataProvenancePanel(ObjectFieldsPanel):
     """Built-in class for a Panel displaying data provenance information on the Advanced tab."""
 
-    weight = 150
-    label = "Data Provenance"
-    section = SectionChoices.LEFT_HALF
     fields = ("created", "last_updated", "created_by", "last_updated_by", "api_url")
     ignore_nonexistent_fields = True
+    label = "Data Provenance"
+    section = SectionChoices.LEFT_HALF
+    weight = 150
 
     def get_data(self, context: Context):
         data = super().get_data(context)
@@ -2271,8 +2268,8 @@ class _ObjectDataProvenancePanel(ObjectFieldsPanel):
 class _ObjectDetailAdvancedTab(Tab):
     """Built-in class for a Tab displaying "advanced" information such as PKs and data provenance."""
 
-    tab_id = "advanced"
     label = "Advanced"
+    tab_id = "advanced"
     weight = Tab.WEIGHT_ADVANCED_TAB
 
     def __init__(self, **kwargs):
@@ -2296,8 +2293,8 @@ class _ObjectDetailAdvancedTab(Tab):
 class _ObjectDetailContactsTab(Tab):
     """Built-in class for a Tab displaying information about contact/team associations."""
 
-    tab_id = "contacts"
     label = "Contacts"
+    tab_id = "contacts"
     weight = Tab.WEIGHT_CONTACTS_TAB
 
     def __init__(self, **kwargs):
@@ -2338,9 +2335,9 @@ class _ObjectDetailContactsTab(Tab):
 class _ObjectDetailDataComplianceTab(DistinctViewTab):
     """Built-in class for a Tab displaying information about data compliance."""
 
-    url_name = ""
-    tab_id = "data_compliance"
     label = "Data Compliance"
+    tab_id = "data_compliance"
+    url_name = ""
     weight = Tab.WEIGHT_DATACOMPLIANCE_TAB
 
     def __init__(self, **kwargs):
@@ -2375,9 +2372,9 @@ class _ObjectDetailDataComplianceTab(DistinctViewTab):
 class DynamicGroupsTextPanel(BaseTextPanel):
     """Panel displaying a note about caching of dynamic groups."""
 
-    render_as = BaseTextPanel.RenderOptions.MARKDOWN
-    label = "Dynamic Group caching"
     css_class = "warning"
+    label = "Dynamic Group caching"
+    render_as = BaseTextPanel.RenderOptions.MARKDOWN
 
     def get_value(self, context):
         dg_list_url = reverse("extras:dynamicgroup_list")
@@ -2399,10 +2396,10 @@ class DynamicGroupsTextPanel(BaseTextPanel):
 class _ObjectDetailGroupsTab(Tab):
     """Built-in class for a Tab displaying information about associated dynamic groups."""
 
-    tab_id = "dynamic_groups"
     label = "Dynamic Groups"
-    weight = Tab.WEIGHT_GROUPS_TAB
     required_permissions = ("extras.view_dynamic_group",)
+    tab_id = "dynamic_groups"
+    weight = Tab.WEIGHT_GROUPS_TAB
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -2439,10 +2436,10 @@ class _ObjectDetailGroupsTab(Tab):
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
 
-    tab_id = "object_metadata"
     label = "Object Metadata"
-    weight = Tab.WEIGHT_METADATA_TAB
     required_permissions = ("extras.view_objectmetadata",)
+    tab_id = "object_metadata"
+    weight = Tab.WEIGHT_METADATA_TAB
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
