@@ -31,6 +31,7 @@ from nautobot.core.ui.breadcrumbs import (
     InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
 )
+from nautobot.core.ui.bulk_buttons import BulkDeleteButton, BulkEditButton
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -369,6 +370,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
         }
     )
 
+    class PrefixSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            """Override the body_content_table_list_url as it derives from obj.parent.pk instead of obj.pk."""
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id or 'null'}",
+            }
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             ui.PrefixObjectFieldsPanel(
@@ -400,12 +410,33 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=100,
                 table_class=tables.PrefixTable,
                 table_attribute="default_ancestors",
-                table_title="Parent Prefixes",
+                table_title="Ancestor Prefixes",
                 exclude_columns=["namespace"],
                 related_field_name="ancestors",
                 add_button_route=None,
                 paginate=False,
-                show_table_config_button=False,
+            ),
+            PrefixSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=130,
+                table_class=tables.PrefixTable,
+                table_attribute="default_siblings",
+                table_title="Sibling Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=160,
+                table_class=tables.PrefixTable,
+                table_attribute="children",
+                table_title="Child Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -455,7 +486,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
-                label="Child Prefixes",
+                label="Descendant Prefixes",
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
@@ -466,6 +497,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         include_paginator=True,
                         related_field_name="within",
+                        form_id="prefix_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="prefix_form", model=Prefix),
+                            BulkDeleteButton(form_id="prefix_form", model=Prefix),
+                        ],
                     ),
                 ),
             ),
@@ -483,6 +520,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         include_paginator=True,
                         related_field_name="prefix",
+                        form_id="ipaddress_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="ipaddress_form", model=IPAddress),
+                            BulkDeleteButton(form_id="ipaddress_form", model=IPAddress),
+                        ],
                     ),
                 ],
             ),
@@ -1315,26 +1358,8 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_edit",
-                        link_includes_pk=False,
-                        label="Edit Selected",
-                        color=ButtonActionColorChoices.EDIT,
-                        icon="mdi-pencil",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=200,
-                    ),
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_delete",
-                        link_includes_pk=False,
-                        label="Delete Selected",
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=100,
-                    ),
+                    BulkEditButton(form_id="vlan_form", model=VLAN),
+                    BulkDeleteButton(form_id="vlan_form", model=VLAN),
                 ],
             ),
         )
