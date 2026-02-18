@@ -121,7 +121,6 @@ class JobExecutionForm(forms.Form):
     """Base form for job execution fields."""
 
 
-
 class BaseJob:
     """Base model for jobs.
 

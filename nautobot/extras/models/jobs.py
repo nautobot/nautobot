@@ -829,6 +829,39 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     execute_job.__func__.alters_data = True
 
     @classmethod
+    def _build_celery_kwargs(
+        cls,
+        job_model: "Job",
+        user: "User",
+        task_queue: str,
+        profile: bool = False,
+        ignore_singleton_lock: bool = False,
+        schedule: Optional["ScheduledJob"] = None,
+        celery_kwargs: Optional[dict] = None,
+    ) -> dict:
+        """Build the celery kwargs dict common to all job execution paths."""
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
+            "queue": task_queue,
+        }
+
+        if schedule is not None:
+            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
+        if job_model.soft_time_limit > 0:
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            job_celery_kwargs["time_limit"] = job_model.time_limit
+
+        if celery_kwargs is not None:
+            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
+            job_celery_kwargs.update(celery_kwargs)
+
+        return job_celery_kwargs
+
+    @classmethod
     def enqueue_job(
         cls,
         job_model: Job,
@@ -846,6 +879,28 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+
+        This method is the primary entry point for job execution and supports
+        asynchronous (Celery), synchronous, and queue-based execution modes.
+
+        Relationship to `console_log_run()` from management commands `runjob_with_job_result`:
+        - When jobs are executed synchronously with console logging enabled,
+        an alternate execution path exists in `console_log_run()`.
+        - Both implementations perform similar responsibilities:
+            * executing the job
+            * capturing results and exceptions
+            * updating JobResult status and timestamps
+        - enqueue_job() is more general-purpose and supports multiple execution
+        backends, while console_log_run() is intentionally limited to suprocess,
+        console-oriented execution.
+
+        IMPORTANT:
+            If changes are made to job execution behavior (status transitions,
+            result handling, logging, profiling, or error propagation), the
+            corresponding logic in ``console_log_run()`` must be reviewed and
+            updated as needed to keep behavior consistent across execution modes.
+
+        This duplication is intentional but requires ongoing coordination.
 
         Args:
             job_model (Job): The Job to be enqueued for execution.
@@ -913,24 +968,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
-        job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
-            "nautobot_job_profile": profile,
-            "nautobot_job_user_id": user.id,
-            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
-            "queue": task_queue,
-        }
-
-        if schedule is not None:
-            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
-        if job_model.soft_time_limit > 0:
-            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-        if job_model.time_limit > 0:
-            job_celery_kwargs["time_limit"] = job_model.time_limit
-
-        if celery_kwargs is not None:
-            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
-            job_celery_kwargs.update(celery_kwargs)
+        job_celery_kwargs = cls._build_celery_kwargs(
+            job_model=job_model,
+            user=user,
+            task_queue=task_queue,
+            profile=profile,
+            ignore_singleton_lock=ignore_singleton_lock,
+            schedule=schedule,
+            celery_kwargs=celery_kwargs,
+        )
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
