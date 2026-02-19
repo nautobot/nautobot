@@ -1,9 +1,6 @@
-- Job run form split into separate sections:
-  - `Job Data` - job-specific user-defined variables (unchanged fields from `as_form_class()`).
-  - `Job Execution` - execution-related fields (`_profile`, `_console_log`, `_job_queue`, `_ignore_singleton_lock`) extracted into a new `as_execution_form()` classmethod and `JobExecutionForm` base form.
-  - `Job Schedule Type` - schedule configuration (previously `"Job Execution"`).
+- Job run form split into 3 separate sections: `Job Data`, `Job Execution` and `Job Schedule Type`.
 - `Job.as_form()` no longer includes execution fields (`_profile`, `_console_log`, `_job_queue`, `_ignore_singleton_lock`). These have been moved to the new `Job.as_execution_form()`.
 - `Job.as_execution_form()` added as a new classmethod returning a standalone `JobExecutionForm` populated with execution-related fields only.
-- `JobRunView.post()` updated to validate `job_data_form`, `job_execution_form`, and `schedule_form` independently. Execution fields are now read from `job_execution_form.cleaned_data` and job data fields from `job_data_form.cleaned_data`.
--  Template `nautobot/extras/templates/extras/job.html` updated to render three separate cards: `Job Data`, `Job Execution`, and `Job Schedule Type`.
+- `JobRunView.post()` updated to validate `job_form`, `job_execution_form`, and `schedule_form` independently. Execution fields are now read from `job_execution_form.cleaned_data` and job data fields from `job_form.cleaned_data`.
+- Template `nautobot/extras/templates/extras/job.html` updated to render three separate cards: `Job Data`, `Job Execution`, and `Job Schedule Type`.
 - Refactored `enqueue_job`. Added helper classmethod `_build_celery_kwargs` to avoid repetition in `console_log_run`.

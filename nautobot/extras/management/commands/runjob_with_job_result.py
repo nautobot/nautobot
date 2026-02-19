@@ -75,6 +75,7 @@ class Command(BaseCommand):
             user=job_user,
             task_queue=task_queue,
             profile=options["profile"],
+            console_log=options["console_log"],
             ignore_singleton_lock=ignore_singleton_lock,
             schedule=schedule,
             celery_kwargs=celery_kwargs,

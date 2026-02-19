@@ -47,10 +47,10 @@ class JobTest(TestCase):
     Test job features that don't require a transaction test case.
     """
 
-    def test_as_form_no_job_model(self):
+    def test_as_execution_form_no_job_model(self):
         """Job.as_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
-        form = BaseJob.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["_console_log", "_job_queue", "_profile"])
+        form = BaseJob.as_execution_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
 
     def test_field_default(self):
         """
@@ -79,9 +79,7 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()), ["var1", "var2", "var23", "_console_log", "_job_queue", "_profile"]
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23"])
 
     def test_no_field_order(self):
         """
@@ -91,7 +89,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_console_log", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -103,7 +101,7 @@ class JobTest(TestCase):
         form = job_class.as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_console_log", "_job_queue", "_profile"],
+            ["testvar1", "b_testvar2", "a_testvar3"],
         )
 
     def test_dryrun_default(self):
@@ -151,7 +149,7 @@ class JobTest(TestCase):
             name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
         )
         job_model.job_queues.set([jq_1, jq_2])
-        form = job_class.as_form()
+        form = job_class.as_execution_form()
         self.assertQuerySetEqual(
             form.fields["_job_queue"].queryset,
             models.JobQueue.objects.filter(jobs=job_model),
@@ -1071,9 +1069,14 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(
-            list(form.fields.keys()), ["object_pk", "object_model_name", "_console_log", "_job_queue", "_profile"]
-        )
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name"])
+
+    def test_execution_form_field(self):
+        module = "job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        job_class, _ = get_job_class_and_model(module, name)
+        execution_form = job_class.as_execution_form()
+        self.assertSequenceEqual(list(execution_form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -1136,7 +1139,14 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_console_log", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change"])
+
+    def test_execution_form_field(self):
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class.as_execution_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
 
     def test_hidden(self):
         module = "job_hook_receiver"
@@ -1418,7 +1428,7 @@ class RunConsoleLogJobTestCase(TestCase):
             date_done=timezone.now(),
             status=JobResultStatusChoices.STATUS_SUCCESS,
         )
-        # temporary override nadpisuje request context task
+        # temporary override request context task
         run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
         try:
             run_console_log_job_and_return_job_result.run()

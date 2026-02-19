@@ -835,6 +835,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         user: "User",
         task_queue: str,
         profile: bool = False,
+        console_log: bool = False,
         ignore_singleton_lock: bool = False,
         schedule: Optional["ScheduledJob"] = None,
         celery_kwargs: Optional[dict] = None,
@@ -845,6 +846,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             "nautobot_job_profile": profile,
             "nautobot_job_user_id": user.id,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
+            "nautobot_job_console_log": console_log,
             "queue": task_queue,
         }
 
@@ -973,6 +975,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             user=user,
             task_queue=task_queue,
             profile=profile,
+            console_log=console_log,
             ignore_singleton_lock=ignore_singleton_lock,
             schedule=schedule,
             celery_kwargs=celery_kwargs,

@@ -49,18 +49,18 @@
                             </div>
                         </div>
                     {% endif %}
-                    {% block job_data_form_wrapper %}
+                    {% block job_form_wrapper %}
                         <div class="card">
                             <div class="card-header">
                                 <strong>Job Data</strong>
                             </div>
                             <div class="card-body">
                                 {% block job_form %}
-                                    {% render_form job_data_form excluded_fields="[]" %}
+                                    {% render_form job_form excluded_fields="[]" %}
                                 {% endblock %}
                             </div>
                         </div>
-                    {% endblock job_data_form_wrapper %}
+                    {% endblock job_form_wrapper %}
                     {% block job_execution_form_wrapper %}
                         <div class="card">
                             <div class="card-header">
