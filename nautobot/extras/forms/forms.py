@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
-from django.urls.base import reverse, reverse_lazy
+from django.urls.base import reverse
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -157,7 +157,6 @@ __all__ = (
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
-    "CustomFieldContentTypesForm",
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
@@ -175,6 +174,7 @@ __all__ = (
     "ExternalIntegrationBulkEditForm",
     "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
+    "FileProxyBulkEditForm",
     "FileProxyFilterForm",
     "FileProxyForm",
     "GitRepositoryBulkEditForm",
@@ -300,7 +300,12 @@ class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
     model = ApprovalWorkflowDefinition
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    model_content_type = MultipleContentTypeField(feature="approval_workflows", choices_as_strings=True, required=False)
+    model_content_type = MultipleContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+        required=False,
+    )
     tags = TagFilterField(model)
 
 
@@ -380,6 +385,7 @@ class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
         label="Approver Group",
         help_text="User group that can approve this stage.",
     )
+    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowFilterForm(NautobotFilterForm):
@@ -392,9 +398,10 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
         required=False,
         label="Approval Workflow Definition",
     )
-    object_under_review_content_type = MultipleContentTypeField(
-        feature="approval_workflows",
-        choices_as_strings=True,
+    object_under_review_content_type = forms.ModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
         required=False,
         label="Object Under Review Content Type",
     )
@@ -427,7 +434,7 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
         widget=StaticSelect2,
         label="State",
     )
-    decision_date_day = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
+    decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
 
 
 class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
@@ -627,10 +634,10 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
-    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -771,17 +778,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         required=False,
     )
     content_types = MultipleContentTypeField(
-        feature="custom_fields",
-        help_text="The object(s) to which this field applies.",
-        widget=StaticSelect2Multiple(
-            attrs={
-                "hx-trigger": "change",
-                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
-                "hx-select": "#nb-scope-filter-form-container",
-                "hx-target": "#nb-scope-filter-form-container",
-                "hx-swap": "outerHTML",
-            }
-        ),
+        feature="custom_fields", help_text="The object(s) to which this field applies."
     )
 
     class Meta:
@@ -819,18 +816,6 @@ class CustomFieldFilterForm(NautobotFilterForm):
         required=False,
         label="Content Type(s)",
     )
-
-
-class CustomFieldContentTypesForm(BootstrapMixin, forms.ModelForm):
-    content_types = MultipleContentTypeField(
-        feature="custom_fields",
-        help_text="The object(s) to which this field applies.",
-        required=False,
-    )
-
-    class Meta:
-        model = CustomField
-        fields = ("content_types",)
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
@@ -1032,7 +1017,7 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
     content_type = MultipleContentTypeField(
-        feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
+        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
     )
     tags = TagFilterField(model)
 
@@ -1127,7 +1112,10 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
     model = StaticGroupAssociation
     q = forms.CharField(required=False, label="Search")
     dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), required=False)
-    associated_object_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, required=False)
+    assigned_object_type = CSVContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
+        required=False,
+    )
 
 
 #
@@ -1203,13 +1191,27 @@ class FileProxyForm(BootstrapMixin, forms.ModelForm):
         )
 
 
+class FileProxyBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = DynamicModelMultipleChoiceField(
+        queryset=FileProxy.objects.all(),
+        required=False,
+        widget=MultipleHiddenInput,
+    )
+    name = forms.CharField(required=False)
+    file = forms.FileField(required=False)
+
+    class Meta:
+        model = FileProxy
+        fields = ["pk", "name", "file"]
+
+
 class FileProxyFilterForm(BootstrapMixin, forms.Form):
     """FileProxy basic filter form."""
 
     model = FileProxy
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
-    uploaded_at = forms.DateField(required=False, label="Uploaded at", widget=DatePicker())
+    uploaded_at = forms.DateTimeField(required=False, label="Uploaded at")
     job = DynamicModelMultipleChoiceField(
         queryset=Job.objects.all(),
         required=False,
@@ -1469,8 +1471,6 @@ class JobEditForm(NautobotModelForm):
             "name",
             "grouping_override",
             "grouping",
-            "console_log_default_override",
-            "console_log_default",
             "description_override",
             "description",
             "dryrun_default_override",
@@ -1549,11 +1549,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
-    console_log_default = forms.NullBooleanField(
-        required=False,
-        widget=BulkEditNullBooleanSelect,
-        help_text="Whether the job defaults to running with console log argument set to true",
-    )
     hidden = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
@@ -1620,10 +1615,6 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
-    clear_console_log_default_override = forms.BooleanField(
-        required=False,
-        help_text="If checked, the values of console log will be reverted to the default values defined in each Job's source code",
-    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1704,10 +1695,6 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
-    )
-    console_log_default = forms.NullBooleanField(
-        required=False,
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
@@ -2191,7 +2178,6 @@ class NoteFilterForm(BootstrapMixin, forms.Form):
 
 
 class LocalContextFilterForm(forms.Form):
-    # TODO: 4.0 change to has_*
     local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",

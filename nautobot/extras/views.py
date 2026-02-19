@@ -33,7 +33,6 @@ from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
-from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
@@ -53,16 +52,12 @@ from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
-    get_form_for_model,
     get_model_for_view_name,
     get_route_for_model,
     get_table_class_string_from_view_name,
     get_table_for_model,
 )
-from nautobot.core.utils.requests import (
-    is_single_choice_field,
-    normalize_querydict,
-)
+from nautobot.core.utils.requests import is_single_choice_field, normalize_querydict
 from nautobot.core.views import generic, viewsets
 from nautobot.core.views.mixins import (
     ObjectBulkCreateViewMixin,
@@ -78,12 +73,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import (
-    check_filter_for_display,
-    common_detail_view_context,
-    get_obj_from_context,
-    prepare_cloned_fields,
-)
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, prepare_cloned_fields
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, Device, Interface, Module, Rack, VirtualDeviceContext
 from nautobot.dcim.tables import (
@@ -1319,18 +1309,8 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         if self.action in ("create", "update"):
             if request.POST:
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
-
-                model_class = self.get_content_type_model_class(request.POST)
-                scope_filter_context = self.get_scope_filter_context(model_class, request.POST)
-                context.update(**scope_filter_context)
             else:
                 context["choices"] = forms.CustomFieldChoiceFormSet(instance=instance)
-
-                if content_type := instance.content_types.first():
-                    scope_filter_context = self.get_scope_filter_context(
-                        content_type.model_class(), instance.scope_filter_prefixed
-                    )
-                    context.update(**scope_filter_context)
 
         if self.action == "retrieve":
             choices_data = []
@@ -1344,67 +1324,6 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
 
         return context
 
-    @staticmethod
-    def get_content_type_model_class(data):
-        """
-        This function will validate ContentType from POST and then return proper model class
-        """
-        content_type_form = forms.CustomFieldContentTypesForm(data=data)
-        if content_type_form.is_valid():
-            if content_type_form.cleaned_data["content_types"].exists():
-                content_type = content_type_form.cleaned_data["content_types"][0]
-                return content_type.model_class()
-            return None
-
-        raise ValidationError(content_type_form.errors)
-
-    def get_scope_filter_context(self, model_class, scope_filter_data=None):
-        """
-        Function responsible for generating context for scope filter form.
-
-        `scope_filter_data` can be both: value from DB or plain request.POST
-        """
-        prefix = "scope"
-        if not scope_filter_data:
-            scope_filter_data = {}
-
-        # We need to drop empty values, because some type of fields (e.g. NaturalKeyOrPKMultipleChoiceFilter) don't accept empty list or str
-        # TODO: Remove this code after fix on NaturalKeyOrPKMultipleChoiceFilter and other
-        scope_filter_data_filtered = scope_filter_data.copy()
-        for key in list(scope_filter_data_filtered.keys()):
-            if key.startswith("scope-"):
-                if hasattr(scope_filter_data_filtered, "getlist"):
-                    values = scope_filter_data_filtered.getlist(key)
-                else:
-                    values = scope_filter_data_filtered.get(key)
-                if values in ("", None, [], [""], ()):
-                    scope_filter_data_filtered.pop(key)
-
-        filterset_class = get_filterset_for_model(model_class)
-        filterset = filterset_class(
-            data=scope_filter_data_filtered,
-            queryset=model_class.objects.all(),
-            prefix=prefix,
-        )
-        filterset_form_class = get_form_for_model(model_class, form_prefix="Filter")
-        filterset_form = filterset_form_class(scope_filter_data_filtered, prefix=prefix)
-        display_filter_params = [
-            # To avoid input name collision between scope filter fields and standard custom field form we're prefixing all the fields
-            check_filter_for_display(filterset.filters, field_name, values, prefix=prefix)
-            for field_name, values in scope_filter_data_filtered.items()
-            if field_name.startswith(f"{prefix}-")
-        ]
-
-        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)(form_kwargs={"filter_fields_prefix": prefix})
-
-        return {
-            "filterset": filterset,
-            "filter_params": display_filter_params,
-            "dynamic_filter_form": dynamic_filter_form,
-            "filter_form": filterset_form,
-            "content_type_selected": True,
-        }
-
     def form_save(self, form, **kwargs):
         obj = super().form_save(form, **kwargs)
 
@@ -1416,41 +1335,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         else:
             raise ValidationError(choices.errors)
 
-        # Process the data for scope filter
-        filter_form = ctx["filterset"].form
-        if filter_form.is_valid():
-            obj.set_scope_filter(filter_form.cleaned_data)
-            obj.save()
-        else:
-            raise ValidationError(filter_form.errors)
-
         return obj
-
-    @action(
-        detail=False,
-        methods=["GET"],
-        url_path="scope-filter-fields",
-        url_name="scope_filter_fields",
-        custom_view_base_action="change",
-    )
-    def scope_filter_fields_for_content_types(self, request, *args, **kwargs):
-        """
-        HTMX endpoint to re-render scope filter part of form on content type update.
-        """
-        context = {}
-
-        model_class = self.get_content_type_model_class(request.GET)
-        if model_class:
-            context = self.get_scope_filter_context(model_class)
-
-        # It's rendering the whole template, but due to `hx-swap-oob` in template
-        # HTMX will swap only part of the page
-        html = render_to_string(
-            template_name=self.template_name,
-            context=context,
-            request=request,
-        )
-        return HttpResponse(html)
 
 
 #
@@ -2166,16 +2051,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         return redirect(return_url or "extras:scheduledjob_list")
 
     def _handle_immediate_execution(
-        self,
-        request,
-        job_model,
-        job_class,
-        job_form,
-        profile,
-        ignore_singleton_lock,
-        job_queue,
-        console_log,
-        return_url,
+        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
     ):
         """Handle immediate job execution."""
         job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
@@ -2185,7 +2061,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             profile=profile,
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
-            console_log=console_log,
             **job_class.serialize_data(job_kwargs),
         )
 
@@ -2198,6 +2073,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 ),
             )
             return redirect(return_url)
+
         return redirect("extras:jobresult", pk=job_result.pk)
 
     def get(self, request, class_path=None, pk=None):
@@ -2239,8 +2115,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
-            job_execution_form = job_class.as_execution_form(initial=initial)
-
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -2261,7 +2135,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             {
                 "job_model": job_model,
                 "job_form": job_form,
-                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )
@@ -2271,7 +2144,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
-        job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
 
         return_url = request.POST.get("_return_url")
@@ -2290,14 +2162,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif (
-            job_form is not None
-            and job_form.is_valid()
-            and job_execution_form is not None
-            and job_execution_form.is_valid()
-            and schedule_form.is_valid()
-        ):
-            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
+        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
             if job_queue is None:
                 job_queue = job_model.default_job_queue
 
@@ -2312,9 +2178,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
-            profile = job_execution_form.cleaned_data.get("_profile")
-            console_log = job_execution_form.cleaned_data.get("_console_log", False)
-            ignore_singleton_lock = job_execution_form.cleaned_data.get("_ignore_singleton_lock", False)
+            profile = job_form.cleaned_data.pop("_profile")
+            ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             with transaction.atomic():
@@ -2327,7 +2192,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     job_queue=job_queue,
                     profile=profile,
-                    console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -2355,7 +2219,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             profile,
                             ignore_singleton_lock,
                             job_queue,
-                            console_log,
                             return_url,
                         )
                     # Step 1: Check if approval is required
@@ -2377,7 +2240,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         profile,
                         ignore_singleton_lock,
                         job_queue,
-                        console_log,
                         return_url,
                     )
 
@@ -2400,7 +2262,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             {
                 "job_model": job_model,
                 "job_form": job_form,
-                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )
@@ -2446,7 +2307,6 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
-                    "console_log_default",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
@@ -2938,12 +2798,12 @@ class JobResultUIViewSet(
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
+
             context.update(
                 {
                     "job": job_class,
                     "associated_record": None,
                     "result": instance,
-                    "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
                 }
             )
 
@@ -3221,18 +3081,17 @@ class FileProxyUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectEditViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
 ):
     queryset = FileProxy.objects.all()
     filterset_class = filters.FileProxyFilterSet
     filterset_form_class = forms.FileProxyFilterForm
     form_class = forms.FileProxyForm
+    bulk_update_form_class = forms.FileProxyBulkEditForm
     serializer_class = serializers.FileProxySerializer
     table_class = tables.FileProxyTable
-    action_buttons = (
-        "add",
-        "export",
-    )
+    action_buttons = ("add",)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__")]
