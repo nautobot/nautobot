@@ -1381,7 +1381,7 @@ class KeyValueTablePanel(Panel):
 class EChartsPanel(Panel):
     """A panel that renders ECharts charts using the supplied ECharts class."""
 
-    body_wrapper_template_path = "nautobot_professional/components/echarts.html"
+    body_wrapper_template_path = "components/echarts.html"
     chart_class = EChartsBase
     chart_container_id = None
     chart_height = "32rem"
