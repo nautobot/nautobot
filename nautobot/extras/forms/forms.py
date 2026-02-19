@@ -30,6 +30,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
@@ -206,6 +207,7 @@ __all__ = (
     "NoteForm",
     "ObjectChangeFilterForm",
     "ObjectMetadataFilterForm",
+    "ObjectMetadataForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
@@ -2084,6 +2086,18 @@ class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = [
             "description",
         ]
+
+
+class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
+    scoped_fields = JSONArrayFormField(
+        required=False,
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        help_text="List of scoped fields, only direct fields on the model",
+    )
+
+    class Meta:
+        model = ObjectMetadata
+        fields = ["contact", "team", "scoped_fields", "assigned_object_id"]
 
 
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
