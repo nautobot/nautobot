@@ -1,1 +1,1 @@
-Fixed ECharts not resizing with their contained DOM element.
+Fixed ECharts not resizing with their container.
