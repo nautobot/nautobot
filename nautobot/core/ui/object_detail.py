@@ -1403,7 +1403,7 @@ class EChartsPanel(Panel):
         """
         Initialize an ECharts panel.
 
-        Args:
+        Keyword Args:
             chart_class (class): ECharts class, defaults to EChartsBase.
             chart_kwargs (dict): Kwargs to pass to EChartsBase constructor.
             chart_width (str, optional): CSS width for the chart container. Defaults to "100%".
