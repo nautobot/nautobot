@@ -175,7 +175,6 @@ __all__ = (
     "ExternalIntegrationBulkEditForm",
     "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
-    "FileProxyBulkEditForm",
     "FileProxyFilterForm",
     "FileProxyForm",
     "GitRepositoryBulkEditForm",
@@ -1202,20 +1201,6 @@ class FileProxyForm(BootstrapMixin, forms.ModelForm):
             "name",
             "file",
         )
-
-
-class FileProxyBulkEditForm(BootstrapMixin, BulkEditForm):
-    pk = DynamicModelMultipleChoiceField(
-        queryset=FileProxy.objects.all(),
-        required=False,
-        widget=MultipleHiddenInput,
-    )
-    name = forms.CharField(required=False)
-    file = forms.FileField(required=False)
-
-    class Meta:
-        model = FileProxy
-        fields = ["pk", "name", "file"]
 
 
 class FileProxyFilterForm(BootstrapMixin, forms.Form):
