@@ -176,8 +176,8 @@ class JobTest(TestCase):
         """
         approval_view=True should disable all fields in the execution form.
         """
-        module = "pass_job"
-        name = "TestPassJob"
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form(approval_view=True)
         for field_name, field in form.fields.items():
@@ -187,8 +187,8 @@ class JobTest(TestCase):
         """
         approval_view=False (default) should leave all fields enabled.
         """
-        module = "pass_job"
-        name = "TestPassJob"
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form(approval_view=False)
         for field_name, field in form.fields.items():
