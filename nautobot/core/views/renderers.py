@@ -241,7 +241,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
                 initial_data = normalize_querydict(request.GET, form_class=form_class)
-                form = form_class(instance=instance, initial=initial_data)
+                kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+                form = form_class(instance=instance, initial=initial_data, **kwargs)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])
