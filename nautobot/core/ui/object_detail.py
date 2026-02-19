@@ -1433,7 +1433,7 @@ class EChartsPanel(Panel):
             self.chart_container_id
             or f"{slugify('echart-' + self.chart_kwargs.get('header', ''))}-{uuid.uuid4().hex[:8]}"
         )
-        super().__init__(body_wrapper_template_path=body_wrapper_template_path, body_id=self.body_id, **kwargs)
+        super().__init__(body_wrapper_template_path=self.body_wrapper_template_path, body_id=self.body_id, **kwargs)
 
     def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
