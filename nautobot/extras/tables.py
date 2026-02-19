@@ -1408,6 +1408,7 @@ class MetadataChoiceTable(BaseTable):
 
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
+    id = tables.Column(linkify=True, verbose_name="ID")
     # NOTE: there is no identity column in this table; this is intentional as we have no detail view for ObjectMetadata
     metadata_type = tables.Column(linkify=True)
     assigned_object = tables.TemplateColumn(
@@ -1416,22 +1417,27 @@ class ObjectMetadataTable(BaseTable):
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
     value = tables.Column(empty_values=[], order_by=("_value",))
+    actions = ButtonsColumn(ObjectMetadata)
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
         fields = (
             "pk",
+            "id",
             "assigned_object",
             "metadata_type",
             "scoped_fields",
             "value",
+            "actions",
         )
         default_columns = (
             "pk",
+            "id",
             "assigned_object",
             "scoped_fields",
             "value",
             "metadata_type",
+            "actions",
         )
 
     def render_scoped_fields(self, value):
