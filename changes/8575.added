@@ -1,0 +1,1 @@
+Added `HYPERLINKED_OBJECT` option to `ObjectTextPanel.RenderOptions` to automatically render the value as a hyperlink to the related object.
