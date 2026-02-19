@@ -23,7 +23,7 @@ import time_machine
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -3711,6 +3711,136 @@ class JobResultTestCase(TestCase):
         job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
 
         self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
+
+    def test_build_celery_kwargs_base_fields(self):
+        """_build_celery_kwargs should always include the core set of keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        task_queue = job_model.default_job_queue.name
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=task_queue,
+        )
+
+        self.assertEqual(result["nautobot_job_job_model_id"], job_model.id)
+        self.assertEqual(result["nautobot_job_user_id"], self.user.id)
+        self.assertEqual(result["queue"], task_queue)
+        self.assertEqual(result["nautobot_job_profile"], False)
+        self.assertEqual(result["nautobot_job_console_log"], False)
+        self.assertEqual(result["nautobot_job_ignore_singleton_lock"], False)
+        self.assertNotIn("nautobot_job_schedule_id", result)
+
+    def test_build_celery_kwargs_with_additional_options(self):
+        """_build_celery_kwargs should correctly pass through additional options."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 120
+        job_model.time_limit = 300
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            profile=True,
+            console_log=True,
+            ignore_singleton_lock=True,
+        )
+
+        self.assertTrue(result["nautobot_job_profile"])
+        self.assertTrue(result["nautobot_job_console_log"])
+        self.assertTrue(result["nautobot_job_ignore_singleton_lock"])
+        self.assertIn("soft_time_limit", result)
+        self.assertEqual(result["soft_time_limit"], 120)
+        self.assertIn("time_limit", result)
+        self.assertEqual(result["time_limit"], 300)
+
+    def test_build_celery_kwargs_with_schedule(self):
+        """_build_celery_kwargs should include nautobot_job_schedule_id when a schedule is provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        schedule = ScheduledJob.objects.create(
+            name="test_schedule",
+            task="pass_job.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            schedule=schedule,
+        )
+
+        self.assertIn("nautobot_job_schedule_id", result)
+        self.assertEqual(result["nautobot_job_schedule_id"], schedule.id)
+
+    def test_build_celery_kwargs_zero_time_limits_excluded(self):
+        """_build_celery_kwargs should NOT include soft_time_limit/time_limit when they are 0."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 0
+        job_model.time_limit = 0
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+        )
+
+        self.assertNotIn("soft_time_limit", result)
+        self.assertNotIn("time_limit", result)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_are_merged(self):
+        """Extra celery_kwargs should be merged into the result."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        extra = {"countdown": 60, "expires": 3600}
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=extra,
+        )
+
+        self.assertEqual(result["countdown"], 60)
+        self.assertEqual(result["expires"], 3600)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_override_defaults(self):
+        """Extra celery_kwargs can override default keys (e.g. queue), matching the existing TODO behaviour."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs={"queue": "custom_queue"},
+        )
+
+        self.assertEqual(result["queue"], "custom_queue")
+
+    def test_build_celery_kwargs_none_celery_kwargs_is_safe(self):
+        """Passing celery_kwargs=None should not raise and should not add unexpected keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=None,
+        )
+
+        # Only the expected base keys should be present (plus any time limit keys if applicable)
+        expected_keys = {
+            "nautobot_job_job_model_id",
+            "nautobot_job_profile",
+            "nautobot_job_console_log",
+            "nautobot_job_user_id",
+            "nautobot_job_ignore_singleton_lock",
+            "queue",
+        }
+        self.assertEqual(set(result.keys()), expected_keys)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

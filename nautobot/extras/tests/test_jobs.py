@@ -47,10 +47,10 @@ class JobTest(TestCase):
     Test job features that don't require a transaction test case.
     """
 
-    def test_as_execution_form_no_job_model(self):
+    def test_as_form_no_job_model(self):
         """Job.as_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
-        form = BaseJob.as_execution_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
+        form = BaseJob.as_form()
+        self.assertSequenceEqual(list(form.fields.keys()), [])
 
     def test_field_default(self):
         """
@@ -171,6 +171,28 @@ class JobTest(TestCase):
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
+
+    def test_as_form_approval_view_disables_all_fields(self):
+        """
+        approval_view=True should disable all fields in the execution form.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_form(approval_view=True)
+        for field_name, field in form.fields.items():
+            self.assertTrue(field.disabled, msg=f"Field '{field_name}' should be disabled in approval view")
+
+    def test_as_form_approval_view_false_fields_enabled(self):
+        """
+        approval_view=False (default) should leave all fields enabled.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_form(approval_view=False)
+        for field_name, field in form.fields.items():
+            self.assertFalse(field.disabled, msg=f"Field '{field_name}' should not be disabled")
 
     def test_submodule_in_jobs_root(self):
         """
@@ -298,6 +320,164 @@ register_jobs(BadJob)
             # example_app does NOT provide dynamic jobs
             get_job("example_app.jobs.ExampleEverythingJob", reload=True)
             mock_get_jobs.assert_called_once_with(reload=False)
+
+    def test_as_execution_form_no_job_model(self):
+        """Job.as_execution_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
+        form = BaseJob.as_execution_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
+
+    def test_as_execution_form_base_fields(self):
+        """
+        as_execution_form() should always return the same base fields regardless of job-specific
+        variables or field_order - job data fields never bleed into the execution form.
+        """
+        for module, name in [
+            ("field_order", "TestFieldOrder"),
+            ("no_field_order", "TestNoFieldOrder"),
+            ("pass_job", "TestPassJob"),
+        ]:
+            with self.subTest(job=f"{module}.{name}"):
+                job_class = get_job(f"{module}.{name}")
+                form = job_class.as_execution_form()
+                self.assertIn("_profile", form.fields)
+                self.assertIn("_console_log", form.fields)
+                self.assertIn("_job_queue", form.fields)
+
+    def test_as_execution_form_console_log_initial_reflects_job_class(self):
+        """
+        _console_log initial value should match job class console_log attribute
+        when console_log_override is False on the job model.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        job_model.console_log_override = False
+        job_model.save()
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_console_log"].initial, job_class.console_log)
+
+    def test_as_execution_form_console_log_initial_reflects_job_model_override(self):
+        """
+        _console_log initial value should match job_model.console_log when console_log_override is True.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        job_model.console_log_override = True
+        job_model.console_log = not job_class.console_log
+        job_model.save()
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_console_log"].initial, job_model.console_log)
+
+    def test_as_execution_form_job_queue_initial_is_default_queue(self):
+        """
+        _job_queue initial value should be set to job_model.default_job_queue.pk.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_job_queue"].initial, job_model.default_job_queue.pk)
+
+    def test_as_execution_form_singleton_has_ignore_lock_field(self):
+        """
+        Singleton jobs should have _ignore_singleton_lock field in execution form.
+        """
+        module = "singleton"
+        name = "TestSingletonJob"
+        job_class, _ = get_job_class_and_model(module, name)
+        self.assertTrue(job_class.is_singleton)
+        form = job_class.as_execution_form()
+        self.assertIn("_ignore_singleton_lock", form.fields)
+
+    def test_as_execution_form_non_singleton_has_no_ignore_lock_field(self):
+        """
+        Non-singleton jobs should NOT have _ignore_singleton_lock field in execution form.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, _ = get_job_class_and_model(module, name)
+        self.assertFalse(job_class.is_singleton)
+        form = job_class.as_execution_form()
+        self.assertNotIn("_ignore_singleton_lock", form.fields)
+
+    @override_settings(DEBUG=False)
+    def test_as_execution_form_profile_hidden_when_not_debug(self):
+        """
+        _profile field should use HiddenInput widget when DEBUG=False.
+        """
+        from django import forms as django_forms
+
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        self.assertIsInstance(form.fields["_profile"].widget, django_forms.HiddenInput)
+
+    @override_settings(DEBUG=True)
+    def test_as_execution_form_profile_visible_when_debug(self):
+        """
+        _profile field should NOT use HiddenInput widget when DEBUG=True.
+        """
+        from django import forms as django_forms
+
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        self.assertNotIsInstance(form.fields["_profile"].widget, django_forms.HiddenInput)
+
+    def test_as_execution_form_approval_view_disables_all_fields(self):
+        """
+        approval_view=True should disable all fields in the execution form.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form(approval_view=True)
+        for field_name, field in form.fields.items():
+            self.assertTrue(field.disabled, msg=f"Field '{field_name}' should be disabled in approval view")
+
+    def test_as_execution_form_approval_view_false_fields_enabled(self):
+        """
+        approval_view=False (default) should leave all fields enabled.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form(approval_view=False)
+        for field_name, field in form.fields.items():
+            self.assertFalse(field.disabled, msg=f"Field '{field_name}' should not be disabled")
+
+    def test_as_execution_form_valid_with_post_data(self):
+        """
+        as_execution_form() should validate correctly when given valid POST data.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+        post_data = {
+            "_profile": False,
+            "_console_log": False,
+            "_job_queue": str(job_model.default_job_queue.pk),
+        }
+        form = job_class.as_execution_form(data=post_data)
+        self.assertTrue(form.is_valid(), msg=f"Form errors: {form.errors}")
+
+    def test_as_execution_form_does_not_contain_job_data_fields(self):
+        """
+        Job-specific variable fields must never appear in the execution form,
+        even for jobs that define many variables.
+        """
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        fields = {name: var.as_field() for name, var in job_class._get_vars().items()}
+        self.assertNotEqual(fields, {})
+        self.assertFalse(any(name in form.fields for name in fields))
 
 
 class JobTransactionTest(TransactionTestCase):
