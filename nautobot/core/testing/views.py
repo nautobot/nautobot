@@ -1063,10 +1063,12 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
-            response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            response = self.client.get(
+                f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
+            )
             self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
-            self.assertBodyContains(response, "None")
+            self.assertBodyContains(response, f"No {self.model._meta.verbose_name_plural} found")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -1110,6 +1112,7 @@ class ViewTestCases:
             )
             self.assertHttpStatus(response, 200)
             content = response.content.decode(response.charset)
+            self.assertNotIn("Unknown filter field", content, msg=content)
             # There should be at least two rows in the table
             self.assertGreaterEqual(content.count("<tr "), 2)
             if hasattr(self.model, "name"):
@@ -1914,7 +1917,9 @@ class ViewTestCases:
             with self.subTest("Assert if no valid objects selected return with error"):
                 for values in ([], [str(uuid.uuid4())]):
                     data["pk"] = values
-                    response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+                    response = self.client.post(
+                        self._get_url("bulk_rename"), data, follow=True, headers={"HX-Request": "true"}
+                    )
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertBodyContains(response, expected_message)
 

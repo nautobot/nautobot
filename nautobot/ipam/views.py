@@ -598,36 +598,33 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
                 param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting "
-                            "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
-                        ),
-                    )
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting "
+                        "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
+                    ),
+                )
             elif "max_depth" not in self.filter_params and default_max_depth > 0:
                 param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting."
-                        ),
-                    )
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting."
+                    ),
+                )
             elif "type" not in self.filter_params and default_container_only:
                 queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the enabled "
-                            "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
-                        ),
-                    )
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the enabled "
+                        "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
+                    ),
+                )
 
         return queryset
 
