@@ -13,7 +13,7 @@ menu_items = (
         weight=NavigationWeightChoices.ADMINISTRATION,
         groups=(
             NavMenuGroup(
-                name="Authentication",
+                name="Administration",
                 weight=100,
                 items=(
                     NavMenuItem(
