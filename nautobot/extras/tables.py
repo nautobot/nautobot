@@ -431,7 +431,7 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     object_under_review = tables.TemplateColumn(
         template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>",
         verbose_name="Object Under Review",
-        order_by=["object_under_review_content_type", "object_under_review_object_id"],
+        order_by=["approval_workflow__object_under_review_content_type", "approval_workflow__object_under_review_object_id"],
     )
     actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 

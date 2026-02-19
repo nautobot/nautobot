@@ -1004,11 +1004,10 @@ class ViewTestCases:
             column_names = list(table.base_columns.keys())
             # We need to make sure all columns are shown, as some of the logic only works when the column is actually present
             self.user.set_config(f"tables.{table_class.__name__}.columns", column_names, commit=True)
-
             for name in column_names:
                 column = table.base_columns[name]
                 with self.subTest(column_name=name):
-                    if hasattr(column, "order_by") and column.order_by:
+                    if hasattr(column, "orderable") and column.orderable is False:
                         continue
                     if name in ["actions", "pk"]:
                         continue
