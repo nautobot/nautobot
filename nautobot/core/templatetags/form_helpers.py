@@ -1,4 +1,3 @@
-import json
 from urllib.parse import urlencode
 
 from django import template
@@ -22,23 +21,19 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
     )
 
     embedded_create_query_params = []
-    field_attributes = getattr(getattr(field_instance, "widget", None), "attrs", {})
-    for attribute_name, attribute_value in field_attributes.items():
-        # If field defines a specific content type(s), parse it and later use as initial value in embedded create form.
-        if attribute_name in ("data-contenttype", "data-query-param-content_type", "data-query-param-content_types"):
-            try:
-                # Most content type field attributes are defined as JSON arrays of strings, e.g. `["dcim.location"]`.
-                content_types = json.loads(attribute_value)
-            except json.JSONDecodeError:
-                content_types = [attribute_value]
+    field_query_params = getattr(field_instance, "query_params", {})
+    for query_param_name, query_param_value in field_query_params.items():
+        # If field defines a specific content type(s), use it as initial value in embedded create form.
+        if query_param_name in ("content_type", "content_types"):
+            # Some `content_types` query params are defined as lists of strings, e.g. `["dcim.location"]`, while others
+            # may just be plain strings, e.g. `"dcim.location"`.
+            content_types = query_param_value if isinstance(query_param_value, list) else [query_param_value]
             for content_type in content_types:
                 try:
                     app_label, model = content_type.split(".")
                     # Need to map content type string to content type ID before passing it as initial form value.
                     content_type_id = ContentType.objects.get(app_label=app_label, model=model).id
-                    # Note the difference between `content_type` and `content_types`.
-                    query_param = (f"content_type{'s' if attribute_name.endswith('s') else ''}", content_type_id)
-                    embedded_create_query_params.append(query_param)
+                    embedded_create_query_params.append((query_param_name, content_type_id))
                 except (AttributeError, ObjectDoesNotExist, ValueError):
                     pass
 
