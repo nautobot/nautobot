@@ -8,6 +8,12 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
+{% block header_messages %}
+    {# Create a placeholder for header messages but do not actually render the current messages; #}
+    {# they will be retrieved and populated by a subsequent HTMX request #}
+    {% include "inc/header_messages.html" with messages=None %}
+{% endblock header_messages %}
+
 {% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
