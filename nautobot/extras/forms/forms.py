@@ -75,6 +75,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -173,6 +174,9 @@ __all__ = (
     "ExternalIntegrationBulkEditForm",
     "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
+    "FileProxyBulkEditForm",
+    "FileProxyFilterForm",
+    "FileProxyForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GitRepositoryForm",
@@ -1173,6 +1177,57 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
         ),
         required=False,
         label="Content Type",
+    )
+
+
+class FileProxyForm(BootstrapMixin, forms.ModelForm):
+    """Form for creating and editing FileProxy objects."""
+
+    class Meta:
+        model = FileProxy
+        fields = (
+            "name",
+            "file",
+        )
+
+
+class FileProxyBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = DynamicModelMultipleChoiceField(
+        queryset=FileProxy.objects.all(),
+        required=False,
+        widget=MultipleHiddenInput,
+    )
+    name = forms.CharField(required=False)
+    file = forms.FileField(required=False)
+
+    class Meta:
+        model = FileProxy
+        fields = ["pk", "name", "file"]
+
+
+class FileProxyFilterForm(BootstrapMixin, forms.Form):
+    """FileProxy basic filter form."""
+
+    model = FileProxy
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    uploaded_at = forms.DateTimeField(required=False, label="Uploaded at")
+    job = DynamicModelMultipleChoiceField(
+        queryset=Job.objects.all(),
+        required=False,
+        label="Job",
+    )
+    job_result_id = DynamicModelMultipleChoiceField(
+        queryset=JobResult.objects.all(),
+        required=False,
+        label="Job Result",
+    )
+    field_order = (
+        "q",
+        "name",
+        "uploaded_at",
+        "job",
+        "job_result_id",
     )
 
 
