@@ -656,6 +656,7 @@ class FileProxy(BaseModel):
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
 
     is_data_compliance_model = False
+    is_saved_view_model = True
 
     def __str__(self):
         return self.name
