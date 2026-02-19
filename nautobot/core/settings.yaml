@@ -1047,6 +1047,15 @@ properties:
     environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
     type: "string"
     version_added: "2.4.0"
+  LOCATION_LIST_DEFAULT_MAX_DEPTH:
+    default: 0
+    description: >-
+      Default `max_depth` filter to apply to Location list view (0 for no filter).
+      Setting this to a small value may improve performance when the number of records is large.
+    environment_variable: "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"
+    is_constance_config: true
+    type: "integer"
+    version_added: "3.1"
   LOCATION_NAME_AS_NATURAL_KEY:
     default: false
     description: >-
@@ -1537,18 +1546,20 @@ properties:
     default: false
     description: >-
       If set to True, the Prefix list view will default to a filter of `type=container`.
-      Enabling this may improve performacne when the number of records is large.
+      Enabling this may improve performance when the number of records is large.
     environment_variable: "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"
     is_constance_config: true
     type: "boolean"
+    version_added: "3.1"
   PREFIX_LIST_DEFAULT_MAX_DEPTH:
-    default: -1
+    default: 0
     description: >-
-      Default `max_depth` filter to apply to Prefix list view (-1 for no filter).
-      Setting this to a small non-negative value may improve performance when the number of records is large.
+      Default `max_depth` filter to apply to Prefix list view (0 for no filter).
+      Setting this to a small value may improve performance when the number of records is large.
     environment_variable: "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"
     is_constance_config: true
     type: "integer"
+    version_added: "3.1"
   PUBLISH_ROBOTS_TXT:
     default: true
     description: >-

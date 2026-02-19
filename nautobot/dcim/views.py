@@ -54,6 +54,8 @@ from nautobot.core.ui.bulk_buttons import (
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -407,6 +409,14 @@ class LocationUIViewSet(NautobotUIViewSet):
     )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
 
+    class LocationSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('dcim:location_list')}?parent={obj.parent_id or 'null'}",
+            }
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -460,6 +470,18 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 api_url_name="dcim-api:location-stats",
             ),
+            LocationSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=150,
+                table_title="Sibling Locations",
+                table_class=tables.LocationTable,
+                table_attribute="siblings",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                add_button_route=None,
+                hide_hierarchy_ui=True,
+                max_display_count=10,
+            ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
@@ -479,15 +501,59 @@ class LocationUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                table_title="Children",
+                table_title="Child Locations",
                 table_class=tables.LocationTable,
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
                 hide_hierarchy_ui=True,
+                max_display_count=10,
             ),
         )
     )
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
+        # no other filters are applied, as they do not generally alter the hierarchy of the filtered locations:
+        if all(
+            key
+            in [
+                "max_depth",
+                "subtree",
+            ]
+            for key in self.filter_params
+        ):
+            self.hide_hierarchy_ui = False
+
+        if not self.hide_hierarchy_ui and "max_depth" not in self.filter_params:
+            default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+            if default_max_depth > 0:
+                if "subtree" in self.filter_params:
+                    min_subtree_depth = 100
+                    for pk_or_name in self.filter_params["subtree"]:
+                        # This isn't *technically* 100% correct since there may be multiple subtrees under the same name
+                        # but it's close enough for now
+                        if loc := (
+                            Location.objects.filter(pk=pk_or_name).first()
+                            if is_uuid(pk_or_name)
+                            else Location.objects.filter(name=pk_or_name).first()
+                        ):
+                            if (depth := loc.ancestors(include_self=False).count()) < min_subtree_depth:
+                                min_subtree_depth = depth
+                    default_max_depth += min_subtree_depth
+                param = f"{'parent__' * default_max_depth}isnull"
+                queryset = queryset.exclude(**{param: False})
+                if not self.request.headers.get("HX-Request"):
+                    messages.info(
+                        self.request,
+                        format_html(
+                            "This table has been filtered by default due to the configured "
+                            "<code>LOCATION_LIST_DEFAULT_MAX_DEPTH</code> setting."
+                        ),
+                    )
+
+        return queryset
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

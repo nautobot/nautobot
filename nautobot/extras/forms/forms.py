@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
-from django.urls.base import reverse
+from django.urls.base import reverse, reverse_lazy
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -156,6 +156,7 @@ __all__ = (
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
+    "CustomFieldContentTypesForm",
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
@@ -774,7 +775,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         required=False,
     )
     content_types = MultipleContentTypeField(
-        feature="custom_fields", help_text="The object(s) to which this field applies."
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        widget=StaticSelect2Multiple(
+            attrs={
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+            }
+        ),
     )
 
     class Meta:
@@ -812,6 +823,18 @@ class CustomFieldFilterForm(NautobotFilterForm):
         required=False,
         label="Content Type(s)",
     )
+
+
+class CustomFieldContentTypesForm(BootstrapMixin, forms.ModelForm):
+    content_types = MultipleContentTypeField(
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        required=False,
+    )
+
+    class Meta:
+        model = CustomField
+        fields = ("content_types",)
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):

@@ -409,6 +409,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# Default filters for Location list view
+#
+# if (
+#     "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+#     and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+# ):
+#     LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
+
 # Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to True to use the location name alone as the natural key for Location objects.
 # Set this to False to use the sequence (name, parent__name, parent__parent__name, ...) as the natural key instead.

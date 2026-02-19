@@ -39,6 +39,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -979,7 +980,36 @@ class CustomField(
             delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
+        """
+        Add `cf_` prefix to the key for forms and filters usage
+        """
         return "cf_" + str(self.key)
+
+    @property
+    def filter_field(self):
+        """
+        Property to get prefixed field key for forms and filters usage.
+
+        Example:
+            key=test_field; this will return cf_test_field
+        """
+        return self.add_prefix_to_cf_key()
+
+    @property
+    def scope_filter_model_class(self):
+        """
+        Property to fetch model class from first content types assigned to this field.
+        """
+        return self.content_types.all()[0].model_class()
+
+    @property
+    def scope_filter_prefixed(self):
+        """
+        Property to get the scope filter data with `scope-` prefix for forms usage.
+        """
+        if self.scope_filter:
+            return {f"scope-{name}": value for name, value in self.scope_filter.items()}
+        return {}
 
     def should_render(self, instance: Model) -> bool:
         """
@@ -1019,6 +1049,19 @@ class CustomField(
             return True
 
         return filterset.qs.exists()
+
+    def set_scope_filter(self, form_data):
+        """
+        Set all desired fields from `form_data` into `scope_filter` dict.
+
+        Args:
+            form_data (dict): Dictionary of filter parameters, generally from a filter form's cleaned data.
+        """
+        model_class = self.scope_filter_model_class
+        filterset_class = get_filterset_for_model(model_class)
+
+        new_filter_dict = build_filter_dict_from_filterset(filterset_class, form_data)
+        self.scope_filter = new_filter_dict
 
 
 @extras_features(

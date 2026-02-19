@@ -1,6 +1,7 @@
+{% load helpers %}
 {% load form_helpers %}
 
-<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}">
+<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
@@ -34,16 +35,48 @@
         <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
             {{ field.label }}
         </label>
-        <div class="col-md-9">
-            {{ field }}
+        <div class="col-md-9{% if should_render_embedded_create or should_render_embedded_search %} align-items-start d-flex gap-8 flex-wrap{% endif %}">
+            {% if should_render_embedded_create or should_render_embedded_search %}
+                <div class="flex-grow-1 nb-w-0">{{ field }}</div>
+                {% if should_render_embedded_create %}
+                    {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
+                        <button
+                            class="btn btn-primary flex-grow-0 flex-shrink-0"
+                            data-bs-title="Add a new {{ verbose_name }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-trigger="hover"
+                            type="button"
+                        >
+                            <span class="mdi mdi-plus-thick"></span>
+                            <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                        </button>
+                    {% endwith %}
+                {% endif %}
+                {% if should_render_embedded_search %}
+                    {% with verbose_name_plural=field.field.queryset.model|meta:"verbose_name_plural" %}
+                        <button
+                            class="btn btn-secondary flex-grow-0 flex-shrink-0"
+                            data-bs-title="Search {{ verbose_name_plural }}"
+                            data-bs-toggle="tooltip"
+                            data-bs-trigger="hover"
+                            type="button"
+                        >
+                            <span class="mdi mdi-filter"></span>
+                            <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
+                        </button>
+                    {% endwith %}
+                {% endif %}
+            {% else %}
+                {{ field }}
+            {% endif %}
             {% if bulk_nullable %}
-                <div class="form-check mt-6">
+                <div class="form-check mt-6 w-100">
                     <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
                     <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
+                <span class="form-text w-100">{{ field.help_text|safe }}</span>
             {% endif %}
     {% endif %}
     {% if field.errors %}
