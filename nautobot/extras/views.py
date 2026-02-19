@@ -3081,14 +3081,12 @@ class FileProxyUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectEditViewMixin,
-    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
 ):
     queryset = FileProxy.objects.all()
     filterset_class = filters.FileProxyFilterSet
     filterset_form_class = forms.FileProxyFilterForm
     form_class = forms.FileProxyForm
-    bulk_update_form_class = forms.FileProxyBulkEditForm
     serializer_class = serializers.FileProxySerializer
     table_class = tables.FileProxyTable
     action_buttons = ("add",)

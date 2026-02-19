@@ -1,1 +1,1 @@
-Refactored File Proxy model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+Implemented File Proxy UI viewset using the existing mixin-based approach and `UI Component Framework`.
