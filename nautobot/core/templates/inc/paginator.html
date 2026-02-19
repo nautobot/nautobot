@@ -7,7 +7,7 @@
          hx-indicator="#{{ table_id }}-htmx-indicator"
          hx-push-url="true"
          hx-swap="show:#{{ paginator_id|default:'paginator' }}:bottom"
-         hx-select-oob="#{{ table_id }},#paginator,#select_all_box"
+         hx-select-oob="#{{ table_id }},#header_messages,#paginator,#select_all_box"
      {% endif %}
 >
     {% if page %}

@@ -129,13 +129,11 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
-                # Avoid adding the message to an HTMX fragment as that will lead to delayed/duplicated messages
-                if not htmx_request:
-                    messages.warning(
-                        request,
-                        'Requested "per_page" is too large. '
-                        f"No more than {max_page_size} items may be displayed at a time.",
-                    )
+                messages.warning(
+                    request,
+                    'Requested "per_page" is too large. '
+                    f"No more than {max_page_size} items may be displayed at a time.",
+                )
             return RequestConfig(request, paginate).configure(table)
         else:
             pk_list = kwargs.get("pk_list", [])

@@ -133,9 +133,9 @@
 
     <div hx-select="#object_table"
          {% if permissions.change or permissions.delete %}
-             hx-select-oob="#paginator,#select_all_box"
+             hx-select-oob="#header_messages,#paginator,#select_all_box"
          {% else %}
-             hx-select-oob="#paginator"
+             hx-select-oob="#header_messages,#paginator"
          {% endif %}
     >
         {% block table %}

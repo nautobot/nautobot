@@ -544,14 +544,13 @@ class LocationUIViewSet(NautobotUIViewSet):
                     default_max_depth += min_subtree_depth
                 param = f"{'parent__' * default_max_depth}isnull"
                 queryset = queryset.exclude(**{param: False})
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the configured "
-                            "<code>LOCATION_LIST_DEFAULT_MAX_DEPTH</code> setting."
-                        ),
-                    )
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the configured "
+                        "<code>LOCATION_LIST_DEFAULT_MAX_DEPTH</code> setting."
+                    ),
+                )
 
         return queryset
 
