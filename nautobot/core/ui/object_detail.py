@@ -1435,13 +1435,14 @@ class EChartsPanel(Panel):
         )
         super().__init__(body_wrapper_template_path=self.body_wrapper_template_path, body_id=self.body_id, **kwargs)
 
+        self.chart = self.chart_class(**self.chart_kwargs)
+
     def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
-        chart = self.chart_class(**self.chart_kwargs)
-        chart_config = chart.get_config(context=context)
+        chart_config = self.chart.get_config(context=context)
         return {
             **super().get_extra_context(context),
-            "chart": chart,
+            "chart": self.chart,
             "chart_config": chart_config,
             "chart_width": self.chart_width,
             "chart_height": self.chart_height,
