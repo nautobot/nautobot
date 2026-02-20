@@ -94,8 +94,9 @@ def _import_jobs_from_jobs_root():
                 continue
         except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
             pass
-        # Else, it's presumably a JOBS_ROOT job
-        del registry["jobs"][job_class_path]
+        # Else, it's presumably a JOBS_ROOT job.
+        if job_class_path in registry["jobs"]:
+            del registry["jobs"][job_class_path]
 
     # Load all modules in JOBS_ROOT
     import_modules_privately(path=os.path.realpath(settings.JOBS_ROOT))
