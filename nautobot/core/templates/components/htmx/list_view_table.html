@@ -2,6 +2,8 @@
 {% load helpers %}
 {% load perms %}
 
+{% include 'inc/header_messages.html' %}
+
 {% if permissions.change or permissions.delete %}
     {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if table.paginator.num_pages > 1 %}

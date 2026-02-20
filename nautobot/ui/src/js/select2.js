@@ -354,10 +354,17 @@ const initializeStaticChoiceSelection = (context, dropdownParent = null) =>
   initializeSelect2(context, '.nautobot-select2-static', { dropdownParent });
 
 export const initializeSelect2Fields = (context) => {
-  initializeColorPicker(context);
-  initializeDynamicChoiceSelection(context);
-  initializeMultiValueChar(context);
-  initializeStaticChoiceSelection(context);
+  /*
+   * Define a scoped `dropdownParent` if given `context` is a descendant of modal or a modal itself.
+   * https://select2.org/troubleshooting/common-problems#select2-does-not-function-properly-when-i-use-it-inside-a-bootst
+   */
+  const contextElement = getElement(context);
+  const dropdownParent = contextElement?.closest?.('.modal') ? contextElement : undefined;
+
+  initializeColorPicker(context, dropdownParent);
+  initializeDynamicChoiceSelection(context, dropdownParent);
+  initializeMultiValueChar(context, dropdownParent);
+  initializeStaticChoiceSelection(context, dropdownParent);
 
   [...getElement(context).querySelectorAll('.modal')].forEach((modal) => {
     initializeColorPicker(modal, modal);

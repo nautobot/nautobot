@@ -1,0 +1,3 @@
+Fixed initial HTMX loading of Job list view (table or tiles).
+Fixed rendering of "Descendants" column in Prefix table.
+Fixed duplicated messages when applying invalid filters to object list views.
