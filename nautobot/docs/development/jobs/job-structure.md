@@ -145,8 +145,7 @@ and finally the Job Author default.
 | OFF        | ON                 | OFF        | OFF             |
 
 This precedence model allows job authors to provide sensible defaults, administrators
-to enforce platform-wide behavior, and runners to make execution-specific decisions
-when permitted.
+to enforce platform-wide behavior, and runners to make execution-specific decisions.
 
 ### `dryrun_default`
 
