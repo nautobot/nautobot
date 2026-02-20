@@ -269,12 +269,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
-                # Check for message in base page
-                response = self.client.get(list_url)
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
                         self.assertBodyContains(response, str(prefix.pk))
@@ -284,12 +282,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
-                # Check for message in base page
-                response = self.client.get(list_url)
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
                         self.assertBodyContains(response, str(prefix.pk))
@@ -300,12 +296,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
             with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
-                # Check for message in base page
-                response = self.client.get(list_url)
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.parent is None or prefix.parent.parent is None or prefix.parent.parent.parent is None:
                         self.assertBodyContains(response, str(prefix.pk))
@@ -315,12 +309,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
-                # Check for message in base page
-                response = self.client.get(list_url)
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.parent is None or prefix.parent.parent is None:
                         self.assertBodyContains(response, str(prefix.pk))
@@ -331,12 +323,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         with self.subTest("With both settings, both should apply"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=4):
-                # Check for message in base page
-                response = self.client.get(list_url)
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.type == PrefixTypeChoices.TYPE_CONTAINER and (
                         prefix.parent is None
@@ -351,12 +341,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=0):
-                # Check for message in base page - not present since both configs are explicitly disabled
-                response = self.client.get(list_url)
+                # Check for un-filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
-                # Check for un-filtered prefix list in table
-                response = self.client.get(list_url, headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     self.assertBodyContains(response, str(prefix.pk))
                 # Indentation should still be present in table rendering
@@ -364,13 +352,11 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
-                # Check for message in base page - not present since an explicit filter is applied
                 prefix_status = Status.objects.get_for_model(Prefix).first()
-                response = self.client.get(list_url + f"?status={prefix_status.name}")
+                # Check for filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url + f"?status={prefix_status.name}", headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url + f"?status={prefix_status.name}", headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if prefix.status == prefix_status:
                         self.assertBodyContains(response, str(prefix.pk))
@@ -383,12 +369,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
 
         with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
-                # Check for message in base page - present since filter is applied that preserves hierarchy
-                response = self.client.get(list_url + "?ip_version=4")
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url + "?ip_version=4", headers={"HX-Request": True})
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
                 self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered prefix list in table
-                response = self.client.get(list_url + "?ip_version=4", headers={"HX-Request": True})
                 for prefix in self._get_queryset().all():
                     if (
                         prefix.ip_version == 4

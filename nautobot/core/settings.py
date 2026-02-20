@@ -709,6 +709,7 @@ MEDIA_URL = "media/"
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 # Messages
+MESSAGE_STORAGE = "nautobot.core.messages.NautobotMessageStorage"
 MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }

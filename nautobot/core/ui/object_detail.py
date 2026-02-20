@@ -1378,60 +1378,74 @@ class KeyValueTablePanel(Panel):
         return result
 
 
-class EChartsPanel(Panel, EChartsBase):
-    """A panel that renders ECharts charts using the EChartsBase class."""
+class EChartsPanel(Panel):
+    """A panel that renders ECharts charts using the supplied ECharts class."""
+
+    body_wrapper_template_path = "components/echarts.html"
+    chart_class = EChartsBase
+    chart_container_id = None
+    chart_height = "32rem"
+    chart_kwargs = {}
+    chart_width = "100%"
+    required_permissions = []
 
     def __init__(
         self,
         *,
+        chart_class=None,
         chart_kwargs=None,
-        width="100%",
-        height="32rem",
+        chart_width=None,
+        chart_height=None,
         chart_container_id=None,
-        body_wrapper_template_path="components/echarts.html",
+        body_wrapper_template_path=None,
         **kwargs,
     ):
         """
         Initialize an ECharts panel.
 
-        Args:
+        Keyword Args:
+            chart_class (class): ECharts class, defaults to EChartsBase.
             chart_kwargs (dict): Kwargs to pass to EChartsBase constructor.
-            width (str): CSS width for the chart container (default: "100%").
-            height (str): CSS height for the chart container (default: "32rem").
+            chart_width (str, optional): CSS width for the chart container. Defaults to "100%".
+            chart_height (str, optional): CSS height for the chart container. Defaults to "32rem".
             chart_container_id (str): Custom HTML ID for the chart container. If None, auto-generated.
+            body_wrapper_template_path (str): Template path to render the panel body, including both its "wrapper"
+                (a `div` or `table`) as well as its contents. Generally you won't override this as a user.
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
         """
-        self.width = width
-        self.height = height
-        self.chart_container_id = chart_container_id
+        # TODO: Switch to letting these fall through to Component init after https://github.com/nautobot/nautobot/pull/8533
+        if chart_class is not None:
+            self.chart_class = chart_class
+        if chart_kwargs is not None:
+            self.chart_kwargs = chart_kwargs
+        if chart_width is not None:
+            self.chart_width = chart_width
+        if chart_height is not None:
+            self.chart_height = chart_height
+        if chart_container_id is not None:
+            self.chart_container_id = chart_container_id
+        if body_wrapper_template_path is not None:
+            self.body_wrapper_template_path = body_wrapper_template_path
         self.body_id = (
-            self.chart_container_id or f"{slugify('echart-' + chart_kwargs.get('header', ''))}-{uuid.uuid4().hex[:8]}"
+            self.chart_container_id
+            or f"{slugify('echart-' + self.chart_kwargs.get('header', ''))}-{uuid.uuid4().hex[:8]}"
         )
+        super().__init__(body_wrapper_template_path=self.body_wrapper_template_path, body_id=self.body_id, **kwargs)
 
-        super().__init__(body_wrapper_template_path=body_wrapper_template_path, body_id=self.body_id, **kwargs)
-        EChartsBase.__init__(self, **chart_kwargs)
-
-    def should_render(self, context: Context):
-        """Determine if the panel should be rendered."""
-        if not super().should_render(context):
-            return False
-
-        # Check permissions if specified
-        if self.permission:
-            request = context.get("request")
-            if request and hasattr(request, "user"):
-                return request.user.has_perm(self.permission)
-
-        return True
+        self.chart = self.chart_class(**self.chart_kwargs)
 
     def get_extra_context(self, context: Context):
         """Add chart-specific context variables."""
-        chart_config = self.get_config(context=context)
+        chart_config = self.chart.get_config(context=context)
         return {
             **super().get_extra_context(context),
-            "chart": self,
+            "chart": self.chart,
             "chart_config": chart_config,
-            "chart_width": self.width,
-            "chart_height": self.height,
+            "chart_width": self.chart_width,
+            "chart_height": self.chart_height,
             "chart_container_id": self.body_id,
         }
 
