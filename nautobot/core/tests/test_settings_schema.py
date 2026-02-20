@@ -146,6 +146,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "LOGIN_URL",
             "LOGIN_REDIRECT_URL",
             "MEDIA_URL",
+            "MESSAGE_STORAGE",
             "MESSAGE_TAGS",
             "MIDDLEWARE",
             "PROMETHEUS_EXPORT_MIGRATIONS",

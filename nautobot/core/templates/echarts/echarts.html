@@ -28,6 +28,9 @@
                     ? options.color.map((colorObj) => colorObj?.[currentTheme] || colorObj?.light || colorObj)
                     : options.color,
             });
+            window.addEventListener('resize', function() {
+                myChart.resize();
+            });
         });
     });
 </script>
