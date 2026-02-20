@@ -1608,7 +1608,7 @@ class ConnectionFilterSetMixin:
         return queryset.filter(**{f"{name}__in": value})
 
 
-class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet, NameSearchFilterSet):
+class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
     location = django_filters.CharFilter(
         method="filter_location",
         label="Location (name)",
