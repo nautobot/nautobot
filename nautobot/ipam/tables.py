@@ -405,7 +405,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         template_code=PREFIX_COPY_LINK,
         attrs={
             "td": {
-                "class": "nb-prefix text-nowrap",
+                "class": "nb-tree-element text-nowrap",
                 "data-pk": lambda record: str(record.pk),
             }
         },

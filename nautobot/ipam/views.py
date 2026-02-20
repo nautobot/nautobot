@@ -339,7 +339,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
-    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_prefix"]
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
 
     queryset = Prefix.objects.select_related(
         "parent",
