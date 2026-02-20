@@ -7,7 +7,7 @@ from nautobot.dcim.models import Location
 from nautobot.extras.models import Tag
 
 
-class TableTestCase(TestCase):
+class FilteringUtilsTestCase(TestCase):
     def test_build_filter_dict_invalid_form_raises_validation_error(self):
         with self.assertRaises(ValidationError) as cm:
             filtering.build_filter_dict_from_filterset(
@@ -33,23 +33,23 @@ class TableTestCase(TestCase):
 
         self.assertEqual(result, {"asn": [123]})
 
-    def test_build_filter_dict_model_choice_stores_pk(self):
+    def test_build_filter_dict_model_choice_stores_object_name(self):
         parent = Location.objects.first()
 
         result = filtering.build_filter_dict_from_filterset(
             LocationFilterSet,
-            {"parent": [str(parent)]},
+            {"parent": [parent]},
         )
 
-        self.assertEqual(result, {"parent": [str(parent)]})
+        self.assertEqual(result, {"parent": [parent.name]})
 
-    def test_build_filter_dict_model_multiple_choice_stores_pk_list(self):
-        Tag.objects.create(name="tag1")
-        Tag.objects.create(name="tag2")
+    def test_build_filter_dict_model_multiple_choice_stores_list_of_names(self):
+        tag1 = Tag.objects.create(name="tag1")
+        tag2 = Tag.objects.create(name="tag2")
 
         result = filtering.build_filter_dict_from_filterset(
             LocationFilterSet,
-            {"tags": ["tag1", "tag2"]},
+            {"tags": [tag1, tag2]},
         )
 
         self.assertEqual(

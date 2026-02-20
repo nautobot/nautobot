@@ -551,6 +551,21 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
         )
 
+    def test_scope_filter_prefixed_return_prefixed_data(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            scope_filter={"name": ["Test name"], "location": ["Test location"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        expected_prefixed_data = {"scope-name": ["Test name"], "scope-location": ["Test location"]}
+        prefixed = cf.scope_filter_prefixed
+        self.assertEqual(prefixed, expected_prefixed_data)
+
 
 @tag("example_app")
 class CustomFieldManagerTest(TestCase):

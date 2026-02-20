@@ -1393,7 +1393,8 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
             for field_name, values in scope_filter_data_filtered.items()
             if field_name.startswith(f"{prefix}-")
         ]
-        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset, filter_fields_prefix=prefix)
+
+        dynamic_filter_form = DynamicFilterFormSet(filterset=filterset)(form_kwargs={"filter_fields_prefix": prefix})
 
         return {
             "filterset": filterset,
