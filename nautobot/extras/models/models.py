@@ -654,7 +654,7 @@ class FileProxy(BaseModel):
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
-
+    last_updated = models.DateTimeField(auto_now=True)
     is_data_compliance_model = False
     is_saved_view_model = True
 
