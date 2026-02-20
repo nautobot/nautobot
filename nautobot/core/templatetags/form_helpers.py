@@ -21,9 +21,16 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
     )
 
     embedded_create_query_params = []
+    embedded_search_query_params = []
+
+    try:
+        embedded_search_query_params.append(("content_type", field_instance.queryset.model._meta.label_lower))
+    except AttributeError:
+        pass
+
     field_query_params = getattr(field_instance, "query_params", {})
     for query_param_name, query_param_value in field_query_params.items():
-        # If field defines a specific content type(s), use it as initial value in embedded create form.
+        # If field defines a specific content type(s), use it as initial value in embedded create and search forms.
         if query_param_name in ("content_type", "content_types"):
             # Some `content_types` query params are defined as lists of strings, e.g. `["dcim.location"]`, while others
             # may just be plain strings, e.g. `"dcim.location"`.
@@ -34,6 +41,9 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
                     # Need to map content type string to content type ID before passing it as initial form value.
                     content_type_id = ContentType.objects.get(app_label=app_label, model=model).id
                     embedded_create_query_params.append((query_param_name, content_type_id))
+                    # For search form, additionally prefix content type param with `initial_` to avoid confusion with
+                    # `content_type` param indicating the model of filterset form to render, not related to form values.
+                    embedded_search_query_params.append((f"initial_{query_param_name}", content_type))
                 except (AttributeError, ObjectDoesNotExist, ValueError):
                     pass
 
@@ -43,6 +53,7 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
         "should_render_embedded_create": embedded_create and not is_embedded and has_embedded_create_permissions,
         "should_render_embedded_search": embedded_search and not is_embedded,
         "embedded_create_query_string": urlencode(embedded_create_query_params),
+        "embedded_search_query_string": urlencode(embedded_search_query_params),
         "container_class": container_class,
     }
 

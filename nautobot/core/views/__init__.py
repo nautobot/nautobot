@@ -53,8 +53,14 @@ from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import (
+    get_filterset_for_model,
+    get_model_from_name,
+    get_related_class_for_model,
+    get_route_for_model,
+)
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.mixins import UIComponentsMixin
 from nautobot.core.views.utils import (
     generate_latest_with_cache,
@@ -351,6 +357,21 @@ class SearchView(AccessMixin, View):
         # when attempting to search
         if not request.user.is_authenticated:
             return self.handle_no_permission()
+
+        # For HTMX request with `content_type` query param, render embedded search form.
+        if request.headers.get("HX-Request", False) and "content_type" in request.GET:
+            content_type = request.GET.get("content_type")
+            model = get_model_from_name(content_type)
+            filterset = get_filterset_for_model(model)
+            filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
+            # Compose initial data from all given query params with `initial_` prefix, and remove that prefix afterward.
+            initial_data = {k.replace("initial_", "", 1): v for k, v in request.GET.items() if k.startswith("initial_")}
+            filter_form = filterset_form(initial=normalize_querydict(initial_data, filterset=filterset()))
+            return render(
+                request,
+                "components/htmx/object_embedded_search.html",
+                {"filter_form": filter_form, "model": model},
+            )
 
         # No query
         if "q" not in request.GET:

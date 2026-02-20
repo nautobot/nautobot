@@ -77,7 +77,7 @@
         </div>
     </form>
     <div class="modal fade" data-bs-backdrop="static" id="embedded_action_modal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div
                 class="modal-content"
                 hx-on:htmx:before-swap="window.nb.embeddedAction.handleCreateEnd(event);"
@@ -120,7 +120,7 @@
                 }
             };
 
-            const handleCreateStart = ({ targetFieldName }) => {
+            const handleStart = ({ targetFieldName }) => {
                 const modal = document.querySelector('#embedded_action_modal');
                 const content = modal.querySelector('.modal-content');
                 content.innerHTML =
@@ -129,7 +129,7 @@
             };
 
             window.nb = window.nb || {};
-            window.nb.embeddedAction = { handleCreateEnd, handleCreateStart, targetFieldName: null };
+            window.nb.embeddedAction = { handleCreateEnd, handleStart, targetFieldName: null };
         })();
     </script>
 {% endblock %}

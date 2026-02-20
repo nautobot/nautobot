@@ -1,0 +1,29 @@
+{% load form_helpers %}
+{% load helpers %}
+
+<div class="modal-header">
+    <h4 class="modal-title">Search {{model|meta:'verbose_name_plural'}}</h4>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body p-0">
+    <div class="d-flex">
+        <form
+            class="border-end d-flex flex-column flex-grow-1 pt-16 px-16 w-50"
+            hx-get="{% url model|viewname:'list' %}"
+            hx-target="#embedded_action_modal .nb-search-results"
+        >
+            {% include 'inc/search_panel.html' with exclude_html_form=True %}
+            <div class="nb-form-sticky-footer mb-0 mx-n16 px-16 rounded-bottom">
+                <button class="btn btn-primary" type="submit">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                    -->Search
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                    -->Cancel
+                </button>
+            </div>
+        </form>
+        <div class="nb-search-results overflow-x-auto p-16 w-100" style="flex-grow: 2;"{% comment %}Bootstrap does not support `flex-grow` other than `0` and `1`.{% endcomment %}></div>
+    </div>
+</div>
