@@ -158,7 +158,7 @@ class Component:
             if not hasattr(self, name):
                 raise TypeError(f"invalid argument: {name}")
             setattr(self, name, value)
-        if getattr(self, "weight", None) is None:
+        if self.weight is None:
             raise TypeError("weight is required")
 
     def should_render(self, context: Context):
@@ -241,7 +241,7 @@ class Button(Component):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "label", None) is None:
+        if self.label is None:
             raise TypeError("label is required")
 
     def get_link(self, context: Context):
@@ -324,7 +324,7 @@ class DropdownButton(Button):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if not getattr(self, "children", None):
+        if not self.children:
             raise TypeError("children is required")
 
     def get_extra_context(self, context: Context):
@@ -369,10 +369,10 @@ class FormButton(Button):
         """
         super().__init__(**kwargs)
 
-        if getattr(self, "link_name", None) is None:
+        if self.link_name is None:
             raise TypeError("FormButton requires a 'link_name'.")
 
-        if getattr(self, "form_id", None) is None:
+        if self.form_id is None:
             raise TypeError("FormButton requires 'form_id'.")
 
     def get_extra_context(self, context: Context):
@@ -416,11 +416,11 @@ class ExtraDetailViewActionButton(Button):
         if kwargs.get("label", None) is None:
             kwargs["label"] = self.render_label
         super().__init__(**kwargs)
-        if getattr(self, "action", None) is None:
+        if self.action is None:
             raise TypeError("action is required")
-        if getattr(self, "link_name", None) is None:
+        if self.link_name is None:
             raise TypeError("link_name is required")
-        if getattr(self, "permission_check", None) is None:
+        if self.permission_check is None:
             raise TypeError("permission_check is required")
         if not callable(self.permission_check):
             raise TypeError(f"permission_check must be callable, got {type(self.permission_check).__name__}")
@@ -476,9 +476,9 @@ class Tab(Component):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "tab_id", None) is None:
+        if self.tab_id is None:
             raise TypeError("tab_id is required")
-        if getattr(self, "label", None) is None:
+        if self.label is None:
             raise TypeError("label is required")
 
     LAYOUT_TEMPLATE_PATHS = {
@@ -592,7 +592,7 @@ class DistinctViewTab(Tab):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if getattr(self, "url_name", None) is None:
+        if self.url_name is None:
             raise TypeError("url_name is required")
 
     def get_extra_context(self, context: Context):
@@ -818,7 +818,7 @@ class DataTablePanel(Panel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "context_data_key", None) is None:
+        if self.context_data_key is None:
             raise TypeError("context_data_key is required")
         if self.columns and self.context_columns_key:
             raise ValueError("You can only specify one of `columns` or `context_columns_key`.")
@@ -1705,7 +1705,7 @@ class GroupedKeyValueTablePanel(KeyValueTablePanel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if getattr(self, "body_id", None) is None:
+        if self.body_id is None:
             raise TypeError("body_id is required")
 
     def render_header_extra_content(self, context: Context):
@@ -1919,7 +1919,7 @@ class StatsPanel(Panel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "filter_name", None) is None:
+        if self.filter_name is None:
             raise TypeError("filter_name is required")
 
     def should_render(self, context: Context):
@@ -2007,7 +2007,7 @@ class AsyncStatsPanel(Panel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        if getattr(self, "api_url_name", None) is None:
+        if self.api_url_name is None:
             raise TypeError("api_url_name is required")
 
     def should_render(self, context: Context):
