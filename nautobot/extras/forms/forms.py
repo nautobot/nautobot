@@ -205,6 +205,7 @@ __all__ = (
     "NoteFilterForm",
     "NoteForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataBulkEditForm",
     "ObjectMetadataFilterForm",
     "ObjectMetadataForm",
     "PasswordInputWithPlaceholder",
@@ -2063,6 +2064,15 @@ class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = [
             "description",
         ]
+
+
+class ObjectMetadataBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ObjectMetadata.objects.all(), widget=forms.MultipleHiddenInput)
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
+
+    class Meta:
+        nullable_fields = ["contact", "team"]
 
 
 class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
