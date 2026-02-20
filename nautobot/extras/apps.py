@@ -1,6 +1,7 @@
 import logging
 
 from django.db.utils import ProgrammingError
+from django.utils.module_loading import import_string
 import graphene
 from health_check.plugins import plugin_dir
 
@@ -23,6 +24,8 @@ class ExtrasConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
+        from django.conf import settings
+
         import nautobot.extras.signals  # noqa: F401  # unused-import -- but this import installs the signals
         from nautobot.extras.signals import refresh_job_models
 
@@ -55,7 +58,19 @@ class ExtrasConfig(NautobotConfig):
 
         plugin_dir.register(DatabaseBackend)
         plugin_dir.register(MigrationsBackend)
-        plugin_dir.register(RedisBackend)
+
+        options = getattr(settings, "CACHES", {}).get("default", {}).get("OPTIONS", {})
+        # Only register the RedisBackend health check if using Nautobot validated Redis client classes
+        # Otherwise a custom client can register its own health check that is compatible with its custom client class.
+        if options.get("CLIENT_CLASS", "django_redis.client.DefaultClient") in [
+            "django_redis.client.SentinelClient",
+            "django_redis.client.DefaultClient",
+        ]:
+            plugin_dir.register(RedisBackend)
+        else:
+            if options.get("CUSTOM_HEALTH_CHECK_CLASS"):
+                custom_health_check = import_string(options["CUSTOM_HEALTH_CHECK_CLASS"])
+                plugin_dir.register(custom_health_check)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets import register_secrets_provider

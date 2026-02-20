@@ -714,6 +714,14 @@ properties:
     see_also:
       "Django documentation for `DATABASES`": "https://docs.djangoproject.com/en/stable/ref/settings/#databases"
     type: "object"
+  CUSTOM_HEALTH_CHECK_CLASS:
+    default: ""
+    description: >-
+      The import path to a custom health check class to use when providing a custom django-redis `CLIENT_CLASS`.
+    version_added: "3.0.8"
+    see_also:
+      "Django Health Check documentation for custom health check classes": "https://codingjoe.dev/django-health-check/usage/#writing-a-custom-health-check"
+    type: "string"
   DATE_FORMAT:
     default: "N j, Y"
     description: "Custom format for dates. The default results in strings like \"January 22, 2024\"."
