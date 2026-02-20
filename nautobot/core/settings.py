@@ -7,17 +7,21 @@ import re
 import sys
 import tempfile
 
-from django.contrib.messages import constants as messages
 import django.forms
+from django.contrib.messages import constants as messages
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
 from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
-    MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
-    PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
 )
-from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT
+from nautobot.core.constants import PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT
+from nautobot.core.settings_funcs import (
+    ConstanceConfigItem,
+    is_truthy,
+    parse_redis_connection,
+)
 
 #
 # Environment setup
@@ -956,6 +960,7 @@ CACHES = {
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "PASSWORD": "",
+            "CUSTOM_HEALTH_CHECK_CLASS": "",
         },
     }
 }
