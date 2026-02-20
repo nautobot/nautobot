@@ -304,7 +304,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         order_by=["module_type"],
     )
     parent_module_bay = tables.Column(
-        linkify=lambda record: record.parent_module_bay.get_absolute_url(),
+        linkify=lambda record: record.parent_module_bay.get_absolute_url() if record else None,
         verbose_name="Parent Module Bay",
         accessor="parent_module_bay__display",
         order_by=["parent_module_bay"],
