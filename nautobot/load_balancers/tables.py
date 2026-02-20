@@ -35,7 +35,7 @@ class VirtualServerTable(BaseTable):
     certificate_profiles_count = LinkedCountColumn(
         viewname="load_balancers:certificateprofile_list",
         verbose_name="Certificate Profiles",
-        url_params={"load_balancer_pool_members": "pk"},
+        url_params={"virtual_servers": "pk"},
     )
     actions = ButtonsColumn(models.VirtualServer)
     tags = TagColumn(url_name="load_balancers:virtualserver_list")
