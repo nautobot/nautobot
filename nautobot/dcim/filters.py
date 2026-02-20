@@ -1891,8 +1891,6 @@ class SoftwareVersionFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
     )
-    release_date = django_filters.DateFilter(field_name="release_date")
-    end_of_support_date = django_filters.DateFilter(field_name="end_of_support_date")
 
     class Meta:
         model = SoftwareVersion
