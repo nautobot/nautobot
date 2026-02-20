@@ -124,7 +124,7 @@ LOCATION_TREE_LINK = """
                     ></button>
                 {% else %}
                     {# placeholder for alignment with expandable rows #}
-                    <span class="nb-subtree"></span>
+                    <span class="nb-subtree nb-subtree-not-expandable"></span>
                 {% endif %}
             {% endif %}
             <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>

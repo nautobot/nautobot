@@ -71,7 +71,7 @@ PREFIX_COPY_LINK = """
                     ></button>
                 {% else %}
                     {# placeholder for alignment with expandable rows #}
-                    <span class="nb-subtree"></span>
+                    <span class="nb-subtree nb-subtree-not-expandable"></span>
                 {% endif %}
             {% endif %}
             <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}&namespace={{ object.namespace.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}"

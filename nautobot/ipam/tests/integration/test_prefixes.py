@@ -54,16 +54,16 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertEqual(self.browser.find_by_tag("tr")[2].find_by_tag("a").first.text, "10.0.0.0/24")
         # ...and it is indented appropriately as a subtree element
         self.assertTrue(
-            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-no-next-sibling")
+            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-next-sibling")
         )
         # 10.0.0.0/30 is third...
         self.assertEqual(self.browser.find_by_tag("tr")[3].find_by_tag("a").first.text, "10.0.0.0/30")
         # ...and it is indented appropriately as a subtree element
         self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-no-next-sibling")
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-next-sibling")
         )
         self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-no-next-sibling")
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling")
         )
 
     def test_parent_child_relationship_navigable_in_list_view(self):
@@ -86,7 +86,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertEqual(self.browser.find_by_tag("tr")[2].find_by_tag("a").first.text, "10.0.0.0/24")
         # ...and it is indented appropriately as a subtree element
         self.assertTrue(
-            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-no-next-sibling")
+            self.browser.find_by_tag("tr")[2].find_by_tag("span").first.has_class("nb-subtree-next-sibling")
         )
         # ...and it has an expandable caret
         self.assertTrue(
@@ -100,10 +100,10 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertEqual(self.browser.find_by_tag("tr")[3].find_by_tag("a").first.text, "10.0.0.0/30")
         # ...and it is indented appropriately as a subtree element
         self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-no-next-sibling")
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-next-sibling")
         )
         self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-no-next-sibling")
+            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling")
         )
         # ...and it does NOT have an expandable caret
         self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree"))

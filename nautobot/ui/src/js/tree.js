@@ -47,23 +47,36 @@ const maybeAddSubtreeExpansionCaret = (td) => {
 };
 
 const fixupSubtreeDisplay = (td) => {
-  const subtreeElements = Array.from(td.getElementsByClassName('nb-subtree'));
+  let subtreeElements = Array.from(td.getElementsByClassName('nb-subtree'));
   const currentDepth = subtreeElements.length;
   const tr = td.closest('tr');
+  let expandableSubtrees = false;
+  if (
+    subtreeElements.at(-1)?.classList.contains('nb-subtree-expandable') ||
+    subtreeElements.at(-1)?.classList.contains('nb-subtree-not-expandable')
+  ) {
+    subtreeElements = subtreeElements.slice(0, -1);
+    expandableSubtrees = true;
+  }
 
-  subtreeElements.slice(0, -2).forEach((element, index) => {
+  subtreeElements.slice(0, -1).forEach((element, index) => {
     let nextTr = tr.nextElementSibling;
-    while (nextTr?.querySelectorAll('.nb-tree-element .nb-subtree').length > index + 2) {
+    while (
+      nextTr?.querySelectorAll('.nb-tree-element .nb-subtree').length > (expandableSubtrees ? index + 2 : index + 1)
+    ) {
       nextTr = nextTr.nextElementSibling;
     }
-    if (!nextTr || nextTr.querySelectorAll('.nb-tree-element .nb-subtree').length === index + 2) {
+    if (
+      !nextTr ||
+      nextTr.querySelectorAll('.nb-tree-element .nb-subtree').length === (expandableSubtrees ? index + 2 : index + 1)
+    ) {
       element.classList.toggle('nb-subtree-ancestor-next-sibling', true);
     } else {
       element.classList.toggle('nb-subtree-ancestor-no-next-sibling', true);
     }
   });
 
-  const lastElement = subtreeElements.at(-2);
+  const lastElement = subtreeElements.at(-1);
   if (lastElement) {
     let nextTr = tr.nextElementSibling;
     while (nextTr?.querySelectorAll('.nb-tree-element .nb-subtree').length > currentDepth) {
