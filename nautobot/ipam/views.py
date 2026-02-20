@@ -426,6 +426,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_field_name="parent",
                 add_button_route=None,
                 max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -437,6 +438,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_field_name="parent",
                 add_button_route=None,
                 max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,

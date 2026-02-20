@@ -46,12 +46,44 @@ const maybeAddSubtreeExpansionCaret = (td) => {
   }
 };
 
+const fixupSubtreeDisplay = (td) => {
+  const subtreeElements = Array.from(td.getElementsByClassName('nb-subtree'));
+  const currentDepth = subtreeElements.length;
+  const tr = td.closest('tr');
+
+  subtreeElements.slice(0, -2).forEach((element, index) => {
+    let nextTr = tr.nextElementSibling;
+    while (nextTr?.querySelectorAll('.nb-tree-element .nb-subtree').length > index + 2) {
+      nextTr = nextTr.nextElementSibling;
+    }
+    if (!nextTr || nextTr.querySelectorAll('.nb-tree-element .nb-subtree').length === index + 2) {
+      element.classList.toggle('nb-subtree-ancestor-next-sibling', true);
+    } else {
+      element.classList.toggle('nb-subtree-ancestor-no-next-sibling', true);
+    }
+  });
+
+  const lastElement = subtreeElements.at(-2);
+  if (lastElement) {
+    let nextTr = tr.nextElementSibling;
+    while (nextTr?.querySelectorAll('.nb-tree-element .nb-subtree').length > currentDepth) {
+      nextTr = nextTr.nextElementSibling;
+    }
+    if (!nextTr || nextTr.querySelectorAll('.nb-tree-element .nb-subtree').length === currentDepth) {
+      lastElement.classList.toggle('nb-subtree-next-sibling', true);
+    } else {
+      lastElement.classList.toggle('nb-subtree-no-next-sibling', true);
+    }
+  }
+};
+
 export const initializeSubtrees = () => {
   htmx.onLoad((content) => {
     const tree_tds = Array.from(content.getElementsByClassName('nb-tree-element'));
     if (tree_tds.length > 0) {
       tree_tds.forEach((td) => {
         maybeAddSubtreeExpansionCaret(td);
+        fixupSubtreeDisplay(td);
       });
       htmx.process(content);
 

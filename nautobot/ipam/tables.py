@@ -54,60 +54,56 @@ PREFIX_COPY_LINK = """
 {% load helpers %}
 {% spaceless %}
     {% if not table.hide_hierarchy_ui %}
-        {% for ancestor in record.ancestors|slice:"1:" %}
-            {% if not record.present_in_database %}
+        {% with children_exists=record.children.exists %}
+            {% for i in record.ancestors.count|as_range %}
                 <span class="nb-subtree"></span>
-            {% elif ancestor.next_sibling is not None %}
-                <span class="nb-subtree nb-subtree-ancestor-next-sibling"></span>
-            {% else %}
-                <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
+            {% endfor %}
+            {% if table_expandable|default:False %}
+                {% if record.present_in_database and children_exists %}
+                    <button class="nb-subtree nb-subtree-expandable"
+                            hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
+                            hx-indicator="closest .table-responsive"
+                            hx-select=".table-responsive tr"
+                            hx-select-oob="none"
+                            hx-swap="afterend"
+                            hx-target="closest tr"
+                            type="button"
+                    ></button>
+                {% else %}
+                    {# placeholder for alignment with expandable rows #}
+                    <span class="nb-subtree"></span>
+                {% endif %}
             {% endif %}
-        {% endfor %}
-        {% if record.parent_id is not None %}
-            {% if record.next_sibling is not None %}
-                <span class="nb-subtree nb-subtree-next-sibling"></span>
-            {% else %}
-                <span class="nb-subtree nb-subtree-no-next-sibling"></span>
+            <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}&namespace={{ object.namespace.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}"
+               id="copy_{{record.id}}">
+                {{ record.prefix }}
+            </a>
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
+            </button>
+            {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
+                <span class="float-end">
+                    {% if children_exists %}
+                        <a class="mdi mdi-table-filter"
+                           href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}"
+                           aria-hidden="true"
+                           title="Filter to this prefix and its descendants"
+                        >
+                        </a>
+                    {% endif %}
+                </span>
             {% endif %}
-        {% elif not record.present_in_database %}
-            <span class="nb-subtree"></span>
-        {% endif %}
-        {% if table_expandable|default:False %}
-            {% if record.present_in_database and record.descendants_count %}
-                <button class="nb-subtree nb-subtree-expandable"
-                        hx-get="{% url 'ipam:prefix_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
-                        hx-indicator="closest .table-responsive"
-                        hx-select=".table-responsive tr"
-                        hx-select-oob="none"
-                        hx-swap="afterend"
-                        hx-target="closest tr"
-                        type="button"
-                ></button>
-            {% else %}
-                {# placeholder for alignment with expandable rows #}
-                <span class="nb-subtree"></span>
-            {% endif %}
-        {% endif %}
-    {% endif %}
-    <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}&namespace={{ object.namespace.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}"
-       id="copy_{{record.id}}">
-        {{ record.prefix }}
-    </a>
-    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
-        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-        <span class="visually-hidden">Copy</span>
-    </button>
-    {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
-        <span class="float-end">
-            {% if record.descendants_count %}
-                <a class="mdi mdi-table-filter"
-                   href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}"
-                   aria-hidden="true"
-                   title="Filter to this prefix and its descendants"
-                >
-                </a>
-            {% endif %}
-        </span>
+        {% endwith %}
+    {% else %}
+        <a href="{% if record.present_in_database %}{% url 'ipam:prefix' pk=record.pk %}{% else %}{% url 'ipam:prefix_add' %}?prefix={{ record }}&namespace={{ object.namespace.pk }}{% for loc in object.locations.all %}&locations={{ loc.pk }}{% endfor %}{% if object.tenant %}&tenant_group={{ object.tenant.tenant_group.pk }}&tenant={{ object.tenant.pk }}{% endif %}{% endif %}"
+           id="copy_{{record.id}}">
+            {{ record.prefix }}
+        </a>
+        <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+            <span class="visually-hidden">Copy</span>
+        </button>
     {% endif %}
 {% endspaceless %}
 """
