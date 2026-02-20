@@ -30,9 +30,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         self.browser.find_by_xpath(f"{modal_xpath}//input[@name='name']").fill(tenant_name)
 
         # Press the "Create" (tenant) button
-        create_button = self.browser.find_by_xpath(f"{modal_xpath}//button[@type='submit']")
-        self.scroll_element_into_view(element=create_button)
-        create_button.click()
+        self.browser.find_by_xpath(f"{modal_xpath}//button[@type='submit']").click()
 
         # Assert that newly created tenant record has been assigned to the related input from which it originated
         tenant_field_xpath = f"{form_xpath}//select[@name='tenant']"
