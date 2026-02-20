@@ -78,7 +78,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
-from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.ipam.models import IPAddress
 from nautobot.ipam.tables import (
@@ -592,11 +592,11 @@ class LocationUIViewSet(NautobotUIViewSet):
         children = instance.children.restrict(request.user, "view")
         return_url = request.GET.get("return_url", None)
         saved_view_pk = request.GET.get("saved_view", None)
-        table_changes_pending  = request.GET.get("table_changes_pending", False)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
         children_table = self.table_class(
             children,
             table_changes_pending=table_changes_pending,
-            saved_view=Savedview.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
             user=request.user,
             hide_hierarchy_ui=False,
             configurable=True,
