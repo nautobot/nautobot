@@ -293,7 +293,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             for location in self._get_queryset().all():
                 self.assertBodyContains(response, str(location.pk))
             # Indentation should be present in table rendering
-            self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
@@ -306,7 +306,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                     else:
                         self.assertBodyContains(response, str(loc.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
                 # Check for filtered location list and message in HTMX response
@@ -318,7 +318,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                     else:
                         self.assertBodyContains(response, str(loc.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=1):
@@ -332,7 +332,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                     else:
                         self.assertBodyContains(response, str(loc.pk), count=0)
                 # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True, count=0)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True, count=0)
 
         with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
@@ -346,7 +346,7 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                     else:
                         self.assertBodyContains(response, str(loc.pk), count=0)
                 # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
-                self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(
@@ -509,6 +509,55 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
+
+    def test_location_children_action(self):
+        self.add_permissions("dcim.view_location")
+        location_with_children = Location.objects.filter(children__isnull=False).first()
+        self.assertIsNotNone(location_with_children)
+        url = reverse("dcim:location_children", kwargs={"pk": location_with_children.pk})
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "components/htmx/subtree_children.html")
+        for child in location_with_children.children.all():
+            self.assertBodyContains(response, str(child.pk))
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        """Override base ListObjectsViewTestCase implementation for Location tree view."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is removed on most filters"):
+            queryset = (
+                self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+            )
+            filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+            response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(
+                f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is present on hierarchy-preserving filter alone"):
+            response = self.client.get(
+                f"{self._get_url('list')}?subtree={Location.objects.first().pk}", headers={"HX-Request": "true"}
+            )
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is not present on mixed filtering"):
+            response = self.client.get(
+                f"{self._get_url('list')}?subtree={Location.objects.first().pk}&status=Active",
+                headers={"HX-Request": "true"},
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
