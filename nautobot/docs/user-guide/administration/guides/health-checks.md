@@ -69,7 +69,7 @@ Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping
 !!! tip
     If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
 
-If you have implemented a custom redis `CLIENT_CLASS` for use withing `CACHES`, you can provide a custom health check to register. This must be in the format shown below.
+If you have implemented a custom redis `CLIENT_CLASS` for use within `CACHES`, you can provide a custom health check to register. This must be in the format shown below.
 
 ```python
 CACHES = {

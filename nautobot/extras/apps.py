@@ -60,17 +60,15 @@ class ExtrasConfig(NautobotConfig):
         plugin_dir.register(MigrationsBackend)
 
         options = getattr(settings, "CACHES", {}).get("default", {}).get("OPTIONS", {})
-        # Only register the RedisBackend health check if using Nautobot validated Redis client classes
-        # Otherwise a custom client can register its own health check that is compatible with its custom client class.
-        if options.get("CLIENT_CLASS", "django_redis.client.DefaultClient") in [
+        if options.get("CUSTOM_HEALTH_CHECK_CLASS"):
+            custom_health_check = import_string(options["CUSTOM_HEALTH_CHECK_CLASS"])
+            plugin_dir.register(custom_health_check)
+        elif options.get("CLIENT_CLASS", "django_redis.client.DefaultClient") in [
             "django_redis.client.SentinelClient",
             "django_redis.client.DefaultClient",
         ]:
+            # Only register the RedisBackend health check if using Nautobot validated Redis client classes.
             plugin_dir.register(RedisBackend)
-        else:
-            if options.get("CUSTOM_HEALTH_CHECK_CLASS"):
-                custom_health_check = import_string(options["CUSTOM_HEALTH_CHECK_CLASS"])
-                plugin_dir.register(custom_health_check)
 
         # Register built-in SecretsProvider classes
         from nautobot.extras.secrets import register_secrets_provider
