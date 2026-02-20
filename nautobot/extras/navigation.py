@@ -532,18 +532,6 @@ menu_items = (
                     ),
                 ),
             ),
-            NavMenuGroup(
-                name="File Proxies",
-                weight=700,
-                items=(
-                    NavMenuItem(
-                        link="extras:fileproxy_list",
-                        name="File Proxies",
-                        weight=420,
-                        permissions=["extras.view_fileproxy"],
-                    ),
-                ),
-            ),
         ),
     ),
     NavMenuTab(
