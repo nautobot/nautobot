@@ -3286,7 +3286,9 @@ class ObjectMetadataUIViewSet(
     ObjectEditViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
+    ObjectBulkUpdateViewMixin,
 ):
+    bulk_update_form_class = forms.ObjectMetadataBulkEditForm
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
