@@ -103,6 +103,57 @@ TREE_LINK = """
 <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 """
 
+LOCATION_TREE_LINK = """
+{% load helpers %}
+{% spaceless %}
+    {% if not table.hide_hierarchy_ui %}
+        {% for ancestor in record.ancestors|slice:"1:" %}
+            {% if ancestor.next_sibling is not None %}
+                <span class="nb-subtree nb-subtree-ancestor-next-sibling"></span>
+            {% else %}
+                <span class="nb-subtree nb-subtree-ancestor-no-next-sibling"></span>
+            {% endif %}
+        {% endfor %}
+        {% if record.parent_id is not None %}
+            {% if record.next_sibling is not None %}
+                <span class="nb-subtree nb-subtree-next-sibling"></span>
+            {% else %}
+                <span class="nb-subtree nb-subtree-no-next-sibling"></span>
+            {% endif %}
+        {% endif %}
+        {% if table_expandable|default:False %}
+            {% if record.children.exists %}
+                <button class="nb-subtree nb-subtree-expandable"
+                        hx-get="{% url 'dcim:location_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
+                        hx-indicator="closest .table-responsive"
+                        hx-select=".table-responsive tr"
+                        hx-select-oob="none"
+                        hx-swap="afterend"
+                        hx-target="closest tr"
+                        type="button"
+                ></button>
+            {% else %}
+                {# placeholder for alignment with expandable rows #}
+                <span class="nb-subtree"></span>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+    <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
+    {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
+        <span class="float-end">
+            {% if record.children.exists %}
+                <a class="mdi mdi-table-filter"
+                   href="{% url 'dcim:location_list' %}?subtree={{ record.pk }}"
+                   aria-hidden="true"
+                   title="Filter to this location and its descendants"
+                >
+                </a>
+            {% endif %}
+        </span>
+    {% endif %}
+{% endspaceless %}
+"""
+
 
 POWERFEED_CABLE = """
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>

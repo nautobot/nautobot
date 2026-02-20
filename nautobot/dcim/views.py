@@ -408,6 +408,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         }
     )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
 
     class LocationSiblingsTablePanel(object_detail.ObjectsTablePanel):
         def get_extra_context(self, context: object_detail.Context):
@@ -577,7 +578,52 @@ class LocationUIViewSet(NautobotUIViewSet):
                 }
             )
 
+        elif self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            context["table_expandable"] = True
+
         return context
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        children = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending  = request.GET.get("table_changes_pending", False)
+        children_table = self.table_class(
+            children,
+            table_changes_pending=table_changes_pending,
+            saved_view=Savedview.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("dcim.change_location") or request.user.has_perm("dcim.delete_location"):
+            children_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "next_page_url": reverse("dcim:location_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
+                "template": "panel_table.html",
+                "table": children_table,
+                "table_expandable": True,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, children.count() - (paginate["per_page"] * children_table.page.number)),
+            }
+        )
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
