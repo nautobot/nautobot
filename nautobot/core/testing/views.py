@@ -5,6 +5,7 @@ from typing import Optional, Sequence
 from unittest import mock, skipIf
 import uuid
 
+from django import forms as django_forms
 from django.apps import apps
 from django.conf import global_settings, settings
 from django.contrib.contenttypes.models import ContentType
@@ -22,6 +23,14 @@ from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
+from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
+from nautobot.core.forms import (
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+    NullableDateField,
+    NumericArrayField,
+    TagFilterField,
+)
 from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -1066,6 +1075,8 @@ class ViewTestCases:
             response = self.client.get(
                 f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
             )
+            # Note: If this breaks, update `test_filter_form_fields_are_working` as well
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
             self.assertBodyContains(response, f"No {self.model._meta.verbose_name_plural} found")
@@ -1122,6 +1133,106 @@ class ViewTestCases:
                 # Some models, such as ObjectMetadata, don't have a detail URL
                 if instance1.get_absolute_url() in content:
                     self.assertIn(instance2.get_absolute_url(), content, msg=content)
+
+        def test_filter_form_fields_are_working(self):
+            """
+            Check that each field in the NautobotFilterForm works with a valid value.
+            """
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            filter_form_class = getattr(view, "filterset_form_class", getattr(view, "filterset_form", None))
+            if not filter_form_class:
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a filterset_form_class or filterset_form defined."
+                )
+
+            messages = []
+            messages.append(f"Testing {filter_form_class.__name__} on {self.model.__name__}")
+
+            # Get the filterset class so we can compare to the FilterForm fields for a match
+            filterset_class = self.get_filterset()
+
+            if not filterset_class:
+                messages.append(f"No filterset found for model {self.model}")
+                self.fail("\n".join(messages))
+
+            for field_name, form_field in filter_form_class().fields.items():
+                if field_name.startswith(("cr_", "cf_", "cpf_")):
+                    continue
+                value = None
+                filter_field = None
+                if not filterset_class.base_filters.get(field_name):
+                    messages.append(
+                        f"{filter_form_class.__name__} field `{field_name}` does not have a corresponding filter on {filterset_class.__name__}."
+                    )
+                    self.fail("\n".join(messages))
+                filter_field = filterset_class.base_filters[field_name]
+                messages.append(f"Testing FormFilter field `{field_name}` and type `{form_field.__class__.__name__}")
+
+                if hasattr(form_field, "choices") and form_field.choices:
+                    # This logic could result in a "flaky" test if the first value is valid, but subsequent values are not.
+                    # Flatten grouped choices and skip group labels
+                    def iter_choices(choices):
+                        for c in choices:
+                            if isinstance(c[1], (list, tuple)):
+                                # This is a group: c[1] is a list of (value, label)
+                                yield from c[1]
+                            else:
+                                yield c
+
+                    valid_choices = [c[0] for c in iter_choices(form_field.choices) if c[0] is not None]
+                    # Skip if no valid choices (only None or empty), this is a gap in the testing
+                    if not valid_choices:
+                        continue
+                    value = valid_choices[0]
+
+                elif type(form_field) in [django_forms.CharField, django_forms.TypedChoiceField]:
+                    value = "test-name"
+                    if type(filter_field) in [MACAddressFilter, MultiValueMACAddressFilter]:
+                        value = "aa:bb:cc:dd:ee:ff"
+                elif type(form_field) in [django_forms.IntegerField, django_forms.ModelChoiceField, NumericArrayField]:
+                    value = 1
+                elif type(form_field) in [django_forms.BooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.DateField, NullableDateField]:
+                    value = "2026-01-01"
+                elif type(form_field) in [django_forms.DateTimeField]:
+                    value = "2026-01-01T00:00:00"
+                elif type(form_field) in [django_forms.ModelMultipleChoiceField, DynamicModelMultipleChoiceField]:
+                    # Use the first valid choice from the queryset, if available
+                    queryset = getattr(form_field, "queryset", None)
+                    value = None
+                    if queryset is not None and queryset.exists():
+                        value = queryset.first().pk
+                    else:
+                        # We currently do not cover use cases where the queryset is empty, this is a gap in the testing
+                        continue
+                elif type(form_field) in [django_forms.NullBooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.URLField]:
+                    value = "https://example.com"
+                elif type(form_field) in [MultiValueCharField, TagFilterField]:
+                    value = "test-tag"
+                else:
+                    # Unsupported type, if missing a case above add it to the elif block with appropriate test value.
+                    messages.append(f"Field `{field_name}` has an unsupported type `{form_field.__class__.__name__}`.")
+                    self.fail("\n".join(messages))
+
+                url = f"{self._get_url('list')}?{field_name}={value!s}"
+
+                messages.append(f"Testing URL: {url}")
+                try:
+                    response = self.client.get(url)
+                except:
+                    self.fail("\n".join(messages))
+                    raise
+                self.assertHttpStatus(response, 200, msg="\n".join(messages))
+                self.assertNotContains(response, "Invalid filters were specified", msg_prefix="\n".join(messages))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
