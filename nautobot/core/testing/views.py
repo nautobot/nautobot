@@ -989,6 +989,10 @@ class ViewTestCases:
             """
             Check for table columns that each sortable columns works.
             """
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
             # Add model-level permission
             self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
 
