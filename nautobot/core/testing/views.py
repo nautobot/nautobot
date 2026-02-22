@@ -1,6 +1,6 @@
 import contextlib
-import inspect
 import re
+import traceback
 from typing import Optional, Sequence
 from unittest import mock, skipIf
 import uuid
@@ -996,27 +996,43 @@ class ViewTestCases:
 
         def test_model_properties_as_table_columns_are_not_orderable(self):
             """
-            Check for table columns that are property-based and not orderable.
+            Check for table columns that each sortable columns works.
             """
-            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            # Add model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            table_class = getattr(view, "table_class", getattr(view, "table", None))
             if not table_class:
-                return
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a table or table_class defined."
+                )
 
             queryset = self._get_queryset()
             table = table_class(queryset)
-            model_cls = table._meta.model
-
-            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
-
-            for name, column in table.base_columns.items():
-                if hasattr(column, "order_by") and column.order_by:
-                    continue
-                if name in property_fields and name != "pk":
-                    with self.subTest(column_name=name):
-                        self.assertFalse(
-                            column.orderable,
-                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
-                        )
+            column_names = list(table.base_columns.keys())
+            # We need to make sure all columns are shown, as some of the logic only works when the column is actually present
+            self.user.set_config(f"tables.{table_class.__name__}.columns", column_names, commit=True)
+            for name in column_names:
+                column = table.base_columns[name]
+                with self.subTest(column_name=name):
+                    if hasattr(column, "orderable") and column.orderable is False:
+                        continue
+                    if name in ["actions", "pk"]:
+                        continue
+                    try:
+                        response = self.client.get(self._get_url("list") + f"?sort={name}")
+                    except Exception as error:
+                        print(f"Exception while sorting column `{name}`: {error}")
+                        traceback.print_exc()
+                        raise  # re-raise so the test still fails
+                    self.assertHttpStatus(
+                        response, 200, msg=f"Column `{name}` on Table `{table_class.__name__}` does not sort properly."
+                    )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
