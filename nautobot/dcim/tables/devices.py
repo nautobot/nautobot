@@ -301,15 +301,17 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
         linkify=lambda record: record.module_type.get_absolute_url(),
         verbose_name="Type",
         accessor="module_type__display",
+        order_by=["module_type"],
     )
     parent_module_bay = tables.Column(
-        linkify=lambda record: record.parent_module_bay.get_absolute_url(),
+        linkify=lambda record: record.parent_module_bay.get_absolute_url() if record else None,
         verbose_name="Parent Module Bay",
         accessor="parent_module_bay__display",
+        order_by=["parent_module_bay"],
     )
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
-    module_type__module_family = tables.Column(linkify=True, verbose_name="Family")
+    module_family = tables.Column(linkify=True, verbose_name="Family", accessor="module_type__module_family")
     tags = TagColumn(url_name="dcim:module_list")
     actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
 
@@ -389,7 +391,6 @@ class DeviceComponentTable(BaseTable):
     pk = ToggleColumn()
     device = tables.Column(linkify=True)
     name = tables.Column(linkify=True, order_by=("_name",))
-    cable = tables.Column(linkify=True)
 
 
 class ModularDeviceComponentTable(DeviceComponentTable):
@@ -1021,11 +1022,13 @@ class ModuleBayTable(BaseTable):
         linkify=lambda record: record.parent_device.get_absolute_url(),
         verbose_name="Parent Device",
         accessor="parent_device__display",
+        order_by=["parent_device"],
     )
     parent_module = tables.Column(
         linkify=lambda record: record.parent_module.get_absolute_url(),
         verbose_name="Parent Module",
         accessor="parent_module__display",
+        order_by=["parent_module"],
     )
     name = tables.Column(linkify=True, order_by=("_name",))
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
@@ -1143,7 +1146,6 @@ class InventoryItemTable(DeviceComponentTable):
     manufacturer = tables.Column(linkify=True)
     discovered = BooleanColumn()
     tags = TagColumn(url_name="dcim:inventoryitem_list")
-    cable = None  # Override DeviceComponentTable
     actions = ButtonsColumn(InventoryItem)
 
     class Meta(DeviceComponentTable.Meta):
