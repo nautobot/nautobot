@@ -995,12 +995,12 @@ class CustomField(
         return self.content_types.all()[0].model_class()
 
     @property
-    def scope_filter_prefixed(self, prefix="scope"):
+    def scope_filter_prefixed(self):
         """
         Property to get the scope filter data with `scope-` prefix for forms usage.
         """
         if self.scope_filter:
-            return {f"{prefix}-{name}": value for name, value in self.scope_filter.items()}
+            return {f"scope-{name}": value for name, value in self.scope_filter.items()}
         return {}
 
     def should_render(self, instance: Model) -> bool:
