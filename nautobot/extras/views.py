@@ -2164,7 +2164,16 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         return redirect(return_url or "extras:scheduledjob_list")
 
     def _handle_immediate_execution(
-        self, request, job_model, job_class, job_form, profile, ignore_singleton_lock, job_queue, return_url
+        self,
+        request,
+        job_model,
+        job_class,
+        job_form,
+        profile,
+        ignore_singleton_lock,
+        job_queue,
+        console_log,
+        return_url,
     ):
         """Handle immediate job execution."""
         job_kwargs = job_class.prepare_job_kwargs(job_form.cleaned_data)
@@ -2174,6 +2183,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             profile=profile,
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
+            console_log=console_log,
             **job_class.serialize_data(job_kwargs),
         )
 
@@ -2186,7 +2196,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 ),
             )
             return redirect(return_url)
-
         return redirect("extras:jobresult", pk=job_result.pk)
 
     def get(self, request, class_path=None, pk=None):
@@ -2228,6 +2237,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
+            job_execution_form = job_class.as_execution_form(initial=initial)
+
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -2248,6 +2259,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             {
                 "job_model": job_model,
                 "job_form": job_form,
+                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )
@@ -2257,6 +2269,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
         schedule_form = forms.JobScheduleForm(request.POST)
 
         return_url = request.POST.get("_return_url")
@@ -2275,8 +2288,14 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+        elif (
+            job_form is not None
+            and job_form.is_valid()
+            and job_execution_form is not None
+            and job_execution_form.is_valid()
+            and schedule_form.is_valid()
+        ):
+            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
             if job_queue is None:
                 job_queue = job_model.default_job_queue
 
@@ -2291,8 +2310,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
             dryrun = job_form.cleaned_data.get("dryrun", False)
             # Run the job. A new JobResult is created.
-            profile = job_form.cleaned_data.pop("_profile")
-            ignore_singleton_lock = job_form.cleaned_data.pop("_ignore_singleton_lock", False)
+            profile = job_execution_form.cleaned_data.get("_profile")
+            console_log = job_execution_form.cleaned_data.get("_console_log", False)
+            ignore_singleton_lock = job_execution_form.cleaned_data.get("_ignore_singleton_lock", False)
             schedule_type = schedule_form.cleaned_data["_schedule_type"]
 
             with transaction.atomic():
@@ -2305,6 +2325,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     crontab=schedule_form.cleaned_data.get("_recurrence_custom_time"),
                     job_queue=job_queue,
                     profile=profile,
+                    console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
                     **job_class.serialize_data(job_form.cleaned_data),
                 )
@@ -2332,6 +2353,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             profile,
                             ignore_singleton_lock,
                             job_queue,
+                            console_log,
                             return_url,
                         )
                     # Step 1: Check if approval is required
@@ -2353,6 +2375,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         profile,
                         ignore_singleton_lock,
                         job_queue,
+                        console_log,
                         return_url,
                     )
 
@@ -2375,6 +2398,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             {
                 "job_model": job_model,
                 "job_form": job_form,
+                "job_execution_form": job_execution_form,
                 "schedule_form": schedule_form,
             },
         )
@@ -2420,6 +2444,7 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
+                    "console_log_default",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
@@ -2911,12 +2936,12 @@ class JobResultUIViewSet(
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
-
             context.update(
                 {
                     "job": job_class,
                     "associated_record": None,
                     "result": instance,
+                    "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
                 }
             )
 

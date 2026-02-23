@@ -162,6 +162,9 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
+    console_log_default = models.BooleanField(
+        default=False, help_text="Whether the job defaults to running with console log argument set to true"
+    )
     hidden = models.BooleanField(
         default=False,
         db_index=True,
@@ -215,6 +218,10 @@ class Job(PrimaryModel):
     name_override = models.BooleanField(
         default=False,
         help_text="If set, the configured name will remain even if the underlying Job source code changes",
+    )
+    console_log_default_override = models.BooleanField(
+        default=False,
+        help_text="If set, the configured console log default will remain even if the underlying Job source code changes",
     )
     description_override = models.BooleanField(
         default=False,
@@ -822,6 +829,41 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     execute_job.__func__.alters_data = True
 
     @classmethod
+    def _build_celery_kwargs(
+        cls,
+        job_model: "Job",
+        user: "User",
+        task_queue: str,
+        profile: bool = False,
+        console_log: bool = False,
+        ignore_singleton_lock: bool = False,
+        schedule: Optional["ScheduledJob"] = None,
+        celery_kwargs: Optional[dict] = None,
+    ) -> dict:
+        """Build the celery kwargs dict common to all job execution paths."""
+        job_celery_kwargs = {
+            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_profile": profile,
+            "nautobot_job_user_id": user.id,
+            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
+            "nautobot_job_console_log": console_log,
+            "queue": task_queue,
+        }
+
+        if schedule is not None:
+            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
+        if job_model.soft_time_limit > 0:
+            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
+        if job_model.time_limit > 0:
+            job_celery_kwargs["time_limit"] = job_model.time_limit
+
+        if celery_kwargs is not None:
+            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
+            job_celery_kwargs.update(celery_kwargs)
+
+        return job_celery_kwargs
+
+    @classmethod
     def enqueue_job(
         cls,
         job_model: Job,
@@ -829,6 +871,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         *job_args,
         celery_kwargs: Optional[dict] = None,
         profile: bool = False,
+        console_log: bool = False,
         schedule: Optional["ScheduledJob"] = None,
         job_queue: Optional["JobQueue"] = None,
         task_queue: Optional[str] = None,  # deprecated!
@@ -838,6 +881,28 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         **job_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
+
+        This method is the primary entry point for job execution and supports
+        asynchronous (Celery), synchronous, and queue-based execution modes.
+
+        Relationship to `console_log_run()` from management commands `runjob_with_job_result`:
+        - When jobs are executed synchronously with console logging enabled,
+        an alternate execution path exists in `console_log_run()`.
+        - Both implementations perform similar responsibilities:
+            * executing the job
+            * capturing results and exceptions
+            * updating JobResult status and timestamps
+        - enqueue_job() is more general-purpose and supports multiple execution
+        backends, while console_log_run() is intentionally limited to suprocess,
+        console-oriented execution.
+
+        IMPORTANT:
+            If changes are made to job execution behavior (status transitions,
+            result handling, logging, profiling, or error propagation), the
+            corresponding logic in ``console_log_run()`` must be reviewed and
+            updated as needed to keep behavior consistent across execution modes.
+
+        This duplication is intentional but requires ongoing coordination.
 
         Args:
             job_model (Job): The Job to be enqueued for execution.
@@ -905,26 +970,16 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
-        job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
-            "nautobot_job_profile": profile,
-            "nautobot_job_user_id": user.id,
-            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
-            "queue": task_queue,
-        }
-
-        if schedule is not None:
-            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
-        if job_model.soft_time_limit > 0:
-            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-        if job_model.time_limit > 0:
-            job_celery_kwargs["time_limit"] = job_model.time_limit
-
-        if celery_kwargs is not None:
-            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
-            job_celery_kwargs.update(celery_kwargs)
-
-        console_log = job_model.job_class.console_log
+        job_celery_kwargs = cls._build_celery_kwargs(
+            job_model=job_model,
+            user=user,
+            task_queue=task_queue,
+            profile=profile,
+            console_log=console_log,
+            ignore_singleton_lock=ignore_singleton_lock,
+            schedule=schedule,
+            celery_kwargs=celery_kwargs,
+        )
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
@@ -944,24 +999,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
 
             try:
-                # Only redirect stdout/stderr if console_log is False
-                if console_log:
+                redirect_logger = get_logger("celery.redirected")
+                proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
+                with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
                     eager_result = run_job.apply(
                         args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
                     )
-                else:
-                    redirect_logger = get_logger("celery.redirected")
-                    proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-                    with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                        eager_result = run_job.apply(
-                            args=[job_model.class_path, *job_args],
-                            kwargs=job_kwargs,
-                            task_id=str(job_result.id),
-                            **job_celery_kwargs,
-                        )
             finally:
                 # Cancel the scheduled SIGALRM if it hasn't fired already
                 signal.alarm(0)
@@ -992,11 +1038,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         else:
             if console_log:
-                job_result.task_kwargs = job_kwargs
-                job_result.save()
                 transaction.on_commit(
                     lambda: run_console_log_job_and_return_job_result.apply_async(
-                        args=[str(job_result.pk)],
+                        args=[*job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
@@ -1592,6 +1636,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         start_time: Optional[datetime] = None,
         interval: str = JobExecutionType.TYPE_IMMEDIATELY,
         crontab: str = "",
+        console_log: bool = False,
         profile: bool = False,
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
@@ -1613,6 +1658,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             interval (JobExecutionType): The interval type for the job execution.
                 Defaults to JobExecutionType.TYPE_IMMEDIATELY.
             crontab (str): The crontab string for the schedule. Defaults to "".
+            console_log (bool): Flag indicating whether to run the job in console log mode. Default to False.
             profile (bool): Flag indicating whether to profile the job. Defaults to False.
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
@@ -1646,6 +1692,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "nautobot_job_profile": profile,
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
+            "nautobot_job_console_log": console_log,
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
