@@ -297,11 +297,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
-                # Check for message in base page
-                response = self.client.get(list_url)
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered location list in table
+                # Check for filtered location list and message in HTMX response
                 response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -311,11 +309,9 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
-                # Check for message in base page
-                response = self.client.get(list_url)
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered location list in table
+                # Check for filtered location list and message in HTMX response
                 response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None or loc.parent.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -326,12 +322,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=1):
-                # Check for message in base page - not present since an explicit filter is applied
                 loc_status = Status.objects.get_for_model(Location).first()
-                response = self.client.get(list_url + f"?status={loc_status.name}")
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH", count=0)
-                # Check for filtered location list in table
+                # Check for filtered location list and no message in HTMX response
                 response = self.client.get(list_url + f"?status={loc_status.name}", headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH", count=0)
                 for loc in self._get_queryset().all():
                     if loc.status == loc_status:
                         self.assertBodyContains(response, str(loc.pk))
@@ -342,12 +336,10 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
-                # Check for message in base page - present since an explicit filter is applied that preserves hierarchy
                 root = Location.objects.first()
-                response = self.client.get(list_url + f"?subtree={root.pk}")
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
-                # Check for filtered location list in table
+                # Check for filtered location list and message in HTMX response
                 response = self.client.get(list_url + f"?subtree={root.pk}", headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
                 for loc in self._get_queryset().all():
                     if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
                         self.assertBodyContains(response, str(loc.pk))

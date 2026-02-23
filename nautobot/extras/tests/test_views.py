@@ -723,7 +723,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -834,7 +834,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -888,7 +888,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -936,7 +936,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "It is just a comment"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -2844,7 +2844,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 1", is_active=True)
         # Try update the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.get(update_url, follow=True)
+        response = self.client.get(update_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
@@ -2889,7 +2889,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 2", is_active=True)
         # Try delete the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.post(delete_url, follow=True)
+        response = self.client.post(delete_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to delete this Saved View owned by {instance.owner}",

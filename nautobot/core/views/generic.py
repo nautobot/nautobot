@@ -42,6 +42,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
@@ -231,6 +232,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
+        htmx_request = self.request.headers.get("HX-Request", False)
 
         skip_user_and_global_default_saved_view = False
         if self.filterset is not None:
@@ -349,7 +351,6 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
-        htmx_request = self.request.headers.get("HX-Request", False)
         if self.table is not None:
             if self.request.GET.getlist("sort") or (
                 current_saved_view is not None and current_saved_view.config.get("sort_order")
@@ -379,7 +380,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
-                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                    'Requested "per_page" is too large. '
+                    f"No more than {max_page_size} items may be displayed at a time.",
                 )
 
         valid_actions = self.validate_action_buttons(request)
@@ -494,9 +496,13 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
+        template_name = self.template_name
+        if self.request.headers.get("HX-Request", False):
+            template_name = "components/htmx/object_embedded_create.html"
+
         return render(
             request,
-            self.template_name,
+            template_name,
             {
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
@@ -548,6 +554,9 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                     form.save_note(instance=obj, user=request.user)
 
                 self.successful_post(request, obj, object_created, logger)
+
+                if self.request.headers.get("HX-Request", False):
+                    return redirect(reverse(get_route_for_model(obj, "detail", api=True), args=[obj.pk]))
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
