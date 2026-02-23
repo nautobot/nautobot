@@ -83,7 +83,7 @@ For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on you
 
 When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI workers) the Prometheus client library requires the use of a shared directory to collect metrics from all worker processes. To configure this, first create or designate a local directory to which the worker processes have read and write access, and then configure your WSGI service (e.g. uWSGI) to define this path as the `prometheus_multiproc_dir` environment variable.
 
-Since the files stored in the designated directory are not meant to be long-lived, it is recommended to use a temporary directory such as `/tmp/nautobot_prometheus` or an `emptyDir` in Kubernetes environments for this purpose. This directory must be wiped between process runs (before startup is recommended). Another approach is to use a "script" to do it through a uwsgi hook before Workers accept requests. As an example:
+Since the files stored in the designated directory are not meant to be long-lived, it is recommended to use a temporary directory such as `/tmp/nautobot_prometheus` or an `emptyDir` in Kubernetes environments for this purpose. Additionally, in order to avoid scraping delays induced by the processing of orphaned files, this directory must be wiped through a uwsgi hook before Workers accept requests. As an example:
 
 ```ini
 ; uwsgi.ini
@@ -91,7 +91,7 @@ Since the files stored in the designated directory are not meant to be long-live
 hook-accepting1 = exec:bash -c 'if [[ $prometheus_multiproc_dir ]]; then rm $prometheus_multiproc_dir/*.db; else echo "No prometheus multi_proc_dir"; fi'
 ```
 
-The downside of this is that you will have to ensure that this directory is cleaned up on a regular basis, as the Prometheus client library will create a separate file for each metric type within each worker process, and these files are not automatically removed which in turn, under certain conditions, may lead to degradation of performance over time. You can use a cron job or similar scheduled task to periodically clean up this directory, for example:
+The downside of this is that you will have to ensure that this directory is cleaned up on a regular basis, as the Prometheus client library will create a separate file for each metric type within each worker process, and these files are not automatically removed. In turn, under certain conditions, this may lead to significant degradation of performance over time. For these situations where it's not enough to rely on cleanups based on periodic worker restarts, a more fitting approach is to clean up in a "live" manner. You can use a cron job or similar scheduled task to periodically clean up this directory, for example:
 
 1. Create a Python script that scans the multiproc directory and removes files belonging to PIDs that are no longer running.
 
