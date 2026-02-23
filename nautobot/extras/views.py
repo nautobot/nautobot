@@ -3279,23 +3279,15 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
         return obj
 
 
-class ObjectMetadataUIViewSet(
-    ObjectListViewMixin,
-    ObjectDetailViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectEditViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectBulkUpdateViewMixin,
-):
+class ObjectMetadataUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ObjectMetadataBulkEditForm
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
-    form_class = forms.ObjectMetadataForm
-    action_buttons = ("export",)
+    create_form_class = forms.ObjectMetadataCreateForm
+    update_form_class = forms.ObjectMetadataForm
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -3309,6 +3301,7 @@ class ObjectMetadataUIViewSet(
                     "scoped_fields",
                     "assigned_object_type",
                     "assigned_object",
+                    "_value",
                 ],
             ),
         ),

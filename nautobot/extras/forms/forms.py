@@ -207,6 +207,7 @@ __all__ = (
     "NoteForm",
     "ObjectChangeFilterForm",
     "ObjectMetadataBulkEditForm",
+    "ObjectMetadataCreateForm",
     "ObjectMetadataFilterForm",
     "ObjectMetadataForm",
     "PasswordInputWithPlaceholder",
@@ -2124,7 +2125,25 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
 
     class Meta:
         model = ObjectMetadata
-        fields = ["contact", "team", "scoped_fields", "assigned_object_id"]
+        fields = ["contact", "team", "assigned_object_id", "scoped_fields", "_value"]
+
+
+class ObjectMetadataCreateForm(ObjectMetadataForm):
+    assigned_object_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        required=True,
+    )
+
+    class Meta(ObjectMetadataForm.Meta):
+        fields = [
+            "contact",
+            "team",
+            "metadata_type",
+            "assigned_object_type",
+            "assigned_object_id",
+            "scoped_fields",
+            "_value",
+        ]
 
 
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
