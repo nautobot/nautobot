@@ -779,7 +779,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1107,27 +1107,27 @@ class ModuleTypeFilterForm(NautobotFilterForm):
     module_family = DynamicModelMultipleChoiceField(
         queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
-    has_console_ports = forms.NullBooleanField(
+    has_console_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_console_server_ports = forms.NullBooleanField(
+    has_console_server_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_ports = forms.NullBooleanField(
+    has_power_port_templates = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_outlets = forms.NullBooleanField(
+    has_power_outlet_templates = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_interfaces = forms.NullBooleanField(
+    has_interface_templates = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
@@ -2686,7 +2686,6 @@ class ModuleBulkEditForm(
 
 class ModuleFilterForm(
     NautobotFilterForm,
-    LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
@@ -5206,6 +5205,7 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(),
         required=False,
+        query_params={"interface_redundancy_groups__isnull": "false"},
     )
     virtual_ip = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),

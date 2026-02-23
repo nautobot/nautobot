@@ -297,12 +297,7 @@ class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
     model = ApprovalWorkflowDefinition
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    model_content_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
-            "app_label", "model"
-        ),
-        required=False,
-    )
+    model_content_type = MultipleContentTypeField(feature="approval_workflows", choices_as_strings=True, required=False)
     tags = TagFilterField(model)
 
 
@@ -382,7 +377,6 @@ class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
         label="Approver Group",
         help_text="User group that can approve this stage.",
     )
-    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowFilterForm(NautobotFilterForm):
@@ -395,10 +389,9 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
         required=False,
         label="Approval Workflow Definition",
     )
-    object_under_review_content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
-            "app_label", "model"
-        ),
+    object_under_review_content_type = MultipleContentTypeField(
+        feature="approval_workflows",
+        choices_as_strings=True,
         required=False,
         label="Object Under Review Content Type",
     )
@@ -431,7 +424,7 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
         widget=StaticSelect2,
         label="State",
     )
-    decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
+    decision_date_day = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
 
 
 class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
@@ -631,10 +624,10 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
-    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1036,7 +1029,7 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
     content_type = MultipleContentTypeField(
-        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
+        feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
     )
     tags = TagFilterField(model)
 
@@ -1131,10 +1124,7 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
     model = StaticGroupAssociation
     q = forms.CharField(required=False, label="Search")
     dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), required=False)
-    assigned_object_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
-        required=False,
-    )
+    associated_object_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, required=False)
 
 
 #
@@ -2161,6 +2151,7 @@ class NoteFilterForm(BootstrapMixin, forms.Form):
 
 
 class LocalContextFilterForm(forms.Form):
+    # TODO: 4.0 change to has_*
     local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",

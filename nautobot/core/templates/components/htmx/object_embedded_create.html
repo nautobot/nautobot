@@ -5,7 +5,7 @@
     <h4 class="modal-title">Add a new {{ obj_type }}</h4>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<div class="modal-body">
+<div class="modal-body pb-0">
     <form hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
@@ -29,7 +29,7 @@
             </div>
         </div>
         {% include 'inc/extras_features_edit_form_fields.html' %}
-        <div class="gap-8 hstack justify-content-center border-top mx-n16 pt-16">
+        <div class="nb-form-sticky-footer mb-0 mx-n16 rounded-bottom">
             <button class="btn btn-primary" name="_create" type="submit">
                 <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
                 -->Create
