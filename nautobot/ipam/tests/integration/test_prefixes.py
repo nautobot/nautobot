@@ -62,9 +62,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(
             self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-next-sibling")
         )
-        self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling")
-        )
+        self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling"))
 
     def test_parent_child_relationship_navigable_in_list_view(self):
         self.browser.visit(
@@ -102,9 +100,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(
             self.browser.find_by_tag("tr")[3].find_by_tag("span")[0].has_class("nb-subtree-ancestor-next-sibling")
         )
-        self.assertTrue(
-            self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling")
-        )
+        self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling"))
         # ...and it does NOT have an expandable caret
         self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree"))
         self.assertFalse(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree-expandable"))
