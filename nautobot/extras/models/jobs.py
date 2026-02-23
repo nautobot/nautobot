@@ -162,7 +162,7 @@ class Job(PrimaryModel):
 
     # Additional properties, potentially inherited from the source code
     # See also the docstring of nautobot.extras.jobs.BaseJob.Meta.
-    console_log = models.BooleanField(
+    console_log_default = models.BooleanField(
         default=False, help_text="Whether the job defaults to running with console log argument set to true"
     )
     hidden = models.BooleanField(
@@ -219,9 +219,9 @@ class Job(PrimaryModel):
         default=False,
         help_text="If set, the configured name will remain even if the underlying Job source code changes",
     )
-    console_log_override = models.BooleanField(
+    console_log_default_override = models.BooleanField(
         default=False,
-        help_text="If set, the configured description will remain even if the underlying Job source code changes",
+        help_text="If set, the configured console log default will remain even if the underlying Job source code changes",
     )
     description_override = models.BooleanField(
         default=False,

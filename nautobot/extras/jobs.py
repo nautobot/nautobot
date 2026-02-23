@@ -135,7 +135,7 @@ class BaseJob:
         Metaclass attributes - subclasses can define any or all of the following attributes:
 
         - name (str)
-        - console_log (bool)
+        - console_log_default (bool)
         - description (str)
         - dryrun_default (bool)
         - field_order (list)
@@ -373,8 +373,8 @@ class BaseJob:
 
     @final
     @classproperty
-    def console_log(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("console_log", False, expected_type=bool)
+    def console_log_default(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("console_log_default", False, expected_type=bool)
 
     @final
     @classproperty
@@ -427,7 +427,7 @@ class BaseJob:
         return {
             "name": cls.name,
             "grouping": cls.grouping,
-            "console_log": cls.console_log,
+            "console_log_default": cls.console_log_default,
             "description": cls.description,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
@@ -580,13 +580,13 @@ class BaseJob:
             label="Job queue",
         )
 
-        console_log = cls.console_log
+        console_log_default = cls.console_log_default
         if job_model is not None:
             form.fields["_job_queue"].initial = job_model.default_job_queue.pk
-            if job_model.console_log_override:
-                console_log = job_model.console_log
+            if job_model.console_log_default_override:
+                console_log_default = job_model.console_log_default
 
-        form.fields["_console_log"].initial = console_log
+        form.fields["_console_log"].initial = console_log_default
 
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()

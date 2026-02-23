@@ -47,7 +47,7 @@
         </li>
     {% endif %}
     {% if perms.extras.view_jobconsoleentry %}
-        {% if result.job_console_entries.exists or result.job_model.job_class.console_log or console_log_from_run %}
+        {% if result.job_console_entries.exists or result.job_model.job_class.console_log_default or console_log_from_run %}
             <li class="nav-item" role="presentation">
                 <a
                     href="{% url 'extras:jobresult_job_console_entries' pk=object.pk %}"

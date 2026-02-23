@@ -108,7 +108,7 @@ Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
-### `console_log`
+### `console_log_default`
 
 +++ 3.1.0
 

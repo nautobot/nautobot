@@ -345,31 +345,31 @@ register_jobs(BadJob)
 
     def test_as_execution_form_console_log_initial_reflects_job_class(self):
         """
-        _console_log initial value should match job class console_log attribute
-        when console_log_override is False on the job model.
+        _console_log initial value should match job class console_log_default attribute
+        when console_log_default_override is False on the job model.
         """
         module = "pass_job"
         name = "TestPassJob"
         job_class, job_model = get_job_class_and_model(module, name)
 
-        job_model.console_log_override = False
+        job_model.console_log_default_override = False
         job_model.save()
         form = job_class.as_execution_form()
-        self.assertEqual(form.fields["_console_log"].initial, job_class.console_log)
+        self.assertEqual(form.fields["_console_log"].initial, job_class.console_log_default)
 
     def test_as_execution_form_console_log_initial_reflects_job_model_override(self):
         """
-        _console_log initial value should match job_model.console_log when console_log_override is True.
+        _console_log initial value should match job_model.console_log_default when console_log_default_override is True.
         """
         module = "pass_job"
         name = "TestPassJob"
         job_class, job_model = get_job_class_and_model(module, name)
 
-        job_model.console_log_override = True
-        job_model.console_log = not job_class.console_log
+        job_model.console_log_default_override = True
+        job_model.console_log_default = not job_class.console_log_default
         job_model.save()
         form = job_class.as_execution_form()
-        self.assertEqual(form.fields["_console_log"].initial, job_model.console_log)
+        self.assertEqual(form.fields["_console_log"].initial, job_model.console_log_default)
 
     def test_as_execution_form_job_queue_initial_is_default_queue(self):
         """
@@ -1608,7 +1608,8 @@ class RunConsoleLogJobTestCase(TestCase):
             date_done=timezone.now(),
             status=JobResultStatusChoices.STATUS_SUCCESS,
         )
-        # temporary override request context task
+        # Simulate a Celery request context so self.request.id is available inside the task,
+        # as it would be when dispatched via .delay() or .apply_async() in production.
         run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
         try:
             run_console_log_job_and_return_job_result.run()

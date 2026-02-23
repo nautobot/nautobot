@@ -2444,7 +2444,7 @@ class JobView(generic.ObjectView):
                 section=SectionChoices.RIGHT_HALF,
                 label="Properties",
                 fields=[
-                    "console_log",
+                    "console_log_default",
                     "supports_dryrun",
                     "dryrun_default",
                     "read_only",
