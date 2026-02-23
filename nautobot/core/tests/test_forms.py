@@ -350,7 +350,7 @@ class AddFieldToFormClassTest(testing.TestCase):
             self.assertIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
         finally:
             # Avoid test leakage
-            del ipam_forms.ServiceFilterForm.base_fields[new_form_field_name]
+            del ipam_forms.ServiceFilterForm.base_fields[new_form_field_name]  # pylint: disable=no-member
 
     def test_field_validation(self):
         """
