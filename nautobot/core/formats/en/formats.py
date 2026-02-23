@@ -1,7 +1,9 @@
+"""
+Stub "localization" formats module to re-enable support for settings like DATE_FORMAT, etc. when l10n is in effect.
+"""
+
 from django.conf import settings
 
-DATE_FORMAT = settings.DATE_FORMAT
-DATETIME_FORMAT = settings.DATETIME_FORMAT
-SHORT_DATE_FORMAT = settings.SHORT_DATE_FORMAT
-SHORT_DATETIME_FORMAT = settings.SHORT_DATETIME_FORMAT
-TIME_FORMAT = settings.TIME_FORMAT
+
+def __getattr__(name):
+    return getattr(settings, name)
