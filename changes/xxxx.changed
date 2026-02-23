@@ -1,0 +1,2 @@
+Restored support for `DATE_FORMAT`, `DATETIME_FORMAT`, `SHORT_DATE_FORMAT`, `SHORT_DATETIME_FORMAT`, and `TIME_FORMAT` settings.
+Removed user-defined locale/language selection feature (previously introduced for 3.1 by #8417).
