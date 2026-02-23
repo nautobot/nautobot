@@ -346,7 +346,11 @@ class AddFieldToFormClassTest(testing.TestCase):
         new_form_field_name = "added_form_field_name"
         self.assertNotIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
         forms.add_field_to_filter_form_class(ipam_forms.ServiceFilterForm, new_form_field_name, new_form_field)
-        self.assertIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
+        try:
+            self.assertIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
+        finally:
+            # Avoid test leakage
+            del ipam_forms.ServiceFilterForm.base_fields[new_form_field_name]
 
     def test_field_validation(self):
         """
