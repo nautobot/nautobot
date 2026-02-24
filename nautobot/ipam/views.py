@@ -339,7 +339,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
-    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_prefix"]
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
 
     queryset = Prefix.objects.select_related(
         "parent",
@@ -426,6 +426,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_field_name="parent",
                 add_button_route=None,
                 max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -437,6 +438,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 related_field_name="parent",
                 add_button_route=None,
                 max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -680,7 +682,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "instance": instance,
                 "request": request,
                 "return_url": return_url,
-                "table_inc_template": "ipam/prefix_children.html",
+                "next_page_url": reverse("ipam:prefix_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
                 "template": "panel_table.html",
                 "table": prefix_table,
                 "table_expandable": True,

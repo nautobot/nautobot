@@ -19,6 +19,10 @@ As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.
 
 If your deployment of Nautobot had overridden any of the above settings (for example, to use [S3 storage](../user-guide/administration/guides/s3-django-storage.md)), you will need to update your `nautobot_config.py` file to use the `STORAGES` setting instead. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
 
+#### Configure New Performance Settings As Appropriate
+
+If you have a large number of Location and/or Prefix records, you can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, with the potential to significantly improve the performance of these enhanced views as a result.
+
 ### App Authors/Maintainers
 
 #### Changes For Django 5.2 Compatibility
@@ -31,7 +35,7 @@ Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django m
 
 #### Changes for HTMX
 
-In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
+See [HTMX List View Rendering](#htmx-list-view-rendering) below.
 
 ## Release Overview
 
@@ -54,6 +58,20 @@ As a consequence of the [dependency update to Django 5.2](#django-52), Nautobot 
 #### Python 3.14 Support
 
 Added official support for Python 3.14.
+
+### Changed
+
+#### HTMX List View Rendering
+
+In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
+
+#### Improved Location and Prefix List Views
+
+In addition to the generalized list-view performance enhancements described above, the list views for Location and Prefix records specifically have been enhanced in several ways:
+
+- The rendering of the "tree" data hierarchy for these records has in general been improved to visualize object relationships more clearly.
+- An administrator can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, improving their responsiveness substantially at high data scale.
+- Users can interactively "drill down" into deeper nested data as needed with a few quick clicks, incrementally loading additional "child" records on the fly.
 
 ### Deprecated
 
