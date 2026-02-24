@@ -54,6 +54,9 @@ function watchSourceFields(context, targetField, sourceFields, repopulate){
     sourceFields.forEach(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
         const sourceField = context.getElementById(sourceFieldId);
+        if (!sourceField) {
+            return;
+        }
         const onFieldUpdate = function(){ repopulateIfChanged(targetField, repopulate)}
         sourceField.addEventListener('keyup', onFieldUpdate)
         sourceField.addEventListener('change', onFieldUpdate)
@@ -63,6 +66,9 @@ function watchSourceFields(context, targetField, sourceFields, repopulate){
 function watchRegenerateButton(context, targetField, repopulate){
     // If user clicks the "regenerate" button, set target field to be auto-populate again
     const regenerateButton = context.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
+    if (!regenerateButton) {
+        return;
+    }
     regenerateButton.addEventListener('click', repopulate)
 }
 
@@ -78,7 +84,11 @@ function getSlugField(){
 
 function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
     // Get source fields and length values set as html attributes on given field
-    const sourceFields = field.getAttribute(sourceFieldsAttrName).split(" ");
+    const sourceFieldsAttr = field.getAttribute(sourceFieldsAttrName);
+    if (!sourceFieldsAttr) {
+        return;
+    }
+    const sourceFields = sourceFieldsAttr.split(" ");
     const length = field.getAttribute('maxlength') || defaultMaxLength
 
     // Prepare repopulate function with custom source fields and length set on this field
