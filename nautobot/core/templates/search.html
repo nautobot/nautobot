@@ -8,20 +8,27 @@
     {% if request.GET.q %}
         <div class="row">
             <div class="col-lg-10">
-                <div id="nb-search-results-tables"
-                     hx-get=""
-                     hx-indicator="#search-htmx-indicator"
-                     hx-select=".nb-search-results-table"
-                     hx-select-oob="#nb-search-results-summaries:beforeend"
-                     hx-swap="beforeend"
-                     hx-trigger="load"
-                     hx-vals='{"model": "{{ next_model }}"}'
-                >
-                    <div id="search-htmx-indicator" class="htmx-indicator">
-                        <div class="spinner-border">
-                            <span class="visually-hidden">Loading...</span>
+                <div id="nb-search-results-tables">
+                    {% for model in searchable_models %}
+                        <div id="{{ model|slugify }}-results-table">
+                            <div id="{{ model|slugify }}-htmx-indicator" class="htmx-indicator">
+                                <div class="spinner-border">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        {% if forloop.counter <= chunk_count %}
+                            <div id="next-getter-{{ forloop.counter }}"
+                                 class="d-none"
+                                 hx-get=""
+                                 hx-indicator="#{{ model|slugify }}-htmx-indicator"
+                                 hx-select="#next-getter-{{ forloop.counter }}"
+                                 hx-select-oob="#{{ model|slugify }}-results-table,#{{ model|slugify }}-results-summary"
+                                 hx-trigger="load"
+                                 hx-vals='{"model": "{{ model }}"}'
+                            ></div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             </div>
             <div class="col-lg-2" style="padding-top: 20px;">
@@ -30,7 +37,11 @@
                         <strong>Search Results</strong>
                     </div>
                     <div class="list-group">
-                        <div id="nb-search-results-summaries"></div>
+                        <div id="nb-search-results-summaries">
+                            {% for model in searchable_models %}
+                                <div id="{{ model|slugify }}-results-summary"></div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>

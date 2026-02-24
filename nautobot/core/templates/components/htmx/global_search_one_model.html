@@ -1,16 +1,7 @@
 {% load helpers %}
 
-{% if table %}
-    <div class="nb-search-results-table"
-         hx-get=""
-         hx-indicator="#search-htmx-indicator"
-         hx-trigger="load"
-         hx-select=".nb-search-results-table"
-         hx-swap="beforeend"
-         hx-target="#nb-search-results-tables"
-         hx-select-oob="#nb-search-results-summaries:beforeend"
-         hx-vals='{"model": "{{ next_model }}"}'
-    >
+<div id="{{ model|slugify }}-results-table">
+    {% if table %}
         <h3 id="{{ name|lower }}">{{ name|bettertitle }}</h3>
         {% include 'panel_table.html' with table=table %}
         <a href="{{ url }}" class="btn btn-primary float-end">
@@ -22,28 +13,27 @@
             {% endif %}
         </a>
         <div class="clearfix"></div>
-    </div>
+    {% endif %}
+</div>
 
-    <div id="nb-search-results-summaries">
+<div id="{{ model|slugify }}-results-summary">
+    {% if table %}
         <a href="#{{ name|lower }}" class="list-group-item">
             {{ name|bettertitle }}
             <span class="badge bg-primary">{{ table.page.paginator.count }}</span>
         </a>
-    </div>
-{% elif next_model %}
-    <div class="nb-search-results-table d-none"
-         hx-get=""
-         hx-indicator="#search-htmx-indicator"
-         hx-trigger="load"
-         hx-select=".nb-search-results-table"
-         hx-swap="beforeend"
-         hx-target="#nb-search-results-tables"
-         hx-select-oob="#nb-search-results-summaries:beforeend"
-         hx-vals='{"model": "{{ next_model }}"}'
-    >
-    </div>
-{% else %}
-    <div class="nb-search-results-table">
-        <h3 class="text-secondary text-center">End of search results</h3>
-    </div>
+    {% endif %}
+</div>
+
+{% if next_model %}
+<div id="next-getter-{{ counter }}"
+     class="d-none"
+     hx-get=""
+     hx-indicator="#{{ next_model|slugify }}-htmx-indicator"
+     hx-select="#next-getter-{{ counter }}"
+     hx-select-oob="#{{ next_model|slugify }}-results-table,#{{ next_model|slugify }}-results-summary"
+     hx-trigger="load"
+     hx-vals='{"model": "{{ next_model }}"}'
+>
+</div>
 {% endif %}

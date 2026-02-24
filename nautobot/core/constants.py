@@ -3,12 +3,12 @@ from copy import deepcopy
 import nh3
 
 SEARCH_MAX_RESULTS = 15
+# Number of simultaneous/parallel HTMX streams to use to retrieve search results
+SEARCH_CHUNK_COUNT = 5
 
 #
 # Filter lookup expressions
 #
-
-SEARCH_MAX_RESULTS = 15
 
 FILTER_CHAR_BASED_LOOKUP_MAP = {
     "n": "exact",

@@ -47,7 +47,7 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import SEARCH_MAX_RESULTS
+from nautobot.core.constants import SEARCH_CHUNK_COUNT, SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
@@ -366,7 +366,11 @@ class SearchView(AccessMixin, View):
 
         if not request.headers.get("HX-Request", False):
             # Initial page-load request
-            return render(request, "search.html", {"next_model": searchable_models[0]})
+            return render(
+                request,
+                "search.html",
+                {"searchable_models": searchable_models, "chunk_count": SEARCH_CHUNK_COUNT},
+            )
 
         # HTMX request for the next relevant object-type
         label_lower = request.GET.get("model", searchable_models[0])
@@ -374,42 +378,49 @@ class SearchView(AccessMixin, View):
             label_lower = searchable_models[0]
         context = {}
         index = searchable_models.index(label_lower)
-        next_label = searchable_models[index + 1] if index < len(searchable_models) - 1 else None
+        if index < len(searchable_models) - SEARCH_CHUNK_COUNT:
+            next_label = searchable_models[index + SEARCH_CHUNK_COUNT]
+        else:
+            next_label = None
 
+        context = {
+            "counter": index % SEARCH_CHUNK_COUNT + 1,
+            "name": None,
+            "model": label_lower,
+            "next_model": next_label,
+            "table": None,
+            "url": None,
+        }
         # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
         # corresponding to that URL, and finally the queryset, filterset, and table classes needed
         # to find and display the model search results.
-        url = get_route_for_model(label_lower, "list")
         try:
-            view_func = resolve(reverse(url)).func
-            # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-            view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-            queryset = view_or_viewset.queryset.restrict(request.user, "view")
-            # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-            filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-            # For a UIViewSet, .table_class, for an ObjectListView, .table.
-            table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
+            url = get_route_for_model(label_lower, "list")
+            try:
+                view_func = resolve(reverse(url)).func
+                context["url"] = f"{reverse(url)}?q={request.GET.get('q')}"
+                # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                context["name"] = queryset.model._meta.verbose_name_plural
+                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-            # Construct the results table for this object type
-            filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
-            table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
-            table.paginate(per_page=SEARCH_MAX_RESULTS)
+                # Construct the results table for this object type
+                if filterset is not None and table is not None:
+                    filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
+                    table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
+                    table.paginate(per_page=SEARCH_MAX_RESULTS)
 
-            if table.page:
-                context = {
-                    "name": queryset.model._meta.verbose_name_plural,
-                    "table": table,
-                    "url": f"{reverse(url)}?q={request.GET.get('q')}",
-                    "next_model": next_label,
-                }
-            else:
-                context = {
-                    "table": None,
-                    "next_model": next_label,
-                }
+                    if table.page:
+                        context["table"] = table
 
-        except NoReverseMatch:
-            logger.error(request, f'Missing URL "{url}" - unable to show search results for {label_lower}.')
+            except NoReverseMatch:
+                logger.error('Missing URL "%s" - unable to show search results for %s.', url, label_lower)
+        except TypeError:
+            logger.error("Invalid app_label - unable to show search results for %s.", label_lower)
 
         return render(request, "components/htmx/global_search_one_model.html", context)
 
