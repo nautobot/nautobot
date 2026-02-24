@@ -1,1 +1,2 @@
 Implemented File Proxy UI viewset using the existing mixin-based approach and `UI Component Framework`.
+Added FileProxy.last_updated and enabled saved views for FileProxy via is_saved_view_model = True.

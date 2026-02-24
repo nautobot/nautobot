@@ -1209,7 +1209,7 @@ class FileProxyFilterForm(BootstrapMixin, forms.Form):
     model = FileProxy
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
-    uploaded_at = forms.DateTimeField(required=False, label="Uploaded at")
+    uploaded_at = forms.DateField(required=False, label="Uploaded at", widget=DatePicker())
     job = DynamicModelMultipleChoiceField(
         queryset=Job.objects.all(),
         required=False,
