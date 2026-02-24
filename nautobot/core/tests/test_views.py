@@ -450,7 +450,7 @@ class SearchViewTestCase(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
     def test_get_unauthenticated_redirects_htmx(self):
-        """Unauthenticated access redirects to the login page."""
+        """Unauthenticated HTMX access redirects to the login page."""
         self.client.logout()
         response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
         expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
@@ -467,12 +467,12 @@ class SearchViewTestCase(TestCase):
         self.assertNotContains(response, "nb-search-results-tables")
 
     def test_get_with_query_non_htmx(self):
-        """GET with ?q but without an HTMX header renders search.html and sets next_model."""
+        """GET with ?q but without an HTMX header renders search.html with all searchable models."""
         response = self.client.get(reverse("search"), {"q": "test"})
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "search.html")
-        # search.html renders the results container with an HTMX trigger for the first model
-        self.assertIsNotNone(response.context["next_model"])
+        # search.html renders the results container with an HTMX trigger for each model in parallel
+        self.assertIn("searchable_models", response.context)
         self.assertContains(response, "nb-search-results-tables")
 
     def test_htmx_with_matching_results(self):
@@ -486,8 +486,7 @@ class SearchViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
         self.assertIsNotNone(response.context["table"])
-        self.assertIsNotNone(response.context["next_model"])
-        self.assertContains(response, "SearchViewTestUniqueLocation")
+        self.assertContains(response, str(self.location.pk))
 
     def test_htmx_with_no_matching_results(self):
         """HTMX request for dcim.location with a non-matching query returns table=None."""
@@ -500,7 +499,7 @@ class SearchViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
         self.assertIsNone(response.context["table"])
-        self.assertIsNotNone(response.context["next_model"])
+        self.assertNotContains(response, str(self.location.pk))
 
     def test_htmx_invalid_model_falls_back_gracefully(self):
         """HTMX request with an unrecognised model parameter falls back without error."""
@@ -511,10 +510,11 @@ class SearchViewTestCase(TestCase):
         )
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
-        self.assertIsNotNone(response.context["next_model"])
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
 
-    def test_htmx_last_model_returns_end_of_results(self):
-        """HTMX request for the last searchable model returns next_model=None and the end-of-results marker."""
+    def test_htmx_any_searchable_model_returns_valid_response(self):
+        """HTMX request for another model in the searchable_models list returns a valid response."""
         searchable_models = []
         for app_config in apps.get_app_configs():
             if hasattr(app_config, "searchable_models"):
@@ -529,8 +529,8 @@ class SearchViewTestCase(TestCase):
         )
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
-        self.assertIsNone(response.context["next_model"])
-        self.assertContains(response, "End of search results")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
 
 
 class FilterFormsTestCase(TestCase):

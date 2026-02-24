@@ -47,7 +47,7 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import SEARCH_CHUNK_COUNT, SEARCH_MAX_RESULTS
+from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
@@ -369,32 +369,21 @@ class SearchView(AccessMixin, View):
             return render(
                 request,
                 "search.html",
-                {"searchable_models": searchable_models, "chunk_count": SEARCH_CHUNK_COUNT},
+                {"searchable_models": searchable_models},
             )
 
-        # HTMX request for the next relevant object-type
+        # HTMX request for searching a specific model class
         label_lower = request.GET.get("model", searchable_models[0])
-        if label_lower not in searchable_models:
-            label_lower = searchable_models[0]
-        context = {}
-        index = searchable_models.index(label_lower)
-        if index < len(searchable_models) - SEARCH_CHUNK_COUNT:
-            next_label = searchable_models[index + SEARCH_CHUNK_COUNT]
-        else:
-            next_label = None
-
         context = {
-            "counter": index % SEARCH_CHUNK_COUNT + 1,
             "name": None,
             "model": label_lower,
-            "next_model": next_label,
             "table": None,
             "url": None,
         }
-        # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
-        # corresponding to that URL, and finally the queryset, filterset, and table classes needed
-        # to find and display the model search results.
-        try:
+        if label_lower in searchable_models:
+            # Based on the label, reverse-lookup the list URL, then the view or UIViewSet
+            # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+            # to find and display the model search results.
             url = get_route_for_model(label_lower, "list")
             try:
                 view_func = resolve(reverse(url)).func
@@ -419,8 +408,6 @@ class SearchView(AccessMixin, View):
 
             except NoReverseMatch:
                 logger.error('Missing URL "%s" - unable to show search results for %s.', url, label_lower)
-        except TypeError:
-            logger.error("Invalid app_label - unable to show search results for %s.", label_lower)
 
         return render(request, "components/htmx/global_search_one_model.html", context)
 

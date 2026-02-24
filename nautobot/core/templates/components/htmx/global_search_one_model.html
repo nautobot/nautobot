@@ -24,16 +24,3 @@
         </a>
     {% endif %}
 </div>
-
-{% if next_model %}
-<div id="next-getter-{{ counter }}"
-     class="d-none"
-     hx-get=""
-     hx-indicator="#{{ next_model|slugify }}-htmx-indicator"
-     hx-select="#next-getter-{{ counter }}"
-     hx-select-oob="#{{ next_model|slugify }}-results-table,#{{ next_model|slugify }}-results-summary"
-     hx-trigger="load"
-     hx-vals='{"model": "{{ next_model }}"}'
->
-</div>
-{% endif %}
