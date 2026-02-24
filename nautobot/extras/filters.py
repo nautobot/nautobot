@@ -955,6 +955,8 @@ class FileProxyFilterSet(BaseFilterSet):
         queryset=JobResult.objects.all(),
         label="Job Result (ID)",
     )
+    # Use a single-value date filter so FileProxyFilterForm.uploaded_at (DateField) receives a string, not a list.
+    uploaded_at = django_filters.DateFilter(field_name="uploaded_at", lookup_expr="date")
 
     class Meta:
         model = FileProxy
