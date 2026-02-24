@@ -22,9 +22,10 @@
                     {% else %}
                         <td colspan="{{ table.columns|length }}" class="nb-tree-element table-info">
                     {% endif %}
-                    {% for i in table.context.tree_depth|add:1|as_range %}
+                    {% for i in table.context.tree_depth|as_range %}
                         <span class="nb-subtree"></span>
                     {% endfor %}
+                    <span class="nb-subtree nb-subtree-not-expandable"></span>
                     &hellip; and
                     <a href="{{ table.context.next_page_url }}{% django_querystring page=table.page.number|add:1 %}"
                        hx-get="{{ table.context.next_page_url }}{% django_querystring page=table.page.number|add:1 %}"
