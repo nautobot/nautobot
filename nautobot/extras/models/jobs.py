@@ -842,9 +842,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     ) -> dict:
         """Build the celery kwargs dict common to all job execution paths."""
         job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_job_model_id": str(job_model.id),
             "nautobot_job_profile": profile,
-            "nautobot_job_user_id": user.id,
+            "nautobot_job_user_id": str(user.id),
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
             "queue": task_queue,
