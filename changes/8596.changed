@@ -1,2 +1,2 @@
-Custom fields out of scope will be hidden on model add/edit form.
+Changed behavior of model edit forms to hide custom fields that are out of scope.
 Improved unit test coverage for scope filter HTMX endpoint.
