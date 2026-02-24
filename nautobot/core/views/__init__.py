@@ -13,7 +13,6 @@ import time
 from db_file_storage.views import get_file
 from django.apps import apps
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
@@ -356,25 +355,32 @@ class SearchView(AccessMixin, View):
         if "q" not in request.GET:
             return render(request, "search.html", {})
 
-        results = []
-
         # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
         # based on the `app_config.searchable_models` list (if any) defined by each app
         searchable_models = []
         for app_config in apps.get_app_configs():
             if hasattr(app_config, "searchable_models"):
-                searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
+                searchable_models += [
+                    f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
+                ]
 
-        # Searching all object types
-        obj_types = [model_info[1] for model_info in searchable_models]
+        if not request.headers.get("HX-Request", False):
+            # Initial page-load request
+            return render(request, "search.html", {"next_model": searchable_models[0]})
 
-        for label, modelname in searchable_models:
-            if modelname not in obj_types:
-                continue
+        # HTMX request for the next relevant object-type
+        label_lower = request.GET.get("model", searchable_models[0])
+        if label_lower not in searchable_models:
+            label_lower = searchable_models[0]
+        context = {}
+        while not context:
+            index = searchable_models.index(label_lower)
+            next_label = searchable_models[index + 1] if index < len(searchable_models) - 1 else None
+
             # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
             # corresponding to that URL, and finally the queryset, filterset, and table classes needed
             # to find and display the model search results.
-            url = get_route_for_model(f"{label}.{modelname}", "list")
+            url = get_route_for_model(label_lower, "list")
             try:
                 view_func = resolve(reverse(url)).func
                 # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
@@ -391,23 +397,31 @@ class SearchView(AccessMixin, View):
                 table.paginate(per_page=SEARCH_MAX_RESULTS)
 
                 if table.page:
-                    results.append(
-                        {
-                            "name": queryset.model._meta.verbose_name_plural,
-                            "table": table,
-                            "url": f"{reverse(url)}?q={request.GET.get('q')}",
-                        }
-                    )
-            except NoReverseMatch:
-                messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
+                    context = {
+                        "name": queryset.model._meta.verbose_name_plural,
+                        "table": table,
+                        "url": f"{reverse(url)}?q={request.GET.get('q')}",
+                        "next_model": next_label,
+                    }
+                    break
+                else:
+                    context = {
+                        "table": None,
+                        "next_model": next_label,
+                    }
+                    break
 
-        return render(
-            request,
-            "search.html",
-            {
-                "results": results,
-            },
-        )
+            except NoReverseMatch:
+                logger.error(request, f'Missing URL "{url}" - unable to show search results for {label_lower}.')
+
+            label_lower = next_label
+
+            if label_lower is None:
+                # End of search
+                context = {"name": None, "table": None, "url": None, "next_model": None}
+                break
+
+        return render(request, "components/htmx/search.html", context)
 
 
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page

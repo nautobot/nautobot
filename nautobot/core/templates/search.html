@@ -6,42 +6,35 @@
 
 {% block content %}
     {% if request.GET.q %}
-        {% if results %}
-            <div class="row">
-                <div class="col-lg-10">
-                    {% for obj_type in results %}
-                        <h3 id="{{ obj_type.name|lower }}">{{ obj_type.name|bettertitle }}</h3>
-                        {% include 'panel_table.html' with table=obj_type.table %}
-                        <a href="{{ obj_type.url }}" class="btn btn-primary float-end">
-                            <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span>
-                            {% if obj_type.table.page.has_next %}
-                                See all {{ obj_type.table.page.paginator.count }} results
-                            {% else %}
-                                Refine search
-                            {% endif %}
-                        </a>
-                        <div class="clearfix"></div>
-                    {% endfor %}
-                </div>
-                <div class="col-lg-2" style="padding-top: 20px;">
-                    <div class="card">
-                        <div class="card-header">
-                            <strong>Search Results</strong>
-                        </div>
-                        <div class="list-group">
-                            {% for obj_type in results %}
-                                <a href="#{{ obj_type.name|lower }}" class="list-group-item">
-                                    {{ obj_type.name|bettertitle }}
-                                    <span class="badge bg-primary">{{ obj_type.table.page.paginator.count }}</span>
-                                </a>
-                            {% endfor %}
+        <div class="row">
+            <div class="col-lg-10">
+                <div id="nb-search-results-tables"
+                     hx-get=""
+                     hx-indicator="#search-htmx-indicator"
+                     hx-select=".nb-search-results-table"
+                     hx-select-oob="#nb-search-results-summaries:beforeend"
+                     hx-swap="beforeend"
+                     hx-trigger="load"
+                     hx-vals='{"model": "{{ next_model }}"}'
+                >
+                    <div id="search-htmx-indicator" class="htmx-indicator">
+                        <div class="spinner-border">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
                 </div>
             </div>
-        {% else %}
-            <h3 class="text-secondary text-center">No results found</h3>
-        {% endif %}
+            <div class="col-lg-2" style="padding-top: 20px;">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Search Results</strong>
+                    </div>
+                    <div class="list-group">
+                        <div id="nb-search-results-summaries"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     {% else %}
         <div class="row" style="margin-top: 150px;">
             <div class="col-md-4 offset-md-4">
