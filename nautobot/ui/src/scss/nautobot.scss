@@ -2649,6 +2649,28 @@ pre.version, pre.version-stamp {
   max-width: 960px;
 }
 
+.nb-embedded-search-results {
+  flex-grow: 2;
+  overflow: auto;
+  padding: map.get($spacers, 16);
+  width: 100%;
+
+  tbody tr {
+    cursor: pointer;
+  }
+
+  /*
+   * Disable all interactions in object embedded search results table cells. This solution is not perfect because it
+   * still allows the elements to be interacted with via keyboard, but at the same time it is non-intrusive for the rest
+   * of the code and should be _good enough_ for this specific use case.
+   */
+  td > *,
+  th > * {
+    pointer-events: none;
+    user-select: none;
+  }
+}
+
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
 .d-none {
   display: none !important;

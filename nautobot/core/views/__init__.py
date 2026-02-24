@@ -366,7 +366,9 @@ class SearchView(AccessMixin, View):
             filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
             # Compose initial data from all given query params with `initial_` prefix, and remove that prefix afterward.
             initial_data = {k.replace("initial_", "", 1): v for k, v in request.GET.items() if k.startswith("initial_")}
-            filter_form = filterset_form(initial=normalize_querydict(initial_data, filterset=filterset()))
+            filter_form = filterset_form(
+                auto_id="embedded_id_%s", initial=normalize_querydict(initial_data, filterset=filterset())
+            )
             return render(
                 request,
                 "components/htmx/object_embedded_search.html",

@@ -46,8 +46,11 @@ class BaseTable(django_tables2.Table):
         user=None,
         hide_hierarchy_ui=False,
         order_by=None,
+        orderable=None,
+        row_attrs=None,
         data_transform_callback=None,
         configurable=False,
+        is_object_embedded_search_results=False,
         **kwargs,
     ):
         """
@@ -60,9 +63,16 @@ class BaseTable(django_tables2.Table):
             user (User, optional): Personalize table display for the given user (optional)
             hide_hierarchy_ui (bool): Whether to display or hide hierarchy indentation of nested objects.
             order_by (list, optional): Field(s) to sort by
+            orderable (bool, optional): Enable/disable column ordering on this table.
+            row_attrs (dict, optional): Add custom html attributes to the table rows. Allows custom HTML attributes to
+                be specified which will be added to the ``<tr>`` tag of the rendered table.
             data_transform_callback (function, optional): A function that takes the given `data` as an input and
                 returns new data. Runs after all of the queryset auto-optimization performed by this class.
                 Used for example in IPAM views to inject "fake" records for "available" Prefixes, IPAddresses, or VLANs.
+            configurable (bool): Include cog wheel icon with "Table Configuration" form; this arg is ignored when
+                `is_object_embedded_search_results` is set to `True`.
+            is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
+                columns unaffected by any user configuration, with static order and visibility.
             **kwargs (dict, optional): Passed through to django_tables2.Table
         Warning:
             Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
@@ -112,10 +122,21 @@ class BaseTable(django_tables2.Table):
 
         self.hide_hierarchy_ui = hide_hierarchy_ui
 
-        # Init table
-        super().__init__(*args, order_by=order_by, **kwargs)
+        # Disable table configuration and sorting in object embedded search results, set `hx-get` to handle selection
+        if is_object_embedded_search_results:
+            configurable = False
+            orderable = False
+            if row_attrs is None:
+                row_attrs = {}
+            row_attrs["hx-get"] = lambda record: reverse(
+                get_route_for_model(record._meta.label, "detail", api=True), kwargs={"pk": record.pk}
+            )
 
         self.configurable = configurable
+        self.is_object_embedded_search_results = is_object_embedded_search_results
+
+        # Init table
+        super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
@@ -143,7 +164,10 @@ class BaseTable(django_tables2.Table):
         columns = []
         pk = self.base_columns.pop("pk", None)
         actions = self.base_columns.pop("actions", None)
-        if saved_view is not None and not table_changes_pending:
+        if is_object_embedded_search_results:
+            # Show only the first 3 columns in their default order in object embedded search results
+            columns = list(self.base_columns)[:3]
+        elif saved_view is not None and not table_changes_pending:
             view_table_config = saved_view.config.get("table_config", {}).get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:
                 columns = view_table_config.get("columns", [])
@@ -163,12 +187,16 @@ class BaseTable(django_tables2.Table):
             with contextlib.suppress(ValueError):
                 self.sequence.remove("pk")
             self.base_columns["pk"] = pk
-            self.sequence.insert(0, "pk")
+            if not is_object_embedded_search_results:
+                # Do not show `"pk"` column in object embedded search results
+                self.sequence.insert(0, "pk")
         if actions:
             with contextlib.suppress(ValueError):
                 self.sequence.remove("actions")
             self.base_columns["actions"] = actions
-            self.sequence.append("actions")
+            if not is_object_embedded_search_results:
+                # Do not show `"actions"` column in object embedded search results
+                self.sequence.append("actions")
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
         if isinstance(self.data, TableQuerysetData):

@@ -80,7 +80,7 @@
         <div class="modal-dialog modal-xl" role="document">
             <div
                 class="modal-content"
-                hx-on:htmx:before-swap="window.nb.embeddedAction.handleCreateEnd(event);"
+                hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
                 hx-on:htmx:load="jsify_form(this);"
             ></div>
         </div>
@@ -92,7 +92,7 @@
     {{ form.media }}
     <script>
         (() => {
-            const handleCreateEnd = (event) => {
+            const handleEnd = (event) => {
                 const obj = (() => {
                     try {
                         const obj = JSON.parse(event.detail.serverResponse);
@@ -103,9 +103,9 @@
                 })();
 
                 /*
-                 * Valid JSON object is returned only when object creation was successful, otherwise is it expected to
-                 * receive a rendered HTML template, a standard content eligible for HTMX swap, in which case do nothing
-                 * here and let HTMX default behaviors handle the rest.
+                 * Valid JSON object is returned only when object creation or search was successful, otherwise it is
+                 * expected to receive a rendered HTML template, a standard content eligible for HTMX swap, in which
+                 * case do nothing here and let HTMX default behaviors handle the rest.
                  */
                 if (obj) {
                     event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
@@ -129,7 +129,7 @@
             };
 
             window.nb = window.nb || {};
-            window.nb.embeddedAction = { handleCreateEnd, handleStart, targetFieldName: null };
+            window.nb.embeddedAction = { handleEnd, handleStart, targetFieldName: null };
         })();
     </script>
 {% endblock %}

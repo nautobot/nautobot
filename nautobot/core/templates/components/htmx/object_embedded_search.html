@@ -5,12 +5,14 @@
     <h4 class="modal-title">Search {{model|meta:'verbose_name_plural'}}</h4>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<div class="modal-body p-0">
-    <div class="d-flex">
+<div class="modal-body overflow-hidden p-0">
+    <div class="d-flex h-100" style="max-height: inherit;"{% comment %}Inherit `max-height` from `modal-body` parent to enable individual scrolling of filter form and search results.{% endcomment %}>
         <form
-            class="border-end d-flex flex-column flex-grow-1 pt-16 px-16 w-50"
+            class="border-end d-flex flex-column flex-grow-1 overflow-auto pt-16 px-16 w-50"
             hx-get="{% url model|viewname:'list' %}"
-            hx-target="#embedded_action_modal .nb-search-results"
+            hx-target="#embedded_action_modal .nb-embedded-search-results"
+            hx-vals="{ &quot;per_page&quot;: 20 }"
+            id="object_embedded_search_form"
         >
             {% include 'inc/search_panel.html' with exclude_html_form=True %}
             <div class="nb-form-sticky-footer mb-0 mx-n16 px-16 rounded-bottom">
@@ -24,6 +26,6 @@
                 </button>
             </div>
         </form>
-        <div class="nb-search-results overflow-x-auto p-16 w-100" style="flex-grow: 2;"{% comment %}Bootstrap does not support `flex-grow` other than `0` and `1`.{% endcomment %}></div>
+        <div class="nb-embedded-search-results"{% comment %}This class is styled in `nautobot.scss` because it requires advanced CSS selectors.{% endcomment %}></div>
     </div>
 </div>
