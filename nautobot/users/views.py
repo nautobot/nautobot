@@ -9,7 +9,6 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -365,15 +364,6 @@ class TokenUIViewSet(NautobotUIViewSet):
         obj.save()
         form.save_m2m()
         return obj
-
-    def get_queryset(self):
-        """
-        Limit visibility to tokens owned by the authenticated user.
-        """
-        queryset = super().get_queryset()
-        if isinstance(self.request.user, AnonymousUser):
-            return queryset.none()
-        return queryset.filter(user=self.request.user)
 
 
 class TokenListView(GenericView):
