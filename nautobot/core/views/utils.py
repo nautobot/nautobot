@@ -63,10 +63,6 @@ def check_filter_for_display(filters, field_name, values, prefix=None):
     if prefix is not None:
         filters_field_name = field_name.removeprefix(f"{prefix}-")
 
-    filters_field_name = field_name
-    if prefix is not None:
-        filters_field_name = field_name.removeprefix(f"{prefix}-")
-
     resolved_filter = {
         "name": field_name,
         "display": field_name,

@@ -334,11 +334,8 @@ class CustomFieldModel(models.Model):
                 # If field is out of scope, we don't require it to be set; but if is set we still check if value
                 # has correct type or is a correct choice
                 # For hidden custom field (out of scope) there still might be a value set in DB and also API can modify it
-                enforce_required = False
-                if custom_fields_should_render[field_key]:
-                    enforce_required = True
                 self._custom_field_data[field_key] = custom_fields[field_key].validate(
-                    value, enforce_required=enforce_required
+                    value, enforce_required=custom_fields_should_render[field_key]
                 )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
