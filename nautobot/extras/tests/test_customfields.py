@@ -1538,6 +1538,10 @@ class CustomFieldModelTest(TestCase):
             weight=200,
         )
 
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_a = Location.objects.create(name="Location A", status=location_status, location_type=cls.lt)
+        cls.location_b = Location.objects.create(name="Location B", status=location_status, location_type=cls.lt)
+
     def test_custom_field_dict_population(self):
         """Test that custom_field_data is properly populated when no data is passed in."""
         label = "Custom Field"
