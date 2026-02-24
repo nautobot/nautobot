@@ -3155,6 +3155,7 @@ class ObjectMetadataUIViewSet(
     table_class = tables.ObjectMetadataTable
     create_form_class = forms.ObjectMetadataCreateForm
     update_form_class = forms.ObjectMetadataForm
+    action_buttons = ("add", "export")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
