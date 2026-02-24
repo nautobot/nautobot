@@ -446,7 +446,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             # Configure fields: Add css class and set choices for lookup_field
             self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
             self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
-            if self.filter_fields_prefix:
+            if getattr(self, "filter_fields_prefix", None):
                 self.fields["lookup_field"].widget.attrs["data-nb-prefix"] = self.filter_fields_prefix
 
             # Update lookup_type and lookup_value fields to match expected field types derived from data
