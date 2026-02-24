@@ -30,28 +30,56 @@ class Command(BaseCommand):
             help="Enable logging output to the console.",
         )
 
-    def console_log_run(self, data, job_result, job_model, job_user, options, *args):
+    def console_log_run(self, data: dict, job_result: JobResult, job_model, job_user, options, *args):
+        """
+        Execute a job in subprocess with console logging enabled.
+
+        This method represents a *parallel execution path* to
+        `JobResult.enqueue_job()` when running jobs synchronously.
+        Both code paths ultimately execute the same job
+        logic, but differ in how execution is orchestrated and how output
+        are handled.
+
+        Relationship to enqueue_job():
+        - Both paths execute a job associated with a JobResult.
+        - Both are responsible for updating job status, result, and
+        error information.
+        - enqueue_job() supports asynchronous, synchronous, and queue-based
+        execution (Celery, Kubernetes, etc.).
+        - console_log_run() is intentionally limited to subprocess, synchronous
+        execution with stdout/stderr streamed directly to the console.
+
+        IMPORTANT:
+            Changes to job execution semantics (status handling, result
+            persistence, exception behavior, logging, or profiling) should
+            be reviewed in *both* this method and `enqueue_job()`.
+            These implementations must remain reasonably synchronized to
+            avoid inconsistent job behavior between execution modes.
+
+        Args:
+            data (dict): Validated job input data passed to the job execution.
+            job_result (JobResult): The JobResult instance being executed.
+            job_model (Job): The job definition associated with the JobResult.
+            job_user (User): The user associated with the job execution.
+            options (dict): Parsed command options provided to the management
+                command (argparse output).
+            *args: Positional arguments passed by the management command framework.
+        """
         schedule = data.get("schedule", None)
         celery_kwargs = data.get("celery_kwargs", None)
         task_queue = data.get("task_queue", None)
         ignore_singleton_lock = data.get("ignore_singleton_lock", None)
-        job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
-            "nautobot_job_profile": options["profile"],
-            "nautobot_job_user_id": job_user.id,
-            "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
-            "queue": task_queue,
-        }
-        if schedule is not None:
-            job_celery_kwargs["nautobot_job_schedule_id"] = schedule.id
-        if job_model.soft_time_limit > 0:
-            job_celery_kwargs["soft_time_limit"] = job_model.soft_time_limit
-        if job_model.time_limit > 0:
-            job_celery_kwargs["time_limit"] = job_model.time_limit
 
-        if celery_kwargs is not None:
-            # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
-            job_celery_kwargs.update(celery_kwargs)
+        job_celery_kwargs = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=job_user,
+            task_queue=task_queue,
+            profile=options["profile"],
+            console_log=options["console_log"],
+            ignore_singleton_lock=ignore_singleton_lock,
+            schedule=schedule,
+            celery_kwargs=celery_kwargs,
+        )
 
         job_result.celery_kwargs = job_celery_kwargs
         job_result.date_started = timezone.now()

@@ -103,9 +103,9 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 +++ 3.1.0
 
-The console_log flag controls how job stdout/stderr is handled and where the job is executed.
+The console_log_default flag controls how job stdout/stderr is handled and where the job is executed.
 
-*If not explicitly provided, `console_log` defaults to False.*
+*If not explicitly provided, `console_log_default` defaults to False.*
 
 ### Asynchronous execution (synchronous=False)
 
@@ -125,7 +125,7 @@ flowchart LR
 
     subgraph K8sCluster [Kubernetes Cluster]
         k8s_pod[K8s Job/Pod
-        Runs 'nautobot-server runjob_with_job_result']
+        Runs 'nautobot-server runjob_with_job_result --console-log']
     end
 
     %% Edges
