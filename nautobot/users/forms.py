@@ -1,19 +1,25 @@
 from django import forms
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
     PasswordChangeForm as DjangoPasswordChangeForm,
 )
+from django.contrib.auth.models import Group
+from django.contrib.contenttypes.models import ContentType
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms.fields import (
+    DynamicModelMultipleChoiceField,
+)
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from .models import Token
+from .models import ObjectPermission, Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
@@ -99,3 +105,42 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
             payload = serialize_user_without_config_and_views(instance)
             publish_event(topic="nautobot.admin.user.change_password", payload=payload)
         return instance
+
+
+class ObjectPermissionForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = ObjectPermission
+        fields = [
+            "name",
+            "description",
+            "enabled",
+            "object_types",
+            "groups",
+            "users",
+            "actions",
+            "constraints",
+        ]
+
+
+class ObjectPermissionFilterForm(BootstrapMixin, forms.Form):
+    model = ObjectPermission
+
+    id = forms.IntegerField(required=False)
+    name = forms.CharField(required=False)
+    description = forms.CharField(required=False)
+    enabled = forms.NullBooleanField(required=False)
+
+    object_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+    )
+
+    users = DynamicModelMultipleChoiceField(
+        queryset=get_user_model().objects.all(),
+        required=False,
+    )
+
+    groups = DynamicModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+    )
