@@ -78,7 +78,7 @@ class CustomFieldModelFormMixinTestCase(TestCase):
 
     def test_scoped_custom_field_is_added_on_edit_form_when_in_scope(self):
         """
-        Test that a custom field is not added to the form when it is not in a scope filter.
+        Test that a custom field is added to the form when it is in a scope filter.
         """
         instance = Location.objects.first()
 
