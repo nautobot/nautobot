@@ -36,25 +36,7 @@
             </div>
         </div>
     {% else %}
-        <div class="row" style="margin-top: 150px;">
-            <div class="col-md-4 offset-md-4">
-                <form action="{% url 'search' %}" method="get" class="form form-horizontal">
-                    <div class="card">
-                        <div class="card-header">
-                            <strong>Search</strong>
-                        </div>
-                        <div class="card-body">
-                            {% render_form form %}
-                        </div>
-                        <div class="card-footer text-end">
-                            <button type="submit" class="btn btn-primary">
-                                <span class="mdi mdi-magnify" aria-hidden="true"></span> Search
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <h3 class="text-secondary text-center">Please enter your desired search in the above search box.</h3>
     {% endif %}
 {% endblock %}
 

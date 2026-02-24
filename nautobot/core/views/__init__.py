@@ -373,55 +373,45 @@ class SearchView(AccessMixin, View):
         if label_lower not in searchable_models:
             label_lower = searchable_models[0]
         context = {}
-        while not context:
-            index = searchable_models.index(label_lower)
-            next_label = searchable_models[index + 1] if index < len(searchable_models) - 1 else None
+        index = searchable_models.index(label_lower)
+        next_label = searchable_models[index + 1] if index < len(searchable_models) - 1 else None
 
-            # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
-            # corresponding to that URL, and finally the queryset, filterset, and table classes needed
-            # to find and display the model search results.
-            url = get_route_for_model(label_lower, "list")
-            try:
-                view_func = resolve(reverse(url)).func
-                # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-                queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-                # For a UIViewSet, .table_class, for an ObjectListView, .table.
-                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
+        # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
+        # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+        # to find and display the model search results.
+        url = get_route_for_model(label_lower, "list")
+        try:
+            view_func = resolve(reverse(url)).func
+            # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+            view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+            queryset = view_or_viewset.queryset.restrict(request.user, "view")
+            # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+            filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+            # For a UIViewSet, .table_class, for an ObjectListView, .table.
+            table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-                # Construct the results table for this object type
-                filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
-                table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
-                table.paginate(per_page=SEARCH_MAX_RESULTS)
+            # Construct the results table for this object type
+            filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
+            table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
+            table.paginate(per_page=SEARCH_MAX_RESULTS)
 
-                if table.page:
-                    context = {
-                        "name": queryset.model._meta.verbose_name_plural,
-                        "table": table,
-                        "url": f"{reverse(url)}?q={request.GET.get('q')}",
-                        "next_model": next_label,
-                    }
-                    break
-                else:
-                    context = {
-                        "table": None,
-                        "next_model": next_label,
-                    }
-                    break
+            if table.page:
+                context = {
+                    "name": queryset.model._meta.verbose_name_plural,
+                    "table": table,
+                    "url": f"{reverse(url)}?q={request.GET.get('q')}",
+                    "next_model": next_label,
+                }
+            else:
+                context = {
+                    "table": None,
+                    "next_model": next_label,
+                }
 
-            except NoReverseMatch:
-                logger.error(request, f'Missing URL "{url}" - unable to show search results for {label_lower}.')
+        except NoReverseMatch:
+            logger.error(request, f'Missing URL "{url}" - unable to show search results for {label_lower}.')
 
-            label_lower = next_label
-
-            if label_lower is None:
-                # End of search
-                context = {"name": None, "table": None, "url": None, "next_model": None}
-                break
-
-        return render(request, "components/htmx/search.html", context)
+        return render(request, "components/htmx/global_search_one_model.html", context)
 
 
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
