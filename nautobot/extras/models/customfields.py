@@ -330,8 +330,16 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
+                # If field should be rendered, we perform full validation with enforce_required=True
+                # If field is out of scope, we don't require it to be set; but if is set we still check if value
+                # has correct type or is a correct choice
+                # For hidden custom field (out of scope) there still might be a value set in DB and also API can modify it
+                enforce_required = False
                 if custom_fields_should_render[field_key]:
-                    self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
+                    enforce_required = True
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(
+                    value, enforce_required=enforce_required
+                )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
@@ -884,7 +892,7 @@ class CustomField(
                 form_field.widget = MultiValueCharInput()
         return form_field
 
-    def validate(self, value):
+    def validate(self, value, enforce_required=True):
         """
         Validate a value according to the field's type validation rules.
 
@@ -956,7 +964,7 @@ class CustomField(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
-        elif self.required:
+        elif self.required and enforce_required:
             raise ValidationError("Required field cannot be empty.")
 
         return value

@@ -566,50 +566,17 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         prefixed = cf.scope_filter_prefixed
         self.assertEqual(prefixed, expected_prefixed_data)
 
-    def test_clean_properly_check_required_fields_when_no_data_saved(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-
-        # Create a custom field
+    def test_validate_enforce_required(self):
         cf = CustomField(
+            label="Test CF",
             type=CustomFieldTypeChoices.TYPE_TEXT,
-            label="Test clean",
             required=True,
-            scope_filter={"name": "Location A"},
         )
-        cf.save()
-        cf.content_types.set([obj_type])
+        value = cf.validate("", enforce_required=False)
+        self.assertEqual(value, "")
 
-        location_a = Location.objects.get(name="Location A")
-        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'test_clean'."):
-            location_a.clean()
-
-        location_b = Location.objects.get(name="Location B")
-        location_b.clean()
-
-    def test_clean_required_fields_when_key_exists(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-
-        # Create a custom field
-        cf = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            label="Test clean",
-            required=True,
-            scope_filter={"name": "Location A"},
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-
-        location_a = Location.objects.get(name="Location A")
-        location_a._custom_field_data.update({"test_clean": ""})
-        with self.assertRaisesRegex(
-            ValidationError, "Invalid value for custom field 'test_clean': Required field cannot be empty."
-        ):
-            location_a.validated_save()
-
-        location_b = Location.objects.get(name="Location B")
-        location_b._custom_field_data.update({"test_clean": ""})
-        location_b.validated_save()
-        self.assertEqual(location_b._custom_field_data.get("test_clean"), "")
+        with self.assertRaisesRegex(ValidationError, "Required field cannot be empty."):
+            cf.validate("", enforce_required=True)
 
 
 @tag("example_app")
@@ -1773,6 +1740,51 @@ class CustomFieldModelTest(TestCase):
             ):
                 cf1.key = invalid_key
                 cf1.validated_save()
+
+    def test_clean_properly_check_required_fields_when_no_data_saved(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Test clean",
+            required=True,
+            scope_filter={"name": "Location A"},
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location_a = Location.objects.get(name="Location A")
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'test_clean'."):
+            location_a.clean()
+
+        location_b = Location.objects.get(name="Location B")
+        location_b.clean()
+
+    def test_clean_required_fields_when_key_exists(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Test clean",
+            required=True,
+            scope_filter={"name": "Location A"},
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location_a = Location.objects.get(name="Location A")
+        location_a._custom_field_data.update({"test_clean": ""})
+        with self.assertRaisesRegex(
+            ValidationError, "Invalid value for custom field 'test_clean': Required field cannot be empty."
+        ):
+            location_a.validated_save()
+
+        location_b = Location.objects.get(name="Location B")
+        location_b._custom_field_data.update({"test_clean": ""})
+        location_b.validated_save()
+        self.assertEqual(location_b._custom_field_data.get("test_clean"), "")
 
 
 class CustomFieldFilterTest(TestCase):
