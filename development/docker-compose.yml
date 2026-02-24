@@ -13,7 +13,7 @@ services:
       start_period: 10m
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
-      - "8080:8080"
+      - "9080:8080"
     volumes:
       - media_root:/opt/nautobot/media
     depends_on:
@@ -28,7 +28,7 @@ services:
   celery_worker:
     image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
     ports:
-      - "8081:8080"
+      - "9081:8080"
     volumes:
       - media_root:/opt/nautobot/media
     entrypoint: "watchmedo auto-restart --directory './' --pattern '*.py' --recursive -- nautobot-server celery worker -l INFO --events"
@@ -94,4 +94,4 @@ services:
       disable: true
     tty: true
     ports:
-      - "8001:8001"
+      - "9001:8001"

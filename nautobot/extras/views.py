@@ -3138,7 +3138,15 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
         return obj
 
 
-class ObjectMetadataUIViewSet(NautobotUIViewSet):
+class ObjectMetadataUIViewSet(
+    ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
     bulk_update_form_class = forms.ObjectMetadataBulkEditForm
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
