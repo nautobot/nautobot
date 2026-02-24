@@ -54,6 +54,7 @@ class TokenFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     description = forms.CharField(required=False)
     write_enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Write Enabled")
+    created = forms.DateTimeField(required=False, widget=DateTimePicker())
     expires = forms.DateTimeField(required=False, widget=DateTimePicker())
 
 
