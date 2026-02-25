@@ -2658,7 +2658,7 @@ class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
                 with self.assertRaises(ValidationError) as err:
                     parent_device_type.full_clean()
                 self.assertIn(
-                    "Must delete all device bay templates associated with this device before declassifying it as a parent device.",
+                    "Must delete all device bay templates associated with this device type before declassifying it as a parent device.",
                     str(err.exception),
                 )
 

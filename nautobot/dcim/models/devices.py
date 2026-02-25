@@ -362,7 +362,7 @@ class DeviceType(PrimaryModel):
         if not self.is_parent_device and self.device_bay_templates.count():
             raise ValidationError(
                 {
-                    "subdevice_role": "Must delete all device bay templates associated with this device before "
+                    "subdevice_role": "Must delete all device bay templates associated with this device type before "
                     "declassifying it as a parent device."
                 }
             )
