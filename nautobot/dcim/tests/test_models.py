@@ -2080,7 +2080,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
         )
         child_device.validated_save()
-        child_mtime_before_parent_saved = str(child_device.last_updated)
+        child_mtime_before_parent_saved = child_device.last_updated
 
         parent_devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
         parent_devicebay.installed_device = child_device
@@ -2094,7 +2094,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         # On a NOOP save, the child device shouldn't be updated
         parent_device.save()
 
-        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
 
@@ -2103,7 +2103,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.serial = "12345"
         parent_device.save()
 
-        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
 
@@ -2140,7 +2140,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             str(cm.exception),
         )
 
-        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
 
@@ -2152,7 +2152,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.location = location
         parent_device.save()
 
-        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
@@ -2192,8 +2192,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_child_device_bay.installed_device = child_device
         parent_child_device_bay.validated_save()
 
-        parent_child_mtime_before_parent_saved = str(parent_child_device.last_updated)
-        child_mtime_before_parent_saved = str(child_device.last_updated)
+        parent_child_mtime_before_parent_saved = parent_child_device.last_updated
+        child_mtime_before_parent_saved = child_device.last_updated
 
         #
         # Tests
@@ -2203,8 +2203,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         # On a NOOP save, the child devices shouldn't be updated
         parent_device.save()
 
-        parent_child_mtime_after_parent_noop_save = str(Device.objects.get(name="Parent-Child Device 1").last_updated)
-        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 2").last_updated)
+        parent_child_mtime_after_parent_noop_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 2").last_updated
 
         self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_noop_save)
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
@@ -2214,10 +2214,10 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.serial = "12345"
         parent_device.save()
 
-        parent_child_mtime_after_parent_serial_update_save = str(
-            Device.objects.get(name="Parent-Child Device 1").last_updated
-        )
-        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 2").last_updated)
+        parent_child_mtime_after_parent_serial_update_save = Device.objects.get(
+            name="Parent-Child Device 1"
+        ).last_updated
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 2").last_updated
 
         self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_serial_update_save)
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
@@ -2228,10 +2228,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.rack = rack
         parent_device.save()
 
-        parent_child_mtime_after_parent_rack_update_save = str(
-            Device.objects.get(name="Parent-Child Device 1").last_updated
-        )
-        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 2").last_updated)
+        parent_child_mtime_after_parent_rack_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 2").last_updated
 
         self.assertNotEqual(parent_child_mtime_after_parent_noop_save, parent_child_mtime_after_parent_rack_update_save)
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
@@ -2244,10 +2242,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.location = location
         parent_device.save()
 
-        parent_child_mtime_after_parent_site_update_save = str(
-            Device.objects.get(name="Parent-Child Device 1").last_updated
-        )
-        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 2").last_updated)
+        parent_child_mtime_after_parent_site_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 2").last_updated
 
         self.assertNotEqual(
             parent_child_mtime_after_parent_rack_update_save, parent_child_mtime_after_parent_site_update_save
