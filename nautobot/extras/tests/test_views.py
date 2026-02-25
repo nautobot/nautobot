@@ -1,4 +1,5 @@
 from datetime import timedelta
+from http import HTTPStatus
 from unittest import mock
 import urllib.parse
 import uuid
@@ -1977,6 +1978,48 @@ class CustomFieldTestCase(
         self.assertFormSetError(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
+
+    def test_scope_filter_fields_without_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+
+    def test_scope_filter_fields_with_invalid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+
+    def test_scope_filter_fields_with_valid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        content_type = ContentType.objects.get_for_model(Location)
+
+        url = reverse("extras:customfield_scope_filter_fields") + f"?content_types={content_type.pk}"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        # Check if tabs are present
+        self.assertIn("Basic", response_content)
+        self.assertIn("Advanced", response_content)
+        # Check example select are present
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
 
 
 class CustomLinkRenderingTestCase(TestCase):
