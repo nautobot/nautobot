@@ -1162,9 +1162,11 @@ class DeviceBay(ComponentModel):
     def _validate_installed_device_parent_chain(self):
         """Validate this bay assignment against the parent chain.
 
-        Ensures: installed_device is not already an ancestor of this bay's device;
-        no existing loop in the parent chain; device not already in another bay;
-        device type is child or parent-child.
+        Ensures:
+        - installed_device is not already an ancestor of this bay's device
+        - no existing loop in the parent chain
+        - device not already in another bay
+        - device type is child or parent-child
         """
         seen_devices = set()
         parent_bay = DeviceBay.objects.filter(installed_device=self.device).first()
