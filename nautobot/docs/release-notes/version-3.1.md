@@ -135,6 +135,9 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8596](https://github.com/nautobot/nautobot/issues/8596) - Improved unit test coverage for scope filter HTMX endpoint.
 - [#8609](https://github.com/nautobot/nautobot/issues/8609) - Made embedded object create form footer sticky.
 - [#8617](https://github.com/nautobot/nautobot/issues/8617) - Enhanced Location list view tree rendering to follow the same pattern as Prefix list view tree.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Restored support for `DATE_FORMAT`, `DATETIME_FORMAT`, `SHORT_DATE_FORMAT`, `SHORT_DATETIME_FORMAT`, and `TIME_FORMAT` settings.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed user-defined locale/language selection feature (previously introduced for 3.1 by #8417).
+- [#8628](https://github.com/nautobot/nautobot/issues/8628) - Changed "global" search to load results incrementally with HTMX in order to avoid timing out when searching a large amount of data.
 
 ### Fixed in v3.1.0a3
 
@@ -161,6 +164,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8532](https://github.com/nautobot/nautobot/issues/8532) - Changed the Python API for the UI components to allow default values to be set directly as class attributes.
 - [#8602](https://github.com/nautobot/nautobot/issues/8602) - Decoupled the EChartsPanel and EChartsBase classes.
 - [#8602](https://github.com/nautobot/nautobot/issues/8602) - Removed the redundant `permission` attribute from the EChartsBase class.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed leftover test case for social-auth-app-django patch.
 
 ## v3.1.0a2 (2026-02-10)
 
