@@ -129,7 +129,7 @@ class TableTestCase(TestCase):
             ("ssid", "SSID"),
             ("mode", "Mode"),
             ("authentication", "Authentication"),
-            ("secret", "Secret"),
+            ("secrets_group", "Secrets group"),
             ("description", "Description"),
             ("tags", "Tags"),
             ("dynamic_group_count", "Dynamic Groups"),

@@ -83,6 +83,12 @@
             dynamicFilterForm: document.querySelector('#dynamic-filter-form'),
         });
 
+        /**
+         * Check if submit event is from default filter form or other form on page.
+         * @param defaultFilterForm
+         * @param event
+         * @returns {boolean}
+         */
         const isEventFromDefaultFilterFormField = (defaultFilterForm, event) => (
             event.target.form === defaultFilterForm
         )

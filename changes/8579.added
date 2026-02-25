@@ -1,0 +1,2 @@
+Added role-based precedence for `console_log` (Author -> Admin -> Runner).
+Added the ability to run scheduled jobs with the console log.

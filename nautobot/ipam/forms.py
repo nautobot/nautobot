@@ -98,6 +98,7 @@ class NamespaceBulkEditForm(
 
 class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm, TenancyFilterForm):
     model = Namespace
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     field_order = ["q", "name", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
