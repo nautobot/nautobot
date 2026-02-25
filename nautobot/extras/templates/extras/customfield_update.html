@@ -209,6 +209,12 @@
             dynamicFilterForm: document.querySelector('#advanced-filter'),
         });
 
+        /**
+         * Check if submit event is from default filter form or other form on page.
+         * @param defaultFilterForm
+         * @param event
+         * @returns {boolean}
+         */
         const isEventFromDefaultFilterFormField = (defaultFilterForm, event) => (
             event.target.closest(`#${defaultFilterForm?.id}`) !== null
         )
@@ -242,6 +248,11 @@
                 const add = dynamicFilterForm.querySelector('button.nb-dynamic-filter-add');
                 add.click();
 
+                /*
+                 * Data on default and advanced tabs are synchronized and we can't send both forms
+                 * to avoid data duplication. To do that we need to remove name attributes from inputs
+                 * that are belongs to the default tab just before form submission.
+                 */
                 defaultFilterForm
                     .querySelectorAll('input[name], select[name], textarea[name]')
                     .forEach(el => {

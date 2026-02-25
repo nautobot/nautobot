@@ -321,6 +321,7 @@ class CustomFieldModel(models.Model):
         super().clean()
 
         custom_fields = {cf.key: cf for cf in CustomField.objects.get_for_model(self)}
+        custom_fields_should_render = {cf.key: cf.should_render(self) for cf in custom_fields.values()}
 
         # Validate all field values
         for field_key, value in self._custom_field_data.items():
@@ -329,13 +330,19 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
+                # If field should be rendered, we perform full validation with enforce_required=True
+                # If field is out of scope, we don't require it to be set; but if is set we still check if value
+                # has correct type or is a correct choice
+                # For hidden custom field (out of scope) there still might be a value set in DB and also API can modify it
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(
+                    value, enforce_required=custom_fields_should_render[field_key]
+                )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
         # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
-            if cf.key not in self._custom_field_data:
+            if cf.key not in self._custom_field_data and custom_fields_should_render[cf.key]:
                 if cf.default is not None:
                     self._custom_field_data[cf.key] = cf.default
                 elif cf.required:
@@ -882,7 +889,7 @@ class CustomField(
                 form_field.widget = MultiValueCharInput()
         return form_field
 
-    def validate(self, value):
+    def validate(self, value, enforce_required=True):
         """
         Validate a value according to the field's type validation rules.
 
@@ -954,7 +961,7 @@ class CustomField(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
-        elif self.required:
+        elif self.required and enforce_required:
             raise ValidationError("Required field cannot be empty.")
 
         return value
@@ -984,16 +991,6 @@ class CustomField(
         Add `cf_` prefix to the key for forms and filters usage
         """
         return "cf_" + str(self.key)
-
-    @property
-    def filter_field(self):
-        """
-        Property to get prefixed field key for forms and filters usage.
-
-        Example:
-            key=test_field; this will return cf_test_field
-        """
-        return self.add_prefix_to_cf_key()
 
     @property
     def scope_filter_model_class(self):

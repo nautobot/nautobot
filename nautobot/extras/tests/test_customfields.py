@@ -551,6 +551,71 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
         )
 
+    def test_scope_filter_prefixed_return_prefixed_data(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            scope_filter={"name": ["Test name"], "location": ["Test location"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        expected_prefixed_data = {"scope-name": ["Test name"], "scope-location": ["Test location"]}
+        prefixed = cf.scope_filter_prefixed
+        self.assertEqual(prefixed, expected_prefixed_data)
+
+    def test_validate_enforce_required(self):
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        value = cf.validate("", enforce_required=False)
+        self.assertEqual(value, "")
+
+        with self.assertRaisesRegex(ValidationError, "Required field cannot be empty."):
+            cf.validate("", enforce_required=True)
+
+    def test_scope_filter_with_required_field_while_updating_object(self):
+        """
+        Test if updating object from "out-of-scope" to "in-scope" is working for required custom fields.
+        """
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location = Location.objects.get(name="Location A")
+
+        cf = CustomField(
+            label="Test transitioning",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+            scope_filter={"description__ic": "in-scope"},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        # Empty value should work for out of scope field even if required
+        location._custom_field_data.update({"test_transitioning": ""})
+        location.validated_save()
+
+        location = Location.objects.get(name="Location A")
+        self.assertEqual(location._custom_field_data.get("test_transitioning"), "")
+
+        # Set object to be in scope, but still should pass
+        location.description = "in-scope"
+        location.validated_save()
+
+        location = Location.objects.get(name="Location A")
+        self.assertEqual(location._custom_field_data.get("test_transitioning"), "")
+        self.assertEqual(location.description, "in-scope")
+
+        # But second save will fail because it's in s
+        with self.assertRaisesRegex(
+            ValidationError, "Invalid value for custom field 'test_transitioning': Required field cannot be empty."
+        ):
+            location.validated_save()
+
 
 @tag("example_app")
 class CustomFieldManagerTest(TestCase):
@@ -1511,6 +1576,10 @@ class CustomFieldModelTest(TestCase):
             weight=200,
         )
 
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_a = Location.objects.create(name="Location A", status=location_status, location_type=cls.lt)
+        cls.location_b = Location.objects.create(name="Location B", status=location_status, location_type=cls.lt)
+
     def test_custom_field_dict_population(self):
         """Test that custom_field_data is properly populated when no data is passed in."""
         label = "Custom Field"
@@ -1713,6 +1782,51 @@ class CustomFieldModelTest(TestCase):
             ):
                 cf1.key = invalid_key
                 cf1.validated_save()
+
+    def test_clean_properly_check_required_fields_when_no_data_saved(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Test clean",
+            required=True,
+            scope_filter={"name": "Location A"},
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location_a = Location.objects.get(name="Location A")
+        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'test_clean'."):
+            location_a.clean()
+
+        location_b = Location.objects.get(name="Location B")
+        location_b.clean()
+
+    def test_clean_required_fields_when_key_exists(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Test clean",
+            required=True,
+            scope_filter={"name": "Location A"},
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location_a = Location.objects.get(name="Location A")
+        location_a._custom_field_data.update({"test_clean": ""})
+        with self.assertRaisesRegex(
+            ValidationError, "Invalid value for custom field 'test_clean': Required field cannot be empty."
+        ):
+            location_a.validated_save()
+
+        location_b = Location.objects.get(name="Location B")
+        location_b._custom_field_data.update({"test_clean": ""})
+        location_b.validated_save()
+        self.assertEqual(location_b._custom_field_data.get("test_clean"), "")
 
 
 class CustomFieldFilterTest(TestCase):
