@@ -918,9 +918,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         This method is the primary entry point for job execution and supports
         asynchronous (Celery), synchronous, and queue-based execution modes.
 
-        Relationship to management commands `runjob_with_consolelog`:
+        Relationship to management commands `execute_job_result`:
         - When jobs are executed synchronously with console logging enabled,
-        an alternate execution path exists in `runjob_with_consolelog`.
+        an alternate execution path exists in `execute_job_result`.
         - Both implementations perform similar responsibilities:
             * executing the job
             * capturing results and exceptions
@@ -932,7 +932,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         IMPORTANT:
             If changes are made to job execution behavior (status transitions,
             result handling, logging, profiling, or error propagation), the
-            corresponding logic in ``runjob_with_consolelog`` must be reviewed and
+            corresponding logic in ``execute_job_result`` must be reviewed and
             updated as needed to keep behavior consistent across execution modes.
 
         This duplication is intentional but requires ongoing coordination.
@@ -1005,7 +1005,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             celery_kwargs=celery_kwargs,
         )
         job_result.celery_kwargs = job_celery_kwargs
-        job_result.save()  # previous save was done only in synchronous mode. Won't that break anything?
+        job_result.save()
 
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
@@ -1019,7 +1019,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
-            # job_result.celery_kwargs = job_celery_kwargs this was move above this if, to have set celery_kwargs always
             job_result.date_started = timezone.now()
             job_result.save()
 

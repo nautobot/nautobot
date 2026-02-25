@@ -21,7 +21,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """
-        Execute a job in subprocess with console logging enabled.
+        Directly execute a pending JobResult in the current process using Celery's
+        eager (synchronous) execution mode.
 
         This method represents a *parallel execution path* to
         `JobResult.enqueue_job()` when running jobs synchronously.
@@ -29,21 +30,37 @@ class Command(BaseCommand):
         logic, but differ in how execution is orchestrated and how output
         are handled.
 
-        Relationship to enqueue_job():
-        - Both paths execute a job associated with a JobResult.
-        - Both are responsible for updating job status, result, and
-        error information.
-        - enqueue_job() supports asynchronous, synchronous, and queue-based
-        execution (Celery, Kubernetes, etc.).
-        - console_log_run() is intentionally limited to subprocess, synchronous
-        execution with stdout/stderr streamed directly to the console.
+        HOW THIS DIFFERS FROM `runjob --local`:
+        - `runjob --local` accepts a job class path and username as CLI arguments,
+        constructs a new JobResult, and calls `JobResult.execute_job()`.
+        - `execute_job_result` accepts an *existing* JobResult PK (already created
+        and PENDING), and re-uses it directly via `run_job.apply()`. It does not
+        create a new JobResult and does not accept a class path or username.
+
+        HOW THIS DIFFERS FROM `runjob_with_job_result`:
+        - `runjob_with_job_result` is an orchestrator: it inspects the JobResult and
+        decides *how* to run it. Either by spawning `execute_job_result` as a
+        subprocess (via `JobConsoleLogExecutor`) when console logging is enabled,
+        or by calling `JobResult.execute_job()` directly otherwise.
+        - `execute_job_result` is the *leaf* command it is never called by a human
+        directly. It is always invoked as a subprocess by `JobConsoleLogExecutor`,
+        which is responsible for capturing its stdout/stderr and storing them as
+        `JobConsoleEntry` rows. It has no knowledge of how its output is consumed.
+
+        EXECUTION CHAIN (console_log path):
+            runjob_with_job_result
+                |
+                -- JobConsoleLogExecutor.execute()
+                    |
+                    -- subprocess: execute_job_result <job_result_pk>
+                        |
+                        -- run_job.apply() (Celery eager)
 
         IMPORTANT:
-            Changes to job execution semantics (status handling, result
-            persistence, exception behavior, logging, or profiling) should
-            be reviewed in *both* this method and `enqueue_job()`.
-            These implementations must remain reasonably synchronized to
-            avoid inconsistent job behavior between execution modes.
+            Changes to job execution semantics (status handling, result persistence,
+            exception behavior, logging, or profiling) should be reviewed in both
+            this command and `JobResult.enqueue_job()`. These two paths must remain
+            consistent to avoid divergent behavior between execution modes.
         """
         job_result = None
         job_result_id = options["job_result"]

@@ -136,7 +136,7 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        return [f"{sys.argv[0]}", "runjob_with_consolelog", f"{self.job_result_pk}"]
+        return [f"{sys.argv[0]}", "execute_job_result", f"{self.job_result_pk}"]
 
     def _print_output(self):
         """Print output in real-time while process runs."""

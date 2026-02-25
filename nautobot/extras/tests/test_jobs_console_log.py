@@ -162,7 +162,7 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
         mock_popen.assert_called_once_with(
             [
                 sys.argv[0],
-                "runjob_with_consolelog",
+                "execute_job_result",
                 f"{self.job_result.pk}",
             ],
             stdout=mock.ANY,

@@ -3723,8 +3723,8 @@ class JobResultTestCase(TestCase):
             task_queue=task_queue,
         )
 
-        self.assertEqual(result["nautobot_job_job_model_id"], job_model.id)
-        self.assertEqual(result["nautobot_job_user_id"], self.user.id)
+        self.assertEqual(result["nautobot_job_job_model_id"], str(job_model.id))
+        self.assertEqual(result["nautobot_job_user_id"], str(self.user.id))
         self.assertEqual(result["queue"], task_queue)
         self.assertEqual(result["nautobot_job_profile"], False)
         self.assertEqual(result["nautobot_job_console_log"], False)
