@@ -164,7 +164,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8532](https://github.com/nautobot/nautobot/issues/8532) - Changed the Python API for the UI components to allow default values to be set directly as class attributes.
 - [#8602](https://github.com/nautobot/nautobot/issues/8602) - Decoupled the EChartsPanel and EChartsBase classes.
 - [#8602](https://github.com/nautobot/nautobot/issues/8602) - Removed the redundant `permission` attribute from the EChartsBase class.
-- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed leftover test case for social-auth-app-django patch.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed leftover test case for `social-auth-app-django` patch.
 
 ## v3.1.0a2 (2026-02-10)
 
