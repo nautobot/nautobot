@@ -590,7 +590,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             label="Test transitioning",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             required=True,
-            scope_filter={"description__ic": "in-scope"}
+            scope_filter={"description__ic": "in-scope"},
         )
         cf.validated_save()
         cf.content_types.set([obj_type])
@@ -611,7 +611,9 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertEqual(location.description, "in-scope")
 
         # But second save will fail because it's in s
-        with self.assertRaisesRegex(ValidationError, "Invalid value for custom field 'test_transitioning': Required field cannot be empty."):
+        with self.assertRaisesRegex(
+            ValidationError, "Invalid value for custom field 'test_transitioning': Required field cannot be empty."
+        ):
             location.validated_save()
 
 
