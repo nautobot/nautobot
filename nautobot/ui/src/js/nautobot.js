@@ -48,6 +48,7 @@ import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
+import { initializeSubtrees } from './tree.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   window.nb ??= {};
@@ -98,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
    *   ```
    */
   observeCollapseTabs();
+
+  // Trees
+  initializeSubtrees();
 
   // Theme
   initializeTheme();
