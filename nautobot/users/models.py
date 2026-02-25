@@ -232,7 +232,7 @@ class AdminGroup(Group):
 #
 
 
-class Token(BaseModel):
+class Token(BaseModel, ChangeLoggedModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
