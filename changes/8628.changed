@@ -1,1 +1,0 @@
-Changed "global" search to load results incrementally with HTMX in order to avoid timing out when searching a large amount of data.
