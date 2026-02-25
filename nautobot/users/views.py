@@ -365,6 +365,13 @@ class TokenUIViewSet(NautobotUIViewSet):
         form.save_m2m()
         return obj
 
+    def get_queryset(self):
+        """
+        Limit visibility to tokens owned by the authenticated user.
+        """
+        queryset = super().get_queryset()
+        return queryset.filter(user=self.request.user)
+
 
 class TokenListView(GenericView):
     view_titles = Titles(titles={"*": "API Tokens"})
