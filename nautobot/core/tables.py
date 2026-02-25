@@ -131,6 +131,9 @@ class BaseTable(django_tables2.Table):
             row_attrs["hx-get"] = lambda record: reverse(
                 get_route_for_model(record._meta.label, "detail", api=True), kwargs={"pk": record.pk}
             )
+            row_attrs["role"] = "button"
+            row_attrs["tabindex"] = 0
+            row_attrs["onkeydown"] = "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }"
 
         self.configurable = configurable
         self.is_object_embedded_search_results = is_object_embedded_search_results
@@ -165,8 +168,14 @@ class BaseTable(django_tables2.Table):
         pk = self.base_columns.pop("pk", None)
         actions = self.base_columns.pop("actions", None)
         if is_object_embedded_search_results:
-            # Show only the first 3 columns in their default order in object embedded search results
-            columns = list(self.base_columns)[:3]
+            # Show only the first 3 columns (excluding "pk" and "actions") in their default order in object embedded search results
+            static_columns = list(default_columns or self.base_columns)
+            # "pk" and "actions" columns are already removed from `base_columns`, but could be present in `default_columns`
+            if "pk" in static_columns:
+                static_columns.remove("pk")
+            if "actions" in static_columns:
+                static_columns.remove("actions")
+            columns = static_columns[:3]
         elif saved_view is not None and not table_changes_pending:
             view_table_config = saved_view.config.get("table_config", {}).get(f"{self.__class__.__name__}", None)
             if view_table_config is not None:

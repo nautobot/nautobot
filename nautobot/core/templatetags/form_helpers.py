@@ -22,12 +22,6 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
 
     embedded_create_query_params = []
     embedded_search_query_params = []
-
-    try:
-        embedded_search_query_params.append(("content_type", field_instance.queryset.model._meta.label_lower))
-    except AttributeError:
-        pass
-
     field_query_params = getattr(field_instance, "query_params", {})
     for query_param_name, query_param_value in field_query_params.items():
         # If field defines a specific content type(s), use it as initial value in embedded create and search forms.
@@ -43,9 +37,15 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
                     embedded_create_query_params.append((query_param_name, content_type_id))
                     # For search form, additionally prefix content type param with `initial_` to avoid confusion with
                     # `content_type` param indicating the model of filterset form to render, not related to form values.
-                    embedded_search_query_params.append((f"initial_{query_param_name}", content_type))
+                    embedded_search_query_params.append((query_param_name, content_type))
                 except (AttributeError, ObjectDoesNotExist, ValueError):
                     pass
+
+    embedded_search_content_type = ""
+    try:
+        embedded_search_content_type = field_instance.queryset.model._meta.label_lower
+    except AttributeError:
+        pass
 
     return {
         "field": field,
@@ -54,6 +54,7 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
         "should_render_embedded_search": embedded_search and not is_embedded,
         "embedded_create_query_string": urlencode(embedded_create_query_params),
         "embedded_search_query_string": urlencode(embedded_search_query_params),
+        "embedded_search_content_type": embedded_search_content_type,
         "container_class": container_class,
     }
 

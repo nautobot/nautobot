@@ -18,7 +18,13 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.http import FileResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.http import (
+    FileResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseServerError,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
@@ -358,23 +364,6 @@ class SearchView(AccessMixin, View):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
-        # For HTMX request with `content_type` query param, render embedded search form.
-        if request.headers.get("HX-Request", False) and "content_type" in request.GET:
-            content_type = request.GET.get("content_type")
-            model = get_model_from_name(content_type)
-            filterset = get_filterset_for_model(model)
-            filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
-            # Compose initial data from all given query params with `initial_` prefix, and remove that prefix afterward.
-            initial_data = {k.replace("initial_", "", 1): v for k, v in request.GET.items() if k.startswith("initial_")}
-            filter_form = filterset_form(
-                auto_id="embedded_id_%s", initial=normalize_querydict(initial_data, filterset=filterset())
-            )
-            return render(
-                request,
-                "components/htmx/object_embedded_search.html",
-                {"filter_form": filter_form, "model": model},
-            )
-
         # No query
         if "q" not in request.GET:
             return render(request, "search.html", {})
@@ -431,6 +420,29 @@ class SearchView(AccessMixin, View):
                 "results": results,
             },
         )
+
+
+class SearchContentTypeView(AccessMixin, View):
+    def get(self, request, content_type):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            model = get_model_from_name(content_type)
+            filterset = get_filterset_for_model(model)
+            filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
+            filter_form = filterset_form(
+                auto_id="embedded_id_%s", initial=normalize_querydict(request.GET, filterset=filterset())
+            )
+            return render(
+                request,
+                "components/htmx/object_embedded_search.html",
+                {"filter_form": filter_form, "model": model},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page

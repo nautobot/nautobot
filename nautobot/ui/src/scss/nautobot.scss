@@ -2655,19 +2655,32 @@ pre.version, pre.version-stamp {
   padding: map.get($spacers, 16);
   width: 100%;
 
-  tbody tr {
-    cursor: pointer;
-  }
+  .table {
+    tbody > tr {
+      cursor: pointer;
+    }
 
-  /*
-   * Disable all interactions in object embedded search results table cells. This solution is not perfect because it
-   * still allows the elements to be interacted with via keyboard, but at the same time it is non-intrusive for the rest
-   * of the code and should be _good enough_ for this specific use case.
-   */
-  td > *,
-  th > * {
-    pointer-events: none;
-    user-select: none;
+    /*
+     * Disable all interactions in object embedded search results table cells. This solution is not perfect because it
+     * still allows the elements to be interacted with via keyboard, but at the same time it is non-intrusive for the
+     * rest of the code and should be _good enough_ for this specific use case.
+     */
+    td > *,
+    th > * {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* Restore "orderable" text color in header cells, because due to disabled table sorting they look grayed out. */
+    th {
+      color: var(--bs-secondary-color);
+    }
+
+    /* De-style links inside table cells. */
+    td a {
+      color: var(--#{$prefix}body-color);
+      text-decoration: none;
+    }
   }
 }
 
