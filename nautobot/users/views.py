@@ -1,7 +1,6 @@
 from http import HTTPStatus
 import logging
 
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -16,7 +15,6 @@ from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
-from django.utils.translation import activate, get_language_from_request
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
@@ -169,7 +167,6 @@ class UserConfigView(GenericView):
     def get(self, request):
         initial = {}
         initial["timezone"] = request.user.get_config("timezone", get_default_timezone_name())
-        initial["language"] = request.user.get_config("language", get_language_from_request(request))
         form = PreferenceProfileSettingsForm(initial=initial)
         preferences = request.user.all_config()
 
@@ -194,10 +191,6 @@ class UserConfigView(GenericView):
                 response = redirect("user:preferences")
                 if timezone := form.cleaned_data["timezone"]:
                     request.user.set_config("timezone", str(timezone), commit=True)
-                if language := form.cleaned_data["language"]:
-                    request.user.set_config("language", str(language), commit=True)
-                    activate(language)
-                    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, language)
                 return response
 
             return render(
