@@ -3686,6 +3686,26 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
 
 class JobResultTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.job_result = JobResult.objects.create(
+            name="JobResultTest",
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result=None,
+            traceback=None,
+            date_done=None,
+        )
+
+    def _make_eager_result(self, **kwargs):
+        """Helper to create an unsaved eager JobResult-like object."""
+        defaults = {
+            "status": JobResultStatusChoices.STATUS_SUCCESS,
+            "result": "Default Eager Result",
+            "traceback": None,
+        }
+        defaults.update(kwargs)
+        return JobResult(**defaults)
+
     def test_passing_invalid_data_into_job_result(self):
         """JobResult.result was changed from TextField to JSONField in https://github.com/nautobot/nautobot/pull/4133/files.
         Assert passing json serializable and non-serializable data into JobResult.result"""
@@ -3841,6 +3861,96 @@ class JobResultTestCase(TestCase):
             "queue",
         }
         self.assertEqual(set(result.keys()), expected_keys)
+
+    def test_higher_precedence_status_updates_job_result(self):
+        """Eager result with higher precedence should overwrite status and result."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="Eager Result Test1",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Eager Result Test1")
+        self.assertIsNotNone(self.job_result.date_done)
+
+    def test_lower_precedence_status_does_not_overwrite(self):
+        """Eager result with lower precedence should not overwrite job_result and status fields."""
+        self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result.result = "Result Higher Precedence"
+        self.job_result.save()
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result="Lower Precedence",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Result Higher Precedence")
+
+    def test_exception_result_copies_structured_exception(self):
+        """Exception results should be converted to structured exc_type / exc_message."""
+        exc = ValueError("Exception Test")
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_FAILURE,
+            result=exc,
+            traceback="traceback text",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertEqual(
+            self.job_result.result,
+            {
+                "exc_type": "ValueError",
+                "exc_message": "Exception Test",
+            },
+        )
+        self.assertEqual(self.job_result.traceback, "traceback text")
+
+    def test_non_exception_result_without_traceback(self):
+        """Successful eager results should not set traceback."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="ok",
+            traceback=None,
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.result, "ok")
+        self.assertIsNone(self.job_result.traceback)
+
+    def test_date_done_is_not_overwritten_if_already_set(self):
+        """Existing date_done should not be replaced."""
+        existing_date = now()
+        self.job_result.date_done = existing_date
+        self.job_result.save()
+
+        eager_result = self._make_eager_result()
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.date_done, existing_date)
+
+    def test_save_is_always_called(self):
+        """JobResult.save() should always be called."""
+        eager_result = self._make_eager_result()
+
+        with mock.patch.object(JobResult, "save", autospec=True) as save_mock:
+            JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        save_mock.assert_called_once()
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

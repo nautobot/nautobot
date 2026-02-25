@@ -27,7 +27,7 @@ class Command(BaseCommand):
             job_result = JobResult.objects.get(pk=job_result_id)
         except JobResult.DoesNotExist:
             raise CommandError(f"Job result with pk {job_result_id} not found.")
-        if job_result.status != JobResultStatusChoices.STATUS_PENDING and not options["console_log"]:
+        if job_result.status != JobResultStatusChoices.STATUS_PENDING:
             raise CommandError(
                 f"Job result has an invalid status {job_result.status} for this command."
                 f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"

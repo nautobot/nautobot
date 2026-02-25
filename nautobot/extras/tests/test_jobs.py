@@ -1616,3 +1616,66 @@ class RunConsoleLogJobTestCase(TestCase):
         finally:
             run_console_log_job_and_return_job_result.pop_request()
         mock_job_console_log_execute.assert_called_once()
+
+
+class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.enabled = True
+        job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=job_model,
+            user=self.user,
+            name=job_model.class_path,
+            date_done=timezone.now(),
+            celery_kwargs={"nautobot_job_console_log": True},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_used(
+        self,
+        mock_report_job_status,
+        mock_execute_job,
+        mock_executor_console_log,
+    ):
+        """Command should use JobConsoleLogExecutor when console logging is enabled."""
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_executor_console_log.assert_called_once_with(str(self.job_result.pk))
+        mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_execute_job.assert_not_called()
+        mock_report_job_status.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_not_used(
+        self,
+        mock_report_job_status,
+        mock_execute_job,
+        mock_executor_console_log,
+    ):
+        """Command should not use JobConsoleLogExecutor when console logging is disabled."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_execute_job.assert_called_once_with(
+            self.job_result.job_model, self.job_result.user, profile=False, job_result=self.job_result
+        )
+        mock_executor_console_log.assert_not_called()
+        mock_report_job_status.assert_called_once()
