@@ -503,7 +503,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    location = NaturalKeyOrPKMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="rack__location",
         to_field_name="name",
@@ -1407,7 +1407,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
-    tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+    tenant_group = TreeNodeMultipleChoiceFilter(
         field_name="master__tenant__tenant_group",
         queryset=TenantGroup.objects.all(),
         to_field_name="name",
@@ -1735,6 +1735,7 @@ class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetM
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interfaces (name or ID)",
+        prefers_id=True,
     )
 
     class Meta:
