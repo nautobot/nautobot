@@ -110,7 +110,7 @@
                 if (obj) {
                     event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
 
-                    // Add selected object to already existing Select2 target field array of values.
+                    // If `multiple`, add selected object to already existing Select2 target field array of values.
                     const targetField = document.querySelector(
                         `#nb-create-form [name="${window.nb.embeddedAction.targetFieldName}"]`,
                     );
@@ -119,7 +119,7 @@
                         value: option.value,
                     }));
                     window.nb.select2.setSelect2Value(targetField, [
-                        ...targetFieldValue,
+                        ...(targetField?.getAttribute('multiple') !== null ? targetFieldValue : []),
                         { text: obj.display, value: obj.id },
                     ]);
 
