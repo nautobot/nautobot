@@ -370,6 +370,8 @@ class TokenUIViewSet(NautobotUIViewSet):
         Limit visibility to tokens owned by the authenticated user.
         """
         queryset = super().get_queryset()
+        if not self.request.user.is_authenticated:
+            return queryset.none()
         return queryset.filter(user=self.request.user)
 
 
