@@ -1,2 +1,0 @@
-Decoupled the EChartsPanel and EChartsBase classes.
-Removed the redundant `permission` attribute from the EChartsBase class.
