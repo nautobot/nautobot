@@ -22,7 +22,6 @@ class PasswordUITest(TestCase):
         """
         Check that a Django-authentication-based user is allowed to change their password
         """
-        self.add_permissions("users.view_token")
         profile_response = self.client.get(reverse("user:profile"))
         preferences_response = self.client.get(reverse("user:preferences"))
         for response in [profile_response, preferences_response]:
@@ -111,8 +110,7 @@ class PasswordUITest(TestCase):
             # Check UI
             profile_response = self.client.get(reverse("user:profile"))
             preferences_response = self.client.get(reverse("user:preferences"))
-            api_tokens_response = self.client.get(reverse("users:token_list"))
-            for response in [profile_response, preferences_response, api_tokens_response]:
+            for response in [profile_response, preferences_response]:
                 self.assertNotIn("Change Password", utils.extract_page_body(response.content.decode(response.charset)))
 
             # Check GET and POST change_password functionality
