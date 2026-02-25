@@ -18,12 +18,13 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
-from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
@@ -513,24 +514,58 @@ class SearchViewTestCase(TestCase):
         self.assertIsNone(response.context["table"])
         self.assertNotContains(response, str(self.location.pk))
 
-    def test_htmx_any_searchable_model_returns_valid_response(self):
-        """HTMX request for another model in the searchable_models list returns a valid response."""
+    def test_htmx_all_searchable_models_return_valid_responses(self):
+        """HTMX request for each model in the searchable_models list returns a valid response."""
         searchable_models = []
         for app_config in apps.get_app_configs():
             if hasattr(app_config, "searchable_models"):
                 searchable_models += [
                     f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
                 ]
-        last_model = searchable_models[-1]
-        response = self.client.get(
-            reverse("search"),
-            {"q": "zzz_no_match_xyzzy_abc123", "model": last_model},
-            headers={"HX-Request": "true"},
-        )
-        self.assertHttpStatus(response, 200)
-        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
-        self.assertIsNone(response.context["table"])
-        self.assertNotContains(response, str(self.location.pk))
+        for label in searchable_models:
+            with self.subTest(label=label):
+                self.add_permissions(f"{label.split('.')[0]}.view_{label.split('.')[1]}")
+                model = get_model_from_name(label)
+                filterset_class = get_filterset_for_model(model)
+                if filterset_class is not None:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "1"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "a", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "a"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+                else:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    self.assertIsNone(response.context["table"])
 
 
 class FilterFormsTestCase(TestCase):
