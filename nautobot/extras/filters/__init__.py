@@ -304,11 +304,11 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Device Redundancy Group (name or PK)",
     )
-    tag = django_filters.ModelMultipleChoiceFilter(
+    tag = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tags",
         queryset=Tag.objects.all(),
         to_field_name="name",
-        label="Tag (name)",
+        label="Tag (ID or name)",
     )
     role = ConfigContextRoleFilter()
 
