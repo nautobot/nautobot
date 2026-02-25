@@ -10,6 +10,7 @@ from timezone_field import TimeZoneFormField
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
 from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.forms import BulkEditForm
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
@@ -54,8 +55,7 @@ class TokenFilterForm(NautobotFilterForm):
     model = Token
     q = forms.CharField(required=False, label="Search")
     description = forms.CharField(required=False)
-    write_enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Write Enabled")
-    created = forms.DateTimeField(required=False, widget=DateTimePicker())
+    write_enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     expires = forms.DateTimeField(required=False, widget=DateTimePicker())
 
 
