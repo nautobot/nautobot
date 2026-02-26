@@ -1436,7 +1436,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         """
         HTMX endpoint to re-render scope filter part of form on content type update.
         """
-        required_checked = True if request.GET.get("required", None) == "on" else False
+        required_checked = request.GET.get("required", None) == "on"
         context = {"required_checked": required_checked}
 
         model_class = self.get_content_type_model_class(request.GET)

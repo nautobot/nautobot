@@ -578,43 +578,32 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         with self.assertRaisesRegex(ValidationError, "Required field cannot be empty."):
             cf.validate("", enforce_required=True)
 
-    def test_scope_filter_with_required_field_while_updating_object(self):
+    def test_scope_filter_and_required_cant_be_set_both(self):
         """
-        Test if updating object from "out-of-scope" to "in-scope" is working for required custom fields.
+        Test if validation works properly and setting both required=True and scope filter is blocked.
         """
-        obj_type = ContentType.objects.get_for_model(Location)
-
-        location = Location.objects.get(name="Location A")
-
         cf = CustomField(
             label="Test transitioning",
             type=CustomFieldTypeChoices.TYPE_TEXT,
             required=True,
             scope_filter={"description__ic": "in-scope"},
         )
+
+        with self.assertRaisesRegex(ValidationError, "Scope filter can't be set, if field is required."):
+            cf.validated_save()
+
+        cf.required = False
         cf.validated_save()
-        cf.content_types.set([obj_type])
 
-        # Empty value should work for out of scope field even if required
-        location._custom_field_data.update({"test_transitioning": ""})
-        location.validated_save()
+        self.assertEqual(cf.scope_filter, {"description__ic": "in-scope"})
+        self.assertEqual(cf.required, False)
 
-        location = Location.objects.get(name="Location A")
-        self.assertEqual(location._custom_field_data.get("test_transitioning"), "")
+        cf.required = True
+        cf.scope_filter = {}
+        cf.validated_save()
 
-        # Set object to be in scope, but still should pass
-        location.description = "in-scope"
-        location.validated_save()
-
-        location = Location.objects.get(name="Location A")
-        self.assertEqual(location._custom_field_data.get("test_transitioning"), "")
-        self.assertEqual(location.description, "in-scope")
-
-        # But second save will fail because it's in s
-        with self.assertRaisesRegex(
-            ValidationError, "Invalid value for custom field 'test_transitioning': Required field cannot be empty."
-        ):
-            location.validated_save()
+        self.assertEqual(cf.scope_filter, {})
+        self.assertEqual(cf.required, True)
 
 
 @tag("example_app")
