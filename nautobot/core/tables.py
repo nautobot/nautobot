@@ -128,9 +128,7 @@ class BaseTable(django_tables2.Table):
             orderable = False
             if row_attrs is None:
                 row_attrs = {}
-            row_attrs["hx-get"] = lambda record: reverse(
-                get_route_for_model(record._meta.label, "detail", api=True), kwargs={"pk": record.pk}
-            )
+            row_attrs["hx-get"] = lambda record: record.get_absolute_url(api=True)
             row_attrs["role"] = "button"
             row_attrs["tabindex"] = 0
             row_attrs["onkeydown"] = "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }"
