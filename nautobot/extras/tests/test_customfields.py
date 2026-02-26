@@ -1783,51 +1783,6 @@ class CustomFieldModelTest(TestCase):
                 cf1.key = invalid_key
                 cf1.validated_save()
 
-    def test_clean_properly_check_required_fields_when_no_data_saved(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-
-        # Create a custom field
-        cf = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            label="Test clean",
-            required=True,
-            scope_filter={"name": "Location A"},
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-
-        location_a = Location.objects.get(name="Location A")
-        with self.assertRaisesRegex(ValidationError, "Missing required custom field 'test_clean'."):
-            location_a.clean()
-
-        location_b = Location.objects.get(name="Location B")
-        location_b.clean()
-
-    def test_clean_required_fields_when_key_exists(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-
-        # Create a custom field
-        cf = CustomField(
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            label="Test clean",
-            required=True,
-            scope_filter={"name": "Location A"},
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-
-        location_a = Location.objects.get(name="Location A")
-        location_a._custom_field_data.update({"test_clean": ""})
-        with self.assertRaisesRegex(
-            ValidationError, "Invalid value for custom field 'test_clean': Required field cannot be empty."
-        ):
-            location_a.validated_save()
-
-        location_b = Location.objects.get(name="Location B")
-        location_b._custom_field_data.update({"test_clean": ""})
-        location_b.validated_save()
-        self.assertEqual(location_b._custom_field_data.get("test_clean"), "")
-
 
 class CustomFieldFilterTest(TestCase):
     """

@@ -777,6 +777,7 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
                 "hx-select": "#nb-scope-filter-form-container",
                 "hx-target": "#nb-scope-filter-form-container",
                 "hx-swap": "outerHTML",
+                "hx-include": "[name='required']",
             }
         ),
     )
@@ -805,6 +806,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
 
         if self.initial.get("key"):
             self.fields["key"].disabled = True
+
+        self.fields["required"].widget.attrs.update(
+            {
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+                "hx-include": "[name='content_types']",
+            }
+        )
 
 
 class CustomFieldFilterForm(NautobotFilterForm):
