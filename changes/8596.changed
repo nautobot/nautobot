@@ -1,2 +1,0 @@
-Changed behavior of model edit forms to hide custom fields that are out of scope.
-Improved unit test coverage for scope filter HTMX endpoint.

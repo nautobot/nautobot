@@ -1,1 +1,0 @@
-Fixed a warning appearing in Firefox when updating table configuration in a view that contained multiple instances of the same table class.
