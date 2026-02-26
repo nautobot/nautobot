@@ -2227,6 +2227,7 @@ class JobUIViewSet(NautobotUIViewSet):
     queryset = JobModel.objects.all()
     serializer_class = serializers.JobSerializer
     table_class = tables.JobTable
+    # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
     form_class = forms.JobEditForm
     filterset_class = filters.JobFilterSet
     filterset_form_class = forms.JobFilterForm
