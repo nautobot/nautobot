@@ -28,11 +28,6 @@ class Command(BaseCommand):
             action="store_true",
             help="Run cProfile on the job execution and write the result to the disk under /tmp.",
         )
-        parser.add_argument(
-            "--console_log",
-            action="store_true",
-            help="Enable logging output to the console. This only works when execute job result is run as a subprocess.",
-        )
 
     def handle(self, *args, **options):
         """Execute a pending JobResult directly via Celery eager (synchronous) mode.
@@ -56,7 +51,7 @@ class Command(BaseCommand):
                 |
                 -- JobConsoleLogExecutor.execute()
                     |
-                    -- subprocess: execute_job_result <job_result_pk> --console_log
+                    -- subprocess: execute_job_result <job_result_pk>
                         |
                         -- run_job.apply() (Celery eager)
 
@@ -84,26 +79,9 @@ class Command(BaseCommand):
         else:
             data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
 
-        schedule = data.get("schedule", None)
-        celery_kwargs = data.get("celery_kwargs", None)
-        task_queue = data.get("task_queue", None)
-        ignore_singleton_lock = data.get("ignore_singleton_lock", None)
-
         job_celery_kwargs = job_result.celery_kwargs
         if not job_celery_kwargs:
-            # should be build in enqueue_job, but if not build it here
-            job_celery_kwargs = JobResult._build_celery_kwargs(
-                job_model=job_model,
-                user=job_user,
-                task_queue=task_queue,
-                console_log=options["console_log"],
-                profile=options["profile"],
-                ignore_singleton_lock=ignore_singleton_lock,
-                schedule=schedule,
-                celery_kwargs=celery_kwargs,
-            )
-
-            job_result.celery_kwargs = job_celery_kwargs
+            raise CommandError(f"Job result with pk {job_result_id} does not have `celery_kwargs` defined.")
         job_result.date_started = timezone.now()
         job_result.save()
         setup_nautobot_job_logging(None, None, app.conf)

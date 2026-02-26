@@ -164,7 +164,6 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
                 sys.argv[0],
                 "execute_job_result",
                 f"{self.job_result.pk}",
-                "--console_log",
             ],
             stdout=mock.ANY,
             stderr=mock.ANY,

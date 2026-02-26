@@ -63,12 +63,30 @@ class Command(BaseCommand):
         job_class_path = options["job"]
         job_model = Job.objects.get_for_class_path(job_class_path)
 
+        data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
         if options["local"]:
             job_result = JobResult.objects.create(
                 name=job_model.name,
                 job_model=job_model,
                 user=user,
             )
+            schedule = data.get("schedule", None)
+            celery_kwargs = data.get("celery_kwargs", None)
+            task_queue = data.get("task_queue", None)
+            ignore_singleton_lock = data.get("ignore_singleton_lock", None)
+            job_celery_kwargs = JobResult._build_celery_kwargs(
+                job_model=job_model,
+                user=user,
+                task_queue=task_queue,
+                console_log=options["console_log"],
+                profile=options["profile"],
+                ignore_singleton_lock=ignore_singleton_lock,
+                schedule=schedule,
+                celery_kwargs=celery_kwargs,
+            )
+
+            job_result.celery_kwargs = job_celery_kwargs
+            job_result.save()
             call_command(
                 "execute_job_result",
                 f"{job_result.pk!s}",
@@ -77,7 +95,6 @@ class Command(BaseCommand):
                 stdout=self.stdout,
             )
         else:
-            data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
             job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 
         # Wait on the job to finish

@@ -32,8 +32,8 @@ class Command(BaseCommand):
         Looks up the JobResult by the provided UUID and asserts it is in STATUS_PENDING.
         Then branches based on the 'nautobot_job_console_log' flag in celery_kwargs:
 
-        - If True:  runs the job via JobConsoleLogExecutor, which spawns 'execute_job_result
-                    --console_log' as a subprocess, captures its stdout and stderr into
+        - If True:  runs the job via JobConsoleLogExecutor, which spawns 'execute_job_result'
+                    as a subprocess, captures its stdout and stderr into
                     JobConsoleEntry records via background StreamReader threads, and raises
                     JobConsoleLogSubprocessError on non-zero exit.
         - If False: delegates to the 'execute_job_result' management command directly
