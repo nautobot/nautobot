@@ -11,50 +11,58 @@ from nautobot.extras.models import JobResult
 
 
 class Command(BaseCommand):
-    help = "Execute a job with console log capturing via JobConsoleLogExecutor"
+    help = (
+        "Execute an existing pending JobResult synchronously in the current process using Celery's "
+        "eager execution mode. Intended to be invoked as a subprocess by JobConsoleLogExecutor "
+        "or via 'runjob --local', not called directly by humans."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "job_result",
             help="Pass in an existing job result id from the database to continue executing the job on a local system",
         )
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
+        parser.add_argument(
+            "--profile",
+            action="store_true",
+            help="Run cProfile on the job execution and write the result to the disk under /tmp.",
+        )
+        parser.add_argument(
+            "--console_log",
+            action="store_true",
+            help="Enable logging output to the console. This only works when execute job result is run as a subprocess.",
+        )
 
     def handle(self, *args, **options):
-        """
-        Directly execute a pending JobResult in the current process using Celery's
-        eager (synchronous) execution mode.
+        """Execute a pending JobResult directly via Celery eager (synchronous) mode.
 
-        This method represents a *parallel execution path* to
-        `JobResult.enqueue_job()` when running jobs synchronously.
-        Both code paths ultimately execute the same job
-        logic, but differ in how execution is orchestrated and how output
-        are handled.
+        Looks up the JobResult by UUID, resolves and validates the job data (from --data
+        or from the existing task_kwargs on the JobResult), builds celery_kwargs if not
+        already present, stamps date_started, then runs the job via run_job.apply().
+        After execution, syncs the eager result back to the JobResult.
 
-        HOW THIS DIFFERS FROM `runjob --local`:
-        - `runjob --local` accepts a job class path and username as CLI arguments,
-        constructs a new JobResult, and calls `JobResult.execute_job()`.
-        - `execute_job_result` accepts an *existing* JobResult PK (already created
-        and PENDING), and re-uses it directly via `run_job.apply()`. It does not
-        create a new JobResult and does not accept a class path or username.
+        This is the leaf command in two execution chains:
 
-        HOW THIS DIFFERS FROM `runjob_with_job_result`:
-        - `runjob_with_job_result` is an orchestrator: it inspects the JobResult and
-        decides *how* to run it. Either by spawning `execute_job_result` as a
-        subprocess (via `JobConsoleLogExecutor`) when console logging is enabled,
-        or by calling `JobResult.execute_job()` directly otherwise.
-        - `execute_job_result` is the *leaf* command it is never called by a human
-        directly. It is always invoked as a subprocess by `JobConsoleLogExecutor`,
-        which is responsible for capturing its stdout/stderr and storing them as
-        `JobConsoleEntry` rows. It has no knowledge of how its output is consumed.
+        Local execution (runjob --local):
+            runjob --local
+                |
+                -- execute_job_result <job_result_pk>
+                    |
+                    -- run_job.apply() (Celery eager)
 
-        EXECUTION CHAIN (console_log path):
+        Console log execution (runjob_with_job_result):
             runjob_with_job_result
                 |
                 -- JobConsoleLogExecutor.execute()
                     |
-                    -- subprocess: execute_job_result <job_result_pk>
+                    -- subprocess: execute_job_result <job_result_pk> --console_log
                         |
                         -- run_job.apply() (Celery eager)
+
+        In the console log path, JobConsoleLogExecutor spawns this command as a subprocess
+        and is responsible for capturing its stdout/stderr into JobConsoleEntry rows.
+        This command has no knowledge of how its output is consumed.
 
         IMPORTANT:
             Changes to job execution semantics (status handling, result persistence,
@@ -71,8 +79,10 @@ class Command(BaseCommand):
         job_user = job_result.user
         job_model = job_result.job_model
         job_class_path = job_model.class_path
-
-        data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
+        if job_data := options.get("data"):
+            data = validate_job_and_job_data(self, job_user, job_class_path, job_data)
+        else:
+            data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
 
         schedule = data.get("schedule", None)
         celery_kwargs = data.get("celery_kwargs", None)
@@ -86,7 +96,8 @@ class Command(BaseCommand):
                 job_model=job_model,
                 user=job_user,
                 task_queue=task_queue,
-                console_log=True,
+                console_log=options["console_log"],
+                profile=options["profile"],
                 ignore_singleton_lock=ignore_singleton_lock,
                 schedule=schedule,
                 celery_kwargs=celery_kwargs,

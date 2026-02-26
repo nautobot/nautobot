@@ -130,7 +130,6 @@ flowchart LR
             direction TB
             k8s_check{console_log?}
             executor_k8s[JobConsoleLogExecutor]
-            k8s_direct[JobResult.execute_job]
         end
     end
 
@@ -144,7 +143,7 @@ flowchart LR
     start -- "K8s Queue (K8s API directly)" --> k8s_pod
 
     k8s_check -- "True" --> executor_k8s
-    k8s_check -- "False" --> k8s_direct
+    k8s_check -- "False" --> execute_job_result
 
     executor_celery -- "subprocess.Popen" --> execute_job_result
     executor_k8s -- "subprocess.Popen" --> execute_job_result
