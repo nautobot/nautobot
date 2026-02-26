@@ -17,7 +17,13 @@ from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.http import FileResponse, HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.http import (
+    FileResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseServerError,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
@@ -52,8 +58,14 @@ from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import (
+    get_filterset_for_model,
+    get_model_from_name,
+    get_related_class_for_model,
+    get_route_for_model,
+)
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.mixins import UIComponentsMixin
 from nautobot.core.views.utils import (
     generate_latest_with_cache,
@@ -410,6 +422,29 @@ class SearchView(AccessMixin, View):
                 logger.error('Missing URL "%s" - unable to show search results for %s.', url, label_lower)
 
         return render(request, "components/htmx/global_search_one_model.html", context)
+
+
+class SearchContentTypeView(AccessMixin, View):
+    def get(self, request, content_type):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            model = get_model_from_name(content_type)
+            filterset_class = get_filterset_for_model(model)
+            filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
+            filter_form = filterset_form(
+                auto_id="embedded_id_%s", initial=normalize_querydict(request.GET, filterset=filterset_class())
+            )
+            return render(
+                request,
+                "components/htmx/object_embedded_search.html",
+                {"filter_form": filter_form, "model": model},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page

@@ -233,6 +233,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
         htmx_request = self.request.headers.get("HX-Request", False)
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
         skip_user_and_global_default_saved_view = False
         if self.filterset is not None:
@@ -365,6 +367,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
                 configurable=True,
+                is_object_embedded_search_results=is_object_embedded_search_request,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
@@ -372,7 +375,9 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request, current_saved_view),
+                "per_page": get_paginate_count(
+                    request, current_saved_view, save_user_config=not is_object_embedded_search_request
+                ),
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
