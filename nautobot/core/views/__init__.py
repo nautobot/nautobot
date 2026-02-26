@@ -431,10 +431,10 @@ class SearchContentTypeView(AccessMixin, View):
 
         if request.headers.get("HX-Request", False):
             model = get_model_from_name(content_type)
-            filterset = get_filterset_for_model(model)
+            filterset_class = get_filterset_for_model(model)
             filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
             filter_form = filterset_form(
-                auto_id="embedded_id_%s", initial=normalize_querydict(request.GET, filterset=filterset())
+                auto_id="embedded_id_%s", initial=normalize_querydict(request.GET, filterset=filterset_class())
             )
             return render(
                 request,
