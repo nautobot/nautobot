@@ -69,6 +69,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
             f"{self.live_server_url}{reverse('ipam:prefix_list')}?namespace={self.namespace.pk}&max_depth=1"
         )
 
+        self.assertTrue(self.browser.is_text_present("10.0.0.0/16", wait_time=10))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 2)  # header + 1 prefix
         # 10.0.0.0/16 is first...
         self.assertEqual(self.browser.find_by_tag("tr")[1].find_by_tag("a").first.text, "10.0.0.0/16")
@@ -76,7 +77,10 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(
             self.browser.find_by_tag("tr")[1].find_by_tag("button").first.has_class("nb-subtree-expandable")
         )
+
+        # Expand the subtree
         self.browser.find_by_tag("tr")[1].find_by_tag("button").first.click()
+        self.assertTrue(self.browser.is_text_present("10.0.0.0/24", wait_time=10))
         self.assertTrue(self.browser.find_by_tag("tr")[1].find_by_tag("button").first.has_class("nb-subtree-expanded"))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 3)  # header + 2 prefixes
 
@@ -90,7 +94,10 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(
             self.browser.find_by_tag("tr")[2].find_by_tag("button").first.has_class("nb-subtree-expandable")
         )
+
+        # Expand the subtree again
         self.browser.find_by_tag("tr")[2].find_by_tag("button").first.click()
+        self.assertTrue(self.browser.is_text_present("10.0.0.0/30", wait_time=10))
         self.assertTrue(self.browser.find_by_tag("tr")[2].find_by_tag("button").first.has_class("nb-subtree-expanded"))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 4)  # header + 3 prefixes
 
@@ -103,13 +110,14 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[1].has_class("nb-subtree-next-sibling"))
         # ...and it does NOT have an expandable caret
         self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree"))
-        self.assertFalse(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree-expandable"))
+        self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree-not-expandable"))
 
     @override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=1, MAX_PAGE_SIZE=100)
     def test_banner_rendering(self):
         # First, confirm that DEFAULT_MAX_DEPTH message is displayed exactly once
         self.browser.visit(f"{self.live_server_url}{reverse('ipam:prefix_list')}?namespace={self.namespace.pk}")
 
+        self.assertTrue(self.browser.is_text_present("This table has been filtered by default", wait_time=10))
         self.assertEqual(len(self.browser.find_by_tag("tr")), 2)  # header plus one root prefix
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
@@ -127,6 +135,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.browser.find_by_id("per_page").first.click()
         self.browser.find_by_value("1000").last.click()
 
+        self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
             2,
@@ -146,6 +155,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
 
         # Next, refresh the page and make sure the two alerts are still rendered
         self.browser.reload()
+        self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
 
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
@@ -167,6 +177,7 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         # Next, select "per_page=25" from the paginator and verify the additional alert is removed
         self.browser.find_by_id("per_page").first.click()
         self.browser.find_by_value("25").last.click()
+        self.assertTrue(self.browser.is_text_not_present('Requested "per_page" is too large', wait_time=10))
 
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
