@@ -2156,7 +2156,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
 
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
-    def test_multi_level_child_devices_are_not_saved_when_unnecessary(self):
+    def test_multi_level_child_devices_are_only_saved_when_necessary(self):
         parent_device = Device.objects.create(
             name="Parent Device 2",
             location=self.location_3,
