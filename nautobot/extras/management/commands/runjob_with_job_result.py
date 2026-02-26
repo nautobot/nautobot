@@ -58,6 +58,6 @@ class Command(BaseCommand):
             executor = JobConsoleLogExecutor(job_result_id)
             executor.execute()
         else:
-            call_command("execute_job_result", f"{job_result_id}", profile=options["profile"])
+            call_command("execute_job_result", f"{job_result_id}", profile=options["profile"], stdout=self.stdout)
             job_result.refresh_from_db
             report_job_status(self, job_result)

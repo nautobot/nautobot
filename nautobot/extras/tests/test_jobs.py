@@ -1702,12 +1702,12 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_report_job_status.assert_not_called()
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
     def test_console_log_executor_is_not_used(
         self,
         mock_report_job_status,
-        mock_execute_job,
+        mock_call_command,
         mock_executor_console_log,
     ):
         """Command should not use JobConsoleLogExecutor when console logging is disabled."""
@@ -1719,8 +1719,8 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
             str(self.job_result.pk),
         )
 
-        mock_execute_job.assert_called_once_with(
-            self.job_result.job_model, self.job_result.user, profile=False, job_result=self.job_result
+        mock_call_command.assert_called_once_with(
+            "execute_job_result", str(self.job_result.pk), profile=False, stdout=mock.ANY
         )
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()

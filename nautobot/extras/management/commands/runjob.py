@@ -70,7 +70,11 @@ class Command(BaseCommand):
                 user=user,
             )
             call_command(
-                "execute_job_result", f"{job_result.pk!s}", profile=options["profile"], data=options.get("data")
+                "execute_job_result",
+                f"{job_result.pk!s}",
+                profile=options["profile"],
+                data=options.get("data"),
+                stdout=self.stdout,
             )
         else:
             data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
