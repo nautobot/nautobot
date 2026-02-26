@@ -25,6 +25,12 @@ def render_tabs_labels(context, tabs):
 
 
 @register.simple_tag(takes_context=True)
+def render_component(context, component):
+    """Render a single component to HTML."""
+    return component.render(context)
+
+
+@register.simple_tag(takes_context=True)
 def render_components(context, components):
     """Render each component in the given `components` with the given `context`."""
     if components is not None:

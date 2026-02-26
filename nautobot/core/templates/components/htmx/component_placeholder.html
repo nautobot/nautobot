@@ -1,0 +1,12 @@
+<div id="component-{{ component.component_id }}"
+     hx-get=""
+     hx-select="#component-{{ component.component_id }}"
+     hx-trigger="load"
+     hx-vals='{"component_id": "{{ component.component_id }}"}'
+>
+    <div class="htmx-indicator text-center">
+        <div class="spinner-border">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+</div>

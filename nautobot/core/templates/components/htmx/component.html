@@ -1,0 +1,6 @@
+{% load ui_framework %}
+{% if component is not None %}
+    <div id="component-{{ component.component_id }}">
+        {% render_component component %}
+    </div>
+{% endif %}

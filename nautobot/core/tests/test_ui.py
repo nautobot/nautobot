@@ -21,7 +21,10 @@ from nautobot.core.ui.echarts import (
 )
 from nautobot.core.ui.object_detail import (
     _ObjectDetailAdvancedTab,
+    _ObjectDetailContactsTab,
+    _ObjectDetailDataComplianceTab,
     _ObjectDetailMainTab,
+    _ObjectDetailMetadataTab,
     BaseTextPanel,
     DataTablePanel,
     DistinctViewTab,
@@ -36,6 +39,69 @@ from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
+from nautobot.ipam.views import PrefixUIViewSet
+
+
+class ObjectDetailContentTest(TestCase):
+    def test_component_iteration_and_ids(self):
+        """Test that components() iterator is comprehensive, and that component IDs are not repeated within a view."""
+        for odc in [DeviceUIViewSet.object_detail_content, PrefixUIViewSet.object_detail_content]:
+            with self.subTest(object_detail_content=odc):
+                seen_ids = set()
+                for component in odc.components():
+                    self.assertIsNotNone(component.component_id)
+                    self.assertNotIn(component.component_id, seen_ids)
+                    seen_ids.add(component.component_id)
+
+                # Make sure we're reasonably comprehensive in `components()` implementation:
+                # Likely to increase as we componentize and enhance more, but unlikely to decrease!
+                self.assertGreaterEqual(len(seen_ids), 30)
+                for tab in odc.tabs:
+                    self.assertIn(tab.component_id, seen_ids)
+                    for panel in tab.panels:
+                        self.assertIn(panel.component_id, seen_ids)
+                        if hasattr(panel, "components"):
+                            for component in panel.components():
+                                self.assertIn(component.component_id, seen_ids)
+                for button in odc.extra_buttons:
+                    self.assertIn(button.component_id, seen_ids)
+
+    def test_consistent_component_ids_across_odcs(self):
+        """Creating the same component class with the same kwargs in different views should have same component_id."""
+        odc1 = DeviceUIViewSet.object_detail_content
+        odc2 = PrefixUIViewSet.object_detail_content
+        tabs1 = [
+            tab
+            for tab in odc1.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+        tabs2 = [
+            tab
+            for tab in odc2.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+
+        for tab1, tab2 in zip(tabs1, tabs2):
+            with self.subTest(tab1=tab1, tab2=tab2):
+                self.assertEqual(tab1.component_id, tab2.component_id)
 
 
 class DataTablePanelTest(TestCase):

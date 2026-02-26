@@ -2588,6 +2588,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
     class DevicePowerUtilizationPanel(object_detail.Panel):
         """Panel showing a table of PDU calculated power utilization per power-port on the device."""
 
+        deferred_render = True
+
         def should_render(self, context):
             """Only render if the device is a PDU, i.e. has both power-ports and power-outlets."""
             instance = get_obj_from_context(context)
