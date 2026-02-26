@@ -1547,19 +1547,21 @@ class ScheduledJobIntervalTestCase(TestCase):
         self.assertEqual(scheduled_job_weekday, requested_weekday)
 
 
-class JobResultConsoleLogTestCase(TransactionTestCase):
-    """Test JobResult.enqueue_job console_log behavior"""
+class JobResultEnqueueJobCase(TransactionTestCase):
+    """Test JobResult.enqueue_job behavior"""
 
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
     def test_console_log_true_uses_console_log_task(
         self,
         mock_run_job,
         mock_console_log_task,
+        mock_kubernetes_job,
     ):
         job_kwargs = {"foo": "bar"}
         job_result = JobResult.enqueue_job(
@@ -1570,14 +1572,17 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             **job_kwargs,
         )
 
+        mock_kubernetes_job.assert_not_called()
         mock_console_log_task.apply_async.assert_called_once()
         mock_run_job.apply_async.assert_not_called()
 
         job_result.refresh_from_db()
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), True)
 
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
-    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task):
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_kubernetes_job):
         job_kwargs = {"foo": "bar"}
 
         job_result = JobResult.enqueue_job(
@@ -1588,12 +1593,52 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             **job_kwargs,
         )
 
+        mock_kubernetes_job.assert_not_called()
         mock_console_log_task.apply_async.assert_not_called()
         mock_run_job.apply_async.assert_called_once()
 
         job_result.refresh_from_db()
         # when console log is false job_result is not updated before run task
         self.assertEqual(job_result.task_kwargs, {})
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), False)
+
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_with_kubernetes_queue_uses_kubernetes_task_with_celery_kwargs(
+        self,
+        mock_run_job,
+        mock_console_log_task,
+        mock_kubernetes_job,
+    ):
+        job_kwargs = {"foo": "bar"}
+        kubernetes_queue = JobQueue.objects.create(
+            name="Empty Job Queue 1",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
+        for console_log in (True, False):
+            with self.subTest(console_log=console_log):
+                mock_kubernetes_job.reset_mock()
+                mock_run_job.reset_mock()
+                mock_console_log_task.reset_mock()
+
+                mock_kubernetes_job.return_value = mock.MagicMock()
+                JobResult.enqueue_job(
+                    job_model=self.job_model,
+                    user=self.user,
+                    synchronous=False,
+                    console_log=console_log,
+                    job_queue=kubernetes_queue,
+                    **job_kwargs,
+                )
+
+                mock_kubernetes_job.assert_called_once()
+                mock_run_job.apply_async.assert_not_called()
+                mock_console_log_task.apply_async.assert_not_called()
+
+                call_args = mock_kubernetes_job.call_args
+                actual_job_result_arg = call_args[0][0]  # first positional arg
+                self.assertEqual(actual_job_result_arg.celery_kwargs.get("nautobot_job_console_log"), console_log)
 
 
 class RunConsoleLogJobTestCase(TestCase):
