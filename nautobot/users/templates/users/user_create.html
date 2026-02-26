@@ -1,0 +1,56 @@
+{% extends "generic/object_create.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card mb-3">
+        <div class="card-header"><strong>Users</strong></div>
+        <div class="card-body">
+            {% block form-body %}
+                {% if form.username %}{% render_field form.username %}{% endif %}
+                {% if form.usable_password %}
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label" for="{{ form.usable_password.id_for_label }}">{{ form.usable_password.label }}</label>
+                        <div class="col-sm-9">
+                            <div class="d-flex gap-3 pt-1">
+                                {% for radio in form.usable_password %}
+                                    <div class="form-check form-check-inline">
+                                        {{ radio.tag }}
+                                        <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.usable_password.help_text %}
+                                <div class="form-text">{{ form.usable_password.help_text }}</div>
+                            {% endif %}
+                            {% if form.usable_password.errors %}
+                                <div class="text-danger small">{{ form.usable_password.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+                {% if form.password1 %}{% render_field form.password1 %}{% endif %}
+                {% if form.password2 %}{% render_field form.password2 %}{% endif %}
+            {% endblock %}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save and add another
+    </button>
+    <button type="submit" name="_continue" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save and continue editing
+    </button>
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
+{% endblock %}
