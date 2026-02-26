@@ -1,0 +1,33 @@
+{% extends "generic/object_create.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card mb-3">
+        <div class="card-header"><strong>Users</strong></div>
+        <div class="card-body">
+            {% render_field form.username %}
+            {% render_field form.password %}
+            {% render_field form.first_name %}
+            {% render_field form.last_name %}
+            {% render_field form.email %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><strong>Status</strong></div>
+        <div class="card-body">
+            {% render_field form.is_active %}
+            {% render_field form.is_staff %}
+            {% render_field form.is_superuser %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header"><strong>Important Dates</strong></div>
+        <div class="card-body">
+            {% render_field form.last_login %}
+            {% render_field form.date_joined %}
+        </div>
+    </div>
+
+{% endblock %}

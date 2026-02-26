@@ -1042,7 +1042,10 @@ class ObjectsTablePanel(Panel):
                     query = query | Q(**{table_filter: instance})
                 body_content_table_queryset = body_content_table_model.objects.filter(query)
 
-            body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
+            if hasattr(body_content_table_queryset, "restrict"):
+                body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
+            elif not request.user.has_perm(get_permission_for_model(body_content_table_model, "view")):
+                body_content_table_queryset = body_content_table_queryset.none()
             if self.select_related_fields:
                 body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
             if self.prefetch_related_fields:
