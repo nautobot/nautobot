@@ -28,7 +28,7 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
@@ -375,6 +375,36 @@ class MediaViewTestCase(TestCase):
                 response = self.client.get(url)
                 self.assertHttpStatus(response, 200)
                 self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
+
+
+class SearchContentTypeView(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_search_content_type(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
+        self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_with_initial_value(self):
+        location_type = LocationType.objects.create(name="Test Location Type")
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"})
+            + f"?location_type={location_type.name}",
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, f'<option selected value="{location_type.name}">{location_type.name}</option>', html=True
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
 
 
 @override_settings(BRANDING_TITLE="Nautobot")
