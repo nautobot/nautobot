@@ -1,4 +1,0 @@
-Changed behavior of `PREFIX_LIST_DEFAULT_MAX_DEPTH` and `max_depth` Prefix filter to start at 1 instead of 0.
-Changed behavior of table paginator widget to automatically return to page 1 when changing the `per_page` selection.
-Renamed Prefix table column "Children" to "Descendants" for improved clarity.
-Changed hierarchy rendering in Prefix table to more clearly indicate parent, child, and sibling relations.

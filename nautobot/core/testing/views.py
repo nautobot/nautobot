@@ -7,7 +7,7 @@ import uuid
 
 from django import forms as django_forms
 from django.apps import apps
-from django.conf import global_settings, settings
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
@@ -290,7 +290,7 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                self.assertBodyContains(response, date(instance.created, settings.DATETIME_FORMAT), html=True)
                 # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
                 # therefore is subject to off-by-one timing failures.
 

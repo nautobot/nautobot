@@ -19,6 +19,10 @@ As a consequence of the [Django 5.2 dependency upgrade](#django-52), Nautobot 3.
 
 If your deployment of Nautobot had overridden any of the above settings (for example, to use [S3 storage](../user-guide/administration/guides/s3-django-storage.md)), you will need to update your `nautobot_config.py` file to use the `STORAGES` setting instead. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
 
+#### Configure New Performance Settings As Appropriate
+
+If you have a large number of Location and/or Prefix records, you can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, with the potential to significantly improve the performance of these enhanced views as a result.
+
 ### App Authors/Maintainers
 
 #### Changes For Django 5.2 Compatibility
@@ -31,7 +35,7 @@ Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django m
 
 #### Changes for HTMX
 
-In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
+See [HTMX List View Rendering](#htmx-list-view-rendering) below.
 
 ## Release Overview
 
@@ -49,19 +53,25 @@ As a consequence of the [dependency update to Django 5.2](#django-52), support f
 
 As a consequence of the [dependency update to Django 5.2](#django-52), Nautobot 3.1 drops support for the Django `DEFAULT_FILE_STORAGE` and `STATICFILES_STORAGE` settings variables in favor of a unified `STORAGES` setting. Additionally, support for the corresponding Nautobot-specific `STORAGE_BACKEND`, `STORAGE_CONFIG`, and `JOB_FILE_IO_STORAGE` settings variables has been removed and merged into the [`STORAGES`](https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-STORAGES) setting. More details are available in the Nautobot [documentation for `STORAGES`](../user-guide/administration/configuration/settings.md#storages).
 
-#### Dropped Support for Custom Date/Time Format Settings
-
-As a consequence of the [dependency update to Django 5.2](#django-52), support for globally customizing date/time display in the UI via the settings variables `DATETIME_FORMAT` and `SHORT_DATETIME_FORMAT` (as well as the less-commonly-used `DATE_FORMAT`, `SHORT_DATE_FORMAT`, `TIME_FORMAT` settings) has been removed from Nautobot.
-
 ### Added
-
-#### Per-User Language Preferences
-
-Users can now specify their preferred language/locale through the User Preferences UI. Currently this configuration applies primarily to date/time display in the UI.
 
 #### Python 3.14 Support
 
 Added official support for Python 3.14.
+
+### Changed
+
+#### HTMX List View Rendering
+
+In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
+
+#### Improved Location and Prefix List Views
+
+In addition to the generalized list-view performance enhancements described above, the list views for Location and Prefix records specifically have been enhanced in several ways:
+
+- The rendering of the "tree" data hierarchy for these records has in general been improved to visualize object relationships more clearly.
+- An administrator can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, improving their responsiveness substantially at high data scale.
+- Users can interactively "drill down" into deeper nested data as needed with a few quick clicks, incrementally loading additional "child" records on the fly.
 
 ### Deprecated
 
@@ -78,6 +88,83 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v3.1.0a3 (2026-02-25)
+
+### Added in v3.1.0a3
+
+- [#2516](https://github.com/nautobot/nautobot/issues/2516) - Enhanced Prefix list view to support dynamic expansion/collapsing of prefix subtrees.
+- [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added support for `prefix_and_descendants` filter on Prefix list view.
+- [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added option for `ButtonsColumn` in tables to be passed an explicit `return_url` in the render context in order to override its default behavior.
+- [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added `Prefix.next_sibling` property.
+- [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added `/ipam/prefixes/<uuid>/children/` URL endpoint in support of enhanced Prefix list view functionality.
+- [#8516](https://github.com/nautobot/nautobot/issues/8516) - Added dynamically rendered scope filter fields to the Custom Field edit form.
+- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Added `Console Log` tab to Job Result detial view.
+- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Added `job_console_entries` action to `JobResultUIViewSet` to stream output from SQL into the UI in realtime.
+- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Modified `runjob_with_job_result.py` command to `run_job` instead of `execute_job`.
+- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Improved `job_result.js` and `job_level_filtering.js`.
+- [#8546](https://github.com/nautobot/nautobot/issues/8546) - Implemented embedded create and search buttons accompanying dynamic model choice fields.
+- [#8551](https://github.com/nautobot/nautobot/issues/8551) - Added `max_depth` filter support to the Location list view.
+- [#8551](https://github.com/nautobot/nautobot/issues/8551) - Added `max_depth` filter to the Location basic filter form.
+- [#8551](https://github.com/nautobot/nautobot/issues/8551) - Added support for the setting/Constance variable `LOCATION_LIST_DEFAULT_MAX_DEPTH`. Configuring this may improve the performance of the Location list view at scale.
+- [#8559](https://github.com/nautobot/nautobot/issues/8559) - Implemented embedded object creation modal.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Added tables of "Sibling Prefixes" and "Child Prefixes" to Prefix detail view.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Added `TreeModel.siblings` convenience property.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Added table of "Sibling Locations" to Location detail view.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Added testing of `test_filter_form_fields_are_working` to catch more filter form issues.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - Added role-based precedence for `console_log` (Author -> Admin -> Runner).
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - Added the ability to run scheduled jobs with the console log.
+
+### Changed in v3.1.0a3
+
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Changed behavior of `PREFIX_LIST_DEFAULT_MAX_DEPTH` and `max_depth` Prefix filter to start at 1 instead of 0.
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Changed behavior of table paginator widget to automatically return to page 1 when changing the `per_page` selection.
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Renamed Prefix table column "Children" to "Descendants" for improved clarity.
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Changed hierarchy rendering in Prefix table to more clearly indicate parent, child, and sibling relations.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Updated testing of `test_model_properties_as_table_columns_are_not_orderable` to catch more sortable issues.
+- [#8551](https://github.com/nautobot/nautobot/issues/8551) - Changed Location list view behavior so that filtering by the filters `max_depth` and/or `subtree` (in the absence of any other filters) will not prevent the indentation of locations based on their nesting depth.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Renamed "Child Prefixes" tab on Prefix detail view to "Descendant Prefixes" for clarity.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Renamed "Parent Prefixes" table on Prefix detail view to "Ancestor Prefixes" for clarity.
+- [#8564](https://github.com/nautobot/nautobot/issues/8564) - Updated the logic that determines which nav menu item is marked "active" to always prefer exact URL matches before falling back to introspecting the view and model.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - Job run form split into 3 separate sections: `Job Data`, `Job Execution` and `Job Schedule Type`.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - `Job.as_form()` no longer includes execution fields (`_profile`, `_console_log`, `_job_queue`, `_ignore_singleton_lock`). These have been moved to the new `Job.as_execution_form()`.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - `Job.as_execution_form()` added as a new classmethod returning a standalone `JobExecutionForm` populated with execution-related fields only.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - `JobRunView.post()` updated to validate `job_form`, `job_execution_form`, and `schedule_form` independently. Execution fields are now read from `job_execution_form.cleaned_data` and job data fields from `job_form.cleaned_data`.
+- [#8579](https://github.com/nautobot/nautobot/issues/8579) - Template `nautobot/extras/templates/extras/job.html` updated to render three separate cards: `Job Data`, `Job Execution`, and `Job Schedule Type`.
+- [#8596](https://github.com/nautobot/nautobot/issues/8596) - Changed behavior of model edit forms to hide custom fields that are out of scope.
+- [#8596](https://github.com/nautobot/nautobot/issues/8596) - Improved unit test coverage for scope filter HTMX endpoint.
+- [#8609](https://github.com/nautobot/nautobot/issues/8609) - Made embedded object create form footer sticky.
+- [#8617](https://github.com/nautobot/nautobot/issues/8617) - Enhanced Location list view tree rendering to follow the same pattern as Prefix list view tree.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Restored support for `DATE_FORMAT`, `DATETIME_FORMAT`, `SHORT_DATE_FORMAT`, `SHORT_DATETIME_FORMAT`, and `TIME_FORMAT` settings.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed user-defined locale/language selection feature (previously introduced for 3.1 by #8417).
+- [#8628](https://github.com/nautobot/nautobot/issues/8628) - Changed "global" search to load results incrementally with HTMX in order to avoid timing out when searching a large amount of data.
+
+### Fixed in v3.1.0a3
+
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Fixed `per_page` list view dropdown not working in Chrome and similar browsers.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537), [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed sorting on multiple tables.
+- [#8562](https://github.com/nautobot/nautobot/issues/8562) - Fixed a warning appearing in Firefox when updating table configuration in a view that contained multiple instances of the same table class.
+- [#8570](https://github.com/nautobot/nautobot/issues/8570) - Fixed an exception under Django 5.2 when bulk-editing or bulk-deleting certain types of records.
+- [#8597](https://github.com/nautobot/nautobot/issues/8597) - Fixed initial HTMX loading of Job list view (table or tiles).
+- [#8597](https://github.com/nautobot/nautobot/issues/8597) - Fixed rendering of "Descendants" column in Prefix table.
+- [#8597](https://github.com/nautobot/nautobot/issues/8597) - Fixed duplicated messages when applying invalid filters to object list views.
+- [#8602](https://github.com/nautobot/nautobot/issues/8602) - Fixed ECharts not resizing with their container.
+- [#8617](https://github.com/nautobot/nautobot/issues/8617) - Reduced the number of database queries needed to render Location tree view.
+
+### Dependencies in v3.1.0a3
+
+- [#8563](https://github.com/nautobot/nautobot/issues/8563) - Added declared support for Python 3.14.
+
+### Documentation in v3.1.0a3
+
+- [#8527](https://github.com/nautobot/nautobot/issues/8527) - Improved developer documentation and release note content about HTMX.
+
+### Housekeeping in v3.1.0a3
+
+- [#8532](https://github.com/nautobot/nautobot/issues/8532) - Changed the Python API for the UI components to allow default values to be set directly as class attributes.
+- [#8602](https://github.com/nautobot/nautobot/issues/8602) - Decoupled the EChartsPanel and EChartsBase classes.
+- [#8602](https://github.com/nautobot/nautobot/issues/8602) - Removed the redundant `permission` attribute from the EChartsBase class.
+- [#8622](https://github.com/nautobot/nautobot/issues/8622) - Removed leftover test case for `social-auth-app-django` patch.
 
 ## v3.1.0a2 (2026-02-10)
 

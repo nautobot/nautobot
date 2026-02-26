@@ -265,7 +265,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             for prefix in self._get_queryset().all():
                 self.assertBodyContains(response, str(prefix.pk))
             # Indentation should be present in table rendering
-            self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
@@ -279,7 +279,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
                 # Check for filtered prefix list and message in HTMX response
@@ -292,7 +292,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
             with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
@@ -306,7 +306,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
                 # Check for filtered prefix list and message in HTMX response
@@ -319,7 +319,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("With both settings, both should apply"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=4):
@@ -338,7 +338,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                     else:
                         self.assertBodyContains(response, str(prefix.pk), count=0)
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
             with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=0):
                 # Check for un-filtered prefix list and no message in HTMX response
@@ -348,7 +348,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 for prefix in self._get_queryset().all():
                     self.assertBodyContains(response, str(prefix.pk))
                 # Indentation should still be present in table rendering
-                self.assertBodyContains(response, '<span class="nb-subtree nb-subtree-next-sibling"></span>', html=True)
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
         with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
             with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
@@ -523,7 +523,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertIsNotNone(pfx_with_children)
         url = reverse("ipam:prefix_children", kwargs={"pk": pfx_with_children.pk})
         response = self.client.get(url)
-        self.assertTemplateUsed(response, "ipam/prefix_children.html")
+        self.assertTemplateUsed(response, "components/htmx/subtree_children.html")
         for child in pfx_with_children.children.all():
             self.assertBodyContains(response, str(child.pk))
 
