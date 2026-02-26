@@ -1979,6 +1979,39 @@ class CustomFieldTestCase(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
 
+    def test_custom_field_update_form_render_scope_filter_section_properly(self):
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField.objects.create(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf.content_types.set([content_type])
+
+        url = reverse("extras:customfield_edit", args=[cf.pk])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
+
+        cf.required = True
+        cf.save()
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
     def test_scope_filter_fields_without_content_type(self):
         self.add_permissions("extras.change_customfield")
         url = reverse("extras:customfield_scope_filter_fields")
@@ -2002,6 +2035,8 @@ class CustomFieldTestCase(
         response_content = response.content.decode(response.charset)
         self.assertIn("nb-scope-filter-form-container", response_content)
         self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
 
     def test_scope_filter_fields_with_valid_content_type(self):
         self.add_permissions("extras.change_customfield")
@@ -2020,6 +2055,20 @@ class CustomFieldTestCase(
         # Check example select are present
         self.assertInHTML('<select name="scope-location_type"', response_content)
         self.assertInHTML('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_when_field_is_required(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999, "required": "on"})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
 
 
 class CustomLinkRenderingTestCase(TestCase):
