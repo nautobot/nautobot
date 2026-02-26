@@ -21,7 +21,7 @@ from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.timezone import get_current_timezone
+from django.utils.timezone import get_current_timezone, now
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
@@ -3017,7 +3017,7 @@ class JobResultUIViewSet(
                     "breadcrumbs": self.get_breadcrumbs(),
                     "view_action": "detail",
                     "job_is_pending": self._is_job_pending(job_result),
-                    "last_timestamp": last_entry.timestamp.isoformat() if last_entry else "",
+                    "last_timestamp": last_entry.timestamp.isoformat() if last_entry else now().isoformat(),
                 }
             )
             response = render(request, "extras/jobresult_retrieve_console_log.html", context)
