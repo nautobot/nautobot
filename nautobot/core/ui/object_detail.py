@@ -83,8 +83,8 @@ class ObjectDetailContent:
 
     layout = LayoutChoices.DEFAULT
     panels = ()
-    _extra_buttons = []
-    extra_tabs = []
+    _extra_buttons = ()
+    extra_tabs = ()
 
     def __init__(self, *, panels=None, layout=None, extra_buttons=None, extra_tabs=None):
         """
@@ -145,8 +145,7 @@ class ObjectDetailContent:
         for tab in self.tabs:
             yield tab
             yield from tab.components()
-        for extra_button in self.extra_buttons:
-            yield extra_button
+        yield from self.extra_buttons
 
     def get_component_by_id(self, component_id):
         """Lookup method for retrieving a single specific Component belonging to this ObjectDetailContent."""
@@ -159,7 +158,7 @@ class ObjectDetailContent:
 class Component:
     """Common base class for individually-renderable components (tabs, panels, buttons, etc.)."""
 
-    required_permissions = []
+    required_permissions = ()
     weight = None
     component_id = None
     deferred_render = False
@@ -385,7 +384,7 @@ class Button(Component):
 class DropdownButton(Button):
     """A Button that has one or more other buttons as `children`, which it renders into a dropdown menu."""
 
-    children: list[Button] = []
+    children: list[Button] = ()
     template_path = "components/button/dropdown.html"
 
     def __init__(self, **kwargs):
@@ -980,28 +979,28 @@ class ObjectsTablePanel(Panel):
     """
 
     add_button_route = "default"
-    add_permissions = []
+    add_permissions = ()
     body_content_template_path = "components/panel/body_content_objects_table.html"
     body_wrapper_template_path = "components/panel/body_wrapper_table.html"
     context_table_key = None
     distinct = False
     enable_bulk_actions = False
     enable_related_link = True
-    exclude_columns = []
-    footer_buttons = None
+    exclude_columns = ()
+    footer_buttons = ()
     footer_content_template_path = "components/panel/footer_content_table.html"
     form_id = None
     header_extra_content_template_path = "components/panel/header_extra_content_table.html"
     hide_hierarchy_ui = False
-    include_columns = []
+    include_columns = ()
     include_paginator = False
     max_display_count = None
-    order_by_fields = []
+    order_by_fields = ()
     paginate = True
-    prefetch_related_fields = []
+    prefetch_related_fields = ()
     related_field_name = None
     related_list_url_name = None
-    select_related_fields = []
+    select_related_fields = ()
     show_table_config_button = True
     tab_id = None
     table_attribute = None
@@ -1544,7 +1543,7 @@ class EChartsPanel(Panel):
     chart_height = "32rem"
     chart_kwargs = {}
     chart_width = "100%"
-    required_permissions = []
+    required_permissions = ()
 
     def __init__(
         self,
@@ -2011,7 +2010,7 @@ class TextPanel(BaseTextPanel):
 class StatsPanel(Panel):
     body_content_template_path = "components/panel/stats_panel_body.html"
     filter_name = None
-    related_models = []
+    related_models = ()
 
     def __init__(self, **kwargs):
         """
