@@ -78,7 +78,7 @@ class Command(BaseCommand):
                 job_model=job_model,
                 user=user,
                 task_queue=task_queue,
-                console_log=options["console_log"],
+                console_log=False,
                 profile=options["profile"],
                 ignore_singleton_lock=ignore_singleton_lock,
                 schedule=schedule,

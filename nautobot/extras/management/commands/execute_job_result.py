@@ -1,3 +1,5 @@
+import json
+
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -75,7 +77,10 @@ class Command(BaseCommand):
         job_model = job_result.job_model
         job_class_path = job_model.class_path
         if job_data := options.get("data"):
-            data = validate_job_and_job_data(self, job_user, job_class_path, job_data)
+            try:
+                data = json.loads(job_data)
+            except json.JSONDecodeError as error:
+                raise CommandError(f"Invalid JSON data:\n{error!s}") from error
         else:
             data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
 

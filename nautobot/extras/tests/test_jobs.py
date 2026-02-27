@@ -1724,3 +1724,110 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         )
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()
+
+
+class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.job_model.enabled = True
+        self.job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=self.job_model,
+            user=self.user,
+            name=self.job_model.class_path,
+            celery_kwargs={"nautobot_job_profile": False},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    def test_invalid_job_result_pk_raises_error(self):
+        """Command should raise CommandError when JobResult UUID does not exist."""
+        invalid_id = "00000000-0000-0000-0000-000000000000"
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", invalid_id)
+        self.assertEqual(str(err.exception), f"Job result with pk {invalid_id} not found.")
+
+    def test_missing_celery_kwargs_raises_error(self):
+        """Command should raise CommandError when celery_kwargs is not set on the JobResult."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk))
+        self.assertEqual(
+            str(err.exception), f"Job result with pk {self.job_result.pk} does not have `celery_kwargs` defined."
+        )
+
+    def test_invalid_json_data_raises_error(self):
+        """Command should raise CommandError when --data is not valid JSON."""
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk), data="not-valid-json")
+        self.assertIn("Invalid JSON data:", str(err.exception))
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_data_option_skips_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should use --data directly and skip validate_job_and_job_data when --data is provided."""
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+            data='{"foo": "bar"}',
+        )
+
+        mock_validate.assert_not_called()
+        mock_run_job.apply.assert_called_once()
+        call_kwargs = mock_run_job.apply.call_args[1]["kwargs"]
+        self.assertEqual(call_kwargs.get("foo"), "bar")
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_no_data_option_calls_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should call validate_job_and_job_data with task_kwargs when --data is not provided."""
+        self.job_result.task_kwargs = {"baz": "qux"}
+        self.job_result.save()
+        mock_validate.return_value = self.job_result.task_kwargs
+
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_validate.assert_called_once_with(
+            mock.ANY, self.user, self.job_model.class_path, self.job_result.task_kwargs
+        )
+        mock_run_job.apply.assert_called_once()
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_successful_execution_sets_date_started(self, mock_validate, mock_sync, mock_run_job):
+        """Command should stamp date_started on the JobResult before executing."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        self.job_result.refresh_from_db()
+        self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_sync_eager_result_is_called(self, mock_validate, mock_sync, mock_run_job):
+        """Command should sync the eager result back to the JobResult after execution."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        mock_sync.assert_called_once()
+        first_arg = mock_sync.call_args[0][0]
+        self.assertEqual(first_arg.pk, self.job_result.pk)
