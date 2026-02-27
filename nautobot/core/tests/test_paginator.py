@@ -49,6 +49,20 @@ class PaginatorTestCase(testing.TestCase):
         request.user = self.user
         self.assertEqual(paginator.get_paginate_count(request), 400)
 
+    def test_get_paginate_count_request_params_save_user_config(self):
+        """Get the paginate count from the request's GET params, saving it in user configuration (default behavior)."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request)
+        self.assertEqual(self.user.get_config("pagination.per_page"), 400)
+
+    def test_get_paginate_count_request_params_do_not_save_user_config(self):
+        """Get the paginate count from the request's GET params, without saving it in user configuration."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request, save_user_config=False)
+        self.assertIsNone(self.user.get_config("pagination.per_page"))
+
     @override_settings(MAX_PAGE_SIZE=10)
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):

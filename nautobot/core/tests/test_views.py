@@ -378,6 +378,36 @@ class MediaViewTestCase(TestCase):
                 self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
+class SearchContentTypeView(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_search_content_type(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
+        self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_with_initial_value(self):
+        location_type = LocationType.objects.create(name="Test Location Type")
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"})
+            + f"?location_type={location_type.name}",
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, f'<option selected value="{location_type.name}">{location_type.name}</option>', html=True
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_search_bar_redirect_to_login(self):

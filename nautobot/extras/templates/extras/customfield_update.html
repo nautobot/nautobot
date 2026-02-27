@@ -27,7 +27,11 @@
     </div>
     <div class="card" id="nb-scope-filter-form-container" hx-on::after-settle="initializeScopeFilter(event)">
         <div class="card-header"><strong>Scope filter</strong></div>
-        {% if content_type_selected %}
+        {% if required_checked or object.required %}
+            <div class="card-body text-center text-secondary p-20">
+                Scope filter can be set only for non-required custom fields.
+            </div>
+        {% elif content_type_selected %}
             <div class="card-body">
                 <ul id="filter-tabs" class="nav nav-tabs">
                     {% if filter_form %}

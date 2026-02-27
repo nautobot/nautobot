@@ -1436,10 +1436,11 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         """
         HTMX endpoint to re-render scope filter part of form on content type update.
         """
-        context = {}
+        required_checked = request.GET.get("required", None) == "on"
+        context = {"required_checked": required_checked}
 
         model_class = self.get_content_type_model_class(request.GET)
-        if model_class:
+        if model_class and not required_checked:
             context = self.get_scope_filter_context(model_class)
 
         # It's rendering the whole template, but due to `hx-swap-oob` in template

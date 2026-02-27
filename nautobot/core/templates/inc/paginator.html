@@ -14,40 +14,44 @@
         <div>
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
-        <div class="vr border-start my-8"></div>
+        {% if not exclude_controls %}
+            <div class="vr border-start my-8"></div>
+        {% endif %}
     {% endif %}
-    <form class="align-items-center d-flex gap-4" method="get">
-        {% for key, value_list in request.GET.lists %}
-            {% if key != 'per_page' %}
-                {% for value in value_list %}
-                    <input type="hidden" name="{{ key }}" value="{{ value }}" />
-                {% endfor %}
-            {% endif %}
-        {% endfor %}
-        <select name="per_page"
-                id="per_page"
-                class="form-select"
-                {% if htmx_enabled|default:False %}
-                    hx-trigger="change"
-                    hx-get="{% django_querystring page=None per_page=None %}"
+    {% if not exclude_controls %}
+        <form class="align-items-center d-flex gap-4" method="get">
+            {% for key, value_list in request.GET.lists %}
+                {% if key != 'per_page' %}
+                    {% for value in value_list %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}" />
+                    {% endfor %}
                 {% endif %}
-        >
-            {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ page.paginator.per_page }}" selected="selected">
-                    {{ page.paginator.per_page }}
-                </option>
-            {% endif %}
-            {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
-                <option value="{{ n }}"
-                        {% if page.paginator.per_page == n %} selected="selected"{% endif %}
-                >
-                    {{ n }}
-                </option>
             {% endfor %}
-        </select>
-        per page
-    </form>
-    {% if paginator.num_pages > 1 %}
+            <select name="per_page"
+                    id="per_page"
+                    class="form-select"
+                    {% if htmx_enabled|default:False %}
+                        hx-trigger="change"
+                        hx-get="{% django_querystring page=None per_page=None %}"
+                    {% endif %}
+            >
+                {% if page.paginator.per_page not in "PER_PAGE_DEFAULTS"|settings_or_config %}
+                    <option value="{{ page.paginator.per_page }}" selected="selected">
+                        {{ page.paginator.per_page }}
+                    </option>
+                {% endif %}
+                {% for n in "PER_PAGE_DEFAULTS"|settings_or_config %}
+                    <option value="{{ n }}"
+                            {% if page.paginator.per_page == n %} selected="selected"{% endif %}
+                    >
+                        {{ n }}
+                    </option>
+                {% endfor %}
+            </select>
+            per page
+        </form>
+    {% endif %}
+    {% if paginator.num_pages > 1 and not exclude_controls %}
         <div class="vr border-start my-8"></div>
         <nav>
             <ul class="pagination mb-0">
