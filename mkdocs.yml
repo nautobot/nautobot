@@ -403,6 +403,7 @@ nav:
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
+          - Device Redundancy: "user-guide/feature-guides/device-redundancy.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields: "user-guide/feature-guides/custom-fields.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
