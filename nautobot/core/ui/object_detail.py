@@ -253,6 +253,7 @@ class Component:
         return True
 
     def should_render_deferred(self, context: Context):
+        """Check whether this component should render a quick placeholder to be later populated via HTMX."""
         return self.deferred_render and (
             not context["request"].headers.get("HX-Request", False)
             or self.component_id != context["request"].GET.get("component_id")
@@ -575,6 +576,7 @@ class Tab(Component):
             raise TypeError("label is required")
 
     def components(self):
+        """Iterator over all Panels (and their contained Components, if any) associated with this Tab."""
         for panel in self.panels:
             yield panel
             if hasattr(panel, "components"):
@@ -1105,6 +1107,7 @@ class ObjectsTablePanel(Panel):
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
 
     def components(self):
+        """Iterator over all contained Components, if any, associated with this Panel."""
         if self.footer_buttons:
             yield from self.footer_buttons
 
