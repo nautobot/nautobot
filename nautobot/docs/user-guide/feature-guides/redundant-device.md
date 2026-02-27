@@ -76,8 +76,8 @@ Note: Insert Model table summarizing attributes and their meanings
 ## Virtual Chassis
 
 ### GraphQL
+
 ===================
-### Dual-chassis
 
 #### Key Questions
 
@@ -90,7 +90,7 @@ Q. Can you connect interfaces from master to non-master? Yes
 Q. Do all configuration map to the model correctly? Yes
 Q. How are interfaces named? TODO: 
 Q. What should the naming standard be for the chassis device?  TODO: 
-Q. Should I use interface named templates? Yes. You will likely have to rename them after the fact, but wil bulk edit it is simple.
+Q. Should I use interface named templates? Yes. You will likely have to rename them after the fact, but the bulk rename makes it simple.
 
 
 #### Configuration Generation
