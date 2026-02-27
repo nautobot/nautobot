@@ -1,0 +1,1 @@
+Added support for preserving leading zeros in numeric ranges for ExpandableNameField (e.g., `[01-03]` expands to `01, 02, 03` instead of `1, 2, 3`).
