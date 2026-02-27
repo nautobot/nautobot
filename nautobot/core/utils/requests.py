@@ -2,6 +2,7 @@ import re
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from django import forms
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -96,7 +97,10 @@ def ensure_content_type_and_field_name_in_query_params(query_params):
         if model is None:
             raise ValidationError(f"model for content_type: <{model_contenttype}> not found", code=500)
     except ContentType.DoesNotExist:
-        raise ValidationError("content_type not found", code=404)
+        try:
+            model = apps.get_model(app_label=app_label, model_name=model_name)
+        except LookupError:
+            raise ValidationError("content_type not found", code=404)
     field_name = query_params.get("field_name")
 
     return field_name, model

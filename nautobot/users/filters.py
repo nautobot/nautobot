@@ -11,10 +11,11 @@ from nautobot.core.filters import (
 )
 from nautobot.dcim.models import RackReservation
 from nautobot.extras.models import ObjectChange
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import LogEntry, ObjectPermission, Token
 
 __all__ = (
     "GroupFilterSet",
+    "LogEntryFilterSet",
     "ObjectPermissionFilterSet",
     "UserFilterSet",
 )
@@ -26,6 +27,20 @@ class GroupFilterSet(BaseFilterSet):
     class Meta:
         model = Group
         fields = ["id", "name"]
+
+
+class LogEntryFilterSet(BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "user__username": "icontains",
+            "object_repr": "icontains",
+            "change_message": "icontains",
+        }
+    )
+
+    class Meta:
+        model = LogEntry
+        fields = ["id", "action_time", "user", "content_type", "object_repr", "action_flag"]
 
 
 class UserFilterSet(BaseFilterSet):

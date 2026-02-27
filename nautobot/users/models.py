@@ -2,12 +2,14 @@ import binascii
 import os
 
 from django.conf import settings
+from django.contrib.admin.models import LogEntry as DjangoLogEntry
 from django.contrib.auth.models import AbstractUser, Group, UserManager as UserManager_
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -16,9 +18,11 @@ from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
 from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.users.choices import LogEntryActionFlagClassChoices
 
 __all__ = (
     "AdminGroup",
+    "LogEntry",
     "ObjectPermission",
     "Token",
     "User",
@@ -225,6 +229,35 @@ class AdminGroup(Group):
     class Meta:
         verbose_name = "Group"
         proxy = True
+
+
+class LogEntry(DjangoLogEntry):
+    """Proxy model for Django admin LogEntry to support Nautobot UI rendering."""
+
+    is_saved_view_model = True
+
+    class Meta:
+        proxy = True
+        verbose_name = "Log Entry"
+        verbose_name_plural = "Log Entries"
+
+    def get_absolute_url(self, api=False):
+        if api:
+            raise AttributeError("No API URL route exists for users.LogEntry")
+        return reverse("user:logentry", kwargs={"pk": self.pk})
+
+    def get_action_flag_class(self):
+        return LogEntryActionFlagClassChoices.get_class(self.action_flag)
+
+    @property
+    def created(self):
+        """Alias action_time for UI detail provenance panels."""
+        return self.action_time
+
+    @property
+    def last_updated(self):
+        """Alias action_time for UI detail provenance panels."""
+        return self.action_time
 
 
 #

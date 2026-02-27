@@ -366,6 +366,9 @@ def get_model_for_view_name(view_name):
     if app_label.endswith("-api"):
         app_label = app_label.replace("-api", "")
         delimiter = "-"
+    elif app_label == "user":
+        # Legacy users UI namespace; actual app_label is "users".
+        app_label = "users"
 
     model_name = model_name.split(delimiter)[0]  # device
 
