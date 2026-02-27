@@ -411,6 +411,7 @@ nav:
               - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
           - Breakout Cables: "user-guide/feature-guides/breakout-cables.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
+          - Device Redundancy: "user-guide/feature-guides/device-redundancy.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields:
               - Custom Fields Overview: "user-guide/feature-guides/custom-fields.md"
