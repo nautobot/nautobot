@@ -40,6 +40,9 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
     Note that **physical uniqueness constraints** such as rack position and virtual chassis position remain enforced at the database level, only the logical uniqueness constraint has been moved to application-level validation.
     Additionally, the Constance setting `DEVICE_NAME_AS_NATURAL_KEY` has been deprecated. During migration, existing configurations using this setting will be translated to the appropriate `DEVICE_UNIQUENESS` value (`"name"` or `"location_tenant_name"`).
 
++/- 3.1.0
+    Devices installed in [device bays](devicebay.md) can now be nested more deeply than simply a child in a parent bay. The "Parent and Child" option for "Parent/child status" on [DeviceType](devicetype.md) can be used for Devices between the topmost Parent and the last Child.
+
 ## Developer API
 
 The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:
