@@ -1,0 +1,2 @@
+Implemented Permissions UI viewset using the existing mixin-based approach and `UI Component Framework`.
+Added is_saved_view_model = True in ObjectPermission Model

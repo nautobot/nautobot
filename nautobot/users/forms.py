@@ -10,11 +10,16 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from timezone_field import TimeZoneFormField
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, DateTimePicker
-from nautobot.core.forms.fields import (
-    DynamicModelMultipleChoiceField,
-)
+
+# from nautobot.core.forms import BootstrapMixin, DateTimePicker
+# from nautobot.core.forms.fields import (
+#     DynamicModelMultipleChoiceField,
+# )
+from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker, JSONArrayFormField, JSONField
+from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
+from nautobot.core.forms.forms import BulkEditForm
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.utils import serialize_user_without_config_and_views
@@ -108,6 +113,12 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
 
 
 class ObjectPermissionForm(BootstrapMixin, forms.ModelForm):
+    object_types = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+        label="Models",
+    )
+
     class Meta:
         model = ObjectPermission
         fields = [
@@ -118,6 +129,38 @@ class ObjectPermissionForm(BootstrapMixin, forms.ModelForm):
             "groups",
             "users",
             "actions",
+            "constraints",
+        ]
+
+
+class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ObjectPermission.objects.all(), widget=forms.MultipleHiddenInput)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    Models = DynamicModelMultipleChoiceField(
+        queryset=ContentType.objects.all(),
+        required=False,
+    )
+    users = DynamicModelMultipleChoiceField(
+        queryset=get_user_model().objects.all(),
+        required=False,
+    )
+    groups = DynamicModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+    )
+    actions = JSONArrayFormField(
+        base_field=forms.CharField(max_length=30),
+        required=False,
+    )
+    constraints = JSONField(required=False)
+
+    class Meta:
+        fields = [
+            "description",
+            "Models",
+            "users",
+            "groups",
             "constraints",
         ]
 

@@ -1,4 +1,5 @@
 # tables.py
+
 import django_tables2 as tables
 
 from nautobot.core.tables import (
@@ -8,6 +9,7 @@ from nautobot.core.tables import (
 from nautobot.users.models import ObjectPermission
 
 
+# import pdb; pdb.set_trace()
 class ObjectPermissionTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -20,11 +22,13 @@ class ObjectPermissionTable(BaseTable):
     constraints = tables.Column(linkify=True)
 
     def render_object_types(self, value):
-        if not value.exists():
-            return ""
+        def label(ct):
+            model = ct.model_class()
+            if model is None:
+                return f"{ct.app_label} | {ct.model}"
+            return f"{ct.app_label.title()} | {model._meta.verbose_name.title()}"
 
-        # Display as app_label.ModelName
-        return ", ".join(f"{ct.app_label} | {ct.model}" for ct in value.all())
+        return ", ".join(label(ct) for ct in value.all())
 
     def render_groups(self, value):
         if not value.exists():
@@ -39,9 +43,8 @@ class ObjectPermissionTable(BaseTable):
         return "—"
 
     def render_users(self, value):
-        # value is a ManyRelatedManager
         if not value.exists():
-            return "—"  # return empty cell
+            return "—"
 
         return ", ".join([user.username for user in value.all()])
 

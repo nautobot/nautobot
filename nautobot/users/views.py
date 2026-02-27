@@ -27,7 +27,9 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
+    AdminRequiredMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -43,6 +45,7 @@ from .forms import (
     LoginForm,
     NavbarFavoritesAddForm,
     NavbarFavoritesRemoveForm,
+    ObjectPermissionBulkEditForm,
     ObjectPermissionFilterForm,
     ObjectPermissionForm,
     PasswordChangeForm,
@@ -510,18 +513,27 @@ class AdvancedProfileSettingsEditView(GenericView):
 
 
 class ObjectPermissionUIViewSet(
-    ObjectDetailViewMixin, ObjectListViewMixin, ObjectEditViewMixin, ObjectDestroyViewMixin, ObjectBulkDestroyViewMixin
+    AdminRequiredMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
 ):
     queryset = ObjectPermission.objects.all()
     filterset_class = ObjectPermissionFilterSet
     filterset_form_class = ObjectPermissionFilterForm
     form_class = ObjectPermissionForm
+    bulk_update_form_class = ObjectPermissionBulkEditForm
     serializer_class = serializers.ObjectPermissionSerializer
     table_class = ObjectPermissionTable
 
     action_buttons = (
         "add",
         "bulk_delete",
+        "bulk_edit",
+        "export",
     )
 
     object_detail_content = object_detail.ObjectDetailContent(
