@@ -294,6 +294,7 @@ class Button(Component):
     label = None
     link_includes_pk = True
     link_name = None
+    placeholder_template_path = "components/button/button_placeholder.html"
     render_on_tab_id = "main"
     size = None
     template_path = "components/button/default.html"
@@ -369,17 +370,15 @@ class Button(Component):
         if not self.should_render(context):
             return ""
 
+        if self.should_render_deferred(context):
+            return render_component_template(self.placeholder_template_path, context, component=self)
+
         with context.update(self.get_extra_context(context)):
-            if self.should_render_deferred(context):
-                template_path = self.placeholder_template_path
-                button = render_component_template(template_path, context)
-            else:
-                template_path = self.template_path
-                button = render_component_template(template_path, context)
-                if self.javascript_template_path:
-                    button += format_html(
-                        "<script>{}</script>", render_component_template(self.javascript_template_path, context)
-                    )
+            button = render_component_template(self.template_path, context)
+            if self.javascript_template_path:
+                button += format_html(
+                    "<script>{}</script>", render_component_template(self.javascript_template_path, context)
+                )
         return button
 
 
@@ -475,6 +474,7 @@ class FormButton(Button):
 
 class ExtraDetailViewActionButton(Button):
     action: str = None
+    deferred_render = False  # TODO: deferred rendering of ExtraDetailViewActionButtons is not currently implemented
     label: str | Callable = None
     permission_check: Callable = None
     template_path = "components/button/extradetailviewactionbutton.html"
@@ -531,10 +531,7 @@ class ExtraDetailViewActionButton(Button):
             return ""
 
         with context.update(self.get_extra_context(context)):
-            template_path = self.template_path
-            if self.should_render_deferred(context):
-                template_path = self.placeholder_template_path
-            button = render_component_template(template_path, context)
+            button = render_component_template(self.template_path, context)
 
         return button
 
@@ -550,6 +547,7 @@ class Tab(Component):
     """Base class for UI framework definition of a single tabbed pane within an Object Detail (Object Retrieve) page."""
 
     content_wrapper_template_path = "components/tab/content_wrapper.html"
+    deferred_render = False  # TODO: deferred rendering of Tabs is not presently implemented/supported
     label = None
     label_wrapper_template_path = "components/tab/label_wrapper.html"
     layout = LayoutChoices.DEFAULT
@@ -663,12 +661,8 @@ class Tab(Component):
                 **self.get_extra_context(context),
             }
         ):
-            template_path = self.content_wrapper_template_path
-            if self.should_render_deferred(context):
-                template_path = self.placeholder_template_path
-
             tab_content = render_component_template(self.LAYOUT_TEMPLATE_PATHS[self.layout], context)
-            return render_component_template(template_path, context, tab_content=tab_content)
+            return render_component_template(self.content_wrapper_template_path, context, tab_content=tab_content)
 
 
 class DistinctViewTab(Tab):
@@ -795,6 +789,7 @@ class Panel(Component):
     footer_content_template_path = None
     header_extra_content_template_path = None
     label = None
+    placeholder_template_path = "components/panel/panel_placeholder.html"
     section = SectionChoices.FULL_WIDTH
     template_path = "components/panel/panel.html"
 
@@ -813,13 +808,13 @@ class Panel(Component):
 
         if not self.body_id:
             self.body_id = self._get_body_id(context)
-        with context.update(self.get_extra_context(context)):
-            template_path = self.template_path
-            if self.should_render_deferred(context):
-                template_path = self.placeholder_template_path
 
+        if self.should_render_deferred(context):
+            return render_component_template(self.placeholder_template_path, context, component=self)
+
+        with context.update(self.get_extra_context(context)):
             return render_component_template(
-                template_path,
+                self.template_path,
                 context,
                 label=self.render_label(context),
                 css_class=self.css_class,
@@ -2167,7 +2162,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        self.body_id = (f"custom_fields_{self.advanced_ui}",)
+        self.body_id = f"custom_fields_{self.advanced_ui}"
 
     def should_render(self, context: Context):
         """Render only if any custom fields are present."""
@@ -2239,7 +2234,7 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
                 The component will only be rendered if the user has these permissions.
         """
         super().__init__(**kwargs)
-        self.body_id = (f"computed_fields_{self.advanced_ui}",)
+        self.body_id = f"computed_fields_{self.advanced_ui}"
 
     def should_render(self, context: Context):
         """Render only if any relevant computed fields are defined."""
