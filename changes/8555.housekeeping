@@ -1,0 +1,6 @@
+Updated development npm dependency `@eslint/js` to `^9.39.3`.
+Updated development npm dependency `autoprefixer` to `^10.4.26`.
+Updated development npm dependency `css-loader` to `^7.1.4`.
+Updated development npm dependency `eslint` to `^9.39.3`.
+Updated development npm dependency `postcss-loader` to `^8.2.1`.
+Updated development npm dependency `webpack` to `^5.105.2`.
