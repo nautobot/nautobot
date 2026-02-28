@@ -95,8 +95,6 @@ urlpatterns = [
         RedirectView.as_view(url="/extras/scheduled-jobs/delete/"),
         name="scheduledjob_bulk_delete_legacy",
     ),
-    path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
-    path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
     # ScheduledJobs
     path("scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
     path("scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
