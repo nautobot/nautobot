@@ -23,23 +23,24 @@ The primary use cases to consider when creating, updating, or documenting redund
 
 To help guide these use cases, we will ask and answer each of these questions to go with the best practices:
 
-Q. Can you port channel across multiple devices? 
-Q. Can you see all interfaces on the Primary? 
-Q. Can you see all interfaces on the Backup? 
-Q. On Primary, can you tell which interfaces are assigned to which device? 
-Q. When do you see all the interfaces on the master device?
-Q. Can you connect interfaces from master to non-master? 
-Q. Any configurations don't map back to model? 
-Q. How are interfaces named?
-Q. What should the naming standard be for the chassis device?
-Q. Should I use interface named templates?
+- Can you port channel across multiple devices?
+- Can you see all interfaces on the Primary? 
+- Can you see all interfaces on the Backup? 
+- On Primary, can you tell which interfaces are assigned to which device? 
+- When do you see all the interfaces on the master device?
+- Can you connect interfaces from master to non-master? 
+- Any configurations don't map back to model? 
+- How are interfaces named?
+- What should the naming standard be for the chassis device?
+- Should I use interface named templates?
 
 ## Vendor Implementations
 
 While vendors offer a variety of technologies, the data model remains largely agnostic to these specifics. The following table serves as a foundation for modeling redundant devices in Nautobot.
 
-| Row | Dual-chassis Single Control Plane<br>(VSS / StackWise Virtual) | Multi-chassis Stack<br>(StackWise / VC / Arista Stack / IRF / SummitStack) | Firewall Cluster<br>(Cisco FXOS / SRX) | Multi-chassis L2 Pair<br>(vPC / MLAG) | Firewall HA Pair<br>(PAN / Fortinet / ASA) | HA Pairs<br>(LB / F5 / A10 / Viptela / Versa / Silver Peak) |
+|     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
+| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS / SRX | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -51,47 +52,48 @@ While vendors offer a variety of technologies, the data model remains largely ag
 | Dedicated HA Interface | Yes | Yes | Yes | Yes | Yes | Typically<br>(sync/heartbeat links) |
 | Shared Virtual MAC | Yes | Yes | Yes | Typically<br>(via protocol such as FHRP/anycast) | Yes (on L3) | Yes |
 
-1. Dual-chassis single control plane (only two)
-    VSS / StackWise Virtual (Cisco)
-2. Multi-chassis stack
-    Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extreme SummitStack
-3. Multi-chassis pair
-    VPC / MLAG (Cisco vPC, Arista MLAG, Juniper MC-LAG variants)
-4. Firewall HA pair 
-    SRX HA (Juniper chassis cluster style; conceptually similar to firewall HA)
-5. Firewall HA pairs
-    Firewall HA Pair (PAN / Fortinet / ASA)
-6. ADC/WAN HA pairs
-    Load balancer HA / F5 BIG-IP HA / A10 Thunder HA / Viptela / Versa / Silver Peak
 
+1. Dual-chassis Single Control Plane
+    VSS / StackWise Virtual (Cisco)
+2. Multi-chassis Stack
+    Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extreme SummitStack
+3. Firewall Cluster
+    Cisco FXOS / SRX
+4. Multi-chassis L2 Pair
+    VPC / MLAG (Cisco vPC, Arista MLAG, Juniper MC-LAG variants)
+5. Firewall HA pairs
+    PAN / Fortinet / ASA
+6. HA Pairs
+    Load balancer HA / F5 BIG-IP HA / A10 Thunder HA / Viptela / Versa / Silver Peak
 
 The primary piece of information to consider from this list is the Management Control Plane Count. When it is **one** you should use a VirtualChassis and when it is **two**, you should use a Device Redundancy Group.
 
-
-## Nautobot Model Overview
-
-Note: Insert UML here
-Note: Insert Model table summarizing attributes and their meanings
-
 ## Virtual Chassis
 
+### Nautobot Model Overview
+
+TODO: Insert UML here
+TODO: Insert Model table summarizing attributes and their meanings
+
+### Sample API
+### Sample Design Builder
 ### GraphQL
 
 ===================
+### Dual-chassis Single Control Plane
 
 #### Key Questions
 
-Q. Can you port channel across multiple devices? Yes, (review bulk edit)
-Q. Can you see all interfaces on the Primary? Yes
-Q. Can you see all interfaces on the Backup? No, only see what is physically on that device (e.g. not the other interfaces)
-Q. On Primary, can you tell which interfaces are assigned to which device? Yes, a column "Device" starts showing up
-Q. When do you see all the interfaces on the master device? When it is set to master
-Q. Can you connect interfaces from master to non-master? Yes
-Q. Do all configuration map to the model correctly? Yes
-Q. How are interfaces named? TODO: 
-Q. What should the naming standard be for the chassis device?  TODO: 
-Q. Should I use interface named templates? Yes. You will likely have to rename them after the fact, but the bulk rename makes it simple.
-
+- Can you port channel across multiple devices? Yes, (review bulk edit)
+- Can you see all interfaces on the Primary? Yes
+- Can you see all interfaces on the Backup? No, only see what is physically on that device (e.g. not the other interfaces)
+- On Primary, can you tell which interfaces are assigned to which device? Yes, a column "Device" starts showing up
+- When do you see all the interfaces on the master device? When it is set to master
+- Can you connect interfaces from master to non-master? Yes
+- Do all configuration map to the model correctly? Yes
+- How are interfaces named? TODO: 
+- What should the naming standard be for the chassis device?  TODO: 
+- Should I use interface named templates? Yes. You will likely have to rename them after the fact, but the bulk rename makes it simple.
 
 #### Configuration Generation
 
@@ -106,7 +108,7 @@ switch virtual domain 200
 
 > Note: Switch number is local, domain must match
 
-~~~ Management Plane ~~
+_Management Plane_
 
 ```
 int port-channel 201
@@ -188,51 +190,65 @@ interface TenGigabitEthernet2/0/1
 > Note: this config is on a single management IP
 
 
-#### Sample API
-#### Sample Design Builder
 
-===================
 
-### Multi-chassis
+
+
+### Multi-Chassis Stack TODO: Jeff
 #### Key Questions
 #### Configuration Generation
-#### Sample API
-#### Sample Design Builder
 
-===================
 
-### Firewall Cluster
+
+
+
+
+### Firewall Cluster TODO: Allen
 #### Key Questions
 #### Configuration Generation
-#### Sample API
-#### Sample Design Builder
+
+
+
+
 
 
 ## Device Redundancy Groups
 
+### Nautobot Model Overview
+
+TODO: Insert UML here
+
+TODO: Insert Model table summarizing attributes and their meanings
+
+### Sample API
+### Sample Design Builder
 ### GraphQL
 
-===================
+================
 
-### Multi-chassis L2 Pair
+### Multi-chassis L2 Pair TODO: Ken
 #### Key Questions
 #### Configuration Generation
-#### Sample API
-#### Sample Design Builder
 
-===================
 
-### Firewall HA pair
+
+
+
+### Firewall HA pair TODO: Allen
 #### Key Questions
 #### Configuration Generation
-#### Sample API
-#### Sample Design Builder
 
-===================
 
-### HA pairs
+
+
+
+
+### HA pairs TODO: Jeff
 #### Key Questions
 #### Configuration Generation
-#### Sample API
-#### Sample Design Builder
+
+
+
+
+
 
