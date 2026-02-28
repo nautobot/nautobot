@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
+from nautobot.core.models import BaseManager, BaseModel, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -30,11 +30,10 @@ __all__ = (
 #
 
 
-class UserQuerySet(CompositeKeyQuerySetMixin, models.QuerySet):
+class UserQuerySet(RestrictedQuerySet):
     """
     Add support for composite-keys to the User queryset.
 
-    Note that this is *NOT* based around RestrictedQuerySet.
     """
 
 
