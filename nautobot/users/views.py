@@ -36,6 +36,7 @@ from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import (
     GetReturnURLMixin,
+    ObjectBulkDestroyViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -185,7 +186,7 @@ class UserUIViewSet(
     ObjectListViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
-    # ObjectBulkDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
     # ObjectBulkUpdateViewMixin,
 ):
     queryset = User.objects.all()
@@ -238,23 +239,6 @@ class UserUIViewSet(
             ),
         ]
     )
-
-    def get_queryset(self):
-        """
-        User uses a custom queryset that doesn't implement `restrict()`.
-        Fall back to model-level permission checks.
-        """
-        queryset = self.queryset.all()
-        action = self.get_action()
-        permission = f"{queryset.model._meta.app_label}.{action}_{queryset.model._meta.model_name}"
-
-        if self.request.user.is_superuser:
-            return queryset
-        if not self.request.user.is_authenticated:
-            return queryset.none()
-        if not self.request.user.has_perm(permission):
-            return queryset.none()
-        return queryset
 
     @staticmethod
     def get_object_permission_formset_class():
