@@ -56,4 +56,4 @@
 
 {% include table_template|default:'panel_table.html' with table_id="object_table" %}
 
-{% include 'inc/paginator.html' with paginator=table.paginator page=table.page htmx_enabled=True table_id="object_table" %}
+{% include 'inc/paginator.html' with paginator=table.paginator page=table.page htmx_enabled=True table_id="object_table" exclude_controls=table.is_object_embedded_search_results %}

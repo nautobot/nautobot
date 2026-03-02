@@ -321,7 +321,6 @@ class CustomFieldModel(models.Model):
         super().clean()
 
         custom_fields = {cf.key: cf for cf in CustomField.objects.get_for_model(self)}
-        custom_fields_should_render = {cf.key: cf.should_render(self) for cf in custom_fields.values()}
 
         # Validate all field values
         for field_key, value in self._custom_field_data.items():
@@ -330,19 +329,15 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                # If field should be rendered, we perform full validation with enforce_required=True
-                # If field is out of scope, we don't require it to be set; but if is set we still check if value
-                # has correct type or is a correct choice
-                # For hidden custom field (out of scope) there still might be a value set in DB and also API can modify it
                 self._custom_field_data[field_key] = custom_fields[field_key].validate(
-                    value, enforce_required=custom_fields_should_render[field_key]
+                    value,
                 )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
         # Check for missing values, erroring on required ones and populating non-required ones automatically
         for cf in custom_fields.values():
-            if cf.key not in self._custom_field_data and custom_fields_should_render[cf.key]:
+            if cf.key not in self._custom_field_data:
                 if cf.default is not None:
                     self._custom_field_data[cf.key] = cf.default
                 elif cf.required:
@@ -748,6 +743,9 @@ class CustomField(
             raise ValidationError(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
+
+        if self.required and self.scope_filter:
+            raise ValidationError({"required": "Scope filter can't be set, if field is required."})
 
     def to_form_field(
         self,

@@ -80,6 +80,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
         htmx_request = request.headers.get("HX-Request", False)
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
@@ -103,6 +105,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
+                    is_object_embedded_search_results=is_object_embedded_search_request,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
@@ -125,7 +128,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request, self.saved_view),
+                "per_page": get_paginate_count(
+                    request, self.saved_view, save_user_config=not is_object_embedded_search_request
+                ),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
