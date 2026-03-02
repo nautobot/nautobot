@@ -20,21 +20,38 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import (
+    AdminRequiredMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+)
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
+from .api import serializers
+from .filters import ObjectPermissionFilterSet
 from .forms import (
     AdvancedProfileSettingsForm,
     LoginForm,
     NavbarFavoritesAddForm,
     NavbarFavoritesRemoveForm,
+    ObjectPermissionBulkEditForm,
+    ObjectPermissionFilterForm,
+    ObjectPermissionForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
 )
-from .models import Token
+from .models import ObjectPermission, Token
+from .tables import ObjectPermissionTable
 
 #
 # Login/logout
@@ -486,3 +503,32 @@ class AdvancedProfileSettingsEditView(GenericView):
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
+
+
+class ObjectPermissionUIViewSet(
+    AdminRequiredMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    queryset = ObjectPermission.objects.all()
+    filterset_class = ObjectPermissionFilterSet
+    filterset_form_class = ObjectPermissionFilterForm
+    form_class = ObjectPermissionForm
+    bulk_update_form_class = ObjectPermissionBulkEditForm
+    serializer_class = serializers.ObjectPermissionSerializer
+    table_class = ObjectPermissionTable
+
+    action_buttons = (
+        "add",
+        "bulk_delete",
+        "bulk_edit",
+        "export",
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__")]
+    )
