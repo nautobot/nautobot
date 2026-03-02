@@ -1,6 +1,4 @@
-Added a Nautobot UI ViewSet implementation for Django admin LogEntry under the Users app.
-- Added LogEntry proxy model to support Nautobot UI rendering.
-- Implemented LogEntry UI list and detail views using NautobotUIViewSet and the UI Component Framework.
-- Added LogEntry navigation under the Administration → Authentication tab.
-- Added LogEntry filtering, search, and table rendering with action flag badge styling.
-- Enabled detail view provenance support via created and last_updated aliases.
+Added LogEntry model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+Added LogEntry proxy model to support Nautobot UI rendering.
+Added LogEntry navigation under the Administration → Authentication tab.
+Added LogEntry filtering, search, and table rendering with action flag badge styling.
