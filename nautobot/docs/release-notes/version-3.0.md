@@ -228,6 +228,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8589](https://github.com/nautobot/nautobot/issues/8589) - Fixed the ability to provide your own CACHES client to allow `health_check` to pass.
 - [#8642](https://github.com/nautobot/nautobot/issues/8642) - Fixed issue where `islower` was not called as a function in the conditional.
 - [#8642](https://github.com/nautobot/nautobot/issues/8642) - Added missing f-string to the raised error message.
+- [#8646](https://github.com/nautobot/nautobot/issues/8646) - Fixed scheduled jobs incorrectly running after their associated approval workflow was denied.
 
 ### Dependencies in v3.0.8
 
