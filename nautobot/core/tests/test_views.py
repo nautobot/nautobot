@@ -18,6 +18,7 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
+from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
@@ -1207,17 +1208,15 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @override_settings(PAGINATE_COUNT=5)
-    def test_object_table_panel(self):
-        provider = Provider.objects.create(name="A Test Provider 1")
-        circuit_type = CircuitType.objects.create(
-            name="A Test Circuit Type",
-        )
+    def setUp(self):
+        super().setUp()
+        self.provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(name="A Test Circuit Type")
         circuit_status = Status.objects.get_for_model(Circuit).first()
 
         circuits = [
             Circuit(
-                provider=provider,
+                provider=self.provider,
                 cid=f"00121{x}",
                 circuit_type=circuit_type,
                 status=circuit_status,
@@ -1227,11 +1226,14 @@ class TestObjectDetailView(TestCase):
         Circuit.objects.bulk_create(circuits)
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
-        url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(url)
+        self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        response = self.client.get(self.url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
-        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={self.provider.id}"
 
         # Assert Badge Count in table panel header
         panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
@@ -1244,7 +1246,7 @@ class TestObjectDetailView(TestCase):
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
         <span>
-            <span id="_value_name">{provider.name}</span>
+            <span id="_value_name">{self.provider.name}</span>
             <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
@@ -1253,6 +1255,22 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(name_copy, response_data)
         # ASN do not have a value, therefore no copy btn
         self.assertNotIn("#asn_copy", response_data)
+
+    def test_get_component_via_htmx(self):
+        panels = ProviderUIViewSet.object_detail_content.tabs[0].panels
+        for panel in panels:
+            if panel.__class__.__name__.startswith("_"):
+                # automagical panel like `_CustomFieldsPanel`, which may not always render unconditionally, skip it.
+                continue
+            with self.subTest(panel=panel):
+                response = self.client.get(
+                    self.url + f"?component_id={panel.component_id}", headers={"HX-Request": "true"}
+                )
+                self.assertHttpStatus(response, 200)
+                response_data = response.content.decode(response.charset)
+                self.assertIn(panel.component_id, response_data)
+                for other_panel in [other_panel for other_panel in panels if other_panel != panel]:
+                    self.assertNotIn(other_panel.component_id, response_data)
 
 
 class SearchRobotsTestCase(TestCase):

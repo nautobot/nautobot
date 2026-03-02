@@ -197,7 +197,7 @@ class Component:
         return f"<{self.__class__.__name__} {self.component_id}>"
 
     def _generate_component_id(self):
-        """Generate a deterministic id based on hashing any suitable instance attributes."""
+        """Generate a deterministic ID based on an MD5 hash of the JSON representation of suitable attributes."""
 
         def filter_dict(dict_):
             filtered_dict = {}

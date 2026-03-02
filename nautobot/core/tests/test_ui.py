@@ -53,18 +53,24 @@ class ObjectDetailContentTest(TestCase):
                     self.assertNotIn(component.component_id, seen_ids)
                     seen_ids.add(component.component_id)
 
+                    self.assertEqual(odc.get_component_by_id(component.component_id), component)
+
                 # Make sure we're reasonably comprehensive in `components()` implementation:
                 # Likely to increase as we componentize and enhance more, but unlikely to decrease!
                 self.assertGreaterEqual(len(seen_ids), 30)
                 for tab in odc.tabs:
                     self.assertIn(tab.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(tab.component_id), tab)
                     for panel in tab.panels:
                         self.assertIn(panel.component_id, seen_ids)
+                        self.assertEqual(odc.get_component_by_id(panel.component_id), panel)
                         if hasattr(panel, "components"):
                             for component in panel.components():
                                 self.assertIn(component.component_id, seen_ids)
+                                self.assertEqual(odc.get_component_by_id(component.component_id), component)
                 for button in odc.extra_buttons:
                     self.assertIn(button.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(button.component_id), button)
 
     def test_consistent_component_ids_across_odcs(self):
         """Creating the same component class with the same kwargs in different views should have same component_id."""
@@ -102,6 +108,11 @@ class ObjectDetailContentTest(TestCase):
         for tab1, tab2 in zip(tabs1, tabs2):
             with self.subTest(tab1=tab1, tab2=tab2):
                 self.assertEqual(tab1.component_id, tab2.component_id)
+
+    def test_get_component_by_id_negative(self):
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(None))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(0))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id("00000000000000000000000000000000"))
 
 
 class DataTablePanelTest(TestCase):
