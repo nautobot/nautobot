@@ -1,5 +1,4 @@
 from django import forms
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
@@ -12,7 +11,6 @@ from timezone_field import TimeZoneFormField
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
-
 from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker, JSONArrayFormField, JSONField
 from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
 from nautobot.core.forms.forms import BulkEditForm
