@@ -480,6 +480,8 @@ ObjectTextPanel(
 )
 ```
 
+If the field is a single related object, you can use `render_as=ObjectTextPanel.RenderOptions.HYPERLINKED_OBJECT` to automatically render the value as a hyperlink to the related object.
+
 ### TextPanel
 
 `TextPanel` renders content from a specified context field. It provides a simple way to display text content in various formats (Markdown, JSON, YAML, plaintext, or code) from the rendering context.

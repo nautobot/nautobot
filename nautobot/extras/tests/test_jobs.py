@@ -457,6 +457,36 @@ class JobTransactionTest(TransactionTestCase):
             print(job_result.traceback)
             raise
 
+    def test_synchronous_enqueue_job_sets_started_before_run(self):
+        """
+        When enqueue_job is called with synchronous=True (e.g. runjob --local or Kubernetes job pod),
+        JobResult status and date_started must be set to STARTED before run_job.apply() executes,
+        so the UI shows "Running" instead of "Pending" until the job completes.
+        """
+        import nautobot.extras.jobs as jobs_module
+
+        real_run_job = jobs_module.run_job
+        with mock.patch("nautobot.extras.jobs.run_job") as mock_run_job:
+
+            def apply_wrapper(*args, **kwargs):
+                task_id = kwargs.get("task_id")
+                if task_id is not None:
+                    job_result = models.JobResult.objects.get(pk=task_id)
+                    self.assertEqual(
+                        job_result.status,
+                        JobResultStatusChoices.STATUS_STARTED,
+                        "JobResult should be STARTED before run_job.apply() when running synchronously",
+                    )
+                    self.assertIsNotNone(
+                        job_result.date_started,
+                        "date_started should be set before run_job.apply() when running synchronously",
+                    )
+                return real_run_job.apply(*args, **kwargs)
+
+            mock_run_job.apply = apply_wrapper
+            job_result = create_job_result_and_run_job("pass_job", "TestPassJob")
+            self.assertJobResultStatus(job_result)
+
     def test_job_result_manager_censor_sensitive_variables(self):
         """
         Job test with JobResult Censored Sensitive Variables.
