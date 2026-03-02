@@ -1,1 +1,1 @@
-Fixed `on_workflow_denied`. Set `enabled=False` to not run denied job.
+Fixed scheduled jobs incorrectly running after their associated approval workflow was denied.
