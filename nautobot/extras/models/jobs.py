@@ -1125,6 +1125,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         else:
             log.save(using=JOB_LOGS)
 
+        if self.celery_kwargs.get("nautobot_job_console_log", False):
+            JobConsoleEntry.objects.create(job_result=self, timestamp=timezone.now(), text=message)
+
     log.alters_data = True
 
     def save(self, *args, **kwargs):
