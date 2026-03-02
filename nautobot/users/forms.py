@@ -7,12 +7,13 @@ from django.contrib.auth.forms import (
     UserChangeForm as DjangoUserChangeForm,
     UserCreationForm as DjangoUserCreationForm,
 )
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, DateTimePicker
-from nautobot.core.forms.widgets import StaticSelect2
+from nautobot.core.forms import BootstrapMixin, BulkEditForm, BulkEditNullBooleanSelect, DateTimePicker
+from nautobot.core.forms.widgets import StaticSelect2, StaticSelect2Multiple
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.models import User
 from nautobot.users.utils import serialize_user_without_config_and_views
@@ -179,3 +180,14 @@ class UserUpdateForm(BootstrapMixin, DjangoUserChangeForm):
             "last_login",
             "date_joined",
         )
+
+
+class UserBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=User.objects.all(), widget=forms.MultipleHiddenInput())
+    groups = forms.ModelMultipleChoiceField(queryset=Group.objects.all(), required=False, widget=StaticSelect2Multiple)
+    is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    is_staff = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+    is_superuser = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    class Meta:
+        nullable_fields = []

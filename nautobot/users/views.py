@@ -37,6 +37,7 @@ from nautobot.users.utils import serialize_user_without_config_and_views
 from ..core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -50,6 +51,7 @@ from .forms import (
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
+    UserBulkEditForm,
     UserCreateForm,
     UserFilterForm,
     UserUpdateForm,
@@ -187,7 +189,7 @@ class UserUIViewSet(
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
-    # ObjectBulkUpdateViewMixin,
+    ObjectBulkUpdateViewMixin,
 ):
     queryset = User.objects.all()
     filterset_class = UserFilterSet
@@ -195,6 +197,7 @@ class UserUIViewSet(
     table_class = UserTable
     create_form_class = UserCreateForm
     update_form_class = UserUpdateForm
+    bulk_update_form_class = UserBulkEditForm
     action_buttons = ("add", "export")
 
     object_detail_content = object_detail.ObjectDetailContent(
@@ -236,6 +239,7 @@ class UserUIViewSet(
                 weight=400,
                 table_class=GroupTable,
                 table_filter="user",
+                enable_related_link=False,
             ),
         ]
     )
@@ -244,7 +248,7 @@ class UserUIViewSet(
     def get_object_permission_formset_class():
         return inlineformset_factory(
             User,
-            User.object_permissions.through,
+            User.object_permissions.through,  # pylint: disable=no-member
             fk_name="user",
             fields=("objectpermission",),
             extra=1,
