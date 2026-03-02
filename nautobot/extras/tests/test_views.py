@@ -4119,7 +4119,7 @@ class JobTestCase(
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
-            self.assertBodyContains(response, "Unable to retrieve a kubernetes job manifest.")
+            self.assertBodyContains(response, "Unable to retrieve a Kubernetes job manifest for this job queue.")
 
         self.assertEqual(JobResult.objects.count(), initial_result_count)
 
