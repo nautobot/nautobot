@@ -8,6 +8,7 @@ import urllib.parse
 import uuid
 
 from django.apps import apps
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -26,7 +27,7 @@ from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
@@ -404,6 +405,51 @@ class SearchContentTypeView(TestCase):
         )
 
     def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
+class MessagesViewTestCase(TestCase):
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_empty(self):
+        """When there are no messages queued, response contains an empty header_messages container."""
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+
+    def test_messages(self):
+        """When there are messages queued, response contains them in the header_messages container."""
+        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
+        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
+        request._messages = messages.storage.cookie.CookieStorage(request)
+        request.user = self.user
+        messages.info(request, "Test info message")
+        messages.success(request, "Test success message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div id="header_messages">
+                    <div class="alert alert-info alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test info message
+                    </div>
+                    <div class="alert alert-success alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test success message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        """Request made from a client other than HTMX results in HTTP 400 response."""
         response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
         self.assertEqual(response.status_code, 400)
 
