@@ -482,6 +482,61 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         self.assertTrue(should_render)
         self.assertEqual(cm.output, [expected_warning])
 
+    def test_set_scope_filter_invalid_form_raises_validation_error(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertRaises(ValidationError) as cm:
+            cf.set_scope_filter({"asn": "invalid str"})
+
+        self.assertEqual(cm.exception.message_dict, {"asn": ["Enter a whole number."]})
+
+    def test_set_scope_filter_drops_empty_values(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter(
+            {
+                "name": "",
+                "asn": None,
+                "tags": [],
+                "contacts": (),
+            }
+        )
+
+        self.assertEqual(cf.scope_filter, {})
+
+    def test_set_scope_filter_model_choice_stores_pk(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location_a = Location.objects.get(name="Location A")
+        location_b = Location.objects.get(name="Location B")
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter({"parent": [location_a, location_b]})
+
+        self.assertEqual(cf.scope_filter, {"parent": ["Location A", "Location B"]})
+
+    def test_set_scope_filter_overrides_previous_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.scope_filter = {"name": ["Old Value"]}
+
+        cf.set_scope_filter({"asn": [123]})
+
+        self.assertEqual(cf.scope_filter, {"asn": [123]})
+
     def test_all_custom_field_types_are_tested(self):
         """Ensure every CustomFieldTypeChoices value is covered by field test data."""
 
@@ -495,6 +550,60 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             set(),
             f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
         )
+
+    def test_scope_filter_prefixed_return_prefixed_data(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            scope_filter={"name": ["Test name"], "location": ["Test location"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        expected_prefixed_data = {"scope-name": ["Test name"], "scope-location": ["Test location"]}
+        prefixed = cf.scope_filter_prefixed
+        self.assertEqual(prefixed, expected_prefixed_data)
+
+    def test_validate_enforce_required(self):
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        value = cf.validate("", enforce_required=False)
+        self.assertEqual(value, "")
+
+        with self.assertRaisesRegex(ValidationError, "Required field cannot be empty."):
+            cf.validate("", enforce_required=True)
+
+    def test_scope_filter_and_required_cant_be_set_both(self):
+        """
+        Test if validation works properly and setting both required=True and scope filter is blocked.
+        """
+        cf = CustomField(
+            label="Test transitioning",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+            scope_filter={"description__ic": "in-scope"},
+        )
+
+        with self.assertRaisesRegex(ValidationError, "Scope filter can't be set, if field is required."):
+            cf.validated_save()
+
+        cf.required = False
+        cf.validated_save()
+
+        self.assertEqual(cf.scope_filter, {"description__ic": "in-scope"})
+        self.assertEqual(cf.required, False)
+
+        cf.required = True
+        cf.scope_filter = {}
+        cf.validated_save()
+
+        self.assertEqual(cf.scope_filter, {})
+        self.assertEqual(cf.required, True)
 
 
 @tag("example_app")
@@ -1455,6 +1564,10 @@ class CustomFieldModelTest(TestCase):
             template="{{ obj.location }}",
             weight=200,
         )
+
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_a = Location.objects.create(name="Location A", status=location_status, location_type=cls.lt)
+        cls.location_b = Location.objects.create(name="Location B", status=location_status, location_type=cls.lt)
 
     def test_custom_field_dict_population(self):
         """Test that custom_field_data is properly populated when no data is passed in."""

@@ -18,17 +18,18 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
-from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
@@ -377,6 +378,36 @@ class MediaViewTestCase(TestCase):
                 self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
+class SearchContentTypeView(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_search_content_type(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
+        self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_with_initial_value(self):
+        location_type = LocationType.objects.create(name="Test Location Type")
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"})
+            + f"?location_type={location_type.name}",
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, f'<option selected value="{location_type.name}">{location_type.name}</option>', html=True
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_search_bar_redirect_to_login(self):
@@ -427,6 +458,144 @@ class SearchFieldsTestCase(TestCase):
             """,
             html=True,
         )
+
+
+class SearchViewTestCase(TestCase):
+    """Unit tests for the SearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.get(name="Campus")
+        active_status = Status.objects.get(name="Active")
+        cls.location = Location.objects.create(
+            name="SearchViewTestUniqueLocation",
+            location_type=location_type,
+            status=active_status,
+        )
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_unauthenticated_redirects_htmx(self):
+        """Unauthenticated HTMX access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_no_query_renders_search_form(self):
+        """GET without ?q renders the search page, not the results page."""
+        response = self.client.get(reverse("search"))
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # The search form should be present
+        self.assertBodyContains(response, "Please enter your desired search in the above search box.")
+        # The results container should NOT be present when there is no query
+        self.assertNotContains(response, "nb-search-results-tables")
+
+    def test_get_with_query_non_htmx(self):
+        """GET with ?q but without an HTMX header renders search.html with all searchable models."""
+        response = self.client.get(reverse("search"), {"q": "test"})
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # search.html renders the results container with an HTMX trigger for each model in parallel
+        self.assertIn("searchable_models", response.context)
+        self.assertContains(response, "nb-search-results-tables")
+
+    def test_htmx_with_matching_results(self):
+        """HTMX request for dcim.location with a matching query returns a populated table."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "SearchViewTestUniqueLocation", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNotNone(response.context["table"])
+        self.assertContains(response, str(self.location.pk))
+
+    def test_htmx_with_no_matching_results(self):
+        """HTMX request for dcim.location with a non-matching query returns table=None."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "zzz_no_match_xyzzy_abc123", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_invalid_model_falls_back_gracefully(self):
+        """HTMX request with an unrecognised model parameter falls back without error."""
+        response = self.client.get(
+            reverse("search"),
+            {"q": "test", "model": "notanapp.notamodel"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_all_searchable_models_return_valid_responses(self):
+        """HTMX request for each model in the searchable_models list returns a valid response."""
+        searchable_models = []
+        for app_config in apps.get_app_configs():
+            if hasattr(app_config, "searchable_models"):
+                searchable_models += [
+                    f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
+                ]
+        for label in searchable_models:
+            with self.subTest(label=label):
+                self.add_permissions(f"{label.split('.')[0]}.view_{label.split('.')[1]}")
+                model = get_model_from_name(label)
+                filterset_class = get_filterset_for_model(model)
+                if filterset_class is not None:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "1"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "a", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "a"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+                else:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    self.assertIsNone(response.context["table"])
 
 
 class FilterFormsTestCase(TestCase):

@@ -843,6 +843,25 @@ class BulkEditTestCase(TransactionTestCase):
         )
         self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
 
+    def test_bulk_edit_objects_select_all_prefetch_related(self):
+        """
+        Bulk edit all DeviceType instances (https://github.com/nautobot/nautobot/issues/8570).
+        """
+        self.add_permissions("dcim.change_devicetype", "dcim.view_devicetype")
+        mfr = Manufacturer.objects.create(name="Cisco")
+        for x in range(3):
+            DeviceType.objects.create(manufacturer=mfr, model=f"Cisco CSR{x}000v")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=ContentType.objects.get_for_model(DeviceType).id,
+            edit_all=True,
+            filter_query_params={},
+            form_data={"u_height": 0},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(DeviceType, job_result, DeviceType.objects.all().count(), u_height=0)
+
     def test_bulk_edit_objects_nullify(self):
         """
         Bulk edit Role instances to nullify their weight.
@@ -1248,6 +1267,26 @@ class BulkDeleteTestCase(TransactionTestCase):
             saved_view_id=None,
         )
         self._common_no_error_test_assertion(Circuit, job_result)
+
+    def test_bulk_delete_objects_select_all_prefetch_related(self):
+        """
+        Delete all DeviceType objects (https://github.com/nautobot/nautobot/issues/8570).
+        """
+        self.add_permissions("dcim.delete_devicetype", "dcim.view_devicetype")
+        mfr = Manufacturer.objects.create(name="Cisco")
+        for x in range(3):
+            DeviceType.objects.create(manufacturer=mfr, model=f"Cisco CSR{x}000v")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(DeviceType).id,
+            delete_all=True,
+            filter_query_params={"per_page": [10]},
+            pk_list=[],
+            saved_view_id=None,
+        )
+        self._common_no_error_test_assertion(DeviceType, job_result)
 
     def test_bulk_delete_objects_select_some(self):
         """

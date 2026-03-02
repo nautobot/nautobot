@@ -46,6 +46,7 @@ of the Redis server and port for each sentinel instance to connect to
 * `LOCATION`: Similar to a redis URL, *however*, the hostname in the URL is the master/service name in redis sentinel
 * `SENTINEL_KWARGS`: Options which will be passed directly to [Redis Sentinel](https://github.com/redis/redis-py#sentinel-support)
 * `PASSWORD`: The redis password (if set), the `SENTINEL_KWARGS["password"]` setting is the password for Sentinel
+* `TIMEOUT`: (Optional) Cache timeout in seconds. Defaults to 300 seconds if not specified.
 
 Example:
 

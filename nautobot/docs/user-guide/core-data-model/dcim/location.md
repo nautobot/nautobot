@@ -11,3 +11,28 @@ Much like Sites, each Location must be assigned a name and operational [`status`
 
 +++ 2.0.0
     Location now supports all properties previously present on the Site model, including the `asn`, `comments`, `contact_email` `contact_name`, `contact_phone`, `facility`, `latitude`, `longitude`, `physical_address`, `shipping_address` and `time_zone` fields.
+
+## Location List View and Hierarchy Display
+
+The default (unfiltered) Location list view (`/dcim/locations/`) includes display elements to indicate the hierarchy or nesting of child Locations under their parent Locations, as this is useful information to be aware of. However, in most cases, applying sorting, filtering, or search to this list view will **remove** the hierarchy from the display, as it would be misleading or outright confusing when not showing the full list of Locations in context.
+
++++ 3.1.0 "Added exemptions for specific filters"
+
+There are a small set of filters which, when applied individually or in combination, *do not* remove the hierarchy display, because these filters preserve the hierarchy of the filtered set of Locations. Examples of such filters include `max_depth` and `subtree`. The "default filter" described in the next section, for much the same reason, also does not remove indentation when in effect.
+
+!!! tip
+    The hierarchy-preserving filters only preserve the hierarchy display if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
+
+    * `/dcim/locations/max_depth=2` -- hierarchy shown
+    * `/dcim/locations/max_depth=2&sort=status` -- hierarchy hidden due to sorting
+    * `/dcim/locations/max_depth=2&status=Active` -- hierarchy hidden due to additional filtering
+
+## Location List View Configuration
+
++++ 3.1.0 "Added configuration parameter"
+
+To improve performance of the initial rendering of the Location list view when a large number of records and/or a deep hierarchy of records are present, an administrator can configure the setting [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../../administration/configuration/settings.md#location_list_default_max_depth). When enabled, this setting effectively applies a default `max_depth` filter (similar to a default [saved view](../../platform-functionality/user-interface/savedview.md) for all users when initially accessing the Location list view, such as from the navigation menu.
+
+When this setting is configured to a positive number, the default Location list view will only display Locations down to a certain depth. For example, a value of `1` (one) will only display root Locations (those with no higher-level parent), a value of `2` (two) will display root Locations and their immediate children, but not their grandchildren, and so forth. Users can then either apply an appropriate filter of their choice to narrow the scope of the list view further, or simply select the relevant parent Location and navigate to its "detail" view to see and interact with any descendant Locations it contains.
+
+This default filter only applies when viewing the hierarchical Location list view (unsorted and either unfiltered or filtered only by the specific filters that preserve hierarchy, as described in the previous section); applying any non-hierarchy-preserving filter(s) to the view will bypass the default filter and display the full set of records as selected by the user-specified filter.

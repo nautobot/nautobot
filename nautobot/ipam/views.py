@@ -31,6 +31,7 @@ from nautobot.core.ui.breadcrumbs import (
     InstanceParentBreadcrumbItem,
     ModelBreadcrumbItem,
 )
+from nautobot.core.ui.bulk_buttons import BulkDeleteButton, BulkEditButton
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -338,6 +339,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
+
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -366,6 +369,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
             "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
         }
     )
+
+    class PrefixSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            """Override the body_content_table_list_url as it derives from obj.parent.pk instead of obj.pk."""
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id or 'null'}",
+            }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -398,12 +410,35 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=100,
                 table_class=tables.PrefixTable,
                 table_attribute="default_ancestors",
-                table_title="Parent Prefixes",
+                table_title="Ancestor Prefixes",
                 exclude_columns=["namespace"],
                 related_field_name="ancestors",
                 add_button_route=None,
                 paginate=False,
-                show_table_config_button=False,
+            ),
+            PrefixSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=130,
+                table_class=tables.PrefixTable,
+                table_attribute="default_siblings",
+                table_title="Sibling Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+                hide_hierarchy_ui=True,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=160,
+                table_class=tables.PrefixTable,
+                table_attribute="children",
+                table_title="Child Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -453,7 +488,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
-                label="Child Prefixes",
+                label="Descendant Prefixes",
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
@@ -464,6 +499,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         include_paginator=True,
                         related_field_name="within",
+                        form_id="prefix_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="prefix_form", model=Prefix),
+                            BulkDeleteButton(form_id="prefix_form", model=Prefix),
+                        ],
                     ),
                 ),
             ),
@@ -481,6 +522,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         include_paginator=True,
                         related_field_name="prefix",
+                        form_id="ipaddress_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="ipaddress_form", model=IPAddress),
+                            BulkDeleteButton(form_id="ipaddress_form", model=IPAddress),
+                        ],
                     ),
                 ],
             ),
@@ -521,57 +568,66 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
     def filter_queryset(self, queryset):
         queryset = super().filter_queryset(queryset)
-        if not self.filter_params:
-            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=-1)
-            default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
-            if default_container_only and default_max_depth >= 0:
-                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
-                queryset = queryset.exclude(**{param: False})
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{max_depth}</code> "
-                            "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
-                            max_depth=default_max_depth,
-                        ),
-                    )
-            elif default_max_depth >= 0:
-                param = f"{'parent__' * (default_max_depth + 1)}isnull"
-                queryset = queryset.exclude(**{param: False})
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the configured "
-                            "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting value of <code>{max_depth}</code>.",
-                            max_depth=default_max_depth,
-                        ),
-                    )
-            elif default_container_only:
-                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                if not self.request.headers.get("HX-Request"):
-                    messages.info(
-                        self.request,
-                        format_html(
-                            "This table has been filtered by default due to the enabled "
-                            "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
-                        ),
-                    )
-
         # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
-        # - ip_version
-        # - max_depth
-        # - namespace
-        # - prefix_length__lte
-        # - type=container (*only*)
         if all(
-            key in ["ip_version", "max_depth", "namespace", "prefix_length__lte", "type"] for key in self.filter_params
+            key
+            in [
+                "ip_version",
+                "max_depth",
+                "namespace",
+                "prefix_and_descendants",
+                "prefix_length__lte",
+                "type",  # *only* for type=container, see below
+                "within_include",
+            ]
+            for key in self.filter_params
         ) and ("type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
             self.hide_hierarchy_ui = False
+
+        if not self.hide_hierarchy_ui:
+            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+            default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
+            if default_max_depth > 0:
+                if first_root := queryset.first():
+                    default_max_depth += first_root.ancestors().count()
+            if (
+                "max_depth" not in self.filter_params
+                and "type" not in self.filter_params
+                and default_container_only
+                and default_max_depth > 0
+            ):
+                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
+                param = f"{'parent__' * default_max_depth}isnull"
+                queryset = queryset.exclude(**{param: False})
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting "
+                        "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
+                    ),
+                )
+            elif "max_depth" not in self.filter_params and default_max_depth > 0:
+                param = f"{'parent__' * default_max_depth}isnull"
+                queryset = queryset.exclude(**{param: False})
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the configured "
+                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting."
+                    ),
+                )
+            elif "type" not in self.filter_params and default_container_only:
+                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
+                messages.info(
+                    self.request,
+                    format_html(
+                        "This table has been filtered by default due to the enabled "
+                        "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
+                    ),
+                )
+
         return queryset
 
     def get_extra_context(self, request, instance):
@@ -589,7 +645,52 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         "Check/Fix IPAM Parents",
                     ),
                 )
-        return super().get_extra_context(request, instance)
+        extra_context = super().get_extra_context(request, instance)
+        if self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            extra_context["table_expandable"] = True
+        return extra_context
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        child_prefixes = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        prefix_table = tables.PrefixDetailTable(
+            child_prefixes,
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "next_page_url": reverse("ipam:prefix_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
+                "template": "panel_table.html",
+                "table": prefix_table,
+                "table_expandable": True,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, child_prefixes.count() - (paginate["per_page"] * prefix_table.page.number)),
+            }
+        )
 
     @action(
         detail=True,
@@ -1257,26 +1358,8 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_edit",
-                        link_includes_pk=False,
-                        label="Edit Selected",
-                        color=ButtonActionColorChoices.EDIT,
-                        icon="mdi-pencil",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=200,
-                    ),
-                    object_detail.FormButton(
-                        link_name="ipam:vlan_bulk_delete",
-                        link_includes_pk=False,
-                        label="Delete Selected",
-                        color=ButtonActionColorChoices.DELETE,
-                        icon="mdi-trash-can-outline",
-                        size="xs",
-                        form_id="vlan_form",
-                        weight=100,
-                    ),
+                    BulkEditButton(form_id="vlan_form", model=VLAN),
+                    BulkDeleteButton(form_id="vlan_form", model=VLAN),
                 ],
             ),
         )

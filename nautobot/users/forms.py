@@ -13,10 +13,6 @@ from timezone_field import TimeZoneFormField
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
 
-# from nautobot.core.forms import BootstrapMixin, DateTimePicker
-# from nautobot.core.forms.fields import (
-#     DynamicModelMultipleChoiceField,
-# )
 from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker, JSONArrayFormField, JSONField
 from nautobot.core.forms.fields import DynamicModelMultipleChoiceField
 from nautobot.core.forms.forms import BulkEditForm
@@ -84,11 +80,6 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
-    language = forms.ChoiceField(
-        required=False,
-        help_text="Set your preferred language. This mostly affects date/time formatting at present.",
-        choices=settings.LANGUAGES,
-    )
     timezone = TimeZoneFormField(required=False, help_text="Set your preferred timezone.", widget=StaticSelect2)
 
 

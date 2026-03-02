@@ -23,7 +23,7 @@ import time_machine
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -3686,6 +3686,26 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
 
 class JobResultTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.job_result = JobResult.objects.create(
+            name="JobResultTest",
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result=None,
+            traceback=None,
+            date_done=None,
+        )
+
+    def _make_eager_result(self, **kwargs):
+        """Helper to create an unsaved eager JobResult-like object."""
+        defaults = {
+            "status": JobResultStatusChoices.STATUS_SUCCESS,
+            "result": "Default Eager Result",
+            "traceback": None,
+        }
+        defaults.update(kwargs)
+        return JobResult(**defaults)
+
     def test_passing_invalid_data_into_job_result(self):
         """JobResult.result was changed from TextField to JSONField in https://github.com/nautobot/nautobot/pull/4133/files.
         Assert passing json serializable and non-serializable data into JobResult.result"""
@@ -3711,6 +3731,226 @@ class JobResultTestCase(TestCase):
         job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
 
         self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
+
+    def test_build_celery_kwargs_base_fields(self):
+        """_build_celery_kwargs should always include the core set of keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        task_queue = job_model.default_job_queue.name
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=task_queue,
+        )
+
+        self.assertEqual(result["nautobot_job_job_model_id"], str(job_model.id))
+        self.assertEqual(result["nautobot_job_user_id"], str(self.user.id))
+        self.assertEqual(result["queue"], task_queue)
+        self.assertEqual(result["nautobot_job_profile"], False)
+        self.assertEqual(result["nautobot_job_console_log"], False)
+        self.assertEqual(result["nautobot_job_ignore_singleton_lock"], False)
+        self.assertNotIn("nautobot_job_schedule_id", result)
+
+    def test_build_celery_kwargs_with_additional_options(self):
+        """_build_celery_kwargs should correctly pass through additional options."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 120
+        job_model.time_limit = 300
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            profile=True,
+            console_log=True,
+            ignore_singleton_lock=True,
+        )
+
+        self.assertTrue(result["nautobot_job_profile"])
+        self.assertTrue(result["nautobot_job_console_log"])
+        self.assertTrue(result["nautobot_job_ignore_singleton_lock"])
+        self.assertIn("soft_time_limit", result)
+        self.assertEqual(result["soft_time_limit"], 120)
+        self.assertIn("time_limit", result)
+        self.assertEqual(result["time_limit"], 300)
+
+    def test_build_celery_kwargs_with_schedule(self):
+        """_build_celery_kwargs should include nautobot_job_schedule_id when a schedule is provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        schedule = ScheduledJob.objects.create(
+            name="test_schedule",
+            task="pass_job.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            schedule=schedule,
+        )
+
+        self.assertIn("nautobot_job_schedule_id", result)
+        self.assertEqual(result["nautobot_job_schedule_id"], schedule.id)
+
+    def test_build_celery_kwargs_zero_time_limits_excluded(self):
+        """_build_celery_kwargs should NOT include soft_time_limit/time_limit when they are 0."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 0
+        job_model.time_limit = 0
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+        )
+
+        self.assertNotIn("soft_time_limit", result)
+        self.assertNotIn("time_limit", result)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_are_merged(self):
+        """Extra celery_kwargs should be merged into the result."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        extra = {"countdown": 60, "expires": 3600}
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=extra,
+        )
+
+        self.assertEqual(result["countdown"], 60)
+        self.assertEqual(result["expires"], 3600)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_override_defaults(self):
+        """Extra celery_kwargs can override default keys (e.g. queue), matching the existing TODO behaviour."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs={"queue": "custom_queue"},
+        )
+
+        self.assertEqual(result["queue"], "custom_queue")
+
+    def test_build_celery_kwargs_none_celery_kwargs_is_safe(self):
+        """Passing celery_kwargs=None should not raise and should not add unexpected keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=None,
+        )
+
+        # Only the expected base keys should be present (plus any time limit keys if applicable)
+        expected_keys = {
+            "nautobot_job_job_model_id",
+            "nautobot_job_profile",
+            "nautobot_job_console_log",
+            "nautobot_job_user_id",
+            "nautobot_job_ignore_singleton_lock",
+            "queue",
+        }
+        self.assertEqual(set(result.keys()), expected_keys)
+
+    def test_higher_precedence_status_updates_job_result(self):
+        """Eager result with higher precedence should overwrite status and result."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="Eager Result Test1",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Eager Result Test1")
+        self.assertIsNotNone(self.job_result.date_done)
+
+    def test_lower_precedence_status_does_not_overwrite(self):
+        """Eager result with lower precedence should not overwrite job_result and status fields."""
+        self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result.result = "Result Higher Precedence"
+        self.job_result.save()
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result="Lower Precedence",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Result Higher Precedence")
+
+    def test_exception_result_copies_structured_exception(self):
+        """Exception results should be converted to structured exc_type / exc_message."""
+        exc = ValueError("Exception Test")
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_FAILURE,
+            result=exc,
+            traceback="traceback text",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertEqual(
+            self.job_result.result,
+            {
+                "exc_type": "ValueError",
+                "exc_message": "Exception Test",
+            },
+        )
+        self.assertEqual(self.job_result.traceback, "traceback text")
+
+    def test_non_exception_result_without_traceback(self):
+        """Successful eager results should not set traceback."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="ok",
+            traceback=None,
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.result, "ok")
+        self.assertIsNone(self.job_result.traceback)
+
+    def test_date_done_is_not_overwritten_if_already_set(self):
+        """Existing date_done should not be replaced."""
+        existing_date = now()
+        self.job_result.date_done = existing_date
+        self.job_result.save()
+
+        eager_result = self._make_eager_result()
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.date_done, existing_date)
+
+    def test_save_is_always_called(self):
+        """JobResult.save() should always be called."""
+        eager_result = self._make_eager_result()
+
+        with mock.patch.object(JobResult, "save", autospec=True) as save_mock:
+            JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        save_mock.assert_called_once()
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
