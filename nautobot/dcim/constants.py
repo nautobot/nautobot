@@ -110,3 +110,11 @@ COMPATIBLE_TERMINATION_TYPES = {
 
 # Limit of 4 allows recursion depth of Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
 MODULE_RECURSION_DEPTH_LIMIT = 4
+
+#
+# Devices
+#
+
+# Limit of 4 allows recursion depth of Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device
+# Matches MODULE_RECURSION_DEPTH_LIMIT for consistency
+DEVICE_RECURSION_DEPTH_LIMIT = 4

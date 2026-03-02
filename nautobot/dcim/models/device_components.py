@@ -30,7 +30,6 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
     COPPER_TWISTED_PAIR_IFACE_TYPES,
@@ -1157,21 +1156,51 @@ class DeviceBay(ComponentModel):
         if self.device == self.installed_device:
             raise ValidationError("Cannot install a device into itself.")
 
-        # Check that the installed device is not already installed elsewhere
         if self.installed_device:
-            current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
-            if current_bay and current_bay != self:
+            self._validate_installed_device_parent_chain()
+
+    def _validate_installed_device_parent_chain(self):
+        """Validate this bay assignment against the parent chain.
+
+        Ensures:
+        - installed_device is not already an ancestor of this bay's device
+        - no existing loop in the parent chain
+        - device not already in another bay
+        - device type is child or parent-child
+        """
+        seen_devices = set()
+        parent_bay = DeviceBay.objects.filter(installed_device=self.device).first()
+        while parent_bay is not None:
+            parent_device = parent_bay.device
+            if parent_device == self.installed_device:
                 raise ValidationError(
-                    {
-                        "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
-                    }
+                    "Installing this device would create a loop; it is already an ancestor of this bay's device."
                 )
-            if self.installed_device.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_CHILD:
+            if parent_device in seen_devices:
                 raise ValidationError(
-                    {
-                        "installed_device": f'Cannot install device "{self.installed_device}"; device-type "{self.installed_device.device_type}" subdevice_role is not "child".'
-                    }
+                    "The device parent chain already contains a loop; fix existing data before making this assignment."
                 )
+            seen_devices.add(parent_device)
+            parent_bay = DeviceBay.objects.filter(installed_device=parent_device).first()
+
+        current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
+        if current_bay and current_bay != self:
+            raise ValidationError(
+                {
+                    "installed_device": (
+                        f"Cannot install the specified device; device is already installed in {current_bay}"
+                    )
+                }
+            )
+        if not self.installed_device.device_type.is_child_device:
+            raise ValidationError(
+                {
+                    "installed_device": (
+                        f'Cannot install device "{self.installed_device}"; device-type '
+                        f'"{self.installed_device.device_type}" subdevice_role is not "child" or "parent-child".'
+                    )
+                }
+            )
 
 
 #
