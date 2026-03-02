@@ -26,6 +26,9 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
     !!! important
         Ensure this job template uses the same Docker image as your Nautobot Kubernetes deployment. You can specify the image name in spec.template.spec.containers.image. Additionally, configure and map the required environment variables to corresponding [Kubernetes ConfigMap](https://kubernetes.io/docs/concepts/configuration/configmap/) instances. These variables can be defined in the spec.template.spec.containers.env list. For consistency, it is recommended to use the same environment configuration for this Job manifest as that of your Nautobot Kubernetes deployment.
 
+    !!! important "**VERY IMPORTANT**: Nautobot Must Be First Container"
+        In order to select the correct job, we must override the container's run command to include the primary key of the job result. As such, it is imperative that the Nautobot container be the first container in the manifest `spec.template.spec.containers` list. You are free to add additional containers to the manifest (e.g., sidecars), but the Nautobot container must be the first one.
+
     ```json
     {
         "apiVersion": "batch/v1",
