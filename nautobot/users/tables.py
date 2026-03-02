@@ -4,12 +4,12 @@ import django_tables2 as tables
 
 from nautobot.core.tables import (
     BaseTable,
+    ButtonsColumn,
     ToggleColumn,
 )
 from nautobot.users.models import ObjectPermission
 
 
-# import pdb; pdb.set_trace()
 class ObjectPermissionTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
@@ -20,6 +20,7 @@ class ObjectPermissionTable(BaseTable):
     users = tables.Column(verbose_name="Users", orderable=False)
     permission_actions = tables.Column(accessor="actions", linkify=True, verbose_name="Actions")
     constraints = tables.Column(linkify=True)
+    actions = ButtonsColumn(ObjectPermission, buttons=("edit", "delete"))
 
     def render_object_types(self, value):
         def label(ct):
@@ -60,6 +61,7 @@ class ObjectPermissionTable(BaseTable):
             "permission_actions",
             "constraints",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -71,4 +73,5 @@ class ObjectPermissionTable(BaseTable):
             "permission_actions",
             "constraints",
             "description",
+            "actions",
         )

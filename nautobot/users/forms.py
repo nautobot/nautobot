@@ -176,6 +176,7 @@ class ObjectPermissionFilterForm(BootstrapMixin, forms.Form):
     object_types = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
+        label="Models",
     )
 
     users = DynamicModelMultipleChoiceField(
