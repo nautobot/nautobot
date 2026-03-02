@@ -447,6 +447,19 @@ class SearchContentTypeView(AccessMixin, View):
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
+class MessagesView(AccessMixin, View):
+    def get(self, request):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            return render(request, "components/htmx/messages.html")
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
     """
     Display a user-friendly error message with troubleshooting tips when a static media file fails to load.
