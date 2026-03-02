@@ -45,9 +45,6 @@ class UserManager(BaseManager, UserManager_):
     def get_queryset(self):
         return UserQuerySet(self.model, using=self._db)
 
-    def restrict(self, user, action="view"):
-        return self.get_queryset().restrict(user, action)
-
 
 class User(BaseModel, AbstractUser):
     """
