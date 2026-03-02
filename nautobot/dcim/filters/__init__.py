@@ -106,7 +106,7 @@ from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
-from nautobot.tenancy.models import Tenant
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
@@ -511,6 +511,12 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         field_name="rack__rack_group",
         to_field_name="name",
         label="Rack group (name or ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        field_name="rack__location",
+        to_field_name="name",
+        prefers_id=True,
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -1474,6 +1480,12 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
+    tenant_group = TreeNodeMultipleChoiceFilter(
+        field_name="master__tenant__tenant_group",
+        queryset=TenantGroup.objects.all(),
+        to_field_name="name",
+        label="Tenant Group (name or ID)",
+    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     members = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1653,7 +1665,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "panel_type", "power_path", "tags"]
+        fields = ["id", "name", "panel_type", "power_path", "breaker_position_count", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1738,6 +1750,12 @@ class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
     virtual_ip = MultiValueCharFilter(
         method="filter_virtual_ip",
         label="Virtual IP Address (address or ID)",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interfaces (name or ID)",
+        prefers_id=True,
     )
 
     class Meta:
@@ -1996,7 +2014,7 @@ class ControllerManagedDeviceGroupFilterSet(
         label="Parent group (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Controller.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Controlled device groups and descendants thereof (name or ID)",
         method="_subtree",
@@ -2258,7 +2276,7 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
 class ModuleBayFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "device__name": {
+            "parent_device__name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
@@ -2366,6 +2384,10 @@ class VirtualDeviceContextFilterSet(
         field_name="interfaces",
         label="Has Interfaces",
     )
+    has_tenant = RelatedMembershipBooleanFilter(
+        field_name="tenant",
+        label="Has tenant",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2376,6 +2398,7 @@ class VirtualDeviceContextFilterSet(
             "tenant",
             "interfaces",
             "has_interfaces",
+            "has_tenant",
             "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
