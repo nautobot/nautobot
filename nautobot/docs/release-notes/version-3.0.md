@@ -210,6 +210,48 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.7 (2026-02-17)
+
+### Security in v3.0.7
+
+- [#8504](https://github.com/nautobot/nautobot/issues/8504) - Updated dependency `django` to `~4.2.28` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
+- [#8539](https://github.com/nautobot/nautobot/issues/8539) - Updated dependency `cryptography` to `46.0.5` to mitigate CVE-2026-26007.
+- [#8544](https://github.com/nautobot/nautobot/issues/8544) - Updated dependency `pillow` to `^12.1.1` to mitigate CVE-2026-25990.
+
+### Added in v3.0.7
+
+- [#8484](https://github.com/nautobot/nautobot/issues/8484) - Added polish type variants to CS connector in PortTypeChoices
+- [#8511](https://github.com/nautobot/nautobot/issues/8511) - Added missing bulk edit buttons to the IP Addresses and Child Prefix tabs on the Prefix detail view.
+- [#8530](https://github.com/nautobot/nautobot/issues/8530) - Added `Status` field to `InterfaceRedundancyGroupTable`.
+
+### Fixed in v3.0.7
+
+- [#8267](https://github.com/nautobot/nautobot/issues/8267) - Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.
+- [#8319](https://github.com/nautobot/nautobot/issues/8319) - Fixed the creation of Interface Dynamic Groups by Duplex, 802.1Q Mode and Tagged/Untagged VLANs.
+- [#8479](https://github.com/nautobot/nautobot/issues/8479) - Fixed missing text on the trace action button.
+- [#8500](https://github.com/nautobot/nautobot/issues/8500) - Fixed `KeyError` when `CACHES` setting does not include an explicit `TIMEOUT` key.
+- [#8522](https://github.com/nautobot/nautobot/issues/8522) - Adjusted the foreground color contrast threshold used for color labels to improve readability.
+- [#8530](https://github.com/nautobot/nautobot/issues/8530) - Fixed FilterForm definitions of `InterfaceRedundancyGroupFilterForm` and `VirtualDeviceContextFilterForm`.
+- [#8550](https://github.com/nautobot/nautobot/issues/8550) - Fixed "Rack" selection on basic filter form for Cables being incorrectly mapped to `rack=<UUID>` instead of `rack=<name>`.
+- [#8550](https://github.com/nautobot/nautobot/issues/8550) - Fixed Cable filterset support for `rack=null` and `tenant=null` filters.
+
+### Dependencies in v3.0.7
+
+- [#8475](https://github.com/nautobot/nautobot/issues/8475) - Updated npm dependency `jquery-ui` to `^1.14.2`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `mysqlclient` to `~2.2.8`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `social-auth-core` to `~4.8.5`.
+
+### Housekeeping in v3.0.7
+
+- [#8475](https://github.com/nautobot/nautobot/issues/8475) - Updated development npm dependency `autoprefixer` to `^10.4.24`.
+- [#8475](https://github.com/nautobot/nautobot/issues/8475) - Updated development npm dependency `mini-css-extract-plugin` to `^2.10.0`.
+- [#8475](https://github.com/nautobot/nautobot/issues/8475) - Updated development npm dependency `prettier` to `^3.8.1`.
+- [#8475](https://github.com/nautobot/nautobot/issues/8475) - Updated development npm dependency `sass-loader` to `^16.0.7`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated development dependency `coverage` to `~7.13.4`.
+- [#8508](https://github.com/nautobot/nautobot/issues/8508) - Changed many invoke commands to accept multiple services as arguments.
+- [#8534](https://github.com/nautobot/nautobot/issues/8534) - Removed AWX reference from Nautobot Cloud documentation.
+- [#8550](https://github.com/nautobot/nautobot/issues/8550) - Added test method `assertQuerySetEqualAndNotEmpty`, which for now is equivalent to `assertQuerysetEqualAndNotEmpty` (note differing capitalization). The latter name will be deprecated in Nautobot 3.1 and eventually removed in a future release.
+
 ## v3.0.6 (2026-02-02)
 
 ### Security in v3.0.6

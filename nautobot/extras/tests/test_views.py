@@ -1,4 +1,5 @@
 from datetime import timedelta
+from http import HTTPStatus
 from unittest import mock
 import urllib.parse
 import uuid
@@ -26,6 +27,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
     ConsolePort,
     Device,
@@ -721,7 +723,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -832,7 +834,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -886,7 +888,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -934,7 +936,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "It is just a comment"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -1977,6 +1979,97 @@ class CustomFieldTestCase(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
 
+    def test_custom_field_update_form_render_scope_filter_section_properly(self):
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField.objects.create(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf.content_types.set([content_type])
+
+        url = reverse("extras:customfield_edit", args=[cf.pk])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
+
+        cf.required = True
+        cf.save()
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_without_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+
+    def test_scope_filter_fields_with_invalid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_with_valid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        content_type = ContentType.objects.get_for_model(Location)
+
+        url = reverse("extras:customfield_scope_filter_fields") + f"?content_types={content_type.pk}"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        # Check if tabs are present
+        self.assertIn("Basic", response_content)
+        self.assertIn("Advanced", response_content)
+        # Check example select are present
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_when_field_is_required(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999, "required": "on"})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
 
 class CustomLinkRenderingTestCase(TestCase):
     """Tests for the inclusion of CustomLinks, distinct from tests of the CustomLink views themselves."""
@@ -2246,6 +2339,68 @@ class DynamicGroupTestCase(
         self.assertHttpStatus(self.client.post(**request), 302)
         instance.refresh_from_db()
         self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
+
+    def test_edit_object_with_content_type_dcim_interface(self):
+        """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
+        # Create some global VLANs
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Create an interface with the specified filter values
+        interface = Interface.objects.create(
+            name="Test Interface",
+            device=Device.objects.first(),
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            status=Status.objects.first(),
+            untagged_vlan=vlan2,
+        )
+        interface.tagged_vlans.add(vlan1)
+        interface.validated_save()
+        # Create a dynamic group with the specified filter values
+        content_type = ContentType.objects.get_for_model(Interface)
+        instance = DynamicGroup.objects.create(name="DG DCIM|Interface", content_type=content_type)
+        data = self.form_data.copy()
+        data.update(
+            {
+                "name": "DG DCIM|Interface",
+                "content_type": content_type.pk,
+                "filter-mode": [InterfaceModeChoices.MODE_TAGGED],
+                "filter-duplex": [InterfaceDuplexChoices.DUPLEX_FULL],
+                "filter-tagged_vlans": [vlan1.pk],
+                "filter-untagged_vlan": [vlan2.pk],
+                "tenant": None,
+                "tags": [],
+            }
+        )
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["mode"], [InterfaceModeChoices.MODE_TAGGED])
+        self.assertEqual(instance.filter["duplex"], [InterfaceDuplexChoices.DUPLEX_FULL])
+        self.assertEqual(instance.filter["tagged_vlans"], [str(vlan1.pk)])
+        self.assertEqual(instance.filter["untagged_vlan"], [str(vlan2.pk)])
+
+        # Check that the members of the dynamic group are correctly calculated
+        # We expect a queryset of Interface objects with the specified filter values
+        filtered_qs = Interface.objects.filter(
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            tagged_vlans=vlan1,
+            untagged_vlan=vlan2,
+        ).distinct()
+
+        group_members = instance.update_cached_members()
+        # The interface queryset and the group members should match
+        self.assertQuerysetEqualAndNotEmpty(
+            group_members,
+            filtered_qs,
+            msg=f"DynamicGroup members mismatch.\nExpected: {list(filtered_qs.values_list('pk', flat=True))}\nReturned: {list(group_members.values_list('pk', flat=True))}",
+        )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
@@ -2738,7 +2893,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 1", is_active=True)
         # Try update the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.get(update_url, follow=True)
+        response = self.client.get(update_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
@@ -2783,7 +2938,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 2", is_active=True)
         # Try delete the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.post(delete_url, follow=True)
+        response = self.client.post(delete_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to delete this Saved View owned by {instance.owner}",

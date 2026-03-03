@@ -39,6 +39,7 @@ from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -328,7 +329,9 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(
+                    value,
+                )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
@@ -741,6 +744,9 @@ class CustomField(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
+        if self.required and self.scope_filter:
+            raise ValidationError({"required": "Scope filter can't be set, if field is required."})
+
     def to_form_field(
         self,
         set_initial=True,
@@ -881,7 +887,7 @@ class CustomField(
                 form_field.widget = MultiValueCharInput()
         return form_field
 
-    def validate(self, value):
+    def validate(self, value, enforce_required=True):
         """
         Validate a value according to the field's type validation rules.
 
@@ -953,7 +959,7 @@ class CustomField(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
-        elif self.required:
+        elif self.required and enforce_required:
             raise ValidationError("Required field cannot be empty.")
 
         return value
@@ -979,7 +985,26 @@ class CustomField(
             delete_custom_field_data.delay(self.key, content_types, context)
 
     def add_prefix_to_cf_key(self):
+        """
+        Add `cf_` prefix to the key for forms and filters usage
+        """
         return "cf_" + str(self.key)
+
+    @property
+    def scope_filter_model_class(self):
+        """
+        Property to fetch model class from first content types assigned to this field.
+        """
+        return self.content_types.all()[0].model_class()
+
+    @property
+    def scope_filter_prefixed(self):
+        """
+        Property to get the scope filter data with `scope-` prefix for forms usage.
+        """
+        if self.scope_filter:
+            return {f"scope-{name}": value for name, value in self.scope_filter.items()}
+        return {}
 
     def should_render(self, instance: Model) -> bool:
         """
@@ -1019,6 +1044,19 @@ class CustomField(
             return True
 
         return filterset.qs.exists()
+
+    def set_scope_filter(self, form_data):
+        """
+        Set all desired fields from `form_data` into `scope_filter` dict.
+
+        Args:
+            form_data (dict): Dictionary of filter parameters, generally from a filter form's cleaned data.
+        """
+        model_class = self.scope_filter_model_class
+        filterset_class = get_filterset_for_model(model_class)
+
+        new_filter_dict = build_filter_dict_from_filterset(filterset_class, form_data)
+        self.scope_filter = new_filter_dict
 
 
 @extras_features(

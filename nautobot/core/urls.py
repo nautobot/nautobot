@@ -13,6 +13,7 @@ from nautobot.core.views import (
     NautobotMetricsView,
     NautobotMetricsViewAuth,
     RenderJinjaView,
+    SearchContentTypeView,
     SearchView,
     StaticMediaFailureView,
     ThemePreviewView,
@@ -32,6 +33,7 @@ urlpatterns = [
     path("", HomeView.as_view(), name="home"),
     path("about/", AboutView.as_view(), name="about"),
     path("search/", SearchView.as_view(), name="search"),
+    path("search/<str:content_type>/", SearchContentTypeView.as_view(), name="search_content_type"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),

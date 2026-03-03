@@ -2,10 +2,12 @@
 {% load helpers %}
 {% load perms %}
 
+{% include 'inc/header_messages.html' %}
+
 {% if permissions.change or permissions.delete %}
     {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
         {% if table.paginator.num_pages > 1 %}
-            <div id="select_all_box" hx-history="false" hx-swap-oob="true" class="visually-hidden card d-print-none">
+            <div id="select_all_box" hx-history="false" class="visually-hidden card d-print-none">
                 <div class="card-body column-gap-20 hstack row-gap-12 flex-wrap justify-content-end">
                     <div class="form-check flex-grow-1 mb-0">
                         <input class="form-check-input" id="select_all" name="_all" type="checkbox">
@@ -47,11 +49,11 @@
                 </div>
             </div>
         {% else %}
-            <span id="select_all_box" hx-history="false" hx-swap-oob="true" class="visually-hidden d-print-none"></span>
+            <span id="select_all_box" hx-history="false" class="visually-hidden d-print-none"></span>
         {% endif %}
     {% endwith %}
 {% endif %}
 
 {% include table_template|default:'panel_table.html' with table_id="object_table" %}
 
-{% include 'inc/paginator.html' with paginator=table.paginator page=table.page htmx_enabled=True table_id="object_table" %}
+{% include 'inc/paginator.html' with paginator=table.paginator page=table.page htmx_enabled=True table_id="object_table" exclude_controls=table.is_object_embedded_search_results %}

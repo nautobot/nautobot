@@ -416,7 +416,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "max_depth", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
@@ -424,6 +424,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    max_depth = forms.IntegerField(required=False, help_text="Maximum nesting depth within parent locations")
     tags = TagFilterField(model)
 
 
@@ -778,7 +779,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1106,27 +1107,27 @@ class ModuleTypeFilterForm(NautobotFilterForm):
     module_family = DynamicModelMultipleChoiceField(
         queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
-    has_console_ports = forms.NullBooleanField(
+    has_console_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_console_server_ports = forms.NullBooleanField(
+    has_console_server_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_ports = forms.NullBooleanField(
+    has_power_port_templates = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_outlets = forms.NullBooleanField(
+    has_power_outlet_templates = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_interfaces = forms.NullBooleanField(
+    has_interface_templates = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
@@ -2685,7 +2686,6 @@ class ModuleBulkEditForm(
 
 class ModuleFilterForm(
     NautobotFilterForm,
-    LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
@@ -3192,6 +3192,16 @@ class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormM
     speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    duplex = forms.MultipleChoiceField(choices=InterfaceDuplexChoices, required=False, widget=StaticSelect2Multiple())
+    mode = forms.MultipleChoiceField(
+        choices=InterfaceModeChoices,
+        required=False,
+        label="802.1Q Mode",
+        help_text=INTERFACE_MODE_HELP_TEXT,
+        widget=StaticSelect2Multiple(),
+    )
+    tagged_vlans = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Tagged VLANs")
+    untagged_vlan = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Untagged VLAN")
     mac_address = forms.CharField(required=False, label="MAC address")
     tags = TagFilterField(model)
 
@@ -4531,11 +4541,13 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(), to_field_name="name", required=False, null_option="None"
+    )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
+        to_field_name="name",
         required=False,
-        label="Rack",
         null_option="None",
         query_params={"location": "$location"},
     )
@@ -5193,6 +5205,7 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(),
         required=False,
+        query_params={"interface_redundancy_groups__isnull": "false"},
     )
     virtual_ip = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
@@ -5202,9 +5215,10 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
         queryset=SecretsGroup.objects.all(),
         required=False,
     )
-    protocol = forms.ChoiceField(
-        choices=InterfaceRedundancyGroupProtocolChoices,
+    protocol = forms.MultipleChoiceField(
+        choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices),
         required=False,
+        widget=StaticSelect2Multiple(),
     )
 
     class Meta:
@@ -5861,7 +5875,6 @@ class VirtualDeviceContextFilterForm(
         "device",
         "status",
         "tenant",
-        "has_tenant",
         "has_primary_ip",
         "tags",
     ]
@@ -5880,11 +5893,6 @@ class VirtualDeviceContextFilterForm(
     has_primary_ip = forms.NullBooleanField(
         required=False,
         label="Has a primary IP",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
-    has_tenant = forms.NullBooleanField(
-        required=False,
-        label="Has Tenant",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
