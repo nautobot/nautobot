@@ -88,7 +88,7 @@
             {% endif %}
     {% endif %}
     {% if field.errors %}
-        <ul class="mb-0 mt-4">
+        <ul class="mb-0 mt-4 w-100">
             {% for error in field.errors %}
                 {# Embed an HTML comment indicating the error for extraction by tests #}
                 <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
