@@ -33,6 +33,7 @@ from nautobot.core.forms import (
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
+    NullableDateField,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -1196,7 +1197,7 @@ class FileProxyFilterForm(BootstrapMixin, forms.Form):
     model = FileProxy
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
-    uploaded_at = forms.DateField(required=False, label="Uploaded at", widget=DatePicker())
+    uploaded_at = NullableDateField(required=False, label="Uploaded at", widget=DateTimePicker())
     job = DynamicModelMultipleChoiceField(
         queryset=Job.objects.all(),
         required=False,
