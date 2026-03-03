@@ -83,6 +83,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     occupied_positions = tables.Column(accessor="occupied_positions", verbose_name="Position", orderable=False)
     phase_designation = tables.Column(accessor="phase_designation", verbose_name="Phase Designation", orderable=False)
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
+    connection = tables.Column(orderable=False)
     available_power = tables.Column(verbose_name="Available power (VA)")
     tags = TagColumn(url_name="dcim:powerfeed_list")
     actions = ButtonsColumn(PowerFeed)

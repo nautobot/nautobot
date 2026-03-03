@@ -1,1 +1,0 @@
-Added test method `assertQuerySetEqualAndNotEmpty`, which for now is equivalent to `assertQuerysetEqualAndNotEmpty` (note differing capitalization). The latter name will be deprecated in Nautobot 3.1 and eventually removed in a future release.

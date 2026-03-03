@@ -1695,6 +1695,7 @@ class BaseTextPanel(Panel):
             YAML (str): Dict will be displayed as pretty-formatted yaml (value: "yaml")
             MARKDOWN (str): Markdown format (value: "markdown").
             CODE (str): Code format. Just wraps content within <pre> tags (value: "code").
+            HYPERLINKED_OBJECT (str): Attempts to render the value as a hyperlink to the related object.
         """
 
         PLAINTEXT = "plaintext"
@@ -1702,6 +1703,7 @@ class BaseTextPanel(Panel):
         YAML = "yaml"
         MARKDOWN = "markdown"
         CODE = "code"
+        HYPERLINKED_OBJECT = "hyperlinked_object"
 
     def __init__(
         self,
