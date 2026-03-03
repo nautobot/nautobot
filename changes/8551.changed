@@ -1,1 +1,0 @@
-Changed Location list view behavior so that filtering by the filters `max_depth` and/or `subtree` (in the absence of any other filters) will not prevent the indentation of locations based on their nesting depth.
