@@ -1,11 +1,15 @@
 from datetime import date, timedelta
 from unittest import mock
 
+from django.contrib.admin.models import ADDITION, CHANGE, DELETION
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.test.utils import override_settings
+from django.urls import reverse
 
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.users.models import ObjectPermission, Token
+from nautobot.users.models import LogEntry, ObjectPermission, Token
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -28,6 +32,45 @@ class TokenTest(ModelTestCases.BaseModelTestCase):
     def test_natural_key_does_not_expose_token_key(self):
         self.assertNotEqual(self.token.key, "")
         self.assertNotIn(self.token.key, self.token.natural_key())
+
+
+class LogEntryTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(username="logentry-user")
+        self.content_type = ContentType.objects.get_for_model(User)
+        self.logentry = LogEntry.objects.create(
+            user=self.user,
+            content_type=self.content_type,
+            object_id=str(self.user.pk),
+            object_repr=self.user.username,
+            action_flag=ADDITION,
+            change_message="Created user",
+        )
+
+    def test_get_absolute_url(self):
+        self.assertEqual(self.logentry.get_absolute_url(), reverse("user:logentry", kwargs={"pk": self.logentry.pk}))
+
+    def test_get_absolute_url_api_unsupported(self):
+        with self.assertRaisesRegex(AttributeError, "No API URL route exists"):
+            self.logentry.get_absolute_url(api=True)
+
+    def test_get_action_flag_class(self):
+        expected = {
+            ADDITION: "success",
+            CHANGE: "warning",
+            DELETION: "danger",
+        }
+        for action_flag, css_class in expected.items():
+            self.logentry.action_flag = action_flag
+            self.assertEqual(self.logentry.get_action_flag_class(), css_class)
+
+        self.logentry.action_flag = 999
+        self.assertEqual(self.logentry.get_action_flag_class(), "secondary")
+
+    def test_created_and_last_updated_aliases(self):
+        self.assertEqual(self.logentry.created, self.logentry.action_time)
+        self.assertEqual(self.logentry.last_updated, self.logentry.action_time)
 
 
 class UserConfigTest(ModelTestCases.BaseModelTestCase):

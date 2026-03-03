@@ -2,7 +2,9 @@ import json
 from unittest import mock
 
 from django.conf import settings
+from django.contrib.admin.models import ADDITION
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
@@ -12,6 +14,7 @@ from social_django.utils import load_backend, load_strategy
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
+from nautobot.users.models import LogEntry
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
@@ -190,3 +193,38 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class LogEntryUIViewSetTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.actor_user = User.objects.create_user(username="log-actor")
+        cls.content_type = ContentType.objects.get_for_model(User)
+        cls.log_entry = LogEntry.objects.create(
+            user=cls.actor_user,
+            content_type=cls.content_type,
+            object_id=str(cls.actor_user.pk),
+            object_repr=cls.actor_user.username,
+            action_flag=ADDITION,
+            change_message="Created user",
+        )
+
+    def test_list_view(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry_list"), {"clear_view": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Log Entries")
+        self.assertBodyContains(response, "Action flag")
+
+    def test_detail_view_user_link(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry", kwargs={"pk": self.log_entry.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, reverse("admin:users_user_change", args=[self.actor_user.pk]))
+
+    def test_detail_view_object_repr(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry", kwargs={"pk": self.log_entry.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, self.log_entry.object_repr)
