@@ -243,7 +243,14 @@ class PrefixFilterSet(
         prefers_id=True,
         to_field_name="network",
         method="filter_ancestors",
-        label="Prefixes which are ancestors of this prefix (ID or host string)",
+        label="Prefixes which are ancestors of this prefix (ID or network string)",
+    )
+    prefix_and_descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        prefers_id=True,
+        to_field_name="network",
+        method="filter_prefix_and_descendants",
+        label="Prefixes which are the given Prefix (ID or network string) and its descendants",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
@@ -387,13 +394,23 @@ class PrefixFilterSet(
         ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
         return queryset.filter(pk__in=ancestor_ids)
 
+    def filter_prefix_and_descendants(self, queryset, name, value):
+        if not value:
+            return queryset
+        prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
+        descendant_ids = [descendant.id for prefix in prefixes for descendant in prefix.descendants(include_self=True)]
+        return queryset.filter(pk__in=descendant_ids)
+
     def generate_query_filter_max_depth(self, value):
-        param = f"{'parent__' * (1 + int(value))}isnull"
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
         query = Q(**{param: False})
         return query
 
     def filter_max_depth(self, queryset, name, value):
-        if value is None:
+        if value is None or value < 1:
             return queryset
         params = self.generate_query_filter_max_depth(value)
         return queryset.exclude(params)

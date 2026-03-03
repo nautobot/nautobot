@@ -233,19 +233,19 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
     def test_max_depth(self):
-        params = {"max_depth": 0}
+        params = {"max_depth": 1}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__isnull=False)
         )
-        params = {"max_depth": 1}
+        params = {"max_depth": 2}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__isnull=False)
         )
-        params = {"max_depth": 2}
+        params = {"max_depth": 3}
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__parent__isnull=False)
         )
-        params = {"max_depth": None}
+        params = {"max_depth": 0}
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ancestors(self):
@@ -284,6 +284,17 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         with self.assertRaises(ValidationError) as exc:
             self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
         self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+
+    def test_prefix_and_descendants(self):
+        pfx1 = Prefix.objects.filter(children__isnull=False).first()
+        pfx2 = Prefix.objects.filter(children__isnull=True).first()
+        self.assertIsNotNone(pfx1)
+        self.assertIsNotNone(pfx2)
+        params = {"prefix_and_descendants": [pfx1.pk, pfx2.pk]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            pfx1.descendants(include_self=True) | pfx2.descendants(include_self=True),
+        )
 
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):

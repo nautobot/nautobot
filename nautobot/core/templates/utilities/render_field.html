@@ -1,7 +1,7 @@
 {% load helpers %}
 {% load form_helpers %}
 
-<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}">
+<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
@@ -40,30 +40,38 @@
                 <div class="flex-grow-1 nb-w-0">{{ field }}</div>
                 {% if should_render_embedded_create %}
                     {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
-                        <button
-                            class="btn btn-primary flex-grow-0 flex-shrink-0"
-                            data-bs-title="Add a new {{ verbose_name }}"
-                            data-bs-toggle="tooltip"
-                            data-bs-trigger="hover"
-                            type="button"
-                        >
-                            <span class="mdi mdi-plus-thick"></span>
-                            <span class="visually-hidden">Add a new {{ verbose_name }}</span>
-                        </button>
+                        <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                            <button
+                                class="btn btn-primary flex-grow-0 flex-shrink-0"
+                                data-bs-toggle="modal"
+                                data-bs-target="#embedded_action_modal"
+                                hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-target="#embedded_action_modal .modal-content"
+                                type="button"
+                            >
+                                <span class="mdi mdi-plus-thick"></span>
+                                <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                            </button>
+                        </span>
                     {% endwith %}
                 {% endif %}
                 {% if should_render_embedded_search %}
                     {% with verbose_name_plural=field.field.queryset.model|meta:"verbose_name_plural" %}
-                        <button
-                            class="btn btn-secondary flex-grow-0 flex-shrink-0"
-                            data-bs-title="Search {{ verbose_name_plural }}"
-                            data-bs-toggle="tooltip"
-                            data-bs-trigger="hover"
-                            type="button"
-                        >
-                            <span class="mdi mdi-filter"></span>
-                            <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
-                        </button>
+                        <span data-bs-title="Search {{ verbose_name_plural }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                            <button
+                                class="btn btn-secondary flex-grow-0 flex-shrink-0"
+                                data-bs-toggle="modal"
+                                data-bs-target="#embedded_action_modal"
+                                hx-get="{% url 'search_content_type' content_type=embedded_search_content_type %}{% if embedded_search_query_string %}?{{ embedded_search_query_string }}{% endif %}"
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-target="#embedded_action_modal .modal-content"
+                                type="button"
+                            >
+                                <span class="mdi mdi-filter"></span>
+                                <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
+                            </button>
+                        </span>
                     {% endwith %}
                 {% endif %}
             {% else %}

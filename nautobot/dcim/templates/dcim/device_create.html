@@ -125,6 +125,7 @@
 {% endblock %}
 
 {% block javascript %}
+    {{ block.super }}
     <script type="text/javascript">
 
         const software_version_image_container = document.querySelector('div#software_version_image_container');

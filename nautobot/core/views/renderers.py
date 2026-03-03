@@ -79,6 +79,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
+        htmx_request = request.headers.get("HX-Request", False)
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
@@ -95,7 +98,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     self.saved_view is not None and self.saved_view.config.get("sort_order")
                 ):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
-                htmx_request = request.headers.get("HX-Request", False)
                 table = table_class(
                     queryset if htmx_request else queryset.none(),
                     table_changes_pending=table_changes_pending,
@@ -103,6 +105,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
+                    is_object_embedded_search_results=is_object_embedded_search_request,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
@@ -125,13 +128,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request, self.saved_view),
+                "per_page": get_paginate_count(
+                    request, self.saved_view, save_user_config=not is_object_embedded_search_request
+                ),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
-                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                    'Requested "per_page" is too large. '
+                    f"No more than {max_page_size} items may be displayed at a time.",
                 )
             return RequestConfig(request, paginate).configure(table)
         else:
@@ -240,7 +246,8 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
                 initial_data = normalize_querydict(request.GET, form_class=form_class)
-                form = form_class(instance=instance, initial=initial_data)
+                kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+                form = form_class(instance=instance, initial=initial_data, **kwargs)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])

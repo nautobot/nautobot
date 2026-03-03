@@ -706,6 +706,8 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         action = self.action
 
         if self.request.headers.get("HX-Request", False):
+            if action == "create":
+                return "components/htmx/object_embedded_create.html"
             if action == "list":
                 return "components/htmx/list_view_table.html"
 
@@ -1070,7 +1072,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             except AttributeError:
                 msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
-            if "_addanother" in request.POST:
+            if self.request.headers.get("HX-Request", False):
+                self.success_url = reverse(lookup.get_route_for_model(obj, "detail", api=True), args=[obj.pk])
+            elif "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"

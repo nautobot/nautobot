@@ -133,12 +133,18 @@ if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JO
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
 
+# Default filters for Location list view
+if (
+    "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
+
 # `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
 # Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
 if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
     LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
-
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
@@ -496,9 +502,12 @@ if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_T
     CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
 
 CSRF_FAILURE_VIEW = "nautobot.core.views.csrf_failure"
+DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
+DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
+FORMAT_MODULE_PATH = "nautobot.core.formats"
 
 TESTING = "test" in sys.argv
 
@@ -551,6 +560,9 @@ MEDIA_ROOT = os.path.join(NAUTOBOT_ROOT, "media").rstrip("/")
 SESSION_EXPIRE_AT_BROWSER_CLOSE = is_truthy(os.getenv("NAUTOBOT_SESSION_EXPIRE_AT_BROWSER_CLOSE", "False"))
 SESSION_COOKIE_AGE = int(os.getenv("NAUTOBOT_SESSION_COOKIE_AGE", "1209600"))  # 2 weeks, in seconds
 SESSION_FILE_PATH = os.getenv("NAUTOBOT_SESSION_FILE_PATH", None)
+SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
+SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
+TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
 TIME_ZONE = os.getenv("NAUTOBOT_TIME_ZONE", "UTC")
 
 # Disable importing the WSGI module before starting the server application. This is required for
@@ -611,7 +623,6 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
     "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -623,7 +634,6 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
-    "nautobot.core.middleware.UserDefinedLanguageMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
@@ -703,6 +713,7 @@ MEDIA_URL = "media/"
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 # Messages
+MESSAGE_STORAGE = "nautobot.core.messages.NautobotMessageStorage"
 MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
@@ -806,6 +817,14 @@ CONSTANCE_CONFIG = {
         ),
         field_type=int,
     ),
+    "LOCATION_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Location list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -841,10 +860,10 @@ CONSTANCE_CONFIG = {
         field_type=bool,
     ),
     "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
-        default=-1,
+        default=0,
         help_text=mark_safe(
-            "Default <code>max_depth</code> filter value to use for Prefix list views (-1 for no filter).\n"
-            "Setting this to a small non-negative value may improve performance when the number of records is large.",
+            "Default <code>max_depth</code> filter value to use for Prefix list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
         ),
         field_type=int,
     ),
@@ -921,6 +940,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
     "Performance": [
         "JOB_CREATE_FILE_MAX_SIZE",
+        "LOCATION_LIST_DEFAULT_MAX_DEPTH",
         "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
         "PREFIX_LIST_DEFAULT_MAX_DEPTH",
     ],
