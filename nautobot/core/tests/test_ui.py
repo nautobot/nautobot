@@ -11,7 +11,7 @@ from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags.helpers import HTML_NONE
+from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.choices import EChartsTypeChoices
 from nautobot.core.ui.echarts import (
@@ -203,9 +203,7 @@ class ObjectTextPanelTest(TestCase):
         )
         context = Context({"object": device})
         result = panel.render_body_content(context)
-        self.assertHTMLEqual(
-            result, f'<a href="{location.get_absolute_url()}" title="{location.description}">{location.display}</a>'
-        )
+        self.assertHTMLEqual(result, hyperlinked_object(location))
 
 
 class ObjectsTablePanelTest(TestCase):

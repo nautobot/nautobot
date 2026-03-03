@@ -2956,7 +2956,7 @@ class JobResultButton(object_detail.Button):
     def get_link(self, context):
         """Resolve the link for this button."""
         if callable(self.link_name):
-            return self.link_name(context)
+            return self.link_name(context)  # pylint: disable=not-callable
         return None
 
     def render(self, context):
