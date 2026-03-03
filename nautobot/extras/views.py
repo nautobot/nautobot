@@ -1983,6 +1983,8 @@ class JobUIViewSet(NautobotUIViewSet):
     action_buttons = ()
     non_filter_params = (*ObjectListViewMixin.non_filter_params, "display")
     base_template = "generic/object_retrieve.html"
+    # Use "object_retrieve.html" explicitly; get_base_template() resolves to
+    # "job.html" for Job models, which uses the wrong layout for changelog.
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -2329,6 +2331,7 @@ class JobUIViewSet(NautobotUIViewSet):
         methods=["get", "post"],
         url_path="run",
         url_name="run",
+        custom_view_base_action="run",
     )
     def run(self, request, pk=None):
         """Run/schedule a Job by Job model PK."""
@@ -3881,18 +3884,3 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
-
-
-#
-# Job Extra Views
-#
-# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
-# constructed below # ObjectChangeLogView and ObjectNotesView.
-
-
-class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "generic/object_retrieve.html"
-
-
-class JobObjectNotesView(ObjectNotesView):
-    base_template = "generic/object_retrieve.html"
