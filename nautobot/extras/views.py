@@ -2090,13 +2090,14 @@ class JobUIViewSet(NautobotUIViewSet):
 
     def _get_job_model_or_404(self, class_path=None, pk=None):
         """Helper function for job run actions."""
+        queryset = self.get_queryset()
         if class_path:
             try:
-                job_model = self.queryset.get_for_class_path(class_path)
+                job_model = queryset.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(self.queryset, pk=pk)
+            job_model = get_object_or_404(queryset, pk=pk)
 
         return job_model
 
@@ -2342,7 +2343,7 @@ class JobUIViewSet(NautobotUIViewSet):
     @action(
         detail=False,
         methods=["get", "post"],
-        url_path=r"(?P<class_path>[^/]*\.[^/]+)/run",
+        url_path=r"(?P<class_path>[^/]*\.[^/]+|[^/]+/[^/]+/[^/]+)/run",
         url_name="run_by_class_path",
         custom_view_base_action="run",
     )
