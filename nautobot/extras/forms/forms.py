@@ -30,6 +30,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
@@ -205,7 +206,10 @@ __all__ = (
     "NoteFilterForm",
     "NoteForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataBulkEditForm",
+    "ObjectMetadataCreateForm",
     "ObjectMetadataFilterForm",
+    "ObjectMetadataForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
@@ -2100,6 +2104,45 @@ class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     class Meta:
         nullable_fields = [
             "description",
+        ]
+
+
+class ObjectMetadataBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ObjectMetadata.objects.all(), widget=forms.MultipleHiddenInput)
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
+
+    class Meta:
+        nullable_fields = ["contact", "team"]
+
+
+class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
+    scoped_fields = JSONArrayFormField(
+        required=False,
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        help_text="List of scoped fields, only direct fields on the model",
+    )
+
+    class Meta:
+        model = ObjectMetadata
+        fields = ["contact", "team", "assigned_object_id", "scoped_fields", "_value"]
+
+
+class ObjectMetadataCreateForm(ObjectMetadataForm):
+    assigned_object_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        required=True,
+    )
+
+    class Meta(ObjectMetadataForm.Meta):
+        fields = [
+            "contact",
+            "team",
+            "metadata_type",
+            "assigned_object_type",
+            "assigned_object_id",
+            "scoped_fields",
+            "_value",
         ]
 
 
