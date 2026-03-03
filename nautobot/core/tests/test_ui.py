@@ -28,6 +28,7 @@ from nautobot.core.ui.object_detail import (
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
+    ObjectTextPanel,
     Panel,
     SectionChoices,
 )
@@ -191,6 +192,20 @@ class BaseTextPanelTest(TestCase):
         panel = BaseTextPanel(weight=100)
         with self.assertRaises(NotImplementedError):
             panel.get_value({})
+
+
+class ObjectTextPanelTest(TestCase):
+    def test_render_body_content_hyperlinked_object(self):
+        device = Device.objects.first()
+        location = device.location
+        panel = ObjectTextPanel(
+            weight=100, render_as=ObjectTextPanel.RenderOptions.HYPERLINKED_OBJECT, object_field="location"
+        )
+        context = Context({"object": device})
+        result = panel.render_body_content(context)
+        self.assertHTMLEqual(
+            result, f'<a href="{location.get_absolute_url()}" title="{location.description}">{location.display}</a>'
+        )
 
 
 class ObjectsTablePanelTest(TestCase):
