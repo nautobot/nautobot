@@ -98,5 +98,5 @@ class Command(BaseCommand):
         )
         job_result.refresh_from_db()
         JobResult._sync_eager_result_to_job_result(job_result, eager_result)
-        if job_celery_kwargs.get("nautobot_job_console_log", False):
+        if eager_result.failed() and job_celery_kwargs.get("nautobot_job_console_log", False):
             handle_eager_result_failure(command=self, eager_result=eager_result)

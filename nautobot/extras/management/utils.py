@@ -125,11 +125,10 @@ def handle_eager_result_failure(command, eager_result):
         command: The Django management command instance, used to write to stderr.
         eager_result: The Celery EagerResult returned from run_job.apply().
     """
-    if eager_result.failed():
-        exc = eager_result.result
-        traceback_str = eager_result.traceback
-        if traceback_str:
-            command.stderr.write(traceback_str)
-        else:
-            command.stderr.write(f"{type(exc).__name__}: {exc}\n")
-        sys.exit(1)
+    exc = eager_result.result
+    traceback_str = eager_result.traceback
+    if traceback_str:
+        command.stderr.write(traceback_str)
+    else:
+        command.stderr.write(f"{type(exc).__name__}: {exc}\n")
+    sys.exit(1)

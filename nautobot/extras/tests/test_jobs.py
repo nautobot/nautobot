@@ -1698,8 +1698,8 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
 
         mock_executor_console_log.assert_called_once_with(str(self.job_result.pk))
         mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
-        mock_report_job_status.assert_not_called()
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")
@@ -1831,3 +1831,39 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
         mock_sync.assert_called_once()
         first_arg = mock_sync.call_args[0][0]
         self.assertEqual(first_arg.pk, self.job_result.pk)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.handle_eager_result_failure")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_handle_eager_result_failure_called_only_when_failed_and_console_log_enabled(
+        self, mock_validate, mock_sync, mock_run_job, mock_handle_failure
+    ):
+        """handle_eager_result_failure should only be called when both eager result failed and nautobot_job_console_log is True."""
+        cases = [
+            {"failed": True, "nautobot_job_console_log": True, "expected_called": True},
+            {"failed": True, "nautobot_job_console_log": False, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": True, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": False, "expected_called": False},
+        ]
+
+        for case in cases:
+            with self.subTest(**case):
+                mock_handle_failure.reset_mock()
+
+                self.job_result.celery_kwargs = {
+                    "nautobot_job_profile": False,
+                    "nautobot_job_console_log": case["nautobot_job_console_log"],
+                }
+                self.job_result.save()
+
+                eager_result = mock.MagicMock()
+                eager_result.failed.return_value = case["failed"]
+                mock_run_job.apply.return_value = eager_result
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                if case["expected_called"]:
+                    mock_handle_failure.assert_called_once()
+                else:
+                    mock_handle_failure.assert_not_called()
