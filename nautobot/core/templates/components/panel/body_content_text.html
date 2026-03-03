@@ -7,6 +7,8 @@
     {{ value | render_markdown }}
 {% elif render_as == 'code' %}
     <pre>{{ value }}</pre>
+{% elif render_as == 'hyperlinked_object' %}
+    {{ value | hyperlinked_object }}
 {% else %}
     {{ value }}
 {% endif %}
