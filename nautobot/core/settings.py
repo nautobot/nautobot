@@ -1295,3 +1295,16 @@ KUBERNETES_TOKEN_PATH = os.getenv(
 # Internal/dev-only: disables TLS verification for the Kubernetes API connection. Required for local clusters
 # WARNING: never set to False in production.
 KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL", "True"))
+
+#
+# OTEL Settings
+#
+
+OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
+OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
+OTEL_TRACES_EXPORTER = os.getenv("OTEL_TRACES_EXPORTER", "otlp").split(",")
+OTEL_METRICS_EXPORTER = os.getenv("OTEL_METRICS_EXPORTER", "otlp").split(",")
+
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+OTEL_EXPORTER_OTLP_INSECURE = is_truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "False"))

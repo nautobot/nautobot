@@ -1,0 +1,1 @@
+Added support for [OpenTelemetry](https://opentelemetry.io/) traces, metrics, and logs via the `OTEL_PYTHON_DJANGO_INSTRUMENT` setting.

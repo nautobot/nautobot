@@ -376,6 +376,7 @@ nav:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
                   - SSO: "user-guide/administration/configuration/authentication/sso.md"
                   - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
+              - OpenTelemetry: "user-guide/administration/configuration/opentelemetry.md"
           - Tools:
               - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
               - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
@@ -389,6 +390,7 @@ nav:
               - Request Profiling: "user-guide/administration/guides/request-profiling.md"
               - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
               - Task Queues: "user-guide/administration/guides/celery-queues.md"
+              - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
           - Security:
               - Security and Maintenance Policy: "user-guide/administration/security/index.md"
               - Notices: "user-guide/administration/security/notices.md"
