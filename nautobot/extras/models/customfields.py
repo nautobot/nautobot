@@ -22,6 +22,7 @@ from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
+    DateTimePicker,
     JSONField,
     LaxURLField,
     MultiValueCharInput,
@@ -783,6 +784,14 @@ class CustomField(
                 widget=DatePicker(),
             )
 
+        # DateTime
+        elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+            field = forms.DateTimeField(
+                required=required,
+                initial=initial,
+                widget=DateTimePicker(),
+            )
+
         # Text-like fields
         elif self.type in (
             CustomFieldTypeChoices.TYPE_URL,
@@ -927,6 +936,14 @@ class CustomField(
                         datetime.strptime(value, "%Y-%m-%d")
                     except ValueError:
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
+
+            # Validate datetime
+            elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+                if not isinstance(value, datetime):
+                    try:
+                        datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                    except ValueError:
+                        raise ValidationError("DateTime values must be in ISO 8601 format.")
 
             # Validate selected choice
             elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
