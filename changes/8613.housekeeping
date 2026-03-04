@@ -1,2 +1,0 @@
-Fixed `ui_build` container not running successfully in a fresh development environment.
-Changed `invoke npm` and related tasks to not install `node_modules` into the local filesystem.
