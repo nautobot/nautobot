@@ -33,10 +33,8 @@ from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
-    ObjectChangeActionChoices,
 )
 from nautobot.extras.constants import (
-    CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
@@ -874,8 +872,10 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     """
     Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
     For use with bulk delete views. This operation is wrapped in an atomic transaction.
+
+    ObjectChange records are eagerly serialized in the pre_delete signal handler while objects still exist,
+    then flushed in bulk after deletion. This also captures cascade-deleted child objects.
     """
-    from nautobot.extras.models import ObjectChange
     from nautobot.extras.signals import change_context_state
 
     change_context = change_context_state.get()
@@ -884,24 +884,10 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
 
     with transaction.atomic():
         try:
-            queued_object_changes = []
             change_context.defer_object_changes = True
-            for obj in qs.iterator():
-                if not hasattr(obj, "to_objectchange"):
-                    break
-                if len(queued_object_changes) >= batch_size:
-                    ObjectChange.objects.bulk_create(queued_object_changes)
-                    queued_object_changes = []
-                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                if oc is not None:
-                    oc.user = change_context.get_user()
-                    oc.user_name = oc.user.username
-                    oc.request_id = change_context.change_id
-                    oc.change_context = change_context.context
-                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                    queued_object_changes.append(oc)
-            ObjectChange.objects.bulk_create(queued_object_changes)
-            return qs.delete()
+            result = qs.delete()
+            change_context.flush_deferred_object_changes(batch_size=batch_size)
+            return result
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()
