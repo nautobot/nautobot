@@ -1,1 +1,0 @@
-Enhanced `import_string_optional` to avoid ignoring `AttributeError` exceptions unrelated to the specific import.
