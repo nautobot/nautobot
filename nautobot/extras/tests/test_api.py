@@ -3811,6 +3811,10 @@ class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
     choices_fields = ["assigned_object_type"]
 
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
+
     @classmethod
     def setUpTestData(cls):
         cls.location1 = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
