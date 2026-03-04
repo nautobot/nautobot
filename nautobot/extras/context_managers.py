@@ -120,7 +120,9 @@ class ChangeContext:
                             objectchange.user_name = objectchange.user.username
                             objectchange.request_id = self.change_id
                             objectchange.change_context = self.context
-                            objectchange.change_context_detail = self.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                            objectchange.change_context_detail = self.context_detail[
+                                :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                            ]
                             if not objectchange.changed_object_id:  # changed_object was deleted
                                 # Clear out the GenericForeignKey to keep Django from complaining about an unsaved object:
                                 objectchange.changed_object = None
