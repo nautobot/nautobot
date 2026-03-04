@@ -27,7 +27,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -1800,6 +1800,47 @@ def check_and_call_git_repository_function(request, pk, func):
     return redirect(job_result.get_absolute_url())
 
 
+class DatasourceContentsPanel(object_detail.Panel):
+    """Panel that displays the 'Provided Data Types' table for Git repositories."""
+
+    def __init__(self, *, context_data_key="datasource_contents", **kwargs):
+        self.context_data_key = context_data_key
+        kwargs.setdefault("body_wrapper_template_path", "components/panel/body_wrapper_key_value_table.html")
+        super().__init__(**kwargs)
+
+    def render_body_content(self, context):
+        datasource_contents = context.get(self.context_data_key, [])
+        obj = context.get("object")
+
+        if not datasource_contents:
+            return format_html('<tr><td colspan="2">{}</td></tr>', helpers.placeholder(None))
+
+        rows = []
+        for entry in datasource_contents:
+            name_cell = format_html(
+                """
+                <span class="d-inline-flex align-items-center gap-2 text-nowrap">
+                    <span class="badge bg-info">
+                        <i class="mdi {}"></i>
+                    </span>
+                    <span>{}</span>
+                </span>
+                """,
+                entry.icon,
+                entry.name.title(),
+            )
+            provided = entry.content_identifier in getattr(obj, "provided_contents", [])
+            provided_cell = helpers.render_boolean(provided)
+            rows.append(
+                format_html(
+                    '<tr><td class="align-middle">{}</td><td class="text-center align-middle">{}</td></tr>',
+                    name_cell,
+                    provided_cell,
+                )
+            )
+        return format_html("".join(rows))
+
+
 class GitRepositoryUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.GitRepositoryBulkEditForm
     filterset_form_class = forms.GitRepositoryFilterForm
@@ -1809,6 +1850,49 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
     view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Repository Details",
+                fields=["remote_url", "branch", "current_head", "secrets_group"],
+            ),
+            DatasourceContentsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Provided Data Types",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="result",
+                label="Synchronization Status",
+                url_name="extras:gitrepository_result",
+                related_object_attribute="result",
+            ),
+        ),
+        extra_buttons=(
+            object_detail.Button(
+                weight=100,
+                color=ButtonActionColorChoices.INFO,
+                link_name="extras:gitrepository_dryrun",
+                label="Dry-Run",
+                icon="mdi-book-refresh",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+            object_detail.Button(
+                weight=200,
+                color=ButtonColorChoices.BLUE,
+                link_name="extras:gitrepository_sync",
+                label="Sync",
+                icon="mdi-source-branch-sync",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
