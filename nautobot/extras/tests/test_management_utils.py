@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from django.core.management.base import OutputWrapper
+
 from nautobot.core.testing import TestCase
 from nautobot.extras.management.utils import handle_eager_result_failure
 
@@ -9,7 +11,7 @@ class TestHandleEagerResultFailure(TestCase):
 
     def _make_command(self):
         command = MagicMock()
-        command.stderr = MagicMock()
+        command.stderr = MagicMock(spec=OutputWrapper)
         return command
 
     def _make_eager_result(self, failed, result=None, traceback=None):
