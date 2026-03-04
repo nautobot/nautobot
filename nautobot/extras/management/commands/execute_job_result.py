@@ -8,7 +8,7 @@ from nautobot.core.celery import (
     setup_nautobot_job_logging,
 )
 from nautobot.extras.jobs import run_job
-from nautobot.extras.management.utils import validate_job_and_job_data
+from nautobot.extras.management.utils import handle_eager_result_failure, validate_job_and_job_data
 from nautobot.extras.models import JobResult
 
 
@@ -98,3 +98,5 @@ class Command(BaseCommand):
         )
         job_result.refresh_from_db()
         JobResult._sync_eager_result_to_job_result(job_result, eager_result)
+        if eager_result.failed() and job_celery_kwargs.get("nautobot_job_console_log", False):
+            handle_eager_result_failure(command=self, eager_result=eager_result)
