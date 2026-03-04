@@ -33,6 +33,7 @@ from nautobot.core.ui.object_detail import (
     ObjectsTablePanel,
     Panel,
     SectionChoices,
+    EChartsPanel
 )
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables import DeviceModuleInterfaceTable
@@ -113,6 +114,16 @@ class ObjectDetailContentTest(TestCase):
         self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(None))
         self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(0))
         self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id("00000000000000000000000000000000"))
+
+
+    def test_get_component_id_non_string_key(self):
+        """Verify that component ID generation handles non-string dictionary keys (None, Bool, Int) without crashing."""
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data":{None:"SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data":{True:"SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data":{123:"SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
 
 
 class DataTablePanelTest(TestCase):
