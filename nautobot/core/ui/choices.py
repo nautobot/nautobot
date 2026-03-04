@@ -131,6 +131,7 @@ class NavigationIconChoices(ChoiceSet):
     LOAD_BALANCERS = "arrow-decision"
     VIRTUALIZATION = "cloud-upload"
     CLOUD = "cloud"
+    NET_OBS = "table-eye"
     DESIGN = "hammer"
     APPROVAL_WORKFLOWS = "checkbox-circle"
     EXTENSIBILITY = "extensibility"
@@ -153,6 +154,7 @@ class NavigationIconChoices(ChoiceSet):
         (LOAD_BALANCERS, "Load Balancers"),
         (VIRTUALIZATION, "Virtualization"),
         (CLOUD, "Cloud"),
+        (NET_OBS, "Network Observability"),
         (DESIGN, "Design"),
         (APPROVAL_WORKFLOWS, "Approval Workflows"),
         (EXTENSIBILITY, "Extensibility"),
@@ -184,6 +186,7 @@ class NavigationWeightChoices(ChoiceSet):
     LOAD_BALANCERS = 800
     VIRTUALIZATION = 850
     CLOUD = 900
+    NET_OBS = 950
     # We leave a gap here to allow for future expansion and don't use 1000
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
@@ -209,6 +212,7 @@ class NavigationWeightChoices(ChoiceSet):
         (VIRTUALIZATION, "Virtualization"),
         (LOAD_BALANCERS, "Load Balancers"),
         (CLOUD, "Cloud"),
+        (NET_OBS, "Network Observability"),
         (DESIGN, "Design"),
         (APPROVAL_WORKFLOWS, "Approval Workflows"),
         (EXTENSIBILITY, "Extensibility"),
