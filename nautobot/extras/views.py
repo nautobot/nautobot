@@ -2936,18 +2936,30 @@ def render_jobresult_status(status):
         str: Safe HTML string for a styled label with a fixed ID so tests work.
     """
     mapping = {
-        "FAILURE": ("danger", "Failed"),
-        "PENDING": ("default", "Pending"),
-        "STARTED": ("warning", "Running"),
-        "SUCCESS": ("success", "Completed"),
+        "FAILURE": ("bg-danger", "Failed"),
+        "PENDING": ("bg-body-secondary border", "Pending"),
+        "STARTED": ("bg-warning", "Running"),
+        "SUCCESS": ("bg-success", "Completed"),
     }
 
-    css_class, text = mapping.get(status, ("default", "N/A"))
+    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
     return format_html(
-        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
+
+
+class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        """Render a placeholder for certain fields if the job hasn't yet completed."""
+        if key in ["duration", "result"]:
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj.status not in JobResultStatusChoices.READY_STATES:
+                return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
+        if key == "result" and value is None:
+            return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        return super().render_value(key, value, context)
 
 
 class JobResultButton(object_detail.Button):
@@ -3027,7 +3039,7 @@ class JobResultUIViewSet(
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            object_detail.ObjectFieldsPanel(
+            JobResultSummaryPanel(
                 label="Summary of Results",
                 weight=100,
                 fields=[
