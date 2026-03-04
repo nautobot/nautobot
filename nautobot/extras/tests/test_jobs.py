@@ -702,6 +702,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_decorator_job_pass_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_pass(self):
         """
         Job with `with transaction.atomic()` context manager test with pass result.
@@ -720,6 +738,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_context_manager_job_pass_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -737,6 +773,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    def test_atomic_transaction_decorator_job_fail_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_fail(self):
         """
         Job with `with transaction.atomic()` context manager test with fail result.
@@ -753,6 +806,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
+
+    def test_atomic_transaction_context_manager_job_fail_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
 
     def test_ip_address_vars(self):
         """
@@ -811,6 +881,22 @@ class JobTransactionTest(TransactionTestCase):
         for log in logs:
             if log.message != "Job completed":
                 self.assertEqual(log.message, "The secret is (redacted)")
+
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_console_log_redaction(self):
+        """
+        Test that an attempt is made at console log redaction.
+        """
+        module = "log_redaction"
+        name = "TestLogRedaction"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+
+        console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result)
+        for console_log in console_logs:
+            if "The secret is" in console_log.text:
+                self.assertEqual(console_log.text, "The secret is (redacted)")
 
     def test_log_skip_db_logging(self):
         """

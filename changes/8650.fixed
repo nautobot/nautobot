@@ -1,2 +1,2 @@
 Fixed subprocess-based(console log) job execution incorrectly reporting SUCCESS when a job raised an exception, caused by Celery eager mode silently capturing exceptions inside EagerResult rather than propagating them to the subprocess exit code.
-Fixed `task_name` when job is run immeditately with console log.
+Fixed `task_name` when job is run immediately with console log.

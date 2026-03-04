@@ -1,7 +1,9 @@
 from io import StringIO
+import re
 import sys
 from unittest import mock
 
+from django.test import override_settings
 from django.utils import timezone
 
 from nautobot.core.testing import TestCase, TransactionTestCase
@@ -65,6 +67,21 @@ class StoreJobOutputLineTestCase(TestCase):
             output_type="output",
         )
         self.assertFalse(JobConsoleEntry.objects.filter(job_result=self.job_result).exists())
+
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_output_line_is_sanitized_before_storing(self):
+        """Test that sensitive data is sanitized."""
+        store_job_output_line(
+            job_result=self.job_result,
+            data="The secret is supersecret123\n",
+            output_type="stdout",
+        )
+
+        job_console_log = JobConsoleEntry.objects.get(job_result=self.job_result)
+        self.assertEqual(job_console_log.text, "The secret is (redacted)\n")
+        self.assertNotIn("supersecret123", job_console_log.text)
 
 
 class StreamReaderTestCase(TestCase):
