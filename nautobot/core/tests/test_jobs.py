@@ -1543,6 +1543,6 @@ class ValidateModelDataTestCase(TransactionTestCase):
             content_types=[ContentType.objects.get_for_model(User).pk],
             verbose=True,
         )
-        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
-        log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
-        self.assertIn("Unable to apply access permissions to users.user", log_fail.message)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_SUCCESS)
+        log_warn = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+        self.assertEqual("No users found", log_warn.message)
