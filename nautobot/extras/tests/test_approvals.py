@@ -677,6 +677,10 @@ class ApprovalWorkflowStageResponseAPITest(ApprovalWorkflowTestMixin, APIViewTes
     model = models.ApprovalWorkflowStageResponse
     choices_fields = ("state",)
 
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
+
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
