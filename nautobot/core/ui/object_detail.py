@@ -202,11 +202,11 @@ class Component:
         def filter_dict(dict_):
             filtered_dict = {}
             for key, value in dict_.items():
-                if not isinstance(key, (str, int, float, bool)) and key is not None:
+                if not isinstance(key, (str, int, bool)) and key is not None:
                     continue
                 if key == "component_id" or (isinstance(key, str) and key.startswith("_")):
                     continue
-                if isinstance(value, (str, int, float, bool)) or value is None:
+                if isinstance(value, (str, int, bool)) or value is None:
                     filtered_dict[key] = value
                 elif isinstance(value, (list, tuple)):
                     filtered_dict[key] = filter_list(value)
@@ -217,7 +217,7 @@ class Component:
         def filter_list(list_):
             filtered_list = []
             for item in list_:
-                if isinstance(item, (str, int, float, bool)) or item is None:
+                if isinstance(item, (str, int, bool)) or item is None:
                     filtered_list.append(item)
                 elif isinstance(item, (list, tuple)):
                     filtered_list.append(filter_list(item))
