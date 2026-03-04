@@ -2801,7 +2801,7 @@ def render_jobresult_status(status):
 
     css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
     return format_html(
-        '<span id="pending-result-label"><span class="badge {}">{}</label></span>',
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
