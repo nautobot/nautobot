@@ -8,6 +8,12 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
+{% block header_messages %}
+    {# Create a placeholder for header messages but do not actually render the current messages; #}
+    {# they will be retrieved and populated by a subsequent HTMX request #}
+    {% include "inc/header_messages.html" with messages=None %}
+{% endblock header_messages %}
+
 {% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
@@ -131,7 +137,13 @@
 
     {% block header_extra %}{% endblock %}
 
-    <div>
+    <div hx-select="#object_table"
+         {% if permissions.change or permissions.delete %}
+             hx-select-oob="#header_messages,#paginator,#select_all_box"
+         {% else %}
+             hx-select-oob="#header_messages,#paginator"
+         {% endif %}
+    >
         {% block table %}
             {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
                 {% if permissions.change or permissions.delete %}
@@ -141,7 +153,7 @@
                         <span id="select_all_box" class="visually-hidden card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
+                        <div hx-get="" hx-params="*" hx-trigger="load">
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -151,7 +163,7 @@
                         </div>
                     </form>
                 {% else %}
-                    <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
+                    <div hx-get="" hx-params="*" hx-trigger="load">
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}

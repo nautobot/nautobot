@@ -210,7 +210,7 @@ class NautobotTemplatetagsHelperTest(TestCase):
         # TODO add unit tests for tzoffset
 
     def test_fgcolor(self):
-        self.assertEqual(helpers.fgcolor("#999999"), "#ffffff")
+        self.assertEqual(helpers.fgcolor("#999999"), "#000000")
         self.assertEqual(helpers.fgcolor("#111111"), "#ffffff")
         self.assertEqual(helpers.fgcolor("#000000"), "#ffffff")
         self.assertEqual(helpers.fgcolor("#ffffff"), "#000000")

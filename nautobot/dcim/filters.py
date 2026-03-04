@@ -108,7 +108,7 @@ from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, VRF
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
-from nautobot.tenancy.models import Tenant
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
@@ -204,6 +204,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         queryset=LocationType.objects.all(),
         to_field_name="name",
     )
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Locations",
+    )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
@@ -211,6 +216,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Parent location (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location(s) and descendants thereof (name or ID)",
@@ -322,6 +328,19 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
             "shipping_address",
             "tags",
         ]
+
+    def generate_query_filter_max_depth(self, value):
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
+        return Q(**{param: False})
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None or value < 1:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
 
     def generate_query__child_location_type(self, value):
         """Helper method used by DynamicGroups and by _child_location_type() method."""
@@ -503,6 +522,12 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         field_name="rack__rack_group",
         to_field_name="name",
         label="Rack group (name or ID)",
+    )
+    location = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        field_name="rack__location",
+        to_field_name="name",
+        prefers_id=True,
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -1404,6 +1429,12 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
+    tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="master__tenant__tenant_group",
+        queryset=TenantGroup.objects.all(),
+        to_field_name="name",
+        label="Tenant Group (name or ID)",
+    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     members = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1431,15 +1462,66 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="_termination_a_device_id",
         label="Device (ID)",
     )
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
-    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
-    location = MultiValueCharFilter(
-        method="filter_device", field_name="device__location__name", label="Location (name)"
+    device = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Device.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device",
+            label="Device (name)",
+        )
     )
-    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
+    rack_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (ID)",
+        )
+    )
+    rack = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (name)",
+        )
+    )
+    location_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            method="filter_device",
+            field_name="device__location",
+            label="Location (ID)",
+        )
+    )
+    location = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__location",
+            label="Location (name)",
+        )
+    )
+    tenant_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (ID)",
+        )
+    )
+    tenant = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (name)",
+        )
+    )
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
@@ -1470,9 +1552,23 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        queryset = queryset.filter(
-            Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
-        )
+        has_null = any(v == "null" for v in value)
+        value = [v for v in value if v != "null"]
+        if value and has_null:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__in": value})
+                | Q(**{f"_termination_b_{name}__in": value})
+                | Q(**{f"_termination_a_{name}__isnull": True})
+                | Q(**{f"_termination_b_{name}__isnull": True})
+            )
+        elif value:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
+            )
+        elif has_null:
+            return queryset.filter(
+                Q(**{f"_termination_a_{name}__isnull": True}) | Q(**{f"_termination_b_{name}__isnull": True})
+            )
         return queryset
 
     def generate_query_filter_device_id(self, value):
@@ -1576,7 +1672,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "panel_type", "power_path", "tags"]
+        fields = ["id", "name", "panel_type", "power_path", "breaker_position_count", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1645,10 +1741,9 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
         fields = ["id", "name", "failover_strategy", "tags"]
 
 
-class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
+class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
-    q = SearchFilter(filter_predicates={"name": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
@@ -1657,6 +1752,11 @@ class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
     virtual_ip = MultiValueCharFilter(
         method="filter_virtual_ip",
         label="Virtual IP Address (address or ID)",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interfaces (name or ID)",
     )
 
     class Meta:
@@ -1897,7 +1997,7 @@ class ControllerManagedDeviceGroupFilterSet(
         label="Parent group (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Controller.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Controlled device groups and descendants thereof (name or ID)",
         method="_subtree",
@@ -2150,7 +2250,7 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
 class ModuleBayFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "device__name": {
+            "parent_device__name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
@@ -2250,6 +2350,10 @@ class VirtualDeviceContextFilterSet(
         field_name="interfaces",
         label="Has Interfaces",
     )
+    has_tenant = RelatedMembershipBooleanFilter(
+        field_name="tenant",
+        label="Has tenant",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2260,6 +2364,7 @@ class VirtualDeviceContextFilterSet(
             "tenant",
             "interfaces",
             "has_interfaces",
+            "has_tenant",
             "has_primary_ip",
             "primary_ip4",
             "primary_ip6",

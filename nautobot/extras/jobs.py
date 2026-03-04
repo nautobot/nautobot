@@ -117,6 +117,10 @@ class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
 
 
+class JobExecutionForm(forms.Form):
+    """Base form for job execution fields."""
+
+
 class BaseJob:
     """Base model for jobs.
 
@@ -131,7 +135,7 @@ class BaseJob:
         Metaclass attributes - subclasses can define any or all of the following attributes:
 
         - name (str)
-        - console_log (bool)
+        - console_log_default (bool)
         - description (str)
         - dryrun_default (bool)
         - field_order (list)
@@ -369,8 +373,8 @@ class BaseJob:
 
     @final
     @classproperty
-    def console_log(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("console_log", False, expected_type=bool)
+    def console_log_default(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("console_log_default", False, expected_type=bool)
 
     @final
     @classproperty
@@ -423,6 +427,7 @@ class BaseJob:
         return {
             "name": cls.name,
             "grouping": cls.grouping,
+            "console_log_default": cls.console_log_default,
             "description": cls.description,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
@@ -484,13 +489,47 @@ class BaseJob:
     @classmethod
     def as_form(cls, data=None, files=None, initial=None, approval_view=False):
         """
-        Return a Django form suitable for populating the context data required to run this Job.
+        Return a Django form with job-specific fields only (Job Data section).
 
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-
         form = cls.as_form_class()(data, files, initial=initial)
+
+        try:
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+        except JobModel.DoesNotExist:
+            logger.warning("No Job instance found in the database corresponding to %s", cls.class_path)
+            job_model = None
+
+        dryrun_default = cls.dryrun_default
+        if job_model is not None and job_model.dryrun_default_override:
+            dryrun_default = job_model.dryrun_default
+
+        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
+            form.fields["dryrun"].initial = dryrun_default
+
+        # https://github.com/PyCQA/pylint/issues/3484
+        if cls.field_order:  # pylint: disable=using-constant-test
+            form.order_fields(cls.field_order)
+
+        if approval_view:
+            for _, field in form.fields.items():
+                field.disabled = True
+
+        return form
+
+    @classmethod
+    def as_execution_form(cls, data=None, initial=None, approval_view=False):
+        """
+        Return a Django form with job execution fields only (Job Execution section):
+        _profile, _console_log, _job_queue, _ignore_singleton_lock.
+
+        `approval_view` will disable all fields from modification and is used to display the form
+        during a approval review workflow.
+        """
+        form = JobExecutionForm(data, initial=initial)
+
         form.fields["_profile"] = forms.BooleanField(
             required=False,
             initial=False,
@@ -498,6 +537,15 @@ class BaseJob:
             help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
         )
         form.fields["_profile"].widget.attrs["class"] = "form-check-input"
+
+        form.fields["_console_log"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Console Log execution",
+            help_text="When enabled, the job runs in a subprocess and streams stdout/stderr "
+            "to the console in real time.",
+        )
+        form.fields["_console_log"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -532,15 +580,14 @@ class BaseJob:
             label="Job queue",
         )
 
-        dryrun_default = cls.dryrun_default
+        console_log_default = cls.console_log_default
         if job_model is not None:
             form.fields["_job_queue"].initial = job_model.default_job_queue.pk
-            if job_model.dryrun_default_override:
-                dryrun_default = job_model.dryrun_default
+            if job_model.console_log_default_override:
+                console_log_default = job_model.console_log_default
 
-        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
-            # Set initial "dryrun" checkbox state based on the Meta parameter
-            form.fields["dryrun"].initial = dryrun_default
+        form.fields["_console_log"].initial = console_log_default
+
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 
@@ -552,13 +599,6 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
-
-        # Ensure non-Job-specific fields are still last after applying field_order
-        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
-            if field not in form.fields:
-                continue
-            value = form.fields.pop(field)
-            form.fields[field] = value
 
         return form
 
@@ -1385,12 +1425,12 @@ def run_job(self, job_class_path, *args, **kwargs):
         _cleanup_job(job, event_payload, status, kwargs)
 
 
-@nautobot_task(bind=False)
-def run_console_log_job_and_return_job_result(job_result_pk, *args, **kwargs):
+@nautobot_task(bind=True)
+def run_console_log_job_and_return_job_result(self, *args, **kwargs):
     """
     Execute job with real-time console output.
     """
-    executor = JobConsoleLogExecutor(job_result_pk)
+    executor = JobConsoleLogExecutor(self.request.id)
     return executor.execute()
 
 

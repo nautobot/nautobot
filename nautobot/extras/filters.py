@@ -271,6 +271,7 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
         }
     )
     decision_date = MultiValueDateTimeFilter()
+    decision_date_day = django_filters.DateFilter(field_name="decision_date", lookup_expr="date")
 
     pending_my_approvals = django_filters.BooleanFilter(
         method="_pending_my_approvals", label="Filter by user's pending approvals (false returns completed approvals)"
@@ -450,11 +451,11 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Device Redundancy Group (name or PK)",
     )
-    tag = ModelMultipleChoiceFilter(
+    tag = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tags",
         queryset=Tag.objects.all(),
         to_field_name="name",
-        label="Tag (name)",
+        label="Tag (ID or name)",
     )
     role = ConfigContextRoleFilter()
 
@@ -1052,6 +1053,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log_default",
             "dryrun_default",
             "hidden",
             "read_only",
@@ -1062,6 +1064,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_singleton",
             "grouping_override",
             "name_override",
+            "console_log_default_override",
             "description_override",
             "dryrun_default_override",
             "hidden_override",

@@ -346,7 +346,11 @@ class AddFieldToFormClassTest(testing.TestCase):
         new_form_field_name = "added_form_field_name"
         self.assertNotIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
         forms.add_field_to_filter_form_class(ipam_forms.ServiceFilterForm, new_form_field_name, new_form_field)
-        self.assertIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
+        try:
+            self.assertIn(new_form_field_name, ipam_forms.ServiceFilterForm().fields.keys())
+        finally:
+            # Avoid test leakage
+            del ipam_forms.ServiceFilterForm.base_fields[new_form_field_name]  # pylint: disable=no-member
 
     def test_field_validation(self):
         """
@@ -667,71 +671,76 @@ class DynamicFilterFormTest(testing.TestCase):
 
         with self.subTest("Assert get_lookup_field_choices"):
             self.assertEqual(
-                [
-                    ("color", "Color"),
-                    ("contacts", "Contacts (name or ID)"),
-                    ("content_types", "Content type(s)"),
-                    ("created", "Created"),
-                    ("dynamic_groups", "Dynamic groups (name or ID)"),
-                    ("id", "Id"),
-                    ("last_updated", "Last updated"),
-                    ("name", "Name"),
-                    ("teams", "Teams (name or ID)"),
-                ],
-                form._get_lookup_field_choices(),
+                set(
+                    [
+                        ("color", "Color"),
+                        ("contacts", "Contacts (name or ID)"),
+                        ("content_types", "Content type(s)"),
+                        ("created", "Created"),
+                        ("dynamic_groups", "Dynamic groups (name or ID)"),
+                        ("id", "Id"),
+                        ("last_updated", "Last updated"),
+                        ("name", "Name"),
+                        ("teams", "Teams (name or ID)"),
+                    ]
+                ),
+                set(form._get_lookup_field_choices()),
             )
             self.assertEqual(
-                [
-                    ("asn", "ASN"),
-                    ("child_location_type", "Child location type (name or ID)"),
-                    ("circuit_terminations", "Circuit terminations (ID)"),
-                    ("clusters", "Clusters (name or ID)"),
-                    ("comments", "Comments"),
-                    ("contact_email", "Contact E-mail"),
-                    ("contact_name", "Contact name"),
-                    ("contact_phone", "Contact phone"),
-                    ("contacts", "Contacts (name or ID)"),
-                    ("created", "Created"),
-                    ("description", "Description"),
-                    ("devices", "Devices (name or ID)"),
-                    ("dynamic_groups", "Dynamic groups (name or ID)"),
-                    ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
-                    ("facility", "Facility"),
-                    ("has_vlan_groups", "Has VLAN groups"),
-                    ("has_vlans", "Has VLANs"),
-                    ("has_circuit_terminations", "Has circuit terminations"),
-                    ("has_clusters", "Has clusters"),
-                    ("has_devices", "Has devices"),
-                    ("has_power_panels", "Has power panels"),
-                    ("has_prefixes", "Has prefixes"),
-                    ("has_rack_groups", "Has rack groups"),
-                    ("has_racks", "Has racks"),
-                    ("id", "Id"),
-                    ("last_updated", "Last updated"),
-                    ("latitude", "Latitude"),
-                    ("location_type", "Location type (name or ID)"),
-                    ("subtree", "Location(s) and descendants thereof (name or ID)"),
-                    ("longitude", "Longitude"),
-                    ("name", "Name"),
-                    ("content_type", "Object types allowed to be associated with this Location Type"),
-                    ("parent", "Parent location (name or ID)"),
-                    ("physical_address", "Physical address"),
-                    ("power_panels", "Power panels (name or ID)"),
-                    ("prefixes", "Prefixes (ID)"),
-                    ("rack_groups", "Rack groups (name or ID)"),
-                    ("racks", "Racks (name or ID)"),
-                    ("shipping_address", "Shipping address"),
-                    ("status", "Status (name or ID)"),
-                    ("vlans", "Tagged VLANs (VID or ID)"),
-                    ("tags", "Tags"),
-                    ("teams", "Teams (name or ID)"),
-                    ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
-                    ("tenant", "Tenant (name or ID)"),
-                    ("tenant_group", "Tenant Group (name or ID)"),
-                    ("time_zone", "Time zone"),
-                    ("vlan_groups", "VLAN groups (name or ID)"),
-                ],
-                location_form._get_lookup_field_choices(),
+                set(
+                    [
+                        ("asn", "ASN"),
+                        ("child_location_type", "Child location type (name or ID)"),
+                        ("circuit_terminations", "Circuit terminations (ID)"),
+                        ("clusters", "Clusters (name or ID)"),
+                        ("comments", "Comments"),
+                        ("contact_email", "Contact E-mail"),
+                        ("contact_name", "Contact name"),
+                        ("contact_phone", "Contact phone"),
+                        ("contacts", "Contacts (name or ID)"),
+                        ("created", "Created"),
+                        ("description", "Description"),
+                        ("devices", "Devices (name or ID)"),
+                        ("dynamic_groups", "Dynamic groups (name or ID)"),
+                        ("cf_example_app_auto_custom_field", "Example App Automatically Added Custom Field"),
+                        ("facility", "Facility"),
+                        ("has_vlan_groups", "Has VLAN groups"),
+                        ("has_vlans", "Has VLANs"),
+                        ("has_circuit_terminations", "Has circuit terminations"),
+                        ("has_clusters", "Has clusters"),
+                        ("has_devices", "Has devices"),
+                        ("has_power_panels", "Has power panels"),
+                        ("has_prefixes", "Has prefixes"),
+                        ("has_rack_groups", "Has rack groups"),
+                        ("has_racks", "Has racks"),
+                        ("id", "Id"),
+                        ("last_updated", "Last updated"),
+                        ("latitude", "Latitude"),
+                        ("location_type", "Location type (name or ID)"),
+                        ("subtree", "Location(s) and descendants thereof (name or ID)"),
+                        ("longitude", "Longitude"),
+                        ("max_depth", "Maximum nesting depth within parent Locations"),
+                        ("name", "Name"),
+                        ("content_type", "Object types allowed to be associated with this Location Type"),
+                        ("parent", "Parent location (name or ID)"),
+                        ("physical_address", "Physical address"),
+                        ("power_panels", "Power panels (name or ID)"),
+                        ("prefixes", "Prefixes (ID)"),
+                        ("rack_groups", "Rack groups (name or ID)"),
+                        ("racks", "Racks (name or ID)"),
+                        ("shipping_address", "Shipping address"),
+                        ("status", "Status (name or ID)"),
+                        ("vlans", "Tagged VLANs (VID or ID)"),
+                        ("tags", "Tags"),
+                        ("teams", "Teams (name or ID)"),
+                        ("tenant_id", 'Tenant (ID) (deprecated, use "tenant" filter instead)'),
+                        ("tenant", "Tenant (name or ID)"),
+                        ("tenant_group", "Tenant Group (name or ID)"),
+                        ("time_zone", "Time zone"),
+                        ("vlan_groups", "VLAN groups (name or ID)"),
+                    ]
+                ),
+                set(location_form._get_lookup_field_choices()),
             )
 
         with self.subTest(
