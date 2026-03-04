@@ -111,48 +111,79 @@ The console_log_default flag controls how job stdout/stderr is handled and where
 
 ```mermaid
 flowchart LR
-    %% Nodes
     start[JobResult.enqueue_job]
-    
-    subgraph CeleryWorker [Celery Worker Execution]
+
+    subgraph CeleryWorker [Celery Worker]
         direction TB
         direct_call[run_job task
         calls my_app.jobs.my_job directly]
-        subprocess_call[run_console_log_job_and_return_job_result task
-        calls subprocess.Popen
-        'nautobot-server runjob_with_job_result']
+
+        subgraph console_log_task [run_console_log_job_and_return_job_result]
+            executor_celery[JobConsoleLogExecutor
+            Celery Task]
+        end
     end
 
     subgraph K8sCluster [Kubernetes Cluster]
-        k8s_pod[K8s Job/Pod
-        Runs 'nautobot-server runjob_with_job_result --console-log']
+        direction TB
+        subgraph k8s_pod [K8s Job/Pod - runjob_with_job_result]
+            direction TB
+            k8s_check{console_log?}
+            executor_k8s[JobConsoleLogExecutor]
+        end
     end
 
-    %% Edges
-    start -- "Default Behavior
-    (Enqueue Celery Task)" --> direct_call
-    start -- "Jobs w/ Full Logging
-    (Enqueue Celery Task)" --> subprocess_call
-    start -- "K8s Job Configured
-    (Triggers K8s API directly)" --> k8s_pod
+    subgraph Subprocess [Local Subprocess]
+        execute_job_result['nautobot-server execute_job_result'
+        runs job via run_job.apply]
+    end
+
+    start -- "Default (Enqueue Celery Task)" --> direct_call
+    start -- "console_log=True (Enqueue Celery Task)" --> console_log_task
+    start -- "K8s Queue (K8s API directly)" --> k8s_pod
+
+    k8s_check -- "True" --> executor_k8s
+    k8s_check -- "False" --> execute_job_result
+
+    executor_celery -- "subprocess.Popen" --> execute_job_result
+    executor_k8s -- "subprocess.Popen" --> execute_job_result
 ```
 
 When `console_log=True` and the job is executed asynchronously:
 
-1. The job is not executed directly by Celery.
-2. The JobResult.task_kwargs field is populated with the job’s keyword arguments.
-3. A dedicated Celery task `run_console_log_job_and_return_job_result` is queued instead of the standard run_job task.
-4. That task:
+- The `JobResult.celery_kwargs` field is populated and `nautobot_job_console_log` is set.
 
+#### Celery Queue
+
+- A dedicated Celery task `run_console_log_job_and_return_job_result` is queued instead of the standard `run_job` task.
+- That task instantiates `JobConsoleLogExecutor` which:
     - Starts a subprocess using:
 
     ```no-highlight
-    nautobot-server runjob_with_job_result <job_result_id> --console_log
+        nautobot-server execute_job_result <job_result_id>
     ```
 
     - Reads stdout and stderr line by line from the subprocess.
-    - Streams output into the JobResult console log in real time.
-    - This allows the UI and API to display live job output as the job runs.
+    - Streams output into the `JobConsoleEntry` table in real time.
+    - This allows the UI to display live job output as the job runs.
+
+#### Kubernetes Queue
+
+- A Kubernetes Job/Pod is created via the K8s API running:
+
+    ```no-highlight
+        nautobot-server runjob_with_job_result <job_result_id>
+    ```
+
+- Inside the pod, `runjob_with_job_result` checks `nautobot_job_console_log` in the `JobResult.celery_kwargs`:
+    - **`console_log=True`** — instantiates `JobConsoleLogExecutor` which starts a subprocess:
+
+    ```no-highlight
+            nautobot-server execute_job_result <job_result_id>
+    ```
+
+    and streams stdout/stderr into the `JobConsoleEntry` table in real time.
+    - **`console_log=False`** — calls `JobResult.execute_job()` directly without console log capturing.
 
 ### Use cases
 

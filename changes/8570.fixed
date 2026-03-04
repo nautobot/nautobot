@@ -1,1 +1,0 @@
-Fixed an exception under Django 5.2 when bulk-editing or bulk-deleting certain types of records.

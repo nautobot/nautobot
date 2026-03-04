@@ -1547,19 +1547,21 @@ class ScheduledJobIntervalTestCase(TestCase):
         self.assertEqual(scheduled_job_weekday, requested_weekday)
 
 
-class JobResultConsoleLogTestCase(TransactionTestCase):
-    """Test JobResult.enqueue_job console_log behavior"""
+class JobResultEnqueueJobCase(TransactionTestCase):
+    """Test JobResult.enqueue_job behavior"""
 
     def setUp(self):
         super().setUp()
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
     def test_console_log_true_uses_console_log_task(
         self,
         mock_run_job,
         mock_console_log_task,
+        mock_kubernetes_job,
     ):
         job_kwargs = {"foo": "bar"}
         job_result = JobResult.enqueue_job(
@@ -1570,14 +1572,17 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             **job_kwargs,
         )
 
+        mock_kubernetes_job.assert_not_called()
         mock_console_log_task.apply_async.assert_called_once()
         mock_run_job.apply_async.assert_not_called()
 
         job_result.refresh_from_db()
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), True)
 
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
     @mock.patch("nautobot.extras.jobs.run_job")
-    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task):
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_kubernetes_job):
         job_kwargs = {"foo": "bar"}
 
         job_result = JobResult.enqueue_job(
@@ -1588,12 +1593,52 @@ class JobResultConsoleLogTestCase(TransactionTestCase):
             **job_kwargs,
         )
 
+        mock_kubernetes_job.assert_not_called()
         mock_console_log_task.apply_async.assert_not_called()
         mock_run_job.apply_async.assert_called_once()
 
         job_result.refresh_from_db()
         # when console log is false job_result is not updated before run task
         self.assertEqual(job_result.task_kwargs, {})
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), False)
+
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_with_kubernetes_queue_uses_kubernetes_task_with_celery_kwargs(
+        self,
+        mock_run_job,
+        mock_console_log_task,
+        mock_kubernetes_job,
+    ):
+        job_kwargs = {"foo": "bar"}
+        kubernetes_queue = JobQueue.objects.create(
+            name="Empty Job Queue 1",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
+        for console_log in (True, False):
+            with self.subTest(console_log=console_log):
+                mock_kubernetes_job.reset_mock()
+                mock_run_job.reset_mock()
+                mock_console_log_task.reset_mock()
+
+                mock_kubernetes_job.return_value = mock.MagicMock()
+                JobResult.enqueue_job(
+                    job_model=self.job_model,
+                    user=self.user,
+                    synchronous=False,
+                    console_log=console_log,
+                    job_queue=kubernetes_queue,
+                    **job_kwargs,
+                )
+
+                mock_kubernetes_job.assert_called_once()
+                mock_run_job.apply_async.assert_not_called()
+                mock_console_log_task.apply_async.assert_not_called()
+
+                call_args = mock_kubernetes_job.call_args
+                actual_job_result_arg = call_args[0][0]  # first positional arg
+                self.assertEqual(actual_job_result_arg.celery_kwargs.get("nautobot_job_console_log"), console_log)
 
 
 class RunConsoleLogJobTestCase(TestCase):
@@ -1616,3 +1661,173 @@ class RunConsoleLogJobTestCase(TestCase):
         finally:
             run_console_log_job_and_return_job_result.pop_request()
         mock_job_console_log_execute.assert_called_once()
+
+
+class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.enabled = True
+        job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=job_model,
+            user=self.user,
+            name=job_model.class_path,
+            date_done=timezone.now(),
+            celery_kwargs={"nautobot_job_console_log": True},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_used(
+        self,
+        mock_report_job_status,
+        mock_execute_job,
+        mock_executor_console_log,
+    ):
+        """Command should use JobConsoleLogExecutor when console logging is enabled."""
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_executor_console_log.assert_called_once_with(str(self.job_result.pk))
+        mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_execute_job.assert_not_called()
+        mock_report_job_status.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_not_used(
+        self,
+        mock_report_job_status,
+        mock_call_command,
+        mock_executor_console_log,
+    ):
+        """Command should not use JobConsoleLogExecutor when console logging is disabled."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_call_command.assert_called_once_with(
+            "execute_job_result", str(self.job_result.pk), profile=False, stdout=mock.ANY
+        )
+        mock_executor_console_log.assert_not_called()
+        mock_report_job_status.assert_called_once()
+
+
+class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.job_model.enabled = True
+        self.job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=self.job_model,
+            user=self.user,
+            name=self.job_model.class_path,
+            celery_kwargs={"nautobot_job_profile": False},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    def test_invalid_job_result_pk_raises_error(self):
+        """Command should raise CommandError when JobResult UUID does not exist."""
+        invalid_id = "00000000-0000-0000-0000-000000000000"
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", invalid_id)
+        self.assertEqual(str(err.exception), f"Job result with pk {invalid_id} not found.")
+
+    def test_missing_celery_kwargs_raises_error(self):
+        """Command should raise CommandError when celery_kwargs is not set on the JobResult."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk))
+        self.assertEqual(
+            str(err.exception), f"Job result with pk {self.job_result.pk} does not have `celery_kwargs` defined."
+        )
+
+    def test_invalid_json_data_raises_error(self):
+        """Command should raise CommandError when --data is not valid JSON."""
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk), data="not-valid-json")
+        self.assertIn("Invalid JSON data:", str(err.exception))
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_data_option_skips_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should use --data directly and skip validate_job_and_job_data when --data is provided."""
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+            data='{"foo": "bar"}',
+        )
+
+        mock_validate.assert_not_called()
+        mock_run_job.apply.assert_called_once()
+        call_kwargs = mock_run_job.apply.call_args[1]["kwargs"]
+        self.assertEqual(call_kwargs.get("foo"), "bar")
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_no_data_option_calls_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should call validate_job_and_job_data with task_kwargs when --data is not provided."""
+        self.job_result.task_kwargs = {"baz": "qux"}
+        self.job_result.save()
+        mock_validate.return_value = self.job_result.task_kwargs
+
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_validate.assert_called_once_with(
+            mock.ANY, self.user, self.job_model.class_path, self.job_result.task_kwargs
+        )
+        mock_run_job.apply.assert_called_once()
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_successful_execution_sets_date_started(self, mock_validate, mock_sync, mock_run_job):
+        """Command should stamp date_started on the JobResult before executing."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        self.job_result.refresh_from_db()
+        self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_sync_eager_result_is_called(self, mock_validate, mock_sync, mock_run_job):
+        """Command should sync the eager result back to the JobResult after execution."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        mock_sync.assert_called_once()
+        first_arg = mock_sync.call_args[0][0]
+        self.assertEqual(first_arg.pk, self.job_result.pk)
