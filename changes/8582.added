@@ -1,0 +1,4 @@
+Added Token model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+Added Token navigation under the Administration tab.
+Added Token UI filtering and bulk-edit capabilities.
+Added Token.last_updated and enabled saved views for Token via is_saved_view_model = True.
