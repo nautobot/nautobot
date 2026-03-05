@@ -2,7 +2,6 @@ import io
 import json
 import logging
 from unittest import mock
-from uuid import uuid4
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -10,9 +9,11 @@ from django.db.models import ProtectedError, QuerySet
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.test import tag
 from django.urls import reverse
+import factory as factory_lib
 from rest_framework import status
 
 from nautobot.circuits.models import Provider
+from nautobot.core.factory import OrganizationalModelFactory
 from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
@@ -2347,6 +2348,15 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
             cf.delete()
 
 
+class _TestLocationTypeFactory(OrganizationalModelFactory):
+    """Minimal LocationType factory for TransactionTestCase tests. Uses Sequence for unique names."""
+
+    class Meta:
+        model = LocationType
+
+    name = factory_lib.Sequence(lambda n: f"LT {n}")
+
+
 class CustomFieldBackgroundTasks(TransactionTestCase):
     def _run_cf_scenario(
         self,
@@ -2364,6 +2374,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         dry_run=False,
         safe_change=False,
         verbose=False,
+        validation_regex=None,
     ):
         """
         Create a Location with a CustomField, run cleanup, and return (location, cf).
@@ -2381,8 +2392,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         scope_filter:     If set, apply this dict as the field's scope_filter after CT assignment.
         dry_run:          Passed through to cleanup_custom_field_data.
         safe_change:      Passed through to cleanup_custom_field_data.
+        validation_regex: If set, apply this regex string to the CustomField before saving.
         """
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
+        location_type = _TestLocationTypeFactory.create()
         location_status = Status.objects.get_for_model(Location).first()
         obj_type = ContentType.objects.get_for_model(Location)
 
@@ -2396,6 +2408,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             cf_kwargs["default"] = default
 
         cf = CustomField(**cf_kwargs)
+        if validation_regex is not None:
+            cf.validation_regex = validation_regex
         cf.save()
 
         if choices:
@@ -2407,7 +2421,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             if exclude_from_scope:
                 # Create a separate in-scope LT so the test object (which uses the other LT)
                 # falls outside the scope_filter.
-                lt_in_scope = LocationType.objects.create(name=f"LT-in {uuid4().hex[:6]}")
+                lt_in_scope = _TestLocationTypeFactory.create()
                 cf.scope_filter = {"location_type": [str(lt_in_scope.pk)]}
                 cf.save()
             elif scope_filter is not None:
@@ -2416,7 +2430,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         initial_data = {"test_cf": initial_value} if has_initial_value else {}
         location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
+            name="Test Location",
             location_type=location_type,
             status=location_status,
             _custom_field_data=initial_data,
@@ -2427,10 +2441,17 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         return location, cf
 
     # -------------------------------------------------------------------------
-    # Matrix stubs — naming: test_cf__<scope>__<required>__<default>__<key>__<value>__<outcome>
+    # Matrix — naming: test_cf__<scope>__<required>__<default>__<key>__<value>__<outcome>
+    #
+    #  - scope: scoped / unscoped
+    #  - required: required / optional
+    #  - default: nodefault / defaulted
+    #  - key: keyed / missing
+    #  - value: na / empty / badtype / invalid / valid / partial
+    #  - outcome: noop / toempty / todefault / log / delete / filter # log is noop with a log message
     # -------------------------------------------------------------------------
 
-    # Required-field warning: scoped + required + nodefault + missing key → provision adds key with None, then log WARNING
+    # (any) Yes / Yes / No / No / n/a => log (Safe)
     def test_cf__scoped__required__nodefault__missing__na__log(self):
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
             location, _ = self._run_cf_scenario(required=True)
@@ -2439,7 +2460,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIsNone(location._custom_field_data["test_cf"])
         self.assertTrue(any("cf_cleanup.validation_failed_required" in msg for msg in cm.output))
 
-    # Required-field warning: scoped + required + nodefault + keyed + empty (None) → log WARNING (noop)
+    # (any) Yes / Yes / No / Yes / empty => log (Safe)
     def test_cf__scoped__required__nodefault__keyed__empty__log(self):
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
             location, _ = self._run_cf_scenario(required=True, has_initial_value=True, initial_value=None)
@@ -2447,7 +2468,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIn("test_cf", location._custom_field_data)
         self.assertTrue(any("cf_cleanup.validation_failed_required" in msg for msg in cm.output))
 
-    # Type-mismatch reset: scoped + optional + nodefault + keyed + badtype → toempty (reset to None)
+    # (any) Yes / No / No / Yes / badtype => toempty (Destructive)
     def test_cf__scoped__optional__nodefault__keyed__badtype__toempty(self):
         location, _ = self._run_cf_scenario(
             field_type=CustomFieldTypeChoices.TYPE_TEXT,
@@ -2458,7 +2479,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
 
-    # Type-mismatch reset: scoped + optional + defaulted + keyed + badtype → todefault
+    # (any) Yes / No / Yes / Yes / badtype => todefault (Destructive)
     def test_cf__scoped__optional__defaulted__keyed__badtype__todefault(self):
         location, _ = self._run_cf_scenario(
             field_type=CustomFieldTypeChoices.TYPE_TEXT,
@@ -2469,91 +2490,40 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         self.assertEqual(location._custom_field_data.get("test_cf"), "default_val")
 
-    # Validation-failure warning: scoped + optional + nodefault + keyed + invalid → log (value unchanged)
+    # (any) Yes / No / No / Yes / invalid => log (Safe)
     def test_cf__scoped__optional__nodefault__keyed__invalid__log(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="Test CF",
-            key="test_cf",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            validation_regex=r"^\d+$",  # only digits allowed
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
-        location_status = Status.objects.get_for_model(Location).first()
-        location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
-            location_type=location_type,
-            status=location_status,
-            _custom_field_data={"test_cf": "not-a-number"},  # string (correct type), fails regex
-        )
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
-            cleanup_custom_field_data()
-        location.refresh_from_db()
+            location, _ = self._run_cf_scenario(
+                validation_regex=r"^\d+$",
+                has_initial_value=True,
+                initial_value="not-a-number",
+            )
         self.assertEqual(location._custom_field_data.get("test_cf"), "not-a-number")
         self.assertTrue(any("cf_cleanup.validation_failed_optional" in msg for msg in cm.output))
 
-    # Validation-failure warning: scoped + optional + defaulted + keyed + invalid → log (default NOT applied) # Wrong
+    # (any) Yes / No / Yes / Yes / invalid => log (Safe)
     def test_cf__scoped__optional__defaulted__keyed__invalid__log(self):
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
-        location_status = Status.objects.get_for_model(Location).first()
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="Test CF",
-            key="test_cf",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            validation_regex=r"^\d+$",
-            default="123",
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-        location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
-            location_type=location_type,
-            status=location_status,
-            _custom_field_data={"test_cf": "not-a-number"},  # correct type, fails regex
-        )
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
-            cleanup_custom_field_data()
-        location.refresh_from_db()
+            location, _ = self._run_cf_scenario(
+                validation_regex=r"^\d+$",
+                has_default=True,
+                default="123",
+                has_initial_value=True,
+                initial_value="not-a-number",
+            )
         self.assertEqual(location._custom_field_data.get("test_cf"), "not-a-number")
         self.assertTrue(any("cf_cleanup.validation_failed_optional" in msg for msg in cm.output))
-
-    # Scope sweep: out-of-scope object + keyed + valid → key set to null (not removed)
-    def test_cf__unscoped__optional__nodefault__keyed__valid__toempty(self):
-        location_type = LocationType.objects.create(name=f"LT-in {uuid4().hex[:6]}")
-        location_type_out = LocationType.objects.create(name=f"LT-out {uuid4().hex[:6]}")
-        location_status = Status.objects.get_for_model(Location).first()
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT)
-        cf.save()
-        cf.content_types.set([obj_type])
-        # scope_filter restricts to location_type (in-scope); our location uses location_type_out
-        cf.scope_filter = {"location_type": [str(location_type.pk)]}
-        cf.save()
-        location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
-            location_type=location_type_out,
-            status=location_status,
-            _custom_field_data={"test_cf": "some-value"},
-        )
-        cleanup_custom_field_data()
-        location.refresh_from_db()
-        # Scope sweep sets key to null rather than removing it.
-        self.assertIn("test_cf", location._custom_field_data)
-        self.assertIsNone(location._custom_field_data["test_cf"])
 
     # -------------------------------------------------------------------------
-    # Unscoped stubs (scope_filter or CT-unassigned) — scope sweep
+    # Unscoped (scope_filter or CT-unassigned) — scope sweep
     # -------------------------------------------------------------------------
 
     # (any) No / No / No / No / n/a => toempty (Safe)
     def test_cf__unscoped__optional__nodefault__missing__na__toempty(self):
-        # Key was never present; _provision_field skips out-of-scope objects, so key stays absent.
+        # provision_field initializes absent key to null even for out-of-scope objects.
         location, _ = self._run_cf_scenario(scoped=True, exclude_from_scope=True, safe_change=True)
-        self.assertNotIn("test_cf", location._custom_field_data)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
 
     # (any) No / No / No / Yes / empty => noop (already null, scope sweep sets null again)
     def test_cf__unscoped__optional__nodefault__keyed__empty__noop(self):
@@ -2575,16 +2545,32 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     # (any) No / No / No / Yes / invalid => set to null (Destructive)
     def test_cf__unscoped__optional__nodefault__keyed__invalid__toempty(self):
-        # Non-null string value that would fail validation if in scope → scope sweep sets to null.
+        # Value fails validation_regex → out-of-scope scope sweep nulls it regardless.
         location, _ = self._run_cf_scenario(
-            scoped=True, exclude_from_scope=True, has_initial_value=True, initial_value="not-digits"
+            scoped=True,
+            exclude_from_scope=True,
+            validation_regex=r"^\d+$",
+            has_initial_value=True,
+            initial_value="not-digits",
         )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+
+    # (any) No / No / No / Yes / valid => toempty (Destructive)
+    def test_cf__unscoped__optional__nodefault__keyed__valid__toempty(self):
+        location, _ = self._run_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            has_initial_value=True,
+            initial_value="some-value",
+        )
+        # Scope sweep sets key to null rather than removing it.
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
 
     # (any) No / No / Yes / No / n/a => toempty (Safe)
     def test_cf__unscoped__optional__defaulted__missing__na__toempty(self):
-        # Default exists but field is out of scope; provisioning skipped, key stays absent.
+        # Default does not apply to out-of-scope objects; key is initialized to null.
         location, _ = self._run_cf_scenario(
             scoped=True,
             exclude_from_scope=True,
@@ -2592,9 +2578,10 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             default="mydefault",
             safe_change=True,
         )
-        self.assertNotIn("test_cf", location._custom_field_data)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
 
-    # (any) No / No / Yes / Yes / empty => noop (already null, scope sweep sets null again)
+    # (any) No / No / Yes / Yes / empty => noop (already null)
     def test_cf__unscoped__optional__defaulted__keyed__empty__noop(self):
         # JSON null; scope sweep sets key to null — same value, key stays present.
         location, _ = self._run_cf_scenario(
@@ -2623,11 +2610,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     # (any) No / No / Yes / Yes / invalid => set to null (Destructive)
     def test_cf__unscoped__optional__defaulted__keyed__invalid__toempty(self):
+        # Value fails validation_regex → out-of-scope scope sweep nulls it regardless.
         location, _ = self._run_cf_scenario(
             scoped=True,
             exclude_from_scope=True,
+            validation_regex=r"^\d+$",
             has_default=True,
-            default="mydefault",
+            default="123",  # must satisfy validation_regex
             has_initial_value=True,
             initial_value="not-digits",
         )
@@ -2657,7 +2646,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             cf.clean()
 
     # -------------------------------------------------------------------------
-    # Scoped optional nodefault stubs — provision, validation-failure warning
+    # Scoped optional nodefault — provision, validation-failure warning
     # -------------------------------------------------------------------------
 
     # (any) Yes / No / No / No / n/a => toempty (Safe)
@@ -2681,7 +2670,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
 
     # -------------------------------------------------------------------------
-    # Scoped optional defaulted stubs — provision, validation-failure warning
+    # Scoped optional defaulted — provision, validation-failure warning
     # -------------------------------------------------------------------------
 
     # (any) Yes / No / Yes / No / n/a => todefault (Safe)
@@ -2703,7 +2692,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "user")
 
     # -------------------------------------------------------------------------
-    # Scoped required nodefault stubs
+    # Scoped required nodefault
     # -------------------------------------------------------------------------
 
     # (any) Yes / Yes / No / Yes / badtype => log (no default to recover with)
@@ -2720,28 +2709,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     # (any) Yes / Yes / No / Yes / invalid => log
     def test_cf__scoped__required__nodefault__keyed__invalid__log(self):
-        # required + no default + correct type but fails validation_regex → log, no mutation.
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
-        location_status = Status.objects.get_for_model(Location).first()
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="Test CF",
-            key="test_cf",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            required=True,
-            validation_regex=r"^\d+$",
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-        location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
-            location_type=location_type,
-            status=location_status,
-            _custom_field_data={"test_cf": "not-a-number"},
-        )
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
-            cleanup_custom_field_data()
-        location.refresh_from_db()
+            location, _ = self._run_cf_scenario(
+                required=True,
+                validation_regex=r"^\d+$",
+                has_initial_value=True,
+                initial_value="not-a-number",
+            )
         self.assertEqual(location._custom_field_data.get("test_cf"), "not-a-number")
         self.assertTrue(any("cf_cleanup.validation_failed_required" in msg for msg in cm.output))
 
@@ -2755,7 +2729,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
 
     # -------------------------------------------------------------------------
-    # Scoped required defaulted stubs
+    # Scoped required defaulted
     # -------------------------------------------------------------------------
 
     # (any) Yes / Yes / Yes / No / n/a => todefault (Safe)
@@ -2790,29 +2764,15 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     # (any) Yes / Yes / Yes / Yes / invalid => log
     def test_cf__scoped__required__defaulted__keyed__invalid__log(self):
-        # required + default + correct type but fails validation_regex → log, no mutation.
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
-        location_status = Status.objects.get_for_model(Location).first()
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="Test CF",
-            key="test_cf",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-            required=True,
-            default="123",
-            validation_regex=r"^\d+$",
-        )
-        cf.save()
-        cf.content_types.set([obj_type])
-        location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
-            location_type=location_type,
-            status=location_status,
-            _custom_field_data={"test_cf": "not-a-number"},
-        )
         with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
-            cleanup_custom_field_data()
-        location.refresh_from_db()
+            location, _ = self._run_cf_scenario(
+                required=True,
+                validation_regex=r"^\d+$",
+                has_default=True,
+                default="123",
+                has_initial_value=True,
+                initial_value="not-a-number",
+            )
         self.assertEqual(location._custom_field_data.get("test_cf"), "not-a-number")
         self.assertTrue(any("cf_cleanup.validation_failed_required" in msg for msg in cm.output))
 
@@ -2831,16 +2791,16 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
     # Orphan stub — orphan sweep
     # -------------------------------------------------------------------------
 
-    # key exists but CustomField definition no longer exists => delete (Destructive)
+    # (orphan) n/a / n/a / n/a / Yes / n/a => delete (Destructive)
     def test_cf__orphan__optional__na__keyed__na__delete(self):
-        location_type = LocationType.objects.create(name=f"LT {uuid4().hex[:6]}")
+        location_type = _TestLocationTypeFactory.create()
         location_status = Status.objects.get_for_model(Location).first()
         obj_type = ContentType.objects.get_for_model(Location)
         cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT)
         cf.save()
         cf.content_types.set([obj_type])
         location = Location.objects.create(
-            name=f"Location {uuid4().hex[:6]}",
+            name="Test Location",
             location_type=location_type,
             status=location_status,
             _custom_field_data={"test_cf": "some-value"},
@@ -2853,13 +2813,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertNotIn("test_cf", location._custom_field_data)
 
     # -------------------------------------------------------------------------
-    # Select / multiselect stubs — choice repair
+    # Select / multiselect — choice repair
     # -------------------------------------------------------------------------
 
-    # select / scoped / optional / nodefault / keyed / empty => noop (no spurious None→None update)
+    # (select) Yes / No / No / Yes / empty => noop
     def test_cf__scoped__select__optional__nodefault__keyed__empty__noop(self):
         # JSON-null value on an optional SELECT field with no default must be a noop.
-        # Previously, JSONB null leaked through the __in exclude (JSONB null ≠ SQL NULL for
+        # Previously, JSONB null leaked through the __in exclude (JSONB null != SQL NULL for
         # the -> operator), triggering a spurious _update_custom_field_choice_data(id, None, None)
         # call that logged "from `None` to `None`". The guard prevents this.
         buf = io.StringIO()
@@ -2885,7 +2845,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             "Spurious None→None selection update should not be logged",
         )
 
-    # multiselect / scoped / optional / nodefault / keyed / partial => filter
+    # (multiselect) Yes / No / No / Yes / partial => filter (Destructive)
     def test_cf__scoped__optional__nodefault__keyed__partial__filter(self):
         location, _ = self._run_cf_scenario(
             field_type=CustomFieldTypeChoices.TYPE_MULTISELECT,
@@ -3074,14 +3034,16 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         self.assertEqual(location.cf["cf1"], "Foo")
 
+        # Set up CF2 outside web_request_context so user=None → signal returns early, no sync job.
+        cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
+        cf.save()
+        cf.content_types.set([obj_type])
+        cf_pk = cf.pk
+
         with web_request_context(self.user):
-            cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
-            cf.save()
-            cf.content_types.set([obj_type])
-            # Signal enqueues a job; call directly with change_context to produce ObjectChange.
             ctx = change_context_state.get()
             ctx_dict = {**ctx.as_dict(), "context_detail": "provision custom field data for new content types"}
-            provision_field(cf.pk, [obj_type.pk], change_context=ctx_dict)
+            provision_field(cf_pk, [obj_type.pk], change_context=ctx_dict)
 
             location.refresh_from_db()
 
@@ -3092,6 +3054,25 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
         self.assertEqual(oc_list[0].user, self.user)
+
+        # Verify that provision_field initializes the key to null on out-of-scope objects.
+        cf_scoped = CustomField(label="CF3", type=CustomFieldTypeChoices.TYPE_TEXT, default="Scoped")
+        cf_scoped.save()
+        cf_scoped.content_types.set([obj_type])
+        # Restrict CF3 to location_type (Root Type 1); location_out is out-of-scope.
+        location_type_out = _TestLocationTypeFactory.create()
+        location_out = Location(name="Location Out", location_type=location_type_out, status=location_status)
+        location_out.save()
+        cf_scoped.scope_filter = {"location_type": [str(location_type.pk)]}
+        cf_scoped.save()
+        provision_field(cf_scoped.pk, [obj_type.pk])
+
+        location.refresh_from_db()
+        location_out.refresh_from_db()
+
+        self.assertEqual(location.cf["cf3"], "Scoped")  # in-scope → default applied
+        self.assertIn("cf3", location_out._custom_field_data)  # out-of-scope → key present
+        self.assertIsNone(location_out._custom_field_data["cf3"])  # out-of-scope → value is null
 
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -3126,10 +3107,11 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         self.assertNotIn("cf1", location._custom_field_data)
 
+        # Delete CF2 outside web_request_context so user=None → signal returns early, no sync job.
+        cf_2_key = cf_2.key
+        cf_2.delete()
+
         with web_request_context(self.user):
-            cf_2_key = cf_2.key
-            cf_2.delete()
-            # Signal enqueues a job; call directly with change_context to produce ObjectChange.
             ctx = change_context_state.get()
             ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data"}
             delete_custom_field_data(cf_2_key, [obj_type.pk], change_context=ctx_dict)
@@ -3157,10 +3139,11 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             _custom_field_data={"cf1": "foo"},
         )
 
+        # Clear content types outside web_request_context so user=None → signal returns early, no sync job.
+        cleared_ct_pks = list(cf_1.content_types.values_list("pk", flat=True))
+        cf_1.content_types.clear()
+
         with web_request_context(self.user):
-            cleared_ct_pks = list(cf_1.content_types.values_list("pk", flat=True))
-            cf_1.content_types.clear()
-            # Signal enqueues a job; call directly with change_context to produce ObjectChange.
             ctx = change_context_state.get()
             ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data from existing content types"}
             delete_custom_field_data("cf1", cleared_ct_pks, change_context=ctx_dict)
@@ -3203,9 +3186,11 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         self.assertEqual(location.cf["cf1"], "Bar")
 
+        # Rename choice outside web_request_context so user=None → signal returns early, no sync job.
+        choice.value = "FizzBuzz"
+        choice.save()
+
         with web_request_context(self.user):
-            choice.value = "FizzBuzz"
-            choice.save()
             ctx = change_context_state.get()
             ctx_dict = {**ctx.as_dict(), "context_detail": "update custom field choice data"}
             update_custom_field_choice_data(cf.id, "Bar", "FizzBuzz", change_context=ctx_dict)
