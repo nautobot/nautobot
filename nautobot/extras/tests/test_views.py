@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -70,6 +71,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -2561,6 +2563,57 @@ class ExportTemplateTestCase(
             "mime_type": "application/json",
             "file_extension": "json",
         }
+
+
+class FileProxyUIViewSetTestCase(TestCase):
+    model = FileProxy
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.user = User.objects.create_user(username="testuser")
+        cls.test_file = SimpleUploadedFile(
+            name="test_file.txt", content=b"This is test file content", content_type="text/plain"
+        )
+        cls.fileproxy = FileProxy.objects.create(
+            name="test_fileproxy",
+            file=cls.test_file,
+        )
+
+    def test_list_view(self):
+        self.add_permissions("extras.view_fileproxy")
+        response = self.client.get(reverse("extras:fileproxy_list"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_detail_view(self):
+        self.add_permissions("extras.view_fileproxy")
+        response = self.client.get(reverse("extras:fileproxy", kwargs={"pk": self.fileproxy.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.fileproxy.name)
+        self.assertEqual(response.context["object"].file, self.fileproxy.file)
+
+    def test_edit_view(self):
+        self.add_permissions("extras.view_fileproxy", "extras.change_fileproxy")
+        updated_file = SimpleUploadedFile(
+            name="updated_file.txt", content=b"Updated content", content_type="text/plain"
+        )
+        response = self.client.post(
+            reverse("extras:fileproxy_edit", kwargs={"pk": self.fileproxy.pk}),
+            data={
+                "name": "updated_fileproxy",
+                "file": updated_file,
+            },
+        )
+        self.assertIn(response.status_code, [200, 302])
+        self.fileproxy.refresh_from_db()
+        self.assertEqual(self.fileproxy.name, "updated_fileproxy")
+
+    def test_delete_view(self):
+        self.add_permissions("extras.view_fileproxy", "extras.delete_fileproxy")
+        pk = self.fileproxy.pk
+        response = self.client.post(reverse("extras:fileproxy_delete", kwargs={"pk": pk}), data={"confirm": True})
+        self.assertIn(response.status_code, [200, 302])
+        self.assertFalse(FileProxy.objects.filter(pk=pk).exists())
 
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
