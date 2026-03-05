@@ -658,6 +658,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
+    "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
