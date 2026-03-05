@@ -1,0 +1,1 @@
+Fixed N + 1 queries in GraphQL relationship resolver using request-scoped caching
