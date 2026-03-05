@@ -12,6 +12,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
+from opentelemetry import trace as _otel_trace
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -467,26 +468,36 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
+        _tracer = _otel_trace.get_tracer("nautobot.extras.relationships")
+        with _tracer.start_as_current_span("relationship_cache.get [source]") as _span:
+            _span.set_attribute("relationship_cache.model", concrete_model._meta.label_lower)
+            _span.set_attribute("relationship_cache.hidden", str(hidden))
+            if not get_queryset:
+                listing = cache.get(list_cache_key)
+                if listing is not None:
+                    _span.set_attribute("relationship_cache.hit", True)
+                    return listing
+            queryset = cache.get(cache_key)
+            if queryset is None:
+                _span.set_attribute("relationship_cache.hit", False)
+                content_type = ContentType.objects.get_for_model(concrete_model)
+                queryset = (
+                    self.get_queryset()
+                    .filter(source_type=content_type)
+                    .select_related("source_type", "destination_type")
+                )  # You almost always will want access to the source_type/destination_type
+                if hidden is not None:
+                    queryset = queryset.filter(source_hidden=hidden)
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+                cache.set(cache_key, queryset, timeout=None)
+            else:
+                _span.set_attribute("relationship_cache.hit", True)
+            if not get_queryset:
+                listing = list(queryset)
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+                cache.set(list_cache_key, listing, timeout=None)
                 return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
-            queryset = (
-                self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
-            )  # You almost always will want access to the source_type/destination_type
-            if hidden is not None:
-                queryset = queryset.filter(source_hidden=hidden)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            return queryset
 
     def get_for_model_destination(self, model, hidden=None, get_queryset=True):
         """
@@ -513,28 +524,36 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
+        _tracer = _otel_trace.get_tracer("nautobot.extras.relationships")
+        with _tracer.start_as_current_span("relationship_cache.get [destination]") as _span:
+            _span.set_attribute("relationship_cache.model", concrete_model._meta.label_lower)
+            _span.set_attribute("relationship_cache.hidden", str(hidden))
+            if not get_queryset:
+                listing = cache.get(list_cache_key)
+                if listing is not None:
+                    _span.set_attribute("relationship_cache.hit", True)
+                    return listing
+            queryset = cache.get(cache_key)
+            if queryset is None:
+                _span.set_attribute("relationship_cache.hit", False)
+                content_type = ContentType.objects.get_for_model(concrete_model)
+                queryset = (
+                    self.get_queryset()
+                    .filter(destination_type=content_type)
+                    .select_related("source_type", "destination_type")
+                )  # You almost always will want access to the source_type/destination_type
+                if hidden is not None:
+                    queryset = queryset.filter(destination_hidden=hidden)
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+                cache.set(cache_key, queryset, timeout=None)
+            else:
+                _span.set_attribute("relationship_cache.hit", True)
+            if not get_queryset:
+                listing = list(queryset)
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+                cache.set(list_cache_key, listing, timeout=None)
                 return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
-            queryset = (
-                self.get_queryset()
-                .filter(destination_type=content_type)
-                .select_related("source_type", "destination_type")
-            )  # You almost always will want access to the source_type/destination_type
-            if hidden is not None:
-                queryset = queryset.filter(destination_hidden=hidden)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            return queryset
 
     def get_required_for_model(self, model):
         """
