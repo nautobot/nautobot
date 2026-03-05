@@ -12,6 +12,7 @@ class TestHandleEagerResultFailure(TestCase):
     def _make_command(self):
         command = MagicMock()
         command.stderr = MagicMock(spec=OutputWrapper)
+        command.stderr.write = MagicMock()
         return command
 
     def _make_eager_result(self, failed, result=None, traceback=None):
