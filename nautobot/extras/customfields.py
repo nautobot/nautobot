@@ -662,6 +662,15 @@ def provision_field(
             # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
             _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
 
+        # If the field has a scope_filter, out-of-scope objects also need the key initialized to
+        # null so that every content-type object has the key present.  Without a scope_filter,
+        # in_scope_qs is all objects, so the first pass already covered everyone.
+        if field.scope_filter:
+            out_of_scope_missing = model.objects.exclude(pk__in=in_scope_qs.values("pk")).filter(
+                **{f"_custom_field_data__{field.key}__isnull": True}
+            )
+            out_of_scope_missing.update(_custom_field_data=JSONSet("_custom_field_data", field.key, None))
+
     return True
 
 
