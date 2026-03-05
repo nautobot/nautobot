@@ -938,6 +938,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         job_result.celery_kwargs = job_celery_kwargs
         job_result.save()
+        job_result.refresh_from_db()
 
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
