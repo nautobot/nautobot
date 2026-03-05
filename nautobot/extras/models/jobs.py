@@ -3,6 +3,7 @@
 import contextlib
 from datetime import datetime, timedelta
 import logging
+import os
 import signal
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -601,6 +602,18 @@ class JobQueue(PrimaryModel):
         worker_count = get_job_queue_worker_count(job_queue=self)
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
+
+    def clean(self):
+        super().clean()
+        if self.name:
+            if ".." in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError({"name": "Job queue name cannot contain '..', please use a different name."})
+            if os.sep in self.name or "/" in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError(
+                    {"name": "Job queue name cannot contain path separators (e.g. '/'), please use a different name."}
+                )
 
 
 @extras_features(

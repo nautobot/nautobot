@@ -687,10 +687,24 @@ def get_kubernetes_job_manifest(job_queue):
         The manifest as a dictionary or None if no manifest is found.
     """
     manifest_path = os.path.join(settings.JOB_QUEUE_PATH, job_queue.name, "manifest.json")
-    if os.path.exists(manifest_path):
+    try:
+        base_real = os.path.realpath(settings.JOB_QUEUE_PATH)
+        resolved = os.path.realpath(manifest_path)
+        if resolved != base_real and not resolved.startswith(base_real + os.sep):
+            logger.warning(
+                "Job queue name %r would resolve outside JOB_QUEUE_PATH, ignoring manifest path.",
+                job_queue.name,
+            )
+            manifest_path = None
+    except OSError:
+        logger.debug("Could not resolve path for job queue %r.", job_queue.name)
+        manifest_path = None
+
+    if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path, "r", encoding="utf-8") as manifest_file:
             return json.load(manifest_file)
-    logger.debug("No manifest.json found at path %s.", manifest_path)
+    if manifest_path:
+        logger.debug("No manifest.json found at path %s.", manifest_path)
     default_manifest = settings.KUBERNETES_JOB_MANIFEST
     if default_manifest:
         return copy.deepcopy(default_manifest)

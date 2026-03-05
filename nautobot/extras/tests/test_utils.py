@@ -179,6 +179,74 @@ class UtilsTestCase(TestCase):
                 result = get_kubernetes_job_manifest(job_queue)
             self.assertIsNone(result)
 
+    def test_get_kubernetes_job_manifest_rejects_path_traversal_queue_names(self):
+        """Queue names that would resolve outside JOB_QUEUE_PATH must not read files."""
+        default_manifest = {"metadata": {"name": "default"}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.join(tmpdir, "base")
+            os.makedirs(base, exist_ok=True)
+            # Place a manifest in parent of base (would be read if ".." were allowed)
+            escape_manifest_path = os.path.join(tmpdir, "manifest.json")
+            escape_manifest = {"metadata": {"name": "escaped"}}
+            with open(escape_manifest_path, "w", encoding="utf-8") as f:
+                json.dump(escape_manifest, f)
+            try:
+                with override_settings(JOB_QUEUE_PATH=base, KUBERNETES_JOB_MANIFEST=default_manifest):
+                    with self.subTest(queue_name=".."):
+                        job_queue = JobQueue.objects.create(
+                            name="..",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue)
+                        self.assertEqual(result, default_manifest, "Must not read manifest from parent dir")
+
+                    with self.subTest(queue_name="../../escape"):
+                        job_queue = JobQueue.objects.create(
+                            name="../../escape",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue)
+                        self.assertEqual(result, default_manifest, "Must not read via path traversal")
+
+                    with self.subTest(queue_name="../../../etc"):
+                        job_queue = JobQueue.objects.create(
+                            name="../../../etc",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue)
+                        self.assertEqual(result, default_manifest, "Must not escape to arbitrary paths")
+            finally:
+                if os.path.exists(escape_manifest_path):
+                    os.remove(escape_manifest_path)
+
+    def test_get_kubernetes_job_manifest_slash_in_queue_name_stays_under_base(self):
+        """Queue names with slashes (e.g. My/Job/Queue) are allowed when path stays under base."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            queue_name = "My/Job/Queue"
+            queue_dir = os.path.join(tmpdir, "My", "Job", "Queue")
+            os.makedirs(queue_dir, exist_ok=True)
+            manifest = {"metadata": {"name": "from-nested-dir"}, "spec": {}}
+            with open(os.path.join(queue_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+            job_queue = JobQueue.objects.create(
+                name=queue_name,
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            with override_settings(JOB_QUEUE_PATH=tmpdir):
+                result = get_kubernetes_job_manifest(job_queue)
+            self.assertEqual(result, manifest)
+
+    def test_get_kubernetes_job_manifest_path_traversal_returns_default_or_none(self):
+        """Path traversal queue names with no default manifest return None (no file read)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST=None):
+                job_queue = JobQueue.objects.create(
+                    name="../../outside",
+                    queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                )
+                result = get_kubernetes_job_manifest(job_queue)
+                self.assertIsNone(result)
+
     @override_settings(
         JOB_QUEUE_PATH="/nonexistent/job-queues",
         KUBERNETES_JOB_POD_NAME="test-pod",
