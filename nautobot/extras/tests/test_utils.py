@@ -149,7 +149,7 @@ class UtilsTestCase(TestCase):
                 queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
             )
             with override_settings(JOB_QUEUE_PATH=tmpdir):
-                result = get_kubernetes_job_manifest(job_queue)
+                result = get_kubernetes_job_manifest(job_queue.name)
             self.assertEqual(result, manifest)
 
     def test_get_kubernetes_job_manifest_fallback_to_settings(self):
@@ -161,7 +161,7 @@ class UtilsTestCase(TestCase):
             )
             default_manifest = {"metadata": {"name": "default"}}
             with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST=default_manifest):
-                result = get_kubernetes_job_manifest(job_queue)
+                result = get_kubernetes_job_manifest(job_queue.name)
             self.assertIsNotNone(result)
             self.assertEqual(result, default_manifest)
             # Mutating the result must not affect the original (returned value is a deep copy)
@@ -176,7 +176,7 @@ class UtilsTestCase(TestCase):
                 queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
             )
             with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST={}):
-                result = get_kubernetes_job_manifest(job_queue)
+                result = get_kubernetes_job_manifest(job_queue.name)
             self.assertIsNone(result)
 
     def test_get_kubernetes_job_manifest_rejects_path_traversal_queue_names(self):
@@ -197,7 +197,7 @@ class UtilsTestCase(TestCase):
                             name="..",
                             queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
                         )
-                        result = get_kubernetes_job_manifest(job_queue)
+                        result = get_kubernetes_job_manifest(job_queue.name)
                         self.assertEqual(result, default_manifest, "Must not read manifest from parent dir")
 
                     with self.subTest(queue_name="../../escape"):
@@ -205,7 +205,7 @@ class UtilsTestCase(TestCase):
                             name="../../escape",
                             queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
                         )
-                        result = get_kubernetes_job_manifest(job_queue)
+                        result = get_kubernetes_job_manifest(job_queue.name)
                         self.assertEqual(result, default_manifest, "Must not read via path traversal")
 
                     with self.subTest(queue_name="../../../etc"):
@@ -213,7 +213,7 @@ class UtilsTestCase(TestCase):
                             name="../../../etc",
                             queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
                         )
-                        result = get_kubernetes_job_manifest(job_queue)
+                        result = get_kubernetes_job_manifest(job_queue.name)
                         self.assertEqual(result, default_manifest, "Must not escape to arbitrary paths")
             finally:
                 if os.path.exists(escape_manifest_path):
@@ -233,7 +233,7 @@ class UtilsTestCase(TestCase):
                 queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
             )
             with override_settings(JOB_QUEUE_PATH=tmpdir):
-                result = get_kubernetes_job_manifest(job_queue)
+                result = get_kubernetes_job_manifest(job_queue.name)
             self.assertEqual(result, manifest)
 
     def test_get_kubernetes_job_manifest_path_traversal_returns_default_or_none(self):
@@ -244,7 +244,7 @@ class UtilsTestCase(TestCase):
                     name="../../outside",
                     queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
                 )
-                result = get_kubernetes_job_manifest(job_queue)
+                result = get_kubernetes_job_manifest(job_queue.name)
                 self.assertIsNone(result)
 
     @override_settings(
@@ -291,6 +291,7 @@ class UtilsTestCase(TestCase):
         job_result = JobResult.objects.create(
             name="Test Job",
             user=self.user,
+            celery_kwargs={"queue": "k8s-queue"},
         )
         # Mock the log method to avoid database writes during test
         job_result.log = mock.Mock()
@@ -321,7 +322,7 @@ class UtilsTestCase(TestCase):
         mock_on_commit.side_effect = capture_callback
 
         # Execute the function
-        result = run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs)
+        result = run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
         # Verify job_result was updated and saved
         job_result.refresh_from_db()
@@ -376,10 +377,11 @@ class UtilsTestCase(TestCase):
             job_result = JobResult.objects.create(
                 name="Test Job",
                 user=self.user,
+                celery_kwargs={"queue": "no-manifest-k8s"},
             )
             job_kwargs = "{}"
             with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST={}):
                 with self.assertRaises(KubernetesJobManifestError) as cm:
-                    run_kubernetes_job_and_return_job_result(job_queue, job_result, job_kwargs)
+                    run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
                 self.assertIn("Unable to retrieve a kubernetes job manifest.", str(cm.exception))
                 self.assertTrue(issubclass(KubernetesJobManifestError, ValidationError))

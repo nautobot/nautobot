@@ -2147,7 +2147,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             if job_queue is None:
                 job_queue = job_model.default_job_queue
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
-                job_queue
+                job_queue.name
             ):
                 job_form.add_error("_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue.")
                 job_form_is_valid = False
