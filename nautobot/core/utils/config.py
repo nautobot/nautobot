@@ -7,6 +7,7 @@ from constance import config
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
+from opentelemetry import trace as _otel_trace
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +23,11 @@ def get_settings_or_config(variable_name, fallback=None):
     if hasattr(settings, variable_name):
         return getattr(settings, variable_name)
     # django-constance 4.x removed some built-in error handling here, so we have to do it ourselves now
-    with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError):
-        return getattr(config, variable_name)
+    _tracer = _otel_trace.get_tracer("nautobot.core.config")
+    with _tracer.start_as_current_span("constance_config.get") as _span:
+        _span.set_attribute("constance_config.key", variable_name)
+        with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError):
+            return getattr(config, variable_name)
     logger.warning(
         'Configuration "%s" is not in settings, and could not read from the Constance database table '
         "(perhaps not initialized yet?)",
