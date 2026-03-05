@@ -291,7 +291,7 @@ class UtilsTestCase(TestCase):
         job_result = JobResult.objects.create(
             name="Test Job",
             user=self.user,
-            celery_kwargs={"queue": "k8s-queue"},
+            celery_kwargs={"queue": job_queue.name},
         )
         # Mock the log method to avoid database writes during test
         job_result.log = mock.Mock()
@@ -377,7 +377,7 @@ class UtilsTestCase(TestCase):
             job_result = JobResult.objects.create(
                 name="Test Job",
                 user=self.user,
-                celery_kwargs={"queue": "no-manifest-k8s"},
+                celery_kwargs={"queue": job_queue.name},
             )
             job_kwargs = "{}"
             with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST={}):
