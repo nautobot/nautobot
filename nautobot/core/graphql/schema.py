@@ -12,6 +12,7 @@ from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel,
 import graphene
 from graphene.types import generic
 import graphene_django_optimizer as gql_optimizer
+from opentelemetry import trace as otel_trace
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.generators import (
@@ -469,6 +470,7 @@ def generate_query_mixin():
     """Generates and returns a class definition representing a GraphQL schema."""
 
     logger.info("Beginning generation of Nautobot GraphQL schema")
+    _span = otel_trace.get_current_span()
 
     class_attrs = {}
 
@@ -511,6 +513,7 @@ def generate_query_mixin():
         schema_type = generate_schema_type(app_name=model._meta.app_label, model=model)
         registry["graphql_types"][type_identifier] = schema_type
 
+    _span.set_attribute("graphql.schema.registered_model_count", len(registered_models))
     logger.debug("Adding plugins' statically defined graphql schema types")
     # After checking for conflict
     for schema_type in registry["plugin_graphql_types"]:
@@ -528,6 +531,7 @@ def generate_query_mixin():
         else:
             registry["graphql_types"][type_identifier] = schema_type
 
+    _span.set_attribute("graphql.schema.plugin_type_count", len(registry["plugin_graphql_types"]))
     logger.debug("Extending all registered schema types with dynamic attributes")
 
     # Precache all content-types as we'll need them for filtering and the like
@@ -547,4 +551,5 @@ def generate_query_mixin():
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
     logger.info("Generation of Nautobot GraphQL schema complete")
+    _span.set_attribute("graphql.schema.total_type_count", len(registry["graphql_types"]))
     return QueryMixin
