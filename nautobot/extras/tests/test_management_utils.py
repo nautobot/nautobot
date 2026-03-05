@@ -33,7 +33,7 @@ class TestHandleEagerResultFailure(TestCase):
         with patch("sys.exit") as mock_exit:
             handle_eager_result_failure(command, eager_result)
 
-        command.stderr.write.assert_called_once_with(traceback_str)
+        command.stderr.write.assert_called_once_with(traceback_str)  # pylint: disable=no-member
         mock_exit.assert_called_once_with(1)
 
     def test_writes_exc_type_and_message_to_stderr_when_traceback_missing(self):
@@ -48,5 +48,5 @@ class TestHandleEagerResultFailure(TestCase):
         with patch("sys.exit") as mock_exit:
             handle_eager_result_failure(command, eager_result)
 
-        command.stderr.write.assert_called_once_with("ValueError: bad value\n")
+        command.stderr.write.assert_called_once_with("ValueError: bad value\n")  # pylint: disable=no-member
         mock_exit.assert_called_once_with(1)
