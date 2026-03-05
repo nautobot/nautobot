@@ -5,6 +5,7 @@ from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
@@ -55,6 +56,7 @@ def instrument():
         metrics.set_meter_provider(meter_provider)
 
     DjangoInstrumentor().instrument(tracer_provider=provider, is_sql_commentor_enabled=True)
+    RequestsInstrumentor().instrument(tracer_provider=provider)
     RedisInstrumentor().instrument(tracer_provider=provider)
     CeleryInstrumentor().instrument(tracer_provider=provider)
 

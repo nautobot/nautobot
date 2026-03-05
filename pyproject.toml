@@ -132,6 +132,7 @@ dependencies = [
     "opentelemetry-instrumentation-logging (>=0.60b1,<0.61)",
     "opentelemetry-instrumentation-mysqlclient (>=0.60b1,<0.61)",
     "opentelemetry-instrumentation-wsgi (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-requests (>=0.60b1,<0.61)",
 ]
 
 [project.optional-dependencies]

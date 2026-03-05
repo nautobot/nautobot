@@ -579,7 +579,7 @@ files = [
     {file = "cffi-2.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:b882b3df248017dba09d6b16defe9b5c407fe32fc7c65a9c69798e6175601be9"},
     {file = "cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\"", testing = "implementation_name != \"pypy\" and os_name == \"nt\""}
+markers = {main = "platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -3742,6 +3742,27 @@ wrapt = ">=1.12.1"
 instruments = ["redis (>=2.6)"]
 
 [[package]]
+name = "opentelemetry-instrumentation-requests"
+version = "0.60b1"
+description = "OpenTelemetry requests instrumentation"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "opentelemetry_instrumentation_requests-0.60b1-py3-none-any.whl", hash = "sha256:eec9fac3fab84737f663a2e08b12cb095b4bd67643b24587a8ecfa3cf4d0ca4c"},
+    {file = "opentelemetry_instrumentation_requests-0.60b1.tar.gz", hash = "sha256:9a1063c16c44a3ba6e81870c4fa42a0fac3ecef5a4d60a11d0976eec9046f3d4"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.12,<2.0"
+opentelemetry-instrumentation = "0.60b1"
+opentelemetry-semantic-conventions = "0.60b1"
+opentelemetry-util-http = "0.60b1"
+
+[package.extras]
+instruments = ["requests (>=2.0,<3.0)"]
+
+[[package]]
 name = "opentelemetry-instrumentation-wsgi"
 version = "0.60b1"
 description = "WSGI Middleware for OpenTelemetry"
@@ -4402,7 +4423,7 @@ files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
-markers = {main = "implementation_name != \"PyPy\" and (platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\")", testing = "implementation_name != \"pypy\" and implementation_name != \"PyPy\" and os_name == \"nt\""}
+markers = {main = "(platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\") and implementation_name != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\" and implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -7122,4 +7143,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "5d2438fa2c33efbb5cc61fe44c1e7a3ccf74e371c0f2b385ec3173838904b01e"
+content-hash = "222e591d929f2084da7dad0a436939879e390ee3eff1c7f4c866759d947f9284"
