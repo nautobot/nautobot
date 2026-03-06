@@ -2,7 +2,7 @@ from logging import getLogger
 import sys
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models.fields.json import KeyTextTransform
 
@@ -27,7 +27,7 @@ def _pks_and_display(queryset, limit=20):
         rows = list(queryset.values_list("pk", "name"))
         parts = [f"{name!r} (pk={pk})" for pk, name in rows[:limit]]
         pks = [pk for pk, _ in rows]
-    except Exception:
+    except FieldDoesNotExist:
         pks = list(queryset.values_list("pk", flat=True))
         parts = [str(pk) for pk in pks[:limit]]
     display = ", ".join(parts) + ("..." if len(pks) > limit else "")
@@ -72,6 +72,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
+            if model is None:
+                continue
             queryset = model.objects.filter(**{f"_custom_field_data__{field.key}": old_value})
             pk_list = []
             if change_context is not None:
@@ -97,6 +99,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         # Loop through all field content types and search for values to update
         for ct in field.content_types.all():
             model = ct.model_class()
+            if model is None:
+                continue
             if old_value is None:
                 queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__contains": [None]})
             else:
@@ -203,7 +207,7 @@ def cleanup_custom_field_data(
     field_id=None,
     content_type_pk_set=None,
     change_context=None,
-    dry_run=False,
+    dryrun=False,
     safe_change=False,
     verbose=False,
     job_logger=logger,
@@ -218,14 +222,14 @@ def cleanup_custom_field_data(
         field_id (uuid4): The PK of the custom field being cleaned up
         content_type_pk_set (list): List of PKs for content types to act upon
         change_context (dict): Optional change context for ObjectChange creation
-        dry_run (bool): If True, execute all changes inside a transaction that is rolled back
+        dryrun (bool): If True, execute all changes inside a transaction that is rolled back
             at the end. Logs reflect what would have changed. Implies verbose=True. Defaults to False.
         safe_change (bool): If True, only run the additive provision step.
             All destructive steps (scope sweep, required null→default, type-mismatch reset,
             choice repair, orphan sweep) are skipped.
             Defaults to False.
         verbose (bool): If True, log each affected object by name/pk rather than just an aggregate
-            count. dry_run=True automatically enables this. Defaults to False.
+            count. dryrun=True automatically enables this. Defaults to False.
     """
     # For each CustomField x ContentType pair:
     # │
@@ -244,12 +248,12 @@ def cleanup_custom_field_data(
     #                  CustomField definition and remove them.
     #
     # safe_change=True: only provision runs; all destructive steps are skipped.
-    # dry_run=True: all mutations execute inside a transaction that is rolled back at the end.
-    # verbose=True (or dry_run=True): log each affected object individually instead of just counts.
+    # dryrun=True: all mutations execute inside a transaction that is rolled back at the end.
+    # verbose=True (or dryrun=True): log each affected object individually instead of just counts.
     from nautobot.extras.models import CustomField
     from nautobot.extras.utils import FeatureQuery
 
-    _verbose = dry_run or verbose  # dry_run implies verbose
+    _verbose = dryrun or verbose  # dryrun implies verbose
 
     is_all = False
     if field_id is None and content_type_pk_set is None:
@@ -279,7 +283,7 @@ def cleanup_custom_field_data(
                 field.pk,
                 ct_pks,
                 change_context=change_context,
-                dry_run=dry_run,
+                dryrun=dryrun,
                 verbose=_verbose,
                 job_logger=job_logger,
             )
@@ -321,7 +325,7 @@ def cleanup_custom_field_data(
                         .filter(_cf_key_text__isnull=True)
                     )
                     pks, display = _pks_and_display(null_with_key_qs) if _verbose else ([], "")
-                    if dry_run and pks:
+                    if dryrun and pks:
                         job_logger.info(
                             "cf_cleanup.required_null_to_default: Would set `%s` = %r on %d %s object(s): %s",
                             field.key,
@@ -361,7 +365,7 @@ def cleanup_custom_field_data(
                         **{f"_custom_field_data__{field.key}__isnull": False}
                     ).exclude(pk__in=in_scope_qs.values("pk"))
                     pks, display = _pks_and_display(out_of_scope_with_key) if _verbose else ([], "")
-                    if dry_run and pks:
+                    if dryrun and pks:
                         job_logger.info(
                             "cf_cleanup.scope_sweep: Would set key `%s` to null on %d %s object(s): %s",
                             field.key,
@@ -464,7 +468,7 @@ def cleanup_custom_field_data(
                     try:
                         model._meta.get_field("name")
                         _vl_fields = ("pk", "_custom_field_data", "name")
-                    except Exception:
+                    except FieldDoesNotExist:
                         _vl_fields = ("pk", "_custom_field_data")
                     for row in objects_with_value.values_list(*_vl_fields).iterator(chunk_size=1000):
                         if len(row) == 3:
@@ -562,7 +566,7 @@ def cleanup_custom_field_data(
             for key, ct_pk_set in orphaned_keys_to_ct_pks.items():
                 delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
 
-        if dry_run:
+        if dryrun:
             transaction.set_rollback(True)
 
 
@@ -600,12 +604,10 @@ def _get_in_scope_queryset(field, model, job_logger=logger):
     return filterset.qs
 
 
-def provision_field(
-    field_id, content_type_pk_set, change_context=None, dry_run=False, verbose=False, job_logger=logger
-):
+def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=False, verbose=False, job_logger=logger):
     from nautobot.extras.models import CustomField
 
-    _verbose = dry_run or verbose
+    _verbose = dryrun or verbose
 
     try:
         field = CustomField.objects.get(pk=field_id)
@@ -615,13 +617,15 @@ def provision_field(
 
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
+        if model is None:
+            continue
         in_scope_qs = _get_in_scope_queryset(field, model, job_logger=job_logger)
         queryset = in_scope_qs.filter(**{f"_custom_field_data__{field.key}__isnull": True})
         pk_list = []
         display = ""
         if _verbose or change_context is not None:
             pk_list, display = _pks_and_display(queryset)
-        if dry_run and pk_list:
+        if dryrun and pk_list:
             job_logger.info(
                 "cf_cleanup.provision: Would set `%s` = %r on %d %s object(s): %s",
                 field.key,
@@ -630,7 +634,7 @@ def provision_field(
                 ct.model,
                 display,
             )
-        elif dry_run:
+        elif dryrun:
             print(f"cf_cleanup.provision: No objects to provision for `{field.key}` on {ct.model}.", file=sys.stderr)
         count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, field.default))
         if count:
@@ -653,7 +657,7 @@ def provision_field(
                     ct.model,
                     extra={"object": field},
                 )
-        elif not dry_run:
+        elif not dryrun:
             print(
                 f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on {ct.model}.",
                 file=sys.stderr,
