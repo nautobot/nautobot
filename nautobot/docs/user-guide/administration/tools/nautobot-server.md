@@ -135,6 +135,7 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 [tasks]
   . nautobot.core.tasks.get_releases
+  . nautobot.extras.jobs.run_job
   . nautobot.extras.tasks.process_webhook
 
 [2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0

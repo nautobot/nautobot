@@ -1,6 +1,7 @@
 import codecs
 import contextlib
 from io import BytesIO
+import json
 
 from django.apps import apps as global_apps
 from django.conf import settings
@@ -40,6 +41,7 @@ from nautobot.extras.datasources import (
 from nautobot.extras.jobs import (
     BooleanVar,
     ChoiceVar,
+    DryRunVar,
     FileVar,
     Job,
     MultiChoiceVar,
@@ -597,17 +599,15 @@ class CleanupCustomFields(Job):
         model=ContentType,
         description="Type(s) of objects to act upon. Leave blank to act on all applicable Content Types.",
         label="Content Types",
-        query_params={"can_view": True},
+        query_params={"can_view": True, "feature": "custom_fields"},
         required=False,
     )
-    dry_run = BooleanVar(
-        default=False,
-        label="Dry run?",
-        description="Execute all changes inside a rolled-back transaction. Logs reflect what would have changed. Implies verbose output.",
+    dryrun = DryRunVar(
+        description="Execute all changes inside a rolled-back transaction. Logs reflect what would have changed. Implies verbose output."
     )
     safe_change = BooleanVar(
         default=False,
-        label="Safe change?",
+        label="Safe changes only",
         description="Only run the additive provision step; skip any removal or mutation of existing data.",
     )
     verbose = BooleanVar(default=False, label="Verbose output?")
@@ -616,16 +616,16 @@ class CleanupCustomFields(Job):
         name = "Cleanup Custom Fields"
         description = "System Job to cleanup Custom Fields, which may be destructive. Please review the documentation before running this job. It is recommended to run this job in a test environment and dry-run first."
         has_sensitive_variables = False
-        soft_time_limit = 1800
-        time_limit = 2000
+        soft_time_limit = 3600
+        time_limit = 4000
 
-    def run(self, *, field=None, content_types=None, dry_run=False, safe_change=False, verbose=False):  # pylint:disable=arguments-differ
+    def run(self, *, field=None, content_types=None, dryrun=False, safe_change=False, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import cleanup_custom_field_data
 
         cleanup_custom_field_data(
             field_id=field.pk if field else None,
             content_type_pk_set=[ct.pk for ct in content_types] if content_types else None,
-            dry_run=dry_run,
+            dryrun=dryrun,
             safe_change=safe_change,
             verbose=verbose,
             job_logger=self.logger,
@@ -644,7 +644,7 @@ class DeleteCustomFieldData(Job):
         model=ContentType,
         description="Type(s) of objects to act upon. Ignored when Field Specs are provided.",
         label="Content Types",
-        query_params={"can_view": True},
+        query_params={"can_view": True, "feature": "custom_fields"},
         required=False,
     )
     field_specs = TextVar(
@@ -665,8 +665,6 @@ class DeleteCustomFieldData(Job):
         time_limit = 4000
 
     def run(self, *, field_key=None, content_types=None, field_specs=None, verbose=False):  # pylint:disable=arguments-differ
-        import json
-
         from nautobot.extras.customfields import delete_custom_field_data
 
         # Normalize both input paths into a uniform list of specs before processing.
@@ -713,7 +711,7 @@ class ProvisionField(Job):
         model=ContentType,
         description="Type(s) of objects to act upon.",
         label="Content Types",
-        query_params={"can_view": True},
+        query_params={"can_view": True, "feature": "custom_fields"},
         required=True,
     )
     dry_run = BooleanVar(
@@ -778,8 +776,6 @@ class UpdateCustomFieldChoiceData(Job):
         time_limit = 4000
 
     def run(self, *, field=None, old_value=None, new_value=None, field_specs=None):  # pylint:disable=arguments-differ
-        import json
-
         from nautobot.extras.customfields import update_custom_field_choice_data
 
         # Normalize both input paths into a uniform list of specs before processing.
