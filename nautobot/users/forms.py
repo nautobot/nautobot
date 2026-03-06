@@ -1,18 +1,22 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
     PasswordChangeForm as DjangoPasswordChangeForm,
 )
+from django.contrib.contenttypes.models import ContentType
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms import add_blank_choice, BootstrapMixin, DateTimePicker, DynamicModelChoiceField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.forms import NautobotFilterForm
+from nautobot.users.choices import LogEntryActionFlagChoices
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from .models import Token
+from .models import LogEntry, Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
@@ -83,6 +87,21 @@ class NavbarFavoritesAddForm(forms.Form):
 
 class NavbarFavoritesRemoveForm(forms.Form):
     link = forms.CharField()
+
+
+class LogEntryFilterForm(NautobotFilterForm):
+    model = LogEntry
+    field_order = ["q", "user", "content_type", "action_flag"]
+
+    q = forms.CharField(required=False, label="Search")
+    user = DynamicModelChoiceField(queryset=get_user_model().objects.all(), required=False)
+    content_type = DynamicModelChoiceField(queryset=ContentType.objects.all(), required=False)
+    action_flag = forms.ChoiceField(
+        choices=add_blank_choice(LogEntryActionFlagChoices),
+        required=False,
+        initial="",
+        widget=StaticSelect2(),
+    )
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):

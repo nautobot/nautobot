@@ -1,0 +1,4 @@
+Added LogEntry model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
+Added LogEntry proxy model to support Nautobot UI rendering.
+Added LogEntry navigation under the Administration → Authentication tab.
+Added LogEntry filtering, search, and table rendering with action flag badge styling.

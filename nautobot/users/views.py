@@ -11,8 +11,10 @@ from django.contrib.auth import (
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
@@ -20,13 +22,21 @@ from django.views.generic import View
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import (
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+)
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
+from .filters import LogEntryFilterSet
 from .forms import (
     AdvancedProfileSettingsForm,
+    LogEntryFilterForm,
     LoginForm,
     NavbarFavoritesAddForm,
     NavbarFavoritesRemoveForm,
@@ -34,7 +44,8 @@ from .forms import (
     PreferenceProfileSettingsForm,
     TokenForm,
 )
-from .models import Token
+from .models import LogEntry, Token
+from .tables import LogEntryTable
 
 #
 # Login/logout
@@ -486,3 +497,37 @@ class AdvancedProfileSettingsEditView(GenericView):
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
+
+
+class LogEntryFieldsPanel(object_detail.ObjectFieldsPanel):
+    """Object detail fields panel for LogEntry with clickable actor user."""
+
+    def render_value(self, key, value, context):
+        if key == "user" and value is not None:
+            try:
+                user_url = reverse("admin:users_user_change", args=[value.pk])
+                return format_html('<a href="{}">{}</a>', user_url, value)
+            except (AttributeError, NoReverseMatch):
+                pass
+        return super().render_value(key, value, context)
+
+
+class LogEntryUIViewSet(ObjectListViewMixin, ObjectDetailViewMixin):
+    queryset = LogEntry.objects.all()
+    table_class = LogEntryTable
+    filterset_class = LogEntryFilterSet
+    filterset_form_class = LogEntryFilterForm
+    action_buttons = ("export",)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            LogEntryFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+        ),
+    )
+
+    def get_queryset(self):
+        # Bypass Nautobot restrict() since LogEntry is not a Nautobot core model.
+        return self.queryset

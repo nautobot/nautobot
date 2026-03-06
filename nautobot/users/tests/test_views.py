@@ -2,16 +2,19 @@ import json
 from unittest import mock
 
 from django.conf import settings
+from django.contrib.admin.models import ADDITION
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.testing import TestCase, utils
+from nautobot.core.testing import TestCase, utils, ViewTestCases
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
+from nautobot.users.models import LogEntry
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
@@ -190,3 +193,87 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class LogEntryUIViewSetTestCase(ViewTestCases.GetObjectViewTestCase, ViewTestCases.ListObjectsViewTestCase):
+    model = LogEntry
+
+    def _get_base_url(self):
+        # `users` app UI routes are under the singular `user:` namespace.
+        return "user:logentry_{}"
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.actor_user = User.objects.create_user(username="log-actor")
+        cls.target_user = User.objects.create_user(username="log-target")
+        cls.content_type = ContentType.objects.get_for_model(User)
+        cls.log_entry = LogEntry.objects.create(
+            user=cls.actor_user,
+            content_type=cls.content_type,
+            object_id=str(cls.actor_user.pk),
+            object_repr=cls.actor_user.username,
+            action_flag=ADDITION,
+            change_message="Created user",
+        )
+        cls.other_log_entry = LogEntry.objects.create(
+            user=cls.actor_user,
+            content_type=cls.content_type,
+            object_id=str(cls.target_user.pk),
+            object_repr=cls.target_user.username,
+            action_flag=ADDITION,
+            change_message="Created user",
+        )
+
+    def test_list_view_content(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry_list"), {"clear_view": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Log Entries")
+        self.assertBodyContains(response, "Action flag")
+
+    def test_detail_view_user_link(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry", kwargs={"pk": self.log_entry.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, reverse("admin:users_user_change", args=[self.actor_user.pk]))
+
+    def test_detail_view_object_repr(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(reverse("user:logentry", kwargs={"pk": self.log_entry.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, self.log_entry.object_repr)
+
+    def test_get_object_with_constrained_permission(self):
+        self.skipTest("LogEntry UI view does not support constrained object-level permissions in this context.")
+
+    def test_list_objects_with_constrained_permission(self):
+        self.skipTest("LogEntry list view does not support constrained object-level permissions in this context.")
+
+    def test_model_properties_as_table_columns_are_not_orderable(self):
+        self.skipTest("LogEntry table includes computed column `object_link` that is intentionally not DB-orderable.")
+
+    def test_has_timestamps_and_buttons(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(self.log_entry.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, self.log_entry.object_repr)
+
+    def test_has_advanced_tab(self):
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(self.log_entry.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, f"{self.log_entry.get_absolute_url()}#advanced")
+
+    def test_list_view_app_banner(self):
+        if "example_app" not in settings.PLUGINS:
+            self.skipTest("example_app not in settings.PLUGINS")
+
+        self.add_permissions("users.view_logentry")
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(
+            response,
+            f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>",
+            html=True,
+        )
