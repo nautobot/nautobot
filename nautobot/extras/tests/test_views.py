@@ -2565,55 +2565,150 @@ class ExportTemplateTestCase(
         }
 
 
-class FileProxyUIViewSetTestCase(TestCase):
+class FileProxyUIViewSetTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+):
     model = FileProxy
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.user = User.objects.create_user(username="testuser")
-        cls.test_file = SimpleUploadedFile(
-            name="test_file.txt", content=b"This is test file content", content_type="text/plain"
+
+        file1 = FileProxy.objects.create(
+            name="test-file-1.txt",
+            file=SimpleUploadedFile("test-file-1.txt", b"file one", content_type="text/plain"),
         )
-        cls.fileproxy = FileProxy.objects.create(
-            name="test_fileproxy",
-            file=cls.test_file,
+        file2 = FileProxy.objects.create(
+            name="test-file-2.txt",
+            file=SimpleUploadedFile("test-file-2.txt", b"file two", content_type="text/plain"),
+        )
+        file3 = FileProxy.objects.create(
+            name="test-file-3.txt",
+            file=SimpleUploadedFile("test-file-3.txt", b"file three", content_type="text/plain"),
         )
 
-    def test_list_view(self):
-        self.add_permissions("extras.view_fileproxy")
-        response = self.client.get(reverse("extras:fileproxy_list"))
-        self.assertEqual(response.status_code, 200)
+        cls.instance = file1  # for get/detail tests
+        cls.instances = [file1, file2, file3]  # for list tests
 
-    def test_detail_view(self):
-        self.add_permissions("extras.view_fileproxy")
-        response = self.client.get(reverse("extras:fileproxy", kwargs={"pk": self.fileproxy.pk}))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.fileproxy.name)
-        self.assertEqual(response.context["object"].file, self.fileproxy.file)
+        cls.form_data = {
+            "name": "new-file.txt",
+            "file": SimpleUploadedFile("new-file.txt", b"new file", content_type="text/plain"),
+        }
 
-    def test_edit_view(self):
-        self.add_permissions("extras.view_fileproxy", "extras.change_fileproxy")
-        updated_file = SimpleUploadedFile(
-            name="updated_file.txt", content=b"Updated content", content_type="text/plain"
-        )
+        # Required by EditObjectViewTestCase
+        cls.update_data = {
+            "name": "updated-file.txt",
+            "file": SimpleUploadedFile("updated-file.txt", b"updated content", content_type="text/plain"),
+        }
+
+    @staticmethod
+    def _uploaded_file(name, content):
+        return SimpleUploadedFile(name, content, content_type="text/plain")
+
+    # FileField values won't compare directly against SimpleUploadedFile objects
+    def assertInstanceEqual(self, instance, data, exclude=None, api=False):
+        exclude = (exclude or []) + ["file"]
+        return super().assertInstanceEqual(instance, data, exclude=exclude, api=api)
+
+    def test_create_object_with_permission(self):
+        # Grant full permission - no constraints
+        self.add_permissions("extras.add_fileproxy")
+
+        uploaded_file = self._uploaded_file("test-file-new.txt", b"new file content")
         response = self.client.post(
-            reverse("extras:fileproxy_edit", kwargs={"pk": self.fileproxy.pk}),
+            self._get_url("add"),
             data={
-                "name": "updated_fileproxy",
-                "file": updated_file,
+                "name": "test-file-new.txt",
+                "file": uploaded_file,
             },
+            format="multipart",
         )
-        self.assertIn(response.status_code, [200, 302])
-        self.fileproxy.refresh_from_db()
-        self.assertEqual(self.fileproxy.name, "updated_fileproxy")
+        self.assertHttpStatus(response, 302)
+        self.assertTrue(FileProxy.objects.filter(name="test-file-new.txt").exists())
 
-    def test_delete_view(self):
-        self.add_permissions("extras.view_fileproxy", "extras.delete_fileproxy")
-        pk = self.fileproxy.pk
-        response = self.client.post(reverse("extras:fileproxy_delete", kwargs={"pk": pk}), data={"confirm": True})
-        self.assertIn(response.status_code, [200, 302])
-        self.assertFalse(FileProxy.objects.filter(pk=pk).exists())
+    def test_create_object_with_constrained_permission(self):
+        # Grant permission with constraint
+        self.add_permissions("extras.add_fileproxy", constraints={"name__startswith": "allowed-"})
+
+        # Case 1: matches constraint → created successfully
+        uploaded_file = self._uploaded_file("allowed-file.txt", b"allowed content")
+        response = self.client.post(
+            self._get_url("add"),
+            data={
+                "name": "allowed-file.txt",
+                "file": uploaded_file,
+            },
+            format="multipart",
+        )
+        self.assertHttpStatus(response, 302)
+        self.assertTrue(FileProxy.objects.filter(name="allowed-file.txt").exists())
+
+        # Case 2:
+        uploaded_file2 = self._uploaded_file("blocked-file.txt", b"blocked content")
+        response = self.client.post(
+            self._get_url("add"),
+            data={
+                "name": "blocked-file.txt",
+                "file": uploaded_file2,
+            },
+            format="multipart",
+        )
+
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(FileProxy.objects.filter(name="blocked-file.txt").exists())
+
+    def test_edit_object_with_permission(self):
+        instance = self._get_queryset().first()
+        self.add_permissions("extras.change_fileproxy")
+        uploaded_file = self._uploaded_file("test-file-1-updated.txt", b"updated file one")
+        response = self.client.post(
+            self._get_url("edit", instance),
+            data={
+                "name": "test-file-1-updated.txt",
+                "file": uploaded_file,
+            },
+            format="multipart",
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "test-file-1-updated.txt")
+
+    def test_edit_object_with_constrained_permission(self):
+        instance1 = self._get_queryset().first()  # allowed object
+        instance2 = self._get_queryset().last()  # NOT allowed object
+
+        # Grant permission ONLY for instance1
+        self.add_permissions("extras.change_fileproxy", constraints={"pk": str(instance1.pk)})
+
+        # instance1 should succeed
+        uploaded_file = self._uploaded_file("test-file-1-constrained.txt", b"constrained update")
+        response = self.client.post(
+            self._get_url("edit", instance1),
+            data={
+                "name": "test-file-1-constrained.txt",
+                "file": uploaded_file,
+            },
+            format="multipart",
+        )
+        self.assertHttpStatus(response, 302)
+        instance1.refresh_from_db()
+        self.assertEqual(instance1.name, "test-file-1-constrained.txt")
+
+        # instance2 should be blocked
+        uploaded_file2 = self._uploaded_file("should-fail.txt", b"should fail")
+        response = self.client.post(
+            self._get_url("edit", instance2),
+            data={
+                "name": "should-fail.txt",
+                "file": uploaded_file2,
+            },
+            format="multipart",
+        )
+        self.assertHttpStatus(response, 404)
 
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
