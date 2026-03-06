@@ -47,6 +47,7 @@ router.register("statuses", views.StatusUIViewSet)
 router.register("tags", views.TagUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
+router.register("fileproxy", views.FileProxyUIViewSet)
 
 urlpatterns = [
     # Approver Dashboard
