@@ -1,1 +1,1 @@
-Fixed component ID generation crash caused by non-string dictionary keys.
+Enhanced `import_string_optional` to avoid ignoring certain exceptions unrelated to the specific import.

@@ -272,6 +272,7 @@ properties:
         LOCATION: "redis://localhost:6379/1"
         OPTIONS:
           CLIENT_CLASS: "django_redis.client.DefaultClient"
+          CUSTOM_HEALTH_CHECK_CLASS: ""
           PASSWORD: ""
         TIMEOUT: 300
     description: "The `CACHES` setting is required to simplify the configuration for `django-redis`."
@@ -317,6 +318,14 @@ properties:
             properties:
               CLIENT_CLASS:
                 default: "django_redis.client.DefaultClient"
+                type: "string"
+              CUSTOM_HEALTH_CHECK_CLASS:
+                default: ""
+                description: >-
+                  The import path to a custom health check class to use when providing a custom django-redis `CLIENT_CLASS`.
+                version_added: "3.0.8"
+                see_also:
+                  "Django Health Check documentation for custom health check classes": "https://codingjoe.dev/django-health-check/usage/#writing-a-custom-health-check"
                 type: "string"
               PASSWORD:
                 default: ""

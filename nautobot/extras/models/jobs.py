@@ -766,6 +766,16 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
+    @property
+    def queue(self):
+        if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
+            return self.celery_kwargs.get("queue")
+        return None
+
+    @property
+    def job_description(self):
+        return self.job_model.description if self.job_model else None
+
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
@@ -1020,6 +1030,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.date_started = timezone.now()
+            job_result.status = JobResultStatusChoices.STATUS_STARTED
             job_result.save()
 
             # setup synchronous task logging
@@ -1578,6 +1589,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.enabled = False
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
