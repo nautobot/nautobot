@@ -202,7 +202,9 @@ class Component:
         def filter_dict(dict_):
             filtered_dict = {}
             for key, value in dict_.items():
-                if key == "component_id" or key.startswith("_"):
+                if not isinstance(key, (str, int, bool)) and key is not None:
+                    continue
+                if key == "component_id" or (isinstance(key, str) and key.startswith("_")):
                     continue
                 if isinstance(value, (str, int, bool)) or value is None:
                     filtered_dict[key] = value
