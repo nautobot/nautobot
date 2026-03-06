@@ -1,0 +1,37 @@
+<div
+    class="modal fade"
+    id="nautobot-generic-modal"
+    tabindex="-1"
+    data-bs-backdrop="static"
+>
+    <div class="modal-dialog modal-lg" id="modal-dialog-container">
+        <div
+            class="modal-content"
+            id="modal-content-container"
+            hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
+            hx-on:htmx:load="jsify_form(this);"
+        >
+            {# --- FALLBACK CONTENT --- #}
+            <div class="modal-header">
+                <h4 class="modal-title" id="modal-fallback-title">
+                    Loading...
+                </h4>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+            </div>
+            <div class="modal-body text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">
+                    Please wait while we fetch the content...
+                </p>
+            </div>
+            {# --- END FALLBACK CONTENT --- #}
+        </div>
+    </div>
+</div>

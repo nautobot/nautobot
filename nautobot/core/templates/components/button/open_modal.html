@@ -1,0 +1,17 @@
+<button 
+    type="button"
+    class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}"
+    {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
+    data-bs-toggle="modal"
+    data-bs-target="#{{ modal_id }}"
+    hx-get="{{ hx_get }}"
+    hx-target="#modal-content-container"
+    hx-vals='{{ hx_vals|safe }}'
+    {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+    {% if hx_select %}hx-select="{{ hx_select }}"{% endif %}
+    {% if hx_select_oob %}hx-select-oob="{{ hx_select_oob }}"{% endif %}
+    hx-on:click="document.getElementById('modal-fallback-title').innerText = '{{ modal_title }}'"
+>
+    {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+    {{ label }}
+</button>

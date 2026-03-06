@@ -1,0 +1,55 @@
+{% include 'inc/modal_header.html' with title=title %}
+
+<div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+    {# Polling Logic: Only present if the job is not finished #}
+    <div id="job-polling-container"
+        {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
+            hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
+            hx-trigger="every 2s"
+            hx-target="#modal-content-container"
+            hx-swap="innerHTML"
+            hx-vals='{"title": "{{ title }}"}'
+        {% endif %}>
+        <div class="container-fluid gy-3">
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Job Status:</div>
+                <div class="col-8">
+                    {% include 'extras/inc/job_label.html' with result=result %}
+                </div>
+            </div>
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Duration:</div>
+                <div class="col-8">
+                    <span>{{ result.duration|default:"--" }}</span>
+                </div>
+            </div>
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Details</div>
+                <div class="col-8">
+                    {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span class="text-muted">Job is running, please wait...</span>
+                        </div>
+                    {% else %}
+                        <div class="form-control bg-body-tertiary" style="min-height: 44px;">
+                            Job finished with status: {{ result.get_status_display }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    {% if result.status == 'FAILURE' or result.status == 'REVOKED' or result.status == 'SUCCESS' %}
+        <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
+            -->View job results
+        </a>
+    {% endif %}
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Close
+    </button>
+</div>
