@@ -1,0 +1,58 @@
+<div class="modal-header">
+    <h4 class="modal-title">Job Result: {{ result.job_model.name|default:result.name }}</h4>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    {# Polling Logic: Only present if the job is not finished #}
+    <div id="job-polling-container"
+        {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
+            hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
+            hx-trigger="every 2s"
+            hx-target="#modal-content-container"
+            hx-swap="innerHTML"
+        {% endif %}>
+        
+        <table class="table table-hover attr-table">
+            <tbody>
+                <tr>
+                    <td><strong>Job Status</strong></td>
+                    <td>
+                        <span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Duration</strong></td>
+                    <td>{{ result.duration|default:"--" }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Details</strong></td>
+                    <td>
+                        {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                <span>Processing task...</span>
+                            </div>
+                        {% else %}
+                            <div class="alert {% if result.status == 'completed' %}alert-success{% else %}alert-warning{% endif %} mb-0">
+                                {# Placeholder for future Console Log integration #}
+                                Job finished with status: {{ result.get_status_display }}
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <a href="{{ result.get_absolute_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-open-in-new me-4"></span><!--
+        -->See job results
+    </a>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Close
+    </button>
+</div>

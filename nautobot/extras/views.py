@@ -1,8 +1,10 @@
 from functools import partial
 import logging
+import json
 from typing import Optional
 from urllib.parse import parse_qs
 
+from attr import field
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -2188,6 +2190,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             console_log=console_log,
             **job_class.serialize_data(job_kwargs),
         )
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            response = redirect("extras:jobresult_modal", pk=job_result.pk)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
 
         if return_url:
             messages.info(
@@ -2201,6 +2208,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         return redirect("extras:jobresult", pk=job_result.pk)
 
     def get(self, request, class_path=None, pk=None):
+        htmx_request = self.request.headers.get("HX-Request", False)
+        htmx_modal = request.GET.get("job_form_modal", False)
         job_model = self._get_job_model_or_404(class_path, pk)
 
         try:
@@ -2241,7 +2250,18 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
-            if hasattr(job_class, "template_name"):
+            if htmx_request and htmx_modal:
+                template_name = "extras/htmx/job_form_modal.html"
+                if hasattr(job_class, "htmx_template_name"):
+                    try:
+                        get_template(job_class.htmx_template_name)
+                        template_name = job_class.htmx_template_name
+                    except TemplateDoesNotExist as err:
+                        messages.error(
+                            request,
+                            f'Unable to render requested custom HTMX job template "{job_class.htmx_template_name}": {err}',
+                        )
+            elif hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
                     template_name = job_class.template_name
@@ -2249,22 +2269,48 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     messages.error(
                         request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
                     )
+
         except RuntimeError as err:
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
+            # TODO SK This should raise error in modal if HTMX request.
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
 
-        return render(
-            request,
-            template_name,  # 2.0 TODO: extras/job_submission.html
-            {
-                "job_model": job_model,
-                "job_form": job_form,
-                "job_execution_form": job_execution_form,
-                "schedule_form": schedule_form,
-            },
-        )
+        if htmx_request and htmx_modal:
+            title = request.GET.get("title", job_model.name)
+            run_button_label = request.GET.get("run_button_label", "Run Job Now")
+            advanced_field_names = request.GET.getlist("advanced_fields")
+            advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+
+            response = render(
+                request,
+                template_name,
+                {
+                    "class_path": job_model.class_path,
+                    "title": title,
+                    "run_button_label": run_button_label,
+                    "job_model": job_model,
+                    "job_form": job_form,
+                    "advanced_fields": advanced_fields,
+                    "excluded_json": json.dumps([field.name for field in advanced_fields]),
+                    "job_execution_form": job_execution_form,
+                    "schedule_form": schedule_form,
+                },
+            )
+        else:
+            response = render(
+                request,
+                template_name,  # 2.0 TODO: extras/job_submission.html
+                {
+                    "job_model": job_model,
+                    "job_form": job_form,
+                    "job_execution_form": job_execution_form,
+                    "schedule_form": schedule_form,
+                },
+            )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def post(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
@@ -2934,7 +2980,7 @@ class JobResultUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action in ["retrieve", "job_console_entries"]:
+        if self.action in ["retrieve", "job_console_entries", "modal"]:
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
@@ -3064,6 +3110,22 @@ class JobResultUIViewSet(
         html_content = render_to_string("extras/inc/jobresult_console_log_response.html", context)
 
         return HttpResponse(html_content, content_type="text/html; charset=utf-8")
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def modal(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # return_url = request.GET.get("return_url", None)
+        context = self.get_extra_context(request, instance)
+
+        return Response(
+            {
+                "request": request,
+                **context,
+            }
+        )
 
 
 #

@@ -1,0 +1,91 @@
+{% load form_helpers %}
+{% load helpers %}
+
+{% include 'inc/modal_header.html' with title=title %}
+
+<form hx-post="{% url 'extras:job_run_by_class_path' class_path=class_path %}" 
+      hx-target="#modal-content-container" 
+      id="job-form-modal"
+      hx-vals='{{ hx_vals|safe }}'
+      enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        {% render_form job_form excluded_fields=excluded_json|safe %}
+        <div class="form-check mb-10 d-md-flex justify-content-center">
+            <div class="col-md-9 offset-md-3">
+                <div class="form-check mt-6">
+                    <input class="form-check-input" type="checkbox" id="toggle-advanced">
+                    <label class="form-check-label" for="toggle-advanced">Show Advanced Settings</label>
+                </div>
+            </div>
+        </div>
+        <div id="advanced-settings" class="d-none">
+            {% if advanced_fields %}
+                {% for field in advanced_fields %}
+                    {% render_field field %}
+                {% endfor %}
+            {% endif %}
+            {% render_form job_execution_form %}
+            <input type="hidden" name="_schedule_type" value="immediately">
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-primary" id="id__run" type="submit">
+            <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
+            -->{{ run_button_label }}
+        </button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+            -->Cancel
+        </button>
+    </div>
+</form>
+
+<script type="text/javascript">
+    (function() {
+        const initJobFormLogic = () => {
+            const container = document.getElementById('modal-content-container'); // Ensure this matches your modal ID
+            if (!container) return;
+
+            // 1. Toggle Advanced Settings
+            const advancedToggle = container.querySelector('#toggle-advanced');
+            const advancedSettings = container.querySelector('#advanced-settings');
+            
+            if (advancedToggle && advancedSettings) {
+                advancedToggle.addEventListener('change', (e) => {
+                    advancedSettings.classList.toggle('d-none', !e.target.checked);
+                });
+            }
+
+            // 2. Define the DryRun toggle logic
+            const toggleExecutionType = () => {
+                const dryrunInput = container.querySelector('#id_dryrun');
+                if (!dryrunInput) return;
+
+                const isDryRun = dryrunInput.type === 'checkbox' ? dryrunInput.checked : dryrunInput.value === 'True';
+                const runButton = container.querySelector('#id__run');
+                
+                if (runButton) {
+                    const text = `Run Job Now${isDryRun ? ' (DRYRUN)' : ''}`;
+                    // Replacing the last child node (the text) safely
+                    runButton.childNodes[runButton.childNodes.length - 1].replaceWith(text);
+                }
+            };
+
+            // 3. Listen for changes specifically on the dryrun field
+            container.addEventListener('change', (event) => {
+                if (event.target.id === 'id_dryrun') {
+                    toggleExecutionType();
+                }
+            });
+
+            // 4. Initial DryRun Check
+            toggleExecutionType();
+        };
+
+        // Run the initialization function immediately after swap.
+        initJobFormLogic();
+    })();
+</script>
+
+{{ job_form.media }}

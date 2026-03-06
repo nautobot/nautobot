@@ -3,7 +3,9 @@
 import contextlib
 from dataclasses import dataclass
 from enum import Enum
+import json
 import logging
+from operator import attrgetter
 from typing import Callable
 import uuid
 
@@ -2479,3 +2481,97 @@ class _ObjectDetailMetadataTab(Tab):
                 badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )
+
+
+class ButtonOpenModal(Button):
+    """A Button that, when clicked, opens a modal dialog. The content of the modal is rendered from the given template path."""
+
+    template_path = "components/button/open_modal.html"
+
+    def __init__(
+        self,
+        modal_id="nautobot-generic-modal",
+        hx_get="",
+        hx_select=None,
+        hx_select_oob=None,
+        hx_target=None,
+        hx_vals=None,
+        hx_swap="innerHTML",
+        modal_title="",
+        **kwargs,
+    ):
+        self.modal_id = modal_id
+        self.hx_get = hx_get
+        self.hx_select = hx_select
+        self.hx_select_oob = hx_select_oob
+        self.hx_swap = hx_swap
+        self.hx_target = hx_target
+        self.modal_title = modal_title
+        self.hx_vals = hx_vals or {}
+        super().__init__(**kwargs)
+
+    def get_extra_context(self, context: Context):
+        return {
+            **super().get_extra_context(context),
+            "modal_id": self.modal_id,
+            "hx_get": self.hx_get,
+            "hx_select": self.hx_select,
+            "hx_select_oob": self.hx_select_oob,
+            "hx_swap": self.hx_swap,
+            "hx_target": self.hx_target,
+            "modal_title": self.modal_title,
+            "hx_vals": json.dumps(self.hx_vals),
+        }
+
+
+def resolve_attr(obj, dotted_path: str):
+    """Resolve nested attributes on a Django model instance using a Django-style double underscore path (e.g. 'location__location_type__name').
+
+    Args:
+        obj: The Django model instance.
+        dotted_path (str): The dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None: The value of the nested attribute, or None if any attribute in the path does not exist.
+    """
+    try:
+        value = attrgetter(dotted_path.replace("__", "."))(obj)
+        return str(value) if value is not None else None
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+
+class JobModalButton(ButtonOpenModal):
+    """A Button that, when clicked, opens a modal dialog for running a Job. The content of the modal is rendered from the given template path."""
+
+    def __init__(
+        self,
+        class_path=None,
+        advanced_fields=None,
+        field_mapping=None,
+        modal_title="",
+        run_button_label="Run Job Now",
+        **kwargs,
+    ):
+        self.class_path = class_path
+        self.advanced_fields = advanced_fields or []
+        self.field_mapping = field_mapping or {}
+        self.run_button_label = run_button_label
+        super().__init__(modal_title=modal_title, **kwargs)
+
+    def get_extra_context(self, context: Context):
+        base_context = super().get_extra_context(context)
+        obj = get_obj_from_context(context, self.context_object_key)
+        hx_vals = self.hx_vals
+        hx_vals = {field_name: resolve_attr(obj, model_field) for field_name, model_field in self.field_mapping.items()}
+        hx_vals["title"] = self.modal_title
+        hx_vals["job_form_modal"] = True
+        hx_vals["advanced_fields"] = self.advanced_fields
+        hx_vals["run_button_label"] = self.run_button_label
+
+        return {
+            **base_context,
+            "hx_get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+            "hx_vals": json.dumps(hx_vals),
+        }
