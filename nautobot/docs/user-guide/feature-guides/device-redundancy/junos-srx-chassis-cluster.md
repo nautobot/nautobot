@@ -5,6 +5,8 @@ The SRX uses a concept called a **Chassis Cluster**, where two discrete SRX devi
 Control/Mgmt/Fabric ports: https://www.juniper.net/documentation/us/en/software/junos/chassis-cluster-security-devices/topics/concept/chassis-cluster-srx-series-node-interface-understanding.html#cc_node_intf_gateway__section_wbq_sjw_l2c
 
 
+
+
 ## Configurations
 
 ```
