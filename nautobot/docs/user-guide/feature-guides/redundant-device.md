@@ -203,9 +203,82 @@ interface TenGigabitEthernet2/0/1
 
 
 
-### Firewall Cluster TODO: Allen
+### Firewall Cluster
+
 #### Key Questions
+
+- Can you port channel across multiple devices? Yes — spanned EtherChannel is supported in FTD clustering
+- Can you see all interfaces on the Primary (control node)? No — Each node can only see its interfaces, but all cluster interfaces are visible via FMC
+- Can you see all interfaces on the Backup (data node)? No — only interfaces physically on that chassis module are visible locally
+- On Primary, can you tell which interfaces are assigned to which device? No — Only the FMC can see all interfaces
+- When do you see all the interfaces on the master device? You cannot - Only the FMC can see all interface
+- Can you connect interfaces from master to non-master? Yes
+- Do all configurations map to the model correctly? Mostly Yes - Anything not represented in the model can be stored in the config context
+- How are interfaces named? FXOS notation (e.g., `Ethernet1/1`, `Ethernet1/2`) at chassis level; logical names assigned in FMC
+- What should the naming standard be for the chassis device? Use the shared cluster name / FMC display name (logical single name)
+- Should I use interface named templates? Yes
+
 #### Configuration Generation
+
+_FXOS Chassis — Physical Interface Config_
+
+```
+scope eth-uplink
+  scope fabric a
+    scope interface Ethernet1/1
+      set port-type data
+      enable
+      exit
+    scope interface Ethernet1/2
+      set port-type data
+      enable
+      exit
+    scope interface Ethernet1/3
+      set port-type cluster
+      enable
+      exit
+    scope interface Ethernet1/4
+      set port-type cluster
+      enable
+      exit
+    exit
+  exit
+```
+
+> Note: Interfaces designated `cluster` type are reserved for CCL; `data` interfaces are assigned to logical devices
+
+_FXOS Chassis — CCL Port Channel_
+
+```
+scope eth-uplink
+  scope fabric a
+    create port-channel 48
+      set port-channel-mode active
+      create member-port Ethernet1/3
+      create member-port Ethernet1/4
+      exit
+    exit
+  exit
+```
+
+> Note: The CCL port channel ID (48 in this example) must match on both chassis; use dedicated high-bandwidth interfaces
+
+_FXOS Chassis — Logical Device (Cluster Bootstrap)_
+
+```
+scope ssa
+  scope slot 1
+    scope app-instance ftd FTD-CLUSTER
+      set cluster-role control
+      set cluster-group-id 1
+      set ccl-network 192.0.2.0
+      set ccl-mask 255.255.255.0
+      exit
+    exit
+  exit
+```
+
+> Note: `cluster-role` is set to `control` on the primary chassis slot and `data` on all others; `cluster-group-id` must match across all members
 
 
 
@@ -234,9 +307,63 @@ TODO: Insert Model table summarizing attributes and their meanings
 
 
 
-### Firewall HA pair TODO: Allen
+### Firewall HA pair
+
 #### Key Questions
+
+- Can you port channel across multiple devices? No — EtherChannel is per-device only
+- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces #TODO: Is this really asking "Can all phyical and logical interfaces on both devices be configured on the primary?
+- Can you see all interfaces on the Backup? No — the standby unit has its own separate interface list
+- On Primary, can you tell which interfaces are assigned to which device? N/A — each device is modeled separately in Nautobot
+- When do you see all the interfaces on the master device? Each device always shows only its own interfaces
+- Can you connect interfaces from master to non-master? The failover and stateful link interfaces connect the two units either directly or via a switch
+- Do all configurations map to the model correctly? Mostly yes; standby IPs and failover link require HA-specific handling
+- How are interfaces named? Standard ASA format (e.g., `GigabitEthernet0/0`, `Management0/0`)
+- What should the naming standard be for the HA pair? A combination of the two devices names (e.g., `ASA01/ASA02` for `ASA01` and `ASA02`)
+- Should I use interface named templates? Yes
+
 #### Configuration Generation
+
+_Primary (Active) Unit — Failover Config_
+
+```
+failover
+failover lan unit primary
+failover lan interface FAILOVER GigabitEthernet0/3
+failover replication http
+failover link STATEFUL GigabitEthernet0/4
+failover interface ip FAILOVER 10.1.1.1 255.255.255.252 standby 10.1.1.2
+failover interface ip STATEFUL 10.1.2.1 255.255.255.252 standby 10.1.2.2
+```
+
+_Interface Standby IPs (on Primary)_
+
+```
+interface GigabitEthernet0/0
+ nameif outside
+ security-level 0
+ ip address 203.0.113.1 255.255.255.0 standby 203.0.113.2
+!
+interface GigabitEthernet0/1
+ nameif inside
+ security-level 100
+ ip address 10.0.0.1 255.255.255.0 standby 10.0.0.2
+```
+
+> Note: Standby IP is assigned to the secondary unit's corresponding interface automatically
+
+_Secondary (Standby) Unit — Failover Config_
+
+```
+failover
+failover lan unit secondary
+failover lan interface FAILOVER GigabitEthernet0/3
+failover link STATEFUL GigabitEthernet0/4
+failover interface ip FAILOVER 10.1.1.1 255.255.255.252 standby 10.1.1.2
+failover interface ip STATEFUL 10.1.2.1 255.255.255.252 standby 10.1.2.2
+```
+
+> Note: The secondary unit receives the full running config from the primary after the failover link is established; interface IPs need not be set manually
 
 
 
