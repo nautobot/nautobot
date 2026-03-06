@@ -21,10 +21,14 @@ from nautobot.core.ui.echarts import (
 )
 from nautobot.core.ui.object_detail import (
     _ObjectDetailAdvancedTab,
+    _ObjectDetailContactsTab,
+    _ObjectDetailDataComplianceTab,
     _ObjectDetailMainTab,
+    _ObjectDetailMetadataTab,
     BaseTextPanel,
     DataTablePanel,
     DistinctViewTab,
+    EChartsPanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
@@ -36,6 +40,89 @@ from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
+from nautobot.ipam.views import PrefixUIViewSet
+
+
+class ObjectDetailContentTest(TestCase):
+    def test_component_iteration_and_ids(self):
+        """Test that components() iterator is comprehensive, and that component IDs are not repeated within a view."""
+        for odc in [DeviceUIViewSet.object_detail_content, PrefixUIViewSet.object_detail_content]:
+            with self.subTest(object_detail_content=odc):
+                seen_ids = set()
+                for component in odc.components():
+                    self.assertIsNotNone(component.component_id)
+                    self.assertNotIn(component.component_id, seen_ids)
+                    seen_ids.add(component.component_id)
+
+                    self.assertEqual(odc.get_component_by_id(component.component_id), component)
+
+                # Make sure we're reasonably comprehensive in `components()` implementation:
+                # Likely to increase as we componentize and enhance more, but unlikely to decrease!
+                self.assertGreaterEqual(len(seen_ids), 30)
+                for tab in odc.tabs:
+                    self.assertIn(tab.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(tab.component_id), tab)
+                    for panel in tab.panels:
+                        self.assertIn(panel.component_id, seen_ids)
+                        self.assertEqual(odc.get_component_by_id(panel.component_id), panel)
+                        if hasattr(panel, "components"):
+                            for component in panel.components():
+                                self.assertIn(component.component_id, seen_ids)
+                                self.assertEqual(odc.get_component_by_id(component.component_id), component)
+                for button in odc.extra_buttons:
+                    self.assertIn(button.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(button.component_id), button)
+
+    def test_consistent_component_ids_across_odcs(self):
+        """Creating the same component class with the same kwargs in different views should have same component_id."""
+        odc1 = DeviceUIViewSet.object_detail_content
+        odc2 = PrefixUIViewSet.object_detail_content
+        tabs1 = [
+            tab
+            for tab in odc1.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+        tabs2 = [
+            tab
+            for tab in odc2.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+
+        for tab1, tab2 in zip(tabs1, tabs2):
+            with self.subTest(tab1=tab1, tab2=tab2):
+                self.assertEqual(tab1.component_id, tab2.component_id)
+
+    def test_get_component_by_id_negative(self):
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(None))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(0))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id("00000000000000000000000000000000"))
+
+    def test_get_component_id_non_string_key(self):
+        """Verify that component ID generation handles non-string dictionary keys (None, Bool, Int) without crashing."""
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {None: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {True: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {123: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
 
 
 class DataTablePanelTest(TestCase):

@@ -8,6 +8,7 @@ from typing import Any, Dict
 
 from django.utils import timezone
 
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices
 from nautobot.extras.models import JobConsoleEntry, JobResult
 
@@ -40,7 +41,9 @@ def store_job_output_line(job_result: JobResult, data: str, output_type: str = "
     if not data:
         return
 
-    JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, text=data)
+    text = sanitize(str(data))
+
+    JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, text=text)
 
 
 #

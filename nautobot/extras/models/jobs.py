@@ -1053,7 +1053,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             if console_log:
                 transaction.on_commit(
                     lambda: run_console_log_job_and_return_job_result.apply_async(
-                        args=[*job_args],
+                        args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
@@ -1124,6 +1124,13 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+        if self.celery_kwargs.get("nautobot_job_console_log", False):
+            job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
+            if not self.use_job_logs_db or not JOB_LOGS:
+                job_console_entry.save()
+            else:
+                job_console_entry.save(using=JOB_LOGS)
 
     log.alters_data = True
 

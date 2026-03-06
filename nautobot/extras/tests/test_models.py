@@ -70,6 +70,7 @@ from nautobot.extras.models import (
     FileProxy,
     GitRepository,
     Job as JobModel,
+    JobConsoleEntry,
     JobLogEntry,
     JobQueue,
     JobResult,
@@ -3951,6 +3952,33 @@ class JobResultTestCase(TestCase):
             JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
 
         save_mock.assert_called_once()
+
+    def test_log_creates_job_console_entry_when_console_log_enabled(self):
+        """log() should create a JobConsoleEntry when nautobot_job_console_log is True."""
+        self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+        self.job_result.use_job_logs_db = False
+        self.job_result.save()
+
+        self.job_result.log("test message")
+
+        self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result, text="test message").count(), 1)
+
+    def test_log_does_not_create_job_console_entry_when_console_log_not_enabled(self):
+        """log() should not create a JobConsoleEntry when nautobot_job_console_log is False or absent."""
+        cases = [
+            {"nautobot_job_console_log": False},
+            {},
+        ]
+
+        for celery_kwargs in cases:
+            with self.subTest(celery_kwargs=celery_kwargs):
+                self.job_result.celery_kwargs = celery_kwargs
+                self.job_result.use_job_logs_db = False
+                self.job_result.save()
+
+                self.job_result.log("test message")
+
+                self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result).count(), 0)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
