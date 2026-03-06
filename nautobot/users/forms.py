@@ -8,6 +8,8 @@ from django.contrib.auth.forms import (
 )
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
+from django.urls import reverse
+from django.utils.html import format_html
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
@@ -157,6 +159,15 @@ class UserCreateForm(BootstrapMixin, DjangoUserCreationForm):
 class UserUpdateForm(BootstrapMixin, DjangoUserChangeForm):
     last_login = forms.DateTimeField(required=False, widget=DateTimePicker())
     date_joined = forms.DateTimeField(required=False, widget=DateTimePicker())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and "password" in self.fields:
+            reset_url = reverse("users:user_password", kwargs={"pk": self.instance.pk})
+            self.fields["password"].help_text = format_html(
+                'Raw passwords are not stored, so there is no way to see this user\'s password. <a href="{}">Reset password</a>',
+                reset_url,
+            )
 
     class Meta(DjangoUserChangeForm.Meta):
         model = User
