@@ -27,6 +27,7 @@
             {% endif %}
             {% render_form job_execution_form %}
             <input type="hidden" name="_schedule_type" value="immediately">
+            <input type="hidden" name="job_result_title" value="{{ title }}">
         </div>
     </div>
     <div class="modal-footer">

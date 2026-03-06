@@ -2192,7 +2192,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            response = redirect("extras:jobresult_modal", pk=job_result.pk)
+            url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
+            if title := request.POST.get("job_result_title", None):
+                url = f"{url}?title={str(title).strip()}"
+            response = redirect(url)
             patch_vary_headers(response, ["HX-Request"])
             return response
 
@@ -3117,8 +3120,11 @@ class JobResultUIViewSet(
     )
     def modal(self, request, *args, **kwargs):
         instance = self.get_object()
-        # return_url = request.GET.get("return_url", None)
+        title = f"Job Result: {instance.job_model.name}"
+        if request.GET.get("title", None):
+            title = request.GET.get("title")
         context = self.get_extra_context(request, instance)
+        context.update({"title": title})
 
         return Response(
             {
