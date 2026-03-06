@@ -20,6 +20,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from nautobot.core.events import publish_event
@@ -42,6 +43,7 @@ from ..core.views.mixins import (
     ObjectListViewMixin,
 )
 from .forms import (
+    AdminPasswordChangeForm,
     AdvancedProfileSettingsForm,
     LoginForm,
     NavbarFavoritesAddForm,
@@ -203,7 +205,7 @@ class UserUIViewSet(
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=["username", "password", "first_name", "last_name", "email"],
+                fields=["username", "first_name", "last_name", "email"],
             ),
             object_detail.ObjectFieldsPanel(
                 label="Status",
@@ -292,6 +294,33 @@ class UserUIViewSet(
                 self.success_url = iri_to_uri(return_url)
             else:
                 self.success_url = self.get_return_url(request, obj)
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="password",
+        url_name="password",
+        custom_view_base_action="change",
+    )
+    def password(self, request, pk=None):
+        """Reset a user password from the users UI."""
+        user_obj = self.get_object()
+        form = AdminPasswordChangeForm(user=user_obj, data=request.POST or None)
+
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, f"Password updated for {user_obj}.")
+            return redirect("users:user_edit", pk=user_obj.pk)
+
+        return Response(
+            {
+                "obj": user_obj,
+                "obj_type": f"{user_obj._meta.verbose_name} password",
+                "form": form,
+                "editing": True,
+                "return_url": reverse("users:user_edit", kwargs={"pk": user_obj.pk}),
+            }
+        )
 
     def perform_update(self, request, *args, **kwargs):
         self.obj = self.get_object()
