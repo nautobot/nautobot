@@ -1,0 +1,1 @@
+Fixed a bug that in rare cases makes `nautobot-server trace_cable` fail with an IntegrityError
