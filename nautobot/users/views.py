@@ -8,24 +8,42 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.db import transaction
+from django.forms import inlineformset_factory
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
+from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import ConfirmationForm
+from nautobot.core.forms import ConfirmationForm, restrict_form_fields
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
+from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.generic import GenericView
+from nautobot.users.filters import UserFilterSet
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from ..core.views.mixins import GetReturnURLMixin
+from ..core.views.mixins import (
+    GetReturnURLMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+)
 from .forms import (
+    AdminPasswordChangeForm,
     AdvancedProfileSettingsForm,
     LoginForm,
     NavbarFavoritesAddForm,
@@ -33,8 +51,13 @@ from .forms import (
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
+    UserBulkEditForm,
+    UserCreateForm,
+    UserFilterForm,
+    UserUpdateForm,
 )
-from .models import Token
+from .models import Token, User
+from .tables import GroupTable, UserTable
 
 #
 # Login/logout
@@ -158,6 +181,168 @@ class ProfileView(GenericView):
                 "breadcrumbs": self.get_breadcrumbs(),
             },
         )
+
+
+class UserUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    queryset = User.objects.all()
+    filterset_class = UserFilterSet
+    filterset_form_class = UserFilterForm
+    table_class = UserTable
+    create_form_class = UserCreateForm
+    update_form_class = UserUpdateForm
+    bulk_update_form_class = UserBulkEditForm
+    action_buttons = ("add", "export")
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=["username", "first_name", "last_name", "email"],
+            ),
+            object_detail.ObjectFieldsPanel(
+                label="Status",
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                ],
+            ),
+            object_detail.ObjectFieldsPanel(
+                label="Important Dates",
+                weight=300,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "last_login",
+                    "date_joined",
+                ],
+            ),
+            object_detail.ObjectTextPanel(
+                label="Config Data",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                object_field="config_data",
+                render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.ObjectsTablePanel(
+                table_title="Groups",
+                section=SectionChoices.LEFT_HALF,
+                weight=400,
+                table_class=GroupTable,
+                table_filter="user",
+                enable_related_link=False,
+            ),
+        ]
+    )
+
+    @staticmethod
+    def get_object_permission_formset_class():
+        return inlineformset_factory(
+            User,
+            User.object_permissions.through,  # pylint: disable=no-member
+            fk_name="user",
+            fields=("objectpermission",),
+            extra=1,
+            can_delete=True,
+        )
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "update" and instance and "object_permission_formset" not in context:
+            formset_class = self.get_object_permission_formset_class()
+            context["object_permission_formset"] = formset_class(instance=instance, prefix="object_permissions")
+        return context
+
+    def _process_create_or_update_form(self, form):
+        request = self.request
+        queryset = self.get_queryset()
+        with transaction.atomic():
+            object_created = not form.instance.present_in_database
+            obj = self.form_save(form)
+            queryset.get(pk=obj.pk)
+
+            msg = f"{'Created' if object_created else 'Modified'} {queryset.model._meta.verbose_name}"
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            try:
+                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+            except AttributeError:
+                msg = format_html("{} {}", msg, obj)
+            messages.success(request, msg)
+
+            if "_addanother" in request.POST:
+                self.success_url = request.get_full_path()
+                return
+
+            if "_continue" in request.POST:
+                try:
+                    self.success_url = reverse("users:user_edit", kwargs={"pk": obj.pk})
+                except NoReverseMatch:
+                    self.success_url = self.get_return_url(request, obj)
+                return
+
+            return_url = form.cleaned_data.get("return_url")
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                self.success_url = iri_to_uri(return_url)
+            else:
+                self.success_url = self.get_return_url(request, obj)
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="password",
+        url_name="password",
+        custom_view_base_action="change",
+    )
+    def password(self, request, pk=None):
+        """Reset a user password from the users UI."""
+        user_obj = self.get_object()
+        form = AdminPasswordChangeForm(user=user_obj, data=request.POST or None)
+
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, f"Password updated for {user_obj}.")
+            return redirect("users:user_edit", pk=user_obj.pk)
+
+        return Response(
+            {
+                "obj": user_obj,
+                "obj_type": f"{user_obj._meta.verbose_name} password",
+                "form": form,
+                "editing": True,
+                "return_url": reverse("users:user_edit", kwargs={"pk": user_obj.pk}),
+            }
+        )
+
+    def perform_update(self, request, *args, **kwargs):
+        self.obj = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
+        restrict_form_fields(form, request.user)
+
+        formset_class = self.get_object_permission_formset_class()
+        object_permission_formset = formset_class(data=request.POST, instance=self.obj, prefix="object_permissions")
+
+        if form.is_valid() and object_permission_formset.is_valid():
+            with transaction.atomic():
+                response = self.form_valid(form)
+                object_permission_formset.save()
+            return response
+
+        return Response({"form": form, "object_permission_formset": object_permission_formset})
 
 
 class UserConfigView(GenericView):

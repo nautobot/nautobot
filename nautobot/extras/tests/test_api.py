@@ -3501,6 +3501,7 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
 
     def setUp(self):
         super().setUp()
+        self.add_permissions("users.view_user")
         self.create_data = [
             {
                 "owner": self.user.pk,
@@ -3552,6 +3553,10 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
 
 class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
     model = UserSavedViewAssociation
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
 
     @classmethod
     def setUpTestData(cls):
@@ -3810,6 +3815,10 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
 class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
     choices_fields = ["assigned_object_type"]
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
 
     @classmethod
     def setUpTestData(cls):
