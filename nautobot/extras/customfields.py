@@ -34,6 +34,27 @@ def _pks_and_display(queryset, limit=20):
     return pks, display
 
 
+def _count_and_display(queryset, limit=20):
+    """
+    Return ``(count, display_string)`` using two bounded DB queries.
+
+    Unlike ``_pks_and_display``, this does *not* materialize all PKs — only a
+    ``COUNT(*)`` plus up to *limit* name/pk rows.  Use this at call sites that
+    only need a count and a human-readable sample for log messages.
+    """
+    model = queryset.model
+    count = queryset.count()
+    try:
+        model._meta.get_field("name")
+        rows = queryset.values_list("pk", "name")[:limit]
+        parts = [f"{name!r} (pk={pk})" for pk, name in rows]
+    except FieldDoesNotExist:
+        pks = queryset.values_list("pk", flat=True)[:limit]
+        parts = [str(pk) for pk in pks]
+    display = ", ".join(parts) + ("..." if count > limit else "")
+    return count, display
+
+
 def _generate_bulk_object_changes(context, queryset, job_logger=logger):
     # Circular import
     from nautobot.extras.context_managers import (
@@ -107,25 +128,34 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
                 queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__contains": old_value})
 
             pk_list = []
-            objects_to_update = []
-            for obj in queryset.iterator():
+            total_updated = 0
+            chunk = []
+            for obj in queryset.iterator(chunk_size=1000):
                 old_list = obj._custom_field_data.get(field.key, [])
                 if not isinstance(old_list, (list, tuple)):
                     continue
                 new_list = list({new_value if e == old_value else e for e in old_list} - {None})
                 if new_list != old_list:
                     obj._custom_field_data[field.key] = new_list
-                    objects_to_update.append(obj)
+                    chunk.append(obj)
                     pk_list.append(obj.pk)
 
-            if objects_to_update:
-                model.objects.bulk_update(objects_to_update, ["_custom_field_data"], batch_size=1000)
+                if len(chunk) >= 1000:
+                    model.objects.bulk_update(chunk, ["_custom_field_data"])
+                    total_updated += len(chunk)
+                    chunk = []
+
+            if chunk:
+                model.objects.bulk_update(chunk, ["_custom_field_data"])
+                total_updated += len(chunk)
+
+            if total_updated:
                 job_logger.info(
                     "Updated `%s` from %r to %r on %d %s object(s).",
                     field.key,
                     old_value,
                     new_value,
-                    len(objects_to_update),
+                    total_updated,
                     ct.model,
                     extra={"object": field},
                 )
@@ -153,7 +183,12 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context=None
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
         queryset = model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False})
-        pks, display = _pks_and_display(queryset) if (verbose or change_context is not None) else ([], "")
+        pks = []
+        display = ""
+        if change_context is not None:
+            pks, display = _pks_and_display(queryset)
+        elif verbose:
+            _, display = _count_and_display(queryset)
         count = queryset.update(_custom_field_data=JSONRemove("_custom_field_data", field_key))
         if count:
             if verbose:
@@ -274,7 +309,9 @@ def cleanup_custom_field_data(
             # FilterSet classes on every pass.
             ct_list = list(content_types)
             ct_pks = [ct.pk for ct in ct_list]
-            model_map = {ct.pk: ct.model_class() for ct in ct_list}
+            model_map = {
+                ct.pk: ct.model_class() for ct in ct_list if hasattr(ct, "model_class") and ct.model_class() is not None
+            }
             in_scope_map = {
                 ct_pk: _get_in_scope_queryset(field, model_map[ct_pk], job_logger=job_logger) for ct_pk in ct_pks
             }
@@ -300,13 +337,13 @@ def cleanup_custom_field_data(
                     empty_qs = in_scope_qs.annotate(
                         _cf_key_text=KeyTextTransform(field.key, "_custom_field_data")
                     ).filter(_cf_key_text__isnull=True)
-                    empty_pks, display = _pks_and_display(empty_qs)
-                    if empty_pks:
+                    count, display = _count_and_display(empty_qs)
+                    if count:
                         job_logger.warning(
                             "cf_cleanup.validation_failed_required: Required field `%s` has %d %s object(s) "
                             "with missing/empty value and no default to apply: %s",
                             field.key,
-                            len(empty_pks),
+                            count,
                             model._meta.label,
                             display,
                         )
@@ -314,7 +351,7 @@ def cleanup_custom_field_data(
             # Required null→default: required + defaulted — set any in-scope objects whose key
             # exists but has JSON null to the default value.  provision_field already handles
             # absent keys; this pass handles the "key present with null" case which __isnull=True
-            # does not detect in PostgreSQL (JSON null ≠ SQL NULL for the -> operator).
+            # does not detect in PostgreSQL (JSON null != SQL NULL for the -> operator).
             if field.required and field.default is not None and not safe_change:
                 for ct_pk in ct_pks:
                     model = model_map[ct_pk]
@@ -324,13 +361,13 @@ def cleanup_custom_field_data(
                         .annotate(_cf_key_text=KeyTextTransform(field.key, "_custom_field_data"))
                         .filter(_cf_key_text__isnull=True)
                     )
-                    pks, display = _pks_and_display(null_with_key_qs) if _verbose else ([], "")
-                    if dryrun and pks:
+                    before_count, display = _count_and_display(null_with_key_qs) if _verbose else (0, "")
+                    if dryrun and before_count:
                         job_logger.info(
                             "cf_cleanup.required_null_to_default: Would set `%s` = %r on %d %s object(s): %s",
                             field.key,
                             field.default,
-                            len(pks),
+                            before_count,
                             model._meta.label,
                             display,
                         )
@@ -338,23 +375,14 @@ def cleanup_custom_field_data(
                         _custom_field_data=JSONSet("_custom_field_data", field.key, field.default)
                     )
                     if count:
-                        if _verbose:
-                            job_logger.info(
-                                "cf_cleanup.default_applied: Set `%s` = %r on %d %s object(s): %s",
-                                field.key,
-                                field.default,
-                                count,
-                                model._meta.label,
-                                display,
-                            )
-                        else:
-                            job_logger.info(
-                                "cf_cleanup.default_applied: Set %d %s objects with null value for "
-                                "required field `%s` to default.",
-                                count,
-                                model._meta.label,
-                                field.key,
-                            )
+                        job_logger.info(
+                            "cf_cleanup.default_applied: Set `%s` = %r on %d %s object(s): %s",
+                            field.key,
+                            field.default,
+                            count,
+                            model._meta.label,
+                            display,
+                        )
 
             # Scope sweep: set key to null on objects that are no longer in scope for this field
             if field.scope_filter and not safe_change:
@@ -364,12 +392,12 @@ def cleanup_custom_field_data(
                     out_of_scope_with_key = model.objects.filter(
                         **{f"_custom_field_data__{field.key}__isnull": False}
                     ).exclude(pk__in=in_scope_qs.values("pk"))
-                    pks, display = _pks_and_display(out_of_scope_with_key) if _verbose else ([], "")
-                    if dryrun and pks:
+                    before_count, display = _count_and_display(out_of_scope_with_key) if _verbose else (0, "")
+                    if dryrun and before_count:
                         job_logger.info(
                             "cf_cleanup.scope_sweep: Would set key `%s` to null on %d %s object(s): %s",
                             field.key,
-                            len(pks),
+                            before_count,
                             model._meta.label,
                             display,
                         )
@@ -420,7 +448,7 @@ def cleanup_custom_field_data(
                                 ):
                                     new_value = new_value[0]
                                 for old_value in queryset.values_list(f"_custom_field_data__{field.key}", flat=True):
-                                    # JSON null leaks through the __in exclude (JSONB null ≠ SQL NULL
+                                    # JSON null leaks through the __in exclude (JSONB null != SQL NULL
                                     # for the -> operator), so guard against no-op calls.
                                     if old_value != new_value:
                                         update_custom_field_choice_data(
@@ -443,10 +471,7 @@ def cleanup_custom_field_data(
 
                                 if new_queryset.exists():
                                     new_value = field.default if field.default is not None else None
-                                    if (
-                                        isinstance(new_value, list)
-                                        and field.type == CustomFieldTypeChoices.TYPE_MULTISELECT
-                                    ):
+                                    if isinstance(new_value, list):
                                         new_value = new_value[0]
                                     old_value = invalid
                                     update_custom_field_choice_data(
@@ -462,7 +487,9 @@ def cleanup_custom_field_data(
                     #
                     # PKs are collected during the loop and flushed in two bulk updates afterward
                     # to avoid issuing one individual save() per invalid object.
-                    objects_with_value = queryset.filter(**{f"_custom_field_data__{field.key}__isnull": False})
+                    objects_with_value = queryset.annotate(
+                        _cf_key_text=KeyTextTransform(field.key, "_custom_field_data")
+                    ).filter(_cf_key_text__isnull=False)
                     badtype_to_default_pks = []
                     badtype_to_null_pks = []
                     try:
@@ -479,9 +506,6 @@ def cleanup_custom_field_data(
                             obj_id = str(pk)
                         value = cf_data.get(field.key)
                         if value is None:
-                            # JSON null stored under the key → treated as empty; already handled by
-                            # provision_field. The __isnull=False filter should exclude these, but
-                            # guard defensively.
                             continue
                         try:
                             field.validate(value, enforce_required=False)
@@ -552,16 +576,23 @@ def cleanup_custom_field_data(
                 data_iterator = (
                     model.objects.exclude(_custom_field_data={}).values_list("_custom_field_data", flat=True).iterator()
                 )
-                found_for_ct = set()
+                # Tracks orphaned keys this CT. As there is no need to process it again for every
+                # subsequent row, since it will be bulk updated in delete_custom_field_data.
+                known_orphaned_keys = set()
 
                 for data in data_iterator:
                     if not isinstance(data, dict):
+                        job_logger.warning(
+                            "Skipping non-dict _custom_field_data on %s (got %r); this indicates data corruption.",
+                            model._meta.label,
+                            type(data).__name__,
+                        )
                         continue
-                    orphaned_in_obj = set(data.keys()) - valid_keys - found_for_ct
+                    orphaned_in_obj = set(data.keys()) - valid_keys - known_orphaned_keys
                     if orphaned_in_obj:
                         for key in orphaned_in_obj:
                             orphaned_keys_to_ct_pks.setdefault(key, set()).add(ct.pk)
-                            found_for_ct.add(key)
+                            known_orphaned_keys.add(key)
 
             for key, ct_pk_set in orphaned_keys_to_ct_pks.items():
                 delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
@@ -623,14 +654,18 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
         queryset = in_scope_qs.filter(**{f"_custom_field_data__{field.key}__isnull": True})
         pk_list = []
         display = ""
-        if _verbose or change_context is not None:
+        before_count = 0
+        if change_context is not None:
             pk_list, display = _pks_and_display(queryset)
-        if dryrun and pk_list:
+            before_count = len(pk_list)
+        elif _verbose:
+            before_count, display = _count_and_display(queryset)
+        if dryrun and before_count:
             job_logger.info(
                 "cf_cleanup.provision: Would set `%s` = %r on %d %s object(s): %s",
                 field.key,
                 field.default,
-                len(pk_list),
+                before_count,
                 ct.model,
                 display,
             )
