@@ -484,7 +484,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING"):
             should_render = cf.should_render(location)
 
         self.assertTrue(should_render)
@@ -496,7 +496,7 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as cm:
             cf.set_scope_filter({"asn": "invalid str"})
 
         self.assertEqual(cm.exception.message_dict, {"asn": ["Enter a whole number."]})
@@ -3417,6 +3417,32 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         # Transaction was rolled back — key must still be present with original value.
         self.assertIn("test_cf", location._custom_field_data)
+
+    # --- data corruption guard ---
+
+    def test_logging__corrupt_custom_field_data__warns(self):
+        """Orphan sweep logs a WARNING and skips rows where _custom_field_data is not a dict."""
+        location_type = LocationType.objects.create(name="LT 1")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Test Location",
+            location_type=location_type,
+            status=location_status,
+        )
+        # Forcibly corrupt _custom_field_data to a JSON array to simulate data corruption;
+        # bypass model validation with a direct ORM update.
+        Location.objects.filter(pk=location.pk).update(_custom_field_data=["corrupt"])
+        location.refresh_from_db()
+        self.assertEqual(location._custom_field_data, ["corrupt"])
+
+        # Remove all active CFs so the provision loop is a no-op and only the orphan sweep runs.
+        # (Signals enqueue jobs that don't execute in TransactionTestCase, so this is safe.)
+        CustomField.objects.all().delete()
+
+        self.reset_logs()
+        cleanup_custom_field_data()  # is_all=True, safe_change=False → orphan sweep runs
+
+        self.assertLogKey("data corruption")
 
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")

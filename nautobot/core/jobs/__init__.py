@@ -589,7 +589,7 @@ class ValidateModelData(Job):
 class CleanupCustomFields(Job):
     """System Job to cleanup Custom Fields."""
 
-    field = ObjectVar(
+    field = MultiObjectVar(
         model=CustomField,
         description="Custom Field to clean up. Leave blank to clean up all Custom Fields.",
         label="Custom Field",
@@ -714,10 +714,8 @@ class ProvisionField(Job):
         query_params={"can_view": True, "feature": "custom_fields"},
         required=True,
     )
-    dry_run = BooleanVar(
-        default=False,
-        label="Dry run?",
-        description="Execute all changes inside a rolled-back transaction. Logs reflect what would have changed. Implies verbose output.",
+    dryrun = DryRunVar(
+        description="Execute all changes inside a rolled-back transaction. Logs reflect what would have changed. Implies verbose output."
     )
     verbose = BooleanVar(default=False, label="Verbose output?")
 
@@ -728,13 +726,13 @@ class ProvisionField(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def run(self, *, field, content_types, dry_run=False, verbose=False):  # pylint:disable=arguments-differ
+    def run(self, *, field, content_types, dryrun=False, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import provision_field
 
         provision_field(
             field_id=field.pk,
             content_type_pk_set=[ct.pk for ct in content_types],
-            dry_run=dry_run,
+            dryrun=dryrun,
             verbose=verbose,
             job_logger=self.logger,
         )

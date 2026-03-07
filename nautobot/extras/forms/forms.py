@@ -1,4 +1,5 @@
 import inspect
+import json
 import logging
 
 from django import forms
@@ -871,8 +872,6 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
-        import json
-
         from nautobot.core.jobs import DeleteCustomFieldData
         from nautobot.extras.customfields import enqueue_custom_field_job
 
