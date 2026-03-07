@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from unittest import mock
@@ -24,7 +25,14 @@ from nautobot.dcim.models import Device, Location, LocationType, Rack
 from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.context_managers import web_request_context
+from nautobot.extras.customfields import (
+    cleanup_custom_field_data,
+    delete_custom_field_data,
+    provision_field,
+    update_custom_field_choice_data,
+)
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
+from nautobot.extras.signals import change_context_state
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
@@ -455,11 +463,11 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING"):
             should_render = cf.should_render(location)
 
         self.assertTrue(should_render)
-        self.assertEqual(cm.output, [expected_warning])
+        self.assertEqual(self.log_lines, [expected_warning])
 
     @mock.patch("nautobot.extras.models.customfields.get_filterset_for_model", return_value=None)
     def test_scope_filter_for_model_without_filterset(self, _):
@@ -476,11 +484,11 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING"):
             should_render = cf.should_render(location)
 
         self.assertTrue(should_render)
-        self.assertEqual(cm.output, [expected_warning])
+        self.assertEqual(self.log_lines, [expected_warning])
 
     def test_set_scope_filter_invalid_form_raises_validation_error(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -2338,7 +2346,1104 @@ class CustomFieldChoiceTest(ModelTestCases.BaseModelTestCase):
             cf.delete()
 
 
+_ABSENT = object()  # sentinel: distinguishes "no initial value" from "initial value is None (JSON null)"
+
+
 class CustomFieldBackgroundTasks(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self._log_buf = io.StringIO()
+        self._log_handler = logging.StreamHandler(self._log_buf)
+        self._log_handler.setLevel(logging.DEBUG)
+        self._log_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))
+        logging.getLogger("nautobot.extras.customfields").addHandler(self._log_handler)
+
+    def tearDown(self):
+        logging.getLogger("nautobot.extras.customfields").removeHandler(self._log_handler)
+        super().tearDown()
+
+    @property
+    def log_lines(self):
+        """Return all log lines captured from nautobot.extras.customfields for this test."""
+        return self._log_buf.getvalue().splitlines()
+
+    def assertLogKey(self, key, msg=None):
+        """Assert that at least one captured log line contains `key`."""
+        self.assertTrue(
+            any(key in line for line in self.log_lines),
+            msg or f"Expected a log line containing {key!r}; got: {self.log_lines}",
+        )
+
+    def assertNoLogs(self, msg=None):
+        """Assert that no log lines were captured for this test."""
+        self.assertEqual(self.log_lines, [], msg or f"Expected no log output; got: {self.log_lines}")
+
+    def reset_logs(self):
+        """Discard all log lines captured so far (e.g. to ignore setup-phase signal errors)."""
+        self._log_buf.truncate(0)
+        self._log_buf.seek(0)
+
+    def _setup_cf_scenario(
+        self,
+        *,
+        prev=None,
+        scoped=True,
+        required=False,
+        has_default=False,
+        default=None,
+        field_type=CustomFieldTypeChoices.TYPE_TEXT,
+        choices=None,
+        initial_value=_ABSENT,
+        scope_filter=None,
+        exclude_from_scope=False,
+        validation_regex=None,
+        safe_change=False,
+        verbose=False,
+        dryrun=False,
+    ):
+        """
+        Create a Location with a CustomField, run cleanup, and return (location, cf, obj_type).
+
+        Parameters
+        ----------
+        prev:             Optional (location, cf) tuple. If provided, tears down the previous
+                          scenario before creating new objects.
+        scoped:           Assign the field to Location's ContentType (True) or not (False).
+        required:         Set CustomField.required=True.
+        has_default:      If True, set CustomField.default=`default`.
+        default:          The default value to set (only used when has_default=True).
+        field_type:       CustomField type choice string.
+        choices:          List of choice values to create as CustomFieldChoice objects.
+        initial_value:    If provided, seed _custom_field_data with this value (use None for JSON null).
+        scope_filter:     If set, apply this dict as the field's scope_filter after CT assignment.
+        exclude_from_scope: If True, create a second in-scope LocationType and set scope_filter so
+                          the test location falls outside scope.
+        validation_regex: If set, apply this regex string to the CustomField before saving.
+        safe_change:      Passed through to cleanup_custom_field_data.
+        verbose:          Passed through to cleanup_custom_field_data.
+        dryrun:           Passed through to cleanup_custom_field_data.
+        """
+        if prev is not None:
+            self._teardown_cf_scenario(prev[0], prev[1])
+        location_type = LocationType.objects.create(name="LT 1")
+        location_status = Status.objects.get_for_model(Location).first()
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf_kwargs = {
+            "label": "Test CF",
+            "key": "test_cf",
+            "type": field_type,
+            "required": required,
+        }
+        if has_default:
+            cf_kwargs["default"] = default
+
+        cf = CustomField(**cf_kwargs)
+        if validation_regex is not None:
+            cf.validation_regex = validation_regex
+        cf.validated_save()
+
+        if choices:
+            for v in choices:
+                CustomFieldChoice.objects.create(custom_field=cf, value=v)
+
+        if exclude_from_scope and scope_filter is not None:
+            raise ValueError("exclude_from_scope and scope_filter are mutually exclusive")
+
+        if scoped:
+            cf.content_types.set([obj_type])
+            if exclude_from_scope:
+                # Create a separate in-scope LT so the test object (which uses the other LT)
+                # falls outside the scope_filter.
+                lt_in_scope = LocationType.objects.create(name="LT In-Scope")
+                cf.scope_filter = {"location_type": [str(lt_in_scope.pk)]}
+                cf.save()
+            elif scope_filter is not None:
+                cf.scope_filter = scope_filter
+                cf.save()
+
+        initial_data = {} if initial_value is _ABSENT else {"test_cf": initial_value}
+        location = Location.objects.create(
+            name="Test Location",
+            location_type=location_type,
+            status=location_status,
+            _custom_field_data=initial_data,
+        )
+        location.refresh_from_db()
+        self.reset_logs()
+        cleanup_custom_field_data(
+            field_id=cf.pk,
+            content_type_pk_set=[obj_type.pk],
+            safe_change=safe_change,
+            verbose=verbose,
+            dryrun=dryrun,
+        )
+        location.refresh_from_db()
+        return location, cf
+
+    def _teardown_cf_scenario(self, location, cf):
+        """Delete objects created by _setup_cf_scenario to allow a clean re-setup."""
+        location_type = location.location_type  # save ref before deletion
+        location.delete()
+        cf.delete()
+        location_type.delete()
+        LocationType.objects.filter(name="LT In-Scope").delete()
+
+    # -------------------------------------------------------------------------
+    # Matrix — naming: test_cf__<scope>__<required>__<default>__<key>__<value>__<outcome>
+    #
+    #  - scope: scoped / unscoped
+    #  - required: required / optional
+    #  - default: nodefault / defaulted
+    #  - key: keyed / missing
+    #  - value: na / empty / badtype / invalid / valid / partial
+    #  - outcome: noop / toempty / todefault / log / delete # when unsafe change applied
+    #
+    # Outcome Types:
+    #
+    #  - noop: no change to the field value (e.g. valid, invalid value but not required, or bad type but not coercible)
+    #  - toempty: set the field value to empty value (e.g. invalid value and required, or bad type with no coercion. Value is dependant on field type, e.g. empty string for text and null for nullable fields)
+    #  - todefault: set the field value to the default (e.g. invalid value and required, or bad type with no coercion but field has a default)
+    #  - log: no change to the field value but log that an issue was detected (e.g. invalid value but not required, or bad type but not coercible)
+    #  - delete: delete the field value (e.g. invalid value and required, or bad type with no coercion but field is nullable)
+    #
+    #  Comment structure is:
+    #  <scope> / <required> / <default> / <key> / <value> => (<safe_outcome>, <unsafe_outcome>)
+    #
+    # Note: (field type) is prepended if relevant such as select and multi-select types.
+    #
+    # -------------------------------------------------------------------------
+
+    # Yes / Yes / No / No / NA => (log, log)
+    def test_cf__scoped__required__nodefault__missing__na__log(self):
+        location, cf = self._setup_cf_scenario(required=True, safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.provision")
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), required=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+    # Yes / Yes / No / Yes / empty => (log, log)
+    def test_cf__scoped__required__nodefault__keyed__empty__log(self):
+        location, cf = self._setup_cf_scenario(required=True, initial_value=None, safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), required=True, initial_value=None)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(prev=(location, cf), required=True, initial_value="", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), required=True, initial_value="")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+    # Yes / No / No / Yes / badtype => (log, toempty)
+    def test_cf__scoped__optional__nodefault__keyed__badtype__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_TEXT,
+            initial_value=12345,  # int in a TEXT field → badtype
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 12345)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_TEXT,
+            initial_value=12345,  # int in a TEXT field → badtype
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.type_reset")
+
+    # Yes / No / Yes / Yes / badtype => (log, todefault)
+    def test_cf__scoped__optional__defaulted__keyed__badtype__todefault(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_TEXT,
+            has_default=True,
+            default="default_val",
+            initial_value=12345,  # int in a TEXT field → badtype
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 12345)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_TEXT,
+            has_default=True,
+            default="default_val",
+            initial_value=12345,  # int in a TEXT field → badtype
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "default_val")
+        self.assertLogKey("cf_cleanup.type_reset")
+
+    # Yes / No / No / Yes / invalid => (log, log)
+    def test_cf__scoped__optional__nodefault__keyed__invalid__log(self):
+        location, cf = self._setup_cf_scenario(
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_optional")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_optional")
+
+    # Yes / No / Yes / Yes / invalid => (log, log)
+    def test_cf__scoped__optional__defaulted__keyed__invalid__log(self):
+        location, cf = self._setup_cf_scenario(
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_optional")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",
+            initial_value="no-prefix",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_optional")
+
+    # -------------------------------------------------------------------------
+    # Unscoped (scope_filter or CT-unassigned) — scope sweep
+    # -------------------------------------------------------------------------
+
+    # No / No / No / No / NA => (noop, toempty)
+    def test_cf__unscoped__optional__nodefault__missing__na__toempty(self):
+        # Location.save() auto-populates the key as null; scope sweep re-nulls it in non-safe mode.
+        location, cf = self._setup_cf_scenario(scoped=True, exclude_from_scope=True, safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), scoped=True, exclude_from_scope=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / No / Yes / empty => (noop, toempty)
+    def test_cf__unscoped__optional__nodefault__keyed__empty__noop(self):
+        # JSON null under the key; scope sweep sets key to null again in non-safe mode.
+        location, cf = self._setup_cf_scenario(
+            scoped=True, exclude_from_scope=True, initial_value=None, safe_change=True
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf), scoped=True, exclude_from_scope=True, initial_value=None
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf), scoped=True, exclude_from_scope=True, initial_value="", safe_change=True
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf), scoped=True, exclude_from_scope=True, initial_value=""
+        )
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / No / Yes / badtype => (noop, toempty)
+    def test_cf__unscoped__optional__nodefault__keyed__badtype__toempty(self):
+        # Non-null value (int in a text field) => out-of-scope scope sweep sets key to null.
+        location, cf = self._setup_cf_scenario(
+            scoped=True, exclude_from_scope=True, initial_value=12345, safe_change=True
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 12345)
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf), scoped=True, exclude_from_scope=True, initial_value=12345
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / No / Yes / invalid => (noop, toempty)
+    def test_cf__unscoped__optional__nodefault__keyed__invalid__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / No / Yes / valid => (noop, toempty)
+    def test_cf__unscoped__optional__nodefault__keyed__valid__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            initial_value="some-value",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "some-value")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            initial_value="some-value",
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / Yes / No / NA => (noop, toempty)
+    def test_cf__unscoped__optional__defaulted__missing__na__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            safe_change=True,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / Yes / Yes / empty => (noop, toempty)
+    def test_cf__unscoped__optional__defaulted__keyed__empty__noop(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value=None,
+            safe_change=True,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value=None,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value="",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value="",
+        )
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / Yes / Yes / badtype => (noop, toempty)
+    def test_cf__unscoped__optional__defaulted__keyed__badtype__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value=12345,
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 12345)
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value=12345,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / Yes / Yes / invalid => (noop, toempty)
+    def test_cf__unscoped__optional__defaulted__keyed__invalid__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",  # must satisfy validation_regex
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",  # must satisfy validation_regex
+            initial_value="no-prefix",
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / No / Yes / Yes / valid => (noop, toempty)
+    def test_cf__unscoped__optional__defaulted__keyed__valid__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value="hello",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            scoped=True,
+            exclude_from_scope=True,
+            has_default=True,
+            default="mydefault",
+            initial_value="hello",
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.scope_sweep")
+
+    # No / Yes / NA / NA / NA => (noop, noop)
+    def test_cf__unscoped__required__na__na__na__na(self):
+        # The model enforces that required=True and scope_filter are mutually exclusive.
+        cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
+        cf.save()
+        cf.scope_filter = {"location_type": ["some-pk"]}
+        with self.assertRaises(ValidationError):
+            cf.clean()
+        self.assertNoLogs()
+
+        cf2 = CustomField(label="Test CF 2", key="test_cf2", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
+        cf2.save()
+        cf2.scope_filter = {"location_type": ["some-pk"]}
+        with self.assertRaises(ValidationError):
+            cf2.clean()
+        self.assertNoLogs()
+
+    # -------------------------------------------------------------------------
+    # Scoped optional nodefault — provision, validation-failure warning
+    # -------------------------------------------------------------------------
+
+    # Yes / No / No / No / NA => (toempty, toempty)
+    def test_cf__scoped__optional__nodefault__missing__na__toempty(self):
+        location, cf = self._setup_cf_scenario(safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.provision")
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf))
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.provision")
+
+    # Yes / No / No / Yes / empty => (noop, noop)
+    def test_cf__scoped__optional__nodefault__keyed__empty__noop(self):
+        location, cf = self._setup_cf_scenario(initial_value=None, safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), initial_value=None)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(prev=(location, cf), initial_value="", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), initial_value="")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+    # Yes / No / No / Yes / valid => (noop, noop)
+    def test_cf__scoped__optional__nodefault__keyed__valid__noop(self):
+        location, cf = self._setup_cf_scenario(initial_value="hello", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), initial_value="hello")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+    # -------------------------------------------------------------------------
+    # Scoped optional defaulted — provision, validation-failure warning
+    # -------------------------------------------------------------------------
+
+    # Yes / No / Yes / No / NA => (todefault, todefault)
+    def test_cf__scoped__optional__defaulted__missing__na__todefault(self):
+        # Key absent; _provision_field fills it with the default value.
+        location, cf = self._setup_cf_scenario(has_default=True, default="d", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.provision")
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), has_default=True, default="d")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.provision")
+
+    # Yes / No / Yes / Yes / empty => (noop, noop)
+    def test_cf__scoped__optional__defaulted__keyed__empty__noop(self):
+        location, cf = self._setup_cf_scenario(has_default=True, default="d", initial_value=None, safe_change=True)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), has_default=True, default="d", initial_value=None)
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf), has_default=True, default="d", initial_value="", safe_change=True
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), has_default=True, default="d", initial_value="")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+    # Yes / No / Yes / Yes / valid => (noop, noop)
+    def test_cf__scoped__optional__defaulted__keyed__valid__noop(self):
+        location, cf = self._setup_cf_scenario(has_default=True, default="d", initial_value="user", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "user")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), has_default=True, default="d", initial_value="user")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "user")
+        self.assertNoLogs()
+
+    # -------------------------------------------------------------------------
+    # Scoped required nodefault
+    # -------------------------------------------------------------------------
+
+    # Yes / Yes / No / Yes / badtype => (log, log)
+    def test_cf__scoped__required__nodefault__keyed__badtype__log(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            initial_value=123,  # int stored in a TEXT field
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            initial_value=123,  # int stored in a TEXT field
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+    # Yes / Yes / No / Yes / invalid => (log, log)
+    def test_cf__scoped__required__nodefault__keyed__invalid__log(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            validation_regex=r"^X-",
+            initial_value="no-prefix",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+    # Yes / Yes / No / Yes / valid => (noop, noop)
+    def test_cf__scoped__required__nodefault__keyed__valid__noop(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            initial_value="hello",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            initial_value="hello",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+    # -------------------------------------------------------------------------
+    # Scoped required defaulted
+    # -------------------------------------------------------------------------
+
+    # Yes / Yes / Yes / No / NA => (todefault, todefault)
+    def test_cf__scoped__required__defaulted__missing__na__todefault(self):
+        location, cf = self._setup_cf_scenario(required=True, has_default=True, default="d", safe_change=True)
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.provision")
+
+        location, cf = self._setup_cf_scenario(prev=(location, cf), required=True, has_default=True, default="d")
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.provision")
+
+    # Yes / Yes / Yes / Yes / empty => (noop, todefault)
+    def test_cf__scoped__required__defaulted__keyed__empty__todefault(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value=None,
+            safe_change=True,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value=None,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.default_applied")
+
+        # Retest with empty string, this is a different type of test but being explicit about expected outcome.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value="",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value="",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "")
+        self.assertNoLogs()
+
+    # Yes / Yes / Yes / Yes / badtype => (log, todefault)
+    def test_cf__scoped__required__defaulted__keyed__badtype__todefault(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value=123,  # int stored in a TEXT field
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value=123,  # int stored in a TEXT field
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "d")
+        self.assertLogKey("cf_cleanup.type_reset")
+
+    # Yes / Yes / Yes / Yes / invalid => (log, log)
+    def test_cf__scoped__required__defaulted__keyed__invalid__log(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",
+            initial_value="no-prefix",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            validation_regex=r"^X-",
+            has_default=True,
+            default="X-default",
+            initial_value="no-prefix",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
+        self.assertLogKey("cf_cleanup.validation_failed_required")
+
+    # Yes / Yes / Yes / Yes / valid => (noop, noop)
+    def test_cf__scoped__required__defaulted__keyed__valid__noop(self):
+        location, cf = self._setup_cf_scenario(
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value="hello",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            required=True,
+            has_default=True,
+            default="d",
+            initial_value="hello",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
+        self.assertNoLogs()
+
+    # -------------------------------------------------------------------------
+    # Orphan stub — orphan sweep
+    # -------------------------------------------------------------------------
+
+    # NA / NA / NA / Yes / NA => (noop, delete)
+    def test_cf__orphan__optional__na__keyed__na__delete(self):
+        # Cannot use _setup_cf_scenario: requires cf.delete() + direct function call.
+        location_type = LocationType.objects.create(name="LT 1")
+        location_status = Status.objects.get_for_model(Location).first()
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.save()
+        cf.content_types.set([obj_type])
+        location = Location.objects.create(
+            name="Test Location",
+            location_type=location_type,
+            status=location_status,
+            _custom_field_data={"test_cf": "some-value"},
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        # Signal enqueues a job; delete and then call cleanup directly.
+        cf.delete()
+        initial_cf_data = dict(location._custom_field_data)
+        # (Other active CFs like example_app_auto_custom_field may still log provision; that's fine.)
+        self.reset_logs()
+        cleanup_custom_field_data(safe_change=True)
+        location.refresh_from_db()
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertEqual(location._custom_field_data["test_cf"], "some-value")
+
+        # Reset to initial state for safe_change=False run.
+        Location.objects.filter(pk=location.pk).update(_custom_field_data=initial_cf_data)
+        location.refresh_from_db()
+        self.reset_logs()
+        delete_custom_field_data("test_cf", [obj_type.pk])
+        location.refresh_from_db()
+        self.assertNotIn("test_cf", location._custom_field_data)
+        self.assertNoLogs()  # verbose=False → stderr only; no logger output
+
+    # -------------------------------------------------------------------------
+    # Select / multiselect — choice repair
+    # -------------------------------------------------------------------------
+
+    # (select) Yes / No / No / Yes / empty => (noop, noop)
+    def test_cf__scoped__select__optional__nodefault__keyed__empty__noop(self):
+        # JSON-null value on an optional SELECT field with no default must be a noop.
+        # Previously, JSONB null leaked through the __in exclude (JSONB null != SQL NULL for
+        # the -> operator), triggering a spurious _update_custom_field_choice_data(id, None, None)
+        # call that logged "from `None` to `None`". The guard prevents this.
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["A", "B"],
+            initial_value=None,
+            safe_change=True,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertFalse(
+            any("from `None` to `None`" in line for line in self.log_lines),
+            "Spurious None→None selection update should not be logged",
+        )
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["A", "B"],
+            initial_value=None,
+        )
+        self.assertIn("test_cf", location._custom_field_data)
+        self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertFalse(
+            any("from `None` to `None`" in line for line in self.log_lines),
+            "Spurious None→None selection update should not be logged",
+        )
+
+    # (multiselect) Yes / No / No / Yes / partial => (noop, delete)
+    def test_cf__scoped__optional__nodefault__keyed__partial__delete(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            choices=["ValidA", "ValidB"],
+            initial_value=["ValidA", "InvalidX"],
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), ["ValidA", "InvalidX"])
+        self.assertNoLogs()
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            choices=["ValidA", "ValidB"],
+            initial_value=["ValidA", "InvalidX"],
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), ["ValidA"])
+        self.assertLogKey("Updated")
+
+    # -------------------------------------------------------------------------
+    # Logging behavior tests
+    # -------------------------------------------------------------------------
+
+    # --- verbose flag: provision step ---
+
+    def test_logging__provision__verbose_true__shows_object_name(self):
+        """verbose=True: provision log includes the location name, not just a count."""
+        location, _ = self._setup_cf_scenario(verbose=True)
+        self.assertTrue(
+            any("cf_cleanup.provision" in msg and location.name in msg for msg in self.log_lines),
+            f"Expected provision log containing {location.name!r}; got: {self.log_lines}",
+        )
+
+    def test_logging__provision__verbose_false__count_only(self):
+        """verbose=False (default): provision log shows aggregate count, not individual names."""
+        location, _ = self._setup_cf_scenario(verbose=False)
+        provision_msgs = [msg for msg in self.log_lines if "cf_cleanup.provision" in msg and "INFO" in msg]
+        self.assertTrue(provision_msgs, "Expected at least one provision INFO log")
+        self.assertFalse(
+            any(location.name in msg for msg in provision_msgs),
+            f"Non-verbose provision log should not contain object name {location.name!r}",
+        )
+
+    def test_logging__provision__zero_records__no_info_log(self):
+        """When all objects are already provisioned, no INFO log is emitted for provision."""
+        # Object already has a valid value — provision finds nothing to do.
+        self._setup_cf_scenario(initial_value="already-set")
+        provision_info = [
+            line for line in self.log_lines if "INFO" in line and "cf_cleanup.provision" in line and "`test_cf`" in line
+        ]
+        self.assertFalse(
+            provision_info,
+            f"Expected no provision INFO log for `test_cf` when already provisioned; got: {provision_info}",
+        )
+
+    # --- verbose flag: scope sweep ---
+
+    def test_logging__scope_sweep__verbose_true__shows_object_name(self):
+        """verbose=True: scope sweep log includes the object name, not just a count."""
+        location, _ = self._setup_cf_scenario(
+            exclude_from_scope=True,
+            initial_value="some-value",
+            verbose=True,
+        )
+        self.assertTrue(
+            any("cf_cleanup.scope_sweep" in msg and location.name in msg for msg in self.log_lines),
+            f"Expected scope_sweep log containing {location.name!r}; got: {self.log_lines}",
+        )
+
+    def test_logging__scope_sweep__verbose_false__count_only(self):
+        """verbose=False: scope sweep log shows aggregate count without object names."""
+        location, _ = self._setup_cf_scenario(
+            exclude_from_scope=True,
+            initial_value="some-value",
+            verbose=False,
+        )
+        sweep_msgs = [msg for msg in self.log_lines if "cf_cleanup.scope_sweep" in msg and "INFO" in msg]
+        self.assertTrue(sweep_msgs, "Expected at least one scope_sweep INFO log")
+        self.assertFalse(
+            any(location.name in msg for msg in sweep_msgs),
+            f"Non-verbose scope_sweep log should not contain object name {location.name!r}",
+        )
+
+    # --- verbose flag: required null→default ---
+
+    def test_logging__required_null_to_default__verbose_true__shows_object_name(self):
+        """verbose=True: default_applied log includes the object name."""
+        location, _ = self._setup_cf_scenario(
+            required=True,
+            has_default=True,
+            default="fallback",
+            initial_value=None,
+            verbose=True,
+        )
+        self.assertTrue(
+            any("cf_cleanup.default_applied" in msg and location.name in msg for msg in self.log_lines),
+            f"Expected default_applied log containing {location.name!r}; got: {self.log_lines}",
+        )
+
+    def test_logging__required_null_to_default__verbose_false__count_only(self):
+        """verbose=False: default_applied log shows aggregate count without object names."""
+        location, _ = self._setup_cf_scenario(
+            required=True,
+            has_default=True,
+            default="fallback",
+            initial_value=None,
+            verbose=False,
+        )
+        applied_msgs = [msg for msg in self.log_lines if "cf_cleanup.default_applied" in msg]
+        self.assertTrue(applied_msgs, "Expected at least one default_applied log")
+        self.assertFalse(
+            any(location.name in msg for msg in applied_msgs),
+            f"Non-verbose default_applied log should not contain object name {location.name!r}",
+        )
+
+    # --- type-mismatch reset always shows object identifier ---
+
+    def test_logging__type_reset__always_shows_object_name(self):
+        """Type-mismatch reset logs include the object name even without verbose=True,
+        because the loop is per-object and can always embed the identifier at no extra cost."""
+        # verbose deliberately omitted (defaults to False)
+        location, _ = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_TEXT,
+            initial_value=12345,  # int in a TEXT field → badtype → type_reset
+        )
+        self.assertTrue(
+            any("cf_cleanup.type_reset" in msg and location.name in msg for msg in self.log_lines),
+            f"Expected type_reset log containing {location.name!r}; got: {self.log_lines}",
+        )
+
+    # --- dryrun: shows "Would …" messages and leaves data unchanged ---
+
+    def test_logging__dryrun__provision__shows_would_message_and_no_mutation(self):
+        """dryrun=True: provision emits 'Would set' log and rolls back — data is unchanged."""
+        location, _ = self._setup_cf_scenario(dryrun=True)
+        self.assertTrue(
+            any("Would set" in msg and "cf_cleanup.provision" in msg for msg in self.log_lines),
+            f"Expected 'Would set' provision log; got: {self.log_lines}",
+        )
+        # Transaction was rolled back — key must still be absent.
+        self.assertNotIn("test_cf", location._custom_field_data)
+
+    def test_logging__dryrun__scope_sweep__shows_would_message_and_no_mutation(self):
+        """dryrun=True: scope sweep emits 'Would set to null' log and rolls back — key is still present."""
+        location, _ = self._setup_cf_scenario(
+            exclude_from_scope=True,
+            initial_value="some-value",
+            dryrun=True,
+        )
+        self.assertTrue(
+            any("Would set" in msg and "cf_cleanup.scope_sweep" in msg for msg in self.log_lines),
+            f"Expected 'Would set to null' scope_sweep log; got: {self.log_lines}",
+        )
+        # Transaction was rolled back — key must still be present with original value.
+        self.assertIn("test_cf", location._custom_field_data)
+
+    # --- data corruption guard ---
+
+    def test_logging__corrupt_custom_field_data__warns(self):
+        """Orphan sweep logs a WARNING and skips rows where _custom_field_data is not a dict."""
+        location_type = LocationType.objects.create(name="LT 1")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Test Location",
+            location_type=location_type,
+            status=location_status,
+        )
+        # Forcibly corrupt _custom_field_data to a JSON array to simulate data corruption;
+        # bypass model validation with a direct ORM update.
+        Location.objects.filter(pk=location.pk).update(_custom_field_data=["corrupt"])
+        location.refresh_from_db()
+        self.assertEqual(location._custom_field_data, ["corrupt"])
+
+        # Remove all active CFs so the provision loop is a no-op and only the orphan sweep runs.
+        # (Signals enqueue jobs that don't execute in TransactionTestCase, so this is safe.)
+        CustomField.objects.all().delete()
+
+        self.reset_logs()
+        cleanup_custom_field_data()  # is_all=True, safe_change=False → orphan sweep runs
+
+        self.assertLogKey("data corruption")
+
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
         location_status = Status.objects.get_for_model(Location).first()
@@ -2349,15 +3454,23 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         cf = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
         cf.save()
         cf.content_types.set([obj_type])
+        # Signal enqueues a job; call directly (no change_context → no ObjectChange).
+        provision_field(cf.pk, [obj_type.pk])
 
         location.refresh_from_db()
 
         self.assertEqual(location.cf["cf1"], "Foo")
 
+        # Set up CF2 outside web_request_context so user=None → signal returns early, no sync job.
+        cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
+        cf.save()
+        cf.content_types.set([obj_type])
+        cf_pk = cf.pk
+
         with web_request_context(self.user):
-            cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
-            cf.save()
-            cf.content_types.set([obj_type])
+            ctx = change_context_state.get()
+            ctx_dict = {**ctx.as_dict(), "context_detail": "provision custom field data for new content types"}
+            provision_field(cf_pk, [obj_type.pk], change_context=ctx_dict)
 
             location.refresh_from_db()
 
@@ -2368,6 +3481,25 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
         self.assertEqual(oc_list[0].user, self.user)
+
+        # Verify that provision_field initializes the key to null on out-of-scope objects.
+        cf_scoped = CustomField(label="CF3", type=CustomFieldTypeChoices.TYPE_TEXT, default="Scoped")
+        cf_scoped.save()
+        cf_scoped.content_types.set([obj_type])
+        # Restrict CF3 to location_type (Root Type 1); location_out is out-of-scope.
+        location_type_out = LocationType.objects.create(name="LT Out")
+        location_out = Location(name="Location Out", location_type=location_type_out, status=location_status)
+        location_out.save()
+        cf_scoped.scope_filter = {"location_type": [str(location_type.pk)]}
+        cf_scoped.save()
+        provision_field(cf_scoped.pk, [obj_type.pk])
+
+        location.refresh_from_db()
+        location_out.refresh_from_db()
+
+        self.assertEqual(location.cf["cf3"], "Scoped")  # in-scope → default applied
+        self.assertIn("cf3", location_out._custom_field_data)  # out-of-scope → key present
+        self.assertIsNone(location_out._custom_field_data["cf3"])  # out-of-scope → value is null
 
     def test_delete_custom_field_data_task(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -2393,18 +3525,27 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         location.save()
 
+        cf_1_key = cf_1.key
         cf_1.delete()
+        # Signal enqueues a job; call directly (no change_context → no ObjectChange).
+        delete_custom_field_data(cf_1_key, [obj_type.pk])
 
         location.refresh_from_db()
 
-        self.assertTrue("cf1" not in location.cf)
+        self.assertNotIn("cf1", location._custom_field_data)
+
+        # Delete CF2 outside web_request_context so user=None → signal returns early, no sync job.
+        cf_2_key = cf_2.key
+        cf_2.delete()
 
         with web_request_context(self.user):
-            cf_2.delete()
+            ctx = change_context_state.get()
+            ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data"}
+            delete_custom_field_data(cf_2_key, [obj_type.pk], change_context=ctx_dict)
 
             location.refresh_from_db()
 
-            self.assertTrue("cf2" not in location.cf)
+            self.assertNotIn("cf2", location._custom_field_data)
 
         oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 1)
@@ -2425,10 +3566,16 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             _custom_field_data={"cf1": "foo"},
         )
 
+        # Clear content types outside web_request_context so user=None → signal returns early, no sync job.
+        cleared_ct_pks = list(cf_1.content_types.values_list("pk", flat=True))
+        cf_1.content_types.clear()
+
         with web_request_context(self.user):
-            cf_1.content_types.clear()
+            ctx = change_context_state.get()
+            ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data from existing content types"}
+            delete_custom_field_data("cf1", cleared_ct_pks, change_context=ctx_dict)
             location.refresh_from_db()
-            self.assertNotIn("cf1", location.cf)
+            self.assertNotIn("cf1", location._custom_field_data)
 
         oc_list = get_changes_for_model(location)
         self.assertEqual(len(oc_list), 1)
@@ -2459,14 +3606,21 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         choice.value = "Bar"
         choice.save()
+        # choice.save() no longer auto-triggers data migration; call directly.
+        update_custom_field_choice_data(cf.id, "Foo", "Bar")
 
         location.refresh_from_db()
 
         self.assertEqual(location.cf["cf1"], "Bar")
 
+        # Rename choice outside web_request_context so user=None → signal returns early, no sync job.
+        choice.value = "FizzBuzz"
+        choice.save()
+
         with web_request_context(self.user):
-            choice.value = "FizzBuzz"
-            choice.save()
+            ctx = change_context_state.get()
+            ctx_dict = {**ctx.as_dict(), "context_detail": "update custom field choice data"}
+            update_custom_field_choice_data(cf.id, "Bar", "FizzBuzz", change_context=ctx_dict)
 
             location.refresh_from_db()
 
