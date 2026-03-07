@@ -14,21 +14,20 @@ logger = getLogger("nautobot.extras.customfields")
 
 def _pks_and_display(queryset, limit=20):
     """
-    Return ``(all_pks, display_string)`` for *queryset* using a single DB query.
+    Return ``(all_pks, display_string)`` for *queryset* using two DB queries.
 
-    Fetches ``pk`` and ``name`` together (same cost as pk-only).  Falls back to
-    pk-only if the model has no ``name`` field.  The display string shows up to
-    *limit* entries as ``"<name>" (pk=<uuid>)``; a trailing ``"..."`` is appended
-    when the result is truncated.
+    Fetches all PKs first (pk-only, flat), then fetches up to *limit* name/pk
+    rows via a bounded SQL LIMIT query for the display string.  Falls back to
+    pk-only display if the model has no ``name`` field.  A trailing ``"..."`` is
+    appended when the result is truncated.
     """
     model = queryset.model
+    pks = list(queryset.values_list("pk", flat=True))
     try:
         model._meta.get_field("name")
-        rows = list(queryset.values_list("pk", "name"))
-        parts = [f"{name!r} (pk={pk})" for pk, name in rows[:limit]]
-        pks = [pk for pk, _ in rows]
+        rows = queryset.values_list("pk", "name")[:limit]
+        parts = [f"{name!r} (pk={pk})" for pk, name in rows]
     except FieldDoesNotExist:
-        pks = list(queryset.values_list("pk", flat=True))
         parts = [str(pk) for pk in pks[:limit]]
     display = ", ".join(parts) + ("..." if len(pks) > limit else "")
     return pks, display
