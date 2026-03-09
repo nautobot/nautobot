@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
@@ -36,10 +37,19 @@ class TokenForm(BootstrapMixin, forms.ModelForm):
         required=False,
         help_text="If no key is provided, one will be generated automatically.",
     )
+    user = forms.ModelChoiceField(queryset=get_user_model().objects.all(), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Never expose existing token keys in edit forms.
+        if self.instance and self.instance.present_in_database and "key" in self.fields:
+            self.fields.pop("key")
 
     class Meta:
         model = Token
         fields = [
+            "user",
             "key",
             "write_enabled",
             "expires",
@@ -55,8 +65,10 @@ class TokenFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     description = forms.CharField(required=False)
     write_enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    created = NullableDateField(required=False, widget=DateTimePicker())
-    expires = NullableDateField(required=False, widget=DateTimePicker())
+    created__gte = NullableDateField(label="Created (after)", required=False, widget=DateTimePicker())
+    created__lte = NullableDateField(label="Created (before)", required=False, widget=DateTimePicker())
+    expires__gte = NullableDateField(label="Expires (after)", required=False, widget=DateTimePicker())
+    expires__lte = NullableDateField(label="Expires (before)", required=False, widget=DateTimePicker())
 
 
 class TokenBulkEditForm(BootstrapMixin, BulkEditForm):

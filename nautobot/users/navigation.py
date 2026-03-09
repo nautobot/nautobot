@@ -1,5 +1,4 @@
 from nautobot.core.apps import (
-    NavMenuAddButton,
     NavMenuGroup,
     NavMenuItem,
     NavMenuTab,
@@ -23,14 +22,6 @@ menu_items = (
                         permissions=[
                             "users.view_token",
                         ],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="users:token_add",
-                                permissions=[
-                                    "users.add_token",
-                                ],
-                            ),
-                        ),
                     ),
                 ),
             ),

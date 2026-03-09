@@ -9,9 +9,10 @@ from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
-from nautobot.core.testing import TestCase, utils
+from nautobot.core.testing import TestCase, utils, ViewTestCases
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
+from nautobot.users.models import Token
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
@@ -188,3 +189,165 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = Token
+
+    form_data = {
+        "description": "created-via-ui-test",
+        "write_enabled": True,
+    }
+
+    update_data = {
+        "description": "updated-via-ui-test",
+        "write_enabled": False,
+    }
+
+    bulk_edit_data = {
+        "description": "bulk-updated-token",
+    }
+
+    def _get_base_url(self):
+        return "user:token_{}"
+
+    def setUp(self):
+        super().setUp()
+        self.other_user = User.objects.create_user(username="other-user")
+
+        Token.objects.create(user=self.user, description="seed-token-1")
+        Token.objects.create(user=self.user, description="seed-token-2")
+        Token.objects.create(user=self.user, description="seed-token-3")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_get_object_anonymous(self):
+        self.client.logout()
+        response = self.client.get(self._get_queryset().first().get_absolute_url())
+        self.assertHttpStatus(response, 404)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["user:token_list"])
+    def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
+        self.client.logout()
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 302)
+        self.assertIn("/login/", response.url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_custom_actions(self):
+        self.skipTest("Token model does not support notes custom action.")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_filter_form_fields_are_working(self):
+        self.add_permissions("users.view_token")
+        urls = [
+            reverse("user:token_list") + "?q=test",
+            reverse("user:token_list") + "?description=test",
+            reverse("user:token_list") + "?write_enabled=True",
+            reverse("user:token_list") + "?created__gte=2026-01-01T00:00:00",
+            reverse("user:token_list") + "?created__lte=2026-12-31T23:59:59",
+            reverse("user:token_list") + "?expires__gte=2026-01-01T00:00:00",
+            reverse("user:token_list") + "?expires__lte=2026-12-31T23:59:59",
+        ]
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertHttpStatus(self.client.get(url), 200)
+
+    def test_token_add_form_shows_key_field(self):
+        self.add_permissions("users.add_token", "users.view_token")
+        response = self.client.get(reverse("user:token_add"))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "If no key is provided")
+
+    def test_token_edit_form_hides_key_field(self):
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.user, description="edit-me")
+        response = self.client.get(reverse("user:token_edit", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("If no key is provided", response.content.decode(response.charset))
+
+    def test_non_staff_list_only_shows_own_tokens(self):
+        self.add_permissions("users.view_token")
+        own_token = Token.objects.create(user=self.user, description="own-token-visible")
+        Token.objects.create(user=self.other_user, description="other-token-hidden")
+
+        response = self.client.get(reverse("user:token_list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, own_token.description)
+        self.assertNotIn("other-token-hidden", response.content.decode(response.charset))
+
+    def test_staff_list_shows_all_tokens(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.view_token")
+        Token.objects.create(user=self.user, description="staff-own-token")
+        Token.objects.create(user=self.other_user, description="staff-can-see-other")
+
+        response = self.client.get(reverse("user:token_list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "staff-own-token")
+        self.assertBodyContains(response, "staff-can-see-other")
+
+    def test_non_staff_create_cannot_assign_other_user(self):
+        self.add_permissions("users.add_token", "users.view_token")
+        response = self.client.post(
+            reverse("user:token_add"),
+            data={
+                "user": str(self.other_user.pk),
+                "description": "non-staff-create",
+                "write_enabled": "on",
+            },
+        )
+        self.assertHttpStatus(response, 302)
+
+        token = Token.objects.get(description="non-staff-create")
+        self.assertEqual(token.user, self.user)
+        self.assertEqual(len(token.key), 40)
+
+    def test_staff_create_can_assign_other_user(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.add_token", "users.view_token")
+        response = self.client.post(
+            reverse("user:token_add"),
+            data={
+                "user": str(self.other_user.pk),
+                "description": "staff-create",
+                "write_enabled": "on",
+            },
+        )
+        self.assertHttpStatus(response, 302)
+
+        token = Token.objects.get(description="staff-create")
+        self.assertEqual(token.user, self.other_user)
+
+    def test_non_staff_cannot_edit_other_users_token(self):
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="not-editable")
+        response = self.client.get(reverse("user:token_edit", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 404)
+
+    def test_staff_can_edit_other_users_token(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="before-edit")
+
+        response = self.client.post(
+            reverse("user:token_edit", kwargs={"pk": token.pk}),
+            data={
+                "user": str(self.other_user.pk),
+                "description": "after-edit",
+                "write_enabled": "on",
+            },
+        )
+        self.assertHttpStatus(response, 302)
+
+        token.refresh_from_db()
+        self.assertEqual(token.user, self.other_user)
+        self.assertEqual(token.description, "after-edit")

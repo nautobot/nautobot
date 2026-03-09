@@ -8,8 +8,8 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
@@ -19,7 +19,6 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import ConfirmationForm
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
@@ -339,150 +338,36 @@ class TokenUIViewSet(NautobotUIViewSet):
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields="__all__",
+                fields=("created", "user", "expires", "write_enabled", "description"),
             ),
         ],
     )
 
     def form_save(self, form, **kwargs):
-        """
-        Save token form data while enforcing ownership.
-
-        ``Token.user`` is required, but the form doesn't expose a ``user`` field.
-        Ensure a newly created token is always owned by the current user.
-        """
+        """Save token form data while enforcing ownership rules."""
         obj = form.save(commit=False)
-        if not obj.user_id:
+
+        # Staff can assign ownership; non-staff are always restricted to themselves.
+        if self.request.user.is_staff:
+            if form.cleaned_data.get("user"):
+                obj.user = form.cleaned_data["user"]
+            elif not obj.user_id:
+                obj.user = self.request.user
+        else:
             obj.user = self.request.user
+
         obj.save()
         form.save_m2m()
         return obj
 
     def get_queryset(self):
-        """
-        Limit visibility to tokens owned by the authenticated user.
-        """
+        """Allow staff users to manage all tokens; others are limited to their own."""
         queryset = super().get_queryset()
         if not self.request.user.is_authenticated:
             return queryset.none()
+        if self.request.user.is_staff:
+            return queryset
         return queryset.filter(user=self.request.user)
-
-
-class TokenListView(GenericView):
-    view_titles = Titles(titles={"*": "API Tokens"})
-
-    def get(self, request):
-        tokens = Token.objects.filter(user=request.user)
-
-        return render(
-            request,
-            "users/api_tokens.html",
-            {
-                "tokens": tokens,
-                "active_tab": "api_tokens",
-                "is_django_auth_user": is_django_auth_user(request),
-                "view_titles": self.get_view_titles(),
-                "breadcrumbs": self.get_breadcrumbs(),
-            },
-        )
-
-
-class TokenEditView(GenericView):
-    def get(self, request, pk=None):
-        if pk is not None:
-            if not request.user.has_perm("users.change_token"):
-                return HttpResponseForbidden()
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-        else:
-            if not request.user.has_perm("users.add_token"):
-                return HttpResponseForbidden()
-            token = Token(user=request.user)
-
-        form = TokenForm(instance=token)
-
-        return render(
-            request,
-            "generic/object_create.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-                "editing": token.present_in_database,
-            },
-        )
-
-    def post(self, request, pk=None):
-        if pk is not None:
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-            form = TokenForm(request.POST, instance=token)
-        else:
-            token = Token()
-            form = TokenForm(request.POST)
-
-        if form.is_valid():
-            token = form.save(commit=False)
-            token.user = request.user
-            token.save()
-
-            msg = f"Modified token {token}" if pk else f"Created token {token}"
-            messages.success(request, msg)
-
-            if "_addanother" in request.POST:
-                return redirect(request.path)
-            else:
-                return redirect("user:token_list")
-
-        return render(
-            request,
-            "generic/object_create.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-                "editing": token.present_in_database,
-            },
-        )
-
-
-class TokenDeleteView(GenericView):
-    def get(self, request, pk):
-        token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-        initial_data = {
-            "return_url": reverse("user:token_list"),
-        }
-        form = ConfirmationForm(initial=initial_data)
-
-        return render(
-            request,
-            "generic/object_destroy.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-            },
-        )
-
-    def post(self, request, pk):
-        token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            token.delete()
-            messages.success(request, "Token deleted")
-            return redirect("user:token_list")
-
-        return render(
-            request,
-            "generic/object_destroy.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-            },
-        )
 
 
 #

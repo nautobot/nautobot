@@ -240,7 +240,6 @@ class Token(BaseModel, ChangeLoggedModel):
 
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tokens")
     created = models.DateTimeField(auto_now_add=True)
-    last_updated = models.DateTimeField(auto_now=True)
     expires = models.DateTimeField(blank=True, null=True)
     key = models.CharField(max_length=40, unique=True, validators=[MinLengthValidator(40)])
     write_enabled = models.BooleanField(default=True, help_text="Permit create/update/delete operations using this key")

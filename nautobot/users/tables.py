@@ -7,11 +7,11 @@ from .models import Token
 
 class TokenTable(BaseTable):
     pk = ToggleColumn()
-    key = tables.Column(linkify=True)
-    description = tables.Column()
-    write_enabled = BooleanColumn(verbose_name="Write Enabled")
-    created = tables.DateTimeColumn()
+    created = tables.DateTimeColumn(linkify=True)
+    user = tables.Column()
     expires = tables.DateTimeColumn()
+    write_enabled = BooleanColumn(verbose_name="Write Enabled")
+    description = tables.Column()
     actions = ButtonsColumn(Token)
 
     class Meta(BaseTable.Meta):
@@ -20,19 +20,19 @@ class TokenTable(BaseTable):
         model = Token
         fields = (
             "pk",
-            "key",
-            "description",
-            "write_enabled",
             "created",
+            "user",
             "expires",
+            "write_enabled",
+            "description",
             "actions",
         )
         default_columns = (
             "pk",
-            "key",
-            "description",
-            "write_enabled",
             "created",
+            "user",
             "expires",
+            "write_enabled",
+            "description",
             "actions",
         )
