@@ -2193,8 +2193,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
             url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
+            job_result_key = request.POST.get("job_result_key", None)
             if title := request.POST.get("job_result_title", None):
                 url = f"{url}?title={str(title).strip()}"
+            if job_result_key:
+                url = f"{url}&job_result_key={job_result_key}"
             response = redirect(url)
             patch_vary_headers(response, ["HX-Request"])
             return response
@@ -2283,6 +2286,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         if htmx_request and htmx_modal:
             title = request.GET.get("title", job_model.name)
             run_button_label = request.GET.get("run_button_label", "Run Job Now")
+            job_result_key = request.GET.get("job_result_key", None)
             advanced_field_names = request.GET.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
 
@@ -2299,6 +2303,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     "excluded_json": json.dumps([field.name for field in advanced_fields]),
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
+                    "job_result_key": job_result_key,
                 },
             )
         else:
@@ -3123,8 +3128,17 @@ class JobResultUIViewSet(
         title = f"Job Result: {instance.job_model.name}"
         if request.GET.get("title", None):
             title = request.GET.get("title")
+        job_result_key = request.GET.get("job_result_key", None)
+        detail_value = f"Job finished with status: {instance.get_status_display()}"
+        if instance.result and job_result_key:
+            detail_value = instance.result.get(
+                job_result_key, f"Job finished with status: {instance.get_status_display()}"
+            )
+        elif instance.result and type(instance.result) in [str, int, float]:
+            # Even though the JobResult.result field is typically expected to be a dict, it can technically be any JSON-serializable value.
+            detail_value = instance.result
         context = self.get_extra_context(request, instance)
-        context.update({"title": title})
+        context.update({"title": title, "detail_value": detail_value, "job_result_key": job_result_key})
 
         return Response(
             {

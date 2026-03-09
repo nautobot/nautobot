@@ -2677,27 +2677,31 @@ class JobModalButton(ButtonOpenModal):
         self,
         class_path=None,
         advanced_fields=None,
-        field_mapping=None,
+        initial_field_mapping=None,
+        job_result_key=None,
         modal_title="",
         run_button_label="Run Job Now",
         **kwargs,
     ):
         self.class_path = class_path
         self.advanced_fields = advanced_fields or []
-        self.field_mapping = field_mapping or {}
+        self.initial_field_mapping = initial_field_mapping or {}
         self.run_button_label = run_button_label
+        self.job_result_key = job_result_key
         super().__init__(modal_title=modal_title, **kwargs)
 
     def get_extra_context(self, context: Context):
         base_context = super().get_extra_context(context)
         obj = get_obj_from_context(context, self.context_object_key)
         hx_vals = self.hx_vals
-        hx_vals = {field_name: resolve_attr(obj, model_field) for field_name, model_field in self.field_mapping.items()}
+        hx_vals = {
+            field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
+        }
         hx_vals["title"] = self.modal_title
         hx_vals["job_form_modal"] = True
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
-
+        hx_vals["job_result_key"] = self.job_result_key
         return {
             **base_context,
             "hx_get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),

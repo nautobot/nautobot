@@ -8,7 +8,7 @@
             hx-trigger="every 2s"
             hx-target="#modal-content-container"
             hx-swap="innerHTML"
-            hx-vals='{"title": "{{ title }}"}'
+            hx-vals='{"title": "{{ title }}", "job_result_key": "{{ job_result_key }}"}'
         {% endif %}>
         <div class="container-fluid gy-3">
             <div class="row align-items-center" style="margin-bottom: 12px;">
@@ -32,9 +32,9 @@
                             <span class="text-muted">Job is running, please wait...</span>
                         </div>
                     {% else %}
-                        <div class="form-control bg-body-tertiary" style="min-height: 44px;">
-                            Job finished with status: {{ result.get_status_display }}
-                        </div>
+                        <pre class="form-control bg-body-tertiary" style="min-height: 44px;"><!--
+                            --><code>{{ detail_value }}</code>
+                        </pre>
                     {% endif %}
                 </div>
             </div>
