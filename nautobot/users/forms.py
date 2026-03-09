@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import (
     AdminPasswordChangeForm as _AdminPasswordChangeForm,
     AuthenticationForm,
@@ -6,10 +7,14 @@ from django.contrib.auth.forms import (
 )
 from timezone_field import TimeZoneFormField
 
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker, NullableDateField
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.forms import BulkEditForm
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.extras.forms import NautobotFilterForm
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from .models import Token
@@ -32,10 +37,19 @@ class TokenForm(BootstrapMixin, forms.ModelForm):
         required=False,
         help_text="If no key is provided, one will be generated automatically.",
     )
+    user = forms.ModelChoiceField(queryset=get_user_model().objects.all(), required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Never expose existing token keys in edit forms.
+        if self.instance and self.instance.present_in_database and "key" in self.fields:
+            self.fields.pop("key")
 
     class Meta:
         model = Token
         fields = [
+            "user",
             "key",
             "write_enabled",
             "expires",
@@ -44,6 +58,30 @@ class TokenForm(BootstrapMixin, forms.ModelForm):
         widgets = {
             "expires": DateTimePicker(),
         }
+
+
+class TokenFilterForm(NautobotFilterForm):
+    model = Token
+    q = forms.CharField(required=False, label="Search")
+    description = forms.CharField(required=False)
+    write_enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    created__gte = NullableDateField(label="Created (after)", required=False, widget=DateTimePicker())
+    created__lte = NullableDateField(label="Created (before)", required=False, widget=DateTimePicker())
+    expires__gte = NullableDateField(label="Expires (after)", required=False, widget=DateTimePicker())
+    expires__lte = NullableDateField(label="Expires (before)", required=False, widget=DateTimePicker())
+
+
+class TokenBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Token.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    expires = forms.DateTimeField(required=False, widget=DateTimePicker())
+    write_enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
+
+    class Meta:
+        nullable_fields = [
+            "description",
+            "expires",
+        ]
 
 
 class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):

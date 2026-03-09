@@ -8,8 +8,8 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.http import HttpResponseForbidden, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponseRedirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
@@ -19,12 +19,16 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import ConfirmationForm
+from nautobot.core.ui import object_detail
+from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
+from . import filters, tables
+from .api import serializers
 from .forms import (
     AdvancedProfileSettingsForm,
     LoginForm,
@@ -32,6 +36,8 @@ from .forms import (
     NavbarFavoritesRemoveForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
+    TokenBulkEditForm,
+    TokenFilterForm,
     TokenForm,
 )
 from .models import Token
@@ -318,121 +324,50 @@ class ChangePasswordView(GenericView):
 #
 
 
-class TokenListView(GenericView):
-    view_titles = Titles(titles={"*": "API Tokens"})
+class TokenUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = TokenBulkEditForm
+    filterset_class = filters.TokenFilterSet
+    filterset_form_class = TokenFilterForm
+    form_class = TokenForm
+    serializer_class = serializers.TokenSerializer
+    table_class = tables.TokenTable
+    queryset = Token.objects.all()
 
-    def get(self, request):
-        tokens = Token.objects.filter(user=request.user)
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=("created", "user", "expires", "write_enabled", "description"),
+            ),
+        ],
+    )
 
-        return render(
-            request,
-            "users/api_tokens.html",
-            {
-                "tokens": tokens,
-                "active_tab": "api_tokens",
-                "is_django_auth_user": is_django_auth_user(request),
-                "view_titles": self.get_view_titles(),
-                "breadcrumbs": self.get_breadcrumbs(),
-            },
-        )
+    def form_save(self, form, **kwargs):
+        """Save token form data while enforcing ownership rules."""
+        obj = form.save(commit=False)
 
-
-class TokenEditView(GenericView):
-    def get(self, request, pk=None):
-        if pk is not None:
-            if not request.user.has_perm("users.change_token"):
-                return HttpResponseForbidden()
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
+        # Staff can assign ownership; non-staff are always restricted to themselves.
+        if self.request.user.is_staff:
+            if form.cleaned_data.get("user"):
+                obj.user = form.cleaned_data["user"]
+            elif not obj.user_id:
+                obj.user = self.request.user
         else:
-            if not request.user.has_perm("users.add_token"):
-                return HttpResponseForbidden()
-            token = Token(user=request.user)
+            obj.user = self.request.user
 
-        form = TokenForm(instance=token)
+        obj.save()
+        form.save_m2m()
+        return obj
 
-        return render(
-            request,
-            "generic/object_create.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-                "editing": token.present_in_database,
-            },
-        )
-
-    def post(self, request, pk=None):
-        if pk is not None:
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-            form = TokenForm(request.POST, instance=token)
-        else:
-            token = Token()
-            form = TokenForm(request.POST)
-
-        if form.is_valid():
-            token = form.save(commit=False)
-            token.user = request.user
-            token.save()
-
-            msg = f"Modified token {token}" if pk else f"Created token {token}"
-            messages.success(request, msg)
-
-            if "_addanother" in request.POST:
-                return redirect(request.path)
-            else:
-                return redirect("user:token_list")
-
-        return render(
-            request,
-            "generic/object_create.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-                "editing": token.present_in_database,
-            },
-        )
-
-
-class TokenDeleteView(GenericView):
-    def get(self, request, pk):
-        token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-        initial_data = {
-            "return_url": reverse("user:token_list"),
-        }
-        form = ConfirmationForm(initial=initial_data)
-
-        return render(
-            request,
-            "generic/object_destroy.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-            },
-        )
-
-    def post(self, request, pk):
-        token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
-        form = ConfirmationForm(request.POST)
-        if form.is_valid():
-            token.delete()
-            messages.success(request, "Token deleted")
-            return redirect("user:token_list")
-
-        return render(
-            request,
-            "generic/object_destroy.html",
-            {
-                "obj": token,
-                "obj_type": token._meta.verbose_name,
-                "form": form,
-                "return_url": reverse("user:token_list"),
-            },
-        )
+    def get_queryset(self):
+        """Allow staff users to manage all tokens; others are limited to their own."""
+        queryset = super().get_queryset()
+        if not self.request.user.is_authenticated:
+            return queryset.none()
+        if self.request.user.is_staff:
+            return queryset
+        return queryset.filter(user=self.request.user)
 
 
 #

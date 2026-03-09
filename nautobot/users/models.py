@@ -232,7 +232,7 @@ class AdminGroup(Group):
 #
 
 
-class Token(BaseModel):
+class Token(BaseModel, ChangeLoggedModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
@@ -248,6 +248,7 @@ class Token(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    is_saved_view_model = True
 
     class Meta:
         ordering = ["created"]
