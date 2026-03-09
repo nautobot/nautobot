@@ -276,10 +276,11 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         parent_menu = self.browser.find_by_xpath(parent_menu_xpath, wait_time=5)
         if not parent_menu["aria-expanded"] == "true":
             parent_menu.click()
-        child_menu_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]"
-        child_menu = self.browser.find_by_xpath(child_menu_xpath, wait_time=5)
+        # Click the anchor (not the li) so navigation is triggered reliably in all browsers
+        child_menu_link_xpath = f"{parent_menu_xpath}/following-sibling::ul//li[.//a[normalize-space()='{child_menu_name}']]//a[normalize-space()='{child_menu_name}']"
+        child_menu_link = self.browser.find_by_xpath(child_menu_link_xpath, wait_time=5)
         old_url = self.browser.url
-        child_menu.click()
+        child_menu_link.click()
 
         WebDriverWait(self.browser, 5).until(lambda driver: driver.url != old_url)
         # Wait for body element to appear

@@ -3,6 +3,7 @@
 import contextlib
 from datetime import datetime, timedelta
 import logging
+import os
 import signal
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -597,6 +598,18 @@ class JobQueue(PrimaryModel):
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
+    def clean(self):
+        super().clean()
+        if self.name:
+            if ".." in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError({"name": "Job queue name cannot contain '..', please use a different name."})
+            if os.sep in self.name or "/" in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError(
+                    {"name": "Job queue name cannot contain path separators (e.g. '/'), please use a different name."}
+                )
+
 
 @extras_features(
     "custom_links",
@@ -855,14 +868,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
-        # Kubernetes Job Queue logic
-        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
-        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
-        # And from the kubernetes pod, we specify "--local"/synchronous=True
-        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
-        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
-            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
-
         job_celery_kwargs = {
             "nautobot_job_job_model_id": job_model.id,
             "nautobot_job_profile": profile,
@@ -882,10 +887,21 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: this lets celery_kwargs override keys like `queue` and `nautobot_job_user_id`; is that desirable?
             job_celery_kwargs.update(celery_kwargs)
 
+        job_result.celery_kwargs = job_celery_kwargs
+        job_result.save()
+        job_result.refresh_from_db()
+
+        # Kubernetes Job Queue logic
+        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
+        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
+        # And from the kubernetes pod, we specify "--local"/synchronous=True
+        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
+
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
-            job_result.celery_kwargs = job_celery_kwargs
             job_result.date_started = timezone.now()
             job_result.save()
 
