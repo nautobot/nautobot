@@ -1,1 +1,0 @@
-Fixed the ability to provide your own CACHES client to allow health_check to pass.
