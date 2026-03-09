@@ -310,7 +310,7 @@ class UserUIViewSet(
         if request.method == "POST" and form.is_valid():
             form.save()
             messages.success(request, f"Password updated for {user_obj}.")
-            return redirect("users:user_edit", pk=user_obj.pk)
+            return redirect("users:user_password", pk=user_obj.pk)
 
         return Response(
             {

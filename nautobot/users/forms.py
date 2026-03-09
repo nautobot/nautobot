@@ -93,6 +93,11 @@ class NavbarFavoritesRemoveForm(forms.Form):
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "usable_password" in self.fields and self.user is not None and not self.is_bound:
+            self.initial["usable_password"] = self.user.has_usable_password()
+
     def save(self, commit=True):
         # Override `_AdminPasswordChangeForm.save()` to publish admin change user password event
         instance = super().save(commit)
