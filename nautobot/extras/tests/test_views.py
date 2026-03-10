@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -68,6 +69,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -3537,6 +3539,8 @@ class JobResultTestCase(
             grouping="run",
             message="This is a test",
         )
+        file = SimpleUploadedFile(name="output.txt", content="Content\n".encode("utf-8"))
+        FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
