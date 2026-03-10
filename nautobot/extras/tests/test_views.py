@@ -2580,15 +2580,15 @@ class FileProxyUIViewSetTestCase(
 
         file1 = FileProxy.objects.create(
             name="test-file-1.txt",
-            file=SimpleUploadedFile("test-file-1.txt", b"file one", content_type="text/plain"),
+            file=SimpleUploadedFile("test-file-1.txt", b"file one", content_type="multipart/form-data"),
         )
         file2 = FileProxy.objects.create(
             name="test-file-2.txt",
-            file=SimpleUploadedFile("test-file-2.txt", b"file two", content_type="text/plain"),
+            file=SimpleUploadedFile("test-file-2.txt", b"file two", content_type="multipart/form-data"),
         )
         file3 = FileProxy.objects.create(
             name="test-file-3.txt",
-            file=SimpleUploadedFile("test-file-3.txt", b"file three", content_type="text/plain"),
+            file=SimpleUploadedFile("test-file-3.txt", b"file three", content_type="multipart/form-data"),
         )
 
         cls.instance = file1  # for get/detail tests
@@ -2596,23 +2596,18 @@ class FileProxyUIViewSetTestCase(
 
         cls.form_data = {
             "name": "new-file.txt",
-            "file": SimpleUploadedFile("new-file.txt", b"new file", content_type="text/plain"),
+            "file": SimpleUploadedFile("new-file.txt", b"new file", content_type="multipart/form-data"),
         }
 
         # Required by EditObjectViewTestCase
         cls.update_data = {
             "name": "updated-file.txt",
-            "file": SimpleUploadedFile("updated-file.txt", b"updated content", content_type="text/plain"),
+            "file": SimpleUploadedFile("updated-file.txt", b"updated content", content_type="multipart/form-data"),
         }
 
     @staticmethod
     def _uploaded_file(name, content):
-        return SimpleUploadedFile(name, content, content_type="text/plain")
-
-    # FileField values won't compare directly against SimpleUploadedFile objects
-    def assertInstanceEqual(self, instance, data, exclude=None, api=False):
-        exclude = (exclude or []) + ["file"]
-        return super().assertInstanceEqual(instance, data, exclude=exclude, api=api)
+        return SimpleUploadedFile(name, content, content_type="multipart/form-data")
 
     def test_create_object_with_permission(self):
         # Grant full permission - no constraints
@@ -2709,6 +2704,29 @@ class FileProxyUIViewSetTestCase(
             format="multipart",
         )
         self.assertHttpStatus(response, 404)
+
+    def test_file_upload(self):
+        data = {
+            "name": "upload-test.txt",
+            "file": SimpleUploadedFile(
+                "upload-test.txt",
+                b"Nautobot is an open-source Network Source of Truth and Network Automation Platform.",
+                content_type="text/plain",
+            ),
+        }
+        self.add_permissions("extras.add_fileproxy")
+        response = self.client.post(self._get_url("add"), data)
+        self.assertEqual(response.status_code, 302)
+        obj = FileProxy.objects.get(name="upload-test.txt")
+        # verify file exists
+        self.assertTrue(obj.file)
+        # verify filename
+        self.assertIn("upload-test.txt", obj.file.name)
+        # verify content
+        with obj.file.open("rb") as f:
+            self.assertEqual(
+                f.read(), b"Nautobot is an open-source Network Source of Truth and Network Automation Platform."
+            )
 
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):

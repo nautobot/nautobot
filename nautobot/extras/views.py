@@ -3224,6 +3224,7 @@ class FileProxyUIViewSet(
     ObjectListViewMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
+    ObjectChangeLogViewMixin,
 ):
     queryset = FileProxy.objects.all()
     filterset_class = filters.FileProxyFilterSet

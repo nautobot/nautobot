@@ -1611,28 +1611,15 @@ class ObjectChangeTable(BaseTable):
 class FileProxyTable(BaseTable):
     """Table for listing FileProxy objects."""
 
-    name = tables.Column(linkify=True, verbose_name="Name")
-    file = tables.Column(linkify=True, verbose_name="File")
-    uploaded_at = tables.DateTimeColumn(
-        verbose_name="Uploaded",
-        format="F j, Y, P",
-    )
+    name = tables.Column(linkify=True)
+    file = tables.Column(linkify=True)
+    created = tables.DateTimeColumn()
     actions = ButtonsColumn(FileProxy, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = FileProxy
-        fields = (
-            "name",
-            "file",
-            "uploaded_at",
-            "actions",
-        )
-        default_columns = (
-            "name",
-            "file",
-            "uploaded_at",
-            "actions",
-        )
+        fields = ("name", "file", "created", "actions")
+        default_columns = ("name", "file", "created", "actions")
 
 
 #

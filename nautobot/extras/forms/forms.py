@@ -15,6 +15,7 @@ from django.urls.base import reverse, reverse_lazy
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -1222,13 +1223,13 @@ class FileProxyFilterForm(BootstrapMixin, forms.Form):
     model = FileProxy
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
-    uploaded_at = NullableDateField(required=False, label="Uploaded at", widget=DateTimePicker())
+    created = NullableDateField(required=False, label="Uploaded at", widget=DatePicker())
     job = DynamicModelMultipleChoiceField(
         queryset=Job.objects.all(),
         required=False,
         label="Job",
     )
-    job_result_id = DynamicModelMultipleChoiceField(
+    job_result = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=JobResult.objects.all(),
         required=False,
         label="Job Result",
@@ -1236,9 +1237,9 @@ class FileProxyFilterForm(BootstrapMixin, forms.Form):
     field_order = (
         "q",
         "name",
-        "uploaded_at",
+        "created",
         "job",
-        "job_result_id",
+        "job_result",
     )
 
 

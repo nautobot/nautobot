@@ -18,7 +18,7 @@ menu_items = (
                     NavMenuItem(
                         link="extras:fileproxy_list",
                         name="File Proxies",
-                        weight=420,
+                        weight=100,
                         permissions=["extras.view_fileproxy"],
                     ),
                 ),
