@@ -12,6 +12,37 @@
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "expr": "{service_name=\"nautobot\"} |= `DEBUG`",
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "DEBUG Logs",
+        "queryType": "range",
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "loki",
+          "uid": "loki"
+        },
+        "enable": true,
+        "expr": "{service_name=\"nautobot\"} |= `POST /graphql/`",
+        "hide": false,
+        "iconColor": "red",
+        "name": "GraphQL Query",
+        "queryType": "range",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        }
       }
     ]
   },
