@@ -2776,7 +2776,7 @@ def render_jobresult_files(files_manager):
             continue
 
         # Pick URL depending on storage backend
-        if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage":
+        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
             href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
         else:
             href = file_proxy.file.url
