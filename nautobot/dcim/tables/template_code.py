@@ -395,3 +395,12 @@ MODULEBAY_BUTTONS = """
     {% endif %}
 {% endif %}
 """
+
+PARENT_DEVICE = """
+{% load helpers %}
+{% if record.parent_bay %}
+    {{ record.parent_bay.device|hyperlinked_object }}
+{% else %}
+    {{ None|placeholder }}
+{% endif %}
+"""

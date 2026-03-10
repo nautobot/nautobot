@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 import logging
 from typing import Callable
+from urllib.parse import urlencode
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -847,6 +848,7 @@ class ObjectsTablePanel(Panel):
         footer_buttons=None,
         form_id=None,
         include_paginator=False,
+        list_url_extra_params=None,
         **kwargs,
     ):
         """Instantiate an ObjectsTable panel.
@@ -902,6 +904,9 @@ class ObjectsTablePanel(Panel):
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
             include_paginator (bool, optional): If True, renders a paginator in the panel footer.
+            list_url_extra_params (dict, optional): Additional query parameters to include in the `list_route`,
+                allowing customization beyond the default filter by `related_field_name`.
+
         """
         if context_table_key and any(
             [
@@ -943,6 +948,10 @@ class ObjectsTablePanel(Panel):
         self.add_button_route = add_button_route
         self.add_permissions = add_permissions or []
         self.hide_hierarchy_ui = hide_hierarchy_ui
+        if isinstance(self.table_filter, list) and not related_field_name:
+            raise ValueError("You must provide a `related_field_name` when specifying `table_filter` as a list.")
+        if related_field_name and not isinstance(related_field_name, str):
+            raise ValueError("`related_field_name` must be a string.")
         self.related_field_name = related_field_name
         self.related_list_url_name = related_list_url_name
         self.enable_related_link = enable_related_link
@@ -951,6 +960,7 @@ class ObjectsTablePanel(Panel):
         self.footer_buttons = footer_buttons
         self.form_id = form_id
         self.include_paginator = include_paginator
+        self.list_url_extra_params = list_url_extra_params or {}
 
         super().__init__(
             body_wrapper_template_path=body_wrapper_template_path,
@@ -969,7 +979,12 @@ class ObjectsTablePanel(Panel):
         obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
-        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
+        if self.related_field_name:
+            related_field_name = self.related_field_name
+        elif isinstance(self.table_filter, str):
+            related_field_name = self.table_filter
+        else:
+            related_field_name = obj._meta.model_name
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
             try:
@@ -1127,7 +1142,10 @@ class ObjectsTablePanel(Panel):
                 list_route = None
 
             if list_route:
-                body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+                query_params = {related_field_name: obj.pk}
+                if isinstance(self.list_url_extra_params, dict):
+                    query_params.update(self.list_url_extra_params)
+                body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
 
         return {
             "body_content_table": body_content_table,
