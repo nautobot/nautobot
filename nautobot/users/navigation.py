@@ -18,7 +18,7 @@ menu_items = (
                     NavMenuItem(
                         link="users:objectpermission_list",
                         name="Permissions",
-                        weight=430,
+                        weight=100,
                         permissions=["users.view_objectpermission"],
                     ),
                 ),

@@ -147,9 +147,11 @@ class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
     class Meta:
         fields = [
             "description",
+            "enabled",
             "Models",
             "users",
             "groups",
+            "actions",
             "constraints",
         ]
 
