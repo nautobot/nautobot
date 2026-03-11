@@ -214,7 +214,7 @@ class ObjectPermissionUIViewSetTestCase(
         content_type = ContentType.objects.get_for_model(ObjectPermission)
 
         cls.object_permission = ObjectPermission.objects.create(
-            name="Test Permission", actions=["view", "add", "change", "delete"]
+            name="sample-test Permission", actions=["view", "add", "change", "delete"]
         )
         cls.object_permission.object_types.set([content_type])
 
