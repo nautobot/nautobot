@@ -339,12 +339,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         url_params={"vpn_tunnel_endpoints": "pk"},
         reverse_lookup="vpn_tunnel_endpoints",
     )
-    protected_prefixes_dg_count = LinkedCountColumn(
-        viewname="extras:dynamicgroup_list",
-        verbose_name="Protected Prefixes Dynamic Group",
-        url_params={"vpn_tunnel_endpoints": "pk"},
-        reverse_lookup="vpn_tunnel_endpoints",
-    )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
     tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
@@ -362,7 +356,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
             "tenant",

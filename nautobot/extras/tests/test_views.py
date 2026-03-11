@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -68,6 +69,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -3537,6 +3539,8 @@ class JobResultTestCase(
             grouping="run",
             message="This is a test",
         )
+        file = SimpleUploadedFile(name="output.txt", content="Content\n".encode("utf-8"))
+        FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -4097,6 +4101,31 @@ class JobTestCase(
                 errors,
                 ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
+
+    @mock.patch("nautobot.extras.views.get_kubernetes_job_manifest", return_value=None)
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_kubernetes_queue_no_manifest(self, _, __):
+        """POST run with Kubernetes queue selected but no manifest shows error and does not run."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        k8s_queue = JobQueue.objects.create(
+            name="k8s-no-manifest",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
+        self.test_pass.job_queues.add(k8s_queue)
+        initial_result_count = JobResult.objects.count()
+        data = {
+            "_schedule_type": "immediately",
+            "_job_queue": k8s_queue.pk,
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            self.assertBodyContains(response, "Unable to retrieve a Kubernetes job manifest for this job queue.")
+
+        self.assertEqual(JobResult.objects.count(), initial_result_count)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_approval_workflow_defined(self, _):

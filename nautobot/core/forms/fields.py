@@ -424,6 +424,9 @@ class NullableDateField(django_forms.DateField):
             return None
         elif value == "null":
             return value
+        # TODO: Once NullableDateField becomes MultiNullableDateField or MultiDateField is fixed, this can be removed.
+        elif isinstance(value, list):
+            return value[0]
         return super().to_python(value)
 
 
