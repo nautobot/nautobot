@@ -2164,6 +2164,41 @@ class DynamicGroupTestCase(
         self.assertIn(str(member1.pk), response_body)
         self.assertNotIn(str(member2.pk), response_body)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_static_group(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        static_group = DynamicGroup.objects.create(
+            name="Static Group",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+
+        response = self.client.get(static_group.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+
+        body = extract_page_body(response.content.decode(response.charset))
+
+        def assert_panel(title, panel_id):
+            panel = (
+                f'<div class="card-header bg-default-subtle border-default">'
+                f"  <strong>{title}</strong>"
+                f"  <a "
+                f'     class="btn stretched-link nb-collapse-toggle" '
+                f'     data-bs-toggle="collapse" '
+                f'     panel-id="{panel_id}" '
+                f'     href="#{panel_id}" '
+                f'     role="button" '
+                f'     aria-expanded="true" '
+                f'     aria-controls="{panel_id}">'
+                f'    <span class="mdi mdi-chevron-down"></span>'
+                f"  </a>"
+                f"</div>"
+            )
+            self.assertInHTML(panel, body)
+
+        assert_panel("FILTER", "filter")
+        assert_panel("FILTER QUERY LOGIC", "filter-query-logic")
+
     def test_get_object_dynamic_groups_anonymous(self):
         url = reverse("dcim:device_dynamicgroups", kwargs={"pk": Device.objects.first().pk})
         self.client.logout()
