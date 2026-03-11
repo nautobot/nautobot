@@ -6,6 +6,7 @@ import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
+from nautobot.core.graphql.relationship_cache import get_relationship_peer_ids, get_cached_peer_objects
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
 from nautobot.core.utils.lookup import get_filterset_for_model
@@ -144,70 +145,32 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
     def resolve_relationship(self, info, **kwargs):
         """Return a queryset or an object depending on the type of the relationship."""
         peer_side = RelationshipSideChoices.OPPOSITE[side]
-        query_params = {"relationship": relationship}
-        # https://github.com/nautobot/nautobot/issues/1228
-        # If querying for **only** the ID of the related object, for example:
-        # { device(id:"...") { ... rel_my_relationship { id } } }
-        # we will get this exception:
-        # TypeError: Cannot call select_related() after .values() or .values_list()
-        # This appears to be a bug in graphene_django_optimizer but I haven't found a known issue on GitHub.
-        # For now we just work around it by catching the exception and retrying without optimization, below...
-        if not relationship.symmetric:
-            # Get the objects on the other side of this relationship
-            query_params[f"{side}_id"] = self.pk
 
-            try:
-                queryset_ids = gql_optimizer.query(
-                    RelationshipAssociation.objects.filter(**query_params).values_list(f"{peer_side}_id", flat=True),
-                    info,
-                )
-            except TypeError:
-                logger.debug("Caught TypeError in graphene_django_optimizer, falling back to un-optimized query")
-                queryset_ids = RelationshipAssociation.objects.filter(**query_params).values_list(
-                    f"{peer_side}_id", flat=True
-                )
-        else:
-            # Get objects that are peers for this relationship, regardless of side
-            try:
-                queryset_ids = list(
-                    gql_optimizer.query(
-                        RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
-                            "destination_id", flat=True
-                        ),
-                        info,
-                    )
-                )
-                queryset_ids += list(
-                    gql_optimizer.query(
-                        RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
-                            "source_id", flat=True
-                        ),
-                        info,
-                    )
-                )
-            except TypeError:
-                logger.debug("Caught TypeError in graphene_django_optimizer, falling back to un-optimized query")
-                queryset_ids = list(
-                    RelationshipAssociation.objects.filter(source_id=self.pk, **query_params).values_list(
-                        "destination_id", flat=True
-                    ),
-                )
-                queryset_ids += list(
-                    RelationshipAssociation.objects.filter(destination_id=self.pk, **query_params).values_list(
-                        "source_id", flat=True
-                    ),
-                )
+        # Use simple cache to get peer IDs - on first access, loads ALL associations
+        # for this relationship, then subsequent objects get O(1) cached lookups
+        queryset_ids = get_relationship_peer_ids(
+            obj_id=self.pk,
+            relationship=relationship,
+            side=side,
+            context=info.context,
+        )
+
+        # Get cached peer objects (fetches ALL peer objects on first access, then caches)
+        peer_objects = get_cached_peer_objects(
+            peer_ids=queryset_ids,
+            peer_model=peer_model,
+            relationship=relationship,
+            side=side,
+            user=info.context.user,
+            context=info.context,
+        )
 
         if relationship.has_many(peer_side):
-            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
-
-        # Also apparently a graphene_django_optimizer bug - in the same query case as described above, here we may see:
-        # AttributeError: object has no attribute "only"
-        try:
-            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
-        except AttributeError:
-            logger.debug("Caught AttributeError in graphene_django_optimizer, falling back to un-optimized query")
-            return peer_model.objects.filter(id__in=queryset_ids).first()
+            # Return list for one-to-many or many-to-many relationships
+            return peer_objects
+        else:
+            # Return single object for one-to-one relationships
+            return peer_objects[0] if peer_objects else None
 
     resolve_relationship.__name__ = resolver_name
     return resolve_relationship
