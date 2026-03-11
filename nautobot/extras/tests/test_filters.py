@@ -1109,7 +1109,7 @@ class FileProxyTestCase(FilterTestCases.FilterTestCase):
         ["job", "job_result__job_model__name"],
         ["job_result_id"],
         ["name"],
-        ["uploaded_at"],
+        ["created"],
     )
 
     @classmethod

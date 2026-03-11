@@ -633,7 +633,7 @@ def _upload_to(instance, filename):
         return f"files/{instance.pk}-{filename}"
 
 
-class FileProxy(BaseModel):
+class FileProxy(BaseModel, ChangeLoggedModel):
     """A database object to reference and index a file, such as a Job input file or a Job output file.
 
     The `file` field can be used like a file handle.
@@ -652,23 +652,23 @@ class FileProxy(BaseModel):
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    created = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
-
     is_data_compliance_model = False
+    is_saved_view_model = True
 
     def __str__(self):
         return self.name
 
     class Meta:
-        get_latest_by = "uploaded_at"
+        get_latest_by = "created"
         ordering = ["name"]
-        # TODO: unique_together = [["name", "uploaded_at"]]
+        # TODO: unique_together = [["name", "created"]]
         verbose_name_plural = "file proxies"
 
     # TODO: This isn't a guaranteed natural key for this model (see lack of a `unique_together` above), but in practice
     # it is "nearly" unique. Once a proper unique_together is added and accounted for, this can be removed as redundant
-    natural_key_field_names = ["name", "uploaded_at"]
+    natural_key_field_names = ["name", "created"]
 
     def save(self, *args, **kwargs):
         if isinstance(_job_storage(), DatabaseFileStorage):

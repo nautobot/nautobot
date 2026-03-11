@@ -95,6 +95,7 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.models.models import FileProxy
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -2198,6 +2199,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 ),
             )
             return redirect(return_url)
+
         return redirect("extras:jobresult", pk=job_result.pk)
 
     def get(self, request, class_path=None, pk=None):
@@ -2240,7 +2242,6 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
-
             if hasattr(job_class, "template_name"):
                 try:
                     get_template(job_class.template_name)
@@ -2938,6 +2939,7 @@ class JobResultUIViewSet(
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
+
             context.update(
                 {
                     "job": job_class,
@@ -3214,6 +3216,30 @@ class ObjectChangeLogView(generic.GenericView):
                 "view_action": "changelog",
             },
         )
+
+
+# File proxy
+class FileProxyUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+):
+    queryset = FileProxy.objects.all()
+    filterset_class = filters.FileProxyFilterSet
+    filterset_form_class = forms.FileProxyFilterForm
+    form_class = forms.FileProxyForm
+    serializer_class = serializers.FileProxySerializer
+    table_class = tables.FileProxyTable
+    action_buttons = (
+        "add",
+        "export",
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__")]
+    )
 
 
 #

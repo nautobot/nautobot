@@ -26,6 +26,7 @@ router.register("custom-links", views.CustomLinkUIViewSet)
 router.register("dynamic-groups", views.DynamicGroupUIViewSet)
 router.register("export-templates", views.ExportTemplateUIViewSet)
 router.register("external-integrations", views.ExternalIntegrationUIViewSet)
+router.register("fileproxy", views.FileProxyUIViewSet)
 router.register("git-repositories", views.GitRepositoryUIViewSet)
 router.register("graphql-queries", views.GraphQLQueryUIViewSet)
 router.register("job-buttons", views.JobButtonUIViewSet)
@@ -47,6 +48,7 @@ router.register("statuses", views.StatusUIViewSet)
 router.register("tags", views.TagUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
+
 
 urlpatterns = [
     # Approver Dashboard
