@@ -12,17 +12,7 @@
             hx-on:htmx:load="jsify_form(this);"
         >
             {# --- FALLBACK CONTENT --- #}
-            <div class="modal-header">
-                <h4 class="modal-title" id="modal-fallback-title">
-                    Loading...
-                </h4>
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                ></button>
-            </div>
+            {% include 'inc/modal_header.html' with title="Loading..."%}
             <div class="modal-body text-center p-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>

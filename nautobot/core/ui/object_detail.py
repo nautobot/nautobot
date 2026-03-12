@@ -2611,47 +2611,6 @@ class _ObjectDetailMetadataTab(Tab):
         )
 
 
-class ButtonOpenModal(Button):
-    """A Button that, when clicked, opens a modal dialog. The content of the modal is rendered from the given template path."""
-
-    template_path = "components/button/open_modal.html"
-
-    def __init__(
-        self,
-        modal_id="nautobot-generic-modal",
-        hx_get="",
-        hx_select=None,
-        hx_select_oob=None,
-        hx_target=None,
-        hx_vals=None,
-        hx_swap="innerHTML",
-        modal_title="",
-        **kwargs,
-    ):
-        self.modal_id = modal_id
-        self.hx_get = hx_get
-        self.hx_select = hx_select
-        self.hx_select_oob = hx_select_oob
-        self.hx_swap = hx_swap
-        self.hx_target = hx_target
-        self.modal_title = modal_title
-        self.hx_vals = hx_vals or {}
-        super().__init__(**kwargs)
-
-    def get_extra_context(self, context: Context):
-        return {
-            **super().get_extra_context(context),
-            "modal_id": self.modal_id,
-            "hx_get": self.hx_get,
-            "hx_select": self.hx_select,
-            "hx_select_oob": self.hx_select_oob,
-            "hx_swap": self.hx_swap,
-            "hx_target": self.hx_target,
-            "modal_title": self.modal_title,
-            "hx_vals": json.dumps(self.hx_vals),
-        }
-
-
 def resolve_attr(obj, dotted_path: str):
     """Resolve nested attributes on a Django model instance using a Django-style double underscore path (e.g. 'location__location_type__name').
 
@@ -2670,40 +2629,74 @@ def resolve_attr(obj, dotted_path: str):
         return None
 
 
-class JobModalButton(ButtonOpenModal):
-    """A Button that, when clicked, opens a modal dialog for running a Job. The content of the modal is rendered from the given template path."""
+class _JobModalButton(Button):
+    """A Button that, when clicked, opens a modal dialog for running a Job."""
 
-    def __init__(
-        self,
-        class_path=None,
-        advanced_fields=None,
-        initial_field_mapping=None,
-        job_result_key=None,
-        modal_title="",
-        run_button_label="Run Job Now",
-        **kwargs,
-    ):
-        self.class_path = class_path
-        self.advanced_fields = advanced_fields or []
-        self.initial_field_mapping = initial_field_mapping or {}
-        self.run_button_label = run_button_label
-        self.job_result_key = job_result_key
-        super().__init__(modal_title=modal_title, **kwargs)
+    class_path = None
+    advanced_fields = []
+    initial_field_mapping = {}
+    run_button_label = "Run Job Now"
+    job_result_key = None
+
+    def __init__(self, **kwargs):
+        """
+        Initialize a Button component.
+
+        Keyword Args:
+            class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices, optional): The color (class) of this button.
+            advanced_fields (list, optional): A list of job fields to only render on the Advanced Settings section of the Modal.
+            initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
+                For example, `{"location": "location__name"}` would pre-populate the `location` field on the
+                Job form with the value of `obj.location.name` from the object in context.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            run_button_label (str, optional): The text to display on the button that submits the Job form within the modal. Defaults to "Run Job Now".
+            job_result_key (str, optional): The dictionary key used to extract specific display data from the JobResult.result field.
+                If JobResult.result is a dictionary, this key determines which value is shown in the Job Result modal.
+                If the result is a primitive type (string, integer, or float), this key is ignored and the full value
+                is displayed directly.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button (not the modal). Defaults to "components/button/default.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "main".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
+        """
+        super().__init__(**kwargs)
+        if self.class_path is None:
+            raise TypeError("class_path is required")
+
+    def get_link(self, context):
+        """Override the default `get_link()` behavior since this button opens a modal."""
+        return None
 
     def get_extra_context(self, context: Context):
-        base_context = super().get_extra_context(context)
+        """Add necessary htmx attributes to the button."""
         obj = get_obj_from_context(context, self.context_object_key)
-        hx_vals = self.hx_vals
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
-        hx_vals["title"] = self.modal_title
         hx_vals["job_form_modal"] = True
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
-        return {
-            **base_context,
-            "hx_get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
-            "hx_vals": json.dumps(hx_vals),
-        }
+        if not self.attributes:
+            self.attributes = {}
+        self.attributes.update(
+            {
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#nautobot-generic-modal",
+                "hx-target": "#modal-content-container",
+                "hx-get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+                "hx-vals": json.dumps(hx_vals),
+                "hx-swap": "innerHTML",
+            }
+        )
+        return super().get_extra_context(context)

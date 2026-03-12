@@ -1,5 +1,6 @@
 """Test cases for nautobot.core.ui module."""
 
+import json
 from unittest.mock import patch
 
 from django.db.models import Sum
@@ -20,6 +21,7 @@ from nautobot.core.ui.echarts import (
     queryset_to_nested_dict_records_as_series,
 )
 from nautobot.core.ui.object_detail import (
+    _JobModalButton,
     _ObjectDetailAdvancedTab,
     _ObjectDetailContactsTab,
     _ObjectDetailDataComplianceTab,
@@ -799,3 +801,64 @@ class ObjectDetailContentExtraTabsTest(TestCase):
                 with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
                     self.assertEqual(tab.render(context), "")
                     panel_render.assert_not_called()
+
+
+class _JobModalButtonTest(TestCase):
+    """Test suite for the _JobModalButton UI component."""
+
+    def test_init_validation(self):
+        """Verify that class_path is a required argument."""
+        # Should raise TypeError if class_path is missing
+        with self.assertRaises(TypeError) as cm:
+            _JobModalButton(weight=100, label="Test")
+        self.assertIn("class_path is required", str(cm.exception))
+
+        # Should initialize fine with class_path
+        btn = _JobModalButton(weight=100, label="Run Test", class_path="nautobot.core.jobs.ValidateModelData")
+        self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
+
+    def test_get_link(self):
+        """Verify get_link returns None because the button uses htmx to open a modal."""
+        btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
+        self.assertIsNone(btn.get_link(Context({})))
+
+    def test_get_extra_context_and_mapping(self):
+        """Verify that initial_field_mapping correctly resolves object attributes into hx_vals."""
+        # Create a test object (Device)
+        device = Device.objects.first()
+
+        mapping = {"job_field_name": "name", "job_location": "location__name"}
+
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.SampleJob",
+            initial_field_mapping=mapping,
+            run_button_label="Execute!",
+            job_result_key="output_data",
+        )
+
+        context = Context({"object": device})
+        btn.get_extra_context(context)
+
+        # Check the generated hx-vals
+        self.assertIn("hx-vals", btn.attributes)
+        hx_vals = json.loads(btn.attributes["hx-vals"])
+
+        # Check resolved mapping values
+        self.assertEqual(hx_vals["job_field_name"], device.name)
+        self.assertEqual(hx_vals["job_location"], device.location.name)
+
+        # Check static modal configuration
+        self.assertTrue(hx_vals["job_form_modal"])
+        self.assertEqual(hx_vals["run_button_label"], "Execute!")
+        self.assertEqual(hx_vals["job_result_key"], "output_data")
+
+        # Verify Bootstrap and HTMX target attributes
+        self.assertEqual(btn.attributes["data-bs-toggle"], "modal")
+        self.assertEqual(btn.attributes["data-bs-target"], "#nautobot-generic-modal")
+        self.assertEqual(btn.attributes["hx-target"], "#modal-content-container")
+
+        # Verify URL generation
+        expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
+        self.assertEqual(btn.attributes["hx-get"], expected_url)
