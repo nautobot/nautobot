@@ -521,7 +521,7 @@ class GroupUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
-    queryset = RestrictedQuerySet(model=Group).order_by("name")
+    queryset = Group.objects.all()
     filterset_class = filters.GroupFilterSet
     filterset_form_class = GroupFilterForm
     create_form_class = GroupForm

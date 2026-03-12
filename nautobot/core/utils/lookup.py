@@ -374,6 +374,9 @@ def get_model_for_view_name(view_name):
 
     model_name = model_name.split(delimiter)[0]  # device
 
+    if app_label == "users" and model_name == "group":
+        return Group
+
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)
         return model
