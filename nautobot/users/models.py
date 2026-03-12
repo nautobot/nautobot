@@ -8,6 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -227,6 +228,20 @@ class AdminGroup(Group):
     class Meta:
         verbose_name = "Group"
         proxy = True
+
+
+Group.documentation_static_path = ""
+Group.is_metadata_associable_model = False
+Group.is_saved_view_model = True
+Group.present_in_database = property(lambda self: self.pk is not None)
+
+
+def _group_get_absolute_url(self, api=False):
+    view_name = "users-api:group-detail" if api else "users:group"
+    return reverse(view_name, kwargs={"pk": self.pk})
+
+
+Group.get_absolute_url = _group_get_absolute_url
 
 
 #

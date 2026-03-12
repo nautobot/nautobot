@@ -9,6 +9,7 @@ app_name = "user"
 
 router = NautobotUIViewSetRouter()
 router.register("users", views.UserUIViewSet, basename="user")
+router.register("groups", views.GroupUIViewSet, basename="group")
 urlpatterns = [
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("preferences/", views.UserConfigView.as_view(), name="preferences"),
