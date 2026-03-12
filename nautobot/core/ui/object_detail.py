@@ -2630,7 +2630,7 @@ def resolve_attr(obj, dotted_path: str):
 
 
 class _JobModalButton(Button):
-    """A Button that, when clicked, opens a modal dialog for running a Job."""
+    """A Button that, when clicked, opens a modal dialog for running a Job. This is experimental and subject to change or removal without deprecation."""
 
     class_path = None
     advanced_fields = []
