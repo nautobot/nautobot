@@ -53,12 +53,6 @@ urlpatterns = [
     path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
     # Approvee Dashboard
     path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
-    # Config context schema
-    path(
-        "config-context-schemas/<uuid:pk>/validation/",
-        views.ConfigContextSchemaObjectValidationView.as_view(),
-        name="configcontextschema_object_validation",
-    ),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
