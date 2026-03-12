@@ -21,6 +21,8 @@ class ContactTeamSharedBase(PrimaryModel):
     comments = models.TextField(blank=True)
     is_contact_associable_model = False
 
+    natural_key_field_names = ["name"]
+
     class Meta:
         abstract = True
         ordering = ("name",)
