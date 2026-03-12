@@ -27,7 +27,6 @@ from rest_framework.response import Response
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm, restrict_form_fields
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     Breadcrumbs,
