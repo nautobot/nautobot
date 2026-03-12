@@ -1248,6 +1248,36 @@ properties:
       LOGGING["loggers"]["nautobot"]["handlers"] += ["file"]
       ```
 
+      !!! note "Rotating File Handler"
+
+          Another option is to use the `RotatingFileHandler` class to rotate log files when they reach a certain size, and retain a configurable number of old log files.
+
+          ```python
+          LOGGING["handlers"]["file"] = {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "/var/log/nautobot.log",
+            "formatter": "normal",
+            "maxBytes": 1024 * 1024 * 512,  # 512MB
+            "backupCount": 5,  # Retain the last 5 log files
+          }
+          ```
+
+      ??? note "Troubleshooting Logging Errors"
+
+          If you encounter logging errors (such as `ValueError: I/O operation on closed file.`) when using systemd, this may be due to systemd prematurely closing log files before the logging is complete.
+
+          In these cases, the simplest solution is to simply disable the console logging handler in lieu of logging directly to a file.
+
+          ```python
+            'loggers': {
+                'django': {'handlers': ['file'], 'level': 'INFO'},
+                'nautobot': {'handlers': ['file'], 'level': 'INFO'},
+            },
+          ```
+
+          Application logs from Nautobot will be written to the dedicated log file, while uWSGI logs will still be written to journalctl or other systemd log files.
+
       #### Available Loggers
 
       * `django.*` - Generic Django operations (HTTP requests/responses, etc.)
