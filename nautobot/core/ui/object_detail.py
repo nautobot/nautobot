@@ -2640,7 +2640,7 @@ class _JobModalButton(Button):
 
     def __init__(self, **kwargs):
         """
-        Initialize a Button component.
+        Initialize a _JobModalButton component.
 
         Keyword Args:
             class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
