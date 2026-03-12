@@ -1,6 +1,6 @@
 from functools import partial
-import logging
 import json
+import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
