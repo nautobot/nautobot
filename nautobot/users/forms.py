@@ -34,6 +34,18 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
     pass
 
 
+class GroupFilterForm(BootstrapMixin, forms.Form):
+    model = Group
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False)
+
+
+class GroupForm(BootstrapMixin, forms.ModelForm):
+    class Meta:
+        model = Group
+        fields = ["name"]
+
+
 class TokenForm(BootstrapMixin, forms.ModelForm):
     key = forms.CharField(
         required=False,

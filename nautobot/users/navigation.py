@@ -21,6 +21,12 @@ menu_items = (
                         weight=430,
                         permissions=["users.view_user"],
                     ),
+                    NavMenuItem(
+                        link="users:group_list",
+                        name="Groups",
+                        weight=440,
+                        permissions=["auth.view_group"],
+                    ),
                 ),
             ),
         ),
