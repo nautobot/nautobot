@@ -2238,7 +2238,9 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = False
-        title = job_model.name
+        title = "Run Job"
+        if hasattr(job_model, "name"):
+            title = job_model.name
         run_button_label = "Run Job Now"
         job_result_key = None
         advanced_fields = ()
@@ -3366,11 +3368,8 @@ class JobResultUIViewSet(
         job_result_key = request.GET.get("job_result_key", None)
         detail_value = f"Job finished with status: {instance.get_status_display()}"
         if instance.result and isinstance(instance.result, dict) and job_result_key:
-            detail_value = instance.result.get(
-                job_result_key, f"Job finished with status: {instance.get_status_display()}"
-            )
-        elif instance.result and isinstance(instance.result, (str, int, float)):
-            # Even though the JobResult.result field is typically expected to be a dict, it can technically be any JSON-serializable value.
+            detail_value = instance.result.get(job_result_key, instance.result)
+        elif instance.result:
             detail_value = instance.result
         job_is_pending = self._is_job_pending(instance)
         context = self.get_extra_context(request, instance)
