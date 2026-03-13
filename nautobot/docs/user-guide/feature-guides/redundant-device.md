@@ -305,102 +305,86 @@ TODO: Insert Model table summarizing attributes and their meanings
 
 ### HA pairs TODO: Jeff
 
-The SRX uses a concept called a **Chassis Cluster**, where two discrete SRX devices are logically merged into a single, unified system. The two nodes communicate over a dedicated **Control Link** (for heartbeat, state synchronization, and configuration) and a **Fabric Link** (for data plane forwarding between nodes). From a management perspective, the pair looks like one device with a single configuration and a single routing engine. One node is always the **primary** (actively processing traffic and running routing protocols) and the other is the **secondary** (standby), though you can influence which interfaces are active on which node using **Redundancy Groups (RGs)**. RG0 always controls the routing engine mastership, while RG1 and above control data plane interfaces. This means you can achieve a form of **active/active** by splitting traffic across RGs, though each individual RG is still in an active/passive relationship. Session state is synchronized across the fabric link in real time, enabling stateful failover.
-
-Control/Mgmt/Fabric ports: https://www.juniper.net/documentation/us/en/software/junos/chassis-cluster-security-devices/topics/concept/chassis-cluster-srx-series-node-interface-understanding.html#cc_node_intf_gateway__section_wbq_sjw_l2c
-
-
-
 
 #### Key Questions
 
-Q. Can you port channel across multiple devices? n/a (i think)
-Q. Can you see all interfaces on the Primary? Yes, but in chassis model they get renumbered ... hard to solve. (Feel like device-type for SRX1500-HA-Mode) which just has them would make sense.
-Q. Can you see all interfaces on the Backup? Yes, configurations are shared / synced same as above.
-Q. On Primary, can you tell which interfaces are assigned to which device? Yes
-Q. When do you see all the interfaces on the master device? show interfaces
-Q. Can you connect interfaces from master to non-master? yes
-Control Port (some times dedicated (ctl), other Juniper provide specific ethernet port to use ie ge-0/0/1)
-Fabric Port (user defined)
-Q. Any configurations don't map back to model? None found
-Q. How are interfaces named?
-(node0) is front panel names == names in show commands
-(node1) front panel names != names in show commands
-In chassis cluster mode node1 gets renumbers where the first numer in the naming ie. (ge-5) is N+1 where the node0 naming ended.  Typically based on chassis/linecards etc.
-Q. What should the naming standard be for the chassis device?
-Device 1: srx1500-node0
-Device 2: srx1500-node1
-DRG: srx1500-rg-#??
+These questions and answers are based on **F5 BIG-IP (DSC)**:
 
-    * Since there is n number of Juniper redundancy-group
-
-Q. Should I use interface named templates?
-yes, but manually determine the n+1 for proper numbering.
-
-Other oddities: 
-
-* SRX priority higher is preferred which is opposite of NB default device redundancy group priority?
-* SRX bases off of n- redundancy groups.  Which allows certain traffic to be active on one and others active on the other. (multiple device redundancy group in NB make sense?)
-
-Once chassis cluster mode is set on both nodes and they’re rebooted the configuration is synced and anything done on node0 or node1 automatically syncs.
-
+Q. Can you port channel across multiple devices? No. (Each device must have its own independent trunks/links to the switches)
+Q. Can you see all interfaces on the Primary? No. (You only see the local physical interfaces of the Primary unit)
+Q. Can you see all interfaces on the Backup? No. (You only see the local physical interfaces of the Backup unit).
+Q. On Primary, can you tell which interfaces are assigned to which device? No. (The Primary is unaware of the Backup's specific physical port numbering).
+Q. When do you see all the interfaces on the master device? Never. (They remain two separate hardware entities).
+Q. Can you connect interfaces from master to non-master? No. (There is no "backplane" traffic switching; you only connect them via HA/Sync cables)
+Q. Any configurations don't map back to model? Yes. (Specific items like Management IP, Hostname, and Interface speeds are "Device-Specific" and do not sync).
+Q. How are interfaces named? Slot.Port (e.g., 1.1, 1.2).
+Q. What should the naming standard be for the chassis device? FQDN (e.g., f5-01.network.local).
+Q. Should I use interface named templates? No. (F5 uses VLAN names to abstract the configuration; you sync the VLAN, not the interface).
 
 #### Configuration Generation
 
-```
-## On Node0
-set chassis cluster cluster-id 1 node 0 reboot
+_Standard Global Config_
 
-## On Node1
-set chassis cluster cluster-id 1 node 1 reboot
-```
-
-Important: Once chassis cluster mode is syncing the node1 interface names change (based on chassis type model type etc). In the example below ge-5 is actually the ge-0 on node1.
-
+1. Device A (Primary)
 
 ```
-## Setup Fabric Ports (syncs session information between systems) (userdefined ge interface)
-set interfaces fab0 fabric-options member-interfaces ge-0/0/2
-set interfaces fab1 fabric-options member-interfaces ge-5/0/2
+# Set the sync address (usually the internal or HA self-IP)
+modify cm device f5-01.local { configsync-ip 10.1.1.1 }
+# Add Device B to the trust (performed on Device A)
+run cm add-to-trust wire-address 10.1.1.2 user admin
 
-## Connect control port between devices (usually dedicate ctl port but sometimes not)
-## -- no config for this -- auto happens when reboot into chassis cluster happens.
-
-# redundancy-group 0 is for route-engine all others are user defined for user traffic.
-set chassis cluster redundancy-group 1 node 0 priority 150
-set chassis cluster redundancy-group 1 node 1 priority 100
-set chassis cluster redundancy-group 1 preempt
-set chassis cluster redundancy-group n+1 node 0 priority 150
-set chassis cluster redundancy-group n+1 node 1 priority 100
-set chassis cluster redundancy-group n+1 preempt
-
-## General Data plane PreReq
-set interfaces reth0 unit 0 family inet address 90.90.90.1/24
-set interfaces reth1 unit 0 family inet address 10.1.1.1/24
-set interfaces ge-0/0/14 gigether-options redundant-parent reth0
-set interfaces ge-0/0/15 gigether-options redundant-parent reth1
-set interfaces ge-5/0/14 gigether-options redundant-parent reth0
-set interfaces ge-5/0/15 gigether-options redundant-parent reth1
-
-## Assign Zones to Reths
-set security zones security-zone untrust interface reth0.0
-set security zones security-zone trust interface reth1.0
-
-## Each redundancy-group is configured with a “weight value” of 255 by default.
-## Junos can monitor the state of certain interfaces, and if those interfaces go down
-## it can lower the group’s weight value to whatever you like.
-## When the weight value reaches 0, the failover happens.
-set chassis cluster redundancy-group 1 interface-monitor ge-0/0/14 weight 255
+# Create the Group (On Primary):
+create cm device-group my_ha_group { devices { f5-01.local f5-02.local } type sync-failover }
 ```
 
-Firewall 1 (Node1)
+2. Device B (Standby)
 
-Nothing beside the initial cluster chassis “enablement” is needed.
+```
+# Set the sync address
+modify cm device f5-02.local { configsync-ip 10.1.1.2 }
+Create the Group (On Primary):
+```
+
+_Management Plane_
+
+Each retains its own unique Management IP for individual access, but they share a Floating Self-IP for management traffic that needs to reach the "Active" unit (like SNMP or API calls).
+
+1. Device A (Primary)
+
+```
+modify sys global-settings mgmt-dhcp disabled
+create sys management-ip 192.168.1.10/24
+
+create net self floating_mgmt_ip { address 192.168.1.12/24 vlan internal floating enabled traffic-group traffic-group-1 }
+```
+
+# Device B (Standby)
+
+```
+create sys management-ip 192.168.1.11/24
+Floating Self-IP (Shared/Active):
+```
 
 
+_Data Plane_
+
+Does not support Cross-Chassis EtherChannel. Instead, you build a "Trunk" on each device separately. Redundancy is handled by the Floating IP moving from Device A's Trunk to Device B's Trunk during a failover.
+
+1. Create the Trunk (Do this on both units locally)
+
+```
+create net trunk my_trunk { interfaces { 1.1 1.2 } lacp enabled }
+```
+
+2. Assign VLAN to the Trunk
+
+```
+create net vlan internal_vlan { interfaces add { my_trunk { tagged } } }
+```
+
+3. Create the Floating IP (The "Gateway" for your servers)
 
 
-
-
-
-
+```
+create net self internal_floating { address 10.10.1.1/24 vlan internal_vlan floating enabled traffic-group traffic-group-1 }
+```
