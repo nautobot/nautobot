@@ -1,3 +1,4 @@
+{% load helpers %}
 {% include 'inc/modal_header.html' with title=title %}
 
 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
@@ -20,7 +21,13 @@
             <div class="row align-items-center" style="margin-bottom: 12px;">
                 <div class="col-4 text-end fw-semibold">Duration:</div>
                 <div class="col-8">
-                    <span>{{ result.duration|default:"--" }}</span>
+                    {% if not result.date_done %}
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        </div>
+                    {% else %}
+                         <span>{{ result.duration }}</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="row align-items-center" style="margin-bottom: 12px;">
@@ -28,7 +35,6 @@
                 <div class="col-8">
                     {% if not result.date_done %}
                         <div class="d-flex align-items-center">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                             <span class="text-muted">Job is running, please wait...</span>
                         </div>
                     {% else %}
