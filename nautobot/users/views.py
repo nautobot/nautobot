@@ -250,7 +250,6 @@ class UserUIViewSet(
                 weight=400,
                 table_class=GroupTable,
                 table_filter="user",
-                enable_related_link=False,
             ),
         ]
     )
