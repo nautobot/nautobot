@@ -8,7 +8,6 @@
         <div
             class="modal-content"
             id="modal-content-container"
-            hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
             hx-on:htmx:load="jsify_form(this);"
         >
             {# --- FALLBACK CONTENT --- #}

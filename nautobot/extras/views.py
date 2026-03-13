@@ -2238,9 +2238,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = False
-        title = "Run Job"
-        if hasattr(job_model, "name"):
-            title = job_model.name
+        title = job_model.name
         run_button_label = "Run Job Now"
         job_result_key = None
         advanced_fields = ()
@@ -3364,7 +3362,9 @@ class JobResultUIViewSet(
     )
     def modal(self, request, *args, **kwargs):
         instance = self.get_object()
-        title = instance.job_model.name
+        title = "Run Job"
+        if instance.job_model is not None:
+            title = instance.job_model.name
         job_result_key = request.GET.get("job_result_key", None)
         detail_value = f"Job finished with status: {instance.get_status_display()}"
         if instance.result and isinstance(instance.result, dict) and job_result_key:

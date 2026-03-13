@@ -875,3 +875,16 @@ class _JobModalButtonTest(TestCase):
         # Verify URL generation
         expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
         self.assertEqual(btn.attributes["hx-get"], expected_url)
+
+        # Since the class_path is not a real job, ensure disabled in attributes.
+        self.assertIn("disabled", btn.attributes)
+
+        # Ensure real job class paths are not disabled
+        real_job_btn = _JobModalButton(
+            weight=100,
+            label="Run Real Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        context = Context({"object": device})
+        real_job_btn.get_extra_context(context)
+        self.assertNotIn("disabled", real_job_btn.attributes)
