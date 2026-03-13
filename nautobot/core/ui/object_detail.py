@@ -53,6 +53,7 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import Job
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -2712,4 +2713,12 @@ class _JobModalButton(Button):
                 "hx-swap": "innerHTML",
             }
         )
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, disable the button.
+        try:
+            jobs = Job.objects
+            if "request" in context and context["request"].user is not None:
+                jobs = jobs.restrict(context["request"].user, "view")
+            jobs.get_for_class_path(self.class_path)
+        except Job.DoesNotExist:
+            self.attributes["disabled"] = "disabled"
         return super().get_extra_context(context)
