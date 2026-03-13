@@ -109,6 +109,7 @@ runs:
 
     - name: "Create manifest list but do not push"
       if: "${{ ! inputs.push }}"
+      shell: "bash"
       working-directory: "${{ runner.temp }}/digests"
       run: |
         docker buildx imagetools create --dry-run \
@@ -117,6 +118,7 @@ runs:
 
     - name: "Create manifest list and push"
       if: "${{ inputs.push }}"
+      shell: "bash"
       working-directory: "${{ runner.temp }}/digests"
       run: |
         docker buildx imagetools create \
@@ -125,5 +127,6 @@ runs:
 
     - name: "Inspect image"
       if: "${{ inputs.push }}"
+      shell: "bash"
       run: |
         docker buildx imagetools inspect ${{ inputs.image }}:${{ steps.meta.outputs.version }}
