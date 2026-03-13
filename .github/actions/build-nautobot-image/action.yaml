@@ -134,11 +134,13 @@ runs:
         mkdir -p ${{ runner.temp }}/digests
         digest="${{ steps.build.outputs.digest }}"
         touch "${{ runner.temp }}/digests/${digest#sha256:}"
+        cache_scope="${{ inputs.cache-scope }}"
+        echo "DIGEST_SCOPE=${cache_scope//\//-}" >> $GITHUB_ENV
 
     - name: "Upload digest"
       uses: "actions/upload-artifact@v4"
       with:
-        name: "digests-${{ inputs.cache-scope }}-${{ inputs.python-version }}-${{ inputs.arch }}"
+        name: "digests-${{ env.DIGEST_SCOPE }}-${{ inputs.python-version }}-${{ inputs.arch }}"
         path: "${{ runner.temp }}/digests/*"
         if-no-files-found: error
         retention-days: 1

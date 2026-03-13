@@ -99,12 +99,14 @@ runs:
       run: |
         echo "=== Tags for ${{ inputs.image }} (py${{ inputs.python-version }}) ==="
         echo "${{ steps.dockermeta.outputs.tags }}"
+        cache_scope="${{ inputs.cache-scope }}"
+        echo "DIGEST_SCOPE=${cache_scope//\//-}" >> $GITHUB_ENV
 
     - name: "Download digests"
       uses: "actions/download-artifact@v4"
       with:
         path: "${{ runner.temp }}/digests"
-        pattern: "digests-${{ inputs.cache-scope }}-${{ inputs.python-version }}-*"
+        pattern: "digests-${{ env.DIGEST_SCOPE }}-${{ inputs.python-version }}-*"
         merge-multiple: true
 
     - name: "Create manifest list but do not push"
