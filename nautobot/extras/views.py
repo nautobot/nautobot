@@ -2238,8 +2238,11 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = False
+        title = job_model.name
+        run_button_label = "Run Job Now"
+        job_result_key = None
+        advanced_fields = ()
         if htmx_request:
-            title = job_model.name
             if request.method == "POST":
                 htmx_modal = request.POST.get("job_form_modal", False)
                 run_button_label = request.POST.get("run_button_label", "Run Job Now")
