@@ -353,6 +353,10 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
         "users",  # M2M field, excluded by default
     ]
 
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
+
     @classmethod
     def setUpTestData(cls):
         groups = (

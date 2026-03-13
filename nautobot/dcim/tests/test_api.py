@@ -914,6 +914,10 @@ class RackReservationTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
+
     @classmethod
     def setUpTestData(cls):
         user = User.objects.create(username="user1", is_active=True)

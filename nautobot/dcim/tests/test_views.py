@@ -599,6 +599,10 @@ class RackReservationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = RackReservation
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
 
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("users.view_user")
+
     @classmethod
     def setUpTestData(cls):
         user2 = User.objects.create_user(username="testuser2")

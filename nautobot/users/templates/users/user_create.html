@@ -1,0 +1,97 @@
+{% extends "generic/object_create.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card mb-3">
+        <div class="card-header"><strong>Users</strong></div>
+        <div class="card-body">
+            {% if form.username %}{% render_field form.username %}{% endif %}
+            {% if form.usable_password %}
+                <div class="row mb-3">
+                    <label class="col-sm-3 col-form-label" for="{{ form.usable_password.id_for_label }}">{{ form.usable_password.label }}</label>
+                    <div class="col-sm-9">
+                        <div class="d-flex gap-3 align-items-center">
+                            {% for radio in form.usable_password %}
+                                <div class="form-check form-check-inline mb-0 d-flex align-items-center">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label ms-1 mb-0" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.usable_password.help_text %}
+                            <div class="form-text">{{ form.usable_password.help_text }}</div>
+                        {% endif %}
+                        {% if form.usable_password.errors %}
+                            <div class="text-danger small">{{ form.usable_password.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div id="password1-wrapper">
+                {% if form.password1 %}{% render_field form.password1 %}{% endif %}
+            </div>
+            <div id="password2-wrapper">
+                {% if form.password2 %}{% render_field form.password2 %}{% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save and add another
+    </button>
+    <button type="submit" name="_continue" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save and continue editing
+    </button>
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Save
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        (() => {
+            const radios = document.querySelectorAll('input[name="usable_password"]');
+            const password1 = document.getElementById('id_password1');
+            const password2 = document.getElementById('id_password2');
+            const wrapper1 = document.getElementById('password1-wrapper');
+            const wrapper2 = document.getElementById('password2-wrapper');
+
+            if (!radios.length || !password1 || !password2 || !wrapper1 || !wrapper2) {
+                return;
+            }
+
+            const syncPasswordFields = () => {
+                const checked = document.querySelector('input[name="usable_password"]:checked');
+                const value = checked ? String(checked.value).toLowerCase() : 'true';
+                const hidePasswords = value === 'false' || value === '0' || value === 'disabled';
+
+                wrapper1.classList.toggle('d-none', hidePasswords);
+                wrapper2.classList.toggle('d-none', hidePasswords);
+
+                password1.disabled = hidePasswords;
+                password2.disabled = hidePasswords;
+                password1.required = !hidePasswords;
+                password2.required = !hidePasswords;
+
+                if (hidePasswords) {
+                    password1.value = '';
+                    password2.value = '';
+                }
+            };
+
+            radios.forEach((radio) => radio.addEventListener('change', syncPasswordFields));
+            syncPasswordFields();
+        })();
+    </script>
+{% endblock %}

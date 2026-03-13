@@ -1,0 +1,216 @@
+{% extends "generic/object_create.html" %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Users</strong>
+        </div>
+        <div class="card-body">
+            {% render_field form.username %}
+            {% render_field form.password %}
+            {% render_field form.first_name %}
+            {% render_field form.last_name %}
+            {% render_field form.email %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Status</strong>
+        </div>
+        <div class="card-body">
+            {% render_field form.is_active %}
+            {% render_field form.is_staff %}
+            {% render_field form.is_superuser %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Groups</strong>
+        </div>
+        <div class="card-body">
+            {% render_field form.groups %}
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Important Dates</strong>
+        </div>
+        <div class="card-body">
+            {% render_field form.last_login %}
+            {% render_field form.date_joined %}
+        </div>
+    </div>
+
+    {% if object_permission_formset %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <strong>Permissions</strong>
+            </div>
+            <div class="card-body">
+                {{ object_permission_formset.management_form }}
+
+                {% if object_permission_formset.non_form_errors %}
+                    <div class="alert alert-danger">
+                        {{ object_permission_formset.non_form_errors }}
+                    </div>
+                {% endif %}
+
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Object Permission</th>
+                            <th>Object Types</th>
+                            <th>Actions</th>
+                            <th>Constraints</th>
+                            <th>Delete?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="object-permission-formset-body">
+                        {% for permission_form in object_permission_formset.forms %}
+                            <tr class="object-permission-row">
+                                <td>
+                                    {% for hidden in permission_form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+
+                                    {{ permission_form.objectpermission.as_widget }}
+
+                                    {% if permission_form.objectpermission.errors %}
+                                        <div class="text-danger small">
+                                            {{ permission_form.objectpermission.errors }}
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="mt-1 d-flex gap-2">
+                                        <a href="{% url 'admin:users_objectpermission_add' %}"
+                                           target="_blank"
+                                           class="text-success"
+                                           title="Add Object Permission">
+                                            <span class="mdi mdi-plus"></span>
+                                        </a>
+
+                                        {% if permission_form.instance.objectpermission_id %}
+                                            <a href="{% url 'admin:users_objectpermission_change' permission_form.instance.objectpermission.pk %}"
+                                               target="_blank"
+                                               class="text-warning"
+                                               title="Edit Object Permission">
+                                                <span class="mdi mdi-pencil"></span>
+                                            </a>
+
+                                            <a href="{% url 'admin:users_objectpermission_change' permission_form.instance.objectpermission.pk %}"
+                                               target="_blank"
+                                               class="text-primary"
+                                               title="View Object Permission">
+                                                <span class="mdi mdi-eye"></span>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-secondary" title="Edit Object Permission">
+                                                <span class="mdi mdi-pencil-off"></span>
+                                            </span>
+                                            <span class="text-secondary" title="View Object Permission">
+                                                <span class="mdi mdi-eye-off"></span>
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if permission_form.instance.objectpermission_id %}
+                                        {{ permission_form.instance.objectpermission.object_types.all|join:", " }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if permission_form.instance.objectpermission_id %}
+                                        {{ permission_form.instance.objectpermission.actions|join:", " }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if permission_form.instance.objectpermission_id %}
+                                        {{ permission_form.instance.objectpermission.constraints|default:"None" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ permission_form.DELETE }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <template id="object-permission-empty-form-template">
+                    <tr class="object-permission-row">
+                        <td>
+                            {{ object_permission_formset.empty_form.objectpermission.as_widget }}
+
+                            <div class="mt-1 d-flex gap-2">
+                                <a href="{% url 'admin:users_objectpermission_add' %}"
+                                   target="_blank"
+                                   class="text-success"
+                                   title="Add Object Permission">
+                                    <span class="mdi mdi-plus"></span>
+                                </a>
+
+                                <span class="text-secondary" title="Edit Object Permission">
+                                    <span class="mdi mdi-pencil-off"></span>
+                                </span>
+
+                                <span class="text-secondary" title="View Object Permission">
+                                    <span class="mdi mdi-eye-off"></span>
+                                </span>
+                            </div>
+                        </td>
+
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{{ object_permission_formset.empty_form.DELETE }}</td>
+                    </tr>
+                </template>
+
+                <button type="button"
+                        id="add-object-permission-row"
+                        class="btn btn-outline-primary btn-sm">
+                    <span class="mdi mdi-plus"></span>
+                    Add Permission Row
+                </button>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+
+    <script>
+        (() => {
+            const addButton = document.getElementById("add-object-permission-row");
+            const formsetBody = document.getElementById("object-permission-formset-body");
+            const template = document.getElementById("object-permission-empty-form-template");
+            const totalFormsInput = document.getElementById("id_object_permissions-TOTAL_FORMS");
+
+            if (!addButton || !formsetBody || !template || !totalFormsInput) {
+                return;
+            }
+
+            addButton.addEventListener("click", () => {
+                const index = Number(totalFormsInput.value);
+                const html = template.innerHTML.replaceAll("__prefix__", index);
+                formsetBody.insertAdjacentHTML("beforeend", html);
+                totalFormsInput.value = String(index + 1);
+            });
+        })();
+    </script>
+{% endblock %}
