@@ -303,7 +303,7 @@ TODO: Insert Model table summarizing attributes and their meanings
 
 
 
-### HA pairs TODO: Jeff
+### HA pairs
 
 
 #### Key Questions
@@ -364,7 +364,6 @@ create net self floating_mgmt_ip { address 192.168.1.12/24 vlan internal floatin
 create sys management-ip 192.168.1.11/24
 Floating Self-IP (Shared/Active):
 ```
-
 
 _Data Plane_
 
