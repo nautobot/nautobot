@@ -4,7 +4,7 @@
 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
     {# Polling Logic: Only present if the job is not finished #}
     <div id="job-polling-container"
-         {% if not result.date_done %}
+         {% if job_is_pending %}
              hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
              hx-trigger="every 2s"
              hx-target="#modal-content-container"
@@ -21,7 +21,7 @@
             <div class="row align-items-center" style="margin-bottom: 12px;">
                 <div class="col-4 text-end fw-semibold">Duration:</div>
                 <div class="col-8">
-                    {% if not result.date_done %}
+                    {% if job_is_pending %}
                         <div class="d-flex align-items-center">
                             <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                         </div>
@@ -33,7 +33,7 @@
             <div class="row align-items-center" style="margin-bottom: 12px;">
                 <div class="col-4 text-end fw-semibold">Details</div>
                 <div class="col-8">
-                    {% if not result.date_done %}
+                    {% if job_is_pending %}
                         <div class="d-flex align-items-center">
                             <span class="text-secondary">Job is running, please wait...</span>
                         </div>
@@ -49,7 +49,7 @@
 </div>
 
 <div class="modal-footer">
-    {% if result.date_done %}
+    {% if not job_is_pending %}
         <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
             -->View job results
         </a>

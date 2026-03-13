@@ -3144,8 +3144,16 @@ class JobResultUIViewSet(
         elif instance.result and isinstance(instance.result, (str, int, float)):
             # Even though the JobResult.result field is typically expected to be a dict, it can technically be any JSON-serializable value.
             detail_value = instance.result
+        job_is_pending = self._is_job_pending(instance)
         context = self.get_extra_context(request, instance)
-        context.update({"title": title, "detail_value": detail_value, "job_result_key": job_result_key})
+        context.update(
+            {
+                "title": title,
+                "detail_value": detail_value,
+                "job_result_key": job_result_key,
+                "job_is_pending": job_is_pending,
+            }
+        )
 
         return Response(
             {
