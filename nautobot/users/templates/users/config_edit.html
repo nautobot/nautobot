@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+
+    <h2>Configuration Settings</h2>
+
+    <form method="post" action="{% url 'user:config_edit' %}">
+    {% csrf_token %}
+
+    {% for field in form %}
+        <div class="form-group">
+            {{ field.label_tag }}
+            {{ field }}
+
+            {% if field.help_text %}
+                <small class="form-text text-muted">
+                    {{ field.help_text }}
+                </small>
+            {% endif %}
+
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+
+    </form>
+
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import logging
 
+from constance.admin import ConstanceForm
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -10,18 +11,23 @@ from django.contrib.auth import (
 )
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from django.views.generic.edit import FormView
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.forms.forms import BootstrapMixin
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import (
+    AdminRequiredMixin,
+)
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
@@ -486,3 +492,17 @@ class AdvancedProfileSettingsEditView(GenericView):
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
+
+
+class ConfigForm(BootstrapMixin, ConstanceForm):
+    """Apply Bootstrap styling to ConstanceForm."""
+
+
+class ConfigUIViewSet(AdminRequiredMixin, FormView):
+    template_name = "users/config_edit.html"
+    form_class = ConfigForm
+    success_url = reverse_lazy("user:config_edit")
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
