@@ -65,8 +65,14 @@ def parse_alphanumeric_range(string):
         except ValueError:
             begin, end = dash_range, dash_range
         if begin.isdigit() and end.isdigit():
-            for n in list(range(int(begin), int(end) + 1)):
-                values.append(n)
+            has_leading_zeros = (begin.startswith("0") and len(begin) > 1) or (end.startswith("0") and len(end) > 1)
+            if has_leading_zeros:
+                padding_width = max(len(begin), len(end))
+                for n in list(range(int(begin), int(end) + 1)):
+                    values.append(str(n).zfill(padding_width))
+            else:
+                for n in list(range(int(begin), int(end) + 1)):
+                    values.append(n)
         else:
             # Value-based
             if begin == end:
