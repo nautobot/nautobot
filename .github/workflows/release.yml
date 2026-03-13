@@ -40,13 +40,19 @@ jobs:
   publish_containers:
     if: "${{ ! github.event.release.draft }}"
     name: "Build & Publish Container Images"
-    runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
         python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        arch: [ "amd64", "arm64" ]
+        os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
+        exclude:
+          - os: "ubuntu-24.04"
+            arch: "arm64"
+          - os: "ubuntu-24.04-arm"
+            arch: "amd64"
+    runs-on: "${{ matrix.os }}"
     env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
       BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
       BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
@@ -54,10 +60,8 @@ jobs:
         uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
-      - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
+        uses: "docker/setup-buildx-action@61918094b871f89097b164af4c1b3a81d98fb735" # v4
       - name: "Login to GitHub Container Registry"
         uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
@@ -84,11 +88,10 @@ jobs:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          arch: "${{ matrix.arch }}"
           push: true
           target: "final"
-          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
-          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
-          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
 
       - name: "Build and Push (dev - final-dev target)"
         uses: "./.github/actions/build-nautobot-image"
@@ -96,17 +99,102 @@ jobs:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          arch: "${{ matrix.arch }}"
+          push: true
+          target: "final-dev"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
+
+  merge_containers:
+    name: "Merge Manifests"
+    if: "${{ ! github.event.release.draft }}"
+    needs:
+      - "publish_containers"
+    runs-on: "ubuntu-24.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+    env:
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
+      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Set up Docker Buildx"
+        uses: "docker/setup-buildx-action@61918094b871f89097b164af4c1b3a81d98fb735" # v4
+      - name: "Login to GitHub Container Registry"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "Login to Docker"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
+        with:
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Merge (prod - final target) to ghcr.io"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "ghcr.io/nautobot/nautobot"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          push: true
+          target: "final"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (prod - final target) to dockerhub"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "networktocode/nautobot"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          push: true
+          target: "final"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (dev - final-dev target) to ghcr.io"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "ghcr.io/nautobot/nautobot-dev"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
           target: "final-dev"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
-          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (dev - final-dev target) to dockerhub"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "networktocode/nautobot-dev"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          push: true
+          target: "final-dev"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
 
   slack-notify:
     if: "${{ ! github.event.release.draft }}"
     needs:
       - "publish_python"
-      - "publish_containers"
+      - "merge_containers"
     runs-on: "ubuntu-24.04"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
@@ -143,7 +231,7 @@ jobs:
     if: "${{ ! github.event.release.draft && ! github.event.release.prerelease }}"
     needs:
       - "publish_python"
-      - "publish_containers"
+      - "merge_containers"
     runs-on: "ubuntu-24.04"
     steps:
       - name: "Call deploy sandbox workflow for demo.nautobot.com"

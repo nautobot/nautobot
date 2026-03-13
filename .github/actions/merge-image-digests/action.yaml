@@ -1,0 +1,129 @@
+# Action to merge manifests for multi-platform Docker images built by `build-nautobot-image` action.
+---
+name: "Merge manifests and publish"
+description: "Merge Docker image manifests for multiple platforms"
+
+inputs:
+  image:
+    description: "Full image name (e.g. networktocode/nautobot or ghcr.io/nautobot/nautobot)"
+    required: true
+  python-version:
+    description: "Python version for the build matrix"
+    required: true
+  nautobot-version:
+    description: "Nautobot version to install (either PEP440 or branch name)"
+    required: true
+  push:
+    description: "Whether to push the image"
+    required: false
+    default: false
+  cache-scope:
+    description: "GHA cache scope prefix"
+    required: false
+    default: ""
+  default-python-version:
+    description: "Default Python version to use for 'latest' tag"
+    required: true
+  set-latest:
+    description: "Whether to set the 'latest' and stable tag for releases"
+    required: false
+    default: "false"
+ 
+outputs:
+  tags:
+    description: "Generated Docker tags"
+    value: "${{ steps.dockermeta.outputs.tags }}"
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Clean nautobot-version Input in Case of Leading 'v' and Valid Version Check"
+      id: "cleannautobotversion"
+      shell: "python"
+      run: |
+        import os
+        import sys
+        from packaging.version import Version, InvalidVersion
+        nautobot_version = "${{ inputs.nautobot-version }}"
+        if nautobot_version.startswith("v"):
+            candidate_version = nautobot_version[1:]
+        else:
+            candidate_version = nautobot_version
+        try:
+            v = Version(candidate_version)
+            clean_version = candidate_version
+        except InvalidVersion:
+            clean_version = nautobot_version  # keep original if not valid version
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            fh.write(f"clean-version={clean_version}\n")
+
+    - name: "Determine if Nautobot Version is Pre-release"
+      id: "prereleasecheck"
+      shell: "python"
+      run: |
+        import os
+        import sys
+        from packaging.version import Version, InvalidVersion
+
+        nautobot_version = "${{ steps.cleannautobotversion.outputs.clean-version }}"
+
+        try:
+            v = Version(nautobot_version)
+            is_prerelease = v.is_prerelease
+        except InvalidVersion:
+            is_prerelease = True  # assume branch names are not stable releases
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            fh.write(f"is-prerelease={str(is_prerelease).lower()}\n")
+
+    - name: "Docker Metadata"
+      id: "dockermeta"
+      uses: "docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051" # v5.10.0
+      with:
+        images: "${{ inputs.image }}"
+        flavor: |
+          latest=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' && inputs.python-version == inputs.default-python-version }}
+        tags: |
+          type=raw,value=${{ steps.cleannautobotversion.outputs.clean-version }}-py${{ inputs.python-version }}
+          type=raw,value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ inputs.python-version == inputs.default-python-version }}
+          type=pep440,pattern={{major}}.{{minor}}-py${{ inputs.python-version }},value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' }}
+          type=pep440,pattern={{major}}.{{minor}},value=${{ steps.cleannautobotversion.outputs.clean-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.python-version == inputs.default-python-version }}
+          type=raw,value=latest-py${{ inputs.python-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' }}
+          type=raw,value=stable,enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' && inputs.python-version == inputs.default-python-version }}
+          type=raw,value=stable-py${{ inputs.python-version }},enable=${{ steps.prereleasecheck.outputs.is-prerelease == 'false' && inputs.set-latest == 'true' }}
+        labels: |
+          org.opencontainers.image.title=Nautobot
+
+    - name: "Log tags"
+      shell: "bash"
+      run: |
+        echo "=== Tags for ${{ inputs.image }} (py${{ inputs.python-version }}) ==="
+        echo "${{ steps.dockermeta.outputs.tags }}"
+
+    - name: "Download digests"
+      uses: "actions/download-artifact@v4"
+      with:
+        path: "${{ runner.temp }}/digests"
+        pattern: "digests-${{ inputs.cache-scope }}-${{ inputs.python-version }}-*"
+        merge-multiple: true
+
+    - name: "Create manifest list but do not push"
+      if: "${{ ! inputs.push }}"
+      working-directory: "${{ runner.temp }}/digests"
+      run: |
+        docker buildx imagetools create --dry-run \
+          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf '${{ inputs.image }}@sha256:%s ' *)
+    
+    - name: "Create manifest list and push"
+      if: "${{ inputs.push }}"
+      working-directory: "${{ runner.temp }}/digests"
+      run: |
+        docker buildx imagetools create \
+          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf '${{ inputs.image }}@sha256:%s ' *)
+    
+    - name: "Inspect image"
+      if: "${{ inputs.push }}"
+      run: |
+        docker buildx imagetools inspect ${{ inputs.image }}:${{ steps.meta.outputs.version }}
