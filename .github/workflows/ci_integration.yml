@@ -385,7 +385,6 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: false
-          target: "final"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
@@ -397,7 +396,6 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
-          target: "final-dev"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"

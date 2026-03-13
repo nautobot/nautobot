@@ -1,4 +1,3 @@
----
 name: "Release"
 on:
   release:
@@ -7,7 +6,7 @@ on:
 jobs:
   # Publish to GitHub followed by pypi
   publish_python:
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     name: "Publish Python Packages"
     runs-on: "ubuntu-24.04"
     steps:
@@ -38,7 +37,7 @@ jobs:
           password: "${{ secrets.PYPI_API_TOKEN }}"
 
   publish_containers:
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     name: "Build & Publish Container Images"
     strategy:
       fail-fast: true
@@ -106,7 +105,7 @@ jobs:
 
   merge_containers:
     name: "Merge Manifests"
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     needs:
       - "publish_containers"
     runs-on: "ubuntu-24.04"
@@ -149,7 +148,6 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
-          target: "final"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
@@ -161,7 +159,6 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
-          target: "final"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
@@ -173,7 +170,6 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
-          target: "final-dev"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
@@ -185,13 +181,12 @@ jobs:
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: true
-          target: "final-dev"
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
 
   slack-notify:
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     needs:
       - "publish_python"
       - "merge_containers"
@@ -207,7 +202,7 @@ jobs:
       - name: "Send a notification to Slack"
         # ENVs cannot be used directly in job.if. This is a workaround to check
         # if SLACK_WEBHOOK_URL is present.
-        if: "${{ env.SLACK_WEBHOOK_URL != '' }}"
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
         uses: "slackapi/slack-github-action@8157a0f4d70c5099e42dcff1258b19bdaabb030b" # v1.17.0
         with:
           payload: |
@@ -228,7 +223,7 @@ jobs:
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
 
   deploy-sandbox:
-    if: "${{ ! github.event.release.draft && ! github.event.release.prerelease }}"
+    if: ${{ ! github.event.release.draft && ! github.event.release.prerelease }}
     needs:
       - "publish_python"
       - "merge_containers"

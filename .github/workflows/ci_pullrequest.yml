@@ -690,7 +690,6 @@ jobs:
           python-version: "3.14"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           push: false
-          target: "final"
           default-python-version: "3.14"
           set-latest: false
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"

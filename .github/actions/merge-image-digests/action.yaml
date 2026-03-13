@@ -110,7 +110,7 @@ runs:
         merge-multiple: true
 
     - name: "Create manifest list but do not push"
-      if: "${{ ! inputs.push }}"
+      if: ${{ ! inputs.push }}
       shell: "bash"
       working-directory: "${{ runner.temp }}/digests"
       run: |
@@ -119,7 +119,7 @@ runs:
           $(printf '${{ inputs.image }}@sha256:%s ' *)
 
     - name: "Create manifest list and push"
-      if: "${{ inputs.push }}"
+      if: ${{ inputs.push }}
       shell: "bash"
       working-directory: "${{ runner.temp }}/digests"
       run: |
@@ -128,7 +128,7 @@ runs:
           $(printf '${{ inputs.image }}@sha256:%s ' *)
 
     - name: "Inspect image"
-      if: "${{ inputs.push }}"
+      if: ${{ inputs.push }}
       shell: "bash"
       run: |
         docker buildx imagetools inspect ${{ inputs.image }}:${{ steps.meta.outputs.version }}
