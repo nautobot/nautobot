@@ -40,7 +40,7 @@ While vendors offer a variety of technologies, the data model remains largely ag
 
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS / SRX | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -190,56 +190,78 @@ interface TenGigabitEthernet2/0/1
 > Note: this config is on a single management IP
 
 
-
-
-
-
-### Multi-Chassis Stack TODO: Jeff
-
-Cisco StackWise allows up to 8–9 physical switches to behave as a single logical unit, offering unified management (one IP), high-speed backplane stacking (up to 1Tbps), and increased port density with redundancy. Key features include hot-swappable switches, a master/subordinate architecture for shared control planes, and reduced operational complexity. 
-
-Whitepaper
-https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-9300-series-switches/white-paper-c11-741468.html
-
-
-1. Use the Nautobot Virtual Chassis feature to represent the stackwise stacks  {{ stackwise_stackname }}
-2. The hostname of the stackwise stack should be the hostname of the master switch
-3. The master switch should be the first switch in the stack and the master
-  - Named  {{ stackwise_stackname }}
-  - Device type shouldn't have templated interface components.
-  - All device components should be defined on the master switch.
-    - Interfaces
-    - IP addresses
-    - Protocols (e.g. bgp)
-    - Redundancy Groups
-4. The remaining switches in the stack should be {{ stackwise_stackname }}:{{ switch_number }}.
-  - Only required fields should be defined (+ Serial Number)
-  - No device components should be defined (interfaces, ip addresses, etc)j
-  - Place individual devices on racks
-5. (Optional) Business requirements considerations
-  - One device role for all stackwise switches vs a device role for the master and a device role for the members, such as "switch" and "switch-child", to make filtering easier
-  - One status for master and one status for child, such as "active" and "active-child", to make filtering easier
-
+### Multi-Chassis Stack
 
 #### Key Questions
 
-Q. Can you port channel across multiple devices?
-Q. Can you see all interfaces on the Primary? 
-Q. Can you see all interfaces on the Backup? 
-Q. On Primary, can you tell which interfaces are assigned to which device? 
-Q. When do you see all the interfaces on the master device?
-Q. Can you connect interfaces from master to non-master? 
-Q. Any configurations don't map back to model? 
-Q. How are interfaces named?
-Q. What should the naming standard be for the chassis device?
-Q. Should I use interface named templates?
+These questions and answers are based on **Cisco StackWise**:
+
+Q. Can you port channel across multiple devices? Yes (this is called a Multi-Chassis EtherChannel or MEC).
+Q. Can you see all interfaces on the Primary? Yes.
+Q. Can you see all interfaces on the Backup? Yes (the standby maintains a synced control plane).
+Q. On Primary, can you tell which interfaces are assigned to which device? Yes (via the interface naming convention).
+Q. When do you see all the interfaces on the master device? Always (once the stack is formed and members are "Ready").
+Q. Can you connect interfaces from master to non-master? Yes.
+Q. Any configurations don't map back to model? No (configurations are applied to the logical stack, not specific physical hardware models).
+Q. How are interfaces named? Interface Type Stack-Unit/Slot/Port (e.g., GigabitEthernet 1/0/1).
+Q. What should the naming standard be for the chassis device? Member numbers (usually 1 through 8 or 9).
+Q. Should I use interface named templates? Yes (highly recommended for consistency across the stack).
 
 #### Configuration Generation
 
+_Standard Global Config_
 
+1. Master Switch (Primary)
+Set a high priority (default is 1, max is 15) to ensure this switch wins the election.
 
+```
+switch 1 priority 15
+switch 1 renumber 1
+```
 
+2. Member Switches (Non-Master)
+Keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
 
+```
+switch 2 priority 1
+switch 1 renumber 2
+```
+
+_Management Plane_
+
+You only configure this once on the Master; it automatically propagates to all members.
+
+- Option A: Using an SVI (VLAN interface)
+
+```
+interface Vlan1
+ ip address 192.168.1.10 255.255.255.0
+ no shut
+```
+
+- Option B: Using the Dedicated Management Port
+
+```
+interface Management0/0
+ ip address 10.1.1.10 255.255.255.0
+ no shut
+```
+
+_Data Plane_
+
+Because the stack behaves as one logical switch, the configuration is identical to a standard Port-Channel, except the interface identifiers reflect the different stack members (e.g., 1/0/1 and 2/0/1).
+
+```
+interface Port-channel 1
+ description Uplink-to-Core
+ switchport mode trunk
+
+interface GigabitEthernet 1/0/1 # <== 1 is member 1 of stack.
+ channel-group 1 mode active
+
+interface GigabitEthernet 2/0/1 # <== 2 is member 2 of stack.
+ channel-group 1 mode active
+```
 
 ### Firewall Cluster TODO: Allen
 #### Key Questions
