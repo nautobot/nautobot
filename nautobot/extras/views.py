@@ -2257,7 +2257,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         template_name = self._get_template_name(job_class, htmx_modal)
         if htmx_request and htmx_modal:
-            return render(
+            response = render(
                 request,
                 template_name,
                 {
@@ -2283,7 +2283,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 },
             )
         else:
-            return render(
+            response = render(
                 request,
                 template_name,
                 {
@@ -2293,6 +2293,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     "schedule_form": schedule_form,
                 },
             )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def get(self, request, class_path=None, pk=None):
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2337,16 +2339,14 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             job_execution_form = job_class.as_execution_form(initial=initial)
 
         except RuntimeError as err:
-            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             if htmx_request and htmx_modal:
                 return render(request, "extras/htmx/job_missing_modal.html", {"class_path": class_path})
+            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
 
-        response = self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
-        patch_vary_headers(response, ["HX-Request"])
-        return response
+        return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
     def post(self, request, class_path=None, pk=None):
         job_model = self._get_job_model_or_404(class_path, pk)
@@ -2466,10 +2466,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         if return_url:
             return redirect(return_url)
 
-        response = self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
-
-        patch_vary_headers(response, ["HX-Request"])
-        return response
+        return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
 
 class JobView(generic.ObjectView):
