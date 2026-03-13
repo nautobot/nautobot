@@ -1,0 +1,1 @@
+Prevented KeyError if deleting non-existing key in dictionary
