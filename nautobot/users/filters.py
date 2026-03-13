@@ -22,10 +22,15 @@ __all__ = (
 
 class GroupFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
+    user = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
+        label="User",
+    )
 
     class Meta:
         model = Group
-        fields = ["id", "name"]
+        fields = ["id", "name", "user"]
 
 
 class UserFilterSet(BaseFilterSet):
