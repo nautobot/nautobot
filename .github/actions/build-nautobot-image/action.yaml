@@ -129,6 +129,7 @@ runs:
           POETRY_INSTALLER_PARALLEL=${{ inputs.poetry-parallel }}
 
     - name: "Export digest"
+      shell: "bash"
       run: |
         mkdir -p ${{ runner.temp }}/digests
         digest="${{ steps.build.outputs.digest }}"
