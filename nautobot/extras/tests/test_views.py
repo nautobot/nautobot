@@ -4063,6 +4063,12 @@ class JobTestCase(
             self.assertHttpStatus(self.client.get(run_url), 403, msg=run_url)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_run_without_permission_modal(self):
+        for run_url in self.run_urls:
+            response = self.client.get(run_url, HTTP_HX_REQUEST="true")
+            self.assertHttpStatus(response, 403, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_permission(self):
         """
         Get view with appropriate global permissions.
@@ -4074,6 +4080,22 @@ class JobTestCase(
         for run_url in self.run_urls:
             response = self.client.get(run_url)
             self.assertBodyContains(response, "TestPassJob")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_run_with_permission_modal(self):
+        """
+        Get view with appropriate global permissions.
+
+        Note that this view is conditional on run_job permission, not view_job permission,
+        so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
+        """
+        self.add_permissions("extras.run_job")
+        for run_url in self.run_urls:
+            response = self.client.get(run_url, {"job_form_modal": True}, HTTP_HX_REQUEST="true")
+            self.assertBodyContains(response, "TestPassJob")
+            self.assertBodyContains(response, "Show Advanced Settings")
+            self.assertBodyContains(response, "Run Job Now")
+            self.assertIn("HX-Request", response.get("Vary", ""))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_constrained_permission(self):
@@ -4132,6 +4154,19 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_modal(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url, self.data_run_immediately, headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"}
+            )
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(response, reverse("extras:jobresult_modal", kwargs={"pk": result.pk}))
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
