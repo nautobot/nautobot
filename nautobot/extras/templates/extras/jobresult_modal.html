@@ -4,13 +4,13 @@
 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
     {# Polling Logic: Only present if the job is not finished #}
     <div id="job-polling-container"
-        {% if not result.date_done %}
-            hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
-            hx-trigger="every 2s"
-            hx-target="#modal-content-container"
-            hx-swap="innerHTML"
-            hx-vals='{"title": "{{ title }}", "job_result_key": "{{ job_result_key }}"}'
-        {% endif %}>
+         {% if not result.date_done %}
+             hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
+             hx-trigger="every 2s"
+             hx-target="#modal-content-container"
+             hx-swap="innerHTML"
+             hx-vals='{"title": "{{ title }}", "job_result_key": "{{ job_result_key }}"}'
+         {% endif %}>
         <div class="container-fluid gy-3">
             <div class="row align-items-center" style="margin-bottom: 12px;">
                 <div class="col-4 text-end fw-semibold">Job Status:</div>
@@ -26,7 +26,7 @@
                             <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                         </div>
                     {% else %}
-                         <span>{{ result.duration }}</span>
+                        <span>{{ result.duration }}</span>
                     {% endif %}
                 </div>
             </div>
@@ -35,7 +35,7 @@
                 <div class="col-8">
                     {% if not result.date_done %}
                         <div class="d-flex align-items-center">
-                            <span class="text-muted">Job is running, please wait...</span>
+                            <span class="text-secondary">Job is running, please wait...</span>
                         </div>
                     {% else %}
                         <pre class="form-control bg-body-tertiary" style="min-height: 44px;"><!--

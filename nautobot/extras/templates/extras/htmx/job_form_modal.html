@@ -4,11 +4,11 @@
 {% block title %}{% include 'inc/modal_header.html' with title=title %}{% endblock %}
 
 {% block content %}
-    <form hx-post="{% url 'extras:job_run_by_class_path' class_path=class_path %}" 
-        hx-target="#modal-content-container" 
-        id="job-form-modal"
-        hx-vals='{{ hx_vals|safe }}'
-        enctype="multipart/form-data">
+    <form hx-post="{% url 'extras:job_run_by_class_path' class_path=class_path %}"
+          hx-target="#modal-content-container"
+          id="job-form-modal"
+          hx-vals='{{ hx_vals|safe }}'
+          enctype="multipart/form-data">
         {% csrf_token %}
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
             <div class="row justify-content-center flex-fill">
@@ -58,7 +58,7 @@
         </div>
         <div class="modal-footer">
             {% block job_form_footer %}
-                <button 
+                <button
                     class="btn btn-primary"
                     id="id__run"
                     type="submit"
@@ -87,7 +87,7 @@
                 // 1. Toggle Advanced Settings
                 const advancedToggle = container.querySelector('#toggle-advanced');
                 const advancedSettings = container.querySelector('#advanced-settings');
-                
+
                 if (advancedToggle && advancedSettings) {
                     advancedToggle.addEventListener('change', (e) => {
                         advancedSettings.classList.toggle('d-none', !e.target.checked);
@@ -101,11 +101,11 @@
 
                     const isDryRun = dryrunInput.type === 'checkbox' ? dryrunInput.checked : dryrunInput.value === 'True';
                     const runButton = container.querySelector('#id__run');
-                    
+
                     if (runButton) {
                         const textSpan = runButton.querySelector('.run-button-text');
                         const baseText = runButton.getAttribute('data-base-text');
-                        
+
                         if (textSpan && baseText) {
                             const suffix = isDryRun ? ' (DRYRUN)' : '';
                             textSpan.textContent = `${baseText}${suffix}`;

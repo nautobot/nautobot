@@ -333,7 +333,7 @@
             if (event.detail.target.id === "modal-content-container") {
                 const modalBody = document.querySelector('#nautobot-generic-modal .modal-body');
                 const modalTitle = document.querySelector('#nautobot-generic-modal .modal-title');
-                
+
                 modalTitle.innerText = "Error Occurred";
                 modalBody.innerHTML = `
                     <div class="alert alert-danger">
@@ -347,7 +347,7 @@
             // Only reset if it's the nautobot generic modal
             if (event.target.id === 'nautobot-generic-modal') {
                 const container = document.getElementById('modal-content-container');
-                
+
                 // Restore the fallback HTML, this will reset the modal, ensuring that any HTMX state is cleared
                 // and the loading spinner is shown for the next use.
                 container.innerHTML = `
