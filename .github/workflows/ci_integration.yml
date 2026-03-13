@@ -378,24 +378,12 @@ jobs:
             echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: "Merge Test (prod - final target)"
-        uses: "./.github/actions/merge-image-digests"
-        with:
-          image: "ghcr.io/nautobot/nautobot"
-          python-version: "${{ matrix.python-version }}"
-          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: false
-          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
-          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
-          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
-
       - name: "Merge (dev - final-dev target)"
         uses: "./.github/actions/merge-image-digests"
         with:
           image: "ghcr.io/nautobot/nautobot-dev"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"

@@ -1,7 +1,7 @@
 # Action to merge manifests for multi-platform Docker images built by `build-nautobot-image` action.
 ---
 name: "Merge manifests and publish"
-description: "Merge Docker image manifests for multiple platforms"
+description: "Merge Docker image manifests and publish the merge for multiple platforms"
 
 inputs:
   image:
@@ -13,10 +13,6 @@ inputs:
   nautobot-version:
     description: "Nautobot version to install (either PEP440 or branch name)"
     required: true
-  push:
-    description: "Whether to push the image"
-    required: false
-    default: "false"
   cache-scope:
     description: "GHA cache scope prefix"
     required: false
@@ -109,26 +105,10 @@ runs:
         pattern: "digests-${{ env.DIGEST_SCOPE }}-${{ inputs.python-version }}-*"
         merge-multiple: true
 
-    - name: "Create manifest list but do not push"
-      if: ${{ inputs.push == 'false' }}
-      shell: "bash"
-      working-directory: "${{ runner.temp }}/digests"
-      run: |
-        docker buildx imagetools create --dry-run \
-          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf '${{ inputs.image }}@sha256:%s ' *)
-
-    - name: "Create manifest list and push"
-      if: ${{ inputs.push != 'false' }}
+    - name: "Create and publish manifest list"
       shell: "bash"
       working-directory: "${{ runner.temp }}/digests"
       run: |
         docker buildx imagetools create \
           $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf '${{ inputs.image }}@sha256:%s ' *)
-
-    - name: "Inspect image"
-      if: ${{ inputs.push != 'false' }}
-      shell: "bash"
-      run: |
-        docker buildx imagetools inspect ${{ inputs.image }}:${{ steps.meta.outputs.version }}

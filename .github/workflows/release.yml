@@ -51,9 +51,6 @@ jobs:
           - os: "ubuntu-24.04-arm"
             arch: "amd64"
     runs-on: "${{ matrix.os }}"
-    env:
-      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
-      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
@@ -147,7 +144,6 @@ jobs:
           image: "ghcr.io/nautobot/nautobot"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
@@ -158,7 +154,6 @@ jobs:
           image: "networktocode/nautobot"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
@@ -169,7 +164,6 @@ jobs:
           image: "ghcr.io/nautobot/nautobot-dev"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
@@ -180,7 +174,6 @@ jobs:
           image: "networktocode/nautobot-dev"
           python-version: "${{ matrix.python-version }}"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-          push: true
           default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
           set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
           cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
