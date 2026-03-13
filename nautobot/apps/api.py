@@ -39,6 +39,7 @@ from nautobot.core.api.utils import (
 )
 from nautobot.core.api.views import (
     BulkDestroyModelMixin,
+    BulkRenameModelMixin,
     BulkUpdateModelMixin,
     ModelViewSet,
     ModelViewSetMixin,
@@ -52,6 +53,7 @@ __all__ = (
     "APIRootView",
     "BaseModelSerializer",
     "BulkDestroyModelMixin",
+    "BulkRenameModelMixin",
     "BulkUpdateModelMixin",
     "ChoiceField",
     "ContentTypeField",
