@@ -2308,6 +2308,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             "job_result_key": job_result_key,
                             "run_button_label": run_button_label,
                             "advanced_fields": advanced_field_names,
+                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
                     ),
                 },
@@ -2494,6 +2495,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                             "job_result_key": job_result_key,
                             "run_button_label": run_button_label,
                             "advanced_fields": advanced_field_names,
+                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
                     ),
                 },

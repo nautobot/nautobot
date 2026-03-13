@@ -2633,20 +2633,20 @@ class _JobModalButton(Button):
     """A Button that, when clicked, opens a modal dialog for running a Job. This is experimental and subject to change or removal without deprecation."""
 
     class_path = None
-    advanced_fields = []
+    advanced_fields = ()
     initial_field_mapping = {}
     run_button_label = "Run Job Now"
     job_result_key = None
 
     def __init__(self, **kwargs):
         """
-        Initialize a Button component.
+        Initialize a _JobModalButton component.
 
         Keyword Args:
             class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
             label (str): The text of this button, not including any icon.
             color (ButtonColorChoices, optional): The color (class) of this button.
-            advanced_fields (list, optional): A list of job fields to only render on the Advanced Settings section of the Modal.
+            advanced_fields (tuple, optional): A tuple of job fields to only render on the Advanced Settings section of the Modal.
             initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
                 For example, `{"location": "location__name"}` would pre-populate the `location` field on the
                 Job form with the value of `obj.location.name` from the object in context.
@@ -2668,6 +2668,17 @@ class _JobModalButton(Button):
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
                 The component will only be rendered if the user has these permissions.
+
+            Example:
+                _JobModalButton(
+                    label="Validate Device Location Data",
+                    weight=200,
+                    class_path="myapp.jobs.ValidateLocationData",
+                    initial_field_mapping={"location": "location__name"},
+                    advanced_fields=("verbose", "skip_related_objects"),
+                    required_permissions=["dcim.view_location"],
+                    run_button_label="Run Validation",
+                )
         """
         super().__init__(**kwargs)
         if self.class_path is None:

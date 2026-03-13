@@ -47,11 +47,9 @@
                     </div>
                 </div>
                 <div id="advanced-settings" class="d-none">
-                    {% if advanced_fields %}
-                        {% for field in advanced_fields %}
-                            {% render_field field %}
-                        {% endfor %}
-                    {% endif %}
+                    {% for field in advanced_fields %}
+                        {% render_field field %}
+                    {% endfor %}
                     {% block job_execution_form_wrapper %}
                         {% render_form job_execution_form %}
                     {% endblock job_execution_form_wrapper %}
@@ -64,10 +62,11 @@
                     class="btn btn-primary"
                     id="id__run"
                     type="submit"
+                    data-base-text="{{ run_button_label }}"
                     {% if not perms.extras.run_job or not job_model.runnable %}disabled{% endif %}
                 >
-                    <span aria-hidden="true" class="mdi mdi-play me-4"></span><!--
-                    -->{{ run_button_label }}
+                    <span aria-hidden="true" class="mdi mdi-play me-4"></span>
+                    <span class="run-button-text">{{ run_button_label }}</span>
                 </button>
                 <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
                     <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
@@ -104,9 +103,13 @@
                     const runButton = container.querySelector('#id__run');
                     
                     if (runButton) {
-                        const text = `Run Job Now${isDryRun ? ' (DRYRUN)' : ''}`;
-                        // Replacing the last child node (the text) safely
-                        runButton.childNodes[runButton.childNodes.length - 1].replaceWith(text);
+                        const textSpan = runButton.querySelector('.run-button-text');
+                        const baseText = runButton.getAttribute('data-base-text');
+                        
+                        if (textSpan && baseText) {
+                            const suffix = isDryRun ? ' (DRYRUN)' : '';
+                            textSpan.textContent = `${baseText}${suffix}`;
+                        }
                     }
                 };
 
