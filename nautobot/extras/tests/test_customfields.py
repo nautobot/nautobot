@@ -2941,7 +2941,10 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             safe_change=True,
         )
         self.assertEqual(location._custom_field_data.get("test_cf"), ["ValidA", "InvalidX"])
-        self.assertLogKey("cf_cleanup.provision: Set")
+        self.assertFalse(
+            any("cf_cleanup.update_custom_field_choice_data: Updated" in line for line in self.log_lines),
+            f"safe_change=True should skip choice repair; got: {self.log_lines}",
+        )
 
         location, cf = self._setup_cf_scenario(
             prev=(location, cf),
