@@ -2374,7 +2374,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             msg or f"Expected a log line containing {key!r}; got: {self.log_lines}",
         )
 
-    def assertNoLogs(self, msg=None):
+    def assertNoLogs(self, logger=None, level=None, msg=None):
         """Assert that no log lines were captured for this test."""
         self.assertEqual(self.log_lines, [], msg or f"Expected no log output; got: {self.log_lines}")
 
