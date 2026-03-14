@@ -1,20 +1,20 @@
-# Custom Field Cleanup Policy
+# Custom Fields Cleanup Policy
 
 Custom Field data can become inconsistent over time as definitions and policies evolve. Some examples include:
 
 - Validation rules may change, select choices may be added or removed, or defaults may be introduced after data has already been stored.
 - Scoping rules can also change — a field that once applied broadly may later apply only to specific device types, roles, or tenants.
-- Inconsistencies can also arise from bulk imports, API writes, legacy data migrations, or manual database edits that bypass validation logic. 
+- Inconsistencies can also arise from bulk imports, API writes, legacy data migrations, or manual database edits that bypass validation logic.
 
 The cleanup process evaluates stored Custom Field data against current definitions and scoping rules, correcting inconsistencies. The goal is to align Custom Fields data with the latest configuration, making changes only when necessary.
 
-The job will run and end up in one of the following conditions for each record. 
+The job will run and end up in one of the following conditions for each record.
 
-1.	No change
-1.	Log failure
-1.	Set to default
-1.	Set to empty value
-1.	Delete key
+1. No change
+1. Log failure
+1. Set to default
+1. Set to empty value
+1. Delete key
 
 !!! warning
     The job will destruct, mutate, or otherwise change the data, do not run the job unless you understand the risk, review the output from a dry-run, and reviewed the data that will be change.
