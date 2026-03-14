@@ -261,7 +261,7 @@ def _orphaned_keys(change_context, _verbose, job_logger=logger):
         for data in data_iterator:
             if not isinstance(data, dict):
                 job_logger.warning(
-                    "Skipping non-dict _custom_field_data on %s (got %r); this indicates data corruption.",
+                    "Skipping non-dict _custom_field_data on `%s` (got %r); this indicates data corruption.",
                     model._meta.label,
                     type(data).__name__,
                 )
@@ -356,7 +356,7 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
                 if field.default is not None:
                     # Type-mismatch reset: wrong type + default exists → todefault (destructive)
                     job_logger.info(
-                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on %s %s (was %r, now %r).",
+                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on `%s` `%s` (was `%r`, now `%r`).",
                         field.key,
                         model._meta.label,
                         obj_id,
@@ -367,7 +367,7 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
                 elif field.required:
                     # Type-mismatch reset: wrong type + required + no default → log failure, noop
                     job_logger.warning(
-                        "cf_cleanup.validation_failed_required: Field `%s` on %s %s "
+                        "cf_cleanup.validation_failed_required: Field `%s` on `%s` `%s` "
                         "has bad-type value %r and no default to recover with.",
                         field.key,
                         model._meta.label,
@@ -377,7 +377,7 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
                 else:
                     # Type-mismatch reset: wrong type + optional + no default → toempty (destructive)
                     job_logger.info(
-                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on %s %s (was %r, now None).",
+                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on `%s` `%s` (was `%r`, now `None`).",
                         field.key,
                         model._meta.label,
                         obj_id,
@@ -387,7 +387,7 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
             else:
                 # Validation-failure warning: correct type but fails validation rules → log, no mutation
                 job_logger.warning(
-                    "cf_cleanup.validation_failed%s: Field `%s` on %s %s has invalid value %r.",
+                    "cf_cleanup.validation_failed%s: Field `%s` on `%s` `%s` has invalid value `%r`.",
                     "_required" if field.required else "_optional",
                     field.key,
                     model._meta.label,
@@ -507,7 +507,7 @@ def cleanup_custom_field_data(
                     count, display = _count_and_display(empty_qs)
                     if count:
                         job_logger.warning(
-                            "cf_cleanup.validation_failed_required: Required field `%s` has %d %s object(s) "
+                            "cf_cleanup.validation_failed_required: Required field `%s` has %d `%s` object(s) "
                             "with missing/empty value and no default to apply: %s",
                             field.key,
                             count,
@@ -530,7 +530,7 @@ def cleanup_custom_field_data(
                     before_count, display = _count_and_display(null_with_key_qs) if _verbose else (0, "")
                     if dryrun and before_count:
                         job_logger.info(
-                            "cf_cleanup.required_null_to_default: Would set `%s` = %r on %d %s object(s): %s",
+                            "cf_cleanup.required_null_to_default: Would set `%s` = %r on %d `%s` object(s): %s",
                             field.key,
                             field.default,
                             before_count,
@@ -542,7 +542,7 @@ def cleanup_custom_field_data(
                     )
                     if count:
                         job_logger.info(
-                            "cf_cleanup.default_applied: Set `%s` = %r on %d %s object(s): %s",
+                            "cf_cleanup.default_applied: Set `%s` = %r on %d `%s` object(s): %s",
                             field.key,
                             field.default,
                             count,
@@ -562,7 +562,7 @@ def cleanup_custom_field_data(
                     before_count, display = _count_and_display(out_of_scope_with_key) if _verbose else (0, "")
                     if dryrun and before_count:
                         job_logger.info(
-                            "cf_cleanup.scope_sweep: Would set key `%s` to null on %d %s object(s): %s",
+                            "cf_cleanup.scope_sweep: Would set key `%s` to null on %d `%s` object(s): %s",
                             field.key,
                             before_count,
                             model._meta.label,
@@ -574,7 +574,7 @@ def cleanup_custom_field_data(
                     if nullified:
                         if _verbose:
                             job_logger.info(
-                                "cf_cleanup.scope_sweep: Set key `%s` to null on %d %s object(s): %s",
+                                "cf_cleanup.scope_sweep: Set key `%s` to null on %d `%s` object(s): %s",
                                 field.key,
                                 nullified,
                                 model._meta.label,
@@ -582,7 +582,7 @@ def cleanup_custom_field_data(
                             )
                         else:
                             job_logger.info(
-                                "cf_cleanup.scope_sweep: Set key `%s` to null on %d %s object(s).",
+                                "cf_cleanup.scope_sweep: Set key `%s` to null on %d `%s` object(s).",
                                 field.key,
                                 nullified,
                                 model._meta.label,
@@ -644,7 +644,7 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
                 display,
             )
         elif dryrun:
-            print(f"cf_cleanup.provision: No objects to provision for `{field.key}` on {ct.model}.", file=sys.stderr)
+            print(f"cf_cleanup.provision: No objects to provision for `{field.key}` on the `{ct.model}` model.", file=sys.stderr)
         count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, field.default))
         if count:
             if _verbose:
@@ -668,7 +668,7 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
                 )
         elif not dryrun:
             print(
-                f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on {ct.model}.",
+                f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on the `{ct.model}` model.",
                 file=sys.stderr,
             )
         if count and change_context is not None:
