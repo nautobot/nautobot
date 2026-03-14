@@ -2827,7 +2827,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
         self.assertLogKey("cf_cleanup.validation_failed_optional")
 
-
     # -------------------------------------------------------------------------
     # unscoped__required tests
     # -------------------------------------------------------------------------
@@ -2848,7 +2847,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         with self.assertRaises(ValidationError):
             cf2.clean()
         self.assertNoLogs()
-
 
     # -------------------------------------------------------------------------
     # scoped__optional__nodefault tests
