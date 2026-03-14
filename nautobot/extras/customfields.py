@@ -644,7 +644,10 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
                 display,
             )
         elif dryrun:
-            print(f"cf_cleanup.provision: No objects to provision for `{field.key}` on the `{ct.model}` model.", file=sys.stderr)
+            print(
+                f"cf_cleanup.provision: No objects to provision for `{field.key}` on the `{ct.model}` model.",
+                file=sys.stderr,
+            )
         count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, field.default))
         if count:
             if _verbose:
