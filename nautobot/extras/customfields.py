@@ -4,7 +4,7 @@ import sys
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import transaction
-from django.db.models.fields.json import KeyTextTransform
+from django.db.models import Q
 
 from nautobot.core.models.query_functions import JSONRemove, JSONSet
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -248,6 +248,9 @@ def _orphaned_keys(change_context, _verbose, job_logger=logger):
         model = ct.model_class()
         if model is None:
             continue
+        # This code streams the full JSONB column for every object, which is constant memory but high
+        # data-transfer volume at scale. PostgreSQL has jsonb_object_keys() to extract distinct key names,
+        # but MySQL's JSON_KEYS() returns an array of keys. Would have to handle MySQL differently.
         data_iterator = (
             model.objects.exclude(_custom_field_data={}).values_list("_custom_field_data", flat=True).iterator()
         )
@@ -326,8 +329,8 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
     #
     # PKs are collected during the loop and flushed in two bulk updates afterward
     # to avoid issuing one individual save() per invalid object.
-    objects_with_value = queryset.annotate(_cf_key_text=KeyTextTransform(field.key, "_custom_field_data")).filter(
-        _cf_key_text__isnull=False
+    objects_with_value = queryset.filter(_custom_field_data__has_key=field.key).exclude(
+        **{f"_custom_field_data__{field.key}": None}
     )
     badtype_to_default_pks = []
     badtype_to_null_pks = []
@@ -491,17 +494,16 @@ def cleanup_custom_field_data(
             )
 
             # Required-field warning: log required fields that have empty values with no default to fill them.
-            # We use KeyTextTransform (which generates the ->> operator in PostgreSQL) rather than a
-            # plain __isnull filter. The -> operator used by __isnull preserves JSON null as a JSONB
-            # value, so IS NULL does not match it. The ->> operator converts JSON null to SQL NULL,
-            # so it correctly catches both absent keys and JSON null values.
+            # Matches objects where the key is absent OR has a JSON null value.  We use has_key + a
+            # direct None comparison rather than KeyTextTransform/__isnull because MySQL's
+            # JSON_UNQUOTE returns the string 'null' for JSON null, making IS NULL = FALSE.
             if field.required and field.default is None:
                 for ct_pk in ct_pks:
                     model = model_map[ct_pk]
                     in_scope_qs = in_scope_map[ct_pk]
-                    empty_qs = in_scope_qs.annotate(
-                        _cf_key_text=KeyTextTransform(field.key, "_custom_field_data")
-                    ).filter(_cf_key_text__isnull=True)
+                    empty_qs = in_scope_qs.filter(
+                        ~Q(_custom_field_data__has_key=field.key) | Q(**{f"_custom_field_data__{field.key}": None})
+                    )
                     count, display = _count_and_display(empty_qs)
                     if count:
                         job_logger.warning(
@@ -521,10 +523,9 @@ def cleanup_custom_field_data(
                 for ct_pk in ct_pks:
                     model = model_map[ct_pk]
                     in_scope_qs = in_scope_map[ct_pk]
-                    null_with_key_qs = (
-                        in_scope_qs.filter(_custom_field_data__has_key=field.key)
-                        .annotate(_cf_key_text=KeyTextTransform(field.key, "_custom_field_data"))
-                        .filter(_cf_key_text__isnull=True)
+                    null_with_key_qs = in_scope_qs.filter(
+                        _custom_field_data__has_key=field.key,
+                        **{f"_custom_field_data__{field.key}": None},
                     )
                     before_count, display = _count_and_display(null_with_key_qs) if _verbose else (0, "")
                     if dryrun and before_count:
@@ -554,9 +555,10 @@ def cleanup_custom_field_data(
                 for ct_pk in ct_pks:
                     model = model_map[ct_pk]
                     in_scope_qs = in_scope_map[ct_pk]
+                    in_scope_pks = list(in_scope_qs.values_list("pk", flat=True))
                     out_of_scope_with_key = model.objects.filter(
                         **{f"_custom_field_data__{field.key}__isnull": False}
-                    ).exclude(pk__in=in_scope_qs.values("pk"))
+                    ).exclude(pk__in=in_scope_pks)
                     before_count, display = _count_and_display(out_of_scope_with_key) if _verbose else (0, "")
                     if dryrun and before_count:
                         job_logger.info(
@@ -677,7 +679,8 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
         # null so that every content-type object has the key present.  Without a scope_filter,
         # in_scope_qs is all objects, so the first pass already covered everyone.
         if field.scope_filter:
-            out_of_scope_missing = model.objects.exclude(pk__in=in_scope_qs.values("pk")).filter(
+            in_scope_pks = list(in_scope_qs.values_list("pk", flat=True))
+            out_of_scope_missing = model.objects.exclude(pk__in=in_scope_pks).filter(
                 **{f"_custom_field_data__{field.key}__isnull": True}
             )
             out_of_scope_missing.update(_custom_field_data=JSONSet("_custom_field_data", field.key, None))
