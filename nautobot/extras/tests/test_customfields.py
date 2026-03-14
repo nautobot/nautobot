@@ -463,11 +463,11 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING"):
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
             should_render = cf.should_render(location)
 
         self.assertTrue(should_render)
-        self.assertEqual(self.log_lines, [expected_warning])
+        self.assertEqual(cm.output, [expected_warning])
 
     @mock.patch("nautobot.extras.models.customfields.get_filterset_for_model", return_value=None)
     def test_scope_filter_for_model_without_filterset(self, _):
@@ -484,11 +484,11 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         cf.validated_save()
         cf.content_types.set([obj_type])
 
-        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING"):
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
             should_render = cf.should_render(location)
 
         self.assertTrue(should_render)
-        self.assertEqual(self.log_lines, [expected_warning])
+        self.assertEqual(cm.output, [expected_warning])
 
     def test_set_scope_filter_invalid_form_raises_validation_error(self):
         obj_type = ContentType.objects.get_for_model(Location)
@@ -2827,6 +2827,29 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
         self.assertLogKey("cf_cleanup.validation_failed_optional")
 
+
+    # -------------------------------------------------------------------------
+    # unscoped__required tests
+    # -------------------------------------------------------------------------
+
+    # No / Yes / NA / NA / NA => (noop, noop)
+    def test_cf__unscoped__required__na__na__na__na(self):
+        # The model enforces that required=True and scope_filter are mutually exclusive.
+        cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
+        cf.save()
+        cf.scope_filter = {"location_type": ["some-pk"]}
+        with self.assertRaises(ValidationError):
+            cf.clean()
+        self.assertNoLogs()
+
+        cf2 = CustomField(label="Test CF 2", key="test_cf2", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
+        cf2.save()
+        cf2.scope_filter = {"location_type": ["some-pk"]}
+        with self.assertRaises(ValidationError):
+            cf2.clean()
+        self.assertNoLogs()
+
+
     # -------------------------------------------------------------------------
     # scoped__optional__nodefault tests
     # -------------------------------------------------------------------------
@@ -2920,7 +2943,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             safe_change=True,
         )
         self.assertEqual(location._custom_field_data.get("test_cf"), ["ValidA", "InvalidX"])
-        self.assertNoLogs()
+        self.assertLogKey("cf_cleanup.provision: Set")
 
         location, cf = self._setup_cf_scenario(
             prev=(location, cf),
@@ -2929,7 +2952,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             initial_value=["ValidA", "InvalidX"],
         )
         self.assertEqual(location._custom_field_data.get("test_cf"), ["ValidA"])
-        self.assertLogKey("Updated")
+        self.assertLogKey("cf_cleanup.update_custom_field_choice_data: Updated")
 
     # (select) Yes / No / No / Yes / empty => (noop, noop)
     def test_cf__select__scoped__optional__nodefault__keyed__empty__noop(self):
@@ -3228,23 +3251,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
     # -------------------------------------------------------------------------
     # unscoped other tests
     # -------------------------------------------------------------------------
-
-    # No / Yes / NA / NA / NA => (noop, noop)
-    def test_cf__unscoped__required__na__na__na__na(self):
-        # The model enforces that required=True and scope_filter are mutually exclusive.
-        cf = CustomField(label="Test CF", key="test_cf", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
-        cf.save()
-        cf.scope_filter = {"location_type": ["some-pk"]}
-        with self.assertRaises(ValidationError):
-            cf.clean()
-        self.assertNoLogs()
-
-        cf2 = CustomField(label="Test CF 2", key="test_cf2", type=CustomFieldTypeChoices.TYPE_TEXT, required=True)
-        cf2.save()
-        cf2.scope_filter = {"location_type": ["some-pk"]}
-        with self.assertRaises(ValidationError):
-            cf2.clean()
-        self.assertNoLogs()
 
     # NA / NA / NA / Yes / NA => (noop, delete)
     def test_cf__orphan__optional__na__keyed__na__delete(self):

@@ -101,7 +101,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
             count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, new_value))
             if count:
                 job_logger.info(
-                    "Updated `%s` from %r to %r on %d %s object(s).",
+                    "cf_cleanup.update_custom_field_choice_data: Updated `%s` from %r to %r on %d %s object(s).",
                     field.key,
                     old_value,
                     new_value,
@@ -150,7 +150,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
 
             if total_updated:
                 job_logger.info(
-                    "Updated `%s` from %r to %r on %d %s object(s).",
+                    "cf_cleanup.update_custom_field_choice_data: Updated `%s` from %r to %r on %d %s object(s).",
                     field.key,
                     old_value,
                     new_value,
@@ -237,6 +237,172 @@ def _is_badtype(field, value):
     return False  # TYPE_JSON: any value is a valid type
 
 
+def _orphaned_keys(change_context, _verbose, job_logger=logger):
+    from nautobot.extras.models import CustomField
+    from nautobot.extras.utils import FeatureQuery
+
+    valid_keys = set(CustomField.objects.values_list("key", flat=True))
+    orphaned_keys_to_ct_pks = {}
+
+    for ct in ContentType.objects.filter(FeatureQuery("custom_fields").get_query()):
+        model = ct.model_class()
+        if model is None:
+            continue
+        data_iterator = (
+            model.objects.exclude(_custom_field_data={}).values_list("_custom_field_data", flat=True).iterator()
+        )
+        # Tracks orphaned keys this CT. As there is no need to process it again for every
+        # subsequent row, since it will be bulk updated in delete_custom_field_data.
+        known_orphaned_keys = set()
+
+        for data in data_iterator:
+            if not isinstance(data, dict):
+                job_logger.warning(
+                    "Skipping non-dict _custom_field_data on %s (got %r); this indicates data corruption.",
+                    model._meta.label,
+                    type(data).__name__,
+                )
+                continue
+            orphaned_in_obj = set(data.keys()) - valid_keys - known_orphaned_keys
+            if orphaned_in_obj:
+                for key in orphaned_in_obj:
+                    orphaned_keys_to_ct_pks.setdefault(key, set()).add(ct.pk)
+                    known_orphaned_keys.add(key)
+
+    for key, ct_pk_set in orphaned_keys_to_ct_pks.items():
+        delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
+
+
+def _select(field, queryset, job_logger=logger):
+    valid_choices = set(field.choices)
+    if field.default is None:
+        valid_choices.add(None)
+
+    if field.type == CustomFieldTypeChoices.TYPE_SELECT:
+        queryset = queryset.exclude(**{f"_custom_field_data__{field.key}__in": valid_choices})
+        if queryset.exists():
+            new_value = field.default if field.default is not None else None
+            if isinstance(new_value, list) and field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+                new_value = new_value[0]
+            for old_value in queryset.values_list(f"_custom_field_data__{field.key}", flat=True):
+                # JSON null leaks through the __in exclude (JSONB null != SQL NULL
+                # for the -> operator), so guard against no-op calls.
+                if old_value != new_value:
+                    update_custom_field_choice_data(
+                        field.id, old_value, new_value, change_context=None, job_logger=job_logger
+                    )
+
+    if field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+        invalid_choices = set(
+            obj
+            for obj in queryset.values_list(f"_custom_field_data__{field.key}", flat=True)
+            if obj
+            for obj in (obj if isinstance(obj, list) else [obj])
+            if obj not in valid_choices
+        )
+        for invalid in invalid_choices:
+            new_queryset = queryset
+            new_queryset = new_queryset.filter(**{f"_custom_field_data__{field.key}__contains": [invalid]})
+
+            if new_queryset.exists():
+                new_value = field.default if field.default is not None else None
+                if isinstance(new_value, list):
+                    new_value = new_value[0]
+                old_value = invalid
+                update_custom_field_choice_data(
+                    field.id, old_value, new_value, change_context=None, job_logger=job_logger
+                )
+
+
+# ==== 479
+
+
+def _field_types(field, queryset, model, safe_change, job_logger=logger):
+    # Type-mismatch reset / validation-failure warning: for all other field types, iterate
+    # in-scope objects with a non-null value and validate each one.
+    #
+    # Type-mismatch reset: wrong Python type → reset to default or empty (destructive).
+    # Validation-failure warning: correct type but fails validation rules → log only (noop).
+    #
+    # PKs are collected during the loop and flushed in two bulk updates afterward
+    # to avoid issuing one individual save() per invalid object.
+    objects_with_value = queryset.annotate(_cf_key_text=KeyTextTransform(field.key, "_custom_field_data")).filter(
+        _cf_key_text__isnull=False
+    )
+    badtype_to_default_pks = []
+    badtype_to_null_pks = []
+    try:
+        model._meta.get_field("name")
+        _vl_fields = ("pk", "_custom_field_data", "name")
+    except FieldDoesNotExist:
+        _vl_fields = ("pk", "_custom_field_data")
+    for row in objects_with_value.values_list(*_vl_fields).iterator(chunk_size=1000):
+        if len(row) == 3:
+            pk, cf_data, name = row
+            obj_id = f"{name!r} (pk={pk})"
+        else:
+            pk, cf_data = row
+            obj_id = str(pk)
+        value = cf_data.get(field.key)
+        if value is None:
+            continue
+        try:
+            field.validate(value, enforce_required=False)
+        except ValidationError:
+            if _is_badtype(field, value):
+                if field.default is not None:
+                    # Type-mismatch reset: wrong type + default exists → todefault (destructive)
+                    job_logger.info(
+                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on %s %s (was %r, now %r).",
+                        field.key,
+                        model._meta.label,
+                        obj_id,
+                        value,
+                        field.default,
+                    )
+                    badtype_to_default_pks.append(pk)
+                elif field.required:
+                    # Type-mismatch reset: wrong type + required + no default → log failure, noop
+                    job_logger.warning(
+                        "cf_cleanup.validation_failed_required: Field `%s` on %s %s "
+                        "has bad-type value %r and no default to recover with.",
+                        field.key,
+                        model._meta.label,
+                        obj_id,
+                        value,
+                    )
+                else:
+                    # Type-mismatch reset: wrong type + optional + no default → toempty (destructive)
+                    job_logger.info(
+                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` on %s %s (was %r, now None).",
+                        field.key,
+                        model._meta.label,
+                        obj_id,
+                        value,
+                    )
+                    badtype_to_null_pks.append(pk)
+            else:
+                # Validation-failure warning: correct type but fails validation rules → log, no mutation
+                job_logger.warning(
+                    "cf_cleanup.validation_failed%s: Field `%s` on %s %s has invalid value %r.",
+                    "_required" if field.required else "_optional",
+                    field.key,
+                    model._meta.label,
+                    obj_id,
+                    value,
+                )
+    # Flush accumulated type-reset PKs in at most two bulk updates.
+    if not safe_change:
+        if badtype_to_default_pks:
+            model.objects.filter(pk__in=badtype_to_default_pks).update(
+                _custom_field_data=JSONSet("_custom_field_data", field.key, field.default)
+            )
+        if badtype_to_null_pks:
+            model.objects.filter(pk__in=badtype_to_null_pks).update(
+                _custom_field_data=JSONSet("_custom_field_data", field.key, None)
+            )
+
+
 def cleanup_custom_field_data(
     field_id=None,
     content_type_pk_set=None,
@@ -285,7 +451,6 @@ def cleanup_custom_field_data(
     # dryrun=True: all mutations execute inside a transaction that is rolled back at the end.
     # verbose=True (or dryrun=True): log each affected object individually instead of just counts.
     from nautobot.extras.models import CustomField
-    from nautobot.extras.utils import FeatureQuery
 
     _verbose = dryrun or verbose  # dryrun implies verbose
 
@@ -312,7 +477,8 @@ def cleanup_custom_field_data(
                 ct.pk: ct.model_class() for ct in ct_list if hasattr(ct, "model_class") and ct.model_class() is not None
             }
             in_scope_map = {
-                ct_pk: _get_in_scope_queryset(field, model_map[ct_pk], job_logger=job_logger) for ct_pk in ct_pks
+                ct_pk: field.get_in_scope_queryset(model_map[ct_pk].objects.all(), job_logger=job_logger)
+                for ct_pk in ct_pks
             }
 
             provision_field(
@@ -426,212 +592,19 @@ def cleanup_custom_field_data(
                 queryset = in_scope_map[ct_pk]
 
                 # Choice repair: replace invalid values for select/multiselect fields.
-                # Note: the validation-failure warning policy recommends log-only (noop) for invalid
-                # values, but SELECT/MULTISELECT auto-repair (replace invalid choice with default or
-                # None) is a deliberate product decision that predates that recommendation. Stale
-                # choice values are unusable in the UI, so replacing them is preferable to leaving
+                # Note: Stale choice values are unusable in the UI, so replacing them is preferable to leaving
                 # bad data in place.
                 if field.type in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
                     if not safe_change:
-                        valid_choices = set(field.choices)
-                        if field.default is None:
-                            valid_choices.add(None)
-
-                        if field.type == CustomFieldTypeChoices.TYPE_SELECT:
-                            queryset = queryset.exclude(**{f"_custom_field_data__{field.key}__in": valid_choices})
-                            if queryset.exists():
-                                new_value = field.default if field.default is not None else None
-                                if (
-                                    isinstance(new_value, list)
-                                    and field.type == CustomFieldTypeChoices.TYPE_MULTISELECT
-                                ):
-                                    new_value = new_value[0]
-                                for old_value in queryset.values_list(f"_custom_field_data__{field.key}", flat=True):
-                                    # JSON null leaks through the __in exclude (JSONB null != SQL NULL
-                                    # for the -> operator), so guard against no-op calls.
-                                    if old_value != new_value:
-                                        update_custom_field_choice_data(
-                                            field.id, old_value, new_value, change_context=None, job_logger=job_logger
-                                        )
-
-                        if field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                            invalid_choices = set(
-                                obj
-                                for obj in queryset.values_list(f"_custom_field_data__{field.key}", flat=True)
-                                if obj
-                                for obj in (obj if isinstance(obj, list) else [obj])
-                                if obj not in valid_choices
-                            )
-                            for invalid in invalid_choices:
-                                new_queryset = queryset
-                                new_queryset = new_queryset.filter(
-                                    **{f"_custom_field_data__{field.key}__contains": [invalid]}
-                                )
-
-                                if new_queryset.exists():
-                                    new_value = field.default if field.default is not None else None
-                                    if isinstance(new_value, list):
-                                        new_value = new_value[0]
-                                    old_value = invalid
-                                    update_custom_field_choice_data(
-                                        field.id, old_value, new_value, change_context=None, job_logger=job_logger
-                                    )
-
+                        _select(field, queryset, job_logger=job_logger)
                 else:
-                    # Type-mismatch reset / validation-failure warning: for all other field types, iterate
-                    # in-scope objects with a non-null value and validate each one.
-                    #
-                    # Type-mismatch reset: wrong Python type → reset to default or empty (destructive).
-                    # Validation-failure warning: correct type but fails validation rules → log only (noop).
-                    #
-                    # PKs are collected during the loop and flushed in two bulk updates afterward
-                    # to avoid issuing one individual save() per invalid object.
-                    objects_with_value = queryset.annotate(
-                        _cf_key_text=KeyTextTransform(field.key, "_custom_field_data")
-                    ).filter(_cf_key_text__isnull=False)
-                    badtype_to_default_pks = []
-                    badtype_to_null_pks = []
-                    try:
-                        model._meta.get_field("name")
-                        _vl_fields = ("pk", "_custom_field_data", "name")
-                    except FieldDoesNotExist:
-                        _vl_fields = ("pk", "_custom_field_data")
-                    for row in objects_with_value.values_list(*_vl_fields).iterator(chunk_size=1000):
-                        if len(row) == 3:
-                            pk, cf_data, name = row
-                            obj_id = f"{name!r} (pk={pk})"
-                        else:
-                            pk, cf_data = row
-                            obj_id = str(pk)
-                        value = cf_data.get(field.key)
-                        if value is None:
-                            continue
-                        try:
-                            field.validate(value, enforce_required=False)
-                        except ValidationError:
-                            if _is_badtype(field, value):
-                                if field.default is not None:
-                                    # Type-mismatch reset: wrong type + default exists → todefault (destructive)
-                                    job_logger.info(
-                                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` "
-                                        "on %s %s (was %r, now %r).",
-                                        field.key,
-                                        model._meta.label,
-                                        obj_id,
-                                        value,
-                                        field.default,
-                                    )
-                                    badtype_to_default_pks.append(pk)
-                                elif field.required:
-                                    # Type-mismatch reset: wrong type + required + no default → log failure, noop
-                                    job_logger.warning(
-                                        "cf_cleanup.validation_failed_required: Field `%s` on %s %s "
-                                        "has bad-type value %r and no default to recover with.",
-                                        field.key,
-                                        model._meta.label,
-                                        obj_id,
-                                        value,
-                                    )
-                                else:
-                                    # Type-mismatch reset: wrong type + optional + no default → toempty (destructive)
-                                    job_logger.info(
-                                        "cf_cleanup.type_reset: Resetting bad-type value for field `%s` "
-                                        "on %s %s (was %r, now None).",
-                                        field.key,
-                                        model._meta.label,
-                                        obj_id,
-                                        value,
-                                    )
-                                    badtype_to_null_pks.append(pk)
-                            else:
-                                # Validation-failure warning: correct type but fails validation rules → log, no mutation
-                                job_logger.warning(
-                                    "cf_cleanup.validation_failed%s: Field `%s` on %s %s has invalid value %r.",
-                                    "_required" if field.required else "_optional",
-                                    field.key,
-                                    model._meta.label,
-                                    obj_id,
-                                    value,
-                                )
-                    # Flush accumulated type-reset PKs in at most two bulk updates.
-                    if not safe_change:
-                        if badtype_to_default_pks:
-                            model.objects.filter(pk__in=badtype_to_default_pks).update(
-                                _custom_field_data=JSONSet("_custom_field_data", field.key, field.default)
-                            )
-                        if badtype_to_null_pks:
-                            model.objects.filter(pk__in=badtype_to_null_pks).update(
-                                _custom_field_data=JSONSet("_custom_field_data", field.key, None)
-                            )
+                    _field_types(field, queryset, model, safe_change, job_logger=job_logger)
 
         if is_all and not safe_change:
-            valid_keys = set(CustomField.objects.values_list("key", flat=True))
-            orphaned_keys_to_ct_pks = {}
-
-            for ct in ContentType.objects.filter(FeatureQuery("custom_fields").get_query()):
-                model = ct.model_class()
-                if model is None:
-                    continue
-                data_iterator = (
-                    model.objects.exclude(_custom_field_data={}).values_list("_custom_field_data", flat=True).iterator()
-                )
-                # Tracks orphaned keys this CT. As there is no need to process it again for every
-                # subsequent row, since it will be bulk updated in delete_custom_field_data.
-                known_orphaned_keys = set()
-
-                for data in data_iterator:
-                    if not isinstance(data, dict):
-                        job_logger.warning(
-                            "Skipping non-dict _custom_field_data on %s (got %r); this indicates data corruption.",
-                            model._meta.label,
-                            type(data).__name__,
-                        )
-                        continue
-                    orphaned_in_obj = set(data.keys()) - valid_keys - known_orphaned_keys
-                    if orphaned_in_obj:
-                        for key in orphaned_in_obj:
-                            orphaned_keys_to_ct_pks.setdefault(key, set()).add(ct.pk)
-                            known_orphaned_keys.add(key)
-
-            for key, ct_pk_set in orphaned_keys_to_ct_pks.items():
-                delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
+            _orphaned_keys(change_context, _verbose, job_logger=job_logger)
 
         if dryrun:
             transaction.set_rollback(True)
-
-
-def _get_in_scope_queryset(field, model, job_logger=logger):
-    """
-    Return a queryset of `model` objects that are in scope for `field`.
-
-    If `field.scope_filter` is empty, returns all objects.
-    Falls back to all objects if no filterset class exists for the model or the stored filter is invalid.
-    """
-    from nautobot.core.utils.lookup import get_filterset_for_model
-
-    if not field.scope_filter:
-        return model.objects.all()
-
-    filterset_class = get_filterset_for_model(model)
-    if not filterset_class:
-        job_logger.warning(
-            "Custom field `%s` has scope_filter set but no filterset exists for %s; treating all objects as in-scope.",
-            field.key,
-            model._meta.label,
-        )
-        return model.objects.all()
-
-    filterset = filterset_class(data=field.scope_filter, queryset=model.objects.all())
-    if not filterset.form.is_valid():
-        job_logger.warning(
-            "Custom field `%s` has an invalid scope_filter for %s: %s; treating all objects as in-scope.",
-            field.key,
-            model._meta.label,
-            filterset.form.errors.as_text(),
-        )
-        return model.objects.all()
-
-    return filterset.qs
 
 
 def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=False, verbose=False, job_logger=logger):
@@ -649,7 +622,7 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
         model = ct.model_class()
         if model is None:
             continue
-        in_scope_qs = _get_in_scope_queryset(field, model, job_logger=job_logger)
+        in_scope_qs = field.get_in_scope_queryset(model.objects.all(), job_logger=job_logger)
         queryset = in_scope_qs.filter(**{f"_custom_field_data__{field.key}__isnull": True})
         pk_list = []
         display = ""
