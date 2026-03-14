@@ -695,8 +695,6 @@ class CustomField(
         *queryset* unchanged if no filterset class exists for the model or the stored filter is invalid,
         so that any pre-filtering applied by the caller is always preserved.
         """
-        from nautobot.core.utils.lookup import get_filterset_for_model
-
         if not self.scope_filter:
             return queryset
 
