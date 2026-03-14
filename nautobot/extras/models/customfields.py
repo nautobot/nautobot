@@ -687,6 +687,41 @@ class CustomField(
             cache.set(cache_key, choices, timeout=None)
         return choices
 
+    def get_in_scope_queryset(self, queryset, job_logger=logger):
+        """
+        Return a filtered version of *queryset* containing only objects in scope for this field.
+
+        If ``scope_filter`` is empty, *queryset* is returned unchanged.  Falls back to returning
+        *queryset* unchanged if no filterset class exists for the model or the stored filter is invalid,
+        so that any pre-filtering applied by the caller is always preserved.
+        """
+        from nautobot.core.utils.lookup import get_filterset_for_model
+
+        if not self.scope_filter:
+            return queryset
+
+        model = queryset.model
+        filterset_class = get_filterset_for_model(model)
+        if not filterset_class:
+            job_logger.warning(
+                "Custom field `%s` has scope_filter set but no filterset exists for %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+            )
+            return queryset
+
+        filterset = filterset_class(data=self.scope_filter, queryset=queryset)
+        if not filterset.form.is_valid():
+            job_logger.warning(
+                "Custom field `%s` has an invalid scope_filter for %s: %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+                filterset.form.errors.as_text(),
+            )
+            return queryset
+
+        return filterset.qs
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
