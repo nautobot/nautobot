@@ -449,7 +449,7 @@ def cleanup_custom_field_data(
     # └─ Orphan sweep: scan all models for JSON keys that have no corresponding
     #                  CustomField definition and remove them.
     #
-    # safe_change=True: only provision runs; all destructive steps are skipped.
+    # safe_change=True: only provision runs; all steps we have deemed destructive are skipped.
     # dryrun=True: all mutations execute inside a transaction that is rolled back at the end.
     # verbose=True (or dryrun=True): log each affected object individually instead of just counts.
     from nautobot.extras.models import CustomField

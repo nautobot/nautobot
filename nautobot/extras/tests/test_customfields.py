@@ -2650,11 +2650,11 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertLogKey("cf_cleanup.validation_failed_required")
 
     # -------------------------------------------------------------------------
-    # scoped__required__defaulted tests
+    # scoped__required__nodefault tests
     # -------------------------------------------------------------------------
 
-    # Yes / Yes / No / No / NA => (log, log)
-    def test_cf__scoped__required__nodefault__missing__na__log(self):
+    # Yes / Yes / No / No / NA => (toempty, toempty)
+    def test_cf__scoped__required__nodefault__missing__na__toempty(self):
         location, cf = self._setup_cf_scenario(required=True, safe_change=True)
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
@@ -2664,6 +2664,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location, cf = self._setup_cf_scenario(prev=(location, cf), required=True)
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.provision")
         self.assertLogKey("cf_cleanup.validation_failed_required")
 
     # Yes / Yes / No / Yes / empty => (log, log)
