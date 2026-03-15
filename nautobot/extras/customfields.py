@@ -317,9 +317,6 @@ def _select(field, queryset, job_logger=logger):
                 )
 
 
-# ==== 479
-
-
 def _field_types(field, queryset, model, safe_change, job_logger=logger):
     # Type-mismatch reset / validation-failure warning: for all other field types, iterate
     # in-scope objects with a non-null value and validate each one.
