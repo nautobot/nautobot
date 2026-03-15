@@ -1,8 +1,11 @@
+from datetime import date
 import io
 import json
 import logging
 from unittest import mock
+import uuid
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
@@ -26,6 +29,9 @@ from nautobot.dcim.tables import LocationTable
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.customfields import (
+    _count_and_display,
+    _is_badtype,
+    _pks_and_display,
     cleanup_custom_field_data,
     delete_custom_field_data,
     provision_field,
@@ -2435,9 +2441,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             "type": field_type,
             "required": required,
         }
-        if has_default:
-            cf_kwargs["default"] = default
-
         cf = CustomField(**cf_kwargs)
         if validation_regex is not None:
             cf.validation_regex = validation_regex
@@ -2446,6 +2449,11 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         if choices:
             for v in choices:
                 CustomFieldChoice.objects.create(custom_field=cf, value=v)
+
+        # Set default after choices so CustomField.clean() can validate the default against them.
+        if has_default:
+            cf.default = default
+            cf.validated_save()
 
         if exclude_from_scope and scope_filter is not None:
             raise ValueError("exclude_from_scope and scope_filter are mutually exclusive")
@@ -2827,6 +2835,55 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "no-prefix")
         self.assertLogKey("cf_cleanup.validation_failed_optional")
 
+    # (select) Yes / No / Yes / Yes / invalid => (noop, todefault)
+    def test_cf__select__scoped__optional__defaulted__keyed__invalid__todefault(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["ValidA", "ValidB"],
+            has_default=True,
+            default="ValidA",
+            initial_value="InvalidX",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "InvalidX")
+        self.assertFalse(
+            any("cf_cleanup.update_custom_field_choice_data: Updated" in line for line in self.log_lines),
+            "safe_change=True should skip SELECT choice repair",
+        )
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["ValidA", "ValidB"],
+            has_default=True,
+            default="ValidA",
+            initial_value="InvalidX",
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "ValidA")
+        self.assertLogKey("cf_cleanup.update_custom_field_choice_data: Updated")
+
+    # (date) Yes / No / Yes / Yes / badtype => (log, todefault)
+    def test_cf__date__scoped__optional__defaulted__keyed__badtype__todefault(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            has_default=True,
+            default="2024-01-01",
+            initial_value=123,  # int stored in a DATE field
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            has_default=True,
+            default="2024-01-01",
+            initial_value=123,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "2024-01-01")
+        self.assertLogKey("cf_cleanup.type_reset")
+
     # -------------------------------------------------------------------------
     # unscoped__required tests
     # -------------------------------------------------------------------------
@@ -2986,6 +3043,47 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             any("from `None` to `None`" in line for line in self.log_lines),
             "Spurious None→None selection update should not be logged",
         )
+
+    # (select) Yes / No / No / Yes / invalid => (noop, toempty)
+    def test_cf__select__scoped__optional__nodefault__keyed__invalid__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["ValidA", "ValidB"],
+            initial_value="InvalidX",
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "InvalidX")
+        self.assertFalse(
+            any("cf_cleanup.update_custom_field_choice_data: Updated" in line for line in self.log_lines),
+            "safe_change=True should skip SELECT choice repair",
+        )
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_SELECT,
+            choices=["ValidA", "ValidB"],
+            initial_value="InvalidX",
+        )
+        self.assertIsNone(location._custom_field_data.get("test_cf"))
+        self.assertLogKey("cf_cleanup.update_custom_field_choice_data: Updated")
+
+    # (date) Yes / No / No / Yes / badtype => (log, toempty)
+    def test_cf__date__scoped__optional__nodefault__keyed__badtype__toempty(self):
+        location, cf = self._setup_cf_scenario(
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            initial_value=123,  # int stored in a DATE field
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            initial_value=123,
+        )
+        self.assertIsNone(location._custom_field_data.get("test_cf"))
+        self.assertLogKey("cf_cleanup.type_reset")
 
     # -------------------------------------------------------------------------
     # unscoped__optional__defaulted tests
@@ -3288,8 +3386,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertNotIn("test_cf", location._custom_field_data)
         self.assertNoLogs()  # verbose=False → stderr only; no logger output
 
-    # --- verbose flag: provision step ---
-
     def test_logging__provision__verbose_true__shows_object_name(self):
         """verbose=True: provision log includes the location name, not just a count."""
         location, _ = self._setup_cf_scenario(verbose=True)
@@ -3320,8 +3416,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             f"Expected no provision INFO log for `test_cf` when already provisioned; got: {provision_info}",
         )
 
-    # --- verbose flag: scope sweep ---
-
     def test_logging__scope_sweep__verbose_true__shows_object_name(self):
         """verbose=True: scope sweep log includes the object name, not just a count."""
         location, _ = self._setup_cf_scenario(
@@ -3347,8 +3441,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             any(location.name in msg for msg in sweep_msgs),
             f"Non-verbose scope_sweep log should not contain object name {location.name!r}",
         )
-
-    # --- verbose flag: required null→default ---
 
     def test_logging__required_null_to_default__verbose_true__shows_object_name(self):
         """verbose=True: default_applied log includes the object name."""
@@ -3380,8 +3472,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             f"Non-verbose default_applied log should not contain object name {location.name!r}",
         )
 
-    # --- type-mismatch reset always shows object identifier ---
-
     def test_logging__type_reset__always_shows_object_name(self):
         """Type-mismatch reset logs include the object name even without verbose=True,
         because the loop is per-object and can always embed the identifier at no extra cost."""
@@ -3394,8 +3484,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             any("cf_cleanup.type_reset" in msg and location.name in msg for msg in self.log_lines),
             f"Expected type_reset log containing {location.name!r}; got: {self.log_lines}",
         )
-
-    # --- dryrun: shows "Would …" messages and leaves data unchanged ---
 
     def test_logging__dryrun__provision__shows_would_message_and_no_mutation(self):
         """dryrun=True: provision emits 'Would set' log and rolls back — data is unchanged."""
@@ -3420,8 +3508,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         # Transaction was rolled back — key must still be present with original value.
         self.assertIn("test_cf", location._custom_field_data)
-
-    # --- data corruption guard ---
 
     def test_logging__corrupt_custom_field_data__warns(self):
         """Orphan sweep logs a WARNING and skips rows where _custom_field_data is not a dict."""
@@ -3634,6 +3720,236 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].changed_object, location)
         self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
         self.assertEqual(oc_list[0].user, self.user)
+
+    def test_update_custom_field_choice_data_task_multiselect(self):
+        """update_custom_field_choice_data with TYPE_MULTISELECT + change_context creates ObjectChange records."""
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(
+            label="CF MS",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        choice_foo = CustomFieldChoice(custom_field=cf, value="Foo")
+        choice_foo.save()
+        CustomFieldChoice(custom_field=cf, value="Bar").save()
+
+        location_type = LocationType.objects.create(name="Root Type MS")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location(
+            name="Location MS",
+            location_type=location_type,
+            status=location_status,
+            _custom_field_data={"cf_ms": ["Foo", "Bar"]},
+        )
+        location.save()
+
+        choice_foo.value = "Baz"
+        choice_foo.save()
+        # Call without change_context first (no ObjectChange expected).
+        update_custom_field_choice_data(cf.id, "Foo", "Baz")
+
+        location.refresh_from_db()
+        self.assertEqual(sorted(location.cf["cf_ms"]), ["Bar", "Baz"])
+
+        # Now rename with change_context so _generate_bulk_object_changes is exercised (line 163).
+        choice_foo.value = "Qux"
+        choice_foo.save()
+
+        with web_request_context(self.user):
+            ctx = change_context_state.get()
+            ctx_dict = {**ctx.as_dict(), "context_detail": "update custom field choice data multiselect"}
+            update_custom_field_choice_data(cf.id, "Baz", "Qux", change_context=ctx_dict)
+
+            location.refresh_from_db()
+            self.assertEqual(sorted(location.cf["cf_ms"]), ["Bar", "Qux"])
+
+        oc_list = get_changes_for_model(location).order_by("pk")
+        self.assertEqual(len(oc_list), 1)
+        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data multiselect")
+        self.assertEqual(oc_list[0].user, self.user)
+
+
+class CustomFieldDefensiveCoverage(TestCase):
+    """
+    Covers defensive / error-handling code paths in nautobot.extras.customfields
+    that are not reached by the matrix scenario tests.
+
+    Not covered here (require impractical setup):
+      - model_class() returning None (orphaned ContentType for uninstalled app)
+      - chunk-flush at >=1000 objects
+      - dead branch: isinstance(new_value, list) when field.type == TYPE_SELECT
+    """
+
+    def setUp(self):
+        self.content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.create(name="CF-Defensive-LT")
+        status = Status.objects.get_for_model(Location).first()
+        self.location = Location.objects.create(name="cf-defensive-loc", location_type=location_type, status=status)
+
+    def test_is_badtype_date_multiselect_json(self):
+        """_is_badtype: TYPE_DATE, TYPE_MULTISELECT, and TYPE_JSON (fallback) branches."""
+        cf_date = CustomField(type=CustomFieldTypeChoices.TYPE_DATE, label="d", key="d")
+        self.assertFalse(_is_badtype(cf_date, "2024-01-01"))
+        self.assertFalse(_is_badtype(cf_date, date(2024, 1, 1)))
+        self.assertTrue(_is_badtype(cf_date, 42))
+
+        cf_multi = CustomField(type=CustomFieldTypeChoices.TYPE_MULTISELECT, label="m", key="m")
+        self.assertFalse(_is_badtype(cf_multi, ["a", "b"]))
+        self.assertTrue(_is_badtype(cf_multi, "a"))
+
+        cf_json = CustomField(type=CustomFieldTypeChoices.TYPE_JSON, label="j", key="j")
+        self.assertFalse(_is_badtype(cf_json, {"any": "thing"}))
+        self.assertFalse(_is_badtype(cf_json, 42))
+
+    def test_helpers_no_name_field(self):
+        """_pks_and_display and _count_and_display fall back to str(pk) for models with no 'name' field."""
+
+        qs = get_user_model().objects.all()
+        pks, _ = _pks_and_display(qs)
+        self.assertIsInstance(pks, list)
+        count, _ = _count_and_display(qs)
+        self.assertEqual(count, get_user_model().objects.count())
+
+    def test_update_choice_data_field_not_found(self):
+        """update_custom_field_choice_data raises DoesNotExist for an unknown field_id."""
+        with self.assertRaises(CustomField.DoesNotExist):
+            update_custom_field_choice_data(uuid.uuid4(), "old", "new")
+
+    def test_update_choice_data_select_no_matches(self):
+        """UPDATE SELECT: no objects have old_value — prints to stderr, returns True."""
+        cf = CustomField.objects.create(
+            label="sel-no-match",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            key="sel_no_match_def",
+        )
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
+        cf.default = "ValidA"
+        cf.save()
+        cf.content_types.set([self.content_type])
+
+        result = update_custom_field_choice_data(cf.pk, "NonExistentValue", "ValidA")
+        self.assertTrue(result)
+
+    def test_update_choice_data_select_same_value_skipped(self):
+        """UPDATE SELECT: old_value == new_value guard skips the update call."""
+        cf = CustomField.objects.create(
+            label="sel-same-val",
+            type=CustomFieldTypeChoices.TYPE_SELECT,
+            key="sel_same_val_def",
+            default=None,
+        )
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
+        cf.content_types.set([self.content_type])
+        # Put a value not in choices on the location; since default is None, new_value=None.
+        # JSON null leaks through __in exclude, so old_value=None == new_value=None → skip.
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"sel_same_val_def": None})
+        result = update_custom_field_choice_data(cf.pk, None, None)
+        self.assertTrue(result)
+
+    def test_update_choice_data_multiselect_null_old_value(self):
+        """UPDATE MULTISELECT: old_value=None removes nulls from lists."""
+        cf = CustomField.objects.create(
+            label="multi-null-old",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            key="multi_null_old_def",
+        )
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
+        cf.content_types.set([self.content_type])
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"multi_null_old_def": [None, "ValidA"]})
+        result = update_custom_field_choice_data(cf.pk, None, "ValidA")
+        self.assertTrue(result)
+
+    def test_update_choice_data_multiselect_non_list_skipped(self):
+        """UPDATE MULTISELECT: objects whose stored value is not a list are skipped."""
+        cf = CustomField.objects.create(
+            label="multi-corrupt",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            key="multi_corrupt_def",
+        )
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
+        cf.content_types.set([self.content_type])
+        # Corrupt the data: stored as a plain string instead of a list
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"multi_corrupt_def": "not-a-list"})
+        result = update_custom_field_choice_data(cf.pk, "not-a-list", "ValidA")
+        self.assertTrue(result)
+
+    def test_update_choice_data_multiselect_list_default(self):
+        """UPDATE MULTISELECT: new_value is extracted from list default (line 313)."""
+        cf = CustomField.objects.create(
+            label="multi-list-default",
+            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
+            key="multi_list_default_def",
+        )
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
+        CustomFieldChoice.objects.create(custom_field=cf, value="ValidB")
+        cf.default = ["ValidA"]
+        cf.save()
+        cf.content_types.set([self.content_type])
+        Location.objects.filter(pk=self.location.pk).update(
+            _custom_field_data={"multi_list_default_def": ["ValidB", "StaleChoice"]}
+        )
+        result = update_custom_field_choice_data(cf.pk, "StaleChoice", "ValidA")
+        self.assertTrue(result)
+
+    def test_update_choice_data_unknown_type_raises(self):
+        """update_custom_field_choice_data raises ValueError for non-SELECT/MULTISELECT types."""
+        cf = CustomField.objects.create(
+            label="txt-def",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            key="txt_def_key",
+        )
+        cf.content_types.set([self.content_type])
+        with self.assertRaises(ValueError):
+            update_custom_field_choice_data(cf.pk, "old", "new")
+
+    def test_delete_verbose_logs_deletions(self):
+        """delete_custom_field_data verbose=True logs each deletion via INFO."""
+        self.location._custom_field_data["verbose_del_key"] = "val"
+        self.location.save()
+        with self.assertLogs("nautobot.extras.customfields", level="INFO") as cm:
+            delete_custom_field_data("verbose_del_key", [self.content_type.pk], verbose=True)
+        self.assertTrue(any("cf_cleanup.orphan_sweep" in line for line in cm.output))
+
+    def test_delete_no_objects_logs_debug(self):
+        """delete_custom_field_data when no objects have the key logs a DEBUG message."""
+        with self.assertLogs("nautobot.extras.customfields", level="DEBUG") as cm:
+            delete_custom_field_data("nonexistent_key_abc", [self.content_type.pk])
+        self.assertTrue(any("No objects had values" in line for line in cm.output))
+
+    def test_provision_field_not_found(self):
+        """provision_field raises CustomField.DoesNotExist for an unknown field_id."""
+        with self.assertRaises(CustomField.DoesNotExist):
+            provision_field(uuid.uuid4(), [self.content_type.pk])
+
+    def test_orphaned_keys_removed(self):
+        """cleanup_custom_field_data (is_all) removes JSON keys with no matching CustomField."""
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"orphaned_xyz": "value"})
+        self.location.refresh_from_db()
+        self.assertIn("orphaned_xyz", self.location._custom_field_data)
+
+        cleanup_custom_field_data()
+
+        self.location.refresh_from_db()
+        self.assertNotIn("orphaned_xyz", self.location._custom_field_data)
+
+    def test_dryrun_required_null_to_default_logs_would_change(self):
+        """cleanup_custom_field_data dryrun logs 'Would set' for required+default fields with JSON-null values."""
+        cf = CustomField.objects.create(
+            label="req-default-cf",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            key="req_default_def",
+            required=True,
+            default="fallback",
+        )
+        cf.content_types.set([self.content_type])
+        # key present with JSON null — bypasses __isnull=True, caught by has_key + None filter
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"req_default_def": None})
+        with self.assertLogs("nautobot.extras.customfields", level="INFO") as cm:
+            cleanup_custom_field_data(field_id=cf.pk, dryrun=True)
+        self.assertTrue(any("Would set" in line for line in cm.output))
 
 
 class CustomFieldTableTest(TestCase):
