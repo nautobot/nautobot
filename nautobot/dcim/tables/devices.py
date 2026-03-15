@@ -1434,6 +1434,8 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         url_params={"software_version": "pk"},
         verbose_name="Inventory Items",
     )
+    long_term_support = BooleanColumn()
+    pre_release = BooleanColumn()
     tags = TagColumn(url_name="dcim:softwareversion_list")
     actions = ButtonsColumn(SoftwareVersion)
 
