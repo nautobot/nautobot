@@ -21,7 +21,7 @@ The job will run and end up in one of the following conditions for each record.
 
 ## Cleanup Decision Tree
 
-The flow diagram illustrates how each field evaluation leads to one of these outcomes.
+The flow diagram shows how each field evaluation results in one of the defined outcomes. When running the job in safe mode, destructive actions (red paths) are skipped. In dry-run mode, no changes are committed, only the evaluation is performed. The diagram represents the full process when both safe mode and dry-run are disabled. Paths highlighted in purple or labeled "Log Failure" indicate validation issues that require manual correction, as the job cannot resolve them automatically.
 
 ```mermaid
 flowchart TD
@@ -29,45 +29,43 @@ flowchart TD
     %% MAIN FLOW
     %% =====================
 
-    B{CustomField exists?}
-    B -- No --> B1[Delete key]
-    B -- Yes --> C{Field in scope?}
+    cf_exists{CustomField exists?}
+    cf_exists -- No --> orphan_delete[Delete key]
+    cf_exists -- Yes --> in_scope{Field in scope?}
 
     %% OUT OF SCOPE BRANCH
-    C -- No --> C1{Key exists?}
-    C1 -- No --> C2[Set to empty value]
-    C1 -- Yes --> C3{Value empty?}
-    C3 -- Yes --> C4[No change]
-    C3 -- No --> C5[Set to empty value]
+    in_scope -- No --> oos_key_exists{Key exists?}
+    oos_key_exists -- No --> oos_provision[Set to empty value]
+    oos_key_exists -- Yes --> oos_value_empty{Value empty?}
+    oos_value_empty -- Yes --> oos_noop[No change]
+    oos_value_empty -- No --> oos_nullify[Set to empty value]
 
     %% IN SCOPE BRANCH
-    C -- Yes --> D{Key exists?}
+    in_scope -- Yes --> key_exists{Key exists?}
 
-    %% KEY MISSING (restructured)
-    D -- No --> F{Default exists?}
-    F -- Yes --> F1[Set to default]
-    F -- No --> E{Required?}
-    E -- Yes --> G2[Log failure]
-    E -- No --> F2[Set to empty value]
+    %% KEY MISSING
+    key_exists -- No --> missing_has_default{Default exists?}
+    missing_has_default -- Yes --> missing_set_default[Set to default]
+    missing_has_default -- No --> missing_required{Required?}
+    missing_required -- Yes --> missing_set_empty_and_log[Set to empty value &<br>Log failure]
+    missing_required -- No --> missing_set_empty[Set to empty value]
 
     %% KEY EXISTS
-    D -- Yes --> H{Value state?}
+    key_exists -- Yes --> value_state{Value state?}
 
-    H -- valid --> H1[No change]
+    value_state -- valid --> valid_noop[No change]
 
-    H -- empty --> I{Required and default?}
-    I -- Yes --> I1[Set to default]
-    I -- No --> I2[No change]
+    value_state -- empty --> empty_req_and_default{Required and default?}
+    empty_req_and_default -- Yes --> empty_set_default[Set to default]
+    empty_req_and_default -- No --> empty_noop[No change]
 
-    H -- invalid type --> J{Default exists?}
-    J -- Yes --> J1[Set to default]
-    J -- No --> J2{Required?}
-    J2 -- Yes --> J3[Log failure]
-    J2 -- No --> J4[Set to empty value]
+    value_state -- invalid type --> wrong_type_has_default{Default exists?}
+    wrong_type_has_default -- Yes --> wrong_type_set_default[Set to default]
+    wrong_type_has_default -- No --> wrong_type_required{Required?}
+    wrong_type_required -- Yes --> wrong_type_log_failure[Log failure]
+    wrong_type_required -- No --> wrong_type_set_empty[Set to empty value]
 
-    H -- fails validation --> K{Required?}
-    K -- Yes --> K1[Log failure]
-    K -- No --> K2[No change]
+    value_state -- fails validation --> invalid_log_failure[Log failure]
 
     %% =====================
     %% COLOR DEFINITIONS
@@ -79,10 +77,10 @@ flowchart TD
     classDef log fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
 
     %% Apply styles to flow nodes
-    class C4,H1,I2,K2 noop;
-    class C2,F1,F2,I1 safe;
-    class B1,C5,J1,J4 destructive;
-    class G2,J3,K1 log;
+    class oos_noop,valid_noop,empty_noop noop;
+    class oos_provision,missing_set_default,missing_set_empty,missing_set_empty_and_log,empty_set_default safe;
+    class orphan_delete,oos_nullify,wrong_type_set_default,wrong_type_set_empty destructive;
+    class wrong_type_log_failure,invalid_log_failure log;
 ```
 
 ```mermaid
