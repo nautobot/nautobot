@@ -40,7 +40,7 @@ While vendors offer a variety of technologies, the data model remains largely ag
 
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS / SRX | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -190,18 +190,78 @@ interface TenGigabitEthernet2/0/1
 > Note: this config is on a single management IP
 
 
+### Multi-Chassis Stack
 
-
-
-
-### Multi-Chassis Stack TODO: Jeff
 #### Key Questions
+
+These questions and answers are based on **Cisco StackWise**:
+
+Q. Can you port channel across multiple devices? Yes (this is called a Multi-Chassis EtherChannel or MEC).
+Q. Can you see all interfaces on the Primary? Yes.
+Q. Can you see all interfaces on the Backup? Yes (the standby maintains a synced control plane).
+Q. On Primary, can you tell which interfaces are assigned to which device? Yes (via the interface naming convention).
+Q. When do you see all the interfaces on the master device? Always (once the stack is formed and members are "Ready").
+Q. Can you connect interfaces from master to non-master? Yes.
+Q. Any configurations don't map back to model? No (configurations are applied to the logical stack, not specific physical hardware models).
+Q. How are interfaces named? Interface Type Stack-Unit/Slot/Port (e.g., GigabitEthernet 1/0/1).
+Q. What should the naming standard be for the chassis device? Member numbers (usually 1 through 8 or 9).
+Q. Should I use interface named templates? Yes (highly recommended for consistency across the stack).
+
 #### Configuration Generation
 
+_Standard Global Config_
 
+1. Master Switch (Primary)
+Set a high priority (default is 1, max is 15) to ensure this switch wins the election.
 
+```
+switch 1 priority 15
+switch 1 renumber 1
+```
 
+2. Member Switches (Non-Master)
+Keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
 
+```
+switch 2 priority 1
+switch 1 renumber 2
+```
+
+_Management Plane_
+
+You only configure this once on the Master; it automatically propagates to all members.
+
+- Option A: Using an SVI (VLAN interface)
+
+```
+interface Vlan1
+ ip address 192.168.1.10 255.255.255.0
+ no shut
+```
+
+- Option B: Using the Dedicated Management Port
+
+```
+interface Management0/0
+ ip address 10.1.1.10 255.255.255.0
+ no shut
+```
+
+_Data Plane_
+
+Because the stack behaves as one logical switch, the configuration is identical to a standard Port-Channel, except the interface identifiers reflect the different stack members (e.g., 1/0/1 and 2/0/1).
+
+```
+interface Port-channel 1
+ description Uplink-to-Core
+ switchport mode trunk
+
+interface GigabitEthernet 1/0/1 # <== 1 is member 1 of stack.
+ channel-group 1 mode active
+
+interface GigabitEthernet 2/0/1 # <== 2 is member 2 of stack.
+ channel-group 1 mode active
+```
 
 ### Firewall Cluster TODO: Allen
 #### Key Questions
@@ -243,12 +303,87 @@ TODO: Insert Model table summarizing attributes and their meanings
 
 
 
-### HA pairs TODO: Jeff
+### HA pairs
+
+
 #### Key Questions
+
+These questions and answers are based on **F5 BIG-IP (DSC)**:
+
+Q. Can you port channel across multiple devices? No. (Each device must have its own independent trunks/links to the switches)
+Q. Can you see all interfaces on the Primary? No. (You only see the local physical interfaces of the Primary unit)
+Q. Can you see all interfaces on the Backup? No. (You only see the local physical interfaces of the Backup unit).
+Q. On Primary, can you tell which interfaces are assigned to which device? No. (The Primary is unaware of the Backup's specific physical port numbering).
+Q. When do you see all the interfaces on the master device? Never. (They remain two separate hardware entities).
+Q. Can you connect interfaces from master to non-master? No. (There is no "backplane" traffic switching; you only connect them via HA/Sync cables)
+Q. Any configurations don't map back to model? Yes. (Specific items like Management IP, Hostname, and Interface speeds are "Device-Specific" and do not sync).
+Q. How are interfaces named? Slot.Port (e.g., 1.1, 1.2).
+Q. What should the naming standard be for the chassis device? FQDN (e.g., f5-01.network.local).
+Q. Should I use interface named templates? No. (F5 uses VLAN names to abstract the configuration; you sync the VLAN, not the interface).
+
 #### Configuration Generation
 
+_Standard Global Config_
+
+1. Device A (Primary)
+
+```
+# Set the sync address (usually the internal or HA self-IP)
+modify cm device f5-01.local { configsync-ip 10.1.1.1 }
+# Add Device B to the trust (performed on Device A)
+run cm add-to-trust wire-address 10.1.1.2 user admin
+
+# Create the Group (On Primary):
+create cm device-group my_ha_group { devices { f5-01.local f5-02.local } type sync-failover }
+```
+
+2. Device B (Standby)
+
+```
+# Set the sync address
+modify cm device f5-02.local { configsync-ip 10.1.1.2 }
+Create the Group (On Primary):
+```
+
+_Management Plane_
+
+Each retains its own unique Management IP for individual access, but they share a Floating Self-IP for management traffic that needs to reach the "Active" unit (like SNMP or API calls).
+
+1. Device A (Primary)
+
+```
+modify sys global-settings mgmt-dhcp disabled
+create sys management-ip 192.168.1.10/24
+
+create net self floating_mgmt_ip { address 192.168.1.12/24 vlan internal floating enabled traffic-group traffic-group-1 }
+```
+
+# Device B (Standby)
+
+```
+create sys management-ip 192.168.1.11/24
+Floating Self-IP (Shared/Active):
+```
+
+_Data Plane_
+
+Does not support Cross-Chassis EtherChannel. Instead, you build a "Trunk" on each device separately. Redundancy is handled by the Floating IP moving from Device A's Trunk to Device B's Trunk during a failover.
+
+1. Create the Trunk (Do this on both units locally)
+
+```
+create net trunk my_trunk { interfaces { 1.1 1.2 } lacp enabled }
+```
+
+2. Assign VLAN to the Trunk
+
+```
+create net vlan internal_vlan { interfaces add { my_trunk { tagged } } }
+```
+
+3. Create the Floating IP (The "Gateway" for your servers)
 
 
-
-
-
+```
+create net self internal_floating { address 10.10.1.1/24 vlan internal_vlan floating enabled traffic-group traffic-group-1 }
+```
