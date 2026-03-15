@@ -3787,7 +3787,9 @@ class CustomFieldDefensiveCoverage(TestCase):
         self.content_type = ContentType.objects.get_for_model(Location)
         location_type = LocationType.objects.create(name="CF-Defensive-LT")
         location_status = Status.objects.get_for_model(Location).first()
-        self.location = Location.objects.create(name="cf-defensive-loc", location_type=location_type, status=location_status)
+        self.location = Location.objects.create(
+            name="cf-defensive-loc", location_type=location_type, status=location_status
+        )
 
     def test_is_badtype_date_multiselect_json(self):
         """_is_badtype: TYPE_DATE, TYPE_MULTISELECT, and TYPE_JSON (fallback) branches."""
