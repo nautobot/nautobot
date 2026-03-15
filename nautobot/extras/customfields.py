@@ -351,7 +351,9 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
             continue
         try:
             field.validate(value, enforce_required=False)
-        except ValidationError:
+        except (ValidationError, TypeError):
+            # TypeError can occur when field.validate() receives a wrong-type value
+            # (e.g., int passed to TYPE_DATE which calls datetime.strptime).
             if _is_badtype(field, value):
                 if field.default is not None:
                     # Type-mismatch reset: wrong type + default exists → todefault (destructive)
