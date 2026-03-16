@@ -1,2 +1,0 @@
-Fixed issue where `islower` was not called as a function in the conditional.
-Added missing f-string to the raised error message.
