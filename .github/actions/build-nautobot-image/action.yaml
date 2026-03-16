@@ -119,6 +119,7 @@ runs:
         platforms: "linux/${{ inputs.arch }}"
         file: "docker/Dockerfile"
         labels: "${{ steps.dockermeta.outputs.labels }}"
+        tags: "${{ inputs.images }}"
         cache-from: "type=gha,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}-${{ inputs.arch }}"
         cache-to: "type=gha,mode=max,scope=${{ inputs.cache-scope }}-${{ inputs.python-version }}-${{ inputs.arch }}"
         context: "."
