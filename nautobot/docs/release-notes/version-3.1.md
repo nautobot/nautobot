@@ -68,7 +68,7 @@ Configurable Columns have been redesigned for improved usability. You can now ea
 
 #### Job Console
 
-When running jobs, Nautobot now displays all log output in the Job Console tab, including logs previously omitted due to log settings or C-program output. You can now see the complete console log as if running the job interactively, creating a clear separation between job troubleshooting (Job Console) and job reporting (Job Results).
+When running jobs, Nautobot now optionally captures and displays all console output in the Job Console tab, including logs previously omitted due to log settings or C-program output. You can now see the complete console log as if running the job interactively, creating a clear separation between job troubleshooting (Job Console) and job reporting (Job Log Entries).
 
 #### Custom Field Scoping
 
