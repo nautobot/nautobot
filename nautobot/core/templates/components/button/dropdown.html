@@ -10,7 +10,7 @@
     <ul class="dropdown-menu">
         {% for child in children %}
             <li>
-                <a href="{{ child.link }}" class="dropdown-item text-{{ child.color }}"
+                <a href="{{ child.link|default:'#' }}" class="dropdown-item text-{{ child.color }}"
                    {% for key, value in child.attributes.items %}{{ key }}="{{ value }}" {% endfor %}
                 >
                     {% if child.icon %}<span class="mdi {{ child.icon }}" aria-hidden="true"></span>{% endif %}

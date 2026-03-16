@@ -6,6 +6,7 @@ from enum import Enum
 import hashlib
 import json
 import logging
+from operator import attrgetter
 from typing import Callable
 import uuid
 
@@ -52,6 +53,7 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import Job
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -2610,3 +2612,113 @@ class _ObjectDetailMetadataTab(Tab):
                 badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )
+
+
+def resolve_attr(obj, dotted_path: str):
+    """Resolve nested attributes on a Django model instance using a Django-style double underscore path (e.g. 'location__location_type__name').
+
+    Args:
+        obj: The Django model instance.
+        dotted_path (str): The dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None: The value of the nested attribute, or None if any attribute in the path does not exist.
+    """
+    try:
+        value = attrgetter(dotted_path.replace("__", "."))(obj)
+        return str(value) if value is not None else None
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+
+class _JobModalButton(Button):
+    """A Button that, when clicked, opens a modal dialog for running a Job. This is experimental and subject to change or removal without deprecation."""
+
+    class_path = None
+    advanced_fields = ()
+    initial_field_mapping = {}
+    run_button_label = "Run Job Now"
+    job_result_key = None
+
+    def __init__(self, **kwargs):
+        """
+        Initialize a _JobModalButton component.
+
+        Keyword Args:
+            class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices, optional): The color (class) of this button.
+            advanced_fields (tuple, optional): A tuple of job fields to only render on the Advanced Settings section of the Modal.
+            initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
+                For example, `{"location": "location__name"}` would pre-populate the `location` field on the
+                Job form with the value of `obj.location.name` from the object in context.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            run_button_label (str, optional): The text to display on the button that submits the Job form within the modal. Defaults to "Run Job Now".
+            job_result_key (str, optional): The dictionary key used to extract specific display data from the JobResult.result field.
+                If JobResult.result is a dictionary, this key determines which value is shown in the Job Result modal.
+                If the result is a primitive type (string, integer, or float), this key is ignored and the full value
+                is displayed directly.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button (not the modal). Defaults to "components/button/default.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to "main".
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
+
+            Example:
+                _JobModalButton(
+                    label="Validate Device Location Data",
+                    weight=200,
+                    class_path="myapp.jobs.ValidateLocationData",
+                    initial_field_mapping={"location": "location__name"},
+                    advanced_fields=("verbose", "skip_related_objects"),
+                    required_permissions=["dcim.view_location"],
+                    run_button_label="Run Validation",
+                )
+        """
+        super().__init__(**kwargs)
+        if self.class_path is None:
+            raise TypeError("class_path is required")
+
+    def get_link(self, context):
+        """Override the default `get_link()` behavior since this button opens a modal."""
+        return None
+
+    def get_extra_context(self, context: Context):
+        """Add necessary htmx attributes to the button."""
+        obj = get_obj_from_context(context, self.context_object_key)
+        hx_vals = {
+            field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
+        }
+        hx_vals["job_form_modal"] = True
+        hx_vals["advanced_fields"] = self.advanced_fields
+        hx_vals["run_button_label"] = self.run_button_label
+        hx_vals["job_result_key"] = self.job_result_key
+        if not self.attributes:
+            self.attributes = {}
+        self.attributes.update(
+            {
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#nautobot-generic-modal",
+                "hx-target": "#modal-content-container",
+                "hx-get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+                "hx-vals": json.dumps(hx_vals),
+                "hx-swap": "innerHTML",
+            }
+        )
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, disable the button.
+        try:
+            jobs = Job.objects
+            if "request" in context and context["request"].user is not None:
+                jobs = jobs.restrict(context["request"].user, "view")
+            jobs.get_for_class_path(self.class_path)
+        except Job.DoesNotExist:
+            self.attributes["disabled"] = "disabled"
+        return super().get_extra_context(context)
