@@ -14,6 +14,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, TemplateDoesNotExist
+from django.templatetags.static import static
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
@@ -87,6 +88,7 @@ from nautobot.extras.templatetags.approvals import render_approval_workflow_stat
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
+    get_kubernetes_job_manifest,
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
@@ -2200,7 +2202,21 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        if job_form is not None:
+            job_form_is_valid = job_form.is_valid()
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
+                job_queue.name
+            ):
+                job_form.add_error("_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue.")
+                job_form_is_valid = False
+        else:
+            job_form_is_valid = False
+
         schedule_form = forms.JobScheduleForm(request.POST)
+        schedule_form_is_valid = schedule_form.is_valid()
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -2218,11 +2234,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            if job_queue is None:
-                job_queue = job_model.default_job_queue
-
+        elif job_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(
                     request,
@@ -2824,7 +2836,7 @@ def render_jobresult_files(files_manager):
             continue
 
         # Pick URL depending on storage backend
-        if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage":
+        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
             href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
         else:
             href = file_proxy.file.url
@@ -2852,18 +2864,31 @@ def render_jobresult_status(status):
         str: Safe HTML string for a styled label with a fixed ID so tests work.
     """
     mapping = {
-        "FAILURE": ("danger", "Failed"),
-        "PENDING": ("default", "Pending"),
-        "STARTED": ("warning", "Running"),
-        "SUCCESS": ("success", "Completed"),
+        "FAILURE": ("bg-danger", "Failed"),
+        "PENDING": ("bg-body-secondary border", "Pending"),
+        "STARTED": ("bg-warning", "Running"),
+        "SUCCESS": ("bg-success", "Completed"),
     }
 
-    css_class, text = mapping.get(status, ("default", "N/A"))
+    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
     return format_html(
-        '<span id="pending-result-label"><label class="label label-{}">{}</label></span>',
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
+
+
+class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        """Render a placeholder for certain fields if the job hasn't yet completed."""
+        if key in ["duration", "result"]:
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj.status not in JobResultStatusChoices.READY_STATES:
+                url = static("img/ajax-loader.gif")
+                return format_html('<img src="{}">', url)
+        if key == "result" and value is None:
+            return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        return super().render_value(key, value, context)
 
 
 class JobResultButton(object_detail.Button):
@@ -2928,7 +2953,7 @@ class JobResultUIViewSet(
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
-            object_detail.ObjectFieldsPanel(
+            JobResultSummaryPanel(
                 label="Summary of Results",
                 weight=100,
                 fields=[
