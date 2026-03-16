@@ -118,6 +118,7 @@ from .choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
 )
+from .constants import OBJECTCHANGE_STAFF_USER_FIELDS
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -3157,6 +3158,17 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
             )
 
         return context
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            staff_authored_logs = Q()
+            for field_name in OBJECTCHANGE_STAFF_USER_FIELDS:
+                staff_authored_logs |= Q(**{f"user__{field_name}": True})
+            queryset = queryset.exclude(staff_authored_logs)
+
+        return queryset
 
 
 class ObjectChangeLogView(generic.GenericView):

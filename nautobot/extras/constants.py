@@ -48,6 +48,9 @@ JOB_LOG_MAX_ABSOLUTE_URL_LENGTH = 255
 CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL = 400
 CHANGELOG_MAX_OBJECT_REPR = 200
 
+# ObjectChange staff-authored log restriction
+OBJECTCHANGE_STAFF_USER_FIELDS = ("is_staff", "is_superuser")
+
 # JobResult custom Celery kwargs
 JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_profile",
