@@ -14,11 +14,11 @@ logger = getLogger("nautobot.extras.customfields")
 
 def _pks_and_display(queryset, limit=20):
     """
-    Return ``(all_pks, display_string)`` for *queryset* using two DB queries.
+    Return `(all_pks, display_string)` for `queryset` using two DB queries.
 
-    Fetches all PKs first (pk-only, flat), then fetches up to *limit* name/pk
+    Fetches all PKs first (pk-only, flat), then fetches up to `limit` name/pk
     rows via a bounded SQL LIMIT query for the display string.  Falls back to
-    pk-only display if the model has no ``name`` field.  A trailing ``"..."`` is
+    pk-only display if the model has no `name` field.  A trailing `"..."` is
     appended when the result is truncated.
     """
     model = queryset.model
@@ -39,7 +39,10 @@ def _count_and_display(queryset, limit=20):
 
     Unlike ``_pks_and_display``, this does *not* materialize all PKs — only a
     ``COUNT(*)`` plus up to *limit* name/pk rows.  Use this at call sites that
-    only need a count and a human-readable sample for log messages.
+    Return `(count, display_string)` using two bounded DB queries.
+
+    Unlike `_pks_and_display`, this does *not* materialize all PKs — only a
+    `COUNT(*)` plus up to `limit` name/pk rows.  Use this at call sites that
     """
     model = queryset.model
     count = queryset.count()
@@ -616,7 +619,7 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
-        job_logger.error(f"Custom field with ID {field_id} not found, failing to provision.")
+        job_logger.error(f"Custom field with ID %s not found, failing to provision.", field_id)
         raise
 
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):

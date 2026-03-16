@@ -689,10 +689,10 @@ class CustomField(
 
     def get_in_scope_queryset(self, queryset, job_logger=logger):
         """
-        Return a filtered version of *queryset* containing only objects in scope for this field.
+        Return a filtered version of `queryset` containing only objects in scope for this field.
 
-        If ``scope_filter`` is empty, *queryset* is returned unchanged.  Falls back to returning
-        *queryset* unchanged if no filterset class exists for the model or the stored filter is invalid,
+        If `self.scope_filter` is empty, `queryset` is returned unchanged.  Falls back to returning
+        `queryset` unchanged if no filterset class exists for the model or the stored filter is invalid,
         so that any pre-filtering applied by the caller is always preserved.
         """
         if not self.scope_filter:

@@ -2441,9 +2441,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             "type": field_type,
             "required": required,
         }
-        cf = CustomField(**cf_kwargs)
         if validation_regex is not None:
-            cf.validation_regex = validation_regex
+            cf_kwargs["validation_regex"] = validation_regex
+        cf = CustomField(**cf_kwargs)
         cf.validated_save()
 
         if choices:

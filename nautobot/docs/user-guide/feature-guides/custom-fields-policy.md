@@ -175,7 +175,7 @@ If the key did not previously exist, it may be created with an empty value depen
 
 ## Delete Key
 
-The key is removed entirely from _custom_field_data.
+The key is removed entirely from `_custom_field_data`.
 
 This occurs when:
 
