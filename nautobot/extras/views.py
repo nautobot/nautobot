@@ -82,7 +82,12 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.utils import fixup_filterset_query_params, get_base_template, get_worker_count
+from nautobot.extras.utils import (
+    fixup_filterset_query_params,
+    get_base_template,
+    get_kubernetes_job_manifest,
+    get_worker_count,
+)
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -1460,6 +1465,26 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         else:
             return_url = None
 
+        if job_form is not None:
+            job_form_is_valid = job_form.is_valid()
+            job_queue = job_form.cleaned_data.pop("_job_queue", None) if job_form_is_valid else None
+            if job_queue is None and job_model.default_job_queue_id:
+                job_queue = job_model.default_job_queue
+            if (
+                job_queue is not None
+                and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES
+                and not get_kubernetes_job_manifest(job_queue.name)
+            ):
+                job_form.add_error(
+                    "_job_queue",
+                    "Unable to retrieve a Kubernetes job manifest for this job queue.",
+                )
+                job_form_is_valid = False
+        else:
+            job_form_is_valid = False
+            job_queue = None
+        schedule_form_is_valid = schedule_form.is_valid()
+
         # Allow execution only if the job is runnable.
         if not job_model.installed or job_class is None:
             messages.error(request, "Unable to run or schedule job: Job is not presently installed.")
@@ -1477,8 +1502,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                 "This job is flagged as possibly having sensitive variables but is also flagged as requiring approval."
                 "One of these two flags must be removed before this job can be scheduled or run.",
             )
-        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+        elif job_form_is_valid and schedule_form_is_valid:
             if job_queue is None:
                 job_queue = job_model.default_job_queue
 
