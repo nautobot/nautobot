@@ -600,8 +600,15 @@ jobs:
           git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
           poetry run towncrier check --compare-with origin/${{ github.base_ref }}
   container-build-test:
-    name: "Test Container Build (amd64 only on Python 3.13)"
-    runs-on: "ubuntu-24.04"
+    name: "Test Container Build (Python 3.13 only)"
+    strategy:
+      matrix:
+        include:
+          - os: "ubuntu-24.04"
+            arch: "amd64"
+          - os: "ubuntu-24.04-arm"
+            arch: "arm64"
+    runs-on: "${{ matrix.os }}"
     needs:
       - "check-migrations"
       - "check-schema"
@@ -617,16 +624,8 @@ jobs:
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
-      - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
-      - name: "Login to GitHub Container Registry"
-        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
-        with:
-          registry: "ghcr.io"
-          username: "${{ github.actor }}"
-          password: "${{ secrets.GITHUB_TOKEN }}"
+        uses: "docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd" # v4
       - name: "Determine if nautobot-version is branch name or from tag name"
         id: "versionname"
         run: |
@@ -640,12 +639,41 @@ jobs:
         with:
           images: "ghcr.io/nautobot/nautobot"
           python-version: "3.13"
-          platforms: "linux/amd64" # only build for amd64 in PRs to save on time/resources
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          arch: "${{ matrix.arch }}"
           push: false
           target: "final"
           default-python-version: "3.13"
-          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}-${{ matrix.python-version }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+#   container-merge-test:
+#     name: "Test Merge Manifests (Python 3.13 only)"
+#     needs:
+#       - "container-build-test"
+#     runs-on: "ubuntu-24.04"
+#     steps:
+#       - name: "Check out repository code"
+#         uses: "actions/checkout@v4"
+#       - name: "Set up Docker Buildx"
+#         uses: "docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd" # v4
+#       - name: "Determine if nautobot-version is branch name or from tag name"
+#         id: "versionname"
+#         run: |
+#           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+#             echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+#           else
+#             echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+#           fi
+#       - name: "Merge Test (prod - final target)"
+#         uses: "./.github/actions/merge-image-digests"
+#         with:
+#           image: "ghcr.io/nautobot/nautobot"
+#           python-version: "3.13"
+#           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+#           default-python-version: "3.13"
+#           set-latest: false
+#           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
   all-tests-passed:
     runs-on: "ubuntu-24.04"
     steps:
