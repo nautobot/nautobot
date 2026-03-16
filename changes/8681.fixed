@@ -1,1 +1,0 @@
-Fixed an exception when viewing JobResult records with associated file outputs.

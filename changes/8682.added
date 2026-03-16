@@ -1,1 +1,0 @@
-Added `software_version__platform` filter to `SoftwareImageFileFilterSet` to allow filtering software image files by their software version's platform.
