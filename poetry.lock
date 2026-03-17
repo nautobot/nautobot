@@ -878,14 +878,14 @@ profile = ["gprof2dot (>=2022.7.29)"]
 
 [[package]]
 name = "django"
-version = "4.2.28"
+version = "4.2.29"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
 optional = false
 python-versions = ">=3.8"
 groups = ["main", "dev"]
 files = [
-    {file = "django-4.2.28-py3-none-any.whl", hash = "sha256:49a23c1b83ef31525f8d71a57b040f91d34660edb3f086280a8519855655ed3c"},
-    {file = "django-4.2.28.tar.gz", hash = "sha256:a4b9cd881991add394cafa8bb3b11ad1742d1e1470ba99c3ef53dc540316ccfe"},
+    {file = "django-4.2.29-py3-none-any.whl", hash = "sha256:074d7c4d2808050e528388bda442bd491f06def4df4fe863f27066851bba010c"},
+    {file = "django-4.2.29.tar.gz", hash = "sha256:86d91bc8086569c8d08f9c55888b583a921ac1f95ed3bdc7d5659d4709542014"},
 ]
 
 [package.dependencies]
@@ -964,14 +964,14 @@ Django = ">=3.2.25"
 
 [[package]]
 name = "django-constance"
-version = "4.3.4"
+version = "4.3.5"
 description = "Django live settings with pluggable backends, including Redis."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "django_constance-4.3.4-py3-none-any.whl", hash = "sha256:598f8c967a675fe2c7fe3688510ac8302e1b6df2141d01b8d29577532a8241db"},
-    {file = "django_constance-4.3.4.tar.gz", hash = "sha256:30d1b325f636177c708cce63abbde7015593f5c60b2bc0b0e2eebe8c36e2ce59"},
+    {file = "django_constance-4.3.5-py3-none-any.whl", hash = "sha256:c28f360c2822112772a3e4caf02db758c82cca8de7d0b9f648fef371bf4b8bc6"},
+    {file = "django_constance-4.3.5.tar.gz", hash = "sha256:081177483d272b664cf768deae76fc2fbb0a777076f45620b6fde4d9075ee2b3"},
 ]
 
 [package.extras]
@@ -2593,14 +2593,14 @@ test = ["mkdocs-d2-plugin", "mkdocs-include-markdown-plugin", "mkdocs-macros-tes
 
 [[package]]
 name = "mkdocs-material"
-version = "9.7.3"
+version = "9.7.5"
 description = "Documentation that simply works"
 optional = false
 python-versions = ">=3.8"
 groups = ["docs"]
 files = [
-    {file = "mkdocs_material-9.7.3-py3-none-any.whl", hash = "sha256:37ebf7b4788c992203faf2e71900be3c197c70a4be9b0d72aed537b08a91dd9d"},
-    {file = "mkdocs_material-9.7.3.tar.gz", hash = "sha256:e5f0a18319699da7e78c35e4a8df7e93537a888660f61a86bd773a7134798f22"},
+    {file = "mkdocs_material-9.7.5-py3-none-any.whl", hash = "sha256:7cf9df2ff121fd098ff6e05c732b0be3699afca9642e2dfe4926c40eb5873eec"},
+    {file = "mkdocs_material-9.7.5.tar.gz", hash = "sha256:f76bdab532bad1d9c57ca7187b37eccf64dd12e1586909307f8856db3be384ea"},
 ]
 
 [package.dependencies]
@@ -2609,7 +2609,7 @@ backrefs = ">=5.7.post1"
 colorama = ">=0.4"
 jinja2 = ">=3.1"
 markdown = ">=3.2"
-mkdocs = ">=1.6"
+mkdocs = ">=1.6,<2"
 mkdocs-material-extensions = ">=1.3"
 paginate = ">=0.5"
 pygments = ">=2.16"
@@ -3534,18 +3534,19 @@ files = [
 
 [[package]]
 name = "pyjwt"
-version = "2.11.0"
+version = "2.12.1"
 description = "JSON Web Token implementation in Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "pyjwt-2.11.0-py3-none-any.whl", hash = "sha256:94a6bde30eb5c8e04fee991062b534071fd1439ef58d2adc9ccb823e7bcd0469"},
-    {file = "pyjwt-2.11.0.tar.gz", hash = "sha256:35f95c1f0fbe5d5ba6e43f00271c275f7a1a4db1dab27bf708073b75318ea623"},
+    {file = "pyjwt-2.12.1-py3-none-any.whl", hash = "sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c"},
+    {file = "pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b"},
 ]
 
 [package.dependencies]
 cryptography = {version = ">=3.4.0", optional = true, markers = "extra == \"crypto\""}
+typing_extensions = {version = ">=4.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
 crypto = ["cryptography (>=3.4.0)"]
@@ -3619,20 +3620,21 @@ pylint = ">=1.7"
 
 [[package]]
 name = "pymarkdownlnt"
-version = "0.9.35"
+version = "0.9.36"
 description = "A GitHub Flavored Markdown compliant Markdown linter."
 optional = false
 python-versions = ">=3.10.0"
 groups = ["linting"]
 files = [
-    {file = "pymarkdownlnt-0.9.35-py3-none-any.whl", hash = "sha256:c71b100cc662d766ab2bb8fbb01dfce4e0410797c450b4cc884cc63162cb83e7"},
-    {file = "pymarkdownlnt-0.9.35.tar.gz", hash = "sha256:89529c9bbd3fc4258b2bf4652a07e98093ee665f5abadccc7d1a7a36b92e2c4d"},
+    {file = "pymarkdownlnt-0.9.36-py3-none-any.whl", hash = "sha256:dcbc1d8ab9cc7be3172ac7c410dde4af8154df75dab7a6e8447c912405cc11f1"},
+    {file = "pymarkdownlnt-0.9.36.tar.gz", hash = "sha256:0b53e436bb5ec018ec0681a8473b4ce604a5c99e16c20f4cf66f08873d3309e5"},
 ]
 
 [package.dependencies]
 application-file-scanner = ">=0.6.4"
-application-properties = ">=0.9.1"
+application-properties = ">=0.9.2"
 columnar = ">=1.4.0"
+py-walk = ">=0.3.3"
 typing-extensions = ">=4.5.0"
 
 [[package]]
@@ -5480,4 +5482,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "14ddb66cbdb8243021bd412c5c432b923d056d08422af65d1d0e8891cd7183b0"
+content-hash = "30e71181cf02813b3be1e0fcb8455ad7fcf1ad96eca852ac25ac97f5c877ab89"

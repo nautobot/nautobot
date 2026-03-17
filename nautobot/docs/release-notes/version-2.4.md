@@ -166,6 +166,18 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.28 (2026-03-02)
+
+### Fixed in v2.4.28
+
+- [#8519](https://github.com/nautobot/nautobot/issues/8519) - Fixed cable color display in dark mode to ensure cable colors render closer to the configured value.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Fixed sorting on multiple tables.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed filtering on multiple tables.
+
+### Housekeeping in v2.4.28
+
+- [#8591](https://github.com/nautobot/nautobot/issues/8591) - Updated `deploy-sandbox` action for release CI.
+
 ## v2.4.27 (2026-02-17)
 
 ### Security in v2.4.27
