@@ -100,6 +100,7 @@ from nautobot.extras.templatetags.approvals import render_approval_workflow_stat
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
+    get_kubernetes_job_manifest,
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
@@ -2353,8 +2354,23 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        if job_form is not None:
+            job_form_is_valid = job_form.is_valid()
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
+                job_queue.name
+            ):
+                job_form.add_error("_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue.")
+                job_form_is_valid = False
+        else:
+            job_form_is_valid = False
+
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+        job_execution_form_is_valid = job_execution_form is not None and job_execution_form.is_valid()
         schedule_form = forms.JobScheduleForm(request.POST)
+        schedule_form_is_valid = schedule_form.is_valid()
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -2372,17 +2388,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif (
-            job_form is not None
-            and job_form.is_valid()
-            and job_execution_form is not None
-            and job_execution_form.is_valid()
-            and schedule_form.is_valid()
-        ):
-            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
-            if job_queue is None:
-                job_queue = job_model.default_job_queue
-
+        elif job_form_is_valid and job_execution_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(
                     request,

@@ -1815,6 +1815,12 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
     )
+    software_version__platform = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_version__platform",
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Software version platform (name or ID)",
+    )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
         to_field_name="model",
