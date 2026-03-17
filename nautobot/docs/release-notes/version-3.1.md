@@ -32,6 +32,7 @@ Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django m
 - Support for `Model.Meta.index_together` (previously deprecated in Django 4.2) is removed; App models with custom indexes using `index_together` will need to migrate to use `Model.Meta.indexes` instead and create a database migration accordingly.
 - Models using a `ManyToManyField` with an explicit `through` table (as is recommended by Nautobot) may need to run `nautobot-server makemigrations <app>` to generate a schema migration explicitly specifying the `through_fields` for each such `ManyToManyField`.
 - The test method `assertQuerysetEqual()` (previously deprecated in Django 4.2) is removed; App tests using this method will need to migrate to use `assertQuerySetEqual()` (note capitalization) instead.
+- Nautobot previously maintained a Django templatetag named `querystring`, which may conflict with the built-in [`querystring` templatetag introduced in Django 5.1](https://docs.djangoproject.com/en/5.1/ref/templates/builtins/#querystring). Additionally, [Django Tables2 has a similar namespace conflict](https://github.com/jieter/django-tables2/issues/976). It is recommended to use Django's built-in version where possible. If compatibility issues arise, use `nautobot.app.templatetags.legacy_querystring` instead.
 
 #### Changes for HTMX
 
@@ -55,6 +56,28 @@ As a consequence of the [dependency update to Django 5.2](#django-52), Nautobot 
 
 ### Added
 
+#### Dependent Object Creation and Search
+
+Dependent objects can now be created directly from the current page using an embedded modal, without interrupting your workflow. Additionally, dependent object search supports advanced filtering, making it easier to find related records, especially in cases like interfaces where simple string matching was not sufficient.
+
+Both creation and search are handled within a modal, so you don't have to leave the main form.
+
+#### Configurable Columns
+
+Configurable Columns have been redesigned for improved usability. You can now easily toggle columns on and off via moveable checkboxes, while preserving the order of selected columns.
+
+#### Job Console
+
+When running jobs, Nautobot now optionally captures and displays all console output in the Job Console tab, including logs previously omitted due to log settings or C-program output. You can now see the complete console log as if running the job interactively, creating a clear separation between job troubleshooting (Job Console) and job reporting (Job Log Entries).
+
+#### Custom Field Scoping
+
+Custom Fields can now be scoped to display or edit only when specific, user-defined filtering conditions are met. Previously, all Custom Fields appeared on all objects. Common use cases include:
+
+- Displaying SMARTnet details for `Device` objects only when the device is a Cisco model.
+- Showing local contact information for `Location` objects only when the `LocationType` is `Site`.
+- Presenting ATT billing account information for `Circuit` objects only when the circuit is an ATT circuit.
+
 #### Python 3.14 Support
 
 Added official support for Python 3.14.
@@ -64,6 +87,10 @@ Added official support for Python 3.14.
 #### HTMX List View Rendering
 
 In Nautobot 3.1, object list views (including both those derived from `generic.ObjectListView` and those using `NautobotUIViewSet`) now load in two stages (using [HTMX](https://htmx.org)) to improve the responsiveness of the UI. Custom implementations of these views, and/or custom test cases written for these views, may require some updates to handle this behavior correctly. Refer to the [developer documentation](../development/core/htmx.md#object-list-views-and-htmx) for more specific guidance.
+
+#### Async Global Search
+
+Global search is now loaded asynchronously. When performing a search, results are returned incrementally, so you see matches immediately without waiting for the slowest queries to complete.
 
 #### Improved Location and Prefix List Views
 
