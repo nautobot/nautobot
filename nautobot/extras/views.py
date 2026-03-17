@@ -2354,21 +2354,23 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
-        if job_form is not None:
-            job_form_is_valid = job_form.is_valid()
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+        job_form_is_valid = job_form is not None and job_form.is_valid()
+        job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+        if job_execution_form is not None:
+            job_execution_form_is_valid = job_execution_form.is_valid()
+            job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
             if job_queue is None:
                 job_queue = job_model.default_job_queue
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
                 job_queue.name
             ):
-                job_form.add_error("_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue.")
-                job_form_is_valid = False
+                job_execution_form.add_error(
+                    "_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue."
+                )
+                job_execution_form_is_valid = False
         else:
-            job_form_is_valid = False
+            job_execution_form_is_valid = False
 
-        job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
-        job_execution_form_is_valid = job_execution_form is not None and job_execution_form.is_valid()
         schedule_form = forms.JobScheduleForm(request.POST)
         schedule_form_is_valid = schedule_form.is_valid()
 
