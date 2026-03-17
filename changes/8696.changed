@@ -1,0 +1,3 @@
+When the dependent object search modal is opened, initial search query is automatically triggered.
+A single loading spinner is displayed for all global search tables.
+When table subtrees are toggled, the "Showing X of Y" pagination info is hidden.
