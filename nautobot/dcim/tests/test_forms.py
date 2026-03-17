@@ -581,6 +581,38 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             bulk_edit_form.fields["untagged_vlan"].queryset,
         )
 
+    def test_bulk_interface_form_clean_tagged_vlan_fail(self):
+        """Assert that form validation fails when adding a tagged VLAN and mode is not tagged to an interface in bulk edit form."""
+        # Create an interface that is NOT in tagged mode.
+        interface = Interface.objects.create(
+            device=self.device,
+            name="Non-Tagged Interface",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_ACCESS,
+            status=self.status,
+        )
+        form = InterfaceBulkEditForm(
+            model=Interface,
+            data={
+                "pk": [interface.pk],
+                "add_tagged_vlans": [self.vlan.pk],
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Attempting to update VLAN when not all of the interfaces were in tagged mode including",
+            form.errors["mode"][0],
+        )
+        form = InterfaceBulkEditForm(
+            model=Interface,
+            data={
+                "pk": [interface.pk],
+                "add_tagged_vlans": [self.vlan.pk],
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+            },
+        )
+        self.assertTrue(form.is_valid())
+
     def test_interface_mode_tagged_vlans_interaction(self):
         """Assert that form validation correctly handles various combinations of mode and tagged_vlans."""
         data = {

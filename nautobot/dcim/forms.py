@@ -3590,7 +3590,14 @@ class InterfaceBulkEditForm(
         queryset=VLAN.objects.all(),
         required=False,
     )
-    tagged_vlans = DynamicModelMultipleChoiceField(
+    add_tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+    )
+    remove_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
@@ -3622,7 +3629,6 @@ class InterfaceBulkEditForm(
             "speed",
             "duplex",
             "untagged_vlan",
-            "tagged_vlans",
             "vrf",
             "port_type",
         ]
@@ -3650,9 +3656,11 @@ class InterfaceBulkEditForm(
                 # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
                 # to those available on the devices in that location and in the ancestors of the location.
                 self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", location.pk)
             else:
-                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
@@ -3670,9 +3678,26 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
+        tagged_vlans = bool(self.cleaned_data["add_tagged_vlans"] or self.cleaned_data["remove_tagged_vlans"])
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["tagged_vlans"]:
+        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
+
+        # In theory UI blocks this from happening, but to ensure on backend we enforce.
+        # An interface must be in tagged mode to have an untagged VLAN assigned
+        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+            non_tagged = (
+                Interface.objects.filter(pk__in=self.cleaned_data["pk"])
+                .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
+                .values_list("name", flat=True)
+            )
+            if non_tagged.exists():
+                raise forms.ValidationError(
+                    {
+                        "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
+                        + ", ".join(list(non_tagged))
+                    }
+                )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
