@@ -2535,43 +2535,63 @@ class DeviceUIViewSet(NautobotUIViewSet):
         ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
         """
 
+        @staticmethod
+        def _get_parent_bay_or_none(device):
+            """Return the parent bay for a device, or None if it has no parent bay."""
+            try:
+                return device.parent_bay
+            except DeviceBay.DoesNotExist:
+                return None
+
+        @classmethod
+        def _get_breadcrumb_objects(cls, instance):
+            """
+            Build an ordered list of breadcrumb objects from top-level parent down to immediate parent bay.
+
+            Output shape (for nested devices):
+                [parent_device, parent_device_bay, intermediate_device, intermediate_device_bay, ...]
+            """
+            current_bay = cls._get_parent_bay_or_none(instance)
+            if current_bay is None:
+                return []
+
+            visited_device_ids = set()
+            breadcrumb_segments = []  # child-upward order: [bay, device, bay, device, ...]
+            max_hops = DEVICE_RECURSION_DEPTH_LIMIT * 2
+            hop_count = 0
+
+            while current_bay is not None and hop_count < max_hops:
+                current_device = current_bay.device
+                if current_device.pk in visited_device_ids:
+                    break
+
+                visited_device_ids.add(current_device.pk)
+                breadcrumb_segments.extend([current_bay, current_device])
+
+                current_bay = cls._get_parent_bay_or_none(current_device)
+                hop_count += 1
+
+            # Convert to top-down order: [device, bay, device, bay, ...]
+            return list(reversed(breadcrumb_segments))
+
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
-                try:
-                    if instance.parent_bay is not None:
-                        # Build fully qualified breadcrumb path by walking up the hierarchy, guarding against
-                        # infinite recursion caused by malformed data
-                        path_objects = []
-                        current_bay = instance.parent_bay
-                        visited_device_ids = set()
-                        max_depth = DEVICE_RECURSION_DEPTH_LIMIT * 2  # device + bay per level
-                        current_depth = 0
+                breadcrumb_objects = self._get_breadcrumb_objects(instance)
 
-                        while current_bay is not None and current_depth < max_depth:
-                            path_objects.insert(0, current_bay)
-                            current_device = current_bay.device
-                            if current_device.pk in visited_device_ids:
-                                break
+                if breadcrumb_objects:
+                    breadcrumb_links = [helpers.hyperlinked_object(obj) for obj in breadcrumb_objects]
+                    display = format_html(" / ".join(["{}"] * len(breadcrumb_links)), *breadcrumb_links)
 
-                            visited_device_ids.add(current_device.pk)
-                            path_objects.insert(0, current_device)
-                            current_bay = getattr(current_device, "parent_bay", None)
-                            current_depth += 1
+                    # Add top-level device position if it has one
+                    if hasattr(breadcrumb_objects[0], "position"):
+                        top_device_position = breadcrumb_objects[0].position
+                        if top_device_position is not None:
+                            display += format_html(
+                                " (U{} / {})", top_device_position, breadcrumb_objects[0].get_face_display()
+                            )
+                    return display
 
-                        path_display = [helpers.hyperlinked_object(obj) for obj in path_objects]
-                        display = format_html(" / ".join(["{}"] * len(path_display)), *path_display)
-
-                        # Add top-level device position if it has one
-                        if path_objects and hasattr(path_objects[0], "position"):
-                            top_device_position = path_objects[0].position
-                            if top_device_position is not None:
-                                display += format_html(
-                                    " (U{} / {})", top_device_position, path_objects[0].get_face_display()
-                                )
-                        return display
-                except DeviceBay.DoesNotExist:
-                    pass
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
