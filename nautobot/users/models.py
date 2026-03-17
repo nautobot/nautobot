@@ -50,7 +50,7 @@ class UserManager(BaseManager, UserManager_):
         return self.get_queryset().restrict(user, action)
 
 
-class User(BaseModel, AbstractUser):
+class User(ChangeLoggedModel, BaseModel, AbstractUser):
     """
     Nautobot implements its own User model to suport several specific use cases.
 
@@ -108,6 +108,23 @@ class User(BaseModel, AbstractUser):
                     return False
 
         return super().has_perm(perm, obj)
+
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+        excluded_fields = list(object_data_exclude or [])
+        if "password" not in excluded_fields:
+            excluded_fields.append("password")
+
+        objectchange = ChangeLoggedModel.to_objectchange(
+            self,
+            action,
+            related_object=related_object,
+            object_data_extra=object_data_extra,
+            object_data_exclude=excluded_fields,
+        )
+        if isinstance(objectchange.object_data_v2, dict):
+            objectchange.object_data_v2.pop("password", None)
+
+        return objectchange
 
     def get_config(self, path, default=None):
         """
