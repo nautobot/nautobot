@@ -372,13 +372,10 @@ class PopulateDeviceBayFormTestCase(TestCase):
         form = PopulateDeviceBayForm(self.device_bay)
         queryset = form.fields["installed_device"].queryset
 
-        self.assertTrue(queryset.filter(pk=self.child_device.pk).exists())
-        self.assertTrue(queryset.filter(pk=self.parent_child_device.pk).exists())
+        actual_pks = set(queryset.values_list("pk", flat=True))
+        expected_pks = {self.child_device.pk, self.parent_child_device.pk}
 
-        self.assertFalse(queryset.filter(pk=self.parent_device.pk).exists())
-        self.assertFalse(queryset.filter(pk=self.parent_only_device.pk).exists())
-        self.assertFalse(queryset.filter(pk=self.assigned_child.pk).exists())
-        self.assertFalse(queryset.filter(pk=self.offsite_child.pk).exists())
+        self.assertSetEqual(actual_pks, expected_pks)
 
 
 class RackTestCase(TestCase):
