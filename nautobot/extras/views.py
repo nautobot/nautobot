@@ -3355,6 +3355,32 @@ class JobResultUIViewSet(
 
     @action(
         detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for a JobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(
+        detail=True,
         custom_view_base_action="view",
     )
     def modal(self, request, *args, **kwargs):

@@ -4,6 +4,7 @@ from unittest import mock
 import urllib.parse
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -3834,6 +3835,63 @@ class JobResultTestCase(
         # Test HTMX request
         response = self.client.get(url, HTTP_HX_REQUEST="true")
         self.assertIn("HX-Request", response.get("Vary", ""))
+
+    def test_export_job_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_export_job_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_export_job_console_entries_with_permission(self):
+        """Test full page load with permission shows console log page."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response["Content-Type"], "text/plain; charset=utf-8")
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{self.job_result_pending.pk}.txt"
+        self.assertEqual(response["Content-Disposition"], f'attachment; filename="{filename}"')
+        lines = response.content.decode().splitlines()
+        self.assertEqual(len(lines), 3)
+        ts1 = self.console_entry_1.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[0], f"[{ts1}] {self.console_entry_1.text.strip()}")
+        ts2 = self.console_entry_2.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[1], f"[{ts2}] {self.console_entry_2.text.strip()}")
+        ts3 = self.console_entry_3.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[2], f"[{ts3}] {self.console_entry_3.text.strip()}")
+
+    def test_export_job_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobConsoleEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.console_entry_1.id, self.console_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+        # Should see allowed entries
+        self.assertIn("Starting job execution...", response_raw_content)
+        self.assertIn("Processing data...", response_raw_content)
 
 
 class JobTestCase(
