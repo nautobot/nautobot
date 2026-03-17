@@ -1,5 +1,5 @@
 from collections import defaultdict, OrderedDict
-from datetime import date, datetime
+from datetime import date, datetime, timezone as datetime_timezone
 import json
 import logging
 import re
@@ -13,6 +13,7 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
 from django.db.models import Model
 from django.forms.widgets import TextInput
+from django.utils import timezone
 from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
 
@@ -23,6 +24,7 @@ from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
+    DateTimePicker,
     JSONField,
     LaxURLField,
     MultiValueCharInput,
@@ -801,6 +803,14 @@ class CustomField(
                 widget=DatePicker(),
             )
 
+        # DateTime
+        elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+            field = forms.DateTimeField(
+                required=required,
+                initial=initial,
+                widget=DateTimePicker(),
+            )
+
         # Text-like fields
         elif self.type in (
             CustomFieldTypeChoices.TYPE_URL,
@@ -945,6 +955,19 @@ class CustomField(
                         datetime.strptime(value, "%Y-%m-%d")
                     except ValueError:
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
+
+            # Validate datetime
+            elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+                if not isinstance(value, datetime):
+                    try:
+                        value = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                    except ValueError:
+                        raise ValidationError("DateTime values must be in ISO 8601 format.")
+                if value.tzinfo:
+                    value = value.astimezone(datetime_timezone.utc)
+                else:
+                    value = value.replace(tzinfo=datetime_timezone.utc)
+                return value.strftime("%Y-%m-%dT%H:%M:%SZ")
 
             # Validate selected choice
             elif self.type == CustomFieldTypeChoices.TYPE_SELECT:

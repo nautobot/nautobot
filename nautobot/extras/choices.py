@@ -120,6 +120,7 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_MULTISELECT = "multi-select"
     TYPE_JSON = "json"
     TYPE_MARKDOWN = "markdown"
+    TYPE_DATETIME = "datetime"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
@@ -131,6 +132,7 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_MULTISELECT, "Multiple selection"),
         (TYPE_JSON, "JSON"),
         (TYPE_MARKDOWN, "Markdown"),
+        (TYPE_DATETIME, "Date/time"),
     )
 
     # Types that support validation_minimum/validation_maximum
@@ -386,14 +388,12 @@ class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
 
     TYPE_CONTACT_TEAM = "contact-or-team"
     # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-    TYPE_DATETIME = "datetime"
     TYPE_FLOAT = "float"
 
     CHOICES = (
         *CustomFieldTypeChoices.CHOICES,
         (TYPE_CONTACT_TEAM, "Contact or Team"),
         # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-        (TYPE_DATETIME, "Date/time"),
         (TYPE_FLOAT, "Floating point number"),
     )
 
