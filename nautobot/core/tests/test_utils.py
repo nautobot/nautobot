@@ -35,6 +35,7 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
+from nautobot.users.models import AdminGroup
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -432,6 +433,8 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list"), "dcim:device_list")
         self.assertEqual(lookup.get_route_for_model("dcim.location", "list"), "dcim:location_list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Location, "list"), "dcim:location_list")
+        self.assertEqual(lookup.get_route_for_model(AdminGroup, "list"), "users:group_list")
+        self.assertEqual(lookup.get_route_for_model(AdminGroup, "edit"), "users:group_edit")
         self.assertEqual(
             lookup.get_route_for_model("example_app.examplemodel", "list"),
             "plugins:example_app:examplemodel_list",
@@ -446,6 +449,8 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_route_for_model(ContentType, "detail", api=True), "extras-api:contenttype-detail")
         self.assertEqual(lookup.get_route_for_model(Group, "list", api=True), "users-api:group-list")
         self.assertEqual(lookup.get_route_for_model(Group, "detail", api=True), "users-api:group-detail")
+        self.assertEqual(lookup.get_route_for_model(AdminGroup, "list", api=True), "users-api:group-list")
+        self.assertEqual(lookup.get_route_for_model(AdminGroup, "detail", api=True), "users-api:group-detail")
         self.assertEqual(
             lookup.get_route_for_model(dcim_models.Location, "detail", api=True), "dcim-api:location-detail"
         )

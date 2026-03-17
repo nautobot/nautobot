@@ -220,14 +220,33 @@ class User(BaseModel, AbstractUser):
 #
 
 
+class AdminGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    """
+    Custom manager for AdminGroup proxy model.
+    Supports Nautobot's restrict().
+    """
+
+
 class AdminGroup(Group):
     """
     Proxy contrib.auth.models.Group for the admin UI
     """
 
+    objects = AdminGroupManager()
+
+    is_saved_view_model = True
+
     class Meta:
         verbose_name = "Group"
         proxy = True
+
+    @property
+    def present_in_database(self):
+        return self.pk is not None
+
+    def get_absolute_url(self, api=False):
+        view_name = "users-api:group-detail" if api else "users:group"
+        return reverse(view_name, kwargs={"pk": self.pk})
 
 
 Group.documentation_static_path = ""

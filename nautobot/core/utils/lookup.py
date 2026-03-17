@@ -162,19 +162,21 @@ def get_route_for_model(model, action, api=False):
 
     if isinstance(model, str):
         model = get_model_from_name(model)
-    if isinstance(model, Model):
-        model = type(model)
 
     suffix = "" if not api else "-api"
-    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
-    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
+    model_name = model._meta.model_name
+    concrete_model = model._meta.concrete_model
+
+    # The contenttypes and auth apps don't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in extras and Group model in users.
     if model is ContentType:
         app_label = "extras"
-    elif model is Group:
+    elif concrete_model is Group:
         app_label = "users"
+        model_name = Group._meta.model_name
     else:
         app_label = model._meta.app_label
-    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
+    prefix = f"{app_label}{suffix}:{model_name}"
     sep = ""
     if action != "":
         sep = "_" if not api else "-"
@@ -215,10 +217,7 @@ def get_related_class_for_model(model, module_name, object_suffix):
         raise TypeError(f"{model!r} is not a subclass of a Django Model class")
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
-    app_label = model._meta.app_label
-    if model is Group:
-        app_label = "users"
-    app_config = apps.get_app_config(app_label)
+    app_config = apps.get_app_config(model._meta.app_label)
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
@@ -373,9 +372,6 @@ def get_model_for_view_name(view_name):
         delimiter = "-"
 
     model_name = model_name.split(delimiter)[0]  # device
-
-    if app_label == "users" and model_name == "group":
-        return Group
 
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)

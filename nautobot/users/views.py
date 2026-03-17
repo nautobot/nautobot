@@ -8,7 +8,6 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Count
 from django.forms import inlineformset_factory
@@ -27,11 +26,11 @@ from rest_framework.response import Response
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm, restrict_form_fields
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     Breadcrumbs,
     InstanceBreadcrumbItem,
+    ModelBreadcrumbItem,
     ViewNameBreadcrumbItem,
 )
 from nautobot.core.ui.choices import SectionChoices
@@ -67,7 +66,7 @@ from .forms import (
     UserFilterForm,
     UserUpdateForm,
 )
-from .models import Token, User
+from .models import AdminGroup, Token, User
 from .tables import GroupTable, ObjectPermissionTable, UserTable
 
 #
@@ -248,8 +247,7 @@ class UserUIViewSet(
                 table_title="Groups",
                 section=SectionChoices.LEFT_HALF,
                 weight=400,
-                table_class=GroupTable,
-                table_filter="user",
+                context_table_key="user_groups_table",
             ),
         ]
     )
@@ -267,9 +265,26 @@ class UserUIViewSet(
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
+
+        if instance and self.action == "retrieve":
+            groups_queryset = (
+                AdminGroup.objects.filter(user=instance)
+                .annotate(user_count=Count("user"))
+                .restrict(request.user, "view")
+            )
+
+            context["user_groups_table"] = GroupTable(
+                groups_queryset,
+                user=request.user,
+            )
+
         if self.action == "update" and instance and "object_permission_formset" not in context:
             formset_class = self.get_object_permission_formset_class()
-            context["object_permission_formset"] = formset_class(instance=instance, prefix="object_permissions")
+            context["object_permission_formset"] = formset_class(
+                instance=instance,
+                prefix="object_permissions",
+            )
+
         return context
 
     def _process_create_or_update_form(self, form):
@@ -520,27 +535,21 @@ class GroupUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
-    queryset = RestrictedQuerySet(model=Group).order_by("name")
+    queryset = AdminGroup.objects.order_by("name")
     filterset_class = filters.GroupFilterSet
     filterset_form_class = GroupFilterForm
+    table_class = GroupTable
     create_form_class = GroupForm
     update_form_class = GroupForm
-    table_class = GroupTable
     action_buttons = ("add", "export")
     breadcrumbs = Breadcrumbs(
         items={
-            "detail": [
-                ViewNameBreadcrumbItem(label="Groups", view_name="users:group_list"),
-                InstanceBreadcrumbItem(),
-            ],
+            "detail": [ModelBreadcrumbItem(model=AdminGroup), InstanceBreadcrumbItem()],
             "create": [
-                ViewNameBreadcrumbItem(label="Groups", view_name="users:group_list"),
+                ModelBreadcrumbItem(model=AdminGroup),
                 ViewNameBreadcrumbItem(label="Add Group", view_name=None),
             ],
-            "update": [
-                ViewNameBreadcrumbItem(label="Groups", view_name="users:group_list"),
-                InstanceBreadcrumbItem(),
-            ],
+            "update": [ModelBreadcrumbItem(model=AdminGroup), InstanceBreadcrumbItem()],
         }
     )
 
@@ -553,7 +562,7 @@ class GroupUIViewSet(
             ),
             object_detail.ObjectsTablePanel(
                 table_title="Permissions",
-                section=SectionChoices.FULL_WIDTH,
+                section=SectionChoices.LEFT_HALF,
                 weight=200,
                 table_class=ObjectPermissionTable,
                 table_filter="groups",
@@ -563,11 +572,15 @@ class GroupUIViewSet(
         ],
     )
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.annotate(user_count=Count("user"))
+
     @staticmethod
     def get_object_permission_formset_class():
         return inlineformset_factory(
-            Group,
-            Group.object_permissions.through,  # pylint: disable=no-member
+            AdminGroup,
+            AdminGroup.object_permissions.through,  # pylint: disable=no-member
             fk_name="group",
             fields=("objectpermission",),
             extra=1,
@@ -579,26 +592,55 @@ class GroupUIViewSet(
             return f"users/group_{self.action}.html"
         return super().get_template_name()
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.annotate(user_count=Count("user"))
-
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
         if self.action in ("create", "update") and "object_permission_formset" not in context:
             formset_class = self.get_object_permission_formset_class()
+            bound_instance = instance if instance is not None else self.get_object()
             if request.method == "POST":
                 context["object_permission_formset"] = formset_class(
                     data=request.POST,
-                    instance=instance or self.get_object(),
+                    instance=bound_instance,
                     prefix="object_permissions",
                 )
             else:
                 context["object_permission_formset"] = formset_class(
-                    instance=instance or self.get_object(),
+                    instance=bound_instance,
                     prefix="object_permissions",
                 )
         return context
+
+    def _process_create_or_update_form(self, form):
+        request = self.request
+        queryset = self.get_queryset()
+        with transaction.atomic():
+            object_created = not form.instance.present_in_database
+            obj = self.form_save(form)
+            queryset.get(pk=obj.pk)
+            msg = f"{'Created' if object_created else 'Modified'} {queryset.model._meta.verbose_name}"
+            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            try:
+                msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
+            except AttributeError:
+                msg = format_html("{} {}", msg, obj)
+            messages.success(request, msg)
+
+            if "_addanother" in request.POST:
+                self.success_url = request.get_full_path()
+                return
+
+            if "_continue" in request.POST:
+                try:
+                    self.success_url = reverse("users:group_edit", kwargs={"pk": obj.pk})
+                except NoReverseMatch:
+                    self.success_url = self.get_return_url(request, obj)
+                return
+
+            return_url = form.cleaned_data.get("return_url")
+            if url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+                self.success_url = iri_to_uri(return_url)
+            else:
+                self.success_url = self.get_return_url(request, obj)
 
     def perform_create(self, request, *args, **kwargs):
         self.obj = self.get_object()
@@ -611,7 +653,11 @@ class GroupUIViewSet(
         )
         restrict_form_fields(form, request.user)
         formset_class = self.get_object_permission_formset_class()
-        object_permission_formset = formset_class(data=request.POST, instance=self.obj, prefix="object_permissions")
+        object_permission_formset = formset_class(
+            data=request.POST,
+            instance=self.obj,
+            prefix="object_permissions",
+        )
         if form.is_valid() and object_permission_formset.is_valid():
             with transaction.atomic():
                 response = self.form_valid(form)
@@ -632,7 +678,11 @@ class GroupUIViewSet(
         )
         restrict_form_fields(form, request.user)
         formset_class = self.get_object_permission_formset_class()
-        object_permission_formset = formset_class(data=request.POST, instance=self.obj, prefix="object_permissions")
+        object_permission_formset = formset_class(
+            data=request.POST,
+            instance=self.obj,
+            prefix="object_permissions",
+        )
         if form.is_valid() and object_permission_formset.is_valid():
             with transaction.atomic():
                 response = self.form_valid(form)
