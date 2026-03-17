@@ -3683,22 +3683,21 @@ class InterfaceBulkEditForm(
         if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
-        # Arguably this cannot be reached since the form should prevent selection of tagged VLANs when not in tagged mode,
-        # but the below would validate that if we choose to allow updating VLANs without the mode set.
-        # # An interface must be in tagged mode to have an untagged VLAN assigned
-        # elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
-        #     non_tagged = (
-        #         Interface.objects.filter(pk__in=self.cleaned_data["pk"])
-        #         .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
-        #         .values_list("name", flat=True)
-        #     )
-        #     if non_tagged.exists():
-        #         raise forms.ValidationError(
-        #             {
-        #                 "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
-        #                 + ", ".join(list(non_tagged))
-        #             }
-        #         )
+        # In theory UI blocks this from happening, but to ensure on backend we enforce.
+        # An interface must be in tagged mode to have an untagged VLAN assigned
+        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+            non_tagged = (
+                Interface.objects.filter(pk__in=self.cleaned_data["pk"])
+                .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
+                .values_list("name", flat=True)
+            )
+            if non_tagged.exists():
+                raise forms.ValidationError(
+                    {
+                        "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
+                        + ", ".join(list(non_tagged))
+                    }
+                )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
