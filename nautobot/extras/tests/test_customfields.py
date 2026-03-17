@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
+from django.db.models.signals import m2m_changed
 from django.forms import ChoiceField, IntegerField, NumberInput
 from django.test import tag
 from django.urls import reverse
@@ -38,7 +39,7 @@ from nautobot.extras.customfields import (
     update_custom_field_choice_data,
 )
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
-from nautobot.extras.signals import change_context_state
+from nautobot.extras.signals import handle_cf_removed_obj_types
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
@@ -2358,6 +2359,8 @@ _ABSENT = object()  # sentinel: distinguishes "no initial value" from "initial v
 class CustomFieldBackgroundTasks(TransactionTestCase):
     def setUp(self):
         super().setUp()
+        self.location_status = Status.objects.get_for_model(Location).first()
+        self.obj_type = ContentType.objects.get_for_model(Location)
         self._log_buf = io.StringIO()
         self._log_handler = logging.StreamHandler(self._log_buf)
         self._log_handler.setLevel(logging.DEBUG)
@@ -2432,8 +2435,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         if prev is not None:
             self._teardown_cf_scenario(prev[0], prev[1])
         location_type = LocationType.objects.create(name="LT 1")
-        location_status = Status.objects.get_for_model(Location).first()
-        obj_type = ContentType.objects.get_for_model(Location)
 
         cf_kwargs = {
             "label": "Test CF",
@@ -2457,9 +2458,19 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         if exclude_from_scope and scope_filter is not None:
             raise ValueError("exclude_from_scope and scope_filter are mutually exclusive")
+        if exclude_from_scope and not scoped:
+            # Defensive programming check
+            raise ValueError("exclude_from_scope=True requires scoped=True; no scope exists to exclude from otherwise.")
 
         if scoped:
-            cf.content_types.set([obj_type])
+            # Temporarily disconnect the m2m signal so content_types.set() doesn't
+            # enqueue jobs during scenario setup.  The signal path is tested separately
+            # by the auto-trigger task tests below.
+            m2m_changed.disconnect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
+            try:
+                cf.content_types.set([self.obj_type])
+            finally:
+                m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
             if exclude_from_scope:
                 # Create a separate in-scope LT so the test object (which uses the other LT)
                 # falls outside the scope_filter.
@@ -2474,14 +2485,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location = Location.objects.create(
             name="Test Location",
             location_type=location_type,
-            status=location_status,
+            status=self.location_status,
             _custom_field_data=initial_data,
         )
-        location.refresh_from_db()
         self.reset_logs()
         cleanup_custom_field_data(
             field_id=cf.pk,
-            content_type_pk_set=[obj_type.pk],
+            content_type_pk_set=[self.obj_type.pk],
             safe_change=safe_change,
             verbose=verbose,
             dryrun=dryrun,
@@ -2496,6 +2506,19 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         cf.delete()
         location_type.delete()
         LocationType.objects.filter(name="LT In-Scope").delete()
+
+    def _assert_idempotent(self, location, cf, expected_value, expected_log_keys=None):
+        """Re-run cleanup and verify no further changes + same warnings."""
+        snapshot = dict(location._custom_field_data)
+        self.reset_logs()
+        cleanup_custom_field_data(field_id=cf.pk, content_type_pk_set=[self.obj_type.pk])
+        location.refresh_from_db()
+        self.assertEqual(location._custom_field_data.get("test_cf"), expected_value, "Value changed on rerun")
+        self.assertEqual(location._custom_field_data, snapshot, "Custom field data changed on rerun")
+        for key in expected_log_keys or []:
+            self.assertLogKey(key)
+        if not expected_log_keys:
+            self.assertNoLogs()
 
     # -------------------------------------------------------------------------
     # Matrix — naming: test_cf__<scope>__<required>__<default>__<key>__<value>__<outcome>
@@ -2535,6 +2558,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location, cf = self._setup_cf_scenario(prev=(location, cf), required=True, has_default=True, default="d")
         self.assertEqual(location._custom_field_data.get("test_cf"), "d")
         self.assertLogKey("cf_cleanup.provision")
+        self._assert_idempotent(location, cf, "d")
 
     # Yes / Yes / Yes / Yes / empty => (noop, todefault)
     def test_cf__scoped__required__defaulted__keyed__empty__todefault(self):
@@ -2666,6 +2690,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIsNone(location._custom_field_data["test_cf"])
         self.assertLogKey("cf_cleanup.provision")
         self.assertLogKey("cf_cleanup.validation_failed_required")
+        # Idempotent: key already exists as JSONB null so provision doesn't fire again,
+        # but the required-field warning still logs.
+        self._assert_idempotent(location, cf, None, expected_log_keys=["cf_cleanup.validation_failed_required"])
 
     # Yes / Yes / No / Yes / empty => (log, log)
     def test_cf__scoped__required__nodefault__keyed__empty__log(self):
@@ -2814,6 +2841,29 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "default_val")
         self.assertLogKey("cf_cleanup.type_reset")
 
+        # DATE sub-case: int in a DATE field triggers TypeError (not ValidationError)
+        # from datetime.strptime, exercising the except (ValidationError, TypeError) fix.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            has_default=True,
+            default="2024-01-01",
+            initial_value=123,
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            has_default=True,
+            default="2024-01-01",
+            initial_value=123,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), "2024-01-01")
+        self.assertLogKey("cf_cleanup.type_reset")
+
     # Yes / No / Yes / Yes / invalid => (log, log)
     def test_cf__scoped__optional__defaulted__keyed__invalid__log(self):
         location, cf = self._setup_cf_scenario(
@@ -2863,28 +2913,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(location._custom_field_data.get("test_cf"), "ValidA")
         self.assertLogKey("cf_cleanup.update_custom_field_choice_data: Updated")
 
-    # (date) Yes / No / Yes / Yes / badtype => (log, todefault)
-    def test_cf__date__scoped__optional__defaulted__keyed__badtype__todefault(self):
-        location, cf = self._setup_cf_scenario(
-            field_type=CustomFieldTypeChoices.TYPE_DATE,
-            has_default=True,
-            default="2024-01-01",
-            initial_value=123,  # int stored in a DATE field
-            safe_change=True,
-        )
-        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
-        self.assertLogKey("cf_cleanup.type_reset")
-
-        location, cf = self._setup_cf_scenario(
-            prev=(location, cf),
-            field_type=CustomFieldTypeChoices.TYPE_DATE,
-            has_default=True,
-            default="2024-01-01",
-            initial_value=123,
-        )
-        self.assertEqual(location._custom_field_data.get("test_cf"), "2024-01-01")
-        self.assertLogKey("cf_cleanup.type_reset")
-
     # -------------------------------------------------------------------------
     # unscoped__required tests
     # -------------------------------------------------------------------------
@@ -2921,6 +2949,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
         self.assertLogKey("cf_cleanup.provision")
+        self._assert_idempotent(location, cf, None)
 
     # Yes / No / No / Yes / empty => (noop, noop)
     def test_cf__scoped__optional__nodefault__keyed__empty__noop(self):
@@ -2952,6 +2981,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         location, cf = self._setup_cf_scenario(prev=(location, cf), initial_value="hello")
         self.assertEqual(location._custom_field_data.get("test_cf"), "hello")
         self.assertNoLogs()
+        self._assert_idempotent(location, cf, "hello")
 
     # Yes / No / No / Yes / badtype => (log, toempty)
     def test_cf__scoped__optional__nodefault__keyed__badtype__toempty(self):
@@ -2970,6 +3000,25 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        # DATE sub-case: int in a DATE field triggers TypeError (not ValidationError)
+        # from datetime.strptime, exercising the except (ValidationError, TypeError) fix.
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            initial_value=123,
+            safe_change=True,
+        )
+        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
+        self.assertLogKey("cf_cleanup.type_reset")
+
+        location, cf = self._setup_cf_scenario(
+            prev=(location, cf),
+            field_type=CustomFieldTypeChoices.TYPE_DATE,
+            initial_value=123,
+        )
+        self.assertIsNone(location._custom_field_data.get("test_cf"))
         self.assertLogKey("cf_cleanup.type_reset")
 
     # Yes / No / No / Yes / invalid => (log, log)
@@ -3067,24 +3116,6 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         )
         self.assertIsNone(location._custom_field_data.get("test_cf"))
         self.assertLogKey("cf_cleanup.update_custom_field_choice_data: Updated")
-
-    # (date) Yes / No / No / Yes / badtype => (log, toempty)
-    def test_cf__date__scoped__optional__nodefault__keyed__badtype__toempty(self):
-        location, cf = self._setup_cf_scenario(
-            field_type=CustomFieldTypeChoices.TYPE_DATE,
-            initial_value=123,  # int stored in a DATE field
-            safe_change=True,
-        )
-        self.assertEqual(location._custom_field_data.get("test_cf"), 123)
-        self.assertLogKey("cf_cleanup.type_reset")
-
-        location, cf = self._setup_cf_scenario(
-            prev=(location, cf),
-            field_type=CustomFieldTypeChoices.TYPE_DATE,
-            initial_value=123,
-        )
-        self.assertIsNone(location._custom_field_data.get("test_cf"))
-        self.assertLogKey("cf_cleanup.type_reset")
 
     # -------------------------------------------------------------------------
     # unscoped__optional__defaulted tests
@@ -3308,6 +3339,8 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIn("test_cf", location._custom_field_data)
         self.assertIsNone(location._custom_field_data["test_cf"])
         self.assertLogKey("cf_cleanup.scope_sweep")
+        # Idempotent: value is already null; scope sweep re-sets it to null (idempotent JSONSet).
+        self._assert_idempotent(location, cf, None, expected_log_keys=["cf_cleanup.scope_sweep"])
 
     # No / No / No / Yes / badtype => (noop, toempty)
     def test_cf__unscoped__optional__nodefault__keyed__badtype__toempty(self):
@@ -3536,34 +3569,24 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
     def test_provision_field_task(self):
         location_type = LocationType.objects.create(name="Root Type 1")
-        location_status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Location 1", location_type=location_type, status=location_status)
+        location = Location(name="Location 1", location_type=location_type, status=self.location_status)
         location.save()
 
-        obj_type = ContentType.objects.get_for_model(Location)
+        # Outside web_request_context: user=None → signal handler logs error, job not enqueued.
         cf = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT, default="Foo")
         cf.save()
-        cf.content_types.set([obj_type])
-        # Signal enqueues a job; call directly (no change_context → no ObjectChange).
-        provision_field(cf.pk, [obj_type.pk])
+        cf.content_types.set([self.obj_type])
 
         location.refresh_from_db()
+        self.assertNotIn("cf1", location.cf)  # NOT provisioned — no user
 
-        self.assertEqual(location.cf["cf1"], "Foo")
-
-        # Set up CF2 outside web_request_context so user=None → signal returns early, no sync job.
-        cf = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
-        cf.save()
-        cf.content_types.set([obj_type])
-        cf_pk = cf.pk
-
+        # Inside web_request_context: job enqueued → provisioned + ObjectChange.
         with web_request_context(self.user):
-            ctx = change_context_state.get()
-            ctx_dict = {**ctx.as_dict(), "context_detail": "provision custom field data for new content types"}
-            provision_field(cf_pk, [obj_type.pk], change_context=ctx_dict)
+            cf2 = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT, default="Bar")
+            cf2.save()
+            cf2.content_types.set([self.obj_type])
 
             location.refresh_from_db()
-
             self.assertEqual(location.cf["cf2"], "Bar")
 
         oc_list = get_changes_for_model(location).order_by("pk")
@@ -3575,14 +3598,14 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         # Verify that provision_field initializes the key to null on out-of-scope objects.
         cf_scoped = CustomField(label="CF3", type=CustomFieldTypeChoices.TYPE_TEXT, default="Scoped")
         cf_scoped.save()
-        cf_scoped.content_types.set([obj_type])
+        cf_scoped.content_types.set([self.obj_type])
         # Restrict CF3 to location_type (Root Type 1); location_out is out-of-scope.
         location_type_out = LocationType.objects.create(name="LT Out")
-        location_out = Location(name="Location Out", location_type=location_type_out, status=location_status)
+        location_out = Location(name="Location Out", location_type=location_type_out, status=self.location_status)
         location_out.save()
         cf_scoped.scope_filter = {"location_type": [str(location_type.pk)]}
         cf_scoped.save()
-        provision_field(cf_scoped.pk, [obj_type.pk])
+        provision_field(cf_scoped.pk, [self.obj_type.pk])
 
         location.refresh_from_db()
         location_out.refresh_from_db()
@@ -3592,49 +3615,32 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertIsNone(location_out._custom_field_data["cf3"])  # out-of-scope → value is null
 
     def test_delete_custom_field_data_task(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf_1 = CustomField(
-            label="CF1",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-        )
+        cf_1 = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT)
         cf_1.save()
-        cf_1.content_types.set([obj_type])
-        cf_2 = CustomField(
-            label="CF2",
-            type=CustomFieldTypeChoices.TYPE_TEXT,
-        )
+        cf_1.content_types.set([self.obj_type])
+        cf_2 = CustomField(label="CF2", type=CustomFieldTypeChoices.TYPE_TEXT)
         cf_2.save()
-        cf_2.content_types.set([obj_type])
+        cf_2.content_types.set([self.obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
-        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             location_type=location_type,
-            status=location_status,
+            status=self.location_status,
             _custom_field_data={"cf1": "foo", "cf2": "bar"},
         )
         location.save()
 
-        cf_1_key = cf_1.key
+        # Outside web_request_context: user=None → job not enqueued → data stays.
+        self.reset_logs()
         cf_1.delete()
-        # Signal enqueues a job; call directly (no change_context → no ObjectChange).
-        delete_custom_field_data(cf_1_key, [obj_type.pk])
-
         location.refresh_from_db()
+        self.assertIn("cf1", location._custom_field_data)  # NOT cleaned up
+        self.assertLogKey("Cannot enqueue")  # enqueue_custom_field_job logged an error
 
-        self.assertNotIn("cf1", location._custom_field_data)
-
-        # Delete CF2 outside web_request_context so user=None → signal returns early, no sync job.
-        cf_2_key = cf_2.key
-        cf_2.delete()
-
+        # Inside web_request_context: job enqueued → data cleaned + ObjectChange.
         with web_request_context(self.user):
-            ctx = change_context_state.get()
-            ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data"}
-            delete_custom_field_data(cf_2_key, [obj_type.pk], change_context=ctx_dict)
-
+            cf_2.delete()
             location.refresh_from_db()
-
             self.assertNotIn("cf2", location._custom_field_data)
 
         oc_list = get_changes_for_model(location).order_by("pk")
@@ -3644,133 +3650,104 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertEqual(oc_list[0].user, self.user)
 
     def test_clear_custom_field_data_task(self):
-        obj_type = ContentType.objects.get_for_model(Location)
         cf_1 = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT)
-        cf_1.content_types.set([obj_type])
+        cf_1.content_types.set([self.obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
-        location_status = Status.objects.get_for_model(Location).first()
         location = Location.objects.create(
             name="Location 1",
             location_type=location_type,
-            status=location_status,
+            status=self.location_status,
             _custom_field_data={"cf1": "foo"},
         )
 
-        # Clear content types outside web_request_context so user=None → signal returns early, no sync job.
-        cleared_ct_pks = list(cf_1.content_types.values_list("pk", flat=True))
-        cf_1.content_types.clear()
-
+        # Inside web_request_context: content_types.clear() fires m2m signal → job enqueued.
         with web_request_context(self.user):
-            ctx = change_context_state.get()
-            ctx_dict = {**ctx.as_dict(), "context_detail": "delete custom field data from existing content types"}
-            delete_custom_field_data("cf1", cleared_ct_pks, change_context=ctx_dict)
+            cf_1.content_types.clear()
             location.refresh_from_db()
-            self.assertNotIn("cf1", location._custom_field_data)
+            self.assertNotIn("cf1", location.cf)
 
         oc_list = get_changes_for_model(location)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
-        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data from existing content types")
+        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
         self.assertEqual(oc_list[0].user, self.user)
 
     def test_update_custom_field_choice_data_task(self):
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="CF1",
-            type=CustomFieldTypeChoices.TYPE_SELECT,
-        )
+        cf = CustomField(label="CF1", type=CustomFieldTypeChoices.TYPE_SELECT)
         cf.save()
-        cf.content_types.set([obj_type])
+        cf.content_types.set([self.obj_type])
 
         choice = CustomFieldChoice(custom_field=cf, value="Foo")
         choice.save()
         location_type = LocationType.objects.create(name="Root Type 3")
-        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location 1",
             location_type=location_type,
-            status=location_status,
+            status=self.location_status,
             _custom_field_data={"cf1": "Foo"},
         )
         location.save()
 
-        choice.value = "Bar"
-        choice.save()
-        # choice.save() no longer auto-triggers data migration; call directly.
-        update_custom_field_choice_data(cf.id, "Foo", "Bar")
-
-        location.refresh_from_db()
-
-        self.assertEqual(location.cf["cf1"], "Bar")
-
-        # Rename choice outside web_request_context so user=None → signal returns early, no sync job.
-        choice.value = "FizzBuzz"
-        choice.save()
-
+        # Inside web_request_context: choice.save() auto-triggers data migration.
         with web_request_context(self.user):
-            ctx = change_context_state.get()
-            ctx_dict = {**ctx.as_dict(), "context_detail": "update custom field choice data"}
-            update_custom_field_choice_data(cf.id, "Bar", "FizzBuzz", change_context=ctx_dict)
+            choice.value = "Bar"
+            choice.save()
 
             location.refresh_from_db()
+            self.assertEqual(location.cf["cf1"], "Bar")
 
+            choice.value = "FizzBuzz"
+            choice.save()
+
+            location.refresh_from_db()
             self.assertEqual(location.cf["cf1"], "FizzBuzz")
 
         oc_list = get_changes_for_model(location).order_by("pk")
-        self.assertEqual(len(oc_list), 1)
-        self.assertEqual(oc_list[0].changed_object, location)
+        self.assertEqual(len(oc_list), 2)
         self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
         self.assertEqual(oc_list[0].user, self.user)
+        self.assertEqual(oc_list[1].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[1].user, self.user)
 
     def test_update_custom_field_choice_data_task_multiselect(self):
         """update_custom_field_choice_data with TYPE_MULTISELECT + change_context creates ObjectChange records."""
-        obj_type = ContentType.objects.get_for_model(Location)
-        cf = CustomField(
-            label="CF MS",
-            type=CustomFieldTypeChoices.TYPE_MULTISELECT,
-        )
+        cf = CustomField(label="CF MS", type=CustomFieldTypeChoices.TYPE_MULTISELECT)
         cf.save()
-        cf.content_types.set([obj_type])
+        cf.content_types.set([self.obj_type])
 
         choice_foo = CustomFieldChoice(custom_field=cf, value="Foo")
         choice_foo.save()
         CustomFieldChoice(custom_field=cf, value="Bar").save()
 
         location_type = LocationType.objects.create(name="Root Type MS")
-        location_status = Status.objects.get_for_model(Location).first()
         location = Location(
             name="Location MS",
             location_type=location_type,
-            status=location_status,
+            status=self.location_status,
             _custom_field_data={"cf_ms": ["Foo", "Bar"]},
         )
         location.save()
 
-        choice_foo.value = "Baz"
-        choice_foo.save()
-        # Call without change_context first (no ObjectChange expected).
-        update_custom_field_choice_data(cf.id, "Foo", "Baz")
-
-        location.refresh_from_db()
-        self.assertEqual(sorted(location.cf["cf_ms"]), ["Bar", "Baz"])
-
-        # Now rename with change_context so _generate_bulk_object_changes is exercised (line 163).
-        choice_foo.value = "Qux"
-        choice_foo.save()
-
+        # Inside web_request_context: choice.save() auto-triggers MULTISELECT data migration + ObjectChange.
         with web_request_context(self.user):
-            ctx = change_context_state.get()
-            ctx_dict = {**ctx.as_dict(), "context_detail": "update custom field choice data multiselect"}
-            update_custom_field_choice_data(cf.id, "Baz", "Qux", change_context=ctx_dict)
+            choice_foo.value = "Baz"
+            choice_foo.save()
+
+            location.refresh_from_db()
+            self.assertEqual(sorted(location.cf["cf_ms"]), ["Bar", "Baz"])
+
+            choice_foo.value = "Qux"
+            choice_foo.save()
 
             location.refresh_from_db()
             self.assertEqual(sorted(location.cf["cf_ms"]), ["Bar", "Qux"])
 
         oc_list = get_changes_for_model(location).order_by("pk")
-        self.assertEqual(len(oc_list), 1)
-        self.assertEqual(oc_list[0].changed_object, location)
-        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data multiselect")
+        self.assertEqual(len(oc_list), 2)
+        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
         self.assertEqual(oc_list[0].user, self.user)
+        self.assertEqual(oc_list[1].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[1].user, self.user)
 
 
 class CustomFieldDefensiveCoverage(TestCase):

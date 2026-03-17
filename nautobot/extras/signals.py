@@ -449,7 +449,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
     The name of this function is misleading as this signal applies to *added* content-types as well.
     """
-    from nautobot.core.jobs import DeleteCustomFieldData, ProvisionField  # avoid module-level circular import
+    from nautobot.core.jobs import DeleteCustomFieldData, ProvisionCustomField  # avoid module-level circular import
 
     change_context = change_context_state.get()
     user = change_context.get_user(instance) if change_context is not None else None
@@ -494,7 +494,7 @@ def handle_cf_removed_obj_types(instance, action, pk_set, **kwargs):
 
         # New content types have been added to the custom field, provision them
         enqueue_custom_field_job(
-            ProvisionField,
+            ProvisionCustomField,
             user,
             field=str(instance.pk),
             content_types=list(pk_set),

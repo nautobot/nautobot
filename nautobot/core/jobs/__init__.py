@@ -23,9 +23,9 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.customfields import (
-    CleanupCustomFields,
+    CleanupCustomFieldsData,
     DeleteCustomFieldData,
-    ProvisionField,
+    ProvisionCustomField,
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
@@ -593,14 +593,14 @@ class ValidateModelData(Job):
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
-    CleanupCustomFields,
+    CleanupCustomFieldsData,
     DeleteCustomFieldData,
     ExportObjectList,
     GitRepositorySync,
     GitRepositoryDryRun,
     ImportObjects,
     LogsCleanup,
-    ProvisionField,
+    ProvisionCustomField,
     RefreshDynamicGroupCaches,
     RefreshDynamicGroupCacheJobButtonReceiver,
     RunRegisteredDataComplianceRules,

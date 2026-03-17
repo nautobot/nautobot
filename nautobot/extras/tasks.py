@@ -4,7 +4,7 @@ from django.conf import settings
 from jinja2.exceptions import TemplateError
 import requests
 
-from nautobot.core import celery
+from nautobot.core.celery import nautobot_task
 from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.utils import generate_signature
 
@@ -13,7 +13,7 @@ from nautobot.extras.utils import generate_signature
 logger = getLogger("nautobot.extras.tasks")
 
 
-@celery.nautobot_task
+@nautobot_task
 def process_webhook(webhook_pk, data, model_name, event, timestamp, username, request_id, snapshots):
     """
     Make a POST request to the defined Webhook

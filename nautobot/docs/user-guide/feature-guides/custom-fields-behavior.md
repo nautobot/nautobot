@@ -6,7 +6,7 @@ Custom Field data can become inconsistent over time as definitions and policies 
 - Scoping rules can also change — a field that once applied broadly may later apply only to specific device types, roles, or tenants.
 - Inconsistencies can also arise from bulk imports, API writes, legacy data migrations, or manual database edits that bypass validation logic.
 
-The cleanup process evaluates stored Custom Field data against current definitions and scoping rules, correcting inconsistencies. The goal is to align Custom Fields data with the latest configuration, making changes only when necessary.
+The cleanup process, as implemented through the system Job `Cleanup Custom Fields Data`, evaluates stored Custom Field data against current definitions and scoping rules, correcting inconsistencies when necessary.
 
 The job will run and end up in one of the following conditions for each record.
 
@@ -17,11 +17,11 @@ The job will run and end up in one of the following conditions for each record.
 1. Delete key
 
 !!! warning
-    The job will destruct, mutate, or otherwise change the data, do not run the job unless you understand the risk, review the output from a dry-run, and reviewed the data that will be change.
+    The job will potentially modify saved data, so do not run the job unless you understand the risk, review the output from a dry-run, and understand the data that will be changed.
 
 ## Cleanup Decision Tree
 
-The flow diagram shows how each field evaluation results in one of the defined outcomes. When running the job in safe mode, destructive actions (red paths) are skipped. In dry-run mode, no changes are committed, only the evaluation is performed. The diagram represents the full process when both safe mode and dry-run are disabled. Paths highlighted in purple or labeled "Log Failure" indicate validation issues that require manual correction, as the job cannot resolve them automatically.
+The flow diagram shows how each field evaluation results in one of the defined outcomes. When running the job in "safe" mode, destructive actions (red paths) are skipped. In "dry-run" mode, no changes are committed, only the evaluation is performed. The diagram represents the full process when both "safe" mode and "dry-run" are disabled. Paths highlighted in purple or labeled "Log Failure" indicate validation issues that require manual correction, as the job cannot resolve them automatically.
 
 ```mermaid
 flowchart TD
@@ -33,37 +33,40 @@ flowchart TD
     cf_exists -- No --> orphan_delete[Delete key]
     cf_exists -- Yes --> in_scope{Field in scope?}
 
-    %% OUT OF SCOPE BRANCH
+    %% OUT OF SCOPE BRANCH — No listed first so Yes renders on the right
     in_scope -- No --> oos_key_exists{Key exists?}
-    oos_key_exists -- No --> oos_provision[Set to empty value]
-    oos_key_exists -- Yes --> oos_value_empty{Value empty?}
-    oos_value_empty -- Yes --> oos_noop[No change]
-    oos_value_empty -- No --> oos_nullify[Set to empty value]
 
     %% IN SCOPE BRANCH
     in_scope -- Yes --> key_exists{Key exists?}
 
-    %% KEY MISSING
-    key_exists -- No --> missing_has_default{Default exists?}
-    missing_has_default -- Yes --> missing_set_default[Set to default]
-    missing_has_default -- No --> missing_required{Required?}
-    missing_required -- Yes --> missing_set_empty_and_log[Set to empty value &<br>Log failure]
-    missing_required -- No --> missing_set_empty[Set to empty value]
+    oos_key_exists -- No --> oos_provision[Set to empty value]
+    oos_key_exists -- Yes --> oos_value_empty{Value empty?}
+    oos_value_empty -- No --> oos_nullify[Set to empty value]
+    oos_value_empty -- Yes --> oos_noop[No change]
 
-    %% KEY EXISTS
+    %% KEY MISSING — No listed first so Yes renders on the right
+    key_exists -- No --> missing_has_default{Default exists?}
     key_exists -- Yes --> value_state{Value state?}
 
+    missing_has_default -- No --> missing_required{Required?}
+    missing_has_default -- Yes --> missing_set_default[Set to default]
+    missing_required -- No --> missing_set_empty[Set to empty value]
+    missing_required -- Yes --> missing_set_empty_and_log[Set to empty value &<br>Log failure]
+
+    %% KEY EXISTS
     value_state -- valid --> valid_noop[No change]
 
-    value_state -- empty --> empty_req_and_default{Required and default?}
-    empty_req_and_default -- Yes --> empty_set_default[Set to default]
-    empty_req_and_default -- No --> empty_noop[No change]
+    value_state -- empty --> empty_required{Required?}
+    empty_required -- No --> empty_noop[No change]
+    empty_required -- Yes --> empty_has_default{Default exists?}
+    empty_has_default -- No --> empty_log_failure[Log failure]
+    empty_has_default -- Yes --> empty_set_default[Set to default]
 
     value_state -- invalid type --> wrong_type_has_default{Default exists?}
-    wrong_type_has_default -- Yes --> wrong_type_set_default[Set to default]
     wrong_type_has_default -- No --> wrong_type_required{Required?}
-    wrong_type_required -- Yes --> wrong_type_log_failure[Log failure]
+    wrong_type_has_default -- Yes --> wrong_type_set_default[Set to default]
     wrong_type_required -- No --> wrong_type_set_empty[Set to empty value]
+    wrong_type_required -- Yes --> wrong_type_log_failure[Log failure]
 
     value_state -- fails validation --> invalid_log_failure[Log failure]
 
@@ -80,7 +83,7 @@ flowchart TD
     class oos_noop,valid_noop,empty_noop noop;
     class oos_provision,missing_set_default,missing_set_empty,missing_set_empty_and_log,empty_set_default safe;
     class orphan_delete,oos_nullify,wrong_type_set_default,wrong_type_set_empty destructive;
-    class wrong_type_log_failure,invalid_log_failure log;
+    class wrong_type_log_failure,invalid_log_failure,empty_log_failure log;
 ```
 
 ```mermaid
@@ -136,7 +139,7 @@ This occurs when:
 - A required field has an invalid type and no default exists.
 - A required field fails validation rules, such as min/max, regex, or select value.
 
-The job does not attempt to repair required fields without a default. Manual correction is required.
+The job is unable to repair required fields without a defined default. Manual correction is required.
 
 ## Set to Default
 
@@ -171,7 +174,7 @@ This occurs when:
 If the key did not previously exist, it may be created with an empty value depending on configuration.
 
 !!! note
-    Setting an empty value is considered safe only when the key is missing from the record.
+    Setting an empty value is considered safe only when the key is missing from the record. Having a key with `None` is preferable for various filtering, sorting, and querying reasons.
 
 ## Delete Key
 

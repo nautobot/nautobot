@@ -1,3 +1,4 @@
+from datetime import date
 from logging import getLogger
 import sys
 
@@ -8,6 +9,8 @@ from django.db.models import Q
 
 from nautobot.core.models.query_functions import JSONRemove, JSONSet
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import CustomField
+from nautobot.extras.utils import FeatureQuery
 
 logger = getLogger("nautobot.extras.customfields")
 
@@ -83,8 +86,6 @@ def _generate_bulk_object_changes(context, queryset, job_logger=logger):
 
 def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None, job_logger=logger):
     # Circular Import, job_logger is passed in as an argument to avoid this
-    from nautobot.extras.models import CustomField
-
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
@@ -96,6 +97,10 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         for ct in field.content_types.all():
             model = ct.model_class()
             if model is None:
+                print(
+                    f"No model class found for content type {ct} which may indicate stale data from a removed app or model.",
+                    file=sys.stderr,
+                )
                 continue
             queryset = model.objects.filter(**{f"_custom_field_data__{field.key}": old_value})
             pk_list = []
@@ -123,6 +128,10 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
         for ct in field.content_types.all():
             model = ct.model_class()
             if model is None:
+                print(
+                    f"No model class found for content type {ct} which may indicate stale data from a removed app or model.",
+                    file=sys.stderr,
+                )
                 continue
             if old_value is None:
                 queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__contains": [None]})
@@ -136,7 +145,15 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
                 old_list = obj._custom_field_data.get(field.key, [])
                 if not isinstance(old_list, (list, tuple)):
                     continue
-                new_list = list({new_value if e == old_value else e for e in old_list} - {None})
+                # Replace old_value → new_value, drop nulls, and deduplicate.
+                new_list = []
+                for entry in old_list:
+                    if entry == old_value:
+                        entry = new_value
+                    if entry is None:
+                        continue
+                    if entry not in new_list:
+                        new_list.append(entry)
                 if new_list != old_list:
                     obj._custom_field_data[field.key] = new_list
                     chunk.append(obj)
@@ -217,10 +234,11 @@ def _is_badtype(field, value):
     """
     Return True if `value` is the wrong Python type for `field`.
 
-    Distinguishes type errors (type-mismatch reset) from validation errors where the type is
-    correct but the value fails rules like regex/min/max/choice (validation-failure warning).
+    Used to distinguish type errors from validation errors (e.g. regex).
     """
-    from datetime import date
+    # Defensive programming in case caller accidentally passes None.
+    if value is None:
+        return False
 
     if field.type in (
         CustomFieldTypeChoices.TYPE_TEXT,
@@ -240,10 +258,8 @@ def _is_badtype(field, value):
     return False  # TYPE_JSON: any value is a valid type
 
 
-def _orphaned_keys(change_context, _verbose, job_logger=logger):
-    from nautobot.extras.models import CustomField
-    from nautobot.extras.utils import FeatureQuery
-
+def _remove_orphaned_keys(change_context, _verbose, job_logger=logger):
+    """Find and delete orphaned custom field data across all models."""
     valid_keys = set(CustomField.objects.values_list("key", flat=True))
     orphaned_keys_to_ct_pks = {}
 
@@ -279,7 +295,8 @@ def _orphaned_keys(change_context, _verbose, job_logger=logger):
         delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
 
 
-def _select(field, queryset, job_logger=logger):
+def _replace_invalid_choice(field, queryset, job_logger=logger):
+    """Replace invalid choice values with default (or None) for select/multiselect fields."""
     valid_choices = set(field.choices)
     if field.default is None:
         valid_choices.add(None)
@@ -288,8 +305,6 @@ def _select(field, queryset, job_logger=logger):
         queryset = queryset.exclude(**{f"_custom_field_data__{field.key}__in": valid_choices})
         if queryset.exists():
             new_value = field.default if field.default is not None else None
-            if isinstance(new_value, list) and field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-                new_value = new_value[0]
             for old_value in queryset.values_list(f"_custom_field_data__{field.key}", flat=True):
                 # JSON null leaks through the __in exclude (JSONB null != SQL NULL
                 # for the -> operator), so guard against no-op calls.
@@ -298,14 +313,15 @@ def _select(field, queryset, job_logger=logger):
                         field.id, old_value, new_value, change_context=None, job_logger=job_logger
                     )
 
-    if field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
-        invalid_choices = set(
-            obj
-            for obj in queryset.values_list(f"_custom_field_data__{field.key}", flat=True)
-            if obj
-            for obj in (obj if isinstance(obj, list) else [obj])
-            if obj not in valid_choices
-        )
+    elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
+        invalid_choices = set()
+        for stored_value in queryset.values_list(f"_custom_field_data__{field.key}", flat=True):
+            if not stored_value:
+                continue
+            entries = stored_value if isinstance(stored_value, list) else [stored_value]
+            for entry in entries:
+                if entry not in valid_choices:
+                    invalid_choices.add(entry)
         for invalid in invalid_choices:
             new_queryset = queryset
             new_queryset = new_queryset.filter(**{f"_custom_field_data__{field.key}__contains": [invalid]})
@@ -318,9 +334,13 @@ def _select(field, queryset, job_logger=logger):
                 update_custom_field_choice_data(
                     field.id, old_value, new_value, change_context=None, job_logger=job_logger
                 )
+    else:
+        # Defensive programming, this function should only be called for select/multiselect fields.
+        raise ValueError(f"Unexpected field type {field.type} for choice repair.")
 
 
-def _field_types(field, queryset, model, safe_change, job_logger=logger):
+def _reset_field_types(field, queryset, model, safe_change, job_logger=logger):
+    """Validate and reset custom field values based on their type."""
     # Type-mismatch reset / validation-failure warning: for all other field types, iterate
     # in-scope objects with a non-null value and validate each one.
     #
@@ -336,10 +356,10 @@ def _field_types(field, queryset, model, safe_change, job_logger=logger):
     badtype_to_null_pks = []
     try:
         model._meta.get_field("name")
-        _vl_fields = ("pk", "_custom_field_data", "name")
+        values_list_fields = ("pk", "_custom_field_data", "name")
     except FieldDoesNotExist:
-        _vl_fields = ("pk", "_custom_field_data")
-    for row in objects_with_value.values_list(*_vl_fields).iterator(chunk_size=1000):
+        values_list_fields = ("pk", "_custom_field_data")
+    for row in objects_with_value.values_list(*values_list_fields).iterator(chunk_size=1000):
         if len(row) == 3:
             pk, cf_data, name = row
             obj_id = f"{name!r} (pk={pk})"
@@ -455,8 +475,6 @@ def cleanup_custom_field_data(
     # safe_change=True: only provision runs; all steps we have deemed destructive are skipped.
     # dryrun=True: all mutations execute inside a transaction that is rolled back at the end.
     # verbose=True (or dryrun=True): log each affected object individually instead of just counts.
-    from nautobot.extras.models import CustomField
-
     _verbose = dryrun or verbose  # dryrun implies verbose
 
     is_all = False
@@ -600,26 +618,35 @@ def cleanup_custom_field_data(
                 # bad data in place.
                 if field.type in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
                     if not safe_change:
-                        _select(field, queryset, job_logger=job_logger)
+                        _replace_invalid_choice(field, queryset, job_logger=job_logger)
                 else:
-                    _field_types(field, queryset, model, safe_change, job_logger=job_logger)
+                    _reset_field_types(field, queryset, model, safe_change, job_logger=job_logger)
 
         if is_all and not safe_change:
-            _orphaned_keys(change_context, _verbose, job_logger=job_logger)
+            _remove_orphaned_keys(change_context, _verbose, job_logger=job_logger)
 
         if dryrun:
             transaction.set_rollback(True)
 
 
 def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=False, verbose=False, job_logger=logger):
-    from nautobot.extras.models import CustomField
+    """
+    Provision a new custom field on all relevant content type object instances.
 
+    Args:
+        field_id (uuid4): The PK of the custom field being provisioned
+        content_type_pk_set (list): List of PKs for content types to act upon
+        change_context (dict): Optional change context for ObjectChange creation.
+        dryrun (bool): If True, execute all changes inside a transaction that is rolled back
+        verbose (bool): If True, log each affected object by name/pk rather than just an aggregate count. Defaults to False.
+        job_logger (logging.Logger): Logger to use for logging messages. Defaults to the module logger.
+    """
     _verbose = dryrun or verbose
 
     try:
         field = CustomField.objects.get(pk=field_id)
     except CustomField.DoesNotExist:
-        job_logger.error(f"Custom field with ID %s not found, failing to provision.", field_id)
+        job_logger.error("Custom field with ID %s not found, failing to provision.", field_id)
         raise
 
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
@@ -685,8 +712,8 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
         # in_scope_qs is all objects, so the first pass already covered everyone.
         if field.scope_filter:
             in_scope_pks = list(in_scope_qs.values_list("pk", flat=True))
-            out_of_scope_missing = model.objects.exclude(pk__in=in_scope_pks).filter(
-                **{f"_custom_field_data__{field.key}__isnull": True}
+            out_of_scope_missing = model.objects.exclude(pk__in=in_scope_pks).exclude(
+                _custom_field_data__has_key=field.key
             )
             out_of_scope_missing.update(_custom_field_data=JSONSet("_custom_field_data", field.key, None))
 
