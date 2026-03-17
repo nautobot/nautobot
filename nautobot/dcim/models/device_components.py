@@ -1176,7 +1176,7 @@ class DeviceBay(ComponentModel):
         - device not already in another bay
         - device type is child or parent-child
         """
-        seen_devices = set()
+        seen_device_ids = set()
         parent_bay = DeviceBay.objects.filter(installed_device=self.device).first()
         while parent_bay is not None:
             parent_device = parent_bay.device
@@ -1184,11 +1184,11 @@ class DeviceBay(ComponentModel):
                 raise ValidationError(
                     "Installing this device would create a loop; it is already an ancestor of this bay's device."
                 )
-            if parent_device in seen_devices:
+            if parent_device.pk in seen_device_ids:
                 raise ValidationError(
                     "The device parent chain already contains a loop; fix existing data before making this assignment."
                 )
-            seen_devices.add(parent_device)
+            seen_device_ids.add(parent_device.pk)
             parent_bay = DeviceBay.objects.filter(installed_device=parent_device).first()
 
         current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
