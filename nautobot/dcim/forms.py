@@ -3944,7 +3944,10 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,
-            device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            device_type__subdevice_role__in=[
+                SubdeviceRoleChoices.ROLE_CHILD,
+                SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            ],
         ).exclude(pk=device_bay.device.pk)
 
 

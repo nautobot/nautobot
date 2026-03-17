@@ -103,7 +103,7 @@ from nautobot.wireless.tables import (
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NONCONNECTABLE_IFACE_TYPES
+from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
@@ -2540,14 +2540,35 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 instance = get_obj_from_context(context, self.context_object_key)
                 try:
                     if instance.parent_bay is not None:
-                        parent = instance.parent_bay.device
-                        display = format_html(
-                            "{} / {}",
-                            helpers.hyperlinked_object(parent),
-                            helpers.hyperlinked_object(instance.parent_bay),
-                        )
-                        if parent.position is not None:
-                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
+                        # Build fully qualified breadcrumb path by walking up the hierarchy, guarding against
+                        # infinite recursion caused by malformed data
+                        path_objects = []
+                        current_bay = instance.parent_bay
+                        visited_device_ids = set()
+                        max_depth = DEVICE_RECURSION_DEPTH_LIMIT * 2  # device + bay per level
+                        current_depth = 0
+
+                        while current_bay is not None and current_depth < max_depth:
+                            path_objects.insert(0, current_bay)
+                            current_device = current_bay.device
+                            if current_device.pk in visited_device_ids:
+                                break
+
+                            visited_device_ids.add(current_device.pk)
+                            path_objects.insert(0, current_device)
+                            current_bay = getattr(current_device, "parent_bay", None)
+                            current_depth += 1
+
+                        path_display = [helpers.hyperlinked_object(obj) for obj in path_objects]
+                        display = format_html(" / ".join(["{}"] * len(path_display)), *path_display)
+
+                        # Add top-level device position if it has one
+                        if path_objects and hasattr(path_objects[0], "position"):
+                            top_device_position = path_objects[0].position
+                            if top_device_position is not None:
+                                display += format_html(
+                                    " (U{} / {})", top_device_position, path_objects[0].get_face_display()
+                                )
                         return display
                 except DeviceBay.DoesNotExist:
                     pass
