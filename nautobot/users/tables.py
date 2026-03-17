@@ -1,8 +1,7 @@
-from django.contrib.auth.models import Group
 import django_tables2 as tables
 
 from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, ToggleColumn
-from nautobot.users.models import ObjectPermission, User
+from nautobot.users.models import AdminGroup, ObjectPermission, User
 
 
 class GroupTable(BaseTable):
@@ -11,12 +10,10 @@ class GroupTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     user_count = tables.Column(verbose_name="Users")
-    actions = ButtonsColumn(Group, buttons=("edit", "delete"))
+    actions = ButtonsColumn(AdminGroup, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
-        """Meta attributes."""
-
-        model = Group
+        model = AdminGroup
         fields = ("pk", "name", "user_count", "actions")
         default_columns = ("pk", "name", "user_count", "actions")
 

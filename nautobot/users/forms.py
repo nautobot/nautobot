@@ -19,7 +19,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.models import User
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from .models import Token
+from .models import AdminGroup, Token
 
 
 class LoginForm(BootstrapMixin, AuthenticationForm):
@@ -35,14 +35,14 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
 
 
 class GroupFilterForm(BootstrapMixin, forms.Form):
-    model = Group
+    model = AdminGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
 
 
 class GroupForm(BootstrapMixin, forms.ModelForm):
     class Meta:
-        model = Group
+        model = AdminGroup
         fields = ["name"]
 
 
