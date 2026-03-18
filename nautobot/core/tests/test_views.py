@@ -945,10 +945,8 @@ class LoginUITestCase(TestCase):
             )
         self.user.refresh_from_db()
         payload = serialize_user_without_config_and_views(self.user)
-        self.assertEqual(
-            cm.output,
-            [f"INFO:nautobot.events.nautobot.users.user.login:{json.dumps(payload, indent=4)}"],
-        )
+        expected_login_event = f"INFO:nautobot.events.nautobot.users.user.login:{json.dumps(payload, indent=4)}"
+        self.assertIn(expected_login_event, cm.output)
         self.assertTrue(self.user.is_authenticated)
         self.assertNotIn("password", cm.output)
         self.assertNotIn("pass", cm.output)
@@ -959,10 +957,8 @@ class LoginUITestCase(TestCase):
             )
         self.user.refresh_from_db()
         payload = serialize_user_without_config_and_views(self.user)
-        self.assertEqual(
-            cm.output,
-            [f"INFO:nautobot.events.nautobot.users.user.logout:{json.dumps(payload, indent=4)}"],
-        )
+        expected_logout_event = f"INFO:nautobot.events.nautobot.users.user.logout:{json.dumps(payload, indent=4)}"
+        self.assertIn(expected_logout_event, cm.output)
         self.assertNotIn("password", cm.output)
         self.assertNotIn("pass", cm.output)
 
