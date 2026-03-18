@@ -1,4 +1,26 @@
 /**
+ * Get form field ID by emulating Django `BoundField.auto_id` @property function in JavaScript.
+ * Source: https://github.com/django/django/blob/4b2b4bf0ac2707dc9c4d51cabfa72168eaea95fe/django/forms/boundfield.py#L243-L255
+ * @param {string} formAutoId - Django form `auto_id` property.
+ * @param {string} name - Field name.
+ * @param {boolean} querySelector - Return field ID in query selector format, i.e. prefixed with `'#'`. For the sake of
+ *   convenience this options is enabled by default.
+ * @returns {string} - Form field ID.
+ */
+export const getFieldAutoId = (formAutoId, name, querySelector = true) => {
+  if (formAutoId?.includes('%s')) {
+    const fieldAutoId = formAutoId.replace('%s', name);
+    return querySelector ? `#${fieldAutoId}` : fieldAutoId;
+  }
+
+  if (formAutoId === 'True') {
+    return querySelector ? `#${name}` : name;
+  }
+
+  return '';
+};
+
+/**
  * Observe pinned state of elements of class `nb-form-sticky-footer` on the page and add drop shadow with `nb-is-pinned`
  * class if they are pinned. This is purely cosmetic and does not affect functionality.
  * @example

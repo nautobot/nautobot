@@ -41,7 +41,7 @@ import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
-import { observeFormStickyFooters } from './form.js';
+import { getFieldAutoId, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { refreshMessages } from './messages.js';
 import { initializeSearch } from './search.js';
@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+  window.nb.form = { getFieldAutoId };
 
   // Messages
   window.nb.messages = { refreshMessages };
