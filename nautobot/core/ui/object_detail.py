@@ -2693,6 +2693,7 @@ class _JobModalButton(Button):
 
     def get_extra_context(self, context: Context):
         """Add necessary htmx attributes to the button."""
+        context = super().get_extra_context(context)
         obj = get_obj_from_context(context, self.context_object_key)
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
@@ -2701,9 +2702,10 @@ class _JobModalButton(Button):
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
-        if not self.attributes:
-            self.attributes = {}
-        self.attributes.update(
+
+        attributes = context.get("attributes", {})
+
+        attributes.update(
             {
                 "data-bs-toggle": "modal",
                 "data-bs-target": "#nautobot-generic-modal",
@@ -2713,12 +2715,15 @@ class _JobModalButton(Button):
                 "hx-swap": "innerHTML",
             }
         )
-        # If the user doesn't have permission to the Job, or the Job doesn't exist, disable the button.
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
         try:
             jobs = Job.objects
             if "request" in context and context["request"].user is not None:
                 jobs = jobs.restrict(context["request"].user, "view")
-            jobs.get_for_class_path(self.class_path)
+            job = jobs.get_for_class_path(self.class_path)
+            if not job.enabled:
+                attributes["disabled"] = "disabled"
         except Job.DoesNotExist:
-            self.attributes["disabled"] = "disabled"
-        return super().get_extra_context(context)
+            attributes["disabled"] = "disabled"
+        context["attributes"] = attributes
+        return context
