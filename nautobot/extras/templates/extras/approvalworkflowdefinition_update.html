@@ -60,7 +60,6 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script type="text/javascript">
         const slugify_prefer_underscores = true;
         $('.formset_row-{{ stages.prefix }}').formset({

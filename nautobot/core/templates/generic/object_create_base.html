@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load form_helpers %}
 {% load helpers %}
+{% load static %}
 
 {% block title %}{% if editing %}Editing {{ obj_type }} {{ obj }}{% else %}Add a new {{ obj_type }}{% endif %}{% endblock %}
 
@@ -144,4 +145,5 @@
             window.nb.embeddedAction = { handleEnd, handleStart, targetFieldName: null };
         })();
     </script>
+    <script src="{% static 'jquery/jquery.formset.js' %}" onerror="nb.media.handleFailure(this)"></script>
 {% endblock %}

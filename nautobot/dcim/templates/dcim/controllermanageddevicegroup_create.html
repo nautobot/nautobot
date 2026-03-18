@@ -146,17 +146,14 @@
         })();
     </script>
     <script type="text/javascript">
-        function formsetifyWirelessNetworks() {
-            $('.formset_row-{{ wireless_networks.prefix }}').formset({
-                addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Wireless Network',
-                addCssClass: 'btn btn-primary add-row',
-                deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
-                deleteCssClass: 'btn btn-danger delete-row',
-                prefix: '{{ wireless_networks.prefix }}',
-                formCssClass: 'dynamic-formset-{{ wireless_networks.prefix }}',
-                added: jsify_form
-            });
-        }
+        $('.formset_row-{{ wireless_networks.prefix }}').formset({
+            addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Wireless Network',
+            addCssClass: 'btn btn-primary add-row',
+            deleteText: '<span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>',
+            deleteCssClass: 'btn btn-danger delete-row',
+            prefix: '{{ wireless_networks.prefix }}',
+            formCssClass: 'dynamic-formset-{{ wireless_networks.prefix }}',
+            added: jsify_form
+        });
     </script>
-    <script src="{% static 'jquery/jquery.formset.js' %}" onload="formsetifyWirelessNetworks();"></script>
 {% endblock %}
