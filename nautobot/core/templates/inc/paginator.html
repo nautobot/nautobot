@@ -11,11 +11,11 @@
      {% endif %}
 >
     {% if page %}
-        <div>
+        <div class="nb-paginator-info">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         {% if not exclude_controls %}
-            <div class="vr border-start my-8"></div>
+            <div class="vr border-start my-8 nb-paginator-divider"></div>
         {% endif %}
     {% endif %}
     {% if not exclude_controls %}
@@ -52,7 +52,7 @@
         </form>
     {% endif %}
     {% if paginator.num_pages > 1 and not exclude_controls %}
-        <div class="vr border-start my-8"></div>
+        <div class="vr border-start my-8 nb-paginator-divider"></div>
         <nav>
             <ul class="pagination mb-0">
                 {% if page.has_previous %}

@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 from unittest import mock
 import uuid
 
@@ -7,11 +10,13 @@ from django.test import override_settings
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
+from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.models import JobQueue, JobResult
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
+    get_kubernetes_job_manifest,
     get_worker_count,
     populate_model_features_registry,
     run_kubernetes_job_and_return_job_result,
@@ -130,7 +135,120 @@ class UtilsTestCase(TestCase):
             "Registry should be restored to original state",
         )
 
+    def test_get_kubernetes_job_manifest_from_file(self):
+        """Manifest from JOB_QUEUE_PATH/{queue_name}/manifest.json is returned."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            queue_name = "my-k8s-queue"
+            queue_dir = os.path.join(tmpdir, queue_name)
+            os.makedirs(queue_dir, exist_ok=True)
+            manifest = {"metadata": {"name": "from-file"}, "spec": {}}
+            with open(os.path.join(queue_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+            job_queue = JobQueue.objects.create(
+                name=queue_name,
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            with override_settings(JOB_QUEUE_PATH=tmpdir):
+                result = get_kubernetes_job_manifest(job_queue.name)
+            self.assertEqual(result, manifest)
+
+    def test_get_kubernetes_job_manifest_fallback_to_settings(self):
+        """When no file exists, fallback to settings.KUBERNETES_JOB_MANIFEST (deep copy)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            job_queue = JobQueue.objects.create(
+                name="fallback-queue",
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            default_manifest = {"metadata": {"name": "default"}}
+            with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST=default_manifest):
+                result = get_kubernetes_job_manifest(job_queue.name)
+            self.assertIsNotNone(result)
+            self.assertEqual(result, default_manifest)
+            # Mutating the result must not affect the original (returned value is a deep copy)
+            result["metadata"]["name"] = "mutated"
+            self.assertEqual(default_manifest["metadata"]["name"], "default")
+
+    def test_get_kubernetes_job_manifest_returns_none_when_no_manifest(self):
+        """When no file and no default manifest, return None."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            job_queue = JobQueue.objects.create(
+                name="no-manifest-queue",
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST={}):
+                result = get_kubernetes_job_manifest(job_queue.name)
+            self.assertIsNone(result)
+
+    def test_get_kubernetes_job_manifest_rejects_path_traversal_queue_names(self):
+        """Queue names that would resolve outside JOB_QUEUE_PATH must not read files."""
+        default_manifest = {"metadata": {"name": "default"}}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base = os.path.join(tmpdir, "base")
+            os.makedirs(base, exist_ok=True)
+            # Place a manifest in parent of base (would be read if ".." were allowed)
+            escape_manifest_path = os.path.join(tmpdir, "manifest.json")
+            escape_manifest = {"metadata": {"name": "escaped"}}
+            with open(escape_manifest_path, "w", encoding="utf-8") as f:
+                json.dump(escape_manifest, f)
+            try:
+                with override_settings(JOB_QUEUE_PATH=base, KUBERNETES_JOB_MANIFEST=default_manifest):
+                    with self.subTest(queue_name=".."):
+                        job_queue = JobQueue.objects.create(
+                            name="..",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue.name)
+                        self.assertEqual(result, default_manifest, "Must not read manifest from parent dir")
+
+                    with self.subTest(queue_name="../../escape"):
+                        job_queue = JobQueue.objects.create(
+                            name="../../escape",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue.name)
+                        self.assertEqual(result, default_manifest, "Must not read via path traversal")
+
+                    with self.subTest(queue_name="../../../etc"):
+                        job_queue = JobQueue.objects.create(
+                            name="../../../etc",
+                            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                        )
+                        result = get_kubernetes_job_manifest(job_queue.name)
+                        self.assertEqual(result, default_manifest, "Must not escape to arbitrary paths")
+            finally:
+                if os.path.exists(escape_manifest_path):
+                    os.remove(escape_manifest_path)
+
+    def test_get_kubernetes_job_manifest_slash_in_queue_name_stays_under_base(self):
+        """Queue names with slashes (e.g. My/Job/Queue) are allowed when path stays under base."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            queue_name = "My/Job/Queue"
+            queue_dir = os.path.join(tmpdir, "My", "Job", "Queue")
+            os.makedirs(queue_dir, exist_ok=True)
+            manifest = {"metadata": {"name": "from-nested-dir"}, "spec": {}}
+            with open(os.path.join(queue_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+            job_queue = JobQueue.objects.create(
+                name=queue_name,
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            with override_settings(JOB_QUEUE_PATH=tmpdir):
+                result = get_kubernetes_job_manifest(job_queue.name)
+            self.assertEqual(result, manifest)
+
+    def test_get_kubernetes_job_manifest_path_traversal_returns_default_or_none(self):
+        """Path traversal queue names with no default manifest return None (no file read)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST=None):
+                job_queue = JobQueue.objects.create(
+                    name="../../outside",
+                    queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+                )
+                result = get_kubernetes_job_manifest(job_queue.name)
+                self.assertIsNone(result)
+
     @override_settings(
+        JOB_QUEUE_PATH="/nonexistent/job-queues",
         KUBERNETES_JOB_POD_NAME="test-pod",
         KUBERNETES_JOB_POD_NAMESPACE="test-namespace",
         KUBERNETES_JOB_MANIFEST={
@@ -166,9 +284,14 @@ class UtilsTestCase(TestCase):
     ):
         """Test run_kubernetes_job_and_return_job_result function."""
         # Setup test data
+        job_queue = JobQueue.objects.create(
+            name="k8s-queue",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
         job_result = JobResult.objects.create(
             name="Test Job",
             user=self.user,
+            celery_kwargs={"queue": job_queue.name},
         )
         # Mock the log method to avoid database writes during test
         job_result.log = mock.Mock()
@@ -241,3 +364,24 @@ class UtilsTestCase(TestCase):
         self.assertEqual(job_result.log.call_count, 1)
         self.assertIn("Creating job pod", str(job_result.log.call_args_list[0]))
         self.assertIn("test-pod", str(job_result.log.call_args_list[0]))
+
+    def test_run_kubernetes_job_and_return_job_result_raises_when_no_manifest(self):
+        """run_kubernetes_job_and_return_job_result raises KubernetesJobManifestError when no manifest."""
+        from django.core.exceptions import ValidationError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            job_queue = JobQueue.objects.create(
+                name="no-manifest-k8s",
+                queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+            )
+            job_result = JobResult.objects.create(
+                name="Test Job",
+                user=self.user,
+                celery_kwargs={"queue": job_queue.name},
+            )
+            job_kwargs = "{}"
+            with override_settings(JOB_QUEUE_PATH=tmpdir, KUBERNETES_JOB_MANIFEST={}):
+                with self.assertRaises(KubernetesJobManifestError) as cm:
+                    run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
+                self.assertIn("Unable to retrieve a kubernetes job manifest.", str(cm.exception))
+                self.assertTrue(issubclass(KubernetesJobManifestError, ValidationError))

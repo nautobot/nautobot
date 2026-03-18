@@ -1026,6 +1026,14 @@ properties:
       "`STORAGES`": "#storages"
     type: "integer"
     version_added: "2.1.0"
+  JOB_QUEUE_PATH:
+    "$ref": "#/definitions/absolute_path"
+    default: "/etc/nautobot/job-queues"
+    description: >-
+      Directory where Job Queue configuration files are stored. Used for Kubernetes Job queues;
+      each queue may have a subdirectory named after the queue containing `manifest.json`.
+    environment_variable: "NAUTOBOT_JOB_QUEUE_PATH"
+    version_added: "3.0.9"
   JOBS_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/jobs"
