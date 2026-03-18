@@ -1457,6 +1457,7 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["team"]["id"], team.pk)
 
+
 class CreatedUpdatedFilterTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
