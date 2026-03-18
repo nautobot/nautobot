@@ -13,7 +13,6 @@ from django.core.validators import RegexValidator, ValidationError
 from django.db import models, transaction
 from django.db.models import Model
 from django.forms.widgets import TextInput
-from django.utils import timezone
 from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
 
