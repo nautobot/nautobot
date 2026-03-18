@@ -3143,11 +3143,13 @@ class JobResultUIViewSet(
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
-                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                    + f"?kwargs_from_job_result={ctx['object'].pk}"
-                )
-                if ctx["object"].job_model and ctx["object"].task_kwargs
-                else None,
+                    (
+                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                        + f"?kwargs_from_job_result={ctx['object'].pk}"
+                    )
+                    if ctx["object"].job_model and ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=110,
@@ -3155,9 +3157,11 @@ class JobResultUIViewSet(
                 color=ButtonActionColorChoices.RUN,
                 icon="mdi-play",
                 required_permissions=["extras.run_job"],
-                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                if ctx["object"].job_model and not ctx["object"].task_kwargs
-                else None,
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    if ctx["object"].job_model and not ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=120,
