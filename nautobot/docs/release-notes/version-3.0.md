@@ -210,6 +210,83 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.9 (2026-03-17)
+
+### Security in v3.0.9
+
+- [#8663](https://github.com/nautobot/nautobot/issues/8663) - Updated dependency `Django` to `~4.2.29` to mitigate CVE-2026-25673 and CVE-2026-25674.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated `immutable` npm development dependency to 5.1.5 to mitigate CVE-2026-29063.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated `minimatch` npm development dependency to 3.1.5 to mitigate CVE-2026-27903.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated `serialize-javascript` npm development dependency to 7.0.4 to mitigate GHSA-5c6j-r48x-rmvq.
+- [#8691](https://github.com/nautobot/nautobot/issues/8691) - Updated dependency `pyjwt` to `2.12.1` to mitigate CVE-2026-32597. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.0.9
+
+- [#8488](https://github.com/nautobot/nautobot/issues/8488) - Added the ability to configure multiple Kubernetes job manifests via file-based configuration.
+- [#8682](https://github.com/nautobot/nautobot/issues/8682) - Added `software_version__platform` filter to `SoftwareImageFileFilterSet` to allow filtering software image files by their software version's platform.
+
+### Fixed in v3.0.9
+
+- [#8643](https://github.com/nautobot/nautobot/issues/8643) - Fixed a bug in "Update Group Assignment" modal where modal title rendering is broken, after applying the fix, the close button is on the top right corner and the title is on the far left margin.
+- [#8657](https://github.com/nautobot/nautobot/issues/8657) - Fixed a few display regressions in the JobResult detail view.
+- [#8661](https://github.com/nautobot/nautobot/issues/8661) - Enhanced `import_string_optional` to avoid ignoring certain exceptions unrelated to the specific import.
+- [#8681](https://github.com/nautobot/nautobot/issues/8681) - Fixed an exception when viewing JobResult records with associated file outputs.
+
+### Dependencies in v3.0.9
+
+- [#8639](https://github.com/nautobot/nautobot/issues/8639) - Updated dependency `django-constance` to `~4.3.5`.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated `Node.js` UI dependency to version 24.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated `npm` UI dependency to `>=11.9.0`.
+
+### Housekeeping in v3.0.9
+
+- [#8638](https://github.com/nautobot/nautobot/issues/8638) - Updated development npm dependency `@eslint/js` and `eslint` to `^9.39.4`.
+- [#8638](https://github.com/nautobot/nautobot/issues/8638) - Updated development npm dependency `mini-css-extract-plugin` to `^2.10.1`.
+- [#8638](https://github.com/nautobot/nautobot/issues/8638) - Updated development npm dependency `postcss` to `^8.5.8`.
+- [#8638](https://github.com/nautobot/nautobot/issues/8638) - Updated development npm dependency `webpack` to `^5.105.4`.
+- [#8639](https://github.com/nautobot/nautobot/issues/8639) - Updated documentation dependency `mkdocs-material` to `~9.7.5`.
+- [#8639](https://github.com/nautobot/nautobot/issues/8639) - Updated development dependency `pymarkdownlnt` to `~0.9.36`.
+- [#8670](https://github.com/nautobot/nautobot/issues/8670) - Updated development npm dependency `copy-webpack-plugin` to `^14.0.0`.
+
+## v3.0.8 (2026-03-02)
+
+### Added in v3.0.8
+
+- [#8575](https://github.com/nautobot/nautobot/issues/8575) - Added `HYPERLINKED_OBJECT` option to `ObjectTextPanel.RenderOptions` to automatically render the value as a hyperlink to the related object.
+
+### Changed in v3.0.8
+
+- [#8519](https://github.com/nautobot/nautobot/issues/8519) - Improved rendering of cable traces, particularly for black and white colored cables.
+
+### Fixed in v3.0.8
+
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Fixed sorting on multiple tables.
+- [#8560](https://github.com/nautobot/nautobot/issues/8560) - Fixed an issue where the `JobResult` status was not being set to `STARTED` when a job was run synchronously.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed filtering on multiple tables.
+- [#8589](https://github.com/nautobot/nautobot/issues/8589) - Fixed the ability to provide your own CACHES client to allow `health_check` to pass.
+- [#8642](https://github.com/nautobot/nautobot/issues/8642) - Fixed issue where `islower` was not called as a function in the conditional.
+- [#8642](https://github.com/nautobot/nautobot/issues/8642) - Added missing f-string to the raised error message.
+- [#8646](https://github.com/nautobot/nautobot/issues/8646) - Fixed scheduled jobs incorrectly running after their associated approval workflow was denied.
+
+### Dependencies in v3.0.8
+
+- [#8556](https://github.com/nautobot/nautobot/issues/8556) - Updated dependency `django-tree-queries` to `~0.23.1`.
+- [#8556](https://github.com/nautobot/nautobot/issues/8556) - Updated dependency `nh3` to `~0.3.3`.
+
+### Housekeeping in v3.0.8
+
+- [#7729](https://github.com/nautobot/nautobot/issues/7729) - Refactored JobResult model related UI views to use `UI component framework`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `@eslint/js` to `^9.39.3`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `autoprefixer` to `^10.4.26`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `css-loader` to `^7.1.4`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `eslint` to `^9.39.3`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `postcss-loader` to `^8.2.1`.
+- [#8555](https://github.com/nautobot/nautobot/issues/8555) - Updated development npm dependency `webpack` to `^5.105.2`.
+- [#8556](https://github.com/nautobot/nautobot/issues/8556) - Updated documentation dependency `mkdocs-material` to `~9.7.3`.
+- [#8590](https://github.com/nautobot/nautobot/issues/8590) - Updated `deploy-sandbox` action for release CI.
+- [#8613](https://github.com/nautobot/nautobot/issues/8613) - Fixed `ui_build` container not running successfully in a fresh development environment.
+- [#8613](https://github.com/nautobot/nautobot/issues/8613) - Changed `invoke npm` and related tasks to not install `node_modules` into the local filesystem.
+
 ## v3.0.7 (2026-02-17)
 
 ### Security in v3.0.7

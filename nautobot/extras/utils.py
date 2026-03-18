@@ -3,7 +3,9 @@ import contextlib
 import copy
 import hashlib
 import hmac
+import json
 import logging
+import os
 import re
 import sys
 from typing import Optional, TYPE_CHECKING, Union
@@ -41,6 +43,7 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
 
 if TYPE_CHECKING:
@@ -668,12 +671,64 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
+def get_kubernetes_job_manifest(queue_name):
+    """Retrieve the job manifest for the given job queue name.
+
+    Given a queue name, look for a manifest.json file in the job queue path.
+    `[path]/[queue_name]/manifest.json`
+    If found, return the manifest as a dictionary.
+    If not, or if queue_name is missing/empty, return the default manifest from
+    settings.KUBERNETES_JOB_MANIFEST.
+    If neither is found, return None.
+
+    Args:
+        queue_name: The job queue name to get the manifest for. If None or empty,
+            skip path lookup and use the default manifest from settings.
+
+    Returns:
+        The manifest as a dictionary or None if no manifest is found.
+    """
+    if not queue_name:
+        manifest_path = None
+    else:
+        manifest_path = os.path.join(settings.JOB_QUEUE_PATH, queue_name, "manifest.json")
+        try:
+            base_real = os.path.realpath(settings.JOB_QUEUE_PATH)
+            resolved = os.path.realpath(manifest_path)
+            if resolved != base_real and not resolved.startswith(base_real + os.sep):
+                logger.warning(
+                    "Job queue name %r would resolve outside JOB_QUEUE_PATH, ignoring manifest path.",
+                    queue_name,
+                )
+                manifest_path = None
+        except OSError:
+            logger.debug("Could not resolve path for job queue %r.", queue_name)
+            manifest_path = None
+
+    if manifest_path and os.path.exists(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            return json.load(manifest_file)
+    if manifest_path:
+        logger.debug("No manifest.json found at path %s.", manifest_path)
+    default_manifest = settings.KUBERNETES_JOB_MANIFEST
+    if default_manifest:
+        return copy.deepcopy(default_manifest)
+    logger.debug("No default manifest found in settings.KUBERNETES_JOB_MANIFEST.")
+    return None
+
+
 def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
+
+    The queue name is derived from job_result.celery_kwargs["queue"] when present;
+    if missing, the default manifest from settings (e.g. KUBERNETES_JOB_MANIFEST) is used.
     """
+    queue_name = job_result.celery_kwargs.get("queue") if job_result.celery_kwargs else None
     pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
+    pod_manifest = get_kubernetes_job_manifest(queue_name)
+    if not pod_manifest:
+        raise KubernetesJobManifestError("Unable to retrieve a kubernetes job manifest.")
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     pod_token = settings.KUBERNETES_TOKEN_PATH
 
@@ -681,6 +736,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     job_result.save()
 
     pod_name = settings.KUBERNETES_JOB_POD_NAME + "-" + str(job_result.pk)
+    pod_manifest.setdefault("metadata", {})
     pod_manifest["metadata"]["name"] = pod_name
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",

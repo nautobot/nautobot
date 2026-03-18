@@ -4094,6 +4094,8 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["image_file_size"],
         ["software_version", "software_version__id"],
         ["software_version", "software_version__version"],
+        ["software_version__platform", "software_version__platform__id"],
+        ["software_version__platform", "software_version__platform__name"],
         ["status", "status__id"],
         ["status", "status__name"],
         ["external_integration", "external_integration__id"],

@@ -1195,6 +1195,9 @@ DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 # Kubernetes settings variables
 #
 
+# The file path for Job Queue configuration files (currently only used for Kubernetes Job manifests)
+JOB_QUEUE_PATH = os.getenv("NAUTOBOT_JOB_QUEUE_PATH", "/etc/nautobot/job-queues")
+
 # Host of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv(
     "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "https://kubernetes.default.svc"

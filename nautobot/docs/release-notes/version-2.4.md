@@ -166,6 +166,33 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.29 (2026-03-17)
+
+### Security in v2.4.29
+
+- [#8663](https://github.com/nautobot/nautobot/issues/8663) - Updated dependency `Django` to `~4.2.29` to mitigate CVE-2026-25673 and CVE-2026-25674.
+- [#8691](https://github.com/nautobot/nautobot/issues/8691) - Updated dependency `pyjwt` to `2.12.1` to mitigate CVE-2026-32597. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.29
+
+- [#8488](https://github.com/nautobot/nautobot/issues/8488) - Added the ability to configure multiple Kubernetes job manifests via file-based configuration.
+
+### Fixed in v2.4.29
+
+- [#8473](https://github.com/nautobot/nautobot/issues/8473) - Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.
+
+## v2.4.28 (2026-03-02)
+
+### Fixed in v2.4.28
+
+- [#8519](https://github.com/nautobot/nautobot/issues/8519) - Fixed cable color display in dark mode to ensure cable colors render closer to the configured value.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Fixed sorting on multiple tables.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed filtering on multiple tables.
+
+### Housekeeping in v2.4.28
+
+- [#8591](https://github.com/nautobot/nautobot/issues/8591) - Updated `deploy-sandbox` action for release CI.
+
 ## v2.4.27 (2026-02-17)
 
 ### Security in v2.4.27
