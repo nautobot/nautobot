@@ -1377,6 +1377,86 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(response.data["team"]["id"], team.pk)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_contact_name_only(self):
+        """Test that creating a ContactAssociation with only a duplicated Contact name fails gracefully (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0001", email="dup1@example.com")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "contact": "Duplicate Contact",
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("contact", response.data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_contact_with_attrs(self):
+        """Test that a ContactAssociation can be created with a duplicated Contact name when disambiguating attributes are provided (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        contact = Contact.objects.create(name="Duplicate Contact", phone="555-0001", email="dup1@example.com")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "contact": {"name": "Duplicate Contact", "phone": "555-0001", "email": "dup1@example.com"},
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["contact"]["id"], contact.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_team_name_only(self):
+        """Test that creating a ContactAssociation with only a duplicated Team name fails gracefully (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        Team.objects.create(name="Duplicate Team", phone="555-0001", email="dup1@example.com")
+        Team.objects.create(name="Duplicate Team", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "team": "Duplicate Team",
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("team", response.data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_team_with_attrs(self):
+        """Test that a ContactAssociation can be created with a duplicated Team name when disambiguating attributes are provided (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        team = Team.objects.create(name="Duplicate Team", phone="555-0001", email="dup1@example.com")
+        Team.objects.create(name="Duplicate Team", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "team": {"name": "Duplicate Team", "phone": "555-0001", "email": "dup1@example.com"},
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["team"]["id"], team.pk)
+
 
 class CreatedUpdatedFilterTest(APITestCase):
     @classmethod
