@@ -2693,8 +2693,8 @@ class _JobModalButton(Button):
 
     def get_extra_context(self, context: Context):
         """Add necessary htmx attributes to the button."""
-        context = super().get_extra_context(context)
         obj = get_obj_from_context(context, self.context_object_key)
+        context = super().get_extra_context(context)
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
@@ -2703,7 +2703,8 @@ class _JobModalButton(Button):
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
 
-        attributes = context.get("attributes", {})
+        raw_attrs = context.get("attributes")
+        attributes = {} if raw_attrs is None else raw_attrs.copy()
 
         attributes.update(
             {
