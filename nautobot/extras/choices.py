@@ -127,12 +127,12 @@ class CustomFieldTypeChoices(ChoiceSet):
         (TYPE_INTEGER, "Integer"),
         (TYPE_BOOLEAN, "Boolean (true/false)"),
         (TYPE_DATE, "Date"),
+        (TYPE_DATETIME, "Date/time"),
         (TYPE_URL, "URL"),
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
         (TYPE_JSON, "JSON"),
         (TYPE_MARKDOWN, "Markdown"),
-        (TYPE_DATETIME, "Date/time"),
     )
 
     # Types that support validation_minimum/validation_maximum
