@@ -3,20 +3,24 @@ import datetime
 from django.contrib.contenttypes.models import ContentType
 import graphene
 from graphene_django import DjangoObjectType
-import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
 
-class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
+class OptimizedNautobotObjectType(DjangoObjectType):
     url = graphene.String()
 
-    # Reset get_queryset to DjangoObjectType's base implementation.
-    # OptimizedDjangoObjectType overrides get_queryset for auto-optimization, but in graphene-django 3.x
-    # any get_queryset override causes FK field resolvers to be wrapped in a custom_resolver that the
-    # optimizer cannot introspect, preventing it from adding select_related for FK fields and causing
-    # N+1 query regressions. Query optimization is handled explicitly via gql_optimizer.query() calls
-    # in the list and single-item resolvers, so this auto-optimization is not needed.
-    get_queryset = classmethod(DjangoObjectType.get_queryset.__func__)
+    # IMPORTANT:
+    # Do NOT override get_queryset here.
+    #
+    # In graphene-django 3.1.15 and later, customizing get_queryset changes how forward FK/1:1 fields are resolved
+    # internally (it wraps FK resolvers in a custom resolver path that defeats gql optimizer hints),
+    # which can re-introduce FK N+1 query regressions.
+    #
+    # Nautobot query optimization is handled explicitly by wrapping the *root* queryset with
+    # `graphene_django_optimizer.query(...)` in our GraphQL resolvers.
+    # See nautobot/core/graphql/generators.py for more details.
+    #
+    # Permission enforcement for ID/node lookups is handled in get_node().
 
     @classmethod
     def get_node(cls, info, id):  # pylint: disable=redefined-builtin
