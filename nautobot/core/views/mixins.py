@@ -706,8 +706,6 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         action = self.action
 
         if self.request.headers.get("HX-Request", False):
-            if action == "create":
-                return "components/htmx/object_embedded_create.html"
             if action == "list":
                 return "components/htmx/list_view_table.html"
             if self.detail and "component_id" in self.request.GET:
