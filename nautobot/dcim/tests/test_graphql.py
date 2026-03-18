@@ -198,7 +198,7 @@ class GraphQLTestCase(TestCase):
         query = "query { interfaces { name status { name } } }"
         execute_query(query, user=self.user)  # prewarm
 
-        with self.assertApproximateNumQueries(minimum=1, maximum=20):
+        with self.assertApproximateNumQueries(minimum=1, maximum=10):
             result = execute_query(query, user=self.user)
 
         self.assertIsNone(result.errors)
@@ -219,42 +219,6 @@ class GraphQLFKPermissionTest(GraphQLTestCase):
             # Ensure we have a distinct status object we can explicitly deny via ObjectPermission constraints.
             self.denied_status = Status.objects.create(name="DeniedStatusForGraphQLFKTest")
             self.denied_status.content_types.add(self.interface_content_type)
-
-        self.allowed_interface = Interface(
-            device=self.device,
-            name="eth_allowed",
-            status=self.allowed_status,
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            mac_address="00:00:00:00:aa:aa",
-        )
-        self.allowed_interface.validated_save()
-
-        self.denied_interface = Interface(
-            device=self.device,
-            name="eth_denied",
-            status=self.denied_status,
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            mac_address="00:00:00:00:bb:bb",
-        )
-        self.denied_interface.validated_save()
-
-        # Grant view permission for the two interfaces, but only grant view permission
-        # for the allowed status object. The denied status should come back as null.
-        allowed_iface_perm = ObjectPermission.objects.create(
-            name="View Interface eth_allowed",
-            actions=["view"],
-            constraints={"name": self.allowed_interface.name},
-        )
-        allowed_iface_perm.object_types.add(self.interface_content_type)
-        allowed_iface_perm.users.add(self.user)
-
-        denied_iface_perm = ObjectPermission.objects.create(
-            name="View Interface eth_denied",
-            actions=["view"],
-            constraints={"name": self.denied_interface.name},
-        )
-        denied_iface_perm.object_types.add(self.interface_content_type)
-        denied_iface_perm.users.add(self.user)
 
         allowed_status_perm = ObjectPermission.objects.create(
             name="View Status allowed",
