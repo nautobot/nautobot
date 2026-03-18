@@ -299,7 +299,7 @@ class Button(Component):
     link_includes_pk = True
     link_name = None
     placeholder_template_path = "components/button/button_placeholder.html"
-    render_on_tab_ids = ["main"]
+    render_on_tab_id = ["main"]
     size = None
     template_path = "components/button/default.html"
 
@@ -321,7 +321,7 @@ class Button(Component):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_ids (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -365,9 +365,14 @@ class Button(Component):
         # Only show if the user has the permission, which is enforce in super.
         if not super().should_render(context):
             return False
-        if self.render_on_tab_ids == "__all__":
+        if self.render_on_tab_id == "__all__":
             return True
-        return context.get("active_tab", "main") in self.render_on_tab_ids
+        # this part is because we want to keep backwards-compatible
+        # when render_on_tab_id was only a string
+        render_on_tab_ids = (
+            self.render_on_tab_id if isinstance(self.render_on_tab_id, list) else [self.render_on_tab_id]
+        )
+        return context.get("active_tab", "main") in render_on_tab_ids
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -410,7 +415,7 @@ class DropdownButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_ids (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -432,7 +437,7 @@ class DropdownButton(Button):
 class FormButton(Button):
     form_id: str = None
     link_name: str = None
-    render_on_tab_ids = "__all__"
+    render_on_tab_id = "__all__"
     template_path = "components/button/formbutton.html"
 
     def __init__(self, **kwargs):
@@ -454,7 +459,7 @@ class FormButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_ids (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to "__all__".
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -501,7 +506,7 @@ class ExtraDetailViewActionButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_ids (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -2665,7 +2670,7 @@ class _JobModalButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_ids (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.

@@ -1,1 +1,1 @@
-Changed `render_on_tab_id` to `render_on_tab_ids` to support more than one tab definition for button.
+Changed `render_on_tab_id` from `Button` class to support also a list.
