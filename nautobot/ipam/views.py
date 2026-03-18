@@ -536,7 +536,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="prefixes",
+                render_on_tab_ids=["prefixes"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddChildPrefixButton(
@@ -546,12 +546,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
-                render_on_tab_id="prefixes",
+                render_on_tab_ids=["prefixes"],
             ),
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="ip-addresses",
+                render_on_tab_ids=["ip-addresses"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddIPAddressButton(
@@ -561,7 +561,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
-                render_on_tab_id="ip-addresses",
+                render_on_tab_ids=["ip-addresses"],
             ),
         ],
     )
