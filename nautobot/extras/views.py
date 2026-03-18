@@ -3134,6 +3134,7 @@ class JobResultUIViewSet(
                 color=ButtonActionColorChoices.RERUN,
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
+                render_on_tab_id="__all__",  # do list
                 link_name=lambda ctx: (
                     reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
                     + f"?kwargs_from_job_result={ctx['object'].pk}"
@@ -3159,6 +3160,17 @@ class JobResultUIViewSet(
                 required_permissions=["extras.view_joblogentry"],
                 link_name=lambda ctx: (
                     reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_jobconsoleentry"],
+                render_on_tab_id="job_console_entries",
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk})
                 ),
             ),
         ),

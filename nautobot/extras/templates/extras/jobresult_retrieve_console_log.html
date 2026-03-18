@@ -1,21 +1,6 @@
 {% extends 'extras/jobresult_retrieve.html' %}
 
-{% block content %}
-    <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
-        <p class="flex-grow-1 m-0"></p>
-        <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
-            {% if perms.extras.run_job and result.job_model and result.task_kwargs %}
-                <a href="{% url 'extras:job_run' pk=result.job_model.pk %}?kwargs_from_job_result={{ result.pk }}"
-                   class="btn btn-success">
-                    <span class="mdi mdi-repeat" aria-hidden="true"></span> Re-Run
-                </a>
-            {% endif %}
-            <a href="{% url 'extras:jobresult_export_job_console_entries' pk=object.pk %}"
-               class="btn btn-success">
-                <span class="mdi mdi-database-export" aria-hidden="true"></span> Export Console Logs
-            </a>
-        </div>
-    </div>
+{% block extra_tab_content %}
     <div class="card h-100 mb-0">
         <div class="card-header">
             <strong>Console Log</strong>

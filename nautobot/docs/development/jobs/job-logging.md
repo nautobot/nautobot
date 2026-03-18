@@ -206,7 +206,7 @@ For example:
 The downloaded file is named `nautobot_job_console_entries_<job_result_pk>.txt`.
 
 !!! note
-    The **Export Console Logs** button requires the `extras.view_jobconsoleentry`.
+    The **Export Console Logs** button requires the `extras.view_jobconsoleentry` permission.
 
 ### Use cases
 
