@@ -15,6 +15,7 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.models import DynamicGroup, Role, Status
+from nautobot.users.models import ObjectPermission
 
 
 class GraphQLTestCase(TestCase):
@@ -174,3 +175,104 @@ class GraphQLTestCase(TestCase):
             names = {i["name"] for i in resp.data["interfaces"]}
             self.assertIn("eth2", names)
             self.assertNotIn("eth3", names)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_optimizer_fk_resolution(self):
+        """Test that nested forward FK fields don't cause N+1 queries.
+
+        Regression test for graphene-django 3.x changes around FK resolution.
+        """
+        interface_status = Status.objects.get_for_model(Interface).first()
+
+        # Amplify the N+1 issue by creating many interfaces with the same status object.
+        for i in range(30):
+            interface = Interface(
+                device=self.device,
+                name=f"eth_perf_{i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                mac_address=f"00:00:00:00:00:{i:02x}",
+            )
+            interface.validated_save()
+
+        query = "query { interfaces { name status { name } } }"
+        execute_query(query, user=self.user)  # prewarm
+
+        with self.assertApproximateNumQueries(minimum=1, maximum=20):
+            result = execute_query(query, user=self.user)
+
+        self.assertIsNone(result.errors)
+
+
+class GraphQLFKPermissionTest(GraphQLTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.interface_content_type = ContentType.objects.get_for_model(Interface)
+        self.status_content_type = ContentType.objects.get_for_model(Status)
+
+        interface_statuses = list(Status.objects.get_for_model(Interface).order_by("name"))
+        self.allowed_status = interface_statuses[0]
+        if len(interface_statuses) > 1:
+            self.denied_status = interface_statuses[1]
+        else:
+            # Ensure we have a distinct status object we can explicitly deny via ObjectPermission constraints.
+            self.denied_status = Status.objects.create(name="DeniedStatusForGraphQLFKTest")
+            self.denied_status.content_types.add(self.interface_content_type)
+
+        self.allowed_interface = Interface(
+            device=self.device,
+            name="eth_allowed",
+            status=self.allowed_status,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            mac_address="00:00:00:00:aa:aa",
+        )
+        self.allowed_interface.validated_save()
+
+        self.denied_interface = Interface(
+            device=self.device,
+            name="eth_denied",
+            status=self.denied_status,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            mac_address="00:00:00:00:bb:bb",
+        )
+        self.denied_interface.validated_save()
+
+        # Grant view permission for the two interfaces, but only grant view permission
+        # for the allowed status object. The denied status should come back as null.
+        allowed_iface_perm = ObjectPermission.objects.create(
+            name="View Interface eth_allowed",
+            actions=["view"],
+            constraints={"name": self.allowed_interface.name},
+        )
+        allowed_iface_perm.object_types.add(self.interface_content_type)
+        allowed_iface_perm.users.add(self.user)
+
+        denied_iface_perm = ObjectPermission.objects.create(
+            name="View Interface eth_denied",
+            actions=["view"],
+            constraints={"name": self.denied_interface.name},
+        )
+        denied_iface_perm.object_types.add(self.interface_content_type)
+        denied_iface_perm.users.add(self.user)
+
+        allowed_status_perm = ObjectPermission.objects.create(
+            name="View Status allowed",
+            actions=["view"],
+            constraints={"name": self.allowed_status.name},
+        )
+        allowed_status_perm.object_types.add(self.status_content_type)
+        allowed_status_perm.users.add(self.user)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_status_id_lookup_enforces_object_permissions(self):
+        query = "query ($id: ID!) { status(id: $id) { name } }"
+
+        allowed_result = execute_query(query, user=self.user, variables={"id": str(self.allowed_status.pk)})
+        self.assertIsNone(allowed_result.errors)
+        self.assertIsNotNone(allowed_result.data["status"])
+        self.assertEqual(allowed_result.data["status"]["name"], self.allowed_status.name)
+
+        denied_result = execute_query(query, user=self.user, variables={"id": str(self.denied_status.pk)})
+        self.assertIsNone(denied_result.errors)
+        self.assertIsNone(denied_result.data["status"])
