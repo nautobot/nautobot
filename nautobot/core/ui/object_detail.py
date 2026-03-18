@@ -2717,14 +2717,23 @@ class _JobModalButton(Button):
             }
         )
         # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
+        disabled = False
+        disabled_reason = ""
         try:
             jobs = Job.objects
             if "request" in context and context["request"].user is not None:
                 jobs = jobs.restrict(context["request"].user, "view")
             job = jobs.get_for_class_path(self.class_path)
             if not job.enabled:
-                attributes["disabled"] = "disabled"
+                disabled = True
+                disabled_reason = "Job is not enabled."
         except Job.DoesNotExist:
+            disabled = True
+            disabled_reason = "You do not have permission to run this Job."
+        if disabled:
             attributes["disabled"] = "disabled"
+            attributes["title"] = disabled_reason
+            attributes["aria-disabled"] = "true"
+            attributes["tabindex"] = "-1"
         base_context["attributes"] = attributes
         return base_context
