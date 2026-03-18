@@ -11,7 +11,7 @@
         {% for child in children %}
             <li>
                 <a href="{% if 'disabled' in child.attributes %}#{% else %}{{ child.link|default:'#' }}{% endif %}"
-                class="dropdown-item text-{{ child.color }} {% if 'disabled' in child.attributes %}disabled{% endif %}"
+                   class="dropdown-item text-{{ child.color }} {% if 'disabled' in child.attributes %}disabled{% endif %}"
                    {% for key, value in child.attributes.items %}{{ key }}="{{ value }}" {% endfor %}
                 >
                     {% if child.icon %}<span class="mdi {{ child.icon }}" aria-hidden="true"></span>{% endif %}
