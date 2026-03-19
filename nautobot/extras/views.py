@@ -3142,7 +3142,6 @@ class JobResultUIViewSet(
                 color=ButtonActionColorChoices.RERUN,
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
-                render_on_tab_id=["main", "job_console_entries"],
                 link_name=lambda ctx: (
                     reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
                     + f"?kwargs_from_job_result={ctx['object'].pk}"
