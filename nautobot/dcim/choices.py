@@ -117,10 +117,12 @@ class RackElevationDetailRenderChoices(ChoiceSet):
 class SubdeviceRoleChoices(ChoiceSet):
     ROLE_PARENT = "parent"
     ROLE_CHILD = "child"
+    ROLE_PARENT_CHILD = "parent-child"
 
     CHOICES = (
         (ROLE_PARENT, "Parent"),
         (ROLE_CHILD, "Child"),
+        (ROLE_PARENT_CHILD, "Parent and Child"),
     )
 
 

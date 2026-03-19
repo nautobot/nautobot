@@ -103,7 +103,7 @@ from nautobot.wireless.tables import (
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NONCONNECTABLE_IFACE_TYPES
+from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
@@ -2535,22 +2535,67 @@ class DeviceUIViewSet(NautobotUIViewSet):
         ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
         """
 
+        @staticmethod
+        def _get_parent_bay_or_none(device):
+            """Return the parent bay for a device, or None if it has no parent bay."""
+            try:
+                return device.parent_bay
+            except DeviceBay.DoesNotExist:
+                return None
+
+        @classmethod
+        def _get_breadcrumb_objects(cls, instance):
+            """
+            Build an ordered list of breadcrumb objects from top-level parent down to immediate parent bay.
+
+            Output shape (for nested devices):
+                [parent_device, parent_device_bay, intermediate_device, intermediate_device_bay, ...]
+            """
+            current_bay = cls._get_parent_bay_or_none(instance)
+            if current_bay is None:
+                return []
+
+            visited_device_ids = set()
+            breadcrumb_segments = []
+            hop_count = 0
+
+            #
+            # Walk up the chain starting at the bay at which the passed instance is installed. The side-effect of
+            # this is that, in the event the chain is longer than the depth limit, the top-most device(s) will
+            # not be included.
+            while current_bay is not None and hop_count < DEVICE_RECURSION_DEPTH_LIMIT:
+                current_device = current_bay.device
+                if current_device.pk in visited_device_ids:
+                    break
+
+                visited_device_ids.add(current_device.pk)
+                breadcrumb_segments.extend([current_bay, current_device])
+
+                current_bay = cls._get_parent_bay_or_none(current_device)
+                hop_count += 1
+
+            # Convert from child-upward order to top-down order to display the breadcrumb from
+            # top-level parent down to immediate parent bay from left to right.
+            return list(reversed(breadcrumb_segments))
+
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
-                try:
-                    if instance.parent_bay is not None:
-                        parent = instance.parent_bay.device
-                        display = format_html(
-                            "{} / {}",
-                            helpers.hyperlinked_object(parent),
-                            helpers.hyperlinked_object(instance.parent_bay),
-                        )
-                        if parent.position is not None:
-                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
-                        return display
-                except DeviceBay.DoesNotExist:
-                    pass
+                breadcrumb_objects = self._get_breadcrumb_objects(instance)
+
+                if breadcrumb_objects:
+                    breadcrumb_links = [helpers.hyperlinked_object(obj) for obj in breadcrumb_objects]
+                    display = format_html(" / ".join(["{}"] * len(breadcrumb_links)), *breadcrumb_links)
+
+                    # Add top-level device position if it has one
+                    if hasattr(breadcrumb_objects[0], "position"):
+                        top_device_position = breadcrumb_objects[0].position
+                        if top_device_position is not None:
+                            display += format_html(
+                                " (U{} / {})", top_device_position, breadcrumb_objects[0].get_face_display()
+                            )
+                    return display
+
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:

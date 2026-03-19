@@ -11,6 +11,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     RackWidthChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
@@ -19,10 +20,12 @@ from nautobot.dcim.forms import (
     InterfaceBulkEditForm,
     InterfaceCreateForm,
     InterfaceForm,
+    PopulateDeviceBayForm,
     RackForm,
 )
 from nautobot.dcim.models import (
     Device,
+    DeviceBay,
     DeviceType,
     Interface,
     Location,
@@ -272,6 +275,107 @@ class LabelTestCase(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("label_pattern", form.errors)
+
+
+class PopulateDeviceBayFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.status = Status.objects.get_for_model(Device).first()
+        cls.role = Role.objects.get_for_model(Device).first()
+        cls.manufacturer = Manufacturer.objects.first() or Manufacturer.objects.create(name="Form Manufacturer")
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack = Rack.objects.create(name="Form Rack 1", location=cls.location, status=rack_status)
+        cls.alt_location = Location.objects.exclude(pk=cls.location.pk).first()
+        if cls.alt_location is None:
+            location_status = Status.objects.get_for_model(Location).first()
+            cls.alt_location = Location.objects.create(
+                name="Form Location 2",
+                location_type=cls.location.location_type,
+                status=location_status,
+            )
+
+        cls.parent_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form Parent DeviceType",
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        cls.child_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form Child DeviceType",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        cls.parent_child_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form ParentChild DeviceType",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
+
+        cls.parent_device = Device.objects.create(
+            name="Form Parent Device",
+            device_type=cls.parent_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            position=1,
+            status=cls.status,
+        )
+        cls.device_bay = DeviceBay.objects.create(device=cls.parent_device, name="Form Bay 1")
+
+        cls.child_device = Device.objects.create(
+            name="Form Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        cls.parent_child_device = Device.objects.create(
+            name="Form ParentChild Device",
+            device_type=cls.parent_child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+
+        cls.assigned_child = Device.objects.create(
+            name="Form Assigned Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        DeviceBay.objects.create(device=cls.parent_device, name="Form Bay 2", installed_device=cls.assigned_child)
+
+        cls.offsite_child = Device.objects.create(
+            name="Form Offsite Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.alt_location,
+            status=cls.status,
+        )
+
+        cls.parent_only_device = Device.objects.create(
+            name="Form Parent Device Only",
+            device_type=cls.parent_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+
+    def test_installed_device_queryset_includes_parent_child_role(self):
+        form = PopulateDeviceBayForm(self.device_bay)
+        queryset = form.fields["installed_device"].queryset
+
+        actual_pks = set(queryset.values_list("pk", flat=True))
+        expected_pks = {self.child_device.pk, self.parent_child_device.pk}
+
+        self.assertSetEqual(actual_pks, expected_pks)
 
 
 class RackTestCase(TestCase):
