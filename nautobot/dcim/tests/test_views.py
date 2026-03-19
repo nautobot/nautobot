@@ -2583,7 +2583,6 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(breadcrumb_objects[-2], devices[-2])
         self.assertEqual(breadcrumb_objects[-1], bays[-1])
 
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
