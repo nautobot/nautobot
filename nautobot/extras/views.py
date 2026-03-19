@@ -238,7 +238,8 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
             stages.save()
         else:
             non_form_errors = stages.non_form_errors()
-            if non_form_errors:
+            # this error comming from https://docs.djangoproject.com/en/6.0/topics/forms/formsets/#validate-min
+            if "Please submit at least 1 form." in non_form_errors:
                 raise ValidationError("At least one Approval Workflow Stage Definition is required.")
             raise ValidationError(stages.errors)
 
