@@ -1,3 +1,4 @@
+import contextlib
 from datetime import date
 import io
 import json
@@ -17,6 +18,7 @@ from rest_framework import status
 
 from nautobot.circuits.models import Provider
 from nautobot.core.forms.widgets import MultiValueCharInput, StaticSelect2
+from nautobot.core.jobs import DeleteCustomFieldData, ProvisionCustomField, UpdateCustomFieldChoiceData
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
@@ -2366,8 +2368,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self._log_handler.setLevel(logging.DEBUG)
         self._log_handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))
         logging.getLogger("nautobot.extras.customfields").addHandler(self._log_handler)
+        # Disconnect the m2m signal so content_types.set() doesn't enqueue jobs
+        # during scenario setup. The signal path is tested separately by the
+        # auto-trigger task tests below.
+        m2m_changed.disconnect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
 
     def tearDown(self):
+        m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
         logging.getLogger("nautobot.extras.customfields").removeHandler(self._log_handler)
         super().tearDown()
 
@@ -2463,14 +2470,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
             raise ValueError("exclude_from_scope=True requires scoped=True; no scope exists to exclude from otherwise.")
 
         if scoped:
-            # Temporarily disconnect the m2m signal so content_types.set() doesn't
-            # enqueue jobs during scenario setup.  The signal path is tested separately
-            # by the auto-trigger task tests below.
-            m2m_changed.disconnect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
-            try:
-                cf.content_types.set([self.obj_type])
-            finally:
-                m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
+            cf.content_types.set([self.obj_type])
             if exclude_from_scope:
                 # Create a separate in-scope LT so the test object (which uses the other LT)
                 # falls outside the scope_filter.
@@ -3568,6 +3568,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         self.assertLogKey("data corruption")
 
     def test_provision_field_task(self):
+        # Reconnect the m2m signal so content_types.set() triggers enqueue_custom_field_job.
+        m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
+
         location_type = LocationType.objects.create(name="Root Type 1")
         location = Location(name="Location 1", location_type=location_type, status=self.location_status)
         location.save()
@@ -3592,7 +3595,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
-        self.assertEqual(oc_list[0].change_context_detail, "provision custom field data for new content types")
+        self.assertEqual(oc_list[0].change_context_detail, ProvisionCustomField.class_path)
         self.assertEqual(oc_list[0].user, self.user)
 
         # Verify that provision_field initializes the key to null on out-of-scope objects.
@@ -3646,10 +3649,13 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
-        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
+        self.assertEqual(oc_list[0].change_context_detail, DeleteCustomFieldData.class_path)
         self.assertEqual(oc_list[0].user, self.user)
 
     def test_clear_custom_field_data_task(self):
+        # Reconnect the m2m signal so content_types.clear() triggers enqueue_custom_field_job.
+        m2m_changed.connect(handle_cf_removed_obj_types, sender=CustomField.content_types.through)
+
         cf_1 = CustomField.objects.create(label="CF1", type=CustomFieldTypeChoices.TYPE_TEXT)
         cf_1.content_types.set([self.obj_type])
         location_type = LocationType.objects.create(name="Root Type 2")
@@ -3669,7 +3675,7 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
         oc_list = get_changes_for_model(location)
         self.assertEqual(len(oc_list), 1)
         self.assertEqual(oc_list[0].changed_object, location)
-        self.assertEqual(oc_list[0].change_context_detail, "delete custom field data")
+        self.assertEqual(oc_list[0].change_context_detail, DeleteCustomFieldData.class_path)
         self.assertEqual(oc_list[0].user, self.user)
 
     def test_update_custom_field_choice_data_task(self):
@@ -3704,9 +3710,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 2)
-        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[0].change_context_detail, UpdateCustomFieldChoiceData.class_path)
         self.assertEqual(oc_list[0].user, self.user)
-        self.assertEqual(oc_list[1].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[1].change_context_detail, UpdateCustomFieldChoiceData.class_path)
         self.assertEqual(oc_list[1].user, self.user)
 
     def test_update_custom_field_choice_data_task_multiselect(self):
@@ -3744,9 +3750,9 @@ class CustomFieldBackgroundTasks(TransactionTestCase):
 
         oc_list = get_changes_for_model(location).order_by("pk")
         self.assertEqual(len(oc_list), 2)
-        self.assertEqual(oc_list[0].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[0].change_context_detail, UpdateCustomFieldChoiceData.class_path)
         self.assertEqual(oc_list[0].user, self.user)
-        self.assertEqual(oc_list[1].change_context_detail, "update custom field choice data")
+        self.assertEqual(oc_list[1].change_context_detail, UpdateCustomFieldChoiceData.class_path)
         self.assertEqual(oc_list[1].user, self.user)
 
 
@@ -3810,8 +3816,18 @@ class CustomFieldDefensiveCoverage(TestCase):
         cf.save()
         cf.content_types.set([self.content_type])
 
-        result = update_custom_field_choice_data(cf.pk, "NonExistentValue", "ValidA")
+        Location.objects.filter(pk=self.location.pk).update(_custom_field_data={cf.key: "ValidA"})
+
+        stderr_buf = io.StringIO()
+        with contextlib.redirect_stderr(stderr_buf):
+            result = update_custom_field_choice_data(cf.pk, "NonExistentValue", "ValidA")
         self.assertTrue(result)
+        self.assertIn(
+            f"No location objects had value 'NonExistentValue' for custom field `{cf.key}`.", stderr_buf.getvalue()
+        )
+
+        self.location.refresh_from_db()
+        self.assertEqual(self.location._custom_field_data[cf.key], "ValidA")
 
     def test_update_choice_data_select_same_value_skipped(self):
         """UPDATE SELECT: old_value == new_value guard skips the update call."""
@@ -3839,8 +3855,13 @@ class CustomFieldDefensiveCoverage(TestCase):
         CustomFieldChoice.objects.create(custom_field=cf, value="ValidA")
         cf.content_types.set([self.content_type])
         Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"multi_null_old_def": [None, "ValidA"]})
-        result = update_custom_field_choice_data(cf.pk, None, "ValidA")
+        with self.assertLogs("nautobot.extras.customfields", level="INFO") as cm:
+            result = update_custom_field_choice_data(cf.pk, None, "ValidA")
         self.assertTrue(result)
+        self.assertTrue(any("Updated" in msg for msg in cm.output))
+
+        self.location.refresh_from_db()
+        self.assertEqual(self.location._custom_field_data["multi_null_old_def"], ["ValidA"])
 
     def test_update_choice_data_multiselect_non_list_skipped(self):
         """UPDATE MULTISELECT: objects whose stored value is not a list are skipped."""
@@ -3853,11 +3874,16 @@ class CustomFieldDefensiveCoverage(TestCase):
         cf.content_types.set([self.content_type])
         # Corrupt the data: stored as a plain string instead of a list
         Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"multi_corrupt_def": "not-a-list"})
-        result = update_custom_field_choice_data(cf.pk, "not-a-list", "ValidA")
+        with self.assertLogs("nautobot.extras.customfields", level="WARNING") as cm:
+            result = update_custom_field_choice_data(cf.pk, "not-a-list", "ValidA")
         self.assertTrue(result)
+        self.assertTrue(any("Skipping" in msg for msg in cm.output))
+
+        self.location.refresh_from_db()
+        self.assertEqual(self.location._custom_field_data["multi_corrupt_def"], "not-a-list")
 
     def test_update_choice_data_multiselect_list_default(self):
-        """UPDATE MULTISELECT: new_value is extracted from list default (line 313)."""
+        """UPDATE MULTISELECT: new_value is extracted from list default."""
         cf = CustomField.objects.create(
             label="multi-list-default",
             type=CustomFieldTypeChoices.TYPE_MULTISELECT,
@@ -3873,6 +3899,9 @@ class CustomFieldDefensiveCoverage(TestCase):
         )
         result = update_custom_field_choice_data(cf.pk, "StaleChoice", "ValidA")
         self.assertTrue(result)
+
+        self.location.refresh_from_db()
+        self.assertEqual(self.location._custom_field_data["multi_list_default_def"], ["ValidB", "ValidA"])
 
     def test_update_choice_data_unknown_type_raises(self):
         """update_custom_field_choice_data raises ValueError for non-SELECT/MULTISELECT types."""
@@ -3905,7 +3934,7 @@ class CustomFieldDefensiveCoverage(TestCase):
             provision_field(uuid.uuid4(), [self.content_type.pk])
 
     def test_orphaned_keys_removed(self):
-        """cleanup_custom_field_data (is_all) removes JSON keys with no matching CustomField."""
+        """cleanup_custom_field_data removes JSON keys with no matching CustomField."""
         Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"orphaned_xyz": "value"})
         self.location.refresh_from_db()
         self.assertIn("orphaned_xyz", self.location._custom_field_data)

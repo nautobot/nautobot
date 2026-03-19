@@ -103,7 +103,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.signals import change_context_state
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -879,9 +878,6 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
 
-        change_context = change_context_state.get()
-        user = change_context.get_user(queryset) if change_context is not None else None
-
         field_specs = [
             {
                 "field_key": obj.key,
@@ -891,7 +887,7 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             if obj.content_types.exists()
         ]
         if field_specs:
-            enqueue_custom_field_job(DeleteCustomFieldData, user, field_specs=json.dumps(field_specs))
+            enqueue_custom_field_job(DeleteCustomFieldData, field_specs=json.dumps(field_specs))
 
 
 #

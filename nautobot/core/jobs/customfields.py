@@ -97,13 +97,6 @@ class DeleteCustomFieldData(Job):
 
     def run(self, *, field_key=None, content_types=None, field_specs=None, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import delete_custom_field_data
-        from nautobot.extras.signals import change_context_state
-
-        change_context = change_context_state.get()
-        ctx_dict = None
-        if change_context is not None:
-            ctx_dict = change_context.as_dict()
-            ctx_dict["context_detail"] = "delete custom field data"
 
         # Normalize both input paths into a uniform list of specs before processing.
         if field_specs:
@@ -131,7 +124,6 @@ class DeleteCustomFieldData(Job):
             delete_custom_field_data(
                 field_key=item["field_key"],
                 content_type_pk_set=item["content_types"],
-                change_context=ctx_dict,
                 verbose=verbose,
                 job_logger=self.logger,
             )
@@ -167,18 +159,10 @@ class ProvisionCustomField(Job):
 
     def run(self, *, field, content_types, dryrun=False, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import provision_field
-        from nautobot.extras.signals import change_context_state
-
-        change_context = change_context_state.get()
-        ctx_dict = None
-        if change_context is not None:
-            ctx_dict = change_context.as_dict()
-            ctx_dict["context_detail"] = "provision custom field data for new content types"
 
         provision_field(
             field_id=field.pk,
             content_type_pk_set=[ct.pk for ct in content_types],
-            change_context=ctx_dict,
             dryrun=dryrun,
             verbose=verbose,
             job_logger=self.logger,
@@ -222,13 +206,6 @@ class UpdateCustomFieldChoiceData(Job):
 
     def run(self, *, field=None, old_value=None, new_value=None, field_specs=None):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import update_custom_field_choice_data
-        from nautobot.extras.signals import change_context_state
-
-        change_context = change_context_state.get()
-        ctx_dict = None
-        if change_context is not None:
-            ctx_dict = change_context.as_dict()
-            ctx_dict["context_detail"] = "update custom field choice data"
 
         # Normalize both input paths into a uniform list of specs before processing.
         if field_specs:
@@ -258,6 +235,5 @@ class UpdateCustomFieldChoiceData(Job):
                 field_id=item["field_id"],
                 old_value=item["old_value"],
                 new_value=item["new_value"],
-                change_context=ctx_dict,
                 job_logger=self.logger,
             )

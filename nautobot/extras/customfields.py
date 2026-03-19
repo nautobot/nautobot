@@ -43,9 +43,6 @@ def _count_and_display(queryset, limit=20):
     Unlike ``_pks_and_display``, this does *not* materialize all PKs — only a
     ``COUNT(*)`` plus up to *limit* name/pk rows.  Use this at call sites that
     Return `(count, display_string)` using two bounded DB queries.
-
-    Unlike `_pks_and_display`, this does *not* materialize all PKs — only a
-    `COUNT(*)` plus up to `limit` name/pk rows.  Use this at call sites that
     """
     model = queryset.model
     count = queryset.count()
@@ -60,23 +57,31 @@ def _count_and_display(queryset, limit=20):
     return count, display
 
 
-def _generate_bulk_object_changes(context, queryset, job_logger=logger):
+def _generate_bulk_object_changes(queryset, job_logger=logger):
+    """Create ObjectChange records for objects modified via bulk update/queryset.update().
+
+    Captures the current change context from the ContextVar. If no change context is active, this is a no-op.
+    """
     # Circular import
     from nautobot.extras.context_managers import (
         change_logging,
         ChangeContext,
         deferred_change_logging_for_bulk_operation,
     )
-    from nautobot.extras.signals import _handle_changed_object
+    from nautobot.extras.signals import _handle_changed_object, change_context_state
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        return
 
     print("Creating deferred ObjectChange records for bulk operation...", file=sys.stderr)
 
     # Note: we use change_logging() here instead of web_request_context() because we don't want these change records to
     #       trigger jobhooks and webhooks.
     # TODO: this could be made much faster if we ensure the queryset has appropriate select_related/prefetch_related?
-    change_context = ChangeContext(**context)
+    new_context = ChangeContext(**change_context.as_dict())
     index = 0
-    with change_logging(change_context):
+    with change_logging(new_context):
         with deferred_change_logging_for_bulk_operation():
             for index, instance in enumerate(queryset.iterator(), start=1):
                 _handle_changed_object(queryset.model, instance, created=False)
@@ -84,7 +89,7 @@ def _generate_bulk_object_changes(context, queryset, job_logger=logger):
     job_logger.info("Created %d ObjectChange records", index)
 
 
-def update_custom_field_choice_data(field_id, old_value, new_value, change_context=None, job_logger=logger):
+def update_custom_field_choice_data(field_id, old_value, new_value, job_logger=logger):
     # Circular Import, job_logger is passed in as an argument to avoid this
     try:
         field = CustomField.objects.get(pk=field_id)
@@ -103,9 +108,7 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
                 )
                 continue
             queryset = model.objects.filter(**{f"_custom_field_data__{field.key}": old_value})
-            pk_list = []
-            if change_context is not None:
-                pk_list = list(queryset.values_list("pk", flat=True))
+            pk_list = list(queryset.values_list("pk", flat=True))
             count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, new_value))
             if count:
                 job_logger.info(
@@ -119,9 +122,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
                 )
             else:
                 print(f"No {ct.model} objects had value {old_value!r} for custom field `{field.key}`.", file=sys.stderr)
-            if change_context is not None:
-                # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
-                _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+            _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
@@ -144,6 +146,14 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
             for obj in queryset.iterator(chunk_size=1000):
                 old_list = obj._custom_field_data.get(field.key, [])
                 if not isinstance(old_list, (list, tuple)):
+                    job_logger.warning(
+                        "cf_cleanup.update_custom_field_choice_data: Skipping %s pk=%s — "
+                        "stored value for `%s` is %s, not a list.",
+                        ct.model,
+                        obj.pk,
+                        field.key,
+                        type(old_list).__name__,
+                    )
                     continue
                 # Replace old_value → new_value, drop nulls, and deduplicate.
                 new_list = []
@@ -178,9 +188,8 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
                     ct.model,
                     extra={"object": field},
                 )
-                if change_context is not None:
-                    # Since we used bulk_update() above, we bypassed ObjectChange automatic creation via signals. Create them now
-                    _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
+                # Since we used bulk_update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+                _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
 
     else:
         job_logger.error(f"Unknown field type, failing to act on choice data for this field {field.key}.")
@@ -189,25 +198,19 @@ def update_custom_field_choice_data(field_id, old_value, new_value, change_conte
     return True
 
 
-def delete_custom_field_data(field_key, content_type_pk_set, change_context=None, verbose=False, job_logger=logger):
+def delete_custom_field_data(field_key, content_type_pk_set, verbose=False, job_logger=logger):
     """
     Delete the values for a custom field
 
     Args:
         field_key (str): The key of the custom field which is being deleted
         content_type_pk_set (list): List of PKs for content types to act upon
-        change_context (dict): Optional change context for ObjectChange creation
         verbose (bool): If True, log each affected object by name/pk. Defaults to False.
     """
     for ct in ContentType.objects.filter(pk__in=content_type_pk_set):
         model = ct.model_class()
         queryset = model.objects.filter(**{f"_custom_field_data__{field_key}__isnull": False})
-        pks = []
-        display = ""
-        if change_context is not None:
-            pks, display = _pks_and_display(queryset)
-        elif verbose:
-            _, display = _count_and_display(queryset)
+        pks, display = _pks_and_display(queryset)
         count = queryset.update(_custom_field_data=JSONRemove("_custom_field_data", field_key))
         if count:
             if verbose:
@@ -225,9 +228,9 @@ def delete_custom_field_data(field_key, content_type_pk_set, change_context=None
                 )
         else:
             job_logger.debug("No objects had values for custom field `%s` on %s.", field_key, ct.model)
-        if count and change_context is not None:
-            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
-            _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pks))
+        if count:
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+            _generate_bulk_object_changes(model.objects.filter(pk__in=pks))
 
 
 def _is_badtype(field, value):
@@ -258,7 +261,7 @@ def _is_badtype(field, value):
     return False  # TYPE_JSON: any value is a valid type
 
 
-def _remove_orphaned_keys(change_context, _verbose, job_logger=logger):
+def _remove_orphaned_keys(_verbose, job_logger=logger):
     """Find and delete orphaned custom field data across all models."""
     valid_keys = set(CustomField.objects.values_list("key", flat=True))
     orphaned_keys_to_ct_pks = {}
@@ -292,7 +295,7 @@ def _remove_orphaned_keys(change_context, _verbose, job_logger=logger):
                     known_orphaned_keys.add(key)
 
     for key, ct_pk_set in orphaned_keys_to_ct_pks.items():
-        delete_custom_field_data(key, list(ct_pk_set), change_context, verbose=_verbose, job_logger=job_logger)
+        delete_custom_field_data(key, list(ct_pk_set), verbose=_verbose, job_logger=job_logger)
 
 
 def _replace_invalid_choice(field, queryset, job_logger=logger):
@@ -309,9 +312,7 @@ def _replace_invalid_choice(field, queryset, job_logger=logger):
                 # JSON null leaks through the __in exclude (JSONB null != SQL NULL
                 # for the -> operator), so guard against no-op calls.
                 if old_value != new_value:
-                    update_custom_field_choice_data(
-                        field.id, old_value, new_value, change_context=None, job_logger=job_logger
-                    )
+                    update_custom_field_choice_data(field.id, old_value, new_value, job_logger=job_logger)
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         invalid_choices = set()
@@ -331,9 +332,7 @@ def _replace_invalid_choice(field, queryset, job_logger=logger):
                 if isinstance(new_value, list):
                     new_value = new_value[0]
                 old_value = invalid
-                update_custom_field_choice_data(
-                    field.id, old_value, new_value, change_context=None, job_logger=job_logger
-                )
+                update_custom_field_choice_data(field.id, old_value, new_value, job_logger=job_logger)
     else:
         # Defensive programming, this function should only be called for select/multiselect fields.
         raise ValueError(f"Unexpected field type {field.type} for choice repair.")
@@ -431,7 +430,6 @@ def _reset_field_types(field, queryset, model, safe_change, job_logger=logger):
 def cleanup_custom_field_data(
     field_id=None,
     content_type_pk_set=None,
-    change_context=None,
     dryrun=False,
     safe_change=False,
     verbose=False,
@@ -446,7 +444,6 @@ def cleanup_custom_field_data(
     Args:
         field_id (uuid4): The PK of the custom field being cleaned up
         content_type_pk_set (list): List of PKs for content types to act upon
-        change_context (dict): Optional change context for ObjectChange creation
         dryrun (bool): If True, execute all changes inside a transaction that is rolled back
             at the end. Logs reflect what would have changed. Implies verbose=True. Defaults to False.
         safe_change (bool): If True, only run the additive provision step.
@@ -507,7 +504,6 @@ def cleanup_custom_field_data(
             provision_field(
                 field.pk,
                 ct_pks,
-                change_context=change_context,
                 dryrun=dryrun,
                 verbose=_verbose,
                 job_logger=job_logger,
@@ -623,20 +619,19 @@ def cleanup_custom_field_data(
                     _reset_field_types(field, queryset, model, safe_change, job_logger=job_logger)
 
         if is_all and not safe_change:
-            _remove_orphaned_keys(change_context, _verbose, job_logger=job_logger)
+            _remove_orphaned_keys(_verbose, job_logger=job_logger)
 
         if dryrun:
             transaction.set_rollback(True)
 
 
-def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=False, verbose=False, job_logger=logger):
+def provision_field(field_id, content_type_pk_set, dryrun=False, verbose=False, job_logger=logger):
     """
     Provision a new custom field on all relevant content type object instances.
 
     Args:
         field_id (uuid4): The PK of the custom field being provisioned
         content_type_pk_set (list): List of PKs for content types to act upon
-        change_context (dict): Optional change context for ObjectChange creation.
         dryrun (bool): If True, execute all changes inside a transaction that is rolled back
         verbose (bool): If True, log each affected object by name/pk rather than just an aggregate count. Defaults to False.
         job_logger (logging.Logger): Logger to use for logging messages. Defaults to the module logger.
@@ -655,14 +650,8 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
             continue
         in_scope_qs = field.get_in_scope_queryset(model.objects.all(), job_logger=job_logger)
         queryset = in_scope_qs.filter(**{f"_custom_field_data__{field.key}__isnull": True})
-        pk_list = []
-        display = ""
-        before_count = 0
-        if change_context is not None:
-            pk_list, display = _pks_and_display(queryset)
-            before_count = len(pk_list)
-        elif _verbose:
-            before_count, display = _count_and_display(queryset)
+        pk_list, display = _pks_and_display(queryset)
+        before_count = len(pk_list)
         if dryrun and before_count:
             job_logger.info(
                 "cf_cleanup.provision: Would set `%s` = %r on %d %s object(s): %s",
@@ -703,9 +692,9 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
                 f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on the `{ct.model}` model.",
                 file=sys.stderr,
             )
-        if count and change_context is not None:
-            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now
-            _generate_bulk_object_changes(change_context, model.objects.filter(pk__in=pk_list))
+        if count:
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+            _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
 
         # If the field has a scope_filter, out-of-scope objects also need the key initialized to
         # null so that every content-type object has the key present.  Without a scope_filter,
@@ -720,9 +709,17 @@ def provision_field(field_id, content_type_pk_set, change_context=None, dryrun=F
     return True
 
 
-def enqueue_custom_field_job(job_class, user, **job_kwargs):
-    """Enqueue a system Custom Field job via JobResult.enqueue_job."""
+def enqueue_custom_field_job(job_class, **job_kwargs):
+    """Enqueue a system Custom Field job via JobResult.enqueue_job.
+
+    Captures the current change context (user, request metadata) from the
+    ContextVar automatically so callers don't need to do so themselves.
+    """
     from nautobot.extras.models import Job, JobResult
+    from nautobot.extras.signals import change_context_state
+
+    change_context = change_context_state.get()
+    user = change_context.get_user() if change_context is not None else None
 
     if user is None:
         logger.error(

@@ -1008,13 +1008,9 @@ class CustomField(
             # Circular Import
             from nautobot.core.jobs import DeleteCustomFieldData
             from nautobot.extras.customfields import enqueue_custom_field_job
-            from nautobot.extras.signals import change_context_state
 
-            change_context = change_context_state.get()
-            user = change_context.get_user(self) if change_context is not None else None
             enqueue_custom_field_job(
                 DeleteCustomFieldData,
-                user,
                 field_key=self.key,
                 content_types=list(content_types),
             )
@@ -1150,13 +1146,10 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
         if self.value != database_object.value:
             # Circular Import
             from nautobot.core.jobs import UpdateCustomFieldChoiceData
-            from nautobot.extras.signals import change_context_state, enqueue_custom_field_job
+            from nautobot.extras.customfields import enqueue_custom_field_job
 
-            change_context = change_context_state.get()
-            user = change_context.get_user(self) if change_context is not None else None
             enqueue_custom_field_job(
                 UpdateCustomFieldChoiceData,
-                user,
                 field=str(self.custom_field.pk),
                 old_value=database_object.value,
                 new_value=self.value,
