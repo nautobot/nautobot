@@ -299,7 +299,7 @@ class Button(Component):
     link_includes_pk = True
     link_name = None
     placeholder_template_path = "components/button/button_placeholder.html"
-    render_on_tab_id = ["main"]
+    render_on_tab_id = ("main",)
     size = None
     template_path = "components/button/default.html"
 
@@ -370,7 +370,7 @@ class Button(Component):
         # this part is because we want to keep backwards-compatible
         # when render_on_tab_id was only a string
         render_on_tab_ids = (
-            self.render_on_tab_id if isinstance(self.render_on_tab_id, list) else [self.render_on_tab_id]
+            self.render_on_tab_id if isinstance(self.render_on_tab_id, (list, tuple)) else [self.render_on_tab_id]
         )
         return context.get("active_tab", "main") in render_on_tab_ids
 
