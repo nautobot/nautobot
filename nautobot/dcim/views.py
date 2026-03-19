@@ -3617,13 +3617,17 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
                 ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_device"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_device is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_device is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_module"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_module is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_module is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(instance=context_object_attr("parent_module_bay")),
                 AncestorsInstanceBreadcrumbItem(
