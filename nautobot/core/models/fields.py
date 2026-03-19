@@ -267,7 +267,9 @@ class NaturalOrderingField(models.CharField):
         return naturalized_value
 
     def deconstruct(self):
-        kwargs = super().deconstruct()[3]  # Pass kwargs from CharField  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
+        kwargs = super().deconstruct()[  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
+            3
+        ]  # Pass kwargs from CharField
         kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
