@@ -2556,11 +2556,14 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 return []
 
             visited_device_ids = set()
-            breadcrumb_segments = []  # child-upward order: [bay, device, bay, device, ...]
-            max_hops = DEVICE_RECURSION_DEPTH_LIMIT * 2
+            breadcrumb_segments = []
             hop_count = 0
 
-            while current_bay is not None and hop_count < max_hops:
+            #
+            # Walk up the chain starting at the bay at which the passed instance is installed. The side-effect of
+            # this is that, in the event the chain is longer than the depth limit, the top-most device(s) will
+            # not be included.
+            while current_bay is not None and hop_count < DEVICE_RECURSION_DEPTH_LIMIT:
                 current_device = current_bay.device
                 if current_device.pk in visited_device_ids:
                     break
@@ -2571,7 +2574,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 current_bay = cls._get_parent_bay_or_none(current_device)
                 hop_count += 1
 
-            # Convert to top-down order: [device, bay, device, bay, ...]
+            # Convert from child-upward order to top-down order to display the breadcrumb from
+            # top-level parent down to immediate parent bay from left to right.
             return list(reversed(breadcrumb_segments))
 
         def render_value(self, key, value, context):
