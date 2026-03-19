@@ -2382,7 +2382,6 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
 
 
 class JobLogsDBConnectionTest(TransactionTestCase):
-    model = ObjectChange
     databases = {"default", JOB_LOGS}
 
     def test_closed_connection_recovery(self):
