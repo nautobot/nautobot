@@ -852,11 +852,11 @@ class _JobModalButtonTest(TestCase):
         )
 
         context = Context({"object": device})
-        btn.get_extra_context(context)
+        context = btn.get_extra_context(context)
 
         # Check the generated hx-vals
-        self.assertIn("hx-vals", btn.attributes)
-        hx_vals = json.loads(btn.attributes["hx-vals"])
+        self.assertIn("hx-vals", context["attributes"])
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
 
         # Check resolved mapping values
         self.assertEqual(hx_vals["job_field_name"], device.name)
@@ -868,16 +868,15 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_result_key"], "output_data")
 
         # Verify Bootstrap and HTMX target attributes
-        self.assertEqual(btn.attributes["data-bs-toggle"], "modal")
-        self.assertEqual(btn.attributes["data-bs-target"], "#nautobot-generic-modal")
-        self.assertEqual(btn.attributes["hx-target"], "#modal-content-container")
+        self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
+        self.assertEqual(context["attributes"]["data-bs-target"], "#nautobot-generic-modal")
+        self.assertEqual(context["attributes"]["hx-target"], "#modal-content-container")
 
         # Verify URL generation
         expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
-        self.assertEqual(btn.attributes["hx-get"], expected_url)
-
+        self.assertEqual(context["attributes"]["hx-get"], expected_url)
         # Since the class_path is not a real job, ensure disabled in attributes.
-        self.assertIn("disabled", btn.attributes)
+        self.assertIn("disabled", context["attributes"])
 
         # Ensure real job class paths are not disabled
         real_job_btn = _JobModalButton(
@@ -886,5 +885,35 @@ class _JobModalButtonTest(TestCase):
             class_path="nautobot.core.jobs.ValidateModelData",
         )
         context = Context({"object": device})
-        real_job_btn.get_extra_context(context)
-        self.assertNotIn("disabled", real_job_btn.attributes)
+        context = real_job_btn.get_extra_context(context)
+        self.assertNotIn("disabled", context["attributes"])
+
+    def test_get_extra_context_no_leakage(self):
+        """Verify that state does not leak between multiple calls or instances."""
+        device = Device.objects.first()
+        context = Context({"object": device})
+
+        # 1. Create a button for a non-existent job (should be disabled)
+        btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
+        ctx_fail = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail["attributes"])
+        # Crucially: ensure the instance attribute didn't get polluted
+        self.assertIsNone(btn_fail.attributes)
+
+        # 2. Create a button for a real job (should be enabled)
+        btn_success = _JobModalButton(
+            weight=100,
+            label="Success",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            attributes={"custom": "value"},
+        )
+        ctx_success = btn_success.get_extra_context(context)
+
+        # Verify result in context
+        self.assertNotIn("disabled", ctx_success["attributes"])
+
+        # If we run the failed button again, it shouldn't affect the success instance
+        # and it should still be disabled in its own context
+        ctx_fail_again = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail_again["attributes"])
+        self.assertNotIn("disabled", btn_success.attributes)

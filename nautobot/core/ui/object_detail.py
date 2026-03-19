@@ -2699,6 +2699,7 @@ class _JobModalButton(Button):
     def get_extra_context(self, context: Context):
         """Add necessary htmx attributes to the button."""
         obj = get_obj_from_context(context, self.context_object_key)
+        base_context = super().get_extra_context(context)
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
@@ -2706,9 +2707,11 @@ class _JobModalButton(Button):
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
-        if not self.attributes:
-            self.attributes = {}
-        self.attributes.update(
+
+        raw_attrs = base_context.get("attributes")
+        attributes = {} if raw_attrs is None else raw_attrs.copy()
+
+        attributes.update(
             {
                 "data-bs-toggle": "modal",
                 "data-bs-target": "#nautobot-generic-modal",
@@ -2718,12 +2721,24 @@ class _JobModalButton(Button):
                 "hx-swap": "innerHTML",
             }
         )
-        # If the user doesn't have permission to the Job, or the Job doesn't exist, disable the button.
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
+        disabled = False
+        disabled_reason = ""
         try:
             jobs = Job.objects
             if "request" in context and context["request"].user is not None:
                 jobs = jobs.restrict(context["request"].user, "view")
-            jobs.get_for_class_path(self.class_path)
+            job = jobs.get_for_class_path(self.class_path)
+            if not job.enabled:
+                disabled = True
+                disabled_reason = "Job is not enabled."
         except Job.DoesNotExist:
-            self.attributes["disabled"] = "disabled"
-        return super().get_extra_context(context)
+            disabled = True
+            disabled_reason = "You do not have permission to run this Job."
+        if disabled:
+            attributes["disabled"] = "disabled"
+            attributes["title"] = disabled_reason
+            attributes["aria-disabled"] = "true"
+            attributes["tabindex"] = "-1"
+        base_context["attributes"] = attributes
+        return base_context
