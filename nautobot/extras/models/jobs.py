@@ -3,6 +3,7 @@
 import contextlib
 from datetime import datetime, timedelta
 import logging
+import os
 import signal
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -611,6 +612,18 @@ class JobQueue(PrimaryModel):
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
+    def clean(self):
+        super().clean()
+        if self.name:
+            if ".." in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError({"name": "Job queue name cannot contain '..', please use a different name."})
+            if os.sep in self.name or "/" in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError(
+                    {"name": "Job queue name cannot contain path separators (e.g. '/'), please use a different name."}
+                )
+
 
 @extras_features(
     "custom_links",
@@ -1016,6 +1029,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         )
         job_result.celery_kwargs = job_celery_kwargs
         job_result.save()
+        job_result.refresh_from_db()
 
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
