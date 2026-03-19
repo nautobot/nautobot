@@ -213,9 +213,9 @@ djhtml = "~3.0.10"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
-pylint = "~3.3.9"
+pylint = "~4.0.5"
 # Pylint extensions for Django
-pylint-django = "~2.6.1"
+pylint-django = "~2.7.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.36"
 # Combination linter and code formatter

@@ -1244,9 +1244,8 @@ class ViewTestCases:
                 messages.append(f"Testing URL: {url}")
                 try:
                     response = self.client.get(url)
-                except:
+                except Exception:
                     self.fail("\n".join(messages))
-                    raise
                 self.assertHttpStatus(response, 200, msg="\n".join(messages))
                 self.assertNotContains(response, "Invalid filters were specified", msg_prefix="\n".join(messages))
 
