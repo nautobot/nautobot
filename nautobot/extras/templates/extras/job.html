@@ -58,7 +58,10 @@
                                 {% block job_form %}
                                     {% render_form job_form excluded_fields="[]" %}
                                     {% if not job_form.visible_fields %}
-                                        <small class="text-secondary">This job does not take any user inputs.</small>
+                                        <span class="form-text w-100">
+                                            <span class="mdi mdi-information-outline"></span>
+                                            This job does not take any user inputs.
+                                        </span>
                                     {% endif %}
                                 {% endblock %}
                             </div>
