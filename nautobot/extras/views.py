@@ -3184,8 +3184,8 @@ class JobResultUIViewSet(
                 icon="mdi-database-export",
                 required_permissions=["extras.view_jobconsoleentry"],
                 render_on_tab_id=["job_console_entries"],
-                link_name=lambda ctx: (
-                    reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk})
+                link_name=lambda ctx: reverse(
+                    "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
         ),
