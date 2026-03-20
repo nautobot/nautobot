@@ -135,6 +135,7 @@ class ApprovalWorkflowDefinitionViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        cls.approver_group = Group.objects.create(name="Test Approver Group")
         for i in range(5):
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
@@ -149,11 +150,98 @@ class ApprovalWorkflowDefinitionViewTestCase(
             "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
             "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
-            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "0",
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",  # Set to 1 because at least one approval workflow stage is required
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "0",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
             "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # At least one valid stage
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Test Stage 1",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(cls.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "",
         }
+
+    def test_create_object_without_stages_fails(self):
+        """Creating an ApprovalWorkflowDefinition without stages should fail validation."""
+        self.add_permissions("extras.add_approvalworkflowdefinition")
+
+        form_data_no_stages = {
+            "name": "Test Approval Workflow No Stages",
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
+            "weight": 10,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "0",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # All stage fields empty - no stage submitted
+            "approval_workflow_stage_definitions-0-sequence": "",
+            "approval_workflow_stage_definitions-0-name": "",
+            "approval_workflow_stage_definitions-0-min_approvers": "",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": "",
+            "approval_workflow_stage_definitions-0-DELETE": "",
+        }
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data_no_stages))
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # no new approval workflow definition was created
+        self.assertFalse(self._get_queryset().filter(name="Test Approval Workflow No Stages").exists())
+        self.assertContains(response, "At least one Approval Workflow Stage Definition is required.")
+
+    def test_edit_object_deleting_all_stages_fails(self):
+        """Editing an ApprovalWorkflowDefinition by deleting all stages should fail validation."""
+        self.add_permissions("extras.change_approvalworkflowdefinition")
+
+        # Create an instance with one stage to edit
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Edit",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        stage = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=1,
+            name="Only Stage",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+
+        form_data_delete_stage = {
+            "name": instance.name,
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": "{}",
+            "weight": 99,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # Existing stage marked for deletion
+            "approval_workflow_stage_definitions-0-id": str(stage.pk),
+            "approval_workflow_stage_definitions-0-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Only Stage",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "on",  # marked for deletion
+        }
+
+        response = self.client.post(
+            self._get_url("edit", instance),
+            data=post_data(form_data_delete_stage),
+        )
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # Stage should still exist in the DB
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage.pk).exists())
+        self.assertContains(response, "At least one Approval Workflow Stage Definition is required.")
 
 
 class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):

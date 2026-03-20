@@ -237,6 +237,10 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
         if stages.is_valid():
             stages.save()
         else:
+            non_form_errors = stages.non_form_errors()
+            # this error comming from https://docs.djangoproject.com/en/6.0/topics/forms/formsets/#validate-min
+            if "Please submit at least 1 form." in non_form_errors:
+                raise ValidationError("At least one Approval Workflow Stage Definition is required.")
             raise ValidationError(stages.errors)
 
         return obj
@@ -3180,8 +3184,8 @@ class JobResultUIViewSet(
                 icon="mdi-database-export",
                 required_permissions=["extras.view_jobconsoleentry"],
                 render_on_tab_id=["job_console_entries"],
-                link_name=lambda ctx: (
-                    reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk})
+                link_name=lambda ctx: reverse(
+                    "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
         ),
