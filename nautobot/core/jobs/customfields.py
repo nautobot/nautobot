@@ -53,14 +53,26 @@ Please review the documentation before running this job. It is recommended to ru
     def run(self, *, field=None, content_types=None, dryrun=False, safe_change=False, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import cleanup_custom_field_data
 
-        cleanup_custom_field_data(
-            field_id=field.pk if field else None,
-            content_type_pk_set=[ct.pk for ct in content_types] if content_types else None,
-            dryrun=dryrun,
-            safe_change=safe_change,
-            verbose=verbose,
-            job_logger=self.logger,
-        )
+        ct_pks = [ct.pk for ct in content_types] if content_types else None
+        if field:
+            for f in field:
+                cleanup_custom_field_data(
+                    field_id=f.pk,
+                    content_type_pk_set=ct_pks,
+                    dryrun=dryrun,
+                    safe_change=safe_change,
+                    verbose=verbose,
+                    job_logger=self.logger,
+                )
+        else:
+            cleanup_custom_field_data(
+                field_id=None,
+                content_type_pk_set=ct_pks,
+                dryrun=dryrun,
+                safe_change=safe_change,
+                verbose=verbose,
+                job_logger=self.logger,
+            )
 
 
 class DeleteCustomFieldData(Job):
@@ -154,8 +166,8 @@ class ProvisionCustomField(Job):
         name = "Provision Custom Field"
         description = "Add missing Custom Field default values to all in-scope objects for the specified Content Types."
         has_sensitive_variables = False
-        soft_time_limit = 1800
-        time_limit = 2000
+        soft_time_limit = 3600
+        time_limit = 4000
 
     def run(self, *, field, content_types, dryrun=False, verbose=False):  # pylint:disable=arguments-differ
         from nautobot.extras.customfields import provision_field

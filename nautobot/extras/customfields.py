@@ -1,3 +1,4 @@
+import contextlib
 from datetime import date
 from logging import getLogger
 import sys
@@ -41,8 +42,7 @@ def _count_and_display(queryset, limit=20):
     Return ``(count, display_string)`` using two bounded DB queries.
 
     Unlike ``_pks_and_display``, this does *not* materialize all PKs — only a
-    ``COUNT(*)`` plus up to *limit* name/pk rows.  Use this at call sites that
-    Return `(count, display_string)` using two bounded DB queries.
+    ``COUNT(*)`` plus up to *limit* name/pk rows for the display string.
     """
     model = queryset.model
     count = queryset.count()
@@ -97,16 +97,20 @@ def update_custom_field_choice_data(field_id, old_value, new_value, job_logger=l
         job_logger.error("Custom field with ID %s not found, failing to act on choice data.", field_id)
         raise
 
+    ct_models = []
+    for ct in field.content_types.all():
+        model = ct.model_class()
+        if model is None:
+            job_logger.warning(
+                "No model class found for content type %s which may indicate stale data from a removed app or model.",
+                ct,
+            )
+            continue
+        ct_models.append((ct, model))
+
     if field.type == CustomFieldTypeChoices.TYPE_SELECT:
         # Loop through all field content types and search for values to update
-        for ct in field.content_types.all():
-            model = ct.model_class()
-            if model is None:
-                print(
-                    f"No model class found for content type {ct} which may indicate stale data from a removed app or model.",
-                    file=sys.stderr,
-                )
-                continue
+        for ct, model in ct_models:
             queryset = model.objects.filter(**{f"_custom_field_data__{field.key}": old_value})
             pk_list = list(queryset.values_list("pk", flat=True))
             count = queryset.update(_custom_field_data=JSONSet("_custom_field_data", field.key, new_value))
@@ -122,19 +126,13 @@ def update_custom_field_choice_data(field_id, old_value, new_value, job_logger=l
                 )
             else:
                 print(f"No {ct.model} objects had value {old_value!r} for custom field `{field.key}`.", file=sys.stderr)
-            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
-            _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
+            if count:
+                # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+                _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
 
     elif field.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
         # Loop through all field content types and search for values to update
-        for ct in field.content_types.all():
-            model = ct.model_class()
-            if model is None:
-                print(
-                    f"No model class found for content type {ct} which may indicate stale data from a removed app or model.",
-                    file=sys.stderr,
-                )
-                continue
+        for ct, model in ct_models:
             if old_value is None:
                 queryset = model.objects.filter(**{f"_custom_field_data__{field.key}__contains": [None]})
             else:
@@ -483,7 +481,12 @@ def cleanup_custom_field_data(
     else:
         fields = CustomField.objects.filter(pk=field_id)
 
-    with transaction.atomic():
+    if dryrun:
+        context_manager = transaction.atomic()
+    else:
+        context_manager = contextlib.nullcontext()
+
+    with context_manager:
         for field in fields:
             content_types = field.content_types.all()
             if content_type_pk_set is not None:
@@ -491,11 +494,12 @@ def cleanup_custom_field_data(
             # Pre-fetch ContentType→model mapping and scope querysets once per field so that the
             # inner loops below reuse them instead of re-querying the DB and re-instantiating
             # FilterSet classes on every pass.
-            ct_list = list(content_types)
-            ct_pks = [ct.pk for ct in ct_list]
-            model_map = {
-                ct.pk: ct.model_class() for ct in ct_list if hasattr(ct, "model_class") and ct.model_class() is not None
-            }
+            model_map = {}
+            for ct in content_types:
+                model = ct.model_class()
+                if model is not None:
+                    model_map[ct.pk] = model
+            ct_pks = list(model_map.keys())
             in_scope_map = {
                 ct_pk: field.get_in_scope_queryset(model_map[ct_pk].objects.all(), job_logger=job_logger)
                 for ct_pk in ct_pks
@@ -571,6 +575,7 @@ def cleanup_custom_field_data(
                 for ct_pk in ct_pks:
                     model = model_map[ct_pk]
                     in_scope_qs = in_scope_map[ct_pk]
+                    # Materialize to list: MySQL forbids UPDATE with a subquery on the same table.
                     in_scope_pks = list(in_scope_qs.values_list("pk", flat=True))
                     out_of_scope_with_key = model.objects.filter(
                         **{f"_custom_field_data__{field.key}__isnull": False}
@@ -687,19 +692,19 @@ def provision_field(field_id, content_type_pk_set, dryrun=False, verbose=False, 
                     ct.model,
                     extra={"object": field},
                 )
+            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
+            _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
         elif not dryrun:
             print(
                 f"cf_cleanup.provision: No objects needed provisioning for `{field.key}` on the `{ct.model}` model.",
                 file=sys.stderr,
             )
-        if count:
-            # Since we used update() above, we bypassed ObjectChange automatic creation via signals. Create them now.
-            _generate_bulk_object_changes(model.objects.filter(pk__in=pk_list))
 
         # If the field has a scope_filter, out-of-scope objects also need the key initialized to
         # null so that every content-type object has the key present.  Without a scope_filter,
         # in_scope_qs is all objects, so the first pass already covered everyone.
         if field.scope_filter:
+            # Materialize to list: MySQL forbids UPDATE with a subquery on the same table.
             in_scope_pks = list(in_scope_qs.values_list("pk", flat=True))
             out_of_scope_missing = model.objects.exclude(pk__in=in_scope_pks).exclude(
                 _custom_field_data__has_key=field.key
@@ -714,6 +719,10 @@ def enqueue_custom_field_job(job_class, **job_kwargs):
 
     Captures the current change context (user, request metadata) from the
     ContextVar automatically so callers don't need to do so themselves.
+
+    The actual enqueue is deferred to ``transaction.on_commit()`` so that the
+    worker always sees committed state.  Outside an atomic block this executes
+    immediately.
     """
     from nautobot.extras.models import Job, JobResult
     from nautobot.extras.signals import change_context_state
@@ -732,4 +741,4 @@ def enqueue_custom_field_job(job_class, **job_kwargs):
     except Job.DoesNotExist:
         logger.error("Cannot enqueue %s: no Job model found in database.", job_class.__name__)
         return
-    JobResult.enqueue_job(job_model, user, **job_kwargs)
+    transaction.on_commit(lambda: JobResult.enqueue_job(job_model, user, **job_kwargs))
