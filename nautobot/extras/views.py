@@ -3147,11 +3147,13 @@ class JobResultUIViewSet(
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
-                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                    + f"?kwargs_from_job_result={ctx['object'].pk}"
-                )
-                if ctx["object"].job_model and ctx["object"].task_kwargs
-                else None,
+                    (
+                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                        + f"?kwargs_from_job_result={ctx['object'].pk}"
+                    )
+                    if ctx["object"].job_model and ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=110,
@@ -3159,9 +3161,11 @@ class JobResultUIViewSet(
                 color=ButtonActionColorChoices.RUN,
                 icon="mdi-play",
                 required_permissions=["extras.run_job"],
-                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                if ctx["object"].job_model and not ctx["object"].task_kwargs
-                else None,
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    if ctx["object"].job_model and not ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=120,
@@ -3171,6 +3175,17 @@ class JobResultUIViewSet(
                 required_permissions=["extras.view_joblogentry"],
                 link_name=lambda ctx: (
                     reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_jobconsoleentry"],
+                render_on_tab_id=["job_console_entries"],
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk})
                 ),
             ),
         ),
@@ -3364,6 +3379,32 @@ class JobResultUIViewSet(
         html_content = render_to_string("extras/inc/jobresult_console_log_response.html", context)
 
         return HttpResponse(html_content, content_type="text/html; charset=utf-8")
+
+    @action(
+        detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for a JobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
     @action(
         detail=True,

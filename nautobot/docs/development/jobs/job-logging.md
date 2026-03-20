@@ -185,6 +185,29 @@ When `console_log=True` and the job is executed asynchronously:
     and streams stdout/stderr into the `JobConsoleEntry` table in real time.
     - **`console_log=False`** — calls `JobResult.execute_job()` directly without console log capturing.
 
+### Exporting Console Logs
+
+**Export Console Logs** button is available on the *Console Log* tab of the Job Result detail view.
+
+Clicking the button downloads a plain-text file containing all `JobConsoleEntry` records associated with that Job Result, sorted chronologically. Each line follows the format:
+
+```no-highlight
+[HH:MM:SS.mmm] <message>
+```
+
+For example:
+
+```no-highlight
+[10:23:41.004] Starting job execution
+[10:23:41.512] Connected to device 192.0.2.1
+[10:23:44.210] Job completed successfully
+```
+
+The downloaded file is named `nautobot_job_console_entries_<job_result_pk>.txt`.
+
+!!! note
+    The **Export Console Logs** button requires the `extras.view_jobconsoleentry` permission.
+
 ### Use cases
 
 1. For debugging
