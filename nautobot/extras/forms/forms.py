@@ -1,7 +1,7 @@
 import inspect
+import json
 import logging
 
-from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -103,8 +103,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.signals import change_context_state
-from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -871,36 +869,27 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
         )
 
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(queryset)
-            context["context_detail"] = "bulk delete custom field data"
-        tasks = []
-        for obj in queryset:
-            pk_set = set(obj.content_types.values_list("pk", flat=True))
-            if pk_set:
-                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
-        return tasks
-
     def perform_pre_delete(self, queryset):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
+        from nautobot.core.jobs import DeleteCustomFieldData
+        from nautobot.extras.customfields import enqueue_custom_field_job
+
         if not get_worker_count():
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
-        tasks = self.construct_custom_field_delete_tasks(queryset)
-        if tasks:
-            # Executing the tasks in the background sequentially using chain() aligns with how a single
-            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-            # to be active and comes with extra performance penalty.
-            chain(*tasks).apply_async()
+
+        field_specs = [
+            {
+                "field_key": obj.key,
+                "content_types": [str(pk) for pk in obj.content_types.values_list("pk", flat=True)],
+            }
+            for obj in queryset
+            if obj.content_types.exists()
+        ]
+        if field_specs:
+            enqueue_custom_field_job(DeleteCustomFieldData, field_specs=json.dumps(field_specs))
 
 
 #
