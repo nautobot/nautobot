@@ -56,10 +56,6 @@
         document.addEventListener('nb-form:load:{{ obj_type }}', () => {
             const getSelectField = (name) => $(`select${window.nb.form.getFieldAutoId('{{ form.auto_id }}', name)}`);
 
-            getSelectField('parent_module_bay_device').select2();
-            getSelectField('parent_module_bay_module').select2();
-            getSelectField('location').select2();
-
             getSelectField('parent_module_bay_device').on('select2:select select2:unselect', function (e) {
                 getSelectField('parent_module_bay_module').val(null).trigger('change');
                 getSelectField('location').val(null).trigger('change');
