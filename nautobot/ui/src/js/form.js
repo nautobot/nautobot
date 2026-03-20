@@ -25,31 +25,41 @@ export const getFieldAutoId = (formAutoId, name, querySelector = true) => {
 };
 
 /**
- * Initialize `onFormLoad` Nautobot UI API.
- * @returns {{ addOnFormLoadListener: function(string, function(Event): void): void }} An object containing a function
- *   to enable adding a **one-per-form-ID** `listener` to be called when a form is loaded.
+ * Initialize form events Nautobot UI API. Add `'nb-form:load:{{ obj_type }}'` event dispatchers to all
+ * create/edit/update forms.
+ * @returns {function(): void} Destructor function - remove all event listeners added during initialization.
  */
-export const initializeOnFormLoad = () => {
-  const EMBEDDED_ACTION_MODAL_QUERY_SELECTOR = '#embedded_action_modal';
-  const listeners = {};
-
-  const onFormLoad = (event) => Object.values(listeners).forEach((listener) => listener(event));
-  document.addEventListener('DOMContentLoaded', onFormLoad);
-  if (document.querySelector(EMBEDDED_ACTION_MODAL_QUERY_SELECTOR)) {
-    htmx.on(EMBEDDED_ACTION_MODAL_QUERY_SELECTOR, 'htmx:afterSettle', onFormLoad);
-  }
-
-  /**
-   * Fire a `listener` callback when a form is loaded.
-   * @param {string} id - Unique listener ID identifier, used to prevent registering the same listener multiple times.
-   * @param {function(Event): void} listener - Callback function to be executed when a form is loaded.
-   * @returns {void} Do not return any value, just add proper event listeners.
-   */
-  const addOnFormLoadListener = (id, listener) => {
-    listeners[id] = listener;
+export const initializeFormEvents = () => {
+  const dispatchFormLoadEvent = (form) => {
+    if (form?.tagName === 'FORM') {
+      const type = `nb-form:load:${form.getAttribute('data-nb-obj-type')}`;
+      // Use `setTimeout` to defer event dispatcher for one cycle, making sure all other "parallel" events have executed.
+      setTimeout(() => form.dispatchEvent(new CustomEvent(type, { bubbles: true, cancelable: true })));
+    }
   };
 
-  return { addOnFormLoadListener };
+  // `'DOMContentLoaded'` handles the case when form is rendered on the main page.
+  const onDOMContentLoaded = () => {
+    const form = document.querySelector('#nb-create-form');
+    if (form) {
+      dispatchFormLoadEvent(form);
+    }
+  };
+  document.addEventListener('DOMContentLoaded', onDOMContentLoaded);
+
+  // `'htmx:afterSettle'` handles the case when form is rendered asynchronously with htmx, e.g. in embedded action modal.
+  const onHtmxAfterSettle = (event) => {
+    const { target } = event.detail;
+    if (target.closest('#embedded_action_modal') && target.classList.contains('modal-content')) {
+      dispatchFormLoadEvent(target.querySelector('form'));
+    }
+  };
+  htmx.on('htmx:afterSettle', onHtmxAfterSettle);
+
+  return () => {
+    document.removeEventListener('DOMContentLoaded', onDOMContentLoaded);
+    htmx.off('htmx:afterSettle', onHtmxAfterSettle);
+  };
 };
 
 /**

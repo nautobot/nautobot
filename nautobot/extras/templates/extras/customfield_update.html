@@ -162,7 +162,11 @@
     {{ block.super }}
     <script src="{% versioned_static 'js/filter_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script type="text/javascript">
-        const slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
+        /*
+         * Deliberately use `var` instead of `const` or `let` here to prevent JavaScript engine from throwing an
+         * exception when the constant is defined multiple times, which can be the case for embedded action modal.
+         */
+        var slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
         $('.formset_row-{{ choices.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
             addCssClass: 'btn btn-primary add-row',

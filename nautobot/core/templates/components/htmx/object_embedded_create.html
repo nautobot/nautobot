@@ -6,7 +6,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body pb-0">
-    <form hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
+    <form data-nb-obj-type="{{ obj_type }}" hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}

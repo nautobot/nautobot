@@ -3,8 +3,8 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-        window.nb.form.addOnFormLoadListener('module', () => {
-            var position_field = document.getElementById(window.nb.getFieldAutoId('{{ form.auto_id }}', 'position', false);
+        document.addEventListener('nb-form:load:{{ obj_type }}', () => {
+            var position_field = document.getElementById(window.nb.getFieldAutoId('{{ form.auto_id }}', 'position', false));
             var source_arr = position_field.getAttribute('source').split(" ");
             var length = position_field.getAttribute('maxlength');
             position_field.setAttribute('_changed', Boolean(position_field.value))

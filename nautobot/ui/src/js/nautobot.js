@@ -41,7 +41,7 @@ import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
-import { getFieldAutoId, initializeOnFormLoad, observeFormStickyFooters } from './form.js';
+import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { refreshMessages } from './messages.js';
 import { initializeSearch } from './search.js';
@@ -52,6 +52,9 @@ import { initializeTheme } from './theme.js';
 import { initializeSubtrees } from './tree.js';
 
 window.nb ??= {};
+
+// Export `getFieldAutoId` before `'DOMContentLoaded'` for convenience, because existing apps forms may need to use it.
+window.nb.form = { getFieldAutoId };
 
 document.addEventListener('DOMContentLoaded', () => {
   // History
@@ -141,7 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /*
- * `onFormLoad` is a special case of Nautobot UI API which has its own `'DOMContentLoaded'` listener, hence it needs to
- * be initialized and exported to the global scope before the main `'DOMContentLoaded'` listener above is called.
+ * Nautobot form events UI API is a special case which has its own `'DOMContentLoaded'` listener, and needs to be
+ * **registered after**, but **initialized before** the main `'DOMContentLoaded'` listener above is fired, hence this
+ * seemingly strange specific place of the actual function call.
  */
-window.nb.form = { getFieldAutoId, ...initializeOnFormLoad() };
+initializeFormEvents();

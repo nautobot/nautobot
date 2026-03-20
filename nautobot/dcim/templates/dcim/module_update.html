@@ -53,7 +53,7 @@
     <script type="text/javascript">
         // clear the select2 widgets for the hidden installation section tabs when a selection is made in the active tab
         // jQuery required for select2
-        window.nb.form.addOnFormLoadListener('module', () => {
+        document.addEventListener('nb-form:load:{{ obj_type }}', () => {
             const getSelectField = (name) => $(`select${window.nb.form.getFieldAutoId('{{ form.auto_id }}', name)}`);
 
             getSelectField('parent_module_bay_device').select2();
