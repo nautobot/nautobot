@@ -3,7 +3,7 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        window.nb.form.addOnFormLoadListener('module', () => {
             var position_field = document.getElementById(window.nb.getFieldAutoId('{{ form.auto_id }}', 'position', false);
             var source_arr = position_field.getAttribute('source').split(" ");
             var length = position_field.getAttribute('maxlength');

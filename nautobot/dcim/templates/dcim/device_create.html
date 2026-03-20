@@ -127,7 +127,7 @@
 {% block javascript %}
     {{ block.super }}
     <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', () => {
+        window.nb.form.addOnFormLoadListener('device', () => {
             const software_version_image_container = document.querySelector('div#software_version_image_container');
             const software_version_image_description = document.querySelector('span#software_version_image_description');
             const software_version_image_list = document.querySelector('ul#software_version_image_list');
@@ -219,13 +219,11 @@
             getSelectField('software_version').on('select2:unselect', hide_software_image_container);
 
             // initialize on document load
-            document.addEventListener("DOMContentLoaded", function() {
-                getSelectField('software_version').select2();
-                var selected_version = getSelectField('software_version').select2('data')[0].id;
-                if (selected_version) {
-                    populate_software_image_list(selected_version);
-                }
-            });
+            window.nb.select2.initializeSelect2Fields(getSelectField('software_version').parent());
+            var selected_version = getSelectField('software_version').select2('data')[0].id;
+            if (selected_version) {
+                populate_software_image_list(selected_version);
+            }
         });
     </script>
 {% endblock %}

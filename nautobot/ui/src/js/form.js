@@ -1,3 +1,5 @@
+import htmx from 'htmx.org';
+
 /**
  * Get form field ID by emulating Django `BoundField.auto_id` @property function in JavaScript.
  * Source: https://github.com/django/django/blob/4b2b4bf0ac2707dc9c4d51cabfa72168eaea95fe/django/forms/boundfield.py#L243-L255
@@ -17,7 +19,37 @@ export const getFieldAutoId = (formAutoId, name, querySelector = true) => {
     return querySelector ? `#${name}` : name;
   }
 
+  // eslint-disable-next-line no-console
+  console.error(`Cannot get field \`auto_id\` for \`"${name}"\` because the form \`auto_id\` is not defined.`);
   return '';
+};
+
+/**
+ * Initialize `onFormLoad` Nautobot UI API.
+ * @returns {{ addOnFormLoadListener: function(string, function(Event): void): void }} An object containing a function
+ *   to enable adding a **one-per-form-ID** `listener` to be called when a form is loaded.
+ */
+export const initializeOnFormLoad = () => {
+  const EMBEDDED_ACTION_MODAL_QUERY_SELECTOR = '#embedded_action_modal';
+  const listeners = {};
+
+  const onFormLoad = (event) => Object.values(listeners).forEach((listener) => listener(event));
+  document.addEventListener('DOMContentLoaded', onFormLoad);
+  if (document.querySelector(EMBEDDED_ACTION_MODAL_QUERY_SELECTOR)) {
+    htmx.on(EMBEDDED_ACTION_MODAL_QUERY_SELECTOR, 'htmx:afterSettle', onFormLoad);
+  }
+
+  /**
+   * Fire a `listener` callback when a form is loaded.
+   * @param {string} id - Unique listener ID identifier, used to prevent registering the same listener multiple times.
+   * @param {function(Event): void} listener - Callback function to be executed when a form is loaded.
+   * @returns {void} Do not return any value, just add proper event listeners.
+   */
+  const addOnFormLoadListener = (id, listener) => {
+    listeners[id] = listener;
+  };
+
+  return { addOnFormLoadListener };
 };
 
 /**

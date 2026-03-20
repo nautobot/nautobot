@@ -41,7 +41,7 @@ import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
-import { getFieldAutoId, observeFormStickyFooters } from './form.js';
+import { getFieldAutoId, initializeOnFormLoad, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { refreshMessages } from './messages.js';
 import { initializeSearch } from './search.js';
@@ -51,9 +51,9 @@ import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
 import { initializeSubtrees } from './tree.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.nb ??= {};
+window.nb ??= {};
 
+document.addEventListener('DOMContentLoaded', () => {
   // History
   loadState();
   window.nb.history = { saveState };
@@ -80,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
-  window.nb.form = { getFieldAutoId };
 
   // Messages
   window.nb.messages = { refreshMessages };
@@ -140,3 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/*
+ * `onFormLoad` is a special case of Nautobot UI API which has its own `'DOMContentLoaded'` listener, hence it needs to
+ * be initialized and exported to the global scope before the main `'DOMContentLoaded'` listener above is called.
+ */
+window.nb.form = { getFieldAutoId, ...initializeOnFormLoad() };
