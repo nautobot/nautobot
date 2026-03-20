@@ -1648,7 +1648,7 @@ class JobView(generic.ObjectView):
                 label="Run/Schedule",
                 icon="mdi-play",
                 color=ButtonActionColorChoices.SUBMIT,
-                required_permissions=["extras.job_run"],
+                required_permissions=["extras.run_job"],
             ),
         ],
     )
