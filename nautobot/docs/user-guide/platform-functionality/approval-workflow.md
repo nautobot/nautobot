@@ -300,6 +300,14 @@ User can cancel his own Approval Workflow.
 
 ### Using Approval Workflow via API
 
+!!! note
+    Unlike the UI, which handles both the Approval Workflow Definition and its stages in a single form submission, the API requires **two separate requests**:
+
+    1. First, create the `ApprovalWorkflowDefinition`
+    2. Then, create one or more `ApprovalWorkflowStageDefinition` records referencing the definition created in step 1
+
+    An `ApprovalWorkflowDefinition` with no stages will still trigger when matching objects are acted upon, but the approval process cannot proceed. There are no stages to approve or deny. Always create at least one stage before the workflow is put into use.
+
 #### Approve/Deny a Stage
 
 ```no-highlight
