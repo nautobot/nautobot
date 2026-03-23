@@ -1,0 +1,1 @@
+Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.

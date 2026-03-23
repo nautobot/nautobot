@@ -1,0 +1,1 @@
+Fixed a bug where GraphQL queries that included related objects were not being optimized correctly since upgrading to graphene-django v3.x.
