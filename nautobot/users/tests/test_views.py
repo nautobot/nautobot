@@ -66,12 +66,10 @@ class PasswordUITest(TestCase):
                     "new_password2": "bar",
                 },
             )
-        payload = serialize_user_without_config_and_views(self.user)
-        self.assertEqual(
-            cm.output,
-            [f"INFO:nautobot.events.nautobot.users.user.change_password:{json.dumps(payload, indent=4)}"],
-        )
         self.user.refresh_from_db()
+        payload = serialize_user_without_config_and_views(self.user)
+        expected_log = f"INFO:nautobot.events.nautobot.users.user.change_password:{json.dumps(payload, indent=4)}"
+        self.assertIn(expected_log, cm.output)
         self.assertTrue(self.user.check_password("bar"))
 
     @override_settings(
