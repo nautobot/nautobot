@@ -24,7 +24,12 @@ from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
-from nautobot.extras.choices import ButtonClassChoices, JobResultStatusChoices, ObjectChangeActionChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    ButtonClassChoices,
+    JobResultStatusChoices,
+    ObjectChangeActionChoices,
+)
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.customfields import enqueue_custom_field_job
 from nautobot.extras.models import (
@@ -42,12 +47,54 @@ from nautobot.extras.models import (
     ObjectChange,
     Relationship,
 )
+from nautobot.extras.models.approvals import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+)
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.utils import refresh_job_model_from_job_class
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
 logger = logging.getLogger(__name__)
+
+#
+# Approvals
+#
+
+
+@receiver(pre_delete, sender=ApprovalWorkflowDefinition)
+def prevent_delete_definition_with_pending_workflows(sender, instance, **kwargs):
+    pending_approvals = ApprovalWorkflow.objects.filter(
+        approval_workflow_definition=instance,
+        current_state=ApprovalWorkflowStateChoices.PENDING,
+    )
+
+    if pending_approvals:
+        names = ", ".join(str(a) for a in pending_approvals[:5])
+
+        raise ValidationError(
+            f"Cannot delete Approval Workflow Definition '{instance.name}'. "
+            f"There are {pending_approvals.count()} pending workflows: {names}"
+        )
+
+
+@receiver(pre_delete, sender=ApprovalWorkflowStageDefinition)
+def prevent_delete_stage_definition_with_pending_stages(sender, instance, **kwargs):
+    pending_stages = ApprovalWorkflowStage.objects.filter(
+        approval_workflow_stage_definition=instance,
+        state=ApprovalWorkflowStateChoices.PENDING,
+    )
+
+    if pending_stages:
+        names = ", ".join(str(a) for a in pending_stages[:5])
+
+        raise ValidationError(
+            f"Cannot delete Approval Workflow Stage Definition '{instance.name}'. "
+            f"There are {pending_stages.count()} pending stages: {names}"
+        )
 
 
 #
