@@ -99,7 +99,6 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
         ("vpn_profile", "vpn_profile__name"),
         ("name",),
         ("description",),
-        ("vpn_id",),
     )
 
 

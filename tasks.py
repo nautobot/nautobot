@@ -1095,6 +1095,7 @@ def tests(
     skip_docs_build=False,
     tag=None,
     verbose=False,
+    pdb=False,
 ):
     """Run Nautobot automated tests."""
     if not skip_docs_build:
@@ -1135,6 +1136,8 @@ def tests(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if pdb:
+        command += " --pdb"
     if parallel:
         command += " --parallel"
         if parallel_workers:

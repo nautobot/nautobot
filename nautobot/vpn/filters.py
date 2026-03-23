@@ -2,6 +2,7 @@
 
 from nautobot.apps.filters import (
     BaseFilterSet,
+    MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
     SearchFilter,
@@ -26,12 +27,12 @@ class VPNProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pyl
     vpn_phase1_policies = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNPhase1Policy.objects.all(),
         to_field_name="name",
-        label="Phase 1 Policy (name or ID)",
+        label="Phase 1 Policies (name or ID)",
     )
     vpn_phase2_policies = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNPhase2Policy.objects.all(),
         to_field_name="name",
-        label="Phase 2 Policy (name or ID)",
+        label="Phase 2 Policies (name or ID)",
     )
 
     class Meta:
@@ -47,12 +48,13 @@ class VPNPhase1PolicyFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "description": "icontains",
         }
     )
     vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
+        label="VPN Profiles (name or ID)",
         to_field_name="name",
-        label="VPN Profile (name or ID)",
     )
 
     class Meta:
@@ -73,8 +75,8 @@ class VPNPhase2PolicyFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  
     )
     vpn_profiles = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
+        label="VPN Profiles (name or ID)",
         to_field_name="name",
-        label="VPN Profile (name or ID)",
     )
 
     class Meta:
@@ -146,6 +148,14 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
             "vpn_id": "icontains",
         }
     )
+    name = MultiValueCharFilter(
+        lookup_expr="icontains",
+        label="Name",
+    )
+    vpn_id = MultiValueCharFilter(
+        lookup_expr="icontains",
+        label="VPN ID",
+    )
     vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPNProfile.objects.all(),
         label="VPN Profile (name or ID)",
@@ -165,18 +175,24 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
+            "vpn__name": "icontains",
+            "vpn_profile__name": "icontains",
             "description": "icontains",
             "tunnel_id": "icontains",
         }
     )
-    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.VPNProfile.objects.all(),
-        label="VPN Profile (name or ID)",
-        to_field_name="name",
+    name = MultiValueCharFilter(
+        lookup_expr="icontains",
+        label="Name",
     )
     vpn = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPN.objects.all(),
         label="VPN (name or ID)",
+        to_field_name="name",
+    )
+    vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPNProfile.objects.all(),
+        label="VPN Profile (name or ID)",
         to_field_name="name",
     )
 
@@ -192,8 +208,9 @@ class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
 
     q = SearchFilter(
         filter_predicates={
-            "source_fqdn": "icontains",
             "device__name": "icontains",
+            "source_interface__name": "icontains",
+            "source_fqdn": "icontains",
         }
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
