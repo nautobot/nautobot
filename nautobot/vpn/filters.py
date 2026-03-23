@@ -174,16 +174,11 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
 
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
             "vpn__name": "icontains",
             "vpn_profile__name": "icontains",
             "description": "icontains",
             "tunnel_id": "icontains",
         }
-    )
-    name = MultiValueCharFilter(
-        lookup_expr="icontains",
-        label="Name",
     )
     vpn = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.VPN.objects.all(),
