@@ -1,3 +1,4 @@
+import functools
 import logging
 
 from django.contrib.contenttypes.models import ContentType
@@ -11,16 +12,24 @@ from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
+    CableTerminationEndpoint,
+    ConsolePort,
+    ConsoleServerPort,
     ControllerManagedDeviceGroup,
     Device,
     DeviceRedundancyGroup,
+    FrontPort,
     Interface,
     InterfaceVDCAssignment,
     LocationType,
     PathEndpoint,
+    PowerFeed,
+    PowerOutlet,
     PowerPanel,
+    PowerPort,
     Rack,
     RackGroup,
+    RearPort,
     VirtualChassis,
 )
 from .utils import validate_interface_tagged_vlans
@@ -30,12 +39,63 @@ def create_cablepath(node, rebuild=True):
     """
     Create CablePaths for all paths originating from the specified node.
 
+    For breakout cables, creates one CablePath per fan-out lane mapped to this
+    node's connector via the template.
+
     rebuild (bool) - Used to refresh paths where this node is not an endpoint.
     """
-    cp = CablePath.from_origin(node)
-    if cp:
+    from nautobot.dcim.models import CableTerminationEndpoint
+
+    if not node.cable_id:
+        if rebuild:
+            rebuild_paths(node)
+        return
+
+    cable = node.cable
+
+    # Check if this is a breakout cable with multiple far-side lanes
+    if cable.cable_type_id:
+        my_endpoint = CableTerminationEndpoint.objects.filter(cable=cable, termination_id=node.pk).first()
+
+        if my_endpoint and my_endpoint.connector is not None:
+            opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
+            origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
+            far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+
+            # Find all far-side endpoints mapped to this origin's connector
+            far_position_key = "b_position" if my_endpoint.cable_end == "A" else "a_position"
+            for mapping_entry in cable.cable_type.mapping:
+                if mapping_entry[origin_side_key] == my_endpoint.connector:
+                    far_connector = mapping_entry[far_side_key]
+                    far_position = mapping_entry.get(far_position_key, 1)
+
+                    # Find the actual far-end termination for this lane
+                    far_ep = CableTerminationEndpoint.objects.filter(
+                        cable=cable,
+                        cable_end=opposite_side,
+                        connector=far_connector,
+                    ).first()
+                    far_term = far_ep.termination if far_ep else None
+
+                    # Trace the path for this specific lane, overriding the first hop's peer
+                    cable_path = CablePath.from_origin(node, far_end_override=far_term)
+                    if cable_path:
+                        cable_path.connector = far_connector
+                        cable_path.position = far_position
+                        try:
+                            cable_path.save()
+                        except Exception:
+                            pass  # Duplicate path — already exists
+
+            if rebuild:
+                rebuild_paths(node)
+            return
+
+    # Standard cable or no breakout endpoint found — single path
+    cable_path = CablePath.from_origin(node)
+    if cable_path:
         try:
-            cp.save()
+            cable_path.save()
         except Exception as e:
             print(node, node.pk)
             raise e
@@ -207,62 +267,137 @@ def clear_virtualchassis_members(instance, **kwargs):
 @receiver(post_save, sender=Cable)
 def update_connected_endpoints(instance, created, raw=False, **kwargs):
     """
-    When a Cable is saved, check for and update its two connected endpoints
+    When a Cable is saved, create CableTermination rows from initial terminations,
+    sync cable/peer caches on termination objects, and create/update CablePaths.
     """
     logger = logging.getLogger(__name__ + ".cable")
     if raw:
         logger.debug(f"Skipping endpoint updates for imported cable {instance}")
         return
 
-    # Cache the Cable on its two termination points
-    if instance.termination_a.cable != instance:
-        logger.debug(f"Updating termination A for cable {instance}")
-        instance.termination_a.cable = instance
-        instance.termination_a._cable_peer = instance.termination_b
-        instance.termination_a.save()
-    if instance.termination_b.cable != instance:
-        logger.debug(f"Updating termination B for cable {instance}")
-        instance.termination_b.cable = instance
-        instance.termination_b._cable_peer = instance.termination_a
-        instance.termination_b.save()
-
-    # Create/update cable paths
+    # On creation, create CableTermination rows and sync caches
     if created:
-        for termination in (instance.termination_a, instance.termination_b):
-            if isinstance(termination, PathEndpoint):
-                create_cablepath(termination)
+        _create_cable_termination_rows(instance, logger)
+        _sync_termination_caches(instance, logger)
+        for ct_row in instance.terminations.all():
+            term = ct_row.termination
+            if isinstance(term, PathEndpoint):
+                create_cablepath(term)
             else:
-                rebuild_paths(termination)
+                rebuild_paths(term)
     elif instance.status != instance._orig_status:
-        # We currently don't support modifying either termination of an existing Cable. (This
-        # may change in the future.) However, we do need to capture status changes and update
-        # any CablePaths accordingly.
+        # Status changed — update path active flags or rebuild
         if instance.status != Cable.STATUS_CONNECTED:
             CablePath.objects.filter(path__contains=instance).update(is_active=False)
         else:
             rebuild_paths(instance)
+    # NOTE: On regular updates (form save), we do NOT sync termination caches here.
+    # The form's _save_connection_terminations() handles CableTermination row
+    # creation/updates and cache syncing AFTER this signal runs.
+
+
+def _create_cable_termination_rows(instance, logger):
+    """Create CableTermination rows from the Cable's _initial_termination_a/b attributes."""
+    term_a = getattr(instance, "_initial_termination_a", None)
+    term_b = getattr(instance, "_initial_termination_b", None)
+
+    # Also handle type/id kwargs for the case where termination objects aren't resolved yet
+    if term_a is None and getattr(instance, "_initial_termination_a_type", None):
+        ct = instance._initial_termination_a_type
+        term_a = ct.model_class().objects.get(pk=instance._initial_termination_a_id)
+    if term_b is None and getattr(instance, "_initial_termination_b_type", None):
+        ct = instance._initial_termination_b_type
+        term_b = ct.model_class().objects.get(pk=instance._initial_termination_b_id)
+
+    # Determine lane 1 connector/position if this is a breakout cable
+    a_connector = a_position = b_connector = b_position = None
+    if instance.cable_type_id and instance.cable_type.mapping:
+        entry = instance.cable_type.mapping[0]
+        a_connector = entry["a_connector"]
+        a_position = entry["a_position"]
+        b_connector = entry["b_connector"]
+        b_position = entry["b_position"]
+
+    if term_a:
+        ct_a = ContentType.objects.get_for_model(term_a)
+        CableTerminationEndpoint.objects.get_or_create(
+            cable=instance,
+            cable_end="A",
+            termination_type=ct_a,
+            termination_id=term_a.pk,
+            defaults={"connector": a_connector, "position": a_position},
+        )
+        logger.debug(f"Created CableTermination A-side for {term_a} on cable {instance}")
+
+    if term_b:
+        ct_b = ContentType.objects.get_for_model(term_b)
+        CableTerminationEndpoint.objects.get_or_create(
+            cable=instance,
+            cable_end="B",
+            termination_type=ct_b,
+            termination_id=term_b.pk,
+            defaults={"connector": b_connector, "position": b_position},
+        )
+        logger.debug(f"Created CableTermination B-side for {term_b} on cable {instance}")
+
+
+def _sync_termination_caches(instance, logger):
+    """Sync cable and _cable_peer on termination objects from the CableTerminationEndpoint rows."""
+    all_endpoints = list(instance.terminations.all())
+    a_endpoints = [endpoint for endpoint in all_endpoints if endpoint.cable_end == "A"]
+    b_endpoints = [endpoint for endpoint in all_endpoints if endpoint.cable_end == "B"]
+
+    # For each termination, set cable FK and _cable_peer cache
+    for endpoint in all_endpoints:
+        termination = endpoint.termination
+        if termination is None:
+            continue
+
+        # Find the opposite-side peer
+        if endpoint.connector is not None and endpoint.position is not None:
+            # Breakout cable — find mapped peer via template
+            from nautobot.dcim.utils import get_opposite_lane_termination
+
+            peer = get_opposite_lane_termination(instance, endpoint.cable_end, endpoint.connector, endpoint.position)
+        else:
+            # Standard cable — peer is the other side
+            if endpoint.cable_end == "A":
+                peer = b_endpoints[0].termination if b_endpoints else None
+            else:
+                peer = a_endpoints[0].termination if a_endpoints else None
+
+        # Update mixin cache fields if they differ
+        needs_save = False
+        if termination.cable_id != instance.pk:
+            termination.cable = instance
+            needs_save = True
+        if termination._cable_peer != peer:
+            termination._cable_peer = peer
+            needs_save = True
+        if needs_save:
+            logger.debug(f"Syncing cache for {termination} on cable {instance}")
+            termination.save()
 
 
 @receiver(pre_delete, sender=Cable)
 def nullify_connected_endpoints(instance, **kwargs):
     """
-    When a Cable is deleted, check for and update its two connected endpoints
+    When a Cable is deleted, clear cable/peer caches on all termination objects
+    and retrace dependent cable paths.
     """
     logger = logging.getLogger(__name__ + ".cable")
 
-    # Disassociate the Cable from its termination points
-    if instance.termination_a is not None:
-        logger.debug(f"Nullifying termination A for cable {instance}")
-        instance.termination_a.cable = None
-        instance.termination_a._cable_peer = None
-        instance.termination_a.save()
-    if instance.termination_b is not None:
-        logger.debug(f"Nullifying termination B for cable {instance}")
-        instance.termination_b.cable = None
-        instance.termination_b._cable_peer = None
-        instance.termination_b.save()
+    # Clear cable and _cable_peer on all termination objects
+    for endpoint in instance.terminations.all():
+        termination = endpoint.termination
+        if termination is not None:
+            logger.debug(f"Nullifying termination {termination} for cable {instance}")
+            termination.cable = None
+            termination._cable_peer = None
+            termination.save()
 
-    # Delete and retrace any dependent cable paths
+    # CableTerminationEndpoint rows will be CASCADE-deleted with the Cable.
+    # Retrace any dependent cable paths.
     for cablepath in CablePath.objects.filter(path__contains=instance):
         cp = CablePath.from_origin(cablepath.origin)
         if cp:
@@ -275,6 +410,58 @@ def nullify_connected_endpoints(instance, **kwargs):
             )
         else:
             cablepath.delete()
+
+
+#
+# Termination object deletion — clean up CableTerminationEndpoint without cascading to Cable
+#
+
+
+@functools.lru_cache(maxsize=1)
+def _get_cable_termination_senders():
+    from nautobot.circuits.models import CircuitTermination
+
+    return [
+        CircuitTermination,
+        ConsolePort,
+        ConsoleServerPort,
+        FrontPort,
+        Interface,
+        PowerFeed,
+        PowerOutlet,
+        PowerPort,
+        RearPort,
+    ]
+
+
+def handle_termination_delete(sender, instance, **kwargs):
+    """
+    When a termination object is deleted, remove its CableTerminationEndpoint row
+    and clean up caches. The Cable itself survives — it just loses this termination.
+    """
+    if not instance.cable_id:
+        return
+
+    logger = logging.getLogger(__name__ + ".cable")
+    logger.debug(f"Handling termination delete for {instance} (cable: {instance.cable})")
+
+    # Delete the CableTerminationEndpoint row for this termination
+    ct_type = ContentType.objects.get_for_model(instance)
+    CableTerminationEndpoint.objects.filter(
+        termination_type=ct_type,
+        termination_id=instance.pk,
+    ).delete()
+
+    # Rebuild CablePaths that passed through this cable
+    try:
+        cable = Cable.objects.get(pk=instance.cable_id)
+        rebuild_paths(cable)
+    except Cable.DoesNotExist:
+        pass
+
+
+for _sender in _get_cable_termination_senders():
+    pre_delete.connect(handle_termination_delete, sender=_sender)
 
 
 #

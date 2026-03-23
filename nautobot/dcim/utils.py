@@ -1,4 +1,5 @@
 from copy import deepcopy
+import functools
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -316,3 +317,137 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         seen_labels.add(label)
 
     return mapping, a_connectors, b_connectors, total_lanes
+
+
+# Cable disconnect utilities
+
+
+def disconnect_termination(termination):
+    """Disconnect a single termination from its cable without deleting the cable.
+
+    Clears the CableTerminationEndpoint row, clears mixin caches on both the termination
+    and its peer, and cleans up CablePaths. Returns the cable if successful, None otherwise.
+    """
+    from django.contrib.contenttypes.models import ContentType
+
+    from nautobot.dcim.models import CablePath, CableTerminationEndpoint
+
+    if not termination or not termination.cable_id:
+        return None
+
+    cable = termination.cable
+
+    # Clear the peer's caches
+    peer = termination._cable_peer
+    if peer is not None:
+        peer.cable = None
+        peer._cable_peer = None
+        if getattr(peer, "_path_id", None):
+            path_id = peer._path_id
+            peer._path = None
+            peer.save()
+            CablePath.objects.filter(pk=path_id).delete()
+        else:
+            peer.save()
+
+    # Clear _path FK before deleting CablePath to avoid FK constraint violation
+    if getattr(termination, "_path_id", None):
+        path_id = termination._path_id
+        termination._path = None
+        termination.save()
+        CablePath.objects.filter(pk=path_id).delete()
+
+    # Remove the CableTerminationEndpoint row
+    CableTerminationEndpoint.objects.filter(
+        termination_type=ContentType.objects.get_for_model(termination),
+        termination_id=termination.pk,
+    ).delete()
+
+    # Clear the mixin cache on this termination
+    termination.cable = None
+    termination._cable_peer = None
+    termination.save()
+
+    return cable
+
+
+# Breakout cable lane utilities
+
+
+@functools.lru_cache(maxsize=1)
+def _get_cable_termination_concrete_models():
+    """Lazily import and cache the concrete CableTermination subclass models."""
+    from nautobot.circuits.models import CircuitTermination
+    from nautobot.dcim.models import (
+        ConsolePort,
+        ConsoleServerPort,
+        FrontPort,
+        Interface,
+        PowerFeed,
+        PowerOutlet,
+        PowerPort,
+        RearPort,
+    )
+
+    return [
+        Interface,
+        ConsolePort,
+        ConsoleServerPort,
+        PowerPort,
+        PowerOutlet,
+        FrontPort,
+        RearPort,
+        PowerFeed,
+        CircuitTermination,
+    ]
+
+
+def get_all_lane_terminations(cable):
+    """
+    Return all CableTermination rows for the given cable from the concrete CableTermination table.
+
+    Returns a QuerySet of CableTermination model instances.
+    """
+    from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+
+    return CableTerminationModel.objects.filter(cable=cable).order_by("cable_end", "connector", "position")
+
+
+def get_opposite_lane_termination(cable, side, connector, position):
+    """
+    Given a cable and one side's (connector, position), return the termination object on the opposite side
+    by looking up the cable's breakout template mapping.
+
+    Returns the termination object or None if the opposite lane is unconnected.
+    """
+    from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+
+    if not cable.cable_type_id:
+        return None
+
+    mapping = cable.cable_type.mapping
+    side_key = "a" if side == "A" else "b"
+    opp_key = "b" if side == "A" else "a"
+    opp_side = "B" if side == "A" else "A"
+
+    for entry in mapping:
+        if entry[f"{side_key}_connector"] == connector and entry[f"{side_key}_position"] == position:
+            opp_connector = entry[f"{opp_key}_connector"]
+            opp_position = entry[f"{opp_key}_position"]
+            # Try exact connector+position match first
+            endpoint = CableTerminationModel.objects.filter(
+                cable=cable,
+                cable_end=opp_side,
+                connector=opp_connector,
+                position=opp_position,
+            ).first()
+            if endpoint:
+                return endpoint.termination
+            # Fall back to connector-only match (trunk port representing all positions)
+            endpoint = CableTerminationModel.objects.filter(
+                cable=cable,
+                cable_end=opp_side,
+                connector=opp_connector,
+            ).first()
+            return endpoint.termination if endpoint else None
+    return None

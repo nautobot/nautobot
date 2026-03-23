@@ -22,6 +22,32 @@
                 <td>{{ object.label|placeholder }}</td>
             </tr>
             <tr>
+                <td>Cable Type</td>
+                <td>
+                    {% if object.cable_type %}
+                        {{ object.cable_type|hyperlinked_object }}
+                    {% else %}
+                        <span class="text-secondary">&mdash;</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if object.cable_type %}
+            <tr>
+                <td>Lanes</td>
+                <td>{{ object.connected_lanes }} / {{ object.total_lanes }} connected</td>
+            </tr>
+            {% elif not object.breakout_eligible %}
+            <tr>
+                <td></td>
+                <td>
+                    <small class="text-muted">
+                        <span class="mdi mdi-information-outline"></span>
+                        Breakout not available for this cable's termination types
+                    </small>
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
                 <td>Color</td>
                 <td>
                     {% if object.color %}
@@ -46,16 +72,62 @@
 {% endblock content_left_page %}
 
 {% block content_right_page %}
+    {% with conns=object.get_connections %}
     <div class="card">
         <div class="card-header">
-            <strong>Termination A</strong>
+            <strong>Connections</strong>
+            {% if conns.is_breakout %}
+                <span class="badge bg-info float-end">{{ conns.a_connector_count }}A &rarr; {{ conns.b_connector_count }}B</span>
+            {% endif %}
         </div>
-        {% include 'dcim/inc/cable_termination.html' with termination=object.termination_a %}
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Side A</th>
+                    <th>Side B</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in conns.rows %}
+                <tr>
+                    {% if row.a_rowspan > 0 %}
+                    <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end" style="width: 45%">
+                        {% if conns.is_breakout %}
+                            <strong>A{{ row.a.connector }}</strong>
+                            {% if row.a.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.a.lanes }} lanes</span>{% endif %}
+                            <br>
+                        {% endif %}
+                        {% include 'dcim/inc/cable_connection_termination.html' with term=row.a.termination %}
+                    </td>
+                    {% endif %}
+                    {% if row.b_rowspan > 0 %}
+                    <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top">
+                        {% if conns.is_breakout %}
+                            <strong>B{{ row.b.connector }}</strong>
+                            {% if row.b.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.b.lanes }} lanes</span>{% endif %}
+                            <br>
+                        {% endif %}
+                        {% include 'dcim/inc/cable_connection_termination.html' with term=row.b.termination %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div class="card">
+
+    {% if conns.is_breakout %}
+    <div class="card mt-3">
         <div class="card-header">
-            <strong>Termination B</strong>
+            <strong>Lane Mapping</strong>
+            <span class="float-end">{{ object.cable_type|hyperlinked_object }}</span>
         </div>
-        {% include 'dcim/inc/cable_termination.html' with termination=object.termination_b %}
+        <div class="card-body">
+            {% with diagram_svg=object.get_mapping_diagram_svg %}
+                {% include 'dcim/inc/breakout_mapping_diagram.html' %}
+            {% endwith %}
+        </div>
     </div>
+    {% endif %}
+    {% endwith %}
 {% endblock content_right_page %}

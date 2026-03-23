@@ -1,7 +1,7 @@
 from decimal import Decimal
 import re
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -243,23 +243,72 @@ class CableTermination(models.Model):
     _cable_peer_id = models.UUIDField(blank=True, null=True)
     _cable_peer = GenericForeignKey(ct_field="_cable_peer_type", fk_field="_cable_peer_id")
 
-    # Generic relations to Cable. These ensure that an attached Cable is deleted if the terminated object is deleted.
-    _cabled_as_a = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_a_type",
-        object_id_field="termination_a_id",
-    )
-    _cabled_as_b = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_b_type",
-        object_id_field="termination_b_id",
-    )
+    # NOTE: We intentionally do NOT have a GenericRelation to CableTerminationEndpoint here.
+    # Deleting a termination object should NOT cascade-delete the Cable.
+    # Instead, a pre_delete signal handler in signals.py removes the CableTerminationEndpoint
+    # row and cleans up caches, leaving the Cable intact.
 
     class Meta:
         abstract = True
 
     def get_cable_peer(self):
-        return self._cable_peer
+        """Return the cached far-end termination of this cable, or look it up from the CableTermination table."""
+        if self._cable_peer_id:
+            return self._cable_peer
+        # Fallback: look up via the CableTermination join table
+        if self.cable_id:
+            from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+
+            my_ct = CableTerminationModel.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
+            if my_ct:
+                other_end = "B" if my_ct.cable_end == "A" else "A"
+                if my_ct.connector is not None and my_ct.position is not None:
+                    # Breakout cable — find the mapped opposite-side termination
+                    from nautobot.dcim.utils import get_opposite_lane_termination
+
+                    return get_opposite_lane_termination(self.cable, my_ct.cable_end, my_ct.connector, my_ct.position)
+                else:
+                    # Standard cable — just find the other end
+                    peer_ct = CableTerminationModel.objects.filter(cable_id=self.cable_id, cable_end=other_end).first()
+                    return peer_ct.termination if peer_ct else None
+        return None
+
+    def get_cable_peers(self):
+        """Return the opposite-side termination objects mapped to this termination's lane(s).
+
+        For standard cables, returns a list with one peer.
+        For breakout cables, returns peers mapped to this termination's connector via the template.
+        """
+        if not self.cable_id:
+            return []
+
+        from nautobot.dcim.models.cables import CableTerminationEndpoint
+
+        my_endpoint = CableTerminationEndpoint.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
+        if not my_endpoint:
+            return []
+
+        opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
+
+        # For breakout cables, find only the connectors mapped to this termination's connector
+        if self.cable.cable_type_id and my_endpoint.connector is not None:
+            origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
+            far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+
+            mapped_far_connectors = set()
+            for entry in self.cable.cable_type.mapping:
+                if entry[origin_side_key] == my_endpoint.connector:
+                    mapped_far_connectors.add(entry[far_side_key])
+
+            opposite_endpoints = CableTerminationEndpoint.objects.filter(
+                cable_id=self.cable_id, cable_end=opposite_side, connector__in=mapped_far_connectors
+            ).order_by("connector", "position")
+        else:
+            opposite_endpoints = CableTerminationEndpoint.objects.filter(
+                cable_id=self.cable_id, cable_end=opposite_side
+            ).order_by("connector", "position")
+
+        return [ep.termination for ep in opposite_endpoints if ep.termination is not None]
 
     @property
     def parent(self):
@@ -310,6 +359,13 @@ class PathEndpoint(models.Model):
     @property
     def path(self):
         return self._path
+
+    def get_all_paths(self):
+        """Return all CablePaths originating from this endpoint (multiple for breakout cables)."""
+        from nautobot.dcim.models.cables import CablePath
+
+        content_type = ContentType.objects.get_for_model(self)
+        return CablePath.objects.filter(origin_type=content_type, origin_id=self.pk).order_by("connector", "position")
 
     @property
     def connected_endpoint(self):

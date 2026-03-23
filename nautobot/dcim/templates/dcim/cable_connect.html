@@ -4,13 +4,11 @@
 {% load form_helpers %}
 
 {% block title %}
-    {% with termination_a=form.instance.termination_a %}
-        {% if termination_a.module %}
-            Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-        {% else %}
-            Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
-        {% endif %}
-    {% endwith %}
+    {% if termination_a.module %}
+        Connect {{ termination_a.module.display }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+    {% else %}
+        Connect {{ termination_a.device }} {{ termination_a }} to {{ termination_b_type|bettertitle }}
+    {% endif %}
 {% endblock %}
 
 {% block content %}
@@ -30,7 +28,6 @@
                     </div>
                 </div>
             {% endif %}
-            {% with termination_a=form.instance.termination_a %}
                 <div class="col-lg-5">
                     <div class="card">
                         <div class="card-header">
@@ -121,7 +118,6 @@
                 <div class="col-lg-6 offset-lg-3">
                     {% include 'dcim/inc/cable_form.html' %}
                 </div>
-            {% endwith %}
         </div>
         <div class="nb-form-sticky-footer">
             <button type="submit" name="_update" class="btn btn-primary">

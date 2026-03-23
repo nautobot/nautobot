@@ -1,0 +1,60 @@
+{% load form_helpers %}
+{% comment %}
+    Cable connection form — A always left, B always right, using HTML table for real rowspan.
+{% endcomment %}
+
+{% with conns=form.get_connection_fields %}
+{% if conns %}
+<div class="card">
+    <div class="card-header">
+        <strong>Connections</strong>
+    </div>
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th style="width: 50%">Side A</th>
+                <th style="width: 50%">Side B</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in conns.rows %}
+            <tr>
+                {% if row.a_rowspan > 0 %}
+                <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end p-3">
+                    {% with a=row.a %}
+                        {% if conns.is_breakout %}
+                            <h6><strong>A{{ a.connector }}</strong>{% if a.lanes > 1 %} <span class="badge bg-secondary">{{ a.lanes }} lanes</span>{% endif %}</h6>
+                        {% else %}
+                            <h6 class="text-muted">Side A</h6>
+                        {% endif %}
+                        <div id="a_conn_{{ a.connector }}_fields">
+                            {% render_field a.type_field %}
+                            {% render_field a.parent_field %}
+                            {% render_field a.term_field %}
+                        </div>
+                    {% endwith %}
+                </td>
+                {% endif %}
+                {% if row.b_rowspan > 0 %}
+                <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top p-3">
+                    {% with b=row.b %}
+                        {% if conns.is_breakout %}
+                            <h6><span class="mdi mdi-arrow-right text-muted"></span> <strong>B{{ b.connector }}</strong>{% if b.lanes > 1 %} <span class="badge bg-secondary">{{ b.lanes }} lanes</span>{% endif %}</h6>
+                        {% else %}
+                            <h6 class="text-muted">Side B</h6>
+                        {% endif %}
+                        <div id="b_conn_{{ b.connector }}_fields">
+                            {% render_field b.type_field %}
+                            {% render_field b.parent_field %}
+                            {% render_field b.term_field %}
+                        </div>
+                    {% endwith %}
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endwith %}

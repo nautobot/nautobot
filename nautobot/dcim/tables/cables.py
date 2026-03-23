@@ -12,7 +12,7 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import Cable, CableType
 from nautobot.extras.tables import StatusTableMixin
 
-from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
+from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT, CABLE_TERMINATIONS_MULTI
 
 __all__ = ("CableTable", "CableTypeTable")
 
@@ -70,6 +70,7 @@ class CableTypeTable(BaseTable):
 class CableTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     id = tables.Column(linkify=True, verbose_name="ID")
+    cable_type = tables.Column(linkify=True, verbose_name="Cable Type")
     termination_a_parent = tables.TemplateColumn(
         template_code=CABLE_TERMINATION_PARENT,
         accessor=Accessor("termination_a"),
@@ -80,6 +81,12 @@ class CableTable(StatusTableMixin, BaseTable):
         accessor=Accessor("termination_a"),
         orderable=False,
         verbose_name="Termination A",
+    )
+    terminations_a = tables.TemplateColumn(
+        template_code=CABLE_TERMINATIONS_MULTI,
+        accessor=Accessor("terminations_a"),
+        orderable=False,
+        verbose_name="A-Side Terminations",
     )
     termination_b_parent = tables.TemplateColumn(
         template_code=CABLE_TERMINATION_PARENT,
@@ -92,6 +99,12 @@ class CableTable(StatusTableMixin, BaseTable):
         orderable=False,
         verbose_name="Termination B",
     )
+    terminations_b = tables.TemplateColumn(
+        template_code=CABLE_TERMINATIONS_MULTI,
+        accessor=Accessor("terminations_b"),
+        orderable=False,
+        verbose_name="B-Side Terminations",
+    )
     length = tables.TemplateColumn(template_code=CABLE_LENGTH, order_by="_abs_length")
     color = ColorColumn()
     tags = TagColumn(url_name="dcim:cable_list")
@@ -102,10 +115,13 @@ class CableTable(StatusTableMixin, BaseTable):
             "pk",
             "id",
             "label",
+            "cable_type",
             "termination_a_parent",
             "termination_a",
+            "terminations_a",
             "termination_b_parent",
             "termination_b",
+            "terminations_b",
             "status",
             "type",
             "color",
@@ -116,10 +132,8 @@ class CableTable(StatusTableMixin, BaseTable):
             "pk",
             "id",
             "label",
-            "termination_a_parent",
-            "termination_a",
-            "termination_b_parent",
-            "termination_b",
+            "terminations_a",
+            "terminations_b",
             "status",
             "type",
         )

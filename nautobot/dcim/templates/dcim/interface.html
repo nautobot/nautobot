@@ -108,9 +108,37 @@
                         <td>Cable</td>
                         <td>
                             {{ object.cable|hyperlinked_object }}
-                            <a href="{% url 'dcim:interface_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
-                                <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
-                            </a>
+                            <span class="float-end">
+                                <a href="{% url 'dcim:interface_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
+                                    <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
+                                </a>
+                                <span class="dropdown">
+                                    <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
+                                        <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        {% if perms.dcim.change_cable %}
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'dcim:cable_edit' pk=object.cable.pk %}?return_url={{ object.get_absolute_url }}">
+                                                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit cable
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item text-warning" href="{% url 'dcim:cable_disconnect' pk=object.cable.pk %}?termination_type={{ object|meta:"app_label" }}.{{ object|meta:"model_name" }}&termination_id={{ object.pk }}&return_url={{ object.get_absolute_url }}">
+                                                    <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span> Disconnect
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% if perms.dcim.delete_cable %}
+                                            <li>
+                                                <a class="dropdown-item text-danger" href="{% url 'dcim:cable_delete' pk=object.cable.pk %}?return_url={{ object.get_absolute_url }}">
+                                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete cable
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </span>
+                            </span>
                         </td>
                     </tr>
                     {% if object.connected_endpoint.device or object.connected_endpoint.module %}
@@ -158,18 +186,18 @@
                             </tr>
                         {% endwith %}
                     {% elif object.connected_endpoint.circuit %}
-                        {% with ct=object.connected_endpoint %}
+                        {% with circuit_term=object.connected_endpoint %}
                             <tr>
                                 <td>Provider</td>
-                                <td>{{ ct.circuit.provider|hyperlinked_object }}</td>
+                                <td>{{ circuit_term.circuit.provider|hyperlinked_object }}</td>
                             </tr>
                             <tr>
                                 <td>Circuit</td>
-                                <td>{{ ct.circuit|hyperlinked_object }}</td>
+                                <td>{{ circuit_term.circuit|hyperlinked_object }}</td>
                             </tr>
                             <tr>
                                 <td>Side</td>
-                                <td>{{ ct.term_side }}</td>
+                                <td>{{ circuit_term.term_side }}</td>
                             </tr>
                         {% endwith %}
                     {% endif %}
@@ -187,20 +215,26 @@
             {% else %}
                 <div class="card-body text-secondary">
                     Not connected
-                    {% if perms.dcim.add_cable %}
-                        <span class="dropdown float-end">
-                            {# comment The "fixed" strategy allows the dropdown to break out of the containing card #}
-                            <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
-                                <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='interface' %}?return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='front-port' %}?return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
-                            </ul>
-                        </span>
-                    {% endif %}
+                    <span class="float-end">
+                        {% if perms.dcim.add_cable %}
+                            <span class="dropdown">
+                                <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
+                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> New Cable
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='interface' %}?return_url={{ object.get_absolute_url }}">Interface</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='front-port' %}?return_url={{ object.get_absolute_url }}">Front Port</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?return_url={{ object.get_absolute_url }}">Rear Port</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
+                                </ul>
+                            </span>
+                        {% endif %}
+                        {% if perms.dcim.change_cable %}
+                            <a href="{% url 'dcim:cable_list' %}?location={{ object.parent.location.name }}" class="btn btn-outline-primary btn-sm" title="Connect to an existing cable">
+                                <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Existing Cable
+                            </a>
+                        {% endif %}
+                    </span>
                 </div>
             {% endif %}
         </div>

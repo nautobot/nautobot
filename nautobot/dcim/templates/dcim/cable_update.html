@@ -3,3 +3,76 @@
 {% block form %}
     {% include 'dcim/inc/cable_form.html' %}
 {% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% if form.instance.pk %}
+    <script>
+        $(document).ready(function() {
+            // --- CableType change → reload entire lane form ---
+            var $cableTypeSelect = $("select#id_cable_type");
+            if ($cableTypeSelect.length) {
+                var laneFormUrl = "{% if form.instance.present_in_database %}{% url 'dcim:cable_lane-form' pk=form.instance.pk %}{% else %}{% url 'dcim:cable_lane-form-new' %}{% endif %}";
+
+                $cableTypeSelect.on("change", function() {
+                    var cableTypeId = $(this).val();
+                    var url = laneFormUrl;
+                    if (cableTypeId) {
+                        url += "?cable_type=" + cableTypeId;
+                    }
+                    $.get(url, function(html) {
+                        var $container = $("#lane-terminations-container");
+                        $container.html(html);
+                        // Reinitialize Nautobot's select2 widgets
+                        if (window.nb && window.nb.select2 && window.nb.select2.initializeSelect2Fields) {
+                            window.nb.select2.initializeSelect2Fields($container);
+                        }
+                        // Re-bind type selector listeners on new elements
+                        bindTypeSelectors();
+                    });
+                });
+            }
+
+            // --- Type selector change → reload parent+termination fields for that lane side ---
+            var sideFieldsUrl = "{% if form.instance.present_in_database %}{% url 'dcim:cable_lane-side-fields' pk=form.instance.pk %}{% else %}{% url 'dcim:cable_lane-side-fields-new' %}{% endif %}";
+
+            function bindTypeSelectors() {
+                // Find all type selectors (names like a_conn_1_type, b_conn_2_type)
+                $("select[name$='_type']").each(function() {
+                    var $typeSelect = $(this);
+                    var fieldName = $typeSelect.attr("name");
+
+                    // Match a_conn_N_type or b_conn_N_type
+                    var match = fieldName.match(/^([ab])_conn_(\d+)_type$/);
+                    if (!match) return;
+
+                    var side = match[1];
+                    var conn = match[2];
+                    var containerId = side + "_conn_" + conn + "_fields";
+
+                    $typeSelect.off("change.typeselector").on("change.typeselector", function() {
+                        var termType = $(this).val() || "interface";
+                        var url = sideFieldsUrl + "?connector=" + conn + "&side=" + side + "&type=" + termType;
+
+                        $.get(url, function(html) {
+                            var $container = $("#" + containerId);
+                            // Remove existing parent and termination fields (keep the type select and its wrapper)
+                            var $typeWrapper = $container.children().first();
+                            $container.children().not($typeWrapper).remove();
+                            // Append fresh empty fields
+                            $container.append(html);
+                            // Reinitialize select2
+                            if (window.nb && window.nb.select2 && window.nb.select2.initializeSelect2Fields) {
+                                window.nb.select2.initializeSelect2Fields($container);
+                            }
+                        });
+                    });
+                });
+            }
+
+            // Bind on initial page load
+            bindTypeSelectors();
+        });
+    </script>
+    {% endif %}
+{% endblock %}

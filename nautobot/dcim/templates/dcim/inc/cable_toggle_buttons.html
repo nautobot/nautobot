@@ -1,3 +1,4 @@
+{% load helpers %}
 {% if perms.dcim.change_cable %}
     {% if cable.status.name == 'Connected' %}
         <li>
@@ -15,11 +16,19 @@
         </li>
     {% endif %}
 {% endif %}
+{% if termination and perms.dcim.change_cable %}
+    <li>
+        <a href="{% url 'dcim:cable_disconnect' pk=cable.pk %}?termination_type={{ termination|meta:"app_label" }}.{{ termination|meta:"model_name" }}&termination_id={{ termination.pk }}&return_url={{ request.path }}" class="dropdown-item text-warning">
+            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
+            Disconnect
+        </a>
+    </li>
+{% endif %}
 {% if perms.dcim.delete_cable %}
     <li>
         <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
-            Remove cable
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+            Delete cable
         </a>
     </li>
 {% endif %}

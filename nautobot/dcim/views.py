@@ -191,17 +191,37 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
             if form.is_valid():
                 with transaction.atomic():
+                    from nautobot.dcim.utils import disconnect_termination
+
                     count = 0
+                    disconnected_cables = []
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                         if obj.cable is None:
                             continue
-                        obj.cable.delete()
+                        cable_label = str(obj.cable)
+                        cable_url = obj.cable.get_absolute_url()
+
+                        disconnect_termination(obj)
+
+                        disconnected_cables.append((cable_label, cable_url))
                         count += 1
 
                 messages.success(
                     request,
                     f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
                 )
+                # Inform user that cables still exist
+                for cable_label, cable_url in disconnected_cables:
+                    messages.info(
+                        request,
+                        format_html(
+                            'Cable <a href="{}">{}</a> still exists. '
+                            '<a href="{}delete/">Delete it</a> if no longer needed.',
+                            cable_url,
+                            cable_label,
+                            cable_url,
+                        ),
+                    )
 
                 return redirect(return_url)
 
@@ -5416,6 +5436,7 @@ class CableTypeUIViewSet(NautobotUIViewSet):
         a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
         b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
 
+        # Try to parse existing mapping from the request
         mapping = None
         mapping_json = request.POST.get("mapping", "")
         if mapping_json:
@@ -5452,8 +5473,8 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
-    action_buttons = ("import", "export")
+    queryset = Cable.objects.prefetch_related("terminations")
+    action_buttons = ("add", "import", "export")
 
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
@@ -5462,6 +5483,116 @@ class CableUIViewSet(NautobotUIViewSet):
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+    @action(detail=True, methods=["get"], url_path="lane-form", custom_view_base_action="view")
+    def lane_form(self, request, pk=None):
+        """HTMX endpoint: return the lane termination form partial for an existing cable."""
+        cable = self.get_object()
+        return self._render_lane_form(request, cable)
+
+    @action(detail=False, methods=["get"], url_path="lane-form-new", custom_view_base_action="view")
+    def lane_form_new(self, request):
+        """HTMX endpoint: return the lane termination form partial for a new (unsaved) cable."""
+        cable = Cable()
+        return self._render_lane_form(request, cable)
+
+    def _render_lane_form(self, request, cable):
+        """Shared: render the lane form partial with an optional breakout template override."""
+        cable_type_id = request.GET.get("cable_type")
+        if cable_type_id:
+            try:
+                from nautobot.dcim.models import CableType
+
+                cable.cable_type = CableType.objects.get(pk=cable_type_id)
+            except CableType.DoesNotExist:
+                pass
+
+        initial = {}
+        for key in ("termination_a_type", "termination_a_id"):
+            if request.GET.get(key):
+                initial[key] = request.GET[key]
+
+        form = forms.CableForm(instance=cable, initial=initial)
+        return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
+
+    @action(detail=False, methods=["get"], url_path="lane-side-fields-new", custom_view_base_action="view")
+    def lane_side_fields_new(self, request):
+        """HTMX endpoint (no-pk variant): return parent+termination fields when type changes."""
+        return self._render_lane_side_fields(request)
+
+    @action(detail=True, methods=["get"], url_path="lane-side-fields", custom_view_base_action="view")
+    def lane_side_fields(self, request, pk=None):
+        """HTMX endpoint: return parent+termination fields for a specific lane side when type changes."""
+        return self._render_lane_side_fields(request)
+
+    def _render_lane_side_fields(self, request):
+        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
+
+        connector = request.GET.get("connector", "1")
+        side = request.GET.get("side", "a")
+        term_type = request.GET.get("type", "interface")
+        prefix = f"{side}_conn_{connector}"
+
+        fieldset = CableTerminationFieldSet()
+        result = fieldset.get_fields(prefix, term_type=term_type)
+
+        # Build a minimal form-like object for template rendering
+        from django import forms as django_forms
+
+        temp_form = django_forms.Form()
+        temp_form.fields.update(result["fields"])
+        for k, v in result["initial"].items():
+            temp_form.initial[k] = v
+
+        return render(
+            request,
+            "dcim/inc/cable_lane_side_fields.html",
+            {
+                "form": temp_form,
+                "parent_field": result["meta"]["parent_field"],
+                "term_field": result["meta"]["term_field"],
+            },
+        )
+
+    @action(detail=True, methods=["get"], url_path="disconnect", custom_view_base_action="change")
+    def disconnect(self, request, pk=None):
+        """Disconnect a single termination from this cable without deleting the cable."""
+        from nautobot.dcim.models import CableTerminationEndpoint
+        from nautobot.dcim.utils import disconnect_termination
+
+        cable = self.get_object()
+        termination_type = request.GET.get("termination_type")
+        termination_id = request.GET.get("termination_id")
+        return_url = request.GET.get("return_url") or cable.get_absolute_url()
+
+        if termination_type and termination_id:
+            app_label, model_name = termination_type.split(".")
+            content_type = ContentType.objects.get_by_natural_key(app_label, model_name)
+            endpoint = CableTerminationEndpoint.objects.filter(
+                cable=cable,
+                termination_type=content_type,
+                termination_id=termination_id,
+            ).first()
+
+            if endpoint:
+                termination = endpoint.termination
+                disconnect_termination(termination)
+
+                messages.success(request, f"Disconnected {termination} from {cable}.")
+                messages.info(
+                    request,
+                    format_html(
+                        'Cable <a href="{}">{}</a> still exists.',
+                        cable.get_absolute_url(),
+                        cable,
+                    ),
+                )
+            else:
+                messages.warning(request, "Termination not found on this cable.")
+        else:
+            messages.error(request, "Missing termination_type or termination_id parameters.")
+
+        return redirect(return_url)
 
 
 class PathTraceView(generic.ObjectView):
@@ -5481,10 +5612,29 @@ class PathTraceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         related_paths = []
+        breakout_fanout = False
 
         # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin
         if isinstance(instance, PathEndpoint):
             path = instance._path
+
+            # Check if this is a trunk-side breakout termination that fans out
+            from nautobot.dcim.models import CableTerminationEndpoint
+
+            if path and instance.cable_id:
+                cable = instance.cable
+                if cable and cable.cable_type_id:
+                    # Find this termination's CableTerminationEndpoint row
+                    ct_row = CableTerminationEndpoint.objects.filter(
+                        cable=cable,
+                        termination_id=instance.pk,
+                    ).first()
+                    if ct_row and ct_row.connector is not None:
+                        # Find all CablePaths through this cable (all lanes)
+                        all_cable_paths = CablePath.objects.filter(path__contains=cable).prefetch_related("origin")
+                        if all_cable_paths.count() > 1:
+                            related_paths = all_cable_paths
+                            breakout_fanout = True
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:
@@ -5504,9 +5654,19 @@ class PathTraceView(generic.ObjectView):
             else:
                 path = related_paths.first()
 
+        # Generate SVG trace diagram
+        from nautobot.dcim.trace_diagram import CableTraceSVG
+
+        trace_svg = ""
+        if isinstance(instance, PathEndpoint):
+            diagram = CableTraceSVG(instance, base_url=request.build_absolute_uri("/").rstrip("/"))
+            trace_svg = diagram.render()
+
         return {
             "path": path,
             "related_paths": related_paths,
+            "breakout_fanout": breakout_fanout,
+            "trace_svg": trace_svg,
             "total_length": path.get_total_length() if path else None,
             "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
@@ -5539,58 +5699,37 @@ class CableCreateView(generic.ObjectEditView):
         termination_b_type_name = url_kwargs.get("termination_b_type")
         self.termination_b_type = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
 
-        # Initialize Cable termination attributes
-        obj.termination_a = termination_a_type.objects.get(pk=termination_a_id)
-        obj.termination_b_type = self.termination_b_type
+        # Initialize Cable termination attributes (stored for post-save signal to create CableTermination rows)
+        obj._initial_termination_a = termination_a_type.objects.get(pk=termination_a_id)
+        obj._initial_termination_b_type = self.termination_b_type
 
         return obj
 
+    def get_extra_context(self, request, instance):
+        ct = super().get_extra_context(request, instance)
+        term_a = getattr(instance, "_initial_termination_a", None) or instance.termination_a
+        ct["termination_a"] = term_a
+        ct["termination_b_type"] = getattr(self, "termination_b_type", ContentType()).name
+        return ct
+
     def get(self, request, *args, **kwargs):
-        if self.model_form is None:
+        # Redirect to the standard cable add form with A-side pre-populated via URL params.
+        # This unifies the connect and edit flows into a single form (CableForm).
+        termination_a_type = kwargs.get("termination_a_type")
+        termination_a_id = kwargs.get("termination_a_id")
+
+        if not termination_a_type or not termination_a_id:
             return HttpResponse(status_code=400)
 
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        ct = ContentType.objects.get_for_model(termination_a_type)
+        return_url = request.GET.get("return_url", "")
 
-        # Parse initial data manually to avoid setting field values as lists
-        initial_data = {k: request.GET[k] for k in request.GET}
+        add_url = reverse("dcim:cable_add")
+        params = f"?termination_a_type={ct.app_label}.{ct.model}&termination_a_id={termination_a_id}"
+        if return_url:
+            params += f"&return_url={return_url}"
 
-        # Set initial location and rack based on side A termination (if not already set)
-        termination_a_location = getattr(obj.termination_a.parent, "location", None)
-        if "termination_b_location" not in initial_data:
-            initial_data["termination_b_location"] = termination_a_location
-        if "termination_b_rack" not in initial_data:
-            initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
-
-        form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
-
-        # the following builds up a CSS query selector to match all drop-downs
-        # in the termination_b form except the termination_b_id. this is necessary to reset the termination_b_id
-        # drop-down whenever any of these drop-downs' values changes. this cannot be hardcoded because the form is
-        # selected dynamically and therefore the fields change depending on the value of termination_b_type (L2358)
-        js_select_onchange_query = ", ".join(
-            [
-                f"select#id_{field_name}"
-                for field_name, field in form.fields.items()
-                # include all termination_b_* fields:
-                if field_name.startswith("termination_b")
-                # exclude termination_b_id:
-                and field_name != "termination_b_id"
-                # include only HTML select fields:
-                and field.widget.input_type == "select"
-            ]
-        )
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": Cable._meta.verbose_name,
-                "termination_b_type": self.termination_b_type.name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "js_select_onchange_query": js_select_onchange_query,
-            },
-        )
+        return redirect(f"{add_url}{params}")
 
 
 #
