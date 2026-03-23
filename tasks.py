@@ -710,10 +710,14 @@ def post_upgrade(context):
     This will run the following management commands with default settings, in order:
 
     - migrate
+    - clear_cache
     - trace_paths
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
+    - send_installation_metrics
+    - refresh_content_type_cache
+    - refresh_dynamic_group_member_caches
     """
     command = "nautobot-server post_upgrade"
 
