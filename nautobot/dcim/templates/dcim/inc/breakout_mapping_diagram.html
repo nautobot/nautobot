@@ -1,0 +1,9 @@
+{% comment %}
+    Breakout lane mapping diagram — renders pre-generated SVG.
+    Context: diagram_svg (safe SVG string from get_diagram_svg or get_mapping_diagram_svg)
+{% endcomment %}
+{% if diagram_svg %}
+<div class="text-center">
+    {{ diagram_svg|safe }}
+</div>
+{% endif %}

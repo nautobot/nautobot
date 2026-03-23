@@ -76,3 +76,17 @@ class CableTable(StatusTableMixin, BaseTable):
             "status",
             "type",
         )
+
+
+# PLACEHOLDER: BreakoutTemplateTable — full implementation in commit 5
+from nautobot.dcim.models import BreakoutTemplate
+
+
+class BreakoutTemplateTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+
+    class Meta(BaseTable.Meta):
+        model = BreakoutTemplate
+        fields = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions", "is_shuffle")
+        default_columns = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions")

@@ -2531,3 +2531,14 @@ class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
     class Meta:
         model = DeviceClusterAssignment
         fields = ["device", "cluster"]
+
+
+# PLACEHOLDER: BreakoutTemplateFilterSet — full implementation in commit 5
+from nautobot.core.filters import BaseFilterSet, NameSearchFilterSet
+from nautobot.dcim.models import BreakoutTemplate
+
+
+class BreakoutTemplateFilterSet(BaseFilterSet, NameSearchFilterSet):
+    class Meta:
+        model = BreakoutTemplate
+        fields = ["id", "name"]

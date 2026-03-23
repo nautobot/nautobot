@@ -1,0 +1,51 @@
+<table class="table table-sm table-hover">
+    <thead>
+        <tr>
+            <th>Lane</th>
+            <th>A Connector</th>
+            <th>A Position</th>
+            <th></th>
+            <th>B Connector</th>
+            <th>B Position</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in mapping %}
+            <tr>
+                <td class="align-middle"><strong>{{ forloop.counter }}</strong></td>
+                <td>
+                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_a_connector">
+                        {% for i in a_connector_range %}
+                            <option value="{{ i }}" {% if i == entry.a_connector %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_a_position">
+                        {% for i in a_position_range %}
+                            <option value="{{ i }}" {% if i == entry.a_position %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="align-middle text-center"><span class="mdi mdi-arrow-right"></span></td>
+                <td>
+                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_b_connector">
+                        {% for i in b_connector_range %}
+                            <option value="{{ i }}" {% if i == entry.b_connector %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_b_position">
+                        {% for i in b_position_range %}
+                            <option value="{{ i }}" {% if i == entry.b_position %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6" class="text-muted text-center">Set connector and position counts above to generate a mapping.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<input type="hidden" name="lane_count" value="{{ mapping|length }}">

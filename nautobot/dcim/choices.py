@@ -1445,6 +1445,25 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
+# Polarity Methods (Breakout Templates)
+#
+
+
+class PolarityMethodChoices(ChoiceSet):
+    METHOD_STRAIGHT = "straight-through"
+    METHOD_REVERSED = "reversed"
+    METHOD_PAIR_REVERSED = "pair-reversed"
+    METHOD_CUSTOM = "custom"
+
+    CHOICES = (
+        (METHOD_STRAIGHT, "Straight-through"),
+        (METHOD_REVERSED, "Reversed"),
+        (METHOD_PAIR_REVERSED, "Pair-reversed"),
+        (METHOD_CUSTOM, "Custom"),
+    )
+
+
+#
 # Power Panels
 #
 

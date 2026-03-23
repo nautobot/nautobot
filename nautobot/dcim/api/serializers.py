@@ -1160,3 +1160,8 @@ class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = DeviceClusterAssignment
         fields = "__all__"
+
+
+# PLACEHOLDER: BreakoutTemplateSerializer — full implementation in commit 5
+class BreakoutTemplateSerializer:
+    pass

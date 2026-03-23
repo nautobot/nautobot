@@ -105,6 +105,7 @@ from .api import serializers
 from .choices import DeviceFaceChoices
 from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
+    BreakoutTemplate,
     Cable,
     CablePath,
     ConsolePort,
@@ -5355,6 +5356,86 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
     default_return_url = "dcim:device_list"
+
+
+#
+# Breakout Templates
+#
+
+
+class BreakoutTemplateUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.BreakoutTemplateFilterSet
+    filterset_form_class = forms.BreakoutTemplateFilterForm
+    form_class = forms.BreakoutTemplateForm
+    bulk_update_form_class = forms.BreakoutTemplateBulkEditForm
+    queryset = BreakoutTemplate.objects.all()
+    serializer_class = serializers.BreakoutTemplateSerializer
+    table_class = tables.BreakoutTemplateTable
+    lookup_field = "pk"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Lane Mapping Diagram",
+                object_field="get_diagram_svg",
+                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
+                body_content_template_path="dcim/inc/breakout_template_diagram_panel.html",
+            ),
+        )
+    )
+
+    @action(detail=False, methods=["get"], url_path="mapping-editor")
+    def mapping_editor(self, request):
+        """HTMX endpoint: return a server-rendered mapping table for given connector/position counts."""
+        import json
+
+        a_connectors = int(request.GET.get("a_connectors", 0) or 0)
+        a_positions = int(request.GET.get("a_positions", 0) or 0)
+        b_connectors = int(request.GET.get("b_connectors", 0) or 0)
+        b_positions = int(request.GET.get("b_positions", 0) or 0)
+
+        mapping = None
+        mapping_json = request.GET.get("mapping", "")
+        if mapping_json:
+            try:
+                mapping = json.loads(mapping_json)
+                if not isinstance(mapping, list):
+                    mapping = None
+            except (json.JSONDecodeError, TypeError):
+                mapping = None
+
+        if not mapping or not a_connectors or not a_positions or not b_connectors or not b_positions:
+            mapping = []
+            lane_index = 0
+            for a_connector in range(1, a_connectors + 1):
+                for a_position in range(1, a_positions + 1):
+                    if b_positions > 0:
+                        b_connector = lane_index // b_positions + 1
+                        b_position = lane_index % b_positions + 1
+                    else:
+                        b_connector = lane_index + 1
+                        b_position = 1
+                    mapping.append({
+                        "a_connector": a_connector,
+                        "a_position": a_position,
+                        "b_connector": b_connector,
+                        "b_position": b_position,
+                    })
+                    lane_index += 1
+
+        return render(request, "dcim/inc/breakout_mapping_table.html", {
+            "mapping": mapping,
+            "a_connector_range": range(1, a_connectors + 1),
+            "a_position_range": range(1, a_positions + 1),
+            "b_connector_range": range(1, b_connectors + 1),
+            "b_position_range": range(1, b_positions + 1),
+        })
 
 
 #

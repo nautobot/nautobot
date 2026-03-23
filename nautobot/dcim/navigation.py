@@ -420,6 +420,15 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
+                        link="dcim:breakouttemplate_list",
+                        name="Breakout Templates",
+                        weight=150,
+                        permissions=[
+                            "dcim.view_breakouttemplate",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
                         link="dcim:console_connections_list",
                         name="Console Connections",
                         weight=200,

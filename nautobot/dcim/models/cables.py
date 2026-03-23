@@ -11,7 +11,7 @@ from django.utils.functional import classproperty
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
-from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
+from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, PolarityMethodChoices
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
@@ -32,11 +32,228 @@ from .device_components import FrontPort, RearPort
 from .devices import Device
 
 __all__ = (
+    "BreakoutTemplate",
     "Cable",
     "CablePath",
 )
 
 logger = logging.getLogger(__name__)
+
+
+#
+# Breakout Templates
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class BreakoutTemplate(PrimaryModel):
+    """
+    A reusable definition of a cable's internal lane structure, describing connectors,
+    positions per connector, and the A-to-B lane mapping for breakout cables.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    a_connectors = models.PositiveSmallIntegerField(help_text="Number of physical connectors on the A side.")
+    a_positions = models.PositiveSmallIntegerField(help_text="Number of positions (lanes) per A-side connector.")
+    b_connectors = models.PositiveSmallIntegerField(help_text="Number of physical connectors on the B side.")
+    b_positions = models.PositiveSmallIntegerField(help_text="Number of positions (lanes) per B-side connector.")
+    mapping = models.JSONField(
+        help_text="A→B lane mapping as a JSON array of objects with keys: "
+        "a_connector, a_position, b_connector, b_position."
+    )
+    is_shuffle = models.BooleanField(
+        default=False,
+        help_text="Indicates non-linear (polarity-shuffled) position mapping. Informational only.",
+    )
+    strands_per_lane = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical strands per logical lane (e.g. 1 for copper, 2 for duplex fiber).",
+    )
+    polarity_method = models.CharField(
+        max_length=50,
+        choices=PolarityMethodChoices,
+        blank=True,
+        help_text="Fiber polarity method. Informational only.",
+    )
+
+    natural_key_field_names = ["name"]
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def total_lanes(self):
+        """Total number of discrete lanes defined in the mapping."""
+        if isinstance(self.mapping, list):
+            return len(self.mapping)
+        return 0
+
+    @property
+    def total_strands(self):
+        """Total physical strand count: total_lanes x strands_per_lane."""
+        return self.total_lanes * (self.strands_per_lane or 1)
+
+    @property
+    def is_breakout(self):
+        """True if A-side and B-side connector/position counts differ."""
+        return self.a_connectors != self.b_connectors or self.a_positions != self.b_positions
+
+    def get_diagram_svg(self):
+        """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
+        from nautobot.dcim.breakout_diagram import BreakoutDiagramSVG
+
+        diagram = BreakoutDiagramSVG(self, show_status=False)
+        return diagram.render()
+
+    def get_diagram_rows(self, connected_a=None, connected_b=None):
+        """
+        Build flat rows for the lane mapping diagram.
+
+        One row per unique (a_connector, b_connector) pair. Uses rowspan so each
+        connector node appears once, spanning its mapped partners.
+        """
+        if not self.mapping:
+            return []
+
+        a_to_b = {}
+        b_to_a = {}
+        for entry in self.mapping:
+            a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
+            b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
+
+        pairs = set()
+        for entry in self.mapping:
+            pairs.add((entry["a_connector"], entry["b_connector"]))
+        pairs = sorted(pairs)
+
+        rows = []
+        a_seen = set()
+        b_seen = set()
+
+        for a_conn, b_conn in pairs:
+            show_a = a_conn not in a_seen
+            show_b = b_conn not in b_seen
+            a_rowspan = len(a_to_b.get(a_conn, [])) if show_a else 0
+            b_rowspan = len(b_to_a.get(b_conn, [])) if show_b else 0
+
+            a_seen.add(a_conn)
+            b_seen.add(b_conn)
+
+            rows.append(
+                {
+                    "a_connector": a_conn,
+                    "b_connector": b_conn,
+                    "show_a": show_a,
+                    "show_b": show_b,
+                    "a_rowspan": a_rowspan,
+                    "b_rowspan": b_rowspan,
+                    "a_lanes": self.a_positions,
+                    "b_lanes": self.b_positions,
+                    "a_connected": a_conn in connected_a if connected_a is not None else False,
+                    "b_connected": b_conn in connected_b if connected_b is not None else False,
+                }
+            )
+
+        return rows
+
+    @property
+    def cable_count(self):
+        """Number of Cable instances currently assigned this template."""
+        return self.cables.count()
+
+    def clean(self):
+        super().clean()
+        self._validate_mapping()
+
+    def _validate_mapping(self):
+        """Validate the mapping JSON structure and consistency with connector/position counts."""
+        if not isinstance(self.mapping, list):
+            raise ValidationError({"mapping": "Mapping must be a JSON array."})
+
+        expected_a_lane_count = (self.a_connectors or 0) * (self.a_positions or 0)
+        expected_b_lane_count = (self.b_connectors or 0) * (self.b_positions or 0)
+        actual_lane_count = len(self.mapping)
+
+        if expected_a_lane_count != actual_lane_count:
+            raise ValidationError(
+                {
+                    "mapping": f"Expected {expected_a_lane_count} lanes (a_connectors x a_positions), got {actual_lane_count}."
+                }
+            )
+        if expected_b_lane_count != actual_lane_count:
+            raise ValidationError(
+                {
+                    "mapping": f"Expected {expected_b_lane_count} lanes (b_connectors x b_positions), got {actual_lane_count}."
+                }
+            )
+
+        required_keys = {"a_connector", "a_position", "b_connector", "b_position"}
+        seen_a_pairs = set()
+        seen_b_pairs = set()
+
+        for entry_index, entry in enumerate(self.mapping):
+            if not isinstance(entry, dict):
+                raise ValidationError({"mapping": f"Entry {entry_index} must be a JSON object."})
+
+            missing_keys = required_keys - set(entry.keys())
+            if missing_keys:
+                raise ValidationError(
+                    {"mapping": f"Entry {entry_index} is missing keys: {', '.join(sorted(missing_keys))}."}
+                )
+
+            for key in required_keys:
+                if not isinstance(entry[key], int) or entry[key] < 1:
+                    raise ValidationError({"mapping": f"Entry {entry_index} key '{key}' must be a positive integer."})
+
+            a_connector = entry["a_connector"]
+            a_position = entry["a_position"]
+            b_connector = entry["b_connector"]
+            b_position = entry["b_position"]
+
+            if a_connector < 1 or a_connector > self.a_connectors:
+                raise ValidationError(
+                    {
+                        "mapping": f"Entry {entry_index}: a_connector {a_connector} out of range [1, {self.a_connectors}]."
+                    }
+                )
+            if a_position < 1 or a_position > self.a_positions:
+                raise ValidationError(
+                    {"mapping": f"Entry {entry_index}: a_position {a_position} out of range [1, {self.a_positions}]."}
+                )
+            if b_connector < 1 or b_connector > self.b_connectors:
+                raise ValidationError(
+                    {
+                        "mapping": f"Entry {entry_index}: b_connector {b_connector} out of range [1, {self.b_connectors}]."
+                    }
+                )
+            if b_position < 1 or b_position > self.b_positions:
+                raise ValidationError(
+                    {"mapping": f"Entry {entry_index}: b_position {b_position} out of range [1, {self.b_positions}]."}
+                )
+
+            a_pair = (a_connector, a_position)
+            if a_pair in seen_a_pairs:
+                raise ValidationError(
+                    {"mapping": f"Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
+                )
+            seen_a_pairs.add(a_pair)
+
+            b_pair = (b_connector, b_position)
+            if b_pair in seen_b_pairs:
+                raise ValidationError(
+                    {"mapping": f"Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
+                )
+            seen_b_pairs.add(b_pair)
 
 
 #

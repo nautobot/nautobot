@@ -1,4 +1,4 @@
-from .cables import Cable, CablePath
+from .cables import BreakoutTemplate, Cable, CablePath
 from .device_component_templates import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
