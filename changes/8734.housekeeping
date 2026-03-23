@@ -1,0 +1,1 @@
+Changed test_cleanup_object_changes to ensure that it always has something to clean up and something to find after cleanup.
