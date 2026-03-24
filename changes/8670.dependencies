@@ -1,3 +1,0 @@
-Updated `Node.js` UI dependency to version 24.
-Updated `npm` UI dependency to `>=11.9.0`.
-Updated `copy-webpack-plugin` npm development dependency to `^14.0.0`.
