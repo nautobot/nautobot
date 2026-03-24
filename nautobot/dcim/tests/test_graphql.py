@@ -3,18 +3,31 @@ from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
-from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
+from nautobot.dcim.choices import (
+    InterfaceDuplexChoices,
+    InterfaceSpeedChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.models import (
     ConsolePortTemplate,
+    ConsoleServerPortTemplate,
     Controller,
     Device,
+    DeviceBayTemplate,
     DeviceType,
+    FrontPortTemplate,
     Interface,
     InterfaceTemplate,
     Location,
     LocationType,
     Manufacturer,
+    ModuleBayTemplate,
     Platform,
+    PowerOutletTemplate,
+    PowerPortTemplate,
+    RearPortTemplate,
 )
 from nautobot.extras.models import DynamicGroup, Role, Status
 from nautobot.users.models import ObjectPermission
@@ -30,14 +43,51 @@ class GraphQLTestCase(TestCase):
         self.manufacturer = Manufacturer.objects.first()
         self.platform = Platform.objects.create(name="Platform", network_driver="cisco_ios")
         self.device_type = DeviceType.objects.create(model="Model", manufacturer=self.manufacturer)
+        self.parent_device_type = DeviceType.objects.create(
+            model="Parent Model",
+            manufacturer=self.manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
         self.console_port_template = ConsolePortTemplate.objects.create(
             device_type=self.device_type,
             name="Console Port 1",
+        )
+        self.console_server_port_template = ConsoleServerPortTemplate.objects.create(
+            device_type=self.device_type,
+            name="Console Server Port 1",
+        )
+        self.power_port_template = PowerPortTemplate.objects.create(
+            device_type=self.device_type,
+            name="Power Port 1",
+        )
+        self.power_outlet_template = PowerOutletTemplate.objects.create(
+            device_type=self.device_type,
+            name="Power Outlet 1",
         )
         self.interface_template = InterfaceTemplate.objects.create(
             device_type=self.device_type,
             name="eth0-template",
             type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        self.rear_port_template = RearPortTemplate.objects.create(
+            device_type=self.device_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+        )
+        self.front_port_template = FrontPortTemplate.objects.create(
+            device_type=self.device_type,
+            name="Front Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+            rear_port_template=self.rear_port_template,
+            rear_port_position=1,
+        )
+        self.device_bay_template = DeviceBayTemplate.objects.create(
+            device_type=self.parent_device_type,
+            name="Device Bay 1",
+        )
+        self.module_bay_template = ModuleBayTemplate.objects.create(
+            device_type=self.device_type,
+            name="Module Bay 1",
         )
         device_status = Status.objects.get_for_model(Device).first()
         self.device = Device.objects.create(
@@ -216,20 +266,25 @@ class GraphQLTestCase(TestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_component_templates(self):
-        """Verify that component template models are queryable via GraphQL."""
-        with self.subTest("console_port_templates query"):
-            query = "{ console_port_templates { id name } }"
-            resp = execute_query(query, user=self.user)
-            self.assertIsNone(resp.errors)
-            names = [t["name"] for t in resp.data["console_port_templates"]]
-            self.assertIn(self.console_port_template.name, names)
-
-        with self.subTest("interface_templates query"):
-            query = "{ interface_templates { id name type } }"
-            resp = execute_query(query, user=self.user)
-            self.assertIsNone(resp.errors)
-            names = [t["name"] for t in resp.data["interface_templates"]]
-            self.assertIn(self.interface_template.name, names)
+        """Verify that all ComponentTemplateModel subclasses are queryable via GraphQL."""
+        cases = [
+            ("console_port_templates", self.console_port_template),
+            ("console_server_port_templates", self.console_server_port_template),
+            ("power_port_templates", self.power_port_template),
+            ("power_outlet_templates", self.power_outlet_template),
+            ("interface_templates", self.interface_template),
+            ("rear_port_templates", self.rear_port_template),
+            ("front_port_templates", self.front_port_template),
+            ("device_bay_templates", self.device_bay_template),
+            ("module_bay_templates", self.module_bay_template),
+        ]
+        for query_name, instance in cases:
+            with self.subTest(query_name):
+                query = f"{{ {query_name} {{ id name }} }}"
+                resp = execute_query(query, user=self.user)
+                self.assertIsNone(resp.errors)
+                names = [t["name"] for t in resp.data[query_name]]
+                self.assertIn(instance.name, names)
 
 
 class GraphQLFKPermissionTest(GraphQLTestCase):
