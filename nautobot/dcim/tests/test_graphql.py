@@ -232,32 +232,67 @@ class GraphQLTestCase(TestCase):
             type=PortTypeChoices.TYPE_8P8C,
         )
         cases = [
-            ("console_port_templates", ConsolePortTemplate.objects.create(
-                device_type=self.device_type, name="Console Port 1",
-            )),
-            ("console_server_port_templates", ConsoleServerPortTemplate.objects.create(
-                device_type=self.device_type, name="Console Server Port 1",
-            )),
-            ("power_port_templates", PowerPortTemplate.objects.create(
-                device_type=self.device_type, name="Power Port 1",
-            )),
-            ("power_outlet_templates", PowerOutletTemplate.objects.create(
-                device_type=self.device_type, name="Power Outlet 1",
-            )),
-            ("interface_templates", InterfaceTemplate.objects.create(
-                device_type=self.device_type, name="eth0-template", type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            )),
+            (
+                "console_port_templates",
+                ConsolePortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Console Port 1",
+                ),
+            ),
+            (
+                "console_server_port_templates",
+                ConsoleServerPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Console Server Port 1",
+                ),
+            ),
+            (
+                "power_port_templates",
+                PowerPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Power Port 1",
+                ),
+            ),
+            (
+                "power_outlet_templates",
+                PowerOutletTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Power Outlet 1",
+                ),
+            ),
+            (
+                "interface_templates",
+                InterfaceTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="eth0-template",
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                ),
+            ),
             ("rear_port_templates", rear_port_template),
-            ("front_port_templates", FrontPortTemplate.objects.create(
-                device_type=self.device_type, name="Front Port 1",
-                type=PortTypeChoices.TYPE_8P8C, rear_port_template=rear_port_template, rear_port_position=1,
-            )),
-            ("device_bay_templates", DeviceBayTemplate.objects.create(
-                device_type=parent_device_type, name="Device Bay 1",
-            )),
-            ("module_bay_templates", ModuleBayTemplate.objects.create(
-                device_type=self.device_type, name="Module Bay 1",
-            )),
+            (
+                "front_port_templates",
+                FrontPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Front Port 1",
+                    type=PortTypeChoices.TYPE_8P8C,
+                    rear_port_template=rear_port_template,
+                    rear_port_position=1,
+                ),
+            ),
+            (
+                "device_bay_templates",
+                DeviceBayTemplate.objects.create(
+                    device_type=parent_device_type,
+                    name="Device Bay 1",
+                ),
+            ),
+            (
+                "module_bay_templates",
+                ModuleBayTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Module Bay 1",
+                ),
+            ),
         ]
         for query_name, instance in cases:
             with self.subTest(query_name=query_name):
