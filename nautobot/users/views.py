@@ -21,6 +21,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from rest_framework import exceptions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -211,7 +212,6 @@ class UserUIViewSet(
     update_form_class = UserUpdateForm
     bulk_update_form_class = UserBulkEditForm
     action_buttons = ("add", "export")
-
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
