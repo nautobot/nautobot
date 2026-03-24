@@ -71,6 +71,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobHook,
+    JobKillRequest,
     JobLogEntry,
     JobQueue,
     JobQueueAssignment,
@@ -718,19 +719,31 @@ class ScheduledJobSerializer(BaseModelSerializer):
 
 class JobResultSerializer(CustomFieldModelSerializerMixin, BaseModelSerializer):
     status = ChoiceField(choices=JobResultStatusChoices, read_only=True)
+    is_killable = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = JobResult
         fields = "__all__"
         extra_kwargs = {
             "files": {"read_only": True},
+            "kill_type": {"read_only": True},
+            "killed_by": {"read_only": True},
+            "killed_at": {"read_only": True},
         }
 
     def get_field_names(self, declared_fields, info):
         """Add reverse relation to related FileProxy objects."""
         fields = list(super().get_field_names(declared_fields, info))
         self.extend_field_names(fields, "files")
+        self.extend_field_names(fields, "is_killable")
         return fields
+
+
+class JobKillRequestSerializer(BaseModelSerializer):
+    class Meta:
+        model = JobKillRequest
+        fields = "__all__"
+        read_only_fields = ["__all__"]
 
 
 class JobRunResponseSerializer(serializers.Serializer):

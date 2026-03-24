@@ -83,6 +83,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobHook,
+    JobKillRequest,
     JobLogEntry,
     JobQueue,
     JobQueueAssignment,
@@ -1182,6 +1183,24 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     class Meta:
         model = JobResult
         fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+
+
+class JobKillRequestFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "job_result__name": "icontains",
+            "requested_by__username": "icontains",
+        },
+    )
+    requested_by = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
+        label="Requested By (username or ID)",
+    )
+
+    class Meta:
+        model = JobKillRequest
+        fields = "__all__"
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

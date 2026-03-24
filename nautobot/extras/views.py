@@ -149,6 +149,7 @@ from .models import (
     JobButton,
     JobConsoleEntry,
     JobHook,
+    JobKillRequest,
     JobQueue,
     JobResult,
     MetadataType,
@@ -3068,6 +3069,34 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
         return False
 
 
+class JobKillRequestUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+):
+    queryset = JobKillRequest.objects.all()
+    filterset_class = filters.JobKillRequestFilterSet
+    table_class = tables.JobKillRequestTable
+    serializer_class = serializers.JobKillRequestSerializer
+    action_buttons = ()
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Kill Request Details",
+                weight=100,
+                fields=[
+                    "job_result",
+                    "requested_by",
+                    "requested_at",
+                    "acknowledged_at",
+                    "status",
+                    "error_detail",
+                ],
+            ),
+        ],
+    )
+
+
 class JobResultUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -3126,6 +3155,9 @@ class JobResultUIViewSet(
                     "duration",
                     "result",
                     "files",
+                    "kill_type",
+                    "killed_by",
+                    "killed_at",
                 ],
                 value_transforms={
                     "status": [render_jobresult_status],
@@ -3167,6 +3199,7 @@ class JobResultUIViewSet(
                     else None
                 ),
             ),
+            # PLACEHOLDER: Terminate Job button will be added in commit 4 (wire-up)
             JobResultButton(
                 weight=120,
                 label="Export Logs",
@@ -3271,6 +3304,8 @@ class JobResultUIViewSet(
             queryset = queryset.defer("result", "task_args", "task_kwargs", "celery_kwargs", "traceback", "meta")
 
         return queryset
+
+    # PLACEHOLDER: terminate and reap actions will be added in commit 4 (wire-up)
 
     @action(
         detail=True,

@@ -320,6 +320,32 @@ class JobResultStatusChoices(ChoiceSet):
         return states.precedence(state)
 
 
+class KillTypeChoices(ChoiceSet):
+    """How a job was killed via the kill switch."""
+
+    TERMINATE = "terminate"
+    REAP = "reap"
+
+    CHOICES = (
+        (TERMINATE, "Terminate"),
+        (REAP, "Reap"),
+    )
+
+
+class KillRequestStatusChoices(ChoiceSet):
+    """Lifecycle states of a JobKillRequest."""
+
+    STATUS_PENDING = "pending"
+    STATUS_ACKNOWLEDGED = "acknowledged"
+    STATUS_FAILED = "failed"
+
+    CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACKNOWLEDGED, "Acknowledged"),
+        (STATUS_FAILED, "Failed"),
+    )
+
+
 #
 # Log Levels for Jobs (formerly Reports and Custom Scripts)
 #

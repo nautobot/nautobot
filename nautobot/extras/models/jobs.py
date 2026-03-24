@@ -41,6 +41,8 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    KillRequestStatusChoices,
+    KillTypeChoices,
     LogLevelChoices,
 )
 from nautobot.extras.constants import (
@@ -715,6 +717,27 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
+    # Kill switch fields
+    kill_type = models.CharField(
+        max_length=32,
+        choices=KillTypeChoices,
+        blank=True,
+        help_text="How the job was killed. Empty for jobs that complete or fail normally.",
+    )
+    killed_by = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="killed_job_results",
+        help_text="The user who initiated the kill action.",
+    )
+    killed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp at which the kill was initiated.",
+    )
+
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -788,6 +811,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     @property
     def job_description(self):
         return self.job_model.description if self.job_model else None
+
+    # PLACEHOLDER: is_killable, backend properties and clean() validation will be added in commit 4 (wire-up)
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
@@ -1202,6 +1227,64 @@ class JobConsoleEntry(BaseModel):
 
     class Meta:
         ordering = ["timestamp"]
+
+
+#
+# Job Kill Request
+#
+
+
+class JobKillRequest(BaseModel):
+    """
+    Captures the intent to terminate a running or pending job.
+
+    A separate model from JobResult so the intent is durable (survives worker restarts),
+    the UI can show "Termination Pending" before the worker confirms, and the termination
+    flow is independently testable.
+    """
+
+    job_result = models.OneToOneField(
+        to="extras.JobResult",
+        on_delete=models.CASCADE,
+        related_name="kill_request",
+    )
+    requested_by = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="job_kill_requests",
+        help_text="User who requested the kill. Null when initiated by the reap workflow.",
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp at which the worker or reap workflow confirmed termination was attempted.",
+    )
+    status = models.CharField(
+        max_length=32,
+        choices=KillRequestStatusChoices,
+        default=KillRequestStatusChoices.STATUS_PENDING,
+    )
+    error_detail = models.TextField(
+        blank=True,
+        help_text="Error detail if the kill attempt failed.",
+    )
+
+    documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    is_data_compliance_model = False
+    is_version_controlled = False
+
+    class Meta:
+        ordering = ["-requested_at"]
+
+    def __str__(self):
+        return f"Kill request for {self.job_result} ({self.status})"
+
+    # PLACEHOLDER: is_pending property and clean() validation will be added in commit 4 (wire-up)
+
+    natural_key_field_names = ["id"]
 
 
 #

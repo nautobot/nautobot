@@ -83,6 +83,9 @@ router.register("job-queue-assignments", views.JobQueueAssignmentViewSet)
 # Job Results
 router.register("job-results", views.JobResultViewSet)
 
+# Job Kill Requests
+router.register("job-kill-requests", views.JobKillRequestViewSet)
+
 # Scheduled Jobs
 router.register("scheduled-jobs", views.ScheduledJobViewSet)
 

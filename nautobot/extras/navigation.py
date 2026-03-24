@@ -208,6 +208,24 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
+                        link="extras:jobkillrequest_list",
+                        name="Job Kill Requests",
+                        weight=450,
+                        permissions=[
+                            "extras.view_jobkillrequest",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="worker_status",
+                        name="Worker Status",
+                        weight=420,
+                        permissions=[
+                            "extras.view_jobresult",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
                         link="extras:jobhook_list",
                         name="Job Hooks",
                         weight=500,

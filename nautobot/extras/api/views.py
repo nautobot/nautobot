@@ -61,6 +61,7 @@ from nautobot.extras.models import (
     Job,
     JobButton,
     JobHook,
+    JobKillRequest,
     JobLogEntry,
     JobQueue,
     JobQueueAssignment,
@@ -1153,6 +1154,23 @@ class JobResultViewSet(
         logs = job_result.job_log_entries.all()
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+    # PLACEHOLDER: terminate action will be added in commit 4 (wire-up)
+
+
+#
+# Job Kill Requests
+#
+
+
+class JobKillRequestViewSet(ReadOnlyModelViewSet):
+    """
+    Read-only view of job kill requests for observability.
+    """
+
+    queryset = JobKillRequest.objects.all()
+    serializer_class = serializers.JobKillRequestSerializer
+    filterset_class = filters.JobKillRequestFilterSet
 
 
 #

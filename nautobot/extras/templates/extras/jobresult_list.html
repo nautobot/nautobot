@@ -1,0 +1,7 @@
+{% extends 'generic/object_list.html' %}
+
+{% block buttons %}
+    <a href="{% url 'extras:jobresult_list' %}?status=STARTED&status=PENDING" class="btn btn-primary">
+        <span class="mdi mdi-play-circle-outline" aria-hidden="true"></span> Active Jobs
+    </a>
+{% endblock %}

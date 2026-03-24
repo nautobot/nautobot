@@ -216,7 +216,7 @@ class WorkerStatusView(UserPassesTestMixin, UIComponentsMixin, TemplateView):
     view_titles = Titles(titles={"*": "Nautobot Worker Status"})
 
     def test_func(self):
-        return self.request.user.is_staff
+        return self.request.user.has_perm("extras.view_jobresult")
 
     def get(self, request, *args, **kwargs):
         from nautobot.extras.models import JobResult

@@ -47,6 +47,7 @@ from .models import (
     Job as JobModel,
     JobButton,
     JobHook,
+    JobKillRequest,
     JobLogEntry,
     JobQueue,
     JobResult,
@@ -176,6 +177,7 @@ JOB_RESULT_BUTTONS = """
         </li>
     {% endif %}
 {% endif %}
+{# PLACEHOLDER: Terminate and Reap buttons will be added in commit 4 (wire-up) #}
 """
 
 SCHEDULED_JOB_BUTTONS = """
@@ -1288,6 +1290,10 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     duration = tables.Column(orderable=False)
+    worker = tables.Column(verbose_name="Worker")
+    kill_type = tables.Column(verbose_name="Termination Reason")
+    killed_by = tables.Column(verbose_name="Killed By")
+    killed_at = tables.DateTimeColumn(short=True, verbose_name="Killed At")
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
 
     def render_summary(self, record):
@@ -1332,6 +1338,10 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
+            "worker",
+            "kill_type",
+            "killed_by",
+            "killed_at",
             "actions",
         )
         default_columns = (
@@ -1342,7 +1352,34 @@ class JobResultTable(BaseTable):
             "user",
             "status",
             "summary",
+            "worker",
             "actions",
+        )
+
+
+class JobKillRequestTable(BaseTable):
+    job_result = tables.Column(linkify=True, verbose_name="Job Result")
+    requested_by = tables.Column(verbose_name="Requested By")
+    requested_at = tables.DateTimeColumn(short=True, verbose_name="Requested At")
+    acknowledged_at = tables.DateTimeColumn(short=True, verbose_name="Acknowledged At")
+    status = tables.Column(verbose_name="Status")
+    error_detail = tables.Column(verbose_name="Error Detail")
+
+    class Meta(BaseTable.Meta):
+        model = JobKillRequest
+        fields = (
+            "job_result",
+            "requested_by",
+            "requested_at",
+            "acknowledged_at",
+            "status",
+            "error_detail",
+        )
+        default_columns = (
+            "job_result",
+            "requested_by",
+            "requested_at",
+            "status",
         )
 
 
