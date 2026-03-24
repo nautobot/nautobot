@@ -524,7 +524,7 @@ class ApprovalWorkflowStage(OrganizationalModel):
             approved_stages = approval_workflow.approval_workflow_stages.filter(
                 state=ApprovalWorkflowStateChoices.APPROVED
             )
-            if approval_workflow.approval_worfklow_definition and (
+            if approval_workflow.approval_workflow_definition and (
                 approved_stages.count()
                 == approval_workflow.approval_workflow_definition.approval_workflow_stage_definitions.count()
                 and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING
@@ -604,7 +604,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
             )
             approved_response_count = approved_responses.count()
             # Check if the number of approvers is met and the stage instance needs to be updated.
-            if self.approval_workflow_stage.approval_worflow_stage_definition and (
+            if self.approval_workflow_stage.approval_workflow_stage_definition and (
                 approved_response_count == self.approval_workflow_stage.approval_workflow_stage_definition.min_approvers
                 and self.approval_workflow_stage.state == ApprovalWorkflowStateChoices.PENDING
             ):
