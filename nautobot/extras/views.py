@@ -14,6 +14,7 @@ from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, TemplateDoesNotExist
+from django.templatetags.static import static
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.encoding import iri_to_uri
@@ -87,6 +88,7 @@ from nautobot.extras.templatetags.approvals import render_approval_workflow_stat
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
+    get_kubernetes_job_manifest,
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
@@ -2200,7 +2202,21 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        if job_form is not None:
+            job_form_is_valid = job_form.is_valid()
+            job_queue = job_form.cleaned_data.pop("_job_queue", None)
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
+                job_queue.name
+            ):
+                job_form.add_error("_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue.")
+                job_form_is_valid = False
+        else:
+            job_form_is_valid = False
+
         schedule_form = forms.JobScheduleForm(request.POST)
+        schedule_form_is_valid = schedule_form.is_valid()
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -2218,11 +2234,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif job_form is not None and job_form.is_valid() and schedule_form.is_valid():
-            job_queue = job_form.cleaned_data.pop("_job_queue", None)
-            if job_queue is None:
-                job_queue = job_model.default_job_queue
-
+        elif job_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(
                     request,
@@ -2383,7 +2395,7 @@ class JobView(generic.ObjectView):
                 label="Run/Schedule",
                 icon="mdi-play",
                 color=ButtonActionColorChoices.SUBMIT,
-                required_permissions=["extras.job_run"],
+                required_permissions=["extras.run_job"],
             ),
         ],
     )
@@ -2804,6 +2816,97 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def render_jobresult_files(files_manager):
+    """
+    Render job result files as an HTML <ul> list with download links.
+
+    Args:
+        files_manager (RelatedManager): JobResult.files manager.
+
+    Returns:
+        str: Safe HTML string containing <ul> with file links,
+             or an empty string if no files exist.
+    """
+    if not files_manager or not files_manager.exists():
+        return ""
+
+    links = []
+    for file_proxy in files_manager.all():
+        if not file_proxy.file:
+            continue
+
+        # Pick URL depending on storage backend
+        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
+            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+        else:
+            href = file_proxy.file.url
+
+        links.append(
+            format_html(
+                '<li><a href="{}" download="{}">{}</a></li>',
+                href,
+                file_proxy.name,
+                file_proxy.name,
+            )
+        )
+
+    return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
+
+
+def render_jobresult_status(status):
+    """
+    Render a Bootstrap-style label for a JobResult status.
+
+    Args:
+        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "FAILURE": ("bg-danger", "Failed"),
+        "PENDING": ("bg-body-secondary border", "Pending"),
+        "STARTED": ("bg-warning", "Running"),
+        "SUCCESS": ("bg-success", "Completed"),
+    }
+
+    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
+    return format_html(
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
+class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        """Render a placeholder for certain fields if the job hasn't yet completed."""
+        if key in ["duration", "result"]:
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj.status not in JobResultStatusChoices.READY_STATES:
+                url = static("img/ajax-loader.gif")
+                return format_html('<img src="{}">', url)
+        if key == "result" and value is None:
+            return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        return super().render_value(key, value, context)
+
+
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
 class JobResultUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -2846,6 +2949,115 @@ class JobResultUIViewSet(
             ]
         },
         detail_item_label=context_object_attr("date_created"),
+    )
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            JobResultSummaryPanel(
+                label="Summary of Results",
+                weight=100,
+                fields=[
+                    "job_description",
+                    "status",
+                    "date_created",
+                    "date_started",
+                    "user",
+                    "duration",
+                    "result",
+                    "files",
+                ],
+                value_transforms={
+                    "status": [render_jobresult_status],
+                    "files": [render_jobresult_files],
+                },
+            ),
+            object_detail.Panel(
+                weight=200,
+                section=object_detail.SectionChoices.FULL_WIDTH,
+                body_content_template_path="extras/inc/log_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        ],
+        extra_buttons=(
+            JobResultButton(
+                weight=100,
+                label="Re-Run",
+                color=ButtonActionColorChoices.RERUN,
+                icon="mdi-repeat",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    + f"?kwargs_from_job_result={ctx['object'].pk}"
+                )
+                if ctx["object"].job_model and ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=110,
+                label="Run",
+                color=ButtonActionColorChoices.RUN,
+                icon="mdi-play",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                if ctx["object"].job_model and not ctx["object"].task_kwargs
+                else None,
+            ),
+            JobResultButton(
+                weight=120,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_joblogentry"],
+                link_name=lambda ctx: (
+                    reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+        ),
+    )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(tab for tab in object_detail_content.tabs if tab.label == "Advanced")
+    advanced_tab.panels = (
+        *advanced_tab.panels,
+        object_detail.ObjectTextPanel(
+            label="Job Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=300,
+            object_field="task_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Positional Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=400,
+            object_field="task_args",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Celery Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=500,
+            object_field="celery_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectFieldsPanel(
+            label="Worker",
+            section=SectionChoices.RIGHT_HALF,
+            weight=110,
+            fields=[
+                "worker",
+                "queue",
+                "task_name",
+                "meta",
+            ],
+        ),
+        object_detail.ObjectTextPanel(
+            label="Traceback",
+            section=SectionChoices.RIGHT_HALF,
+            weight=200,
+            object_field="traceback",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+        ),
     )
 
     def get_extra_context(self, request, instance):

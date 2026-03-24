@@ -710,10 +710,14 @@ def post_upgrade(context):
     This will run the following management commands with default settings, in order:
 
     - migrate
+    - clear_cache
     - trace_paths
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
+    - send_installation_metrics
+    - refresh_content_type_cache
+    - refresh_dynamic_group_member_caches
     """
     command = "nautobot-server post_upgrade"
 
@@ -752,7 +756,7 @@ def loaddata(context, filepath="db_output.json"):
 @task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
 def npm(context, command):
     """Execute any given npm command inside `ui` directory."""
-    run_command(context, f"npm --prefix nautobot/ui {command}")
+    run_command(context, f"npm --prefix nautobot/ui {command}", service="ui_build")
 
 
 @task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})

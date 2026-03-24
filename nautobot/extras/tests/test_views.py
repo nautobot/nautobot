@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -26,6 +27,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
     ConsolePort,
     Device,
@@ -67,6 +69,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -2278,6 +2281,68 @@ class DynamicGroupTestCase(
         instance.refresh_from_db()
         self.assertEqual(instance.filter["present_in_vrf_id"], str(vrf_instance.id))
 
+    def test_edit_object_with_content_type_dcim_interface(self):
+        """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
+        # Create some global VLANs
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Create an interface with the specified filter values
+        interface = Interface.objects.create(
+            name="Test Interface",
+            device=Device.objects.first(),
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            status=Status.objects.first(),
+            untagged_vlan=vlan2,
+        )
+        interface.tagged_vlans.add(vlan1)
+        interface.validated_save()
+        # Create a dynamic group with the specified filter values
+        content_type = ContentType.objects.get_for_model(Interface)
+        instance = DynamicGroup.objects.create(name="DG DCIM|Interface", content_type=content_type)
+        data = self.form_data.copy()
+        data.update(
+            {
+                "name": "DG DCIM|Interface",
+                "content_type": content_type.pk,
+                "filter-mode": [InterfaceModeChoices.MODE_TAGGED],
+                "filter-duplex": [InterfaceDuplexChoices.DUPLEX_FULL],
+                "filter-tagged_vlans": [vlan1.pk],
+                "filter-untagged_vlan": [vlan2.pk],
+                "tenant": None,
+                "tags": [],
+            }
+        )
+        self.add_permissions("extras.change_dynamicgroup")
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.filter["mode"], [InterfaceModeChoices.MODE_TAGGED])
+        self.assertEqual(instance.filter["duplex"], [InterfaceDuplexChoices.DUPLEX_FULL])
+        self.assertEqual(instance.filter["tagged_vlans"], [str(vlan1.pk)])
+        self.assertEqual(instance.filter["untagged_vlan"], [str(vlan2.pk)])
+
+        # Check that the members of the dynamic group are correctly calculated
+        # We expect a queryset of Interface objects with the specified filter values
+        filtered_qs = Interface.objects.filter(
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            duplex=InterfaceDuplexChoices.DUPLEX_FULL,
+            tagged_vlans=vlan1,
+            untagged_vlan=vlan2,
+        ).distinct()
+
+        group_members = instance.update_cached_members()
+        # The interface queryset and the group members should match
+        self.assertQuerysetEqualAndNotEmpty(
+            group_members,
+            filtered_qs,
+            msg=f"DynamicGroup members mismatch.\nExpected: {list(filtered_qs.values_list('pk', flat=True))}\nReturned: {list(group_members.values_list('pk', flat=True))}",
+        )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_edit_saved_filter(self):
         """Test that editing a filter works using the edit view."""
@@ -3507,6 +3572,8 @@ class JobResultTestCase(
             grouping="run",
             message="This is a test",
         )
+        file = SimpleUploadedFile(name="output.txt", content="Content\n".encode("utf-8"))
+        FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -4067,6 +4134,31 @@ class JobTestCase(
                 errors,
                 ["_job_queue: Select a valid choice. That choice is not one of the available choices."],
             )
+
+    @mock.patch("nautobot.extras.views.get_kubernetes_job_manifest", return_value=None)
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_job_kubernetes_queue_no_manifest(self, _, __):
+        """POST run with Kubernetes queue selected but no manifest shows error and does not run."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        k8s_queue = JobQueue.objects.create(
+            name="k8s-no-manifest",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
+        self.test_pass.job_queues.add(k8s_queue)
+        initial_result_count = JobResult.objects.count()
+        data = {
+            "_schedule_type": "immediately",
+            "_job_queue": k8s_queue.pk,
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            self.assertBodyContains(response, "Unable to retrieve a Kubernetes job manifest for this job queue.")
+
+        self.assertEqual(JobResult.objects.count(), initial_result_count)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_job_with_sensitive_variables_and_approval_workflow_defined(self, _):
