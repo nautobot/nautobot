@@ -1,0 +1,10 @@
+<form method="post" action="{{ link }}" style="display: inline-block"
+      onsubmit="return confirm('Terminate job {{ object.name|escapejs }}? This is immediate and cannot be undone.')">
+    {% csrf_token %}
+    <button type="submit" id="component-{{ component.component_id }}"
+            class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}"
+            {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}>
+        {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+        {{ label }}
+    </button>
+</form>

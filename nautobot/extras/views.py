@@ -3199,7 +3199,20 @@ class JobResultUIViewSet(
                     else None
                 ),
             ),
-            # PLACEHOLDER: Terminate Job button will be added in commit 4 (wire-up)
+            JobResultButton(
+                weight=90,
+                label="Terminate Job",
+                color=ButtonActionColorChoices.DELETE,
+                icon="mdi-close-circle",
+                required_permissions=["extras.change_jobresult"],
+                render_on_tab_id="__all__",
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_terminate", kwargs={"pk": ctx["object"].pk})
+                    if ctx["object"].is_killable
+                    else None
+                ),
+                template_path="extras/inc/terminate_job_button.html",
+            ),
             JobResultButton(
                 weight=120,
                 label="Export Logs",
@@ -3305,7 +3318,64 @@ class JobResultUIViewSet(
 
         return queryset
 
-    # PLACEHOLDER: terminate and reap actions will be added in commit 4 (wire-up)
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="terminate",
+        url_name="terminate",
+        custom_view_base_action="change",
+    )
+    def terminate(self, request, pk=None):
+        """Terminate a running or pending job."""
+        job_result = get_object_or_404(self.queryset.restrict(request.user, "change"), pk=pk)
+
+        if not job_result.is_killable:
+            messages.info(request, f"Job '{job_result.name}' has already completed and cannot be terminated.")
+            return redirect(job_result.get_absolute_url())
+
+        from nautobot.extras.kill import terminate_job
+
+        result = terminate_job(job_result=job_result, user=request.user)
+
+        if result.get("error"):
+            messages.error(request, f"Failed to terminate job '{job_result.name}': {result['error']}")
+        else:
+            messages.success(request, f"Job '{job_result.name}' has been terminated.")
+
+        # TODO: Is this the proper place to always return the url? In list view it can be a bit awkward to return to detail view.
+        return redirect(job_result.get_absolute_url())
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="reap",
+        url_name="reap",
+        custom_view_base_action="change",
+    )
+    def reap(self, request, pk=None):
+        """Reap a single dead job — check if worker is dead, cancel if so."""
+        from nautobot.extras.kill import reap_dead_jobs
+
+        job_result = get_object_or_404(self.queryset.restrict(request.user, "change"), pk=pk)
+
+        if not job_result.is_killable:
+            messages.info(request, f"Job '{job_result.name}' is already in a terminal state.")
+            return redirect(job_result.get_absolute_url())
+
+        result = reap_dead_jobs(queryset=JobResult.objects.filter(pk=job_result.pk))
+
+        if result["cancelled"]:
+            messages.success(request, f"Job '{job_result.name}' has been reaped (worker confirmed dead).")
+        elif result["skipped"]:
+            messages.warning(
+                request,
+                f"Job '{job_result.name}' was skipped — worker is still alive or liveness could not be determined.",
+            )
+        for error in result["errors"]:
+            messages.error(request, error)
+
+        # TODO: Is this the proper place to always return the url? In list view it can be a bit awkward to return to detail view.
+        return redirect(job_result.get_absolute_url())
 
     @action(
         detail=True,

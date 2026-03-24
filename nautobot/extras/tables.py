@@ -177,7 +177,26 @@ JOB_RESULT_BUTTONS = """
         </li>
     {% endif %}
 {% endif %}
-{# PLACEHOLDER: Terminate and Reap buttons will be added in commit 4 (wire-up) #}
+{% if perms.extras.change_jobresult and record.is_killable %}
+    <li>
+        <form method="post" action="{% url 'extras:jobresult_terminate' pk=record.pk %}" onsubmit="return confirm('Terminate job {{ record.name|escapejs }}? This is immediate and cannot be undone.')">
+            {% csrf_token %}
+            <button class="dropdown-item text-danger" type="submit">
+                <span class="mdi mdi-close-circle" aria-hidden="true"></span>
+                Terminate Job
+            </button>
+        </form>
+    </li>
+    <li>
+        <form method="post" action="{% url 'extras:jobresult_reap' pk=record.pk %}" onsubmit="return confirm('Reap job {{ record.name|escapejs }}? This will check if the worker is dead and cancel the job if so.')">
+            {% csrf_token %}
+            <button class="dropdown-item text-warning" type="submit">
+                <span class="mdi mdi-skull-crossbones" aria-hidden="true"></span>
+                Reap Job
+            </button>
+        </form>
+    </li>
+{% endif %}
 """
 
 SCHEDULED_JOB_BUTTONS = """

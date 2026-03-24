@@ -812,7 +812,42 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     def job_description(self):
         return self.job_model.description if self.job_model else None
 
-    # PLACEHOLDER: is_killable, backend properties and clean() validation will be added in commit 4 (wire-up)
+    @property
+    def is_killable(self):
+        """True if the job is in a non-terminal state that can be terminated."""
+        return self.status in (JobResultStatusChoices.STATUS_PENDING, JobResultStatusChoices.STATUS_STARTED)
+
+    @property
+    def backend(self):
+        """Returns 'celery' or 'kubernetes' based on how the job was dispatched."""
+        queue_name = self.queue
+        if queue_name:
+            try:
+                job_queue = JobQueue.objects.get(name=queue_name)
+                return job_queue.queue_type
+            except JobQueue.DoesNotExist:
+                pass
+        return JobQueueTypeChoices.TYPE_CELERY
+
+    def clean(self):
+        super().clean()
+
+        # kill_type and killed_at must be set/empty together
+        if bool(self.kill_type) != bool(self.killed_at):
+            raise ValidationError("kill_type and killed_at must both be set or both be empty.")
+
+        # killed_at must not be before date_created
+        if self.killed_at and self.date_created and self.killed_at < self.date_created:
+            raise ValidationError({"killed_at": "killed_at must not be before the job's date_created."})
+
+        # Once kill_type is set, it must not be changed
+        if self.pk:
+            try:
+                existing = JobResult.objects.only("kill_type").get(pk=self.pk)
+                if existing.kill_type and self.kill_type != existing.kill_type:
+                    raise ValidationError({"kill_type": "kill_type cannot be changed once set."})
+            except JobResult.DoesNotExist:
+                pass
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
@@ -1282,7 +1317,24 @@ class JobKillRequest(BaseModel):
     def __str__(self):
         return f"Kill request for {self.job_result} ({self.status})"
 
-    # PLACEHOLDER: is_pending property and clean() validation will be added in commit 4 (wire-up)
+    @property
+    def is_pending(self):
+        return self.status == KillRequestStatusChoices.STATUS_PENDING
+
+    def clean(self):
+        super().clean()
+
+        # job_result must be in a non-terminal state at creation time
+        if not self.pk and self.job_result_id:
+            job_result = self.job_result
+            if not job_result.is_killable:
+                raise ValidationError(
+                    {"job_result": "Cannot create a kill request for a job that is not in a killable state."}
+                )
+
+        # acknowledged_at must not be before requested_at
+        if self.acknowledged_at and self.requested_at and self.acknowledged_at < self.requested_at:
+            raise ValidationError({"acknowledged_at": "acknowledged_at must not be before requested_at."})
 
     natural_key_field_names = ["id"]
 

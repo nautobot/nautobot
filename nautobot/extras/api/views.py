@@ -1155,7 +1155,42 @@ class JobResultViewSet(
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
-    # PLACEHOLDER: terminate action will be added in commit 4 (wire-up)
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={
+            202: serializers.JobKillRequestSerializer,
+            200: OpenApiTypes.OBJECT,
+            409: OpenApiTypes.OBJECT,
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="terminate")
+    def terminate(self, request, pk=None):
+        """Request termination of a running or pending job."""
+        if not request.user.has_perm("extras.change_jobresult"):
+            return Response({"detail": "Permission denied."}, status=status.HTTP_403_FORBIDDEN)
+        job_result = self.get_object()
+
+        # Already in a terminal state — no-op
+        if not job_result.is_killable:
+            return Response(
+                {"detail": "This job has already completed and cannot be terminated."},
+                status=status.HTTP_200_OK,
+            )
+
+        from nautobot.extras.kill import terminate_job
+
+        result = terminate_job(job_result=job_result, user=request.user)
+
+        if result.get("error"):
+            return Response(
+                {"detail": result["error"], "kill_request_id": str(result.get("kill_request_id", ""))},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        kill_request = result["kill_request"]
+        serializer = serializers.JobKillRequestSerializer(kill_request, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 
 #

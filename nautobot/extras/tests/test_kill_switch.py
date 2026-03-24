@@ -3,8 +3,10 @@
 from unittest import mock
 
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
+from nautobot.core.testing import APITestCase, TestCase as NautobotTestCase
 from nautobot.extras.choices import (
     JobResultStatusChoices,
     KillRequestStatusChoices,
@@ -12,6 +14,30 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.kill import reap_dead_jobs, terminate_job
 from nautobot.extras.models import JobKillRequest, JobResult
+
+
+class JobResultIsKillableTest(TestCase):
+    """Test the is_killable property."""
+
+    def test_pending_is_killable(self):
+        jr = JobResult(status=JobResultStatusChoices.STATUS_PENDING)
+        self.assertTrue(jr.is_killable)
+
+    def test_started_is_killable(self):
+        jr = JobResult(status=JobResultStatusChoices.STATUS_STARTED)
+        self.assertTrue(jr.is_killable)
+
+    def test_success_not_killable(self):
+        jr = JobResult(status=JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertFalse(jr.is_killable)
+
+    def test_failure_not_killable(self):
+        jr = JobResult(status=JobResultStatusChoices.STATUS_FAILURE)
+        self.assertFalse(jr.is_killable)
+
+    def test_revoked_not_killable(self):
+        jr = JobResult(status=JobResultStatusChoices.STATUS_REVOKED)
+        self.assertFalse(jr.is_killable)
 
 
 class TerminateJobTest(TestCase):
@@ -171,6 +197,108 @@ class ReapDeadJobsTest(TestCase):
         self.assertEqual(result["skipped"], 0)
 
 
+class TerminateAPIEndpointTest(APITestCase):
+    """Test the POST /api/extras/job-results/{id}/terminate/ endpoint."""
+
+    model = JobResult
+
+    def setUp(self):
+        super().setUp()
+        self.job_result = JobResult.objects.create(
+            name="API Test Job",
+            status=JobResultStatusChoices.STATUS_STARTED,
+            celery_kwargs={"queue": "default"},
+        )
+
+    @mock.patch("nautobot.core.celery.app")
+    def test_terminate_returns_202(self, mock_app):
+        self.user.is_superuser = True
+        self.user.save()
+        url = reverse("extras-api:jobresult-terminate", kwargs={"pk": self.job_result.pk})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertEqual(response.status_code, 202)
+
+    def test_terminate_completed_job_returns_200(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result.save()
+        url = reverse("extras-api:jobresult-terminate", kwargs={"pk": self.job_result.pk})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertEqual(response.status_code, 200)
+
+    def test_terminate_without_permission_returns_403(self):
+        """Users without extras.change_jobresult cannot terminate jobs."""
+        self.user.is_superuser = False
+        self.user.save()
+        url = reverse("extras-api:jobresult-terminate", kwargs={"pk": self.job_result.pk})
+        response = self.client.post(url, format="json", **self.header)
+        self.assertEqual(response.status_code, 403)
+
+
+class TerminateUIViewTest(NautobotTestCase):
+    """Test the UI terminate action."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+        self.job_result = JobResult.objects.create(
+            name="UI Test Job",
+            status=JobResultStatusChoices.STATUS_STARTED,
+            celery_kwargs={"queue": "default"},
+        )
+
+    @mock.patch("nautobot.core.celery.app")
+    def test_terminate_redirects(self, mock_app):
+        url = reverse("extras:jobresult_terminate", kwargs={"pk": self.job_result.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+
+    @mock.patch("nautobot.core.celery.app")
+    def test_terminate_marks_job_revoked(self, mock_app):
+        url = reverse("extras:jobresult_terminate", kwargs={"pk": self.job_result.pk})
+        self.client.post(url)
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_REVOKED)
+
+    def test_terminate_completed_job_is_noop(self):
+        self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result.save()
+        url = reverse("extras:jobresult_terminate", kwargs={"pk": self.job_result.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+
+
+class ReapUIViewTest(NautobotTestCase):
+    """Test the UI reap action."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+        self.job_result = JobResult.objects.create(
+            name="Reap Test Job",
+            status=JobResultStatusChoices.STATUS_STARTED,
+            celery_kwargs={"queue": "default"},
+        )
+
+    @mock.patch("nautobot.extras.kill._get_active_celery_task_ids")
+    def test_reap_dead_job(self, mock_active):
+        mock_active.return_value = set()
+        url = reverse("extras:jobresult_reap", kwargs={"pk": self.job_result.pk})
+        self.client.post(url)
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_REVOKED)
+        self.assertEqual(self.job_result.kill_type, KillTypeChoices.REAP)
+
+    @mock.patch("nautobot.extras.kill._get_active_celery_task_ids")
+    def test_reap_active_job_skipped(self, mock_active):
+        mock_active.return_value = {str(self.job_result.pk)}
+        url = reverse("extras:jobresult_reap", kwargs={"pk": self.job_result.pk})
+        self.client.post(url)
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_STARTED)
+
+
 class JobKillRequestModelTest(TestCase):
     """Test the JobKillRequest model."""
 
@@ -181,7 +309,17 @@ class JobKillRequestModelTest(TestCase):
             status=KillRequestStatusChoices.STATUS_PENDING,
         )
         self.assertEqual(kr.job_result, jr)
+        self.assertTrue(kr.is_pending)
         self.assertIsNone(kr.acknowledged_at)
+
+    def test_is_pending_property(self):
+        jr = JobResult.objects.create(name="Test", status=JobResultStatusChoices.STATUS_STARTED)
+        kr = JobKillRequest.objects.create(
+            job_result=jr,
+            status=KillRequestStatusChoices.STATUS_ACKNOWLEDGED,
+            acknowledged_at=timezone.now(),
+        )
+        self.assertFalse(kr.is_pending)
 
     def test_one_to_one_constraint(self):
         jr = JobResult.objects.create(name="Test", status=JobResultStatusChoices.STATUS_STARTED)
@@ -194,3 +332,16 @@ class JobKillRequestModelTest(TestCase):
         JobKillRequest.objects.create(job_result=jr, status=KillRequestStatusChoices.STATUS_PENDING)
         jr.delete()
         self.assertEqual(JobKillRequest.objects.count(), 0)
+
+
+class WorkerStatusViewTest(NautobotTestCase):
+    """Test the Worker Status view."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("extras.view_jobresult")
+
+    def test_worker_status_view_returns_200(self):
+        url = reverse("worker_status")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
