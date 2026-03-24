@@ -37,6 +37,11 @@ class UserQuerySet(RestrictedQuerySet):
 
     """
 
+    def restrict(self, user, action="view"):
+        if not (user and user.is_active and (user.is_staff or user.is_superuser)):
+            return self.none()
+        return super().restrict(user, action)
+
 
 class UserManager(BaseManager, UserManager_):
     """
