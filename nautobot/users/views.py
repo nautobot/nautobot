@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import logging
 
+from constance import config
 from constance.admin import ConstanceForm
 from django.contrib import messages
 from django.contrib.auth import (
@@ -9,6 +10,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.contrib.messages.views import SuccessMessageMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -23,6 +25,7 @@ from django.views.generic.edit import FormView
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.forms.forms import BootstrapMixin
+from nautobot.core.settings import CONSTANCE_CONFIG, CONSTANCE_CONFIG_FIELDSETS
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
 from nautobot.core.views.mixins import (
@@ -498,11 +501,45 @@ class ConfigForm(BootstrapMixin, ConstanceForm):
     """Apply Bootstrap styling to ConstanceForm."""
 
 
-class ConfigUIViewSet(AdminRequiredMixin, FormView):
+class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
     template_name = "users/config_edit.html"
     form_class = ConfigForm
     success_url = reverse_lazy("user:config_edit")
+    success_message = "Live settings updated successfully."
+
+    def get_initial(self):
+        initial = {}
+        for name in CONSTANCE_CONFIG:
+            initial[name] = getattr(config, name)
+        return initial
 
     def form_valid(self, form):
         form.save()
         return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        fieldsets = CONSTANCE_CONFIG_FIELDSETS
+        constance_config = CONSTANCE_CONFIG
+        context = super().get_context_data(**kwargs)
+        fieldsets = {k: CONSTANCE_CONFIG_FIELDSETS[k] for k in sorted(CONSTANCE_CONFIG_FIELDSETS)}
+        form = context["form"]
+        config_values = []
+
+        for fieldset, fields in fieldsets.items():
+            for name in fields:  # order comes from fieldset list
+                item = constance_config[name]
+                config_values.append(
+                    {
+                        "name": name,
+                        "default": item.default,
+                        "help_text": item.help_text,
+                        "value": getattr(config, name),
+                        "form_field": form[name],
+                        "is_file": False,  # adjust if file fields exist
+                    }
+                )
+
+        context["config_values"] = config_values
+        context["fieldsets"] = fieldsets
+
+        return context
