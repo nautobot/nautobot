@@ -582,25 +582,40 @@ class BaseJob:
         These are converted back during job execution.
         """
 
-        return_data = {}
-        for field_name, value in data.items():
+        def _serialize_value(value):
+            """Recursively convert job kwargs into JSON-serializable primitives.
+
+            This is particularly important for Kubernetes job execution where `task_kwargs` is stored as JSON and
+            Django's JSON encoder will otherwise convert Django model instances into `__nautobot_type__` dicts.
+            """
+
             # MultiObjectVar
             if isinstance(value, QuerySet):
-                return_data[field_name] = list(value.values_list("pk", flat=True))
-            # ObjectVar
-            elif isinstance(value, Model):
-                return_data[field_name] = value.pk
-            # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, UploadedFile):
-                return_data[field_name] = BaseJob._save_file_to_proxy(value)
-            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
-            elif isinstance(value, netaddr.ip.BaseIP):
-                return_data[field_name] = str(value)
-            # Everything else...
-            else:
-                return_data[field_name] = value
+                return list(value.values_list("pk", flat=True))
 
-        return return_data
+            # ObjectVar
+            if isinstance(value, Model):
+                return value.pk
+
+            # FileVar (Save each FileVar as a FileProxy)
+            if isinstance(value, UploadedFile):
+                return BaseJob._save_file_to_proxy(value)
+
+            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
+            if isinstance(value, netaddr.ip.BaseIP):
+                return str(value)
+
+            # Recurse into containers/dicts to handle nested Model instances (e.g. BulkEdit `form_data`).
+            if isinstance(value, dict):
+                return {k: _serialize_value(v) for k, v in value.items()}
+
+            if isinstance(value, (list, tuple, set)):
+                return [_serialize_value(v) for v in value]
+
+            # Everything else...
+            return value
+
+        return {field_name: _serialize_value(value) for field_name, value in data.items()}
 
     # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
