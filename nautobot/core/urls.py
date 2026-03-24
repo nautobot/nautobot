@@ -99,9 +99,11 @@ urlpatterns = [
     # The response is conditional as opposed to wrapping the path() call in an if statement to be able to test the setting with current test setup
     path(
         "robots.txt",
-        lambda x: HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain")
-        if settings.PUBLISH_ROBOTS_TXT
-        else HttpResponseNotFound(),
+        lambda x: (
+            HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain")
+            if settings.PUBLISH_ROBOTS_TXT
+            else HttpResponseNotFound()
+        ),
         name="robots_txt",
     ),
 ]

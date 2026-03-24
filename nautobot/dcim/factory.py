@@ -317,10 +317,13 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     is_full_depth = NautobotBoolIterator()
 
-    # If randomly a subdevice, also set subdevice_role to "child". We might want to reconsider this.
+    # If randomly a subdevice, also set subdevice_role to "child" or "parent-child". We might want to reconsider this.
     subdevice_role = factory.Maybe(
         "is_subdevice_child",
-        SubdeviceRoleChoices.ROLE_CHILD,
+        factory.Faker(
+            "random_element",
+            elements=[SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD],
+        ),
         factory.Faker("random_element", elements=["", SubdeviceRoleChoices.ROLE_PARENT]),
     )
 

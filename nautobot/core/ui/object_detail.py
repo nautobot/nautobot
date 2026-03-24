@@ -299,7 +299,7 @@ class Button(Component):
     link_includes_pk = True
     link_name = None
     placeholder_template_path = "components/button/button_placeholder.html"
-    render_on_tab_id = "main"
+    render_on_tab_id = ("main",)
     size = None
     template_path = "components/button/default.html"
 
@@ -321,8 +321,8 @@ class Button(Component):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -367,7 +367,12 @@ class Button(Component):
             return False
         if self.render_on_tab_id == "__all__":
             return True
-        return context.get("active_tab", "main") == self.render_on_tab_id
+        # this part is because we want to keep backwards-compatible
+        # when render_on_tab_id was only a string
+        render_on_tab_ids = (
+            self.render_on_tab_id if isinstance(self.render_on_tab_id, (list, tuple)) else [self.render_on_tab_id]
+        )
+        return context.get("active_tab", "main") in render_on_tab_ids
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -410,8 +415,8 @@ class DropdownButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -454,7 +459,7 @@ class FormButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to "__all__".
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -501,8 +506,8 @@ class ExtraDetailViewActionButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -2665,8 +2670,8 @@ class _JobModalButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -2694,6 +2699,7 @@ class _JobModalButton(Button):
     def get_extra_context(self, context: Context):
         """Add necessary htmx attributes to the button."""
         obj = get_obj_from_context(context, self.context_object_key)
+        base_context = super().get_extra_context(context)
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
@@ -2701,9 +2707,11 @@ class _JobModalButton(Button):
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
-        if not self.attributes:
-            self.attributes = {}
-        self.attributes.update(
+
+        raw_attrs = base_context.get("attributes")
+        attributes = {} if raw_attrs is None else raw_attrs.copy()
+
+        attributes.update(
             {
                 "data-bs-toggle": "modal",
                 "data-bs-target": "#nautobot-generic-modal",
@@ -2713,12 +2721,24 @@ class _JobModalButton(Button):
                 "hx-swap": "innerHTML",
             }
         )
-        # If the user doesn't have permission to the Job, or the Job doesn't exist, disable the button.
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
+        disabled = False
+        disabled_reason = ""
         try:
             jobs = Job.objects
             if "request" in context and context["request"].user is not None:
                 jobs = jobs.restrict(context["request"].user, "view")
-            jobs.get_for_class_path(self.class_path)
+            job = jobs.get_for_class_path(self.class_path)
+            if not job.enabled:
+                disabled = True
+                disabled_reason = "Job is not enabled."
         except Job.DoesNotExist:
-            self.attributes["disabled"] = "disabled"
-        return super().get_extra_context(context)
+            disabled = True
+            disabled_reason = "You do not have permission to run this Job."
+        if disabled:
+            attributes["disabled"] = "disabled"
+            attributes["title"] = disabled_reason
+            attributes["aria-disabled"] = "true"
+            attributes["tabindex"] = "-1"
+        base_context["attributes"] = attributes
+        return base_context

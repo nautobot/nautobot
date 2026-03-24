@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.db.models import Model
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
@@ -45,7 +45,6 @@ from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
-from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -689,6 +688,39 @@ class CustomField(
             cache.set(cache_key, choices, timeout=None)
         return choices
 
+    def get_in_scope_queryset(self, queryset, job_logger=logger):
+        """
+        Return a filtered version of `queryset` containing only objects in scope for this field.
+
+        If `self.scope_filter` is empty, `queryset` is returned unchanged.  Falls back to returning
+        `queryset` unchanged if no filterset class exists for the model or the stored filter is invalid,
+        so that any pre-filtering applied by the caller is always preserved.
+        """
+        if not self.scope_filter:
+            return queryset
+
+        model = queryset.model
+        filterset_class = get_filterset_for_model(model)
+        if not filterset_class:
+            job_logger.warning(
+                "Custom field `%s` has scope_filter set but no filterset exists for %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+            )
+            return queryset
+
+        filterset = filterset_class(data=self.scope_filter, queryset=queryset)
+        if not filterset.form.is_valid():
+            job_logger.warning(
+                "Custom field `%s` has an invalid scope_filter for %s: %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+                filterset.form.errors.as_text(),
+            )
+            return queryset
+
+        return filterset.qs
+
     def save(self, *args, **kwargs):
         self.clean()
         super().save(*args, **kwargs)
@@ -996,15 +1028,14 @@ class CustomField(
 
         if content_types:
             # Circular Import
-            from nautobot.extras.signals import change_context_state
+            from nautobot.core.jobs import DeleteCustomFieldData
+            from nautobot.extras.customfields import enqueue_custom_field_job
 
-            change_context = change_context_state.get()
-            if change_context is None:
-                context = None
-            else:
-                context = change_context.as_dict(instance=self)
-                context["context_detail"] = "delete custom field data"
-            delete_custom_field_data.delay(self.key, content_types, context)
+            enqueue_custom_field_job(
+                DeleteCustomFieldData,
+                field_key=self.key,
+                content_types=list(content_types),
+            )
 
     def add_prefix_to_cf_key(self):
         """
@@ -1136,21 +1167,14 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         if self.value != database_object.value:
             # Circular Import
-            from nautobot.extras.signals import change_context_state
+            from nautobot.core.jobs import UpdateCustomFieldChoiceData
+            from nautobot.extras.customfields import enqueue_custom_field_job
 
-            change_context = change_context_state.get()
-            if change_context is None:
-                context = None
-            else:
-                context = change_context.as_dict(instance=self)
-                context["context_detail"] = "update custom field choice data"
-            transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(
-                    self.custom_field.pk,
-                    database_object.value,
-                    self.value,
-                    context,
-                )
+            enqueue_custom_field_job(
+                UpdateCustomFieldChoiceData,
+                field=str(self.custom_field.pk),
+                old_value=database_object.value,
+                new_value=self.value,
             )
 
     def delete(self, *args, **kwargs):
