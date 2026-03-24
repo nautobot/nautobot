@@ -1821,18 +1821,41 @@ class ModuleType(PrimaryModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Save references to the original front/rear images
-        self._original_front_image = self.front_image if self.present_in_database else None
-        self._original_rear_image = self.rear_image if self.present_in_database else None
+        # Save references to the original front/rear images for newly-created instances.
+        # For instances loaded from the database, from_db() overrides these after __init__
+        # completes (Django sets _state.adding=False after __init__, so present_in_database
+        # is always False here for DB-loaded objects).
+        self._original_front_image = None
+        self._original_rear_image = None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Capture original image values for instances loaded from the database.
+
+        __init__ cannot do this reliably because Django sets _state.adding=False
+        only after __init__ completes, making present_in_database always False
+        during __init__ for DB-loaded instances.
+        """
+        instance = super().from_db(db, field_names, values)
+        instance._original_front_image = instance.front_image
+        instance._original_rear_image = instance.rear_image
+        return instance
 
     def save(self, *args, **kwargs):
+        original_front_image = self._original_front_image
+        original_rear_image = self._original_rear_image
+
         super().save(*args, **kwargs)
 
         # Delete any previously uploaded image files that are no longer in use
-        if self._original_front_image and self.front_image != self._original_front_image:
-            self._original_front_image.delete(save=False)
-        if self._original_rear_image and self.rear_image != self._original_rear_image:
-            self._original_rear_image.delete(save=False)
+        if original_front_image and self.front_image != original_front_image:
+            original_front_image.delete(save=False)
+        if original_rear_image and self.rear_image != original_rear_image:
+            original_rear_image.delete(save=False)
+
+        # Update tracked originals to current values for subsequent saves
+        self._original_front_image = self.front_image
+        self._original_rear_image = self.rear_image
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)

@@ -1811,7 +1811,8 @@ class ModuleTypeFieldsPanel(object_detail.ObjectFieldsPanel):
             image = getattr(obj, key, None)
             if image:
                 return format_html(
-                    '<a href="{}" target="_blank"><img src="{}" alt="{}" class="img-responsive mw-100"></a>',
+                    '<a href="{}" target="_blank" rel="noopener noreferrer">'
+                    '<img src="{}" alt="{}" class="img-responsive mw-100"></a>',
                     image.url,
                     image.url,
                     image.name,

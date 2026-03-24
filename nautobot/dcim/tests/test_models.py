@@ -4805,21 +4805,23 @@ class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
 
     def test_image_replaced_on_save_deletes_old_file(self):
-        """Saving a ModuleType after changing images should delete the previously stored image files."""
+        """Replacing a front/rear image on a DB-loaded ModuleType should delete the old file."""
         manufacturer = Manufacturer.objects.first()
-        module_type = ModuleType.objects.create(
+        ModuleType.objects.create(
             manufacturer=manufacturer,
             model="Image Replacement Test",
         )
-        # Directly simulate previously-stored images. Django's from_db() sets _state.adding=False
-        # *after* __init__ completes, so present_in_database is always False during __init__ and
-        # _original_* are always None for DB-loaded objects. We bypass this by assigning directly.
+        # Load from DB so from_db() populates _original_front_image/_original_rear_image.
+        module_type = ModuleType.objects.get(model="Image Replacement Test")
+
+        # Simulate previously-stored images by patching the tracked originals directly,
+        # avoiding real filesystem I/O while still exercising the save() cleanup path.
         old_front = MagicMock()
         old_rear = MagicMock()
         module_type._original_front_image = old_front
         module_type._original_rear_image = old_rear
 
-        # Save without updating images; the empty FieldFiles differ from the mock originals,
+        # Save without changing images; the empty FieldFiles differ from the mocked originals,
         # so the cleanup logic should call delete() on both.
         module_type.save()
 
