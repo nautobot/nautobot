@@ -561,6 +561,7 @@ nav:
           - Jobs:
               - "user-guide/platform-functionality/jobs/index.md"
               - Managing Jobs: "user-guide/platform-functionality/jobs/managing-jobs.md"
+              - Job Kill Switch: "user-guide/platform-functionality/jobs/job-kill-switch.md"
               - Job Scheduling and Approvals: "user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md"
               - Job Queues: "user-guide/platform-functionality/jobs/jobqueue.md"
               - Job Buttons: "user-guide/platform-functionality/jobs/jobbutton.md"
