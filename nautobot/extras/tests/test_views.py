@@ -247,7 +247,6 @@ class ApprovalWorkflowDefinitionViewTestCase(
         """Editing an ApprovalWorkflowDefinition by deleting pending stages should fail validation."""
         self.add_permissions("extras.change_approvalworkflowdefinition")
 
-        # Create an instance with one stage to edit
         instance = ApprovalWorkflowDefinition.objects.create(
             name="Workflow To Edit",
             model_content_type=self.scheduledjob_ct,
@@ -315,8 +314,10 @@ class ApprovalWorkflowDefinitionViewTestCase(
         self.assertHttpStatus(response, 200)
         # Stage should still exist in the DB
         self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage2_definition.pk).exists())
-        self.assertContains(response, "Cannot delete Approval Workflow Stage(s) Definition")
-        self.assertContains(response, f"<a href='{instance.get_absolute_url()}'>Workflows</a>.")
+        self.assertContains(response, "Cannot delete Approval Workflow Stage Definition(s)")
+        self.assertContains(
+            response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> including this definition. "
+        )
 
     def test_delete_object_blocked_when_pending_workflow_exists(self):
         """Deleting ApprovalWorkflowDefinition should fail if pending workflows exist."""
@@ -351,7 +352,7 @@ class ApprovalWorkflowDefinitionViewTestCase(
 
         self.assertContains(response, "Cannot delete Approval Workflow Definition")
         self.assertContains(response, instance.name)
-        self.assertContains(response, f"<a href='{instance.get_absolute_url()}'>Workflows</a>.")
+        self.assertContains(response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> using this definition. ")
 
     def test_bulk_delete_blocked_when_pending_workflow_exists(self):
         """Bulk delete should fail when pending workflows exist."""

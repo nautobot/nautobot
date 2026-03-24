@@ -74,7 +74,9 @@ def prevent_delete_definition_with_pending_workflows(sender, instance, **kwargs)
 
     if pending_approvals:
         raise ValidationError(
-            message=f"Cannot delete Approval Workflow Definition '{instance.name}'. There are still pending Approval Workflows.",
+            message=f"Cannot delete Approval Workflow Definition '{instance.name}'. "
+            "There are still pending Approval Workflows using this definition. "
+            "You must approve or cancel those workflows before deleting this definition.",
             code=PENDING_WORKFLOWS_ERROR_CODE,
         )
 
@@ -88,7 +90,9 @@ def prevent_delete_stage_definition_with_pending_stages(sender, instance, **kwar
 
     if pending_stages:
         raise ValidationError(
-            message=f"Cannot delete Approval Workflow Stage Definition '{instance.name}'. There are still pending Approval Workflows.",
+            message=f"Cannot delete Approval Workflow Stage Definition '{instance.name}'. "
+            "There are still pending Approval Workflows including this definition. "
+            "You must approve or cancel those workflows before deleting this definition.",
             code=PENDING_WORKFLOWS_ERROR_CODE,
         )
 

@@ -259,12 +259,16 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
         if isinstance(e, ValidationError) and e.code == PENDING_WORKFLOWS_ERROR_CODE:
             if self.action == "update":
                 cannot_delete_msg = format_html(
-                    "Cannot delete Approval Workflow Stage(s) Definition. There are still pending Approval <a href='{}'>Workflows</a>.",
+                    "Cannot delete Approval Workflow Stage Definition(s). "
+                    "There are still pending Approval <a href='{}'>Workflows</a> including this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
                     self.obj.get_absolute_url(),
                 )
             else:
                 cannot_delete_msg = format_html(
-                    "Cannot delete Approval Workflow Definition '{}'. There are still pending Approval <a href='{}'>Workflows</a>.",
+                    "Cannot delete Approval Workflow Definition '{}'. "
+                    "There are still pending Approval <a href='{}'>Workflows</a> using this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
                     self.obj.name,
                     self.obj.get_absolute_url(),
                 )
