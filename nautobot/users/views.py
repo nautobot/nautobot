@@ -585,6 +585,12 @@ class GroupUIViewSet(
         queryset = super().get_queryset()
         return queryset.annotate(user_count=Count("user"))
 
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        user = request.user
+        if not (user and user.is_active and (user.is_staff or user.is_superuser)):
+            raise exceptions.PermissionDenied("Only staff or superuser accounts can access group administration.")
+
     @staticmethod
     def get_object_permission_formset_class():
         return inlineformset_factory(
