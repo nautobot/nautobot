@@ -1677,6 +1677,7 @@ class BaseTextPanel(Panel):
             YAML (str): Dict will be displayed as pretty-formatted yaml (value: "yaml")
             MARKDOWN (str): Markdown format (value: "markdown").
             CODE (str): Code format. Just wraps content within <pre> tags (value: "code").
+            HYPERLINKED_OBJECT (str): Attempts to render the value as a hyperlink to the related object.
         """
 
         PLAINTEXT = "plaintext"
@@ -1684,6 +1685,7 @@ class BaseTextPanel(Panel):
         YAML = "yaml"
         MARKDOWN = "markdown"
         CODE = "code"
+        HYPERLINKED_OBJECT = "hyperlinked_object"
 
     def __init__(
         self,
@@ -1917,6 +1919,7 @@ class _ObjectCustomFieldsPanel(GroupedKeyValueTablePanel):
 
     def render_value(self, key, value, context: Context):
         """Render a given custom field value appropriately depending on what type of custom field it is."""
+        # TODO: this logic could be unified with CustomFieldColumn.render()?
         cf = key
         if cf.type == CustomFieldTypeChoices.TYPE_BOOLEAN:
             return render_boolean(value)

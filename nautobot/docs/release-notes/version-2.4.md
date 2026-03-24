@@ -166,6 +166,169 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.29 (2026-03-17)
+
+### Security in v2.4.29
+
+- [#8663](https://github.com/nautobot/nautobot/issues/8663) - Updated dependency `Django` to `~4.2.29` to mitigate CVE-2026-25673 and CVE-2026-25674.
+- [#8691](https://github.com/nautobot/nautobot/issues/8691) - Updated dependency `pyjwt` to `2.12.1` to mitigate CVE-2026-32597. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.29
+
+- [#8488](https://github.com/nautobot/nautobot/issues/8488) - Added the ability to configure multiple Kubernetes job manifests via file-based configuration.
+
+### Fixed in v2.4.29
+
+- [#8473](https://github.com/nautobot/nautobot/issues/8473) - Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.
+
+## v2.4.28 (2026-03-02)
+
+### Fixed in v2.4.28
+
+- [#8519](https://github.com/nautobot/nautobot/issues/8519) - Fixed cable color display in dark mode to ensure cable colors render closer to the configured value.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Fixed sorting on multiple tables.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed filtering on multiple tables.
+
+### Housekeeping in v2.4.28
+
+- [#8591](https://github.com/nautobot/nautobot/issues/8591) - Updated `deploy-sandbox` action for release CI.
+
+## v2.4.27 (2026-02-17)
+
+### Security in v2.4.27
+
+- [#8504](https://github.com/nautobot/nautobot/issues/8504) - Updated dependency `django` to `~4.2.28` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
+- [#8539](https://github.com/nautobot/nautobot/issues/8539) - Updated dependency `cryptography` to `46.0.5` to mitigate CVE-2026-26007.
+- [#8544](https://github.com/nautobot/nautobot/issues/8544) - Updated dependency `pillow` to `^12.1.1` to mitigate CVE-2026-25990.
+
+### Added in v2.4.27
+
+- [#8484](https://github.com/nautobot/nautobot/issues/8484) - Added polish type variants to CS connector in PortTypeChoices
+- [#8511](https://github.com/nautobot/nautobot/issues/8511) - Added missing bulk edit buttons to the IP Addresses and Child Prefix tabs on the Prefix detail view.
+- [#8525](https://github.com/nautobot/nautobot/issues/8525) - Added missing table action buttons to the Child Prefixes and IP Addresses tabs on the respective Prefix detail view tabs.
+
+### Fixed in v2.4.27
+
+- [#8267](https://github.com/nautobot/nautobot/issues/8267) - Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.
+- [#8319](https://github.com/nautobot/nautobot/issues/8319) - Fixed the creation of Interface Dynamic Groups by Duplex, 802.1Q Mode and Tagged/Untagged VLANs.
+- [#8453](https://github.com/nautobot/nautobot/issues/8453) - Fixed an issue where a link on a Prefix's Child Prefixes tab was not working as expected.
+- [#8478](https://github.com/nautobot/nautobot/issues/8478) - Fixed an issue where a link on a Prefix's IP Addresses tab was not working as expected.
+- [#8500](https://github.com/nautobot/nautobot/issues/8500) - Fixed `KeyError` when `CACHES` setting does not include an explicit `TIMEOUT` key.
+- [#8522](https://github.com/nautobot/nautobot/issues/8522) - Adjusted the foreground color contrast threshold used for color labels to improve readability.
+
+### Dependencies in v2.4.27
+
+- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency `celery` to ~5.6.2.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `mysqlclient` to `~2.2.8`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `social-auth-core` to `~4.8.5`.
+
+### Housekeeping in v2.4.27
+
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated development dependency `coverage` to `~7.13.4`.
+- [#8508](https://github.com/nautobot/nautobot/issues/8508) - Changed many invoke commands to accept multiple services as arguments.
+
+## v2.4.26 (2026-02-02)
+
+### Security in v2.4.26
+
+- [#8428](https://github.com/nautobot/nautobot/issues/8428) - Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Fixed in v2.4.26
+
+- [#7076](https://github.com/nautobot/nautobot/issues/7076) - Fixed various font sizes that are used by the admin interface.
+- [#8404](https://github.com/nautobot/nautobot/issues/8404) - Fixed the ability to re-run a Kubernetes Job.
+
+## v2.4.25 (2026-01-09)
+
+### Security in v2.4.25
+
+- [#8383](https://github.com/nautobot/nautobot/issues/8383) - Updated dependency `pynacl` to `1.6.2` to mitigate CVE-2025-69277. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8395](https://github.com/nautobot/nautobot/issues/8395) - Updated dependency `urllib3` to `2.6.3` to mitigate CVE-2026-21441. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.25
+
+- [#7252](https://github.com/nautobot/nautobot/issues/7252) - Added `NAUTOBOT_KUBERNETES_JOB_MANIFEST` environment variable to configure `KUBERNETES_JOB_MANIFEST` setting.
+
+### Changed in v2.4.25
+
+- [#8350](https://github.com/nautobot/nautobot/issues/8350) - Use graceful degradation in case of media failure. When a dependency fails to load, show an error alert instead of navigating to a separate page.
+
+### Fixed in v2.4.25
+
+- [#8340](https://github.com/nautobot/nautobot/issues/8340) - Fixed incorrect default timeout values for cache entries intended to be long-lived when not explicitly invalidated.
+- [#8362](https://github.com/nautobot/nautobot/issues/8362) - Fixed an IntegrityError when using kubernetes workers to run jobs.
+- [#8380](https://github.com/nautobot/nautobot/issues/8380) - Restored (still-deprecated) support for explicit configuration of `STATICFILES_STORAGE` and `DEFAULT_FILE_STORAGE` in `nautobot_config.py` that was inadvertently broken when deprecating these settings in the previous release.
+
+### Documentation in v2.4.25
+
+- [#8380](https://github.com/nautobot/nautobot/issues/8380) - Updated documentation for the deprecated `STORAGE_BACKEND` and `STORAGE_CONFIG` settings to clarify their migration path.
+
+## v2.4.24 (2025-12-15)
+
+### Security in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `celery` to `~5.6.0` to include a security fix (`https://github.com/celery/celery/pull/9997`).
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `urllib3` to version `2.6.1` due to CVE-2025-66418 and CVE-2025-66471. This is not a direct dependency so it will not auto-update when upgrading. Please be sure to upgrade your local environment.
+- [#8271](https://github.com/nautobot/nautobot/issues/8271) - Updated dependency `Django` to `~4.2.27` to protect against CVE-2025-13372 and CVE-2025-64460.
+
+### Added in v2.4.24
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Added support for defining Job input/output file storage via Django's `STORAGES` setting. This deprecates the separate settings `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which will be removed entirely in Nautobot v3.1.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `TreeModel.cacheable_descendants_pks` method to be usable for improved performance.
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Added `nautobot.apps.api.StatsSerializer` and `nautobot.apps.ui.AsyncStatsPanel` to allow for defining a StatsPanel that renders asynchronously.
+- [#8215](https://github.com/nautobot/nautobot/issues/8215) - Added support for custom Celery worker health probes based on files.
+
+### Deprecated in v2.4.24
+
+- [#694](https://github.com/nautobot/nautobot/issues/694) - Deprecated support for the settings variables `DEFAULT_FILE_STORAGE`, `JOB_FILE_IO_STORAGE`, `STATICFILES_STORAGE`, `STORAGE_BACKEND`, and `STORAGE_CONFIG`, which are replaced with Django's unified `STORAGES` setting. Support for these variables will be removed entirely in Nautobot v3.1.
+
+### Fixed in v2.4.24
+
+- [#8119](https://github.com/nautobot/nautobot/issues/8119) - Improved performance of Location detail view by adding caching of a repeated expensive database query and asynchronous loading of related-object statistics.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to set a default saved view for list views defined in an App.
+- [#8235](https://github.com/nautobot/nautobot/issues/8235) - Fixed inability to use UI Component Framework `BulkButton` for a model defined in an App.
+- [#8274](https://github.com/nautobot/nautobot/issues/8274) - Fixed unintended omission of the rendered documentation from `.whl` packages.
+- [#8291](https://github.com/nautobot/nautobot/issues/8291) - Removed a redundant error condition in Interface form validation when setting interface mode to tagged-all.
+
+### Dependencies in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tables2` to `~2.8.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-timezone-field` to `~7.2.1`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated dependency `django-tree-queries` to `~0.23.0`.
+
+### Housekeeping in v2.4.24
+
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `coverage` to `~7.13.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `ruff` to `~0.14.8`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated development dependency `tblib` to `~3.2.2`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-gen-files` to `~0.6.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-macros-plugin` to `~1.5.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocs-material` to `~9.7.0`.
+- [#8262](https://github.com/nautobot/nautobot/issues/8262) - Updated documentation dependency `mkdocstrings-python` to `~1.19.0`.
+- [#8295](https://github.com/nautobot/nautobot/issues/8295) - Fixed incorrect generic filter test error message.
+
+## v2.4.23 (2025-11-24)
+
+### Added in v2.4.23
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Added additional Celery worker metrics.
+
+### Fixed in v2.4.23
+
+- [#7848](https://github.com/nautobot/nautobot/issues/7848) - Fixed the Logs Cleanup job to skip records with a protected relationship instead of raising an error.
+- [#8025](https://github.com/nautobot/nautobot/issues/8025) - Fixed a `KeyError` when viewing a record with a symmetric one-to-one `Relationship` defined.
+- [#8164](https://github.com/nautobot/nautobot/issues/8164) - Fixed insertion order of middleware for `nautobot.core.settings_funcs.setup_structlog_logging`.
+- [#8178](https://github.com/nautobot/nautobot/issues/8178) - Fixed "Create and Add Another" behavior for UIViewSet-derived views.
+- [#8202](https://github.com/nautobot/nautobot/issues/8202) - Fixed Bulk operations when using Saved View and selecting all.
+
+### Documentation in v2.4.23
+
+- [#1629](https://github.com/nautobot/nautobot/issues/1629) - Updated prometheus metrics documentation.
+
+### Housekeeping in v2.4.23
+
+- [#8162](https://github.com/nautobot/nautobot/issues/8162) - Updated GitHub Actions definitions for ltm-2.4 branch.
+
 ## v2.4.22 (2025-11-10)
 
 ### Security in v2.4.22

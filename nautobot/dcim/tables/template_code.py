@@ -4,7 +4,7 @@ CABLETERMINATION = """
     <i class="mdi mdi-chevron-right"></i>
     <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 {% else %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
@@ -26,12 +26,16 @@ PATHENDPOINT = """
         {% endfor %}
     {% endwith %}
 {% else %}
-    &mdash;
+    <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
 CABLE_LENGTH = """
-{% if record.length %}{{ record.length }} {{ record.get_length_unit_display }}{% else %}&mdash;{% endif %}
+{% if record.length %}
+    {{ record.length }} {{ record.get_length_unit_display }}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
 """
 
 CABLE_TERMINATION_PARENT = """
@@ -83,7 +87,7 @@ INTERFACE_TAGGED_VLANS = """
 {% elif record.mode == 'tagged-all' %}
   All
 {% else %}
-  &mdash;
+  <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
@@ -236,7 +240,7 @@ INTERFACE_BUTTONS = """
     </li>
 {% endif %}
 {% if record.cable %}
-    <li><a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span><Trace/a></li>
+    <li><a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
     {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
 {% elif record.is_connectable and perms.dcim.add_cable %}
     <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>

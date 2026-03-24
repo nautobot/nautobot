@@ -6,26 +6,29 @@ import logging
 import os
 import pkgutil
 import sys
+import threading
 
 from django.utils.module_loading import import_string
 
 logger = logging.getLogger(__name__)
 
+_import_lock = threading.RLock()
+
 
 def import_string_optional(dotted_path):
     """An extension/wrapper of Django's `import_string()` that returns `None` if no such dotted path exists."""
+    module_name, attribute_name = dotted_path.rsplit(".", 1)
     try:
         return import_string(dotted_path)
     except ModuleNotFoundError as err:
         # No such module
-        module_name, _ = dotted_path.rsplit(".", 1)
         if module_name.startswith(err.name):  # tried to import foo.bar.baz but couldn't find foo.bar, etc.
             return None
         # Some import *from within* the given module couldn't find what it was looking for?
         raise
     except ImportError as err:
-        if "does not define" in str(err):
-            # Exception raised by Django if the module exists but has no such attribute
+        if isinstance(err.__cause__, AttributeError) and err.__cause__.name == attribute_name:  # pylint: disable=no-member
+            # Exception raised by Django if the module exists but the *specific* requested attribute does not
             return None
         # Maybe a legitimate problem with the import?
         raise
@@ -100,7 +103,7 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
         module_prefix = ".".join(module_path)
 
     loaded_modules = []
-    with _temporarily_add_to_sys_path(path):
+    with _import_lock, _temporarily_add_to_sys_path(path):
         for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
             if module_prefix and not (
                 module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py

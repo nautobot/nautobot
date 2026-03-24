@@ -17,16 +17,28 @@ from nautobot.load_balancers import models
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 
-class VirtualServerFilterSet(NameSearchFilterSet, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VirtualServer."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            # "vip__host": "icontains", Consider enabling this with generated fields
+            "port": {"lookup_expr": "exact", "preprocessor": int},
+            "device__name": "icontains",
+            "load_balancer_pool__name": "icontains",
+        }
+    )
 
     vip = django_filters.ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="VIP (ID)",
     )
-    source_nat_pool = django_filters.ModelMultipleChoiceFilter(
+    source_nat_pool = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
-        label="Source NAT Pool (ID)",
+        prefers_id=True,
+        to_field_name="network",
+        label="Source NAT Pool (ID or network string)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.LoadBalancerPool.objects.all(),

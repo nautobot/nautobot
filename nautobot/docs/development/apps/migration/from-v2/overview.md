@@ -14,3 +14,6 @@ Most migrations outside of the UI updates are minimal. However, for completeness
 | Do not use the REST API (minor change if using pynautobot required to keep same behavior).                                                                                                                                        |
 
 More detailed documentation for each of these checks is provided in the next section.
+
+!!! tip
+    It is recommended to upgrade your production instance from Nautobot 2.4 to 3.x in separate steps. Attempting to combine both upgrades can complicate troubleshooting and make it harder to identify the source of any issues. If you are running Nautobot 1.x or a version earlier than 2.4, upgrade to the latest 2.4.x first before proceeding to 3.x.

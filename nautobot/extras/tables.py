@@ -321,7 +321,9 @@ class ApprovalWorkflowTable(BaseTable):
     approval_workflow_definition = tables.Column(linkify=True)
     object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
-        template_code=APPROVAL_WORKFLOW_OBJECT, verbose_name="Object Under Review"
+        template_code=APPROVAL_WORKFLOW_OBJECT,
+        verbose_name="Object Under Review",
+        order_by=["object_under_review_content_type", "object_under_review_object_id"],
     )
     user = tables.TemplateColumn(
         template_code="{% if record.user %}{{record.user}}{% else %}{{ record.user_name }}{% endif %}",
@@ -374,11 +376,11 @@ class ApprovalWorkflowStageTable(BaseTable):
     actions_needed = tables.TemplateColumn(
         template_code="""
         {% if record.remaining_approvals == 1 %}
-        {{ record.remaining_approvals }} more approval needed
+            {{ record.remaining_approvals }} more approval needed
         {% elif record.remaining_approvals == 0 %}
-        <span class="text-secondary">&mdash;</span>
+            <span class="text-secondary">&mdash;</span>
         {% else %}
-        {{ record.remaining_approvals }} more approvals needed
+            {{ record.remaining_approvals }} more approvals needed
         {% endif %}
         """,
         orderable=False,
@@ -428,7 +430,12 @@ class ApproverDashboardTable(ApprovalWorkflowStageTable):
     )
     approval_workflow__object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
     object_under_review = tables.TemplateColumn(
-        template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>"
+        template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>",
+        verbose_name="Object Under Review",
+        order_by=[
+            "approval_workflow__object_under_review_content_type",
+            "approval_workflow__object_under_review_object_id",
+        ],
     )
     actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
 
@@ -576,7 +583,7 @@ class ComputedFieldTable(BaseTable):
 class ConfigContextTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     is_active = BooleanColumn(verbose_name="Active")
 
     class Meta(BaseTable.Meta):
@@ -603,7 +610,7 @@ class ConfigContextTable(BaseTable):
 class ConfigContextSchemaTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     actions = ButtonsColumn(ConfigContextSchema)
 
     class Meta(BaseTable.Meta):
@@ -896,7 +903,9 @@ class StaticGroupAssociationTable(BaseTable):
 
     pk = ToggleColumn()
     dynamic_group = tables.Column(linkify=True)
-    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    associated_object = tables.Column(
+        linkify=True, verbose_name="Associated Object", order_by=["associated_object_type", "associated_object_id"]
+    )
     actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
 
     class Meta(BaseTable.Meta):
@@ -908,7 +917,7 @@ class StaticGroupAssociationTable(BaseTable):
 class ExportTemplateTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
 
     class Meta(BaseTable.Meta):
         model = ExportTemplate
@@ -968,11 +977,9 @@ class GitRepositoryTable(BaseTable):
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
     secrets_group = tables.Column(linkify=True)
-    last_sync_time = tables.DateTimeColumn(
-        empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
-    )
+    last_sync_time = tables.DateTimeColumn(empty_values=(), short=True, verbose_name="Sync Time", orderable=False)
 
-    last_sync_user = tables.Column(empty_values=(), verbose_name="Sync By")
+    last_sync_user = tables.Column(empty_values=(), verbose_name="Sync By", orderable=False)
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
@@ -983,8 +990,10 @@ class GitRepositoryTable(BaseTable):
                     table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)
 
-    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
-    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
+    last_sync_status = JobResultColumn(
+        template_name="extras/inc/job_label.html", verbose_name="Sync Status", orderable=False
+    )
+    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES, orderable=False)
     actions = ButtonsColumn(GitRepository, prepend_template=GITREPOSITORY_BUTTONS)
 
     class Meta(BaseTable.Meta):
@@ -1901,7 +1910,9 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
     associated_object_type = tables.Column(verbose_name="Object Type")
-    associated_object = tables.Column(linkify=True, verbose_name="Object")
+    associated_object = tables.Column(
+        linkify=True, verbose_name="Object", order_by=["associated_object_type", "associated_object_id"]
+    )
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation

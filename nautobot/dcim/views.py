@@ -35,7 +35,6 @@ from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import bettertitle, has_perms
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     AncestorsInstanceBreadcrumbItem,
@@ -559,14 +558,14 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
         migrate_action = request.POST.get("action")
         try:
             with transaction.atomic():
-                if not has_perms(request.user, ["extras.add_contactassociation"]):
+                if not helpers.has_perms(request.user, ["extras.add_contactassociation"]):
                     raise PermissionDenied(
                         "ObjectPermission extras.add_contactassociation is needed to perform this action"
                     )
                 contact = None
                 team = None
                 if migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_CONTACT:
-                    if not has_perms(request.user, ["extras.add_contact"]):
+                    if not helpers.has_perms(request.user, ["extras.add_contact"]):
                         raise PermissionDenied("ObjectPermission extras.add_contact is needed to perform this action")
                     contact = Contact(
                         name=request.POST.get("name"),
@@ -577,7 +576,7 @@ class MigrateLocationDataToContactView(generic.ObjectEditView):
                     # Trigger permission check
                     Contact.objects.restrict(request.user, "view").get(pk=contact.pk)
                 elif migrate_action == LocationDataToContactActionChoices.CREATE_AND_ASSIGN_NEW_TEAM:
-                    if not has_perms(request.user, ["extras.add_team"]):
+                    if not helpers.has_perms(request.user, ["extras.add_team"]):
                         raise PermissionDenied("ObjectPermission extras.add_team is needed to perform this action")
                     team = Team(
                         name=request.POST.get("name"),
@@ -958,7 +957,7 @@ class DeviceTypeFieldsPanel(object_detail.ObjectFieldsPanel):
                     image.url,
                     image.name,
                 )
-            return format_html('<span class="text-secondary">&mdash;</span>')
+            return helpers.HTML_NONE
 
         return super().render_value(key, value, context)
 
@@ -2309,7 +2308,7 @@ class DeviceComponentPageMixin:
                     view_name=device_breadcrumb_url,
                     should_render=lambda c: c["object"].device is not None,
                     reverse_kwargs=lambda c: {"pk": c["object"].device.pk},
-                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
+                    label=lambda c: helpers.bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
             )
 
@@ -2319,7 +2318,7 @@ class DeviceComponentPageMixin:
                     view_name=module_breadcrumb_url,
                     should_render=lambda c: c["object"].device is None,
                     reverse_kwargs=lambda c: {"pk": c["object"].module.pk},
-                    label=lambda c: bettertitle(c["object"]._meta.verbose_name_plural),
+                    label=lambda c: helpers.bettertitle(c["object"]._meta.verbose_name_plural),
                 ),
             )
 

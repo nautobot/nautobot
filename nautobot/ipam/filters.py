@@ -1,4 +1,5 @@
 import contextlib
+import ipaddress
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -221,6 +222,10 @@ class PrefixFilterSet(
         method="filter_prefix",
         label="Prefix",
     )
+    prefix_exact = MultiValueCharFilter(
+        method="filter_prefix_exact",
+        label="Prefix (exact, strict)",
+    )
     within = MultiValueCharFilter(
         method="search_within",
         label="Within prefix",
@@ -327,6 +332,20 @@ class PrefixFilterSet(
             return queryset.net_equals(*prefixes)
         return queryset.none()
 
+    def filter_prefix_exact(self, queryset, name, value):
+        """
+        Strict version of `prefix` filter.
+        Rejects prefixes with host bits set (e.g. 10.32.0.34/28 vs 10.32.0.32/28).
+        """
+        prefixes = self._strip_values(value)
+
+        for prefix in prefixes:
+            try:
+                ipaddress.ip_network(prefix, strict=True)
+            except ValueError:
+                raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
+        return self.filter_prefix(queryset, name, value)
+
     def search_within(self, queryset, name, value):
         prefixes = self._strip_values(value)
         with contextlib.suppress(netaddr.AddrFormatError, ValueError):
@@ -416,6 +435,10 @@ class IPAddressFilterSet(
     prefix = MultiValueCharFilter(
         method="search_by_prefix",
         label="Contained in prefix",
+    )
+    prefix_exact = MultiValueCharFilter(
+        method="search_by_prefix_exact",
+        label="Prefix (exact, strict)",
     )
     address = MultiValueCharFilter(
         method="filter_address",
@@ -512,16 +535,48 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
-    def search_by_prefix(self, queryset, name, value):
+    def _strip_prefix_values(self, values):
+        """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""
         prefixes = []
-        for prefix in value:
+        for prefix in values:
             prefix = prefix.strip()
+            if not prefix:
+                continue
             if is_uuid(prefix):
                 prefixes.append(Prefix.objects.get(pk=prefix).prefix)
-            elif prefix:
+            else:
                 prefixes.append(prefix)
+        return prefixes
 
+    def search_by_prefix(self, queryset, name, value):
+        prefixes = self._strip_prefix_values(value)
         return queryset.net_host_contained(*prefixes)
+
+    def search_by_prefix_exact(self, queryset, name, value):
+        """
+        Strict version of `prefix` filter.
+        Rejects prefixes with host bits set (e.g. 10.32.0.34/28 vs 10.32.0.32/28).
+        """
+        prefixes = self._strip_prefix_values(value)
+
+        # Validate network is on CIDR boundary
+        for prefix in prefixes:
+            if "/" not in str(prefix):
+                # If someone passes a host-only string here, treat it as invalid for "prefix_exact".
+                raise ValidationError(f"Invalid prefix_exact value (missing mask): {prefix}")
+
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                ip_network = netaddr.IPNetwork(str(prefix)).cidr
+                # cidr will always a proper network subnet; compare against original input
+                if str(ip_network) != str(prefix):
+                    raise ValidationError(
+                        f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}, did you mean {ip_network}?"
+                    )
+                continue
+
+            # Defensive programming in case there is logic missed above
+            raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
+        return self.search_by_prefix(queryset, name, prefixes)
 
     def filter_address(self, queryset, name, value):
         try:
