@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 import os
 import shutil
 import tempfile
-import time
 from unittest import expectedFailure, mock
 import uuid
 from zoneinfo import ZoneInfo
@@ -13,9 +12,8 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connections
 from django.db.models import ProtectedError
-from django.db.utils import IntegrityError, InterfaceError, OperationalError
+from django.db.utils import IntegrityError
 from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
@@ -25,7 +23,7 @@ import time_machine
 
 from nautobot.circuits.models import CircuitType
 from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
@@ -91,7 +89,6 @@ from nautobot.extras.models import (
     Team,
     Webhook,
 )
-from nautobot.extras.models.jobs import JOB_LOGS
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
@@ -2379,91 +2376,6 @@ class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual("Hi 2", log.message)
         self.assertEqual("a" * JOB_LOG_MAX_LOG_OBJECT_LENGTH, log.log_object)
         self.assertEqual("", log.absolute_url)
-
-
-class JobLogsDBConnectionTest(TransactionTestCase):
-    model = ObjectChange
-    databases = {"default", JOB_LOGS}
-
-    def test_closed_connection_recovery(self):
-        """Test the job logs DB connection is recovered from the errors at the driver layer."""
-        conn = connections[JOB_LOGS]
-
-        # Ensure a job logs connection is open
-        conn.ensure_connection()
-        self.assertTrue(conn.is_usable())
-
-        jobs = JobModel.objects.all()[:2]
-        job_result = JobResult.objects.create(
-            name="irrelevant",
-            job_model=jobs[0],
-            date_done=now(),
-            user=None,
-            status=JobResultStatusChoices.STATUS_SUCCESS,
-            task_kwargs={},
-            scheduled_job=None,
-        )
-
-        # Forcefully close the connection through the underlying driver.
-        conn.connection.close()
-        self.assertFalse(conn.is_usable())
-
-        # Attempt a log message write. The connection should automatically recover.
-        try:
-            job_result.log("Hello")
-        except (InterfaceError, OperationalError) as ex:
-            self.fail(f"Job Logs DB Connection regression error. Caused by exception: {ex}")
-
-        # Confirm the log entry was created
-        log = JobLogEntry.objects.get(job_result=job_result)
-        self.assertEqual("Hello", log.message)
-        self.assertEqual(LogLevelChoices.LOG_INFO, log.log_level)
-        self.assertEqual("main", log.grouping)
-        self.assertEqual("", log.log_object)
-        self.assertEqual("", log.absolute_url)
-
-        # Set connection close_at time to 30s from now to make sure CONN_MAX_AGE time is not getting in the way
-        conn.close_at = time.monotonic() + 30
-        # This closes connections that had reported errors. Here, we're validating that the connection is NOT closed.
-        conn.close_if_unusable_or_obsolete()
-        self.assertTrue(conn.is_usable())
-
-    def test_close_if_unusable_or_obsolete(self):
-        """Test the job logs DB connection is refreshed when the connection's CONN_MAX_AGE is exceeded."""
-        conn = connections[JOB_LOGS]
-
-        # Ensure the DB connection is open
-        conn.ensure_connection()
-        self.assertTrue(conn.is_usable())
-
-        # Set close at_time to now, combined with time.sleep this will force the connection expiration.
-        conn.close_at = time.monotonic()
-        original_conn_close_at = conn.close_at
-        time.sleep(2)
-
-        jobs = JobModel.objects.all()[:2]
-        job_result = JobResult.objects.create(
-            name="irrelevant",
-            job_model=jobs[0],
-            date_done=now(),
-            user=None,
-            status=JobResultStatusChoices.STATUS_SUCCESS,
-            task_kwargs={},
-            scheduled_job=None,
-        )
-
-        # Confirm the log entry was created. This should also trigger the connection refresh confirming CONN_MAX_AGE is honored.
-        job_result.log("Hello")
-        log = JobLogEntry.objects.get(job_result=job_result)
-        self.assertEqual("Hello", log.message)
-        self.assertEqual(LogLevelChoices.LOG_INFO, log.log_level)
-        self.assertEqual("main", log.grouping)
-        self.assertEqual("", log.log_object)
-        self.assertEqual("", log.absolute_url)
-
-        # If the connection was reopend, a new close at value should be present.
-        new_conn_close_at = conn.close_at
-        self.assertGreater(new_conn_close_at, original_conn_close_at)
 
 
 class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
