@@ -243,6 +243,145 @@ class ApprovalWorkflowDefinitionViewTestCase(
         self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage.pk).exists())
         self.assertContains(response, "At least one Approval Workflow Stage Definition is required.")
 
+    def test_edit_object_deleting_pending_stages_fails(self):
+        """Editing an ApprovalWorkflowDefinition by deleting pending stages should fail validation."""
+        self.add_permissions("extras.change_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Edit",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        stage1_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=1,
+            name="Stage 1",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+        stage2_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=2,
+            name="Stage 2",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )  # creating this schedule job automatically created pending workflow
+
+        form_data_delete_stage = {
+            "name": instance.name,
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": "{}",
+            "weight": 99,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "2",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "2",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # Existing stage marked for deletion
+            "approval_workflow_stage_definitions-0-id": str(stage1_definition.pk),
+            "approval_workflow_stage_definitions-0-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Stage 1",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "",
+            "approval_workflow_stage_definitions-1-id": str(stage2_definition.pk),
+            "approval_workflow_stage_definitions-1-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-1-sequence": "2",
+            "approval_workflow_stage_definitions-1-name": "Stage 2",
+            "approval_workflow_stage_definitions-1-min_approvers": "1",
+            "approval_workflow_stage_definitions-1-denial_message": "",
+            "approval_workflow_stage_definitions-1-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-1-DELETE": "on",  # marked for deletion
+        }
+
+        response = self.client.post(
+            self._get_url("edit", instance),
+            data=post_data(form_data_delete_stage),
+        )
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # Stage should still exist in the DB
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage2_definition.pk).exists())
+        self.assertContains(response, "Cannot delete Approval Workflow Stage Definition(s)")
+        self.assertContains(
+            response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> including this definition. "
+        )
+
+    def test_delete_object_blocked_when_pending_workflow_exists(self):
+        """Deleting ApprovalWorkflowDefinition should fail if pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Delete",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        request = {
+            "path": self._get_url("delete", instance),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request, follow=True)
+
+        # Delete should be blocked
+        self.assertHttpStatus(response, 200)
+
+        # Object should still exist
+        self.assertTrue(ApprovalWorkflowDefinition.objects.filter(pk=instance.pk).exists())
+
+        self.assertContains(response, "Cannot delete Approval Workflow Definition")
+        self.assertContains(response, instance.name)
+        self.assertContains(response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> using this definition. ")
+
+    def test_bulk_delete_blocked_when_pending_workflow_exists(self):
+        """Bulk delete should fail when pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Delete",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        response = self.client.post(
+            self._get_url("bulk_delete"),
+            data={"pk": [instance.pk]},
+        )
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowDefinition.objects.filter(pk=instance.pk).exists())
+
 
 class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     """Test the ApprovalWorkflowStageDefinition views."""
@@ -327,6 +466,63 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
             "min_approvers": 5,
             "denial_message": "updated denial message",
         }
+
+    def test_delete_stage_definition_blocked_when_pending_workflow_exists(self):
+        """Deleting stage definition should fail if pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowstagedefinition")
+
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.name = "NoSuchJob"  # to match to existing definition and create approval workflow
+        job_model.save()
+        scheduled_job = ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        self.assertEqual(scheduled_job.associated_approval_workflows.count(), 1)
+        stage_definition = ApprovalWorkflowStageDefinition.objects.first()
+        request = {
+            "path": self._get_url("delete", stage_definition),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request)
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage_definition.pk).exists())
+
+        self.assertContains(response, "Cannot delete Approval Workflow Stage Definition")
+        self.assertContains(response, stage_definition.name)
+
+    def test_bulk_delete_stage_definition_blocked_when_pending_workflow_stages_exists(self):
+        """Bulk delete should fail when pending workflow stages exist."""
+        self.add_permissions("extras.delete_approvalworkflowstagedefinition")
+
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.name = "NoSuchJob"  # to match to existing definition and create approval workflow
+        job_model.save()
+        scheduled_job = ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        self.assertEqual(scheduled_job.associated_approval_workflows.count(), 1)
+        stage_definition = ApprovalWorkflowStageDefinition.objects.first()
+
+        response = self.client.post(
+            self._get_url("bulk_delete"),
+            data={"pk": [stage_definition.pk]},
+        )
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage_definition.pk).exists())
 
 
 class ApprovalWorkflowViewTestCase(
