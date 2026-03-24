@@ -225,10 +225,6 @@ class ApprovalWorkflow(OrganizationalModel):
         ]
         ordering = ["approval_workflow_definition"]
 
-    # def __str__(self):
-    #     """Stringify instance."""
-    #     return f"{self.approval_workflow_definition.name}: {self.object_under_review} ({self.current_state})"
-
     def __str__(self):
         name = getattr(self.approval_workflow_definition, "name", "Deleted workflow")
         return f"{name}: {self.object_under_review} ({self.current_state})"
@@ -325,6 +321,8 @@ class ApprovalWorkflow(OrganizationalModel):
             approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
             approval_workflow_stage_count = (
                 self.approval_workflow_definition.approval_workflow_stage_definitions.count()
+                if self.approval_workflow_definition
+                else 0
             )
             if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
                 self.current_state = ApprovalWorkflowStateChoices.APPROVED
@@ -526,7 +524,7 @@ class ApprovalWorkflowStage(OrganizationalModel):
             approved_stages = approval_workflow.approval_workflow_stages.filter(
                 state=ApprovalWorkflowStateChoices.APPROVED
             )
-            if (
+            if approval_workflow.approval_worfklow_definition and (
                 approved_stages.count()
                 == approval_workflow.approval_workflow_definition.approval_workflow_stage_definitions.count()
                 and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING
@@ -606,7 +604,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
             )
             approved_response_count = approved_responses.count()
             # Check if the number of approvers is met and the stage instance needs to be updated.
-            if (
+            if self.approval_workflow_stage.approval_worflow_stage_definition and (
                 approved_response_count == self.approval_workflow_stage.approval_workflow_stage_definition.min_approvers
                 and self.approval_workflow_stage.state == ApprovalWorkflowStateChoices.PENDING
             ):

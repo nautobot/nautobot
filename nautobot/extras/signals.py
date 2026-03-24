@@ -30,7 +30,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     ObjectChangeActionChoices,
 )
-from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.customfields import enqueue_custom_field_job
 from nautobot.extras.models import (
     ComputedField,
@@ -73,11 +73,9 @@ def prevent_delete_definition_with_pending_workflows(sender, instance, **kwargs)
     )
 
     if pending_approvals:
-        names = ", ".join(str(a) for a in pending_approvals[:5])
-
         raise ValidationError(
-            f"Cannot delete Approval Workflow Definition '{instance.name}'. "
-            f"There are {pending_approvals.count()} pending workflows: {names}"
+            message=f"Cannot delete Approval Workflow Definition '{instance.name}'. There are still pending Approval Workflows.",
+            code=PENDING_WORKFLOWS_ERROR_CODE,
         )
 
 
@@ -89,11 +87,9 @@ def prevent_delete_stage_definition_with_pending_stages(sender, instance, **kwar
     )
 
     if pending_stages:
-        names = ", ".join(str(a) for a in pending_stages[:5])
-
         raise ValidationError(
-            f"Cannot delete Approval Workflow Stage Definition '{instance.name}'. "
-            f"There are {pending_stages.count()} pending stages: {names}"
+            message=f"Cannot delete Approval Workflow Stage Definition '{instance.name}'. There are still pending Approval Workflows.",
+            code=PENDING_WORKFLOWS_ERROR_CODE,
         )
 
 

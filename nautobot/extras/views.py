@@ -95,6 +95,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
@@ -244,6 +245,33 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
             raise ValidationError(stages.errors)
 
         return obj
+
+    def _handle_validation_error(self, e):
+        """
+        Override to handle ValidationError raised during delete operations
+        from pre_delete signals (e.g. pending workflows).
+
+        Catches ValidationError with specific error code (PENDING_WORKFLOWS_ERROR_CODE)
+        raised by signals.
+        Displays formatted HTML error message with link to the object's workflow.
+        For other errors, delegates to parent implementation.
+        """
+        if isinstance(e, ValidationError) and e.code == PENDING_WORKFLOWS_ERROR_CODE:
+            if self.action == "update":
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Stage(s) Definition. There are still pending Approval <a href='{}'>Workflows</a>.",
+                    self.obj.get_absolute_url(),
+                )
+            else:
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Definition '{}'. There are still pending Approval <a href='{}'>Workflows</a>.",
+                    self.obj.name,
+                    self.obj.get_absolute_url(),
+                )
+            messages.error(self.request, cannot_delete_msg)
+            self.has_error = True
+        else:
+            super()._handle_validation_error(e)
 
 
 class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
