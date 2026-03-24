@@ -535,7 +535,7 @@ This will run the following management commands with default settings, in order:
 --- 2.1.1
     Removed the `--build_ui` flag.
 
-+++ 3.0.10
++++ 2.4.30
     Added `clear_cache` to this command's default behavior.
 
 `--no-clear-cache`
