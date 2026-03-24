@@ -65,6 +65,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.graphql.types import StatusType
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContext,
@@ -239,6 +240,48 @@ class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
         self.assertIn(OptimizedNautobotObjectType, schema.__bases__)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
+
+
+class GraphQLGetNodePermissionTest(GraphQLTestCaseBase):
+    """Direct tests for `OptimizedNautobotObjectType.get_node()`.
+
+    These ensure that our object-level permission enforcement for ID/node
+    lookups is covered even when nested FK optimization behavior changes.
+    """
+
+    def test_get_node_enforces_object_permissions(self):
+        user = create_test_user("graphql_get_node_user")
+
+        # Status objects are associated with "content_types"; we include one here so the
+        # Status model is fully valid for GraphQL usage.
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        status_ct = ContentType.objects.get_for_model(Status)
+
+        allowed_status = Status.objects.create(name="AllowedStatusForGetNodeTest")
+        allowed_status.content_types.add(interface_ct)
+
+        denied_status = Status.objects.create(name="DeniedStatusForGetNodeTest")
+        denied_status.content_types.add(interface_ct)
+
+        allowed_status_perm = ObjectPermission.objects.create(
+            name="View Status allowed (get_node test)",
+            actions=["view"],
+            constraints={"name": allowed_status.name},
+        )
+        allowed_status_perm.object_types.add(status_ct)
+        allowed_status_perm.users.add(user)
+
+        info = types.SimpleNamespace(context=types.SimpleNamespace(user=user))
+
+        allowed_node = StatusType.get_node(info, str(allowed_status.pk))
+        self.assertIsNotNone(allowed_node)
+        self.assertEqual(allowed_node.name, allowed_status.name)
+
+        denied_node = StatusType.get_node(info, str(denied_status.pk))
+        self.assertIsNone(denied_node)
+
+        nonexistent_node = StatusType.get_node(info, str(uuid.uuid4()))
+        self.assertIsNone(nonexistent_node)
 
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
