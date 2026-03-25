@@ -59,7 +59,7 @@ def _validate_vrf_device_assignments(sender, instance, pk_set, device_field):
     """
     filter_kwargs = {"vrf": instance, device_field + "_id__in": pk_set}
     for assignment in sender.objects.filter(**filter_kwargs):
-        assignment.full_clean()
+        assignment.validated_save()
 
 
 def _validate_device_vrf_assignments(sender, instance, pk_set, device_field):
@@ -79,7 +79,7 @@ def _validate_device_vrf_assignments(sender, instance, pk_set, device_field):
     """
     filter_kwargs = {device_field: instance, "vrf_id__in": pk_set}
     for assignment in sender.objects.filter(**filter_kwargs):
-        assignment.full_clean()
+        assignment.validated_save()
 
 
 @receiver(m2m_changed, sender=VRFDeviceAssignment)

@@ -2329,54 +2329,54 @@ class VRFDeviceAssignmentSignalTest(TestCase):
         self.vrf1.devices.add(self.device1)
         self.assertEqual(self.vrf1.device_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.vrf1.devices.add(self.device2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
     def test_device_vrf_associated_signal_only_validates_new_assignments(self):
         """Adding a VRF to a device should only validate the new assignment, not all existing ones."""
         self.device1.vrfs.add(self.vrf1)
         self.assertEqual(self.device1.vrf_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.device1.vrfs.add(self.vrf2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
     def test_vrf_vm_associated_signal_only_validates_new_assignments(self):
         """Adding a VM to a VRF should only validate the new assignment, not all existing ones."""
         self.vrf1.virtual_machines.add(self.vm1)
         self.assertEqual(self.vrf1.device_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.vrf1.virtual_machines.add(self.vm2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
     def test_vm_vrf_associated_signal_only_validates_new_assignments(self):
         """Adding a VRF to a VM should only validate the new assignment, not all existing ones."""
         self.vm1.vrfs.add(self.vrf1)
         self.assertEqual(self.vm1.vrf_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.vm1.vrfs.add(self.vrf2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
     def test_vrf_vdc_associated_signal_only_validates_new_assignments(self):
         """Adding a VDC to a VRF should only validate the new assignment, not all existing ones."""
         self.vrf1.virtual_device_contexts.add(self.vdc1)
         self.assertEqual(self.vrf1.device_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.vrf1.virtual_device_contexts.add(self.vdc2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
     def test_vdc_vrf_associated_signal_only_validates_new_assignments(self):
         """Adding a VRF to a VDC should only validate the new assignment, not all existing ones."""
         self.vdc1.vrfs.add(self.vrf1)
         self.assertEqual(self.vdc1.vrf_assignments.count(), 1)
 
-        with patch.object(VRFDeviceAssignment, "full_clean", autospec=True) as mock_clean:
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
             self.vdc1.vrfs.add(self.vrf2)
-            self.assertEqual(mock_clean.call_count, 1)
+            self.assertEqual(mock_validated_save.call_count, 1)
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):
