@@ -166,7 +166,6 @@ class L2VPNFilterTestCase(TestCase):
         # Create L2VPN objects for filter tests
         cls.l2vpn1 = models.L2VPN.objects.create(
             name="L2VPN Filter Test 1",
-            slug="l2vpn-filter-test-1",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=10001,
@@ -175,7 +174,6 @@ class L2VPNFilterTestCase(TestCase):
         )
         cls.l2vpn2 = models.L2VPN.objects.create(
             name="L2VPN Filter Test 2",
-            slug="l2vpn-filter-test-2",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=status,
             identifier=10002,
@@ -183,7 +181,6 @@ class L2VPNFilterTestCase(TestCase):
         )
         cls.l2vpn3 = models.L2VPN.objects.create(
             name="L2VPN Filter Test 3",
-            slug="l2vpn-filter-test-3",
             type=choices.L2VPNTypeChoices.TYPE_VPWS,
             status=status,
             identifier=10003,
@@ -212,15 +209,6 @@ class L2VPNFilterTestCase(TestCase):
         filtered_qs = filters.L2VPNFilterSet(params, queryset).qs
         self.assertTrue(filtered_qs.filter(pk=self.l2vpn1.pk).exists())
 
-    def test_filter_by_slug(self):
-        """Test filtering L2VPNs by slug."""
-        queryset = models.L2VPN.objects.all()
-        params = {"slug": self.l2vpn1.slug}
-        filtered_qs = filters.L2VPNFilterSet(params, queryset).qs
-        self.assertEqual(filtered_qs.count(), 1)
-        self.assertEqual(filtered_qs.first(), self.l2vpn1)
-
-
 class L2VPNTerminationFilterTestCase(TestCase):
     """L2VPN Termination FilterSet Test Case, simple filter tests."""
 
@@ -241,7 +229,6 @@ class L2VPNTerminationFilterTestCase(TestCase):
         # Create L2VPN for termination tests
         cls.l2vpn = models.L2VPN.objects.create(
             name="L2VPN Term Filter Test",
-            slug="l2vpn-term-filter-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
         )

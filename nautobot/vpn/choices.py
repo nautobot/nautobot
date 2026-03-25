@@ -247,12 +247,11 @@ class L2VPNTypeChoices(ChoiceSet):
     )
 
     # Types that use VNI (VXLAN Network Identifier) — range 1 to 16,777,214
+    # Only pure VXLAN types use the 24-bit VNI field (RFC 7348).
+    # MPLS EVPN, PBB EVPN, and EVPN VPWS use MPLS labels / route distinguishers, not VNIs.
     VXLAN_TYPES = (
         TYPE_VXLAN,
         TYPE_VXLAN_EVPN,
-        TYPE_MPLS_EVPN,
-        TYPE_PBB_EVPN,
-        TYPE_EVPN_VPWS,
     )
 
     VXLAN_VNI_MIN = 1

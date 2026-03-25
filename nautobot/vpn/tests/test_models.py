@@ -214,32 +214,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         if l2vpn:
             self.assertEqual(str(l2vpn), l2vpn.name)
 
-    def test_slug_auto_generation(self):
-        """Test that slug is auto-generated from name if not provided."""
-        # In UI there is no option to enter slug
-        # From API/objects it can be done "slug":"any-name"
-        status = self._get_l2vpn_status()
-        l2vpn = models.L2VPN(
-            name="Test L2VPN Auto Slug",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=status,
-        )
-        l2vpn.save()
-        self.assertEqual(l2vpn.slug, "test-l2vpn-auto-slug")
-
-    def test_slug_preserved_if_provided(self):
-        """Test that slug is preserved if explicitly provided."""
-        status = self._get_l2vpn_status()
-        l2vpn = models.L2VPN(
-            name="Test L2VPN Custom Slug",
-            slug="custom-slug-value",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=status,
-        )
-        l2vpn.save()
-
-        self.assertEqual(l2vpn.slug, "custom-slug-value")
-
     def test_can_add_termination_non_p2p(self):
         """Test can_add_termination returns True for non-P2P types."""
         # Non-P2P types can have unlimited terminations
@@ -289,7 +263,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         models.L2VPN.objects.create(
             name="I Swear This Name Is Unique",
-            slug="i-swear-this-name-is-unique",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
         )
@@ -297,25 +270,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(IntegrityError):
             models.L2VPN.objects.create(
                 name="I Swear This Name Is Unique",
-                slug="i-swear-this-name-is-unique-2",
-                type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-                status=status,
-            )
-
-    def test_slug_unique_constraint(self):
-        """Test that L2VPN slug must be unique."""
-        status = self._get_l2vpn_status()
-        models.L2VPN.objects.create(
-            name="L2VPN Slug Unique Test 1",
-            slug="unique-slug-test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=status,
-        )
-
-        with self.assertRaises(IntegrityError):
-            models.L2VPN.objects.create(
-                name="L2VPN Slug Unique Test 2",
-                slug="unique-slug-test",
                 type=choices.L2VPNTypeChoices.TYPE_VXLAN,
                 status=status,
             )
@@ -398,7 +352,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="Valid VNI Test",
-            slug="valid-vni-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=10000,
@@ -410,7 +363,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="High VNI Test",
-            slug="high-vni-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=16777215,
@@ -424,7 +376,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="Zero VNI Test",
-            slug="zero-vni-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN,
             status=status,
             identifier=0,
@@ -438,7 +389,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="Negative ID Test",
-            slug="negative-id-test",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=status,
             identifier=-1,
@@ -452,7 +402,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="Null ID Test",
-            slug="null-id-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=None,
@@ -464,7 +413,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         status = self._get_l2vpn_status()
         l2vpn = models.L2VPN(
             name="Large VPLS ID Test",
-            slug="large-vpls-id-test",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=status,
             identifier=99999999,
@@ -477,7 +425,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         # Min valid VNI (1)
         l2vpn_min = models.L2VPN(
             name="VNI Min Boundary Test",
-            slug="vni-min-boundary-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=1,
@@ -487,7 +434,6 @@ class TestL2VPNModel(ModelTestCases.BaseModelTestCase):
         # Max valid VNI (16,777,214)
         l2vpn_max = models.L2VPN(
             name="VNI Max Boundary Test",
-            slug="vni-max-boundary-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=status,
             identifier=16777214,

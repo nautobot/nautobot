@@ -120,7 +120,7 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 # L2VPN Serializers
 #
 
-class L2VPNSerializer(NautobotModelSerializer):
+class L2VPNSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """Serializer for L2VPN."""
 
     class Meta:
@@ -128,7 +128,7 @@ class L2VPNSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class L2VPNTerminationSerializer(NautobotModelSerializer):
+class L2VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
     """Serializer for L2VPNTermination."""
 
     assigned_object_type = ContentTypeField(

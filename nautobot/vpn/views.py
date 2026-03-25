@@ -521,7 +521,6 @@ class L2VPNUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields=[
                     "name",
-                    "slug",
                     "status",
                     "type",
                     "identifier",

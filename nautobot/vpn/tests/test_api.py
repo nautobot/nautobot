@@ -367,7 +367,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
         # Create at least 3 L2VPN objects for GET tests (required by base class)
         models.L2VPN.objects.create(
             name="L2VPN API Existing 1",
-            slug="l2vpn-api-existing-1",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=l2vpn_status,
             identifier=1001,
@@ -375,7 +374,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
         )
         models.L2VPN.objects.create(
             name="L2VPN API Existing 2",
-            slug="l2vpn-api-existing-2",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=l2vpn_status,
             identifier=1002,
@@ -383,7 +381,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
         )
         models.L2VPN.objects.create(
             name="L2VPN API Existing 3",
-            slug="l2vpn-api-existing-3",
             type=choices.L2VPNTypeChoices.TYPE_VPWS,
             status=l2vpn_status,
             identifier=1003,
@@ -393,7 +390,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
         cls.create_data = [
             {
                 "name": "L2VPN API Test 1",
-                "slug": "l2vpn-api-test-1",
                 "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
                 "status": l2vpn_status.pk,
                 "identifier": 10001,
@@ -401,7 +397,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "L2VPN API Test 2",
-                "slug": "l2vpn-api-test-2",
                 "type": choices.L2VPNTypeChoices.TYPE_VPLS,
                 "status": l2vpn_status.pk,
                 "identifier": 10002,
@@ -409,7 +404,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
             },
             {
                 "name": "L2VPN API Test 3",
-                "slug": "l2vpn-api-test-3",
                 "type": choices.L2VPNTypeChoices.TYPE_VPWS,
                 "status": l2vpn_status.pk,
                 "identifier": 10003,
@@ -437,7 +431,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
 
             data = {
                 "name": "L2VPN With Route Targets",
-                "slug": "l2vpn-with-route-targets",
                 "type": choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN,
                 "status": l2vpn_status.pk,
                 "import_targets": [rt.pk for rt in route_targets[:1]],
@@ -466,7 +459,6 @@ class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
 
             data = {
                 "name": "L2VPN With Tenant",
-                "slug": "l2vpn-with-tenant",
                 "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
                 "status": l2vpn_status.pk,
                 "tenant": tenant.pk,
@@ -592,7 +584,6 @@ class L2VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
         l2vpn_status = cls._get_l2vpn_status()
         cls.l2vpn = models.L2VPN.objects.create(
             name="L2VPN For Termination API Test",
-            slug="l2vpn-for-termination-api-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=l2vpn_status,
         )
@@ -678,7 +669,6 @@ class L2VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
         # Create a second L2VPN for update test
         cls.l2vpn2 = models.L2VPN.objects.create(
             name="L2VPN For Termination API Update Test",
-            slug="l2vpn-for-termination-api-update-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=l2vpn_status,
         )

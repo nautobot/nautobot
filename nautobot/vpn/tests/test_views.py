@@ -327,7 +327,6 @@ class L2VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create at least 3 L2VPN objects for view tests (required by base class)
         models.L2VPN.objects.create(
             name="L2VPN View Existing 1",
-            slug="l2vpn-view-existing-1",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=l2vpn_status,
             identifier=2001,
@@ -335,7 +334,6 @@ class L2VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         models.L2VPN.objects.create(
             name="L2VPN View Existing 2",
-            slug="l2vpn-view-existing-2",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=l2vpn_status,
             identifier=2002,
@@ -343,7 +341,6 @@ class L2VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         models.L2VPN.objects.create(
             name="L2VPN View Existing 3",
-            slug="l2vpn-view-existing-3",
             type=choices.L2VPNTypeChoices.TYPE_VPWS,
             status=l2vpn_status,
             identifier=2003,
@@ -481,7 +478,6 @@ class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         l2vpn_status = cls._get_l2vpn_status()
         l2vpn = models.L2VPN.objects.create(
             name="L2VPN For Termination View Test",
-            slug="l2vpn-for-termination-view-test",
             type=choices.L2VPNTypeChoices.TYPE_VXLAN,
             status=l2vpn_status,
         )
@@ -489,7 +485,6 @@ class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Create a second L2VPN for bulk edit tests
         l2vpn2 = models.L2VPN.objects.create(
             name="L2VPN For Termination View Test 2",
-            slug="l2vpn-for-termination-view-test-2",
             type=choices.L2VPNTypeChoices.TYPE_VPLS,
             status=l2vpn_status,
         )

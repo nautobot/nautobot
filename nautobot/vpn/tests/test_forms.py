@@ -336,8 +336,7 @@ class L2VPNFormTest(FormTestCases.BaseFormTestCase):
         self.assertTrue(form.is_valid())
         instance = form.save()
         self.assertIsNotNone(instance)
-        # Verify slug is auto-generated
-        self.assertEqual(instance.slug, "test-l2vpn-required-only")
+        self.assertEqual(instance.name, "Test L2VPN Required Only")
 
     def test_validate_name_is_required(self):
         """Test that the name field is required."""

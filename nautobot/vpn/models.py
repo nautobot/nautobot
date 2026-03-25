@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -5,7 +6,6 @@ from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.apps.models import BaseModel, extras_features, JSONArrayField, PrimaryModel, StatusField
 from nautobot.extras.models import RoleField
 from nautobot.vpn import choices
-from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 @extras_features(
@@ -563,11 +563,6 @@ class L2VPN(PrimaryModel):
         unique=True,
         help_text="Unique name for this L2VPN"
     )
-    slug = models.SlugField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="URL-friendly unique identifier"
-    )
     type = models.CharField(
         max_length=50,
         choices=choices.L2VPNTypeChoices,
@@ -604,7 +599,7 @@ class L2VPN(PrimaryModel):
     )
 
     clone_fields = ["type", "status", "description", "tenant"]
-    natural_key_field_names = ["slug"]
+    natural_key_field_names = ["name"]
 
     class Meta:
         ordering = ("name", "identifier")
@@ -640,10 +635,6 @@ class L2VPN(PrimaryModel):
                     })
 
     def save(self, *args, **kwargs):
-        """Auto-generate slug from name if not set."""
-        if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
 
@@ -652,7 +643,6 @@ class L2VPN(PrimaryModel):
     "custom_validators",
     "export_templates",
     "graphql",
-    "statuses",
     "webhooks",
 )
 class L2VPNTermination(PrimaryModel):
@@ -694,6 +684,27 @@ class L2VPNTermination(PrimaryModel):
         if self.pk and self.assigned_object:
             return f"{self.assigned_object} <> {self.l2vpn}"
         return super().__str__()
+
+    @property
+    def assigned_object_parent(self):
+        """Return the parent object of the assigned termination target.
+
+        - Interface → Device
+        - VMInterface → VirtualMachine
+        - VLAN → VLANGroup (or None if ungrouped)
+        """
+        from nautobot.dcim.models import Interface
+        from nautobot.virtualization.models import VMInterface
+        from nautobot.ipam.models import VLAN
+
+        obj = self.assigned_object
+        if isinstance(obj, Interface):
+            return obj.device
+        if isinstance(obj, VMInterface):
+            return obj.virtual_machine
+        if isinstance(obj, VLAN):
+            return obj.vlan_group
+        return None
 
     def clean(self):
         from django.contrib.contenttypes.models import ContentType

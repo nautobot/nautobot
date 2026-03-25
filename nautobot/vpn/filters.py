@@ -262,7 +262,6 @@ class L2VPNFilterSet(
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
-            "slug": "icontains",
             "description": "icontains",
             "identifier": "exact",
         }
@@ -280,7 +279,7 @@ class L2VPNFilterSet(
 
     class Meta:
         model = models.L2VPN
-        fields = ["id", "name", "slug", "type", "identifier", "description"]
+        fields = ["id", "name", "type", "identifier", "description"]
 
 
 class L2VPNTerminationFilterSet(NautobotFilterSet):
@@ -293,8 +292,8 @@ class L2VPNTerminationFilterSet(NautobotFilterSet):
     )
     l2vpn = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.L2VPN.objects.all(),
-        to_field_name="slug",
-        label="L2VPN (slug or ID)",
+        to_field_name="name",
+        label="L2VPN (name or ID)",
     )
 
     class Meta:

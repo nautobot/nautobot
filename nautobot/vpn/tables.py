@@ -424,7 +424,6 @@ class L2VPNTable(StatusTableMixin, BaseTable):
         fields = (
             "pk",
             "name",
-            "slug",
             "status",
             "identifier",
             "type",
