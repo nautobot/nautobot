@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import shutil
 import sys
-
 from celery import bootsteps, Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
@@ -21,7 +20,7 @@ from nautobot.core.celery.control import discard_git_repository, refresh_git_rep
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
 from nautobot.core.utils.module_loading import import_modules_privately, import_string_optional
-from nautobot.extras.registry import registry
+from nautobot.extras.registry import registry, registry_jobs_lock
 
 logger = logging.getLogger(__name__)
 
@@ -53,19 +52,20 @@ def import_jobs(sender=None, **kwargs):
 
     Note that app-provided jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs
-    import nautobot.ipam.jobs  # noqa: F401
+    with registry_jobs_lock:
+        import nautobot.core.jobs
+        import nautobot.ipam.jobs  # noqa: F401
 
-    _import_jobs_from_jobs_root()
-    _import_dynamic_jobs_from_apps()
+        _import_jobs_from_jobs_root()
+        _import_dynamic_jobs_from_apps()
 
-    try:
-        _import_jobs_from_git_repositories()
-    except (
-        OperationalError,  # Database not present, as may be the case when running pylint-nautobot
-        ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
-    ):
-        pass
+        try:
+            _import_jobs_from_git_repositories()
+        except (
+            OperationalError,  # Database not present, as may be the case when running pylint-nautobot
+            ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
+        ):
+            pass
 
 
 def _import_jobs_from_jobs_root():
@@ -95,7 +95,7 @@ def _import_jobs_from_jobs_root():
         except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
             pass
         # Else, it's presumably a JOBS_ROOT job
-        del registry["jobs"][job_class_path]
+        registry["jobs"].pop(job_class_path, None)
 
     # Load all modules in JOBS_ROOT
     import_modules_privately(path=os.path.realpath(settings.JOBS_ROOT))

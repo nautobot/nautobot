@@ -1,3 +1,4 @@
+import threading
 from collections import defaultdict
 
 
@@ -26,6 +27,8 @@ registry = Registry(
     datasource_contents=defaultdict(list),
     secrets_providers={},
 )
+
+registry_jobs_lock = threading.RLock()
 
 
 class DatasourceContent:
