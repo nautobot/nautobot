@@ -774,11 +774,20 @@ class JobTransactionTest(TransactionTestCase):
         module = "profiling"
         name = "TestProfilingJob"
 
-        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
-        job_result = create_job_result_and_run_job(module, name, profile=True)
+        with self.assertWarnsRegex(DeprecationWarning, "deprecated"):
+            job_result = create_job_result_and_run_job(module, name, profile=True)
 
         self.assertJobResultStatus(job_result)
 
+        # New behaviour: profiling data is available as a downloadable FileProxy linked to the JobResult
+        job_result.refresh_from_db()
+        self.assertEqual(job_result.files.count(), 1)
+        file_proxy = job_result.files.first()
+        self.assertEqual(file_proxy.name, f"nautobot-jobresult-{job_result.id}.pstats")
+        self.assertGreater(len(file_proxy.file.read()), 0)
+
+        # Old (deprecated) behaviour: stats are still written to /tmp for backward compatibility
+        # TODO: Remove after deprecation
         profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
         self.assertTrue(profiling_result.exists())
         profiling_result.unlink()

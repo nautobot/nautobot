@@ -166,22 +166,37 @@ class BaseJob:
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
-                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-                # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                profile_filename = f"nautobot-jobresult-{self.job_result.id}.pstats"
                 self.logger.info(
-                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                    "Profiling job execution; results will be available for download upon completion.",
+                    extra={"grouping": "initialization"},
                 )
 
                 with cProfile.Profile() as pr:
                     try:
                         output = self.run(*args, **deserialized_kwargs)
-                    except Exception as err:
-                        pr.dump_stats(profiling_path)
-                        raise err
+                    except Exception:
+                        raise
                     else:
-                        pr.dump_stats(profiling_path)
                         return output
+                    finally:
+                        import io
+                        import marshal
+
+                        pr.create_stats()
+                        buf = io.BytesIO()
+                        marshal.dump(pr.stats, buf)
+                        self.create_file(profile_filename, content=buf.getvalue())
+
+                        # TODO: Remove after deprecation
+                        profiling_path = f"{tempfile.gettempdir()}/{profile_filename}"
+                        warnings.warn(
+                            f"Writing profiling stats to {profiling_path} is deprecated and will be removed in a "
+                            "future release. Download the profiling file directly from the Job Result in the GUI.",
+                            DeprecationWarning,
+                            stacklevel=2,
+                        )
+                        pr.dump_stats(profiling_path)
             else:
                 return self.run(*args, **deserialized_kwargs)
 
