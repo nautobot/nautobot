@@ -1,1 +1,1 @@
-Changed ObjectChangeFactory to use `factory_boy` instead of `faker` for deterministic timestamps for the `time` field for tests.
+Changed ObjectChangeFactory to use set start and end dates for deterministic timestamps for the `time` field for tests.
