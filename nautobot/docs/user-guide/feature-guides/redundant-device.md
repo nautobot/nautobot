@@ -382,7 +382,7 @@ TODO: Insert UML here
 | Attribute | Type | Required | Description |
 |---|---|---|---|
 | `device_redundancy_group` | FK → DeviceRedundancyGroup | No | The redundancy group this device belongs to |
-| `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group; lower values indicate higher priority (e.g., `1` = primary) |
+| `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group |
 
 ### Sample API
 ### Sample Design Builder
