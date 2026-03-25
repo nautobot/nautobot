@@ -1885,6 +1885,13 @@ class ModuleTypeUIViewSet(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
+                exclude_fields=["front_image", "rear_image"],
+            ),
+            ModuleTypeFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["front_image", "rear_image"],
+                label="Images",
             ),
             object_detail.ObjectsTablePanel(
                 weight=200,
