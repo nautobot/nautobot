@@ -95,11 +95,13 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
+    get_kubernetes_job_manifest,
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
@@ -236,9 +238,44 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
         if stages.is_valid():
             stages.save()
         else:
+            non_form_errors = stages.non_form_errors()
+            # this error comming from https://docs.djangoproject.com/en/6.0/topics/forms/formsets/#validate-min
+            if "Please submit at least 1 form." in non_form_errors:
+                raise ValidationError("At least one Approval Workflow Stage Definition is required.")
             raise ValidationError(stages.errors)
 
         return obj
+
+    def _handle_validation_error(self, e):
+        """
+        Override to handle ValidationError raised during delete operations
+        from pre_delete signals (e.g. pending workflows).
+
+        Catches ValidationError with specific error code (PENDING_WORKFLOWS_ERROR_CODE)
+        raised by signals.
+        Displays formatted HTML error message with link to the object's workflow.
+        For other errors, delegates to parent implementation.
+        """
+        if isinstance(e, ValidationError) and e.code == PENDING_WORKFLOWS_ERROR_CODE:
+            if self.action == "update":
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Stage Definition(s). "
+                    "There are still pending Approval <a href='{}'>Workflows</a> including this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.get_absolute_url(),
+                )
+            else:
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Definition '{}'. "
+                    "There are still pending Approval <a href='{}'>Workflows</a> using this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.name,
+                    self.obj.get_absolute_url(),
+                )
+            messages.error(self.request, cannot_delete_msg)
+            self.has_error = True
+        else:
+            super()._handle_validation_error(e)
 
 
 class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
@@ -2353,8 +2390,25 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+        if job_execution_form is not None:
+            job_execution_form_is_valid = job_execution_form.is_valid()
+            job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
+                job_queue.name
+            ):
+                job_execution_form.add_error(
+                    "_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue."
+                )
+                job_execution_form_is_valid = False
+        else:
+            job_execution_form_is_valid = False
+
         schedule_form = forms.JobScheduleForm(request.POST)
+        schedule_form_is_valid = schedule_form.is_valid()
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -2372,17 +2426,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif (
-            job_form is not None
-            and job_form.is_valid()
-            and job_execution_form is not None
-            and job_execution_form.is_valid()
-            and schedule_form.is_valid()
-        ):
-            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
-            if job_queue is None:
-                job_queue = job_model.default_job_queue
-
+        elif job_form_is_valid and job_execution_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(
                     request,
@@ -3135,11 +3179,13 @@ class JobResultUIViewSet(
                 icon="mdi-repeat",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
-                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                    + f"?kwargs_from_job_result={ctx['object'].pk}"
-                )
-                if ctx["object"].job_model and ctx["object"].task_kwargs
-                else None,
+                    (
+                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                        + f"?kwargs_from_job_result={ctx['object'].pk}"
+                    )
+                    if ctx["object"].job_model and ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=110,
@@ -3147,9 +3193,11 @@ class JobResultUIViewSet(
                 color=ButtonActionColorChoices.RUN,
                 icon="mdi-play",
                 required_permissions=["extras.run_job"],
-                link_name=lambda ctx: reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                if ctx["object"].job_model and not ctx["object"].task_kwargs
-                else None,
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    if ctx["object"].job_model and not ctx["object"].task_kwargs
+                    else None
+                ),
             ),
             JobResultButton(
                 weight=120,
@@ -3159,6 +3207,17 @@ class JobResultUIViewSet(
                 required_permissions=["extras.view_joblogentry"],
                 link_name=lambda ctx: (
                     reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_jobconsoleentry"],
+                render_on_tab_id=["job_console_entries"],
+                link_name=lambda ctx: reverse(
+                    "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
         ),
@@ -3352,6 +3411,32 @@ class JobResultUIViewSet(
         html_content = render_to_string("extras/inc/jobresult_console_log_response.html", context)
 
         return HttpResponse(html_content, content_type="text/html; charset=utf-8")
+
+    @action(
+        detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for a JobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
     @action(
         detail=True,

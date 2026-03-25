@@ -1046,6 +1046,40 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
             },
         ]
 
+    def test_filter_subdevice_role(self):
+        self.add_permissions("dcim.view_devicetype")
+        manufacturer = Manufacturer.objects.first()
+        device_family = DeviceFamily.objects.first()
+
+        roles = [
+            (SubdeviceRoleChoices.ROLE_PARENT_CHILD, "Device Type ParentChild API", 0),
+            (SubdeviceRoleChoices.ROLE_PARENT, "Device Type Parent API", None),
+            (SubdeviceRoleChoices.ROLE_CHILD, "Device Type Child API", 0),
+        ]
+        device_types = {}
+        for role, model, u_height in roles:
+            kwargs = {
+                "manufacturer": manufacturer,
+                "device_family": device_family,
+                "model": model,
+                "subdevice_role": role,
+            }
+            if u_height is not None:
+                kwargs["u_height"] = u_height
+            device_types[role] = DeviceType.objects.create(**kwargs)
+
+        url = self._get_list_url()
+        for role, _, _ in roles:
+            with self.subTest(role=role):
+                response = self.client.get(url, {"subdevice_role": role}, **self.header)
+
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_ids = {item["id"] for item in response.data["results"]}
+                self.assertIn(str(device_types[role].pk), result_ids)
+                for other_role, other_device_type in device_types.items():
+                    if other_role != role:
+                        self.assertNotIn(str(other_device_type.pk), result_ids)
+
 
 class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
     model = ModuleType
@@ -1425,6 +1459,9 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        parent_child_device_type = DeviceType.objects.filter(
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD
+        ).first()
 
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 1")
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 2")
@@ -1442,6 +1479,10 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
             {
                 "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
+            },
+            {
+                "device_type": parent_child_device_type.pk,
+                "name": "Device Bay Template 7",
             },
         ]
 
@@ -2889,6 +2930,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD).first(),
         )
 
         devices = (
@@ -2921,6 +2963,13 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 name="Device 5",
                 location=cls.location,
             ),
+            Device.objects.create(
+                device_type=device_types[2],
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 6",
+                location=cls.location,
+            ),
         )
 
         DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
@@ -2942,6 +2991,11 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "device": devices[0].pk,
                 "name": "Device Bay 6",
                 "installed_device": devices[3].pk,
+            },
+            {
+                "device": devices[0].pk,
+                "name": "Device Bay 7",
+                "installed_device": devices[4].pk,
             },
         ]
 

@@ -404,7 +404,9 @@ nav:
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
-          - Custom Fields: "user-guide/feature-guides/custom-fields.md"
+          - Custom Fields:
+              - Custom Fields Overview: "user-guide/feature-guides/custom-fields.md"
+              - Custom Fields Cleanup: "user-guide/feature-guides/custom-fields-behavior.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
