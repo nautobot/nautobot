@@ -91,21 +91,24 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
     # optionally setting RD/name on assignment.
     if action == "post_add" and pk_set:
         if isinstance(instance, VRF):
-            device_field_map = {
-                Device: "device",
-                VirtualMachine: "virtual_machine",
-                VirtualDeviceContext: "virtual_device_context",
-            }
-            device_field = device_field_map.get(model)
-            if device_field:
-                _validate_vrf_device_assignments(sender, instance, pk_set, device_field)
+            if isinstance(model, Device):
+                device_field = "device"
+            elif isinstance(model, VirtualMachine):
+                device_field = "virtual_machine"
+            elif isinstance(model, VirtualDeviceContext):
+                device_field = "virtual_device_context"
+            else:
+                return
+            _validate_vrf_device_assignments(sender, instance, pk_set, device_field)
         else:
             if isinstance(instance, Device):
                 device_field = "device"
             elif isinstance(instance, VirtualMachine):
                 device_field = "virtual_machine"
-            else:
+            elif isinstance(instance, VirtualDeviceContext):
                 device_field = "virtual_device_context"
+            else:
+                return
             _validate_device_vrf_assignments(sender, instance, pk_set, device_field)
 
 
