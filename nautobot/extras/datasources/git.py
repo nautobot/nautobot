@@ -756,7 +756,9 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
                         raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
                 else:
                     import_modules_privately(
-                        settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
+                        settings.GIT_ROOT,
+                        module_path=[repository_slug, "jobs"],
+                        ignore_import_errors=ignore_import_errors,
                     )
         except GitRepository.DoesNotExist as exc:
             logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)

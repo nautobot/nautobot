@@ -1,5 +1,5 @@
-import threading
 from collections import defaultdict
+import threading
 
 
 class Registry(dict):
