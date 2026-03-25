@@ -23,6 +23,7 @@ from nautobot.core.forms import (
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    EmbeddedActionsFormMixin,
     ExpandableNameField,
     form_from_model,
     JSONArrayFormField,
@@ -253,7 +254,7 @@ class InterfaceCommonForm(forms.Form):
                 )
 
 
-class ComponentForm(BootstrapMixin, forms.Form):
+class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     """
     Subclass this form when facilitating the creation of one or more device component or component templates based on
     a name pattern.
@@ -1767,7 +1768,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
 
 
-class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+class ModuleBayBaseCreateForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
@@ -4343,6 +4344,8 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         help_texts = {
             "status": "Connection status",
         }
+        embedded_create = []
+        embedded_search = []
 
     def clean_termination_b_id(self):
         # Return the PK rather than the object

@@ -112,7 +112,7 @@
                     event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
 
                     const targetField = document.querySelector(
-                        `#nb-create-form [name="${window.nb.embeddedAction.targetFieldName}"]`,
+                        `#nb-create-form select[name="${window.nb.embeddedAction.targetFieldName}"]`,
                     );
                     if (targetField) {
                         const targetFieldValue = [...targetField.selectedOptions].map((option) => ({

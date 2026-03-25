@@ -510,7 +510,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
-        form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.model_form(instance=obj, initial=initial_data, **form_kwargs)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
         base_template = (
@@ -1399,13 +1400,20 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     def get(self, request):
         if self.form is None or self.model_form is None:
             raise RuntimeError("self.form and self.model_form must not be None")
-        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form), **form_kwargs)  # pylint: disable=not-callable
         model_form = self.model_form(request.GET)  # pylint: disable=not-callable
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
 
         return render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "component_type": self.queryset.model._meta.verbose_name,
                 "model_form": model_form,
                 "form": form,

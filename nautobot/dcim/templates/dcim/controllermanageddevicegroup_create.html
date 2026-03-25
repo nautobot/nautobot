@@ -124,11 +124,13 @@
                 const parentUid = parentInput.val();
                 if (parentUid) {
                     controllerInput.prop("disabled", true);
+                    controllerInput.parent().parent().find('button[data-bs-target="#embedded_action_modal"]').prop('disabled', true);
                     if (event) {
                         updateControllerFromParent(parentUid);
                     }
                 } else {
                     controllerInput.prop("disabled", false);
+                    controllerInput.parent().parent().find('button[data-bs-target="#embedded_action_modal"]').prop('disabled', false);
                 }
             };
 
