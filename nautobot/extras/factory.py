@@ -474,12 +474,15 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                # Use factory_boy's seeded random (not standalone faker) with absolute dates
-                # to ensure deterministic output. Standalone faker.Faker() bypasses factory_boy's
-                # seed, and relative date strings like "-1y" are non-deterministic (faker#2149).
+                # Generate timestamps between 30 and 90 days ago using factory_boy's seeded
+                # random. This ensures records land on both sides of the 60-day cleanup cutoff.
+                # Standalone faker.Faker() bypasses factory_boy's seed, and relative date
+                # strings like "-1y" are non-deterministic (faker#2149).
                 now = datetime.now(tz=timezone.utc)
-                seconds_in_year = 365 * 24 * 60 * 60
-                self.time = now - timedelta(seconds=factory.random.randgen.randint(0, seconds_in_year))
+                start = now - timedelta(days=90)
+                end = now - timedelta(days=30)
+                seconds_range = int((end - start).total_seconds())
+                self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
 
 
 class RoleFactory(OrganizationalModelFactory):

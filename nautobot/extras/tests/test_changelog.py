@@ -458,7 +458,7 @@ class ChangeLogAPITest(APITestCase):
         resp = execute_query(gql_payload, user=self.user)
         self.assertIsNone(resp.errors)
         self.assertIsInstance(resp.data.get("query"), list)
-        # ObjectChangeFactory creates records in the last year only; there shouldn't be any in this filtered response.
+        # ObjectChangeFactory creates records between 30 and 90 days ago; there shouldn't be any in this filtered response.
         self.assertEqual(len(resp.data.get("query")), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
