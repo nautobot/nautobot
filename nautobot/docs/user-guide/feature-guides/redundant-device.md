@@ -403,7 +403,7 @@ TODO: Insert UML here
 #### Key Questions
 
 - Can you port channel across multiple devices? No — EtherChannel is per-device only
-- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces #TODO: Is this really asking "Can all phyical and logical interfaces on both devices be configured on the primary?
+- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces
 - Can you see all interfaces on the Backup? No — the standby unit has its own separate interface list
 - On Primary, can you tell which interfaces are assigned to which device? N/A — each device is modeled separately in Nautobot
 - When do you see all the interfaces on the master device? Each device always shows only its own interfaces
