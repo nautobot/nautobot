@@ -87,6 +87,8 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
     """
     Assert validation on m2m when Devices, VMs, or VDCs are associated with a VRF.
     """
+    # TODO(jathan): Temporary workaround until a formset to add/remove/update VRFs <-> Devices and
+    # optionally setting RD/name on assignment.
     if action == "post_add" and pk_set:
         if isinstance(instance, VRF):
             device_field_map = {
