@@ -1,0 +1,3 @@
+Added boolean column showing it has a console log or not, set as default column.
+Added filter by console_log flag.
+Added download log(s) console and job log entry to action button from list view.

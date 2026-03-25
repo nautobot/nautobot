@@ -2365,6 +2365,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
                         "nautobot_job_ignore_singleton_lock", False
                     )
+                    initial["_console_log"] = job_result.celery_kwargs.get("nautobot_job_console_log", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(

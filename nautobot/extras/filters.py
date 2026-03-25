@@ -1178,10 +1178,27 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Scheduled Job (name or ID)",
     )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    console_log = RelatedMembershipBooleanFilter(
+        field_name="console_log",
+        method="_has_job_console_log",
+        label="Console Log",
+    )
 
     class Meta:
         model = JobResult
         fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+
+    def generate_query__console_log(self, value):
+        if value is not None:
+            if value:
+                return Q(celery_kwargs__nautobot_job_console_log=True)
+            else:
+                return ~Q(celery_kwargs__nautobot_job_console_log=True)
+        return Q()
+
+    def _has_job_console_log(self, queryset, name, value):
+        params = self.generate_query__console_log(value)
+        return queryset.filter(params)
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

@@ -786,6 +786,12 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         return None
 
     @property
+    def console_log(self):
+        if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
+            return self.celery_kwargs.get("nautobot_job_console_log", False)
+        return False
+
+    @property
     def job_description(self):
         return self.job_model.description if self.job_model else None
 
