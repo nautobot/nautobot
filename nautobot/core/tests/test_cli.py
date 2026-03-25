@@ -134,7 +134,7 @@ class TestPreprocessSettings(TestCase):
         settings_module.STORAGE_BACKEND = "storages.some_custom_backend"
         settings_module.STORAGE_CONFIG = {"MY_BACKEND_OPTION": "some_value"}
 
-        import storages.utils
+        import storages.utils  # pylint: disable=import-error
 
         original_setting = storages.utils.setting
         del sys.modules["storages.utils"]
@@ -153,7 +153,7 @@ class TestPreprocessSettings(TestCase):
             self.assertEqual("some_value", storages.utils.setting("MY_BACKEND_OPTION"))
         finally:
             # Clean up the STORAGE_CONFIG monkeypatch
-            import storages.utils  # pylint: disable=reimported
+            import storages.utils  # pylint: disable=reimported,import-error
 
             storages.utils.setting = original_setting
             self.assertIsNone(storages.utils.setting("MY_BACKEND_OPTION"))

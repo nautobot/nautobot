@@ -175,10 +175,6 @@ class BaseJob:
                 with cProfile.Profile() as pr:
                     try:
                         output = self.run(*args, **deserialized_kwargs)
-                    except Exception:
-                        raise
-                    else:
-                        return output
                     finally:
                         import io
                         import marshal
@@ -197,6 +193,7 @@ class BaseJob:
                             stacklevel=2,
                         )
                         pr.dump_stats(profiling_path)
+                return output
             else:
                 return self.run(*args, **deserialized_kwargs)
 
