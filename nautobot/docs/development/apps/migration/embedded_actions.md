@@ -28,7 +28,7 @@ Previously, when you wrote JavaScript to enhance an app's form (e.g., toggling f
 
 When a user opens a dynamic modal to create an object, the modal content is fetched and injected into the page. Because the document is already "ready", those initialization events do not re-fire for the dynamically injected content, leaving your custom form logic uninitialized and broken.
 
-The new `window.nb.form` API provides a standardized lifecycle hook that executes both on the initial page load and whenever a dynamic form is loaded into a modal.
+The new `window.nb.form` API provides a standardized lifecycle event that dispatches both on the initial page load and whenever a dynamic form is loaded into a modal.
 
 ##Migrating to `window.nb.form`
 
@@ -53,16 +53,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 ```
 
-### 3. Use the new API lifecycle hook
+### 3. Use the new API lifecycle event
 
-Wrap your initialization logic using the `window.nb.form.onLoad` API.
+Wrap your initialization logic using the `nb-form:load:{{ obj_type }}` event API.
 
 After:
 
 ```javascript
 // ✅ Executes reliably on page load AND when the form renders asynchronoulsy inside a modal
-window.nb.form.onLoad(function() {
-     document.querySelector('#custom_widget').addEventListener('click', function() {
+document.addEventListener('nb-form:load:{{ obj_type }}', () => {
+     document.querySelector('#custom_widget').addEventListener('click', () => {
         // Handle toggle logic...
     });
 });
@@ -81,7 +81,7 @@ You are encouraged to use `window.nb.form.getFieldAutoId(autoId, fieldName, quer
 ❌ Anti-pattern:
 
 ```javascript
-window.nb.form.onLoad(function() {
+document.addEventListener('nb-form:load:{{ obj_type }}', () => {
   // ❌ Hardcoded IDs might select the background page's field instead of the modal's!
   document.querySelector('#id_field_name').doSomething();
 });
@@ -90,7 +90,7 @@ window.nb.form.onLoad(function() {
 ✅ Best practice:
 
 ```javascript
-window.nb.form.onLoad(function() {
+document.addEventListener('nb-form:load:{{ obj_type }}', () => {
   // ✅ Resolves the correct selector for the current context (page load vs. modal)
   const fieldSelector = window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'field_name');
   // Use the resolved selector to safely query the DOM
@@ -102,7 +102,7 @@ window.nb.form.onLoad(function() {
     In case your script makes reference to certain fields multiple times, you may also consider a helper function, like `getField` below:
 
     ```javascript
-    window.nb.form.onLoad(function() {
+    document.addEventListener('nb-form:load:{{ obj_type }}', () => {
         const getField = (name) => document.querySelector(window.nb.form.getFieldAutoId('{{ form.auto_id }}', name));
         getField('field_name').doSomething();
         getField('other_field_name').doSomethingElse();
@@ -116,7 +116,7 @@ Whenever a form is loaded — whether on the initial page load or dynamically in
 You should remove manual `.select2()` calls on standard Nautobot fields to prevent conflicts or double-initialization bugs.
 
 !!! note
-    If your app introduces specific, highly customized fields that `jsify_form` does not process by default, you may still need to manually call `.select2()` on those specific custom fields inside your `window.nb.form.onLoad` block.
+    If your app introduces specific, highly customized fields that `jsify_form` does not process by default, you may still need to manually call `.select2()` on those specific custom fields inside your `nb-form:load:{{ obj_type }}` event listener.
 
 ## Summary checklist for App Developers
 
@@ -124,6 +124,6 @@ You should remove manual `.select2()` calls on standard Nautobot fields to preve
 - Identify all JavaScript files in your app that interact with add/create/update/edit forms.
 - Remove `jquery.formset.js` script loads when templates extend `generic/object_create.html`.
 - Remove `$(document).ready()` or `document.addEventListener('DOMContentLoaded', ...)` wrappers around form manipulation logic.
-- Wrap the logic in the new `window.nb.form.onLoad` lifecycle hook.
+- Wrap the logic in the new `nb-form:load:{{ obj_type }}` event listener.
 - Replace hardcoded field ID selectors (like `$('#id_field_name')` or `document.querySelector('#id_field_name')`) with dynamically resolved selectors using `window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'field_name')`.
 - Remove manual `.select2()` initialization calls for standard fields, relying on the core `jsify_form` function being called by default instead. Keep it only for specific custom fields if strictly necessary.
