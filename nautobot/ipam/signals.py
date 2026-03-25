@@ -91,11 +91,11 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
     # optionally setting RD/name on assignment.
     if action == "post_add" and pk_set:
         if isinstance(instance, VRF):
-            if isinstance(model, Device):
+            if issubclass(model, Device):
                 device_field = "device"
-            elif isinstance(model, VirtualMachine):
+            elif issubclass(model, VirtualMachine):
                 device_field = "virtual_machine"
-            elif isinstance(model, VirtualDeviceContext):
+            elif issubclass(model, VirtualDeviceContext):
                 device_field = "virtual_device_context"
             else:
                 return
