@@ -1,0 +1,1 @@
+Changed the default ordering of models in the global Search results to place Device, Location, Prefix, and IPAddress first in the results, followed by all remaining core models, followed by all app models.
