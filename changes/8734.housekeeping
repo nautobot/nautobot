@@ -1,1 +1,1 @@
-Changed test_cleanup_object_changes to ensure that it always has something to clean up and something to find after cleanup.
+Changed ObjectChangeFactory to use `factory_boy` instead of `faker` for deterministic timestamps for the `time` field for tests.
