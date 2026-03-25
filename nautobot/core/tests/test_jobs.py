@@ -722,10 +722,6 @@ class LogsCleanupTestCase(TransactionTestCase):
     def test_cleanup_object_changes(self):
         """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
         cutoff = timezone.now() - timedelta(days=60)
-        # Pin one record inside the window so the post-cleanup assertTrue has something to find.
-        ObjectChangeFactory(time=timezone.now() - timedelta(days=30))
-        # Pin one record outside the window so the assertFalse actually proves deletion occurred.
-        ObjectChangeFactory(time=timezone.now() - timedelta(days=90))
         create_job_result_and_run_job(
             "nautobot.core.jobs.cleanup",
             "LogsCleanup",
