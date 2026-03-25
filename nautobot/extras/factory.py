@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 import json
 
 from django.contrib.auth import get_user_model
@@ -474,7 +474,12 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                self.time = faker.Faker().date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
+                # Use factory_boy's seeded random (not standalone faker) with absolute dates
+                # to ensure deterministic output. Standalone faker.Faker() bypasses factory_boy's
+                # seed, and relative date strings like "-1y" are non-deterministic (faker#2149).
+                now = datetime.now(tz=timezone.utc)
+                seconds_in_year = 365 * 24 * 60 * 60
+                self.time = now - timedelta(seconds=factory.random.randgen.randint(0, seconds_in_year))
 
 
 class RoleFactory(OrganizationalModelFactory):
