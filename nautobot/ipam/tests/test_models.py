@@ -2378,6 +2378,36 @@ class VRFDeviceAssignmentSignalTest(TestCase):
             self.vdc1.vrfs.add(self.vrf2)
             self.assertEqual(mock_validated_save.call_count, 1)
 
+    def test_vrf_device_associated_signal_ignores_unknown_model(self):
+        """Signal should return early when model is not Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=self.vrf1,
+                action="post_add",
+                reverse=False,
+                model=VRF,  # unexpected model type
+                pk_set={self.device1.pk},
+            )
+            mock_validated_save.assert_not_called()
+
+    def test_vrf_device_associated_signal_ignores_unknown_instance(self):
+        """Signal should return early when instance is not VRF, Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=Namespace.objects.first(),  # unexpected instance type
+                action="post_add",
+                reverse=False,
+                model=VRF,
+                pk_set={self.vrf1.pk},
+            )
+            mock_validated_save.assert_not_called()
+
 
 class TestVRF(ModelTestCases.BaseModelTestCase):
     model = VRF
