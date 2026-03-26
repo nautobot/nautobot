@@ -1947,6 +1947,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="name",
     )
+    has_job_console_entries = forms.NullBooleanField(
+        required=False,
+        label="Has Job Console Entries",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 class ScheduledJobFilterForm(BootstrapMixin, forms.Form):

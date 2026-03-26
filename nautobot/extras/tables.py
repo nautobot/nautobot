@@ -176,6 +176,22 @@ JOB_RESULT_BUTTONS = """
         </li>
     {% endif %}
 {% endif %}
+{% if perms.extras.view_joblogentry %}
+    <li>
+        <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_jobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:jobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
+{% endif %}
 """
 
 SCHEDULED_JOB_BUTTONS = """
@@ -1289,6 +1305,7 @@ class JobResultTable(BaseTable):
     )
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+    console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
 
     def render_summary(self, record):
         """
@@ -1333,6 +1350,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
             "actions",
+            "console_log",
         )
         default_columns = (
             "pk",

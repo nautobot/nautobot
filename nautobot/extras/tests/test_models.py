@@ -3982,6 +3982,21 @@ class JobResultTestCase(TestCase):
 
         save_mock.assert_called_once()
 
+    def test_console_log_property(self):
+        """console_log property should reflect nautobot_job_console_log from celery_kwargs."""
+
+        with self.subTest("Returns True when nautobot_job_console_log is True"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+            self.assertTrue(self.job_result.console_log)
+
+        with self.subTest("Returns False when nautobot_job_console_log is False"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": False}
+            self.assertFalse(self.job_result.console_log)
+
+        with self.subTest("Returns False when key is absent"):
+            self.job_result.celery_kwargs = {}
+            self.assertFalse(self.job_result.console_log)
+
     def test_log_creates_job_console_entry_when_console_log_enabled(self):
         """log() should create a JobConsoleEntry when nautobot_job_console_log is True."""
         self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
