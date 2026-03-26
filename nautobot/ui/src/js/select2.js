@@ -45,6 +45,11 @@ export const setSelect2Value = (select2, value) => {
   })();
 
   $(select2).val(nextValue).trigger('change');
+  if ((Array.isArray(value) && value.length === 0) || value === null) {
+    $(select2).trigger('select2:clear').trigger('select2:unselect');
+  } else {
+    $(select2).trigger('select2:select');
+  }
 };
 
 /**
