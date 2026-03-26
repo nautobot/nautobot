@@ -2335,7 +2335,7 @@ class JobView(generic.ObjectView):
                 label="Run/Schedule",
                 icon="mdi-play",
                 color=ButtonActionColorChoices.SUBMIT,
-                required_permissions=["extras.job_run"],
+                required_permissions=["extras.run_job"],
             ),
         ],
     )
@@ -2684,7 +2684,7 @@ class ScheduledJobView(generic.ObjectView):
         context = super().get_extra_context(request, instance)
 
         # Add job class labels
-        job_class = get_job(instance.task)
+        job_class = get_job(instance.task, reload=True)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():

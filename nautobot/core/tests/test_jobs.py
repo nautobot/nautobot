@@ -12,6 +12,7 @@ from django.utils import timezone
 import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
@@ -933,6 +934,58 @@ class BulkEditTestCase(TransactionTestCase):
         for namespace in namespaces[3:]:
             self.assertFalse(namespace.tags.filter(pk__in=[self.tags[0].pk]).exists())
             self.assertTrue(namespace.tags.filter(pk__in=[self.tags[-1].pk]).exists())
+
+    def test_bulk_edit_objects_kubernetes_serialization_nested_models(self):
+        """
+        Regression test for Kubernetes job execution.
+
+        Kubernetes stores job kwargs (including BulkEdit `form_data`) in a JSONField, which uses
+        NautobotKombuJSONEncoder to serialize Django model instances into `__nautobot_type__` dicts.
+        `BulkEditObjects.serialize_data()` must recursively pre-flatten any nested models into primitive PK values,
+        otherwise BulkEdit's form validation will fail with `invalid_list`.
+        """
+
+        self.add_permissions("ipam.change_namespace", "ipam.view_namespace", "extras.change_tag", "extras.view_tag")
+
+        namespaces = [Namespace.objects.create(name=f"Sample Namespace {x}") for x in range(2)]
+        for namespace in namespaces:
+            namespace.tags.set(self.tags[2:])
+
+        pk_list = [str(ns.pk) for ns in namespaces]
+        add_tags = self.tags[:2]
+
+        # Mimic the UI job enqueue payload: include actual model instances inside form_data.
+        job_kwargs = {
+            "content_type": self.namespace_ct,
+            "edit_all": False,
+            "filter_query_params": {},
+            "pk_list": pk_list,
+            "form_data": {"pk": namespaces, "add_tags": add_tags},
+        }
+
+        from nautobot.core.jobs.bulk_actions import BulkEditObjects
+
+        serialized_job_kwargs = BulkEditObjects.serialize_data(job_kwargs)
+        # Mimic the Kubernetes JSONField encoding of task_kwargs.
+        encoded_job_kwargs = json.loads(json.dumps(serialized_job_kwargs, cls=NautobotKombuJSONEncoder))
+
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=encoded_job_kwargs["content_type"],
+            edit_all=encoded_job_kwargs["edit_all"],
+            filter_query_params=encoded_job_kwargs["filter_query_params"],
+            pk_list=encoded_job_kwargs["pk_list"],
+            form_data=encoded_job_kwargs["form_data"],
+            username=self.user.username,
+        )
+
+        self._common_no_error_test_assertion(Namespace, job_result, 2, pk__in=pk_list)
+
+        # Assert namespaces received the added tags.
+        add_tag_pks = [tag.pk for tag in add_tags]
+        for namespace in namespaces:
+            self.assertTrue(namespace.tags.filter(pk__in=add_tag_pks).exists())
 
     def test_bulk_edit_objects_filter_all(self):
         """

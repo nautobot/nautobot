@@ -1,4 +1,0 @@
-Updated development npm dependency `@eslint/js` and `eslint` to `^9.39.4`.
-Updated development npm dependency `mini-css-extract-plugin` to `^2.10.1`.
-Updated development npm dependency `postcss` to `^8.5.8`.
-Updated development npm dependency `webpack` to `^5.105.4`.
