@@ -34,15 +34,15 @@ To give developers granular control over the UI, Nautobot forms and fields suppo
 
 ### 1. Form meta class attributes
 
-You can define white- and blacklists on your form meta class to control which fields get embedded action buttons:
+You can define inclusion and exclusion lists on your form meta class to control which fields get embedded action buttons:
 
-- **`embedded_create`**: A whitelist of field names that should display the embedded object create button. If defined, only the fields in this list will get the button.
-- **`exclude_embedded_create`**: A blacklist of field names that should not display the embedded object create button. All other compatible fields will display it by default.
-- **`embedded_search`**: A whitelist of field names that should display the embedded object search button.
-- **`exclude_embedded_search`**: A blacklist of field names that should not display the embedded object search button.
+- **`embedded_create`**: An inclusion list of field names that should display the embedded object create button. If defined, only the fields in this list will get the button.
+- **`exclude_embedded_create`**: An exclusion list of field names that should not display the embedded object create button. All other compatible fields will display it by default.
+- **`embedded_search`**: An inclusion list of field names that should display the embedded object search button.
+- **`exclude_embedded_search`**: An exclusion list of field names that should not display the embedded object search button.
 
 !!! note
-    Whitelists and blacklists of the same category (e.g. `embedded_create` and `exclude_embedded_create`) are mutually exclusive and cannot be defined both at once on the same class.
+    Inclusion and exclusion lists of the same category (e.g. `embedded_create` and `exclude_embedded_create`) are mutually exclusive and cannot be defined both at once on the same class.
 
 ```python
 from nautobot.extras.forms import NautobotModelForm
