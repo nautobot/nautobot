@@ -508,6 +508,7 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
     success_message = "Live settings updated successfully."
 
     def get_initial(self):
+        # Populate the form's initial values from the current Constance config
         initial = {}
         for name in CONSTANCE_CONFIG:
             initial[name] = getattr(config, name)
@@ -518,16 +519,18 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
+        # Build a list of config items with their current values and metadata for display in the template
         fieldsets = CONSTANCE_CONFIG_FIELDSETS
         constance_config = CONSTANCE_CONFIG
         context = super().get_context_data(**kwargs)
+        # Sort fieldsets by key to ensure consistent ordering
         fieldsets = {k: CONSTANCE_CONFIG_FIELDSETS[k] for k in sorted(CONSTANCE_CONFIG_FIELDSETS)}
         form = context["form"]
         config_values = []
-
-        for fieldset, fields in fieldsets.items():
+        for _, fields in fieldsets.items():
             for name in fields:  # order comes from fieldset list
                 item = constance_config[name]
+                print(form[name], "form field for", name)
                 config_values.append(
                     {
                         "name": name,
@@ -535,11 +538,13 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
                         "help_text": item.help_text,
                         "value": getattr(config, name),
                         "form_field": form[name],
-                        "is_file": False,  # adjust if file fields exist
+                        "is_file": True,  # adjust if file fields exist
                     }
                 )
 
         context["config_values"] = config_values
         context["fieldsets"] = fieldsets
-
+        context["title"] = "Configuration"
+        if form.errors:
+            context["form_errors"] = form.errors
         return context

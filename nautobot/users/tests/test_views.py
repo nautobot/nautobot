@@ -1,6 +1,7 @@
 import json
 from unittest import mock
 
+from constance import config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -9,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 from social_django.utils import load_backend, load_strategy
 
+from nautobot.core.settings import CONSTANCE_CONFIG, CONSTANCE_CONFIG_FIELDSETS
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
@@ -190,3 +192,84 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class ConfigUIViewSetTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Create an admin user and a regular user for testing permissions
+        cls.admin_user = User.objects.create_superuser(username="admin", email="admin@example.com")
+        cls.regular_user = User.objects.create_user(username="normal", email="normal@example.com")
+        cls.url = reverse("user:config_edit")
+
+    def setUp(self):
+        # Log in as the admin user for each test by default
+        self.client.force_login(self.admin_user)
+
+    def test_get_config_page(self):
+        # Test that the config edit page loads successfully and contains the expected context data
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "users/config_edit.html")
+        self.assertIn("form", response.context)
+        self.assertIn("config_values", response.context)
+        self.assertIn("fieldsets", response.context)
+
+    def test_get_initial_values_from_constance(self):
+        # Test that the initial form values are populated from the current Constance config
+        response = self.client.get(self.url)
+        form = response.context["form"]
+        for key in CONSTANCE_CONFIG:
+            self.assertIn(key, form.initial)
+            self.assertEqual(form.initial[key], getattr(config, key))
+
+    def test_context_data_populates_config_values(self):
+        # Test that the config_values context variable contains all Constance config items with their current values
+        response = self.client.get(self.url)
+        config_values = response.context["config_values"]
+        # each fieldset item exists
+        for _, names in CONSTANCE_CONFIG_FIELDSETS.items():
+            for name in names:
+                self.assertTrue(any(item["name"] == name for item in config_values))
+
+    def test_post_valid_config_updates_values(self):
+        # test updating a single value, but the form requires all values to be present so we need to include them all in the post data
+        name = "PAGINATE_COUNT"
+        old_value = getattr(config, name)
+        print(f"Old value of {name}: {old_value}")
+        new_value = old_value + 1 if isinstance(old_value, int) else 10
+        # get the form to obtain the version and full initial data
+        response = self.client.get(self.url)
+        data = response.context["form"].initial.copy()
+        for key in CONSTANCE_CONFIG:
+            value = getattr(config, key)
+            data[key] = json.dumps(value) if isinstance(value, dict) else value
+        data["PAGINATE_COUNT"] = new_value
+        # include the version to avoid required field error
+        data["version"] = response.context["form"]["version"].value()
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.url)
+        self.assertEqual(getattr(config, name), new_value)
+
+    def test_post_invalid_config_shows_form_errors(self):
+        # test that posting invalid data (e.g. a string for an integer field) results in form errors and does not update the config value
+        response = self.client.post(self.url, {"PAGINATE_COUNT": "not-an-int"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("form", response.context)
+        self.assertTrue(response.context["form"].errors)
+        self.assertIn("PAGINATE_COUNT", response.context["form"].errors)
+        # page still contains fieldset context
+        self.assertIn("config_values", response.context)
+        self.assertIn("fieldsets", response.context)
+
+    def test_admin_only_permissions(self):
+        # Test that only admin users can access the config edit page
+        self.client.logout()
+        self.client.force_login(self.regular_user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 403)
+
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)  # redirect to login

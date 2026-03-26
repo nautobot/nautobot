@@ -21,11 +21,11 @@
         {% csrf_token %}
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                {% if form.non_field_errors %}
+                {% if form_errors %}
                     <div class="card border-danger">
                         <div class="card-header bg-danger-subtle border-danger text-body"><strong>Errors</strong></div>
                         <div class="card-body">
-                            {{ form.non_field_errors }}
+                            {{ form_errors }}
                         </div>
                     </div>
                 {% endif %}
@@ -66,7 +66,7 @@
                                                 </div>
                                                 {{ item.form_field.as_hidden }}
                                             {% else %}
-                                                <div class="mb-10 d-md-flex align-content-start justify-content-between{% if item.form_field.errors %} has-error{% endif %}">
+                                                <div class="mb-10 d-md-flex align-content-start justify-content-between{% if form_errors %} has-error{% endif %}">
                                                     <label class="col-12 col-md-3 col-form-label" for="{{ item.form_field.id_for_label }}">
                                                         {{ name | split:"_" | join:" " }}
                                                         <span class="form-text ps-2">
@@ -74,9 +74,12 @@
                                                         </span>
                                                     </label>
                                                     <div class="col-12 col-md-9">
-                                                        {{ item.form_field.errors }}
-                                                        {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                        
+                                                        <!-- {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %} -->
                                                         {{ item.form_field }}
+                                                        <div class="text-danger">
+                                                            {{ item.form_field.errors }}
+                                                        </div>
                                                         <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                                     </div>
                                                 </div>
@@ -96,7 +99,7 @@
                                             </div>
                                             {{ item.form_field.as_hidden }}
                                         {% else %}
-                                            <div class="mb-10 d-md-flex align-content-start justify-content-between{% if item.form_field.errors %} has-error{% endif %}">
+                                            <div class="mb-10 d-md-flex align-content-start justify-content-between{% if form_errors %} has-error{% endif %}">
                                                 <label class="col-12 col-md-3 d-flex d-md-block col-form-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ item.name | split:"_" | join:" " }}
                                                     <span class="form-text ps-2">
@@ -104,9 +107,12 @@
                                                     </span>
                                                 </label>
                                                 <div class="col-12 col-md-9">
-                                                    {{ item.form_field.errors }}
-                                                    {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                    
+                                                    <!-- {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %} -->
                                                     {{ item.form_field }}
+                                                    <div class="text-danger">
+                                                        {{ item.form_field.errors }}
+                                                    </div>
                                                     <span class="form-text">{{ item.help_text | linebreaksbr }}</span>
                                                 </div>
                                             </div>
