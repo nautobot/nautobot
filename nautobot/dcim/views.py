@@ -16,6 +16,7 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
@@ -55,7 +56,6 @@ from nautobot.core.ui.bulk_buttons import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -513,8 +513,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         )
     )
 
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
+    def _filter_params_imply_hide_hierarchy_ui(self, filter_params):
         # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered locations:
         if all(
@@ -523,37 +522,33 @@ class LocationUIViewSet(NautobotUIViewSet):
                 "max_depth",
                 "subtree",
             ]
-            for key in self.filter_params
+            for key in filter_params
         ):
+            return False
+        return True
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self._filter_params_imply_hide_hierarchy_ui(self.filter_params):
             self.hide_hierarchy_ui = False
-
-        if not self.hide_hierarchy_ui and "max_depth" not in self.filter_params:
-            default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
-            if default_max_depth > 0:
-                if "subtree" in self.filter_params:
-                    min_subtree_depth = 100
-                    for pk_or_name in self.filter_params["subtree"]:
-                        # This isn't *technically* 100% correct since there may be multiple subtrees under the same name
-                        # but it's close enough for now
-                        if loc := (
-                            Location.objects.filter(pk=pk_or_name).first()
-                            if is_uuid(pk_or_name)
-                            else Location.objects.filter(name=pk_or_name).first()
-                        ):
-                            if (depth := loc.ancestors(include_self=False).count()) < min_subtree_depth:
-                                min_subtree_depth = depth
-                    default_max_depth += min_subtree_depth
-                param = f"{'parent__' * default_max_depth}isnull"
-                queryset = queryset.exclude(**{param: False})
-                messages.info(
-                    self.request,
-                    format_html(
-                        "This table has been filtered by default due to the configured "
-                        "<code>LOCATION_LIST_DEFAULT_MAX_DEPTH</code> setting."
-                    ),
-                )
-
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """If `LOCATION_LIST_DEFAULT_MAX_DEPTH` is set, redirect any query-param-free request to `?max_depth=...`."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response, HttpResponseRedirect):
+            # already a redirect
+            return response
+        if request.GET:
+            # query params explicitly provided by user, defaults don't apply
+            return response
+        default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+        if not default_max_depth:
+            # no relevant default to apply
+            return response
+        query_dict = request.GET.copy()
+        query_dict["max_depth"] = default_max_depth
+        return redirect(request.path + "?" + query_dict.urlencode())
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)

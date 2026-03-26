@@ -114,70 +114,34 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
 
     @override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=1, MAX_PAGE_SIZE=100)
     def test_banner_rendering(self):
-        # First, confirm that DEFAULT_MAX_DEPTH message is displayed exactly once
+        # First, confirm that no alerts are initially displayed
         self.browser.visit(f"{self.live_server_url}{reverse('ipam:prefix_list')}?namespace={self.namespace.pk}")
-
-        self.assertTrue(self.browser.is_text_present("This table has been filtered by default", wait_time=10))
-        self.assertEqual(len(self.browser.find_by_tag("tr")), 2)  # header plus one root prefix
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
-            1,
+            0,
             [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
         )
 
-        alert = self.browser.find_by_css("#header_messages .alert").first
-        self.assertEqual(
-            alert.value,
-            "This table has been filtered by default due to the configured PREFIX_LIST_DEFAULT_MAX_DEPTH setting.",
-        )
-
-        # Next, select "per_page=1000" from the paginator and verify an additional alert is added
+        # Select "per_page=1000" from the paginator and verify an alert is added
         self.browser.find_by_id("per_page").first.click()
         self.browser.find_by_value("1000").last.click()
 
         self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
-            2,
+            1,
             [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
         )
 
-        alert = self.browser.find_by_css("#header_messages .alert-info").first
-        self.assertEqual(
-            alert.value,
-            "This table has been filtered by default due to the configured PREFIX_LIST_DEFAULT_MAX_DEPTH setting.",
-        )
         alert = self.browser.find_by_css("#header_messages .alert-warning").first
         self.assertEqual(
             alert.value,
             'Requested "per_page" is too large. No more than 100 items may be displayed at a time.',
         )
 
-        # Next, refresh the page and make sure the two alerts are still rendered
+        # Next, refresh the page and make sure the alert is still rendered
         self.browser.reload()
         self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
-
-        self.assertEqual(
-            len(self.browser.find_by_css("#header_messages .alert")),
-            2,
-            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
-        )
-
-        alert = self.browser.find_by_css("#header_messages .alert-info").first
-        self.assertEqual(
-            alert.value,
-            "This table has been filtered by default due to the configured PREFIX_LIST_DEFAULT_MAX_DEPTH setting.",
-        )
-        alert = self.browser.find_by_css("#header_messages .alert-warning").first
-        self.assertEqual(
-            alert.value,
-            'Requested "per_page" is too large. No more than 100 items may be displayed at a time.',
-        )
-
-        # Next, select "per_page=25" from the paginator and verify the additional alert is removed
-        self.browser.find_by_id("per_page").first.click()
-        self.browser.find_by_value("25").last.click()
-        self.assertTrue(self.browser.is_text_not_present('Requested "per_page" is too large', wait_time=10))
 
         self.assertEqual(
             len(self.browser.find_by_css("#header_messages .alert")),
@@ -185,8 +149,19 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
             [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
         )
 
-        alert = self.browser.find_by_css("#header_messages .alert").first
+        alert = self.browser.find_by_css("#header_messages .alert-warning").first
         self.assertEqual(
             alert.value,
-            "This table has been filtered by default due to the configured PREFIX_LIST_DEFAULT_MAX_DEPTH setting.",
+            'Requested "per_page" is too large. No more than 100 items may be displayed at a time.',
+        )
+
+        # Next, select "per_page=25" from the paginator and verify the alert is removed
+        self.browser.find_by_id("per_page").first.click()
+        self.browser.find_by_value("25").last.click()
+        self.assertTrue(self.browser.is_text_not_present('Requested "per_page" is too large', wait_time=10))
+
+        self.assertEqual(
+            len(self.browser.find_by_css("#header_messages .alert")),
+            0,
+            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
         )
