@@ -153,7 +153,7 @@
                         <span id="select_all_box" class="visually-hidden card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div hx-get="" hx-params="*" hx-trigger="load">
+                        <div id="object_table_wrapper" hx-get="" hx-params="*" hx-trigger="load">
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -163,7 +163,7 @@
                         </div>
                     </form>
                 {% else %}
-                    <div hx-get="" hx-params="*" hx-trigger="load">
+                    <div id="object_table_wrapper" hx-get="" hx-params="*" hx-trigger="load">
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}
@@ -356,5 +356,19 @@
                 });
             });
         })();
+
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail?.target?.id === 'object_table_wrapper' ||
+                event.detail?.elt?.classList.contains("page-link") ||
+                event.detail?.elt?.id === 'per_page'
+            ) {
+                document.querySelector("#object_table table").innerHTML = `
+                    <div class="bg-danger-subtle text-center">
+                        <strong>Failed to load table content.</strong>
+                        The server responded with status: ${event.detail.xhr.status}
+                    </div>
+                `;
+            }
+        });
     </script>
 {% endblock %}
