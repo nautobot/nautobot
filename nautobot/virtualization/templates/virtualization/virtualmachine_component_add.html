@@ -15,3 +15,18 @@
     </div>
     {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
 {% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create
+    </button>
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create and Add More
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
+{% endblock %}
