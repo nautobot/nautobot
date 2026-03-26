@@ -210,6 +210,52 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.10 (2026-03-27)
+
+### Security in v3.0.10
+
+- [#8710](https://github.com/nautobot/nautobot/issues/8710) - Updated dependency `pyasn1` to `0.6.3` to mitigate CVE-2026-30922. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated development npm dependency `flatted` to `~3.4.2` to mitigate CVE-2026-33228.
+
+### Added in v3.0.10
+
+- [#5789](https://github.com/nautobot/nautobot/issues/5789) - Added `graphql` and `webhooks` extras features to all `ComponentTemplateModel` subclasses.
+- [#8736](https://github.com/nautobot/nautobot/issues/8736) - Added `clear_cache` step to `nautobot-server post_upgrade` command.
+
+### Changed in v3.0.10
+
+- [#8747](https://github.com/nautobot/nautobot/issues/8747) - Job profiling results are now available for download as a file attached to the Job Result, rather than only being written to the worker's local filesystem.
+
+### Fixed in v3.0.10
+
+- [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
+- [#8465](https://github.com/nautobot/nautobot/issues/8465) - Fixed an issue where cable terminations for module interfaces incorrectly displayed as "Circuit" instead of showing the device, type, and component fields.
+- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
+- [#8614](https://github.com/nautobot/nautobot/issues/8614) - Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
+- [#8629](https://github.com/nautobot/nautobot/issues/8629) - Fixed a scenario where rendering a GitRepository related Jobs "Scheduled Job View" would sometimes show the Job as not installed
+- [#8706](https://github.com/nautobot/nautobot/issues/8706) - Fixed a bug where GraphQL queries that included related objects were not being optimized correctly since upgrading to `graphene-django` v3.x in Nautobot 3.0.0.
+- [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
+- [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
+- [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
+
+### Dependencies in v3.0.10
+
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `celery` to `~5.6.3`.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `nh3` to `~0.3.4`.
+
+### Documentation in v3.0.10
+
+- [#4234](https://github.com/nautobot/nautobot/issues/4234) - Documented suggested method for periodic metrics files removal.
+
+### Housekeeping in v3.0.10
+
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-gen-files` to `~0.6.1`.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-material` to `~9.7.6`.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-section-index` to `~0.3.11`.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated development dependency `coverage` to `~7.13.5`.
+
 ## v3.0.9 (2026-03-17)
 
 ### Security in v3.0.9

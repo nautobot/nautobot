@@ -1,1 +1,0 @@
-Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
