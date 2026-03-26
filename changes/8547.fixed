@@ -1,0 +1,1 @@
+Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
