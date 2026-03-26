@@ -43,7 +43,7 @@ Before (deprecated):
 ```javascript
 document.addEventListener('DOMContentLoaded', function() {
     // ❌ Fails when this form is loaded dynamically in a modal later!
-     document.querySelector('#custom_widget').addEventListener('click', function() {
+    document.querySelector('#custom_widget').addEventListener('click', function() {
         // Handle toggle logic...
     });
 });
@@ -58,7 +58,7 @@ After:
 ```javascript
 // ✅ Executes reliably on page load AND when the form renders asynchronoulsy inside a modal
 document.addEventListener('nb-form:load:{{ obj_type }}', () => {
-     document.querySelector('#custom_widget').addEventListener('click', () => {
+    document.querySelector('#custom_widget').addEventListener('click', () => {
         // Handle toggle logic...
     });
 });
@@ -68,7 +68,7 @@ document.addEventListener('nb-form:load:{{ obj_type }}', () => {
 
 When forms are loaded in a modal, Django may apply prefixes to the form fields to prevent ID collisions with the background page. Because of this, hardcoding IDs like `$('#id_status')` is no longer safe.
 
-You are encouraged to use `window.nb.form.getFieldAutoId(autoId, fieldName, querySelector)` to get the dynamically generated, context-aware ID for your field.
+You are encouraged to use `window.nb.form.getFieldAutoId(formAutoId, name, querySelector)` to get the dynamically generated, context-aware ID for your field.
 
 - **`formAutoId`**: The Django form's auto ID format string, usually passed from the template via `'{{ form.auto_id }}'`.
 - **`name`**: The name of your target field (e.g., `'my_custom_widget'`).
@@ -114,6 +114,38 @@ You should remove manual `.select2()` calls on standard Nautobot fields to preve
 !!! note
     If your app introduces specific, highly customized fields that `jsify_form` does not process by default, you may still need to manually call `.select2()` on those specific custom fields inside your `nb-form:load:{{ obj_type }}` event listener.
 
+### 6. Prevent variables from leaking into the global scope
+
+Because forms can now be loaded multiple times within the same browser session (for example, opening and closing the embedded modal repeatedly), it is crucial to keep your variables, constants, and functions tightly scoped.
+
+If you declare variables in the global scope (outside of your `nb-form:load:{{ obj_type }}` event handler or [IIFE](https://developer.mozilla.org/en-US/docs/Glossary/IIFE)), they will be attached to the global scope (either the main block or `window` object, depending on used declaration keyword or lack thereof). This means subsequent modal opens will attempt to overwrite them, potentially causing exceptions, state bleed, race conditions, or bugs where interacting with a new modal inadvertently affects the background page.
+
+❌ Anti-pattern:
+
+```javascript
+// ❌ Leaks into the global scope! Will throw syntax errors if the modal is opened multiple times.
+const fieldSelector = window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'field_name');
+
+document.addEventListener('nb-form:load:{{ obj_type }}', () => {
+    document.querySelector(fieldSelector).addEventListener('input', () => {
+        // Logic...
+    });
+});
+```
+
+✅ Best Practice:
+
+```javascript
+document.addEventListener('nb-form:load:{{ obj_type }}', () => {
+    // ✅ Safely scoped to the specific execution of this form load instance
+    const fieldSelector = window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'field_name');
+
+    document.querySelector(fieldSelector).addEventListener('input', () => {
+        // Logic...
+    });
+});
+```
+
 ## Summary checklist for App Developers
 
 - Read up on the transition to embedded search and create forms to understand the new UX paradigm.
@@ -123,3 +155,4 @@ You should remove manual `.select2()` calls on standard Nautobot fields to preve
 - Wrap the logic in the new `nb-form:load:{{ obj_type }}` event listener.
 - Replace hardcoded field ID selectors (like `$('#id_field_name')` or `document.querySelector('#id_field_name')`) with dynamically resolved selectors using `window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'field_name')`.
 - Remove manual `.select2()` initialization calls for standard fields, relying on the core `jsify_form` function being called by default instead. Keep it only for specific custom fields if strictly necessary.
+- Ensure all variables, constants, and helper functions are properly encapsulated to avoid their leakage into the global scope.
