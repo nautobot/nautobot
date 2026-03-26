@@ -26,6 +26,59 @@ When a user opens a dynamic modal to create an object, the modal content is fetc
 
 The new `window.nb.form` API provides a standardized lifecycle event that dispatches both on the initial page load and whenever a dynamic form is loaded into a modal.
 
+## Controlling Embedded Actions on forms
+
+While the embedded search and create modals significantly improve the default user experience, there are times when they might not be appropriate for your app's specific workflow. For instance, you might have a highly customized field where a generic creation modal doesn't capture the necessary context, or a field where you explicitly want to prevent users from creating new related objects on the fly.
+
+To give developers granular control over the UI, Nautobot forms and fields support several attributes to explicitly enable or disable these embedded action buttons on a per-field basis. You can define these attributes directly on your form class:
+
+### 1. Form meta class attributes
+
+You can define white- and blacklists on your form meta class to control which fields get embedded action buttons:
+
+- **`embedded_create`**: A whitelist of field names that should display the embedded object create button. If defined, only the fields in this list will get the button.
+- **`exclude_embedded_create`**: A blacklist of field names that should not display the embedded object create button. All other compatible fields will display it by default.
+- **`embedded_search`**: A whitelist of field names that should display the embedded object search button.
+- **`exclude_embedded_search`**: A blacklist of field names that should not display the embedded object search button.
+
+!!! note
+    Whitelists and blacklists of the same category (e.g. `embedded_create` and `exclude_embedded_create`) are mutually exclusive and cannot be defined both at once on the same class.
+
+```python
+from nautobot.extras.forms import NautobotModelForm
+
+from my_app.models import MyModel
+
+
+class MyModelForm(NautobotModelForm):
+    class Meta:
+        model = MyModel
+        fields = "__all__"
+        # ℹ️ Allow embedded search ONLY for "device"
+        embedded_search = ["device"]
+```
+
+### 2. Field-Level constructor arguments
+
+Alternatively, if you are explicitly declaring a `DynamicModelChoiceField` or `DynamicModelMultipleChoiceField`, the constructor supports `embedded_create` and `embedded_search` boolean keyword arguments.
+
+```python
+from nautobot.dcim.models import Device
+from nautobot.extras.forms import NautobotModelForm
+
+from my_app.models import MyModel
+
+
+class MyModelForm(NautobotModelForm):
+    # ℹ️ Disable the embedded create button ONLY for "device"
+    device = DynamicModelChoiceField(queryset=Device.objects.all(), embedded_create=False)
+
+    class Meta:
+        model = MyModel
+        fields = "__all__"
+```
+
+
 ## Migrating to `window.nb.form`
 
 The `window.nb.form` object provides an interface to register your form initialization scripts so they run at the correct time and target the correct fields.
@@ -149,6 +202,7 @@ document.addEventListener('nb-form:load:{{ obj_type }}', () => {
 ## Summary checklist for App Developers
 
 - Read up on the transition to embedded search and create forms to understand the new UX paradigm.
+- Determine if you need to opt specific fields out of embedded actions using proper form- or field-level kwargs.
 - Identify all JavaScript content in your app that interacts with add/create/update/edit forms.
 - Remove `jquery.formset.js` script loads when templates extend `generic/object_create.html`.
 - Remove `$(document).ready()` or `document.addEventListener('DOMContentLoaded', ...)` wrappers around form manipulation logic.
