@@ -487,7 +487,7 @@ class BaseJob:
             required=False,
             initial=False,
             label="Profile job execution",
-            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+            help_text="Profiles the job execution using cProfile and attaches a report to the job result",
         )
         form.fields["_profile"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
