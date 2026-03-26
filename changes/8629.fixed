@@ -1,1 +1,1 @@
-Fixed a scenario where rendering a Jobs "Scheduled Job View" would sometimes show the Job as not installed
+Fixed a scenario where rendering a GitRepository related Jobs "Scheduled Job View" would sometimes show the Job as not installed
