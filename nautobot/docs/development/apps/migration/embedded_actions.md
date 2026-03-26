@@ -9,8 +9,6 @@ To solve this, Nautobot 3.1 introduced:
 - Embedded Search: Allowing users to perform advanced filtering and selection of related objects dynamically within a modal.
 - Embedded Create: Permitting users to create new related objects on the fly via a modal without ever leaving their current page or losing their form context.
 
-This shift toward a more dynamic, single-page-like experience fundamentally changes how forms are rendered and injected into the DOM.
-
 !!! info
     Embedded Actions were introduced only in standard object add/create/update/edit form views which inherit from generic Nautobot form and view or vieweset classes. Any custom form views or other non-CRUD forms (such as Jobs) were not affected in any way by this change.
 
