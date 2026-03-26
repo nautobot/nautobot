@@ -218,15 +218,15 @@ class JobResultFactory(BaseModelFactory):
             return
         if extracted:
             return
-        # Create a date_created in the past, but not too far in the past
-        self.date_created = faker.Faker().date_time_between(start_date="-1y", end_date="-1w", tzinfo=timezone.utc)
-        self.date_started = faker.Faker().date_time_between(
-            start_date=self.date_created, end_date="-1d", tzinfo=timezone.utc
+        # Fixed absolute dates with factory_boy's seeded random for full determinism.
+        # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        seconds_range = int((end - start).total_seconds())
+        timestamps = sorted(
+            start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
         )
-        # TODO, should we create "in progress" job results without a date_done value as well?
-        self.date_done = faker.Faker().date_time_between(
-            start_date=self.date_started, end_date="now", tzinfo=timezone.utc
-        )
+        self.date_created, self.date_started, self.date_done = timestamps
 
 
 class MetadataChoiceFactory(BaseModelFactory):
@@ -474,13 +474,10 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                # Generate timestamps between 30 and 90 days ago using factory_boy's seeded
-                # random. This ensures records land on both sides of the 60-day cleanup cutoff.
-                # Standalone faker.Faker() bypasses factory_boy's seed, and relative date
-                # strings like "-1y" are non-deterministic (faker#2149).
-                now = datetime.now(tz=timezone.utc)
-                start = now - timedelta(days=90)
-                end = now - timedelta(days=30)
+                # Fixed absolute dates with factory_boy's seeded random for full determinism.
+                # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+                start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+                end = datetime(2025, 1, 1, tzinfo=timezone.utc)
                 seconds_range = int((end - start).total_seconds())
                 self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
 
