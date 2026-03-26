@@ -20,8 +20,6 @@ Because these embedded forms are loaded dynamically into the DOM via AJAX after 
 
 This guide explains how Nautobot App developers should update their form-related JavaScript to remain fully compatible with both standard page loads and dynamic modals.
 
-Previously, when you wrote JavaScript to enhance an app's form (e.g., toggling field visibility based on user input, or setting up dynamic formsets), you likely wrapped your logic in a global document-ready block.
-
 When a user opens a dynamic modal to create an object, the modal content is fetched and injected into the page. Because the document is already "ready", those initialization events do not re-fire for the dynamically injected content, leaving your custom form logic uninitialized and broken.
 
 The new `window.nb.form` API provides a standardized lifecycle event that dispatches both on the initial page load and whenever a dynamic form is loaded into a modal.
