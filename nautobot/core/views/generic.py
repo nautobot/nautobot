@@ -519,7 +519,7 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
             if request.headers.get("HX-Request", False)
             else "generic/object_create_base.html"
         )
-        return render(
+        response = render(
             request,
             self.template_name,
             {
@@ -534,6 +534,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 **self.get_extra_context(request, obj),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def successful_post(self, request, obj, created, logger):
         """Callback after the form is successfully saved but before redirecting the user."""
@@ -1409,7 +1411,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             else "generic/object_create_base.html"
         )
 
-        return render(
+        response = render(
             request,
             self.template_name,
             {
@@ -1420,6 +1422,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                 "return_url": self.get_return_url(request),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
