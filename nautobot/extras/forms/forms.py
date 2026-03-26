@@ -1947,9 +1947,9 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="name",
     )
-    has_console_log_entries = forms.NullBooleanField(
+    has_job_console_entries = forms.NullBooleanField(
         required=False,
-        label="Has Console Log Entries",
+        label="Has Job Console Entries",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
 

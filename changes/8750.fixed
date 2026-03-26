@@ -1,1 +1,1 @@
-Fixed Re-Run form to set console log field properly.
+Fixed JobResult rerun behavior to persist the "console log" field properly.

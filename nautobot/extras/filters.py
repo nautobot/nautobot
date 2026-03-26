@@ -1178,9 +1178,9 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Scheduled Job (name or ID)",
     )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
-    has_console_log_entries = RelatedMembershipBooleanFilter(
+    has_job_console_entries = RelatedMembershipBooleanFilter(
         field_name="job_console_entries",
-        label="Has Console Log Entries",
+        label="Has Job Console Entries",
     )
 
     class Meta:
