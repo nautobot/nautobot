@@ -14,7 +14,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
   <tr>
     <th>Summary</th>
-    <td>User creation and editing via the REST API failed to apply the password validation rules defined by Django's `AUTH_PASSWORD_VALIDATORS` setting (which defaults to an empty list, i.e., no specific rules, but can be configured in Nautobot's `nautobot_config.py` to apply various rules if desired). This could potentially allow for the creation or modification of users to have passwords that are weak or otherwise do not comply with configured standards.</td>
+    <td>User creation and editing via the REST API failed to apply the password validation rules defined by Django's <code>AUTH_PASSWORD_VALIDATORS</code> setting (which defaults to an empty list, i.e., no specific rules, but can be configured in Nautobot's <code>nautobot_config.py</code> to apply various rules if desired). This could potentially allow for the creation or modification of users to have passwords that are weak or otherwise do not comply with configured standards.</td>
   </tr>
   <tr>
     <th>Full&nbsp;Description</th>
