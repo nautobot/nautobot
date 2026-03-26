@@ -121,7 +121,7 @@ You should remove manual `.select2()` calls on standard Nautobot fields to preve
 ## Summary checklist for App Developers
 
 - Read up on the transition to embedded search and create forms to understand the new UX paradigm.
-- Identify all JavaScript files in your app that interact with add/create/update/edit forms.
+- Identify all JavaScript content in your app that interacts with add/create/update/edit forms.
 - Remove `jquery.formset.js` script loads when templates extend `generic/object_create.html`.
 - Remove `$(document).ready()` or `document.addEventListener('DOMContentLoaded', ...)` wrappers around form manipulation logic.
 - Wrap the logic in the new `nb-form:load:{{ obj_type }}` event listener.
