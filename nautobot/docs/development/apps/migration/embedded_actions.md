@@ -30,7 +30,7 @@ When a user opens a dynamic modal to create an object, the modal content is fetc
 
 The new `window.nb.form` API provides a standardized lifecycle event that dispatches both on the initial page load and whenever a dynamic form is loaded into a modal.
 
-##Migrating to `window.nb.form`
+## Migrating to `window.nb.form`
 
 The `window.nb.form` object provides an interface to register your form initialization scripts so they run at the correct time and target the correct fields.
 
