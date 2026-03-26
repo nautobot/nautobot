@@ -38,9 +38,17 @@ class UserQuerySet(RestrictedQuerySet):
     """
 
     def restrict(self, user, action="view"):
-        if not (user and user.is_active and (user.is_staff or user.is_superuser)):
+        # Block anonymous or inactive users
+        if not (user and user.is_active):
             return self.none()
-        return super().restrict(user, action)
+
+        # Staff/superuser sees all users
+        if user.is_staff or user.is_superuser:
+            return super().restrict(user, action)
+
+        # Regular users can only see themselves
+        # Needed for FK validation in serializers (e.g. RackReservation.user)
+        return super().restrict(user, action).filter(pk=user.pk)
 
 
 class UserManager(BaseManager, UserManager_):
