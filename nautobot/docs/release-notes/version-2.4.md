@@ -166,6 +166,24 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.30 (2026-03-27)
+
+### Security in v2.4.30
+
+- [#8710](https://github.com/nautobot/nautobot/issues/8710) - Updated dependency `pyasn1` to `0.6.3` to mitigate CVE-2026-30922. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.30
+
+- [#8463](https://github.com/nautobot/nautobot/issues/8463) - Added default values for additional Kubernetes settings variables.
+- [#8736](https://github.com/nautobot/nautobot/issues/8736) - Added `clear_cache` step to `nautobot-server post_upgrade` command.
+
+### Fixed in v2.4.30
+
+- [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
+- [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
+- [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
+- [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
+
 ## v2.4.29 (2026-03-17)
 
 ### Security in v2.4.29
