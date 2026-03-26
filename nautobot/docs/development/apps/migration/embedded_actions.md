@@ -78,7 +78,6 @@ class MyModelForm(NautobotModelForm):
         fields = "__all__"
 ```
 
-
 ## Migrating to `window.nb.form`
 
 The `window.nb.form` object provides an interface to register your form initialization scripts so they run at the correct time and target the correct fields.
