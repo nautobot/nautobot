@@ -38,7 +38,7 @@ celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.5"
+cryptography = "~46.0.6"
 # Fundamental web framework for Nautobot
 Django = "~4.2.29"
 # Adds AJAX capabilities to django-tables2
@@ -229,7 +229,7 @@ django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = "~2.32.5"
+requests = "~2.33.0"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
