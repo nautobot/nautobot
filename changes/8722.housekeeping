@@ -1,4 +1,4 @@
 Updated documentation dependency `mkdocs-gen-files` to `~0.6.1`.
 Updated documentation dependency `mkdocs-material` to `~9.7.6`.
 Updated documentation dependency `mkdocs-section-index` to `~0.3.11`.
-UPdated development dependency `coverage` to `~7.13.5`.
+Updated development dependency `coverage` to `~7.13.5`.
