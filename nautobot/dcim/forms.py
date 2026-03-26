@@ -3314,6 +3314,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3463,6 +3465,10 @@ class InterfaceCreateForm(
         "tagged_vlans",
         "tags",
     )
+
+    class Meta:
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
 
 
 class InterfaceBulkCreateForm(
