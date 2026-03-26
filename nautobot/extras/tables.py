@@ -1361,7 +1361,6 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
             "actions",
-            "console_log",
         )
 
 
