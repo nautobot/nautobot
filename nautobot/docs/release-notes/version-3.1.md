@@ -66,7 +66,7 @@ Dependent objects can now be created directly from the current page using an emb
 
 Both creation and search are handled within a modal, so you don't have to leave the main form.
 
-Form migration guide is available in [Embedded Actions](../development/apps/migration/embedded_actions.md).
+Form migration guide for App developers is available in [Embedded Actions](../development/apps/migration/embedded_actions.md).
 
 #### Configurable Columns
 
