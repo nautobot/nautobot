@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.utils import timezone
+import time_machine
 import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
@@ -675,63 +676,67 @@ class LogsCleanupTestCase(TransactionTestCase):
     )
     def test_cleanup_job_results(self):
         """With unconstrained permissions, all JobResults before the cutoff should be deleted."""
-        cutoff = timezone.now() - timedelta(days=60)
-        job_results_to_be_deleted = JobResult.objects.filter(date_done__lt=cutoff)
-        job_results_to_be_deleted_count = job_results_to_be_deleted.count()
-        job_log_entry_to_be_deleted_count = JobLogEntry.objects.filter(job_result__in=job_results_to_be_deleted).count()
-        objectmetadata_to_be_deleted_count = ObjectMetadata.objects.filter(
-            assigned_object_id__in=job_results_to_be_deleted,
-            assigned_object_type=ContentType.objects.get_for_model(JobResult),
-        ).count()
+        with time_machine.travel("2024-10-01 00:00 +0000"):
+            cutoff = timezone.now() - timedelta(days=60)
+            job_results_to_be_deleted = JobResult.objects.filter(date_done__lt=cutoff)
+            job_results_to_be_deleted_count = job_results_to_be_deleted.count()
+            job_log_entry_to_be_deleted_count = JobLogEntry.objects.filter(
+                job_result__in=job_results_to_be_deleted
+            ).count()
+            objectmetadata_to_be_deleted_count = ObjectMetadata.objects.filter(
+                assigned_object_id__in=job_results_to_be_deleted,
+                assigned_object_type=ContentType.objects.get_for_model(JobResult),
+            ).count()
 
-        with self.assertLogs("nautobot.events") as cm:
-            job_result = create_job_result_and_run_job(
-                "nautobot.core.jobs.cleanup",
-                "LogsCleanup",
-                cleanup_types=[CleanupTypes.JOB_RESULT],
-                max_age=60,
+            with self.assertLogs("nautobot.events") as cm:
+                job_result = create_job_result_and_run_job(
+                    "nautobot.core.jobs.cleanup",
+                    "LogsCleanup",
+                    cleanup_types=[CleanupTypes.JOB_RESULT],
+                    max_age=60,
+                )
+            self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists(), cm.output)
+            self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists(), cm.output)
+            self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists(), cm.output)
+            self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists(), cm.output)
+
+            started_logs = {
+                "job_result_id": str(job_result.id),
+                "job_name": "Logs Cleanup",
+                "user_name": job_result.user.username,
+                "job_kwargs": {"cleanup_types": ["extras.JobResult"], "max_age": 60},
+            }
+            self.assertEqual(
+                cm.output[0],
+                f"INFO:nautobot.events.nautobot.jobs.job.started:{json.dumps(started_logs, indent=4)}",
             )
-        self.assertFalse(JobResult.objects.filter(date_done__lt=cutoff).exists(), cm.output)
-        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists(), cm.output)
-        self.assertTrue(ObjectChange.objects.filter(time__lt=cutoff).exists(), cm.output)
-        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists(), cm.output)
 
-        started_logs = {
-            "job_result_id": str(job_result.id),
-            "job_name": "Logs Cleanup",
-            "user_name": job_result.user.username,
-            "job_kwargs": {"cleanup_types": ["extras.JobResult"], "max_age": 60},
-        }
-        self.assertEqual(
-            cm.output[0],
-            f"INFO:nautobot.events.nautobot.jobs.job.started:{json.dumps(started_logs, indent=4)}",
-        )
+            started_logs["job_output"] = {
+                "extras.JobResult": job_results_to_be_deleted_count,
+                "extras.JobLogEntry": job_log_entry_to_be_deleted_count,
+            }
+            if objectmetadata_to_be_deleted_count > 0:
+                started_logs["job_output"]["extras.ObjectMetadata"] = objectmetadata_to_be_deleted_count
 
-        started_logs["job_output"] = {
-            "extras.JobResult": job_results_to_be_deleted_count,
-            "extras.JobLogEntry": job_log_entry_to_be_deleted_count,
-        }
-        if objectmetadata_to_be_deleted_count > 0:
-            started_logs["job_output"]["extras.ObjectMetadata"] = objectmetadata_to_be_deleted_count
-
-        self.assertEqual(
-            cm.output[1],
-            f"INFO:nautobot.events.nautobot.jobs.job.completed:{json.dumps(started_logs, indent=4)}",
-        )
+            self.assertEqual(
+                cm.output[1],
+                f"INFO:nautobot.events.nautobot.jobs.job.completed:{json.dumps(started_logs, indent=4)}",
+            )
 
     def test_cleanup_object_changes(self):
         """With unconstrained permissions, all ObjectChanges before the cutoff should be deleted."""
-        cutoff = timezone.now() - timedelta(days=60)
-        create_job_result_and_run_job(
-            "nautobot.core.jobs.cleanup",
-            "LogsCleanup",
-            cleanup_types=[CleanupTypes.OBJECT_CHANGE],
-            max_age=60,
-        )
-        self.assertTrue(JobResult.objects.filter(date_done__lt=cutoff).exists())
-        self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
-        self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
-        self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
+        with time_machine.travel("2024-10-01 00:00 +0000"):
+            cutoff = timezone.now() - timedelta(days=60)
+            create_job_result_and_run_job(
+                "nautobot.core.jobs.cleanup",
+                "LogsCleanup",
+                cleanup_types=[CleanupTypes.OBJECT_CHANGE],
+                max_age=60,
+            )
+            self.assertTrue(JobResult.objects.filter(date_done__lt=cutoff).exists())
+            self.assertTrue(JobResult.objects.filter(date_done__gte=cutoff).exists())
+            self.assertFalse(ObjectChange.objects.filter(time__lt=cutoff).exists())
+            self.assertTrue(ObjectChange.objects.filter(time__gte=cutoff).exists())
 
 
 class BulkEditTestCase(TransactionTestCase):
