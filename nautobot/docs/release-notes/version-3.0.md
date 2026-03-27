@@ -210,7 +210,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
-## v3.0.10 (2026-03-27)
+## v3.0.10 (2026-03-30)
 
 ### Security in v3.0.10
 
@@ -232,13 +232,15 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 - [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
 - [#8465](https://github.com/nautobot/nautobot/issues/8465) - Fixed an issue where cable terminations for module interfaces incorrectly displayed as "Circuit" instead of showing the device, type, and component fields.
-- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
+- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolved issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
 - [#8614](https://github.com/nautobot/nautobot/issues/8614) - Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
 - [#8629](https://github.com/nautobot/nautobot/issues/8629) - Fixed a scenario where rendering a GitRepository related Jobs "Scheduled Job View" would sometimes show the Job as not installed
 - [#8706](https://github.com/nautobot/nautobot/issues/8706) - Fixed a bug where GraphQL queries that included related objects were not being optimized correctly since upgrading to `graphene-django` v3.x in Nautobot 3.0.0.
 - [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
 - [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
 - [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
+- [#8759](https://github.com/nautobot/nautobot/issues/8759) - Fixed an exception related to version control branches and recursive Job execution.
+- [#8763](https://github.com/nautobot/nautobot/issues/8763) - Fixed `get_config_context` and ConfigContexModel annotation for subclasses of Device model
 
 ### Dependencies in v3.0.10
 
@@ -251,10 +253,13 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 ### Housekeeping in v3.0.10
 
+- [#8607](https://github.com/nautobot/nautobot/issues/8607) - Refreshed indirect npm dependencies to their latest relevant versions.
+- [#8608](https://github.com/nautobot/nautobot/issues/8608) - Refreshed indirect dependencies to their latest valid versions.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-gen-files` to `~0.6.1`.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-material` to `~9.7.6`.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated documentation dependency `mkdocs-section-index` to `~0.3.11`.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated development dependency `coverage` to `~7.13.5`.
+- [#8734](https://github.com/nautobot/nautobot/issues/8734) - Changed ObjectChangeFactory to use set start and end dates for deterministic timestamps for the `time` field for tests.
 
 ## v3.0.9 (2026-03-17)
 
