@@ -1398,23 +1398,44 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context)
             if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
                 return obj.filter
-            return super().get_value(context)
+            return helpers.HTML_NONE
 
-        def render_body_content(self, context):
-            """Return placeholder directly to avoid JSON encoding of safe HTML for non-dynamic groups."""
+        def should_render(self, context):
             obj = get_obj_from_context(context)
-            if obj and obj.group_type != DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                return helpers.HTML_NONE
-            return super().render_body_content(context)
+            return obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
 
     class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.group_type in [
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            ]
+
         def get_value(self, context):
             obj = get_obj_from_context(context)
             if obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-                    self.body_wrapper_template_path = "extras/inc/filter_query_body_wrapper.html"
                 return pretty_print_query(obj.generate_query())
             return helpers.HTML_NONE
+
+        def render_body(self, context):
+            obj = get_obj_from_context(context)
+            body_wrapper_template_path = (
+                "extras/inc/filter_query_body_wrapper.html"
+                if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+                else "components/panel/body_wrapper_generic.html"
+            )
+            return object_detail.render_component_template(
+                body_wrapper_template_path,
+                context,
+                body_id=self.body_id,
+                body_content=self.render_body_content(context),
+            )
+
+    class AncestorDescendantObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -1435,7 +1456,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 weight=100,
                 render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
             ),
-            object_detail.ObjectsTablePanel(
+            AncestorDescendantObjectsTablePanel(
                 weight=200,
                 section=SectionChoices.FULL_WIDTH,
                 context_table_key="ancestors_table",
@@ -1443,7 +1464,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 table_title="Ancestors",
                 add_button_route=None,
             ),
-            object_detail.ObjectsTablePanel(
+            AncestorDescendantObjectsTablePanel(
                 weight=300,
                 section=SectionChoices.FULL_WIDTH,
                 context_table_key="descendants_table",
