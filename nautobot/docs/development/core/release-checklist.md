@@ -148,7 +148,7 @@ Ensure that continuous integration testing on the `develop` branch is completing
 
     <h4>Update the Changelog</h4>
 
-    Generate release notes with `towncrier build --version <new-version-number>` and answer `yes` to the prompt `Is it okay if I remove those files? [Y/n]:`. This will update the release notes in `nautobot/docs/release-notes/version-<major.minor>.md`, stage that file in Git, and `git rm` all of the fragments that have now been incorporated into the release notes.
+    Generate release notes with `invoke generate-release-notes --version <new-version-number>`. This will update the release notes in `nautobot/docs/release-notes/version-<major.minor>.md`, stage that file in Git, and `git rm` all of the fragments that have now been incorporated into the release notes.
 
     Run `invoke markdownlint` to make sure the generated release notes pass the linter checks, and manually review them for completeness/correctness as well.
 
