@@ -2907,7 +2907,7 @@ class ScheduledJobUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
-    queryset = ScheduledJob.objects.enabled()
+    queryset = ScheduledJob.objects.all()
     filterset_class = filters.ScheduledJobFilterSet
     filterset_form_class = forms.ScheduledJobFilterForm
     serializer_class = serializers.ScheduledJobSerializer
