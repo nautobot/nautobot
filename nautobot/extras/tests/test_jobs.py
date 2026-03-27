@@ -289,6 +289,56 @@ register_jobs(BadJob)
             # Clean up back to normal behavior
             get_jobs(reload=True)
 
+    def test_concurrent_import_jobs(self):
+        """
+        Test that concurrent calls to import_jobs() don't raise KeyError.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/8614
+        """
+        import threading
+
+        from nautobot.core.celery import import_jobs
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with override_settings(JOBS_ROOT=temp_dir):
+                    # Create a job file so there's something to flush/reload
+                    with open(os.path.join(temp_dir, "concurrent_test_jobs.py"), "w") as fd:
+                        fd.write(
+                            """\
+from nautobot.apps.jobs import Job, register_jobs
+class ConcurrentTestJob(Job):
+    def run(self):
+        pass
+register_jobs(ConcurrentTestJob)
+"""
+                        )
+                    # Initial load
+                    get_jobs(reload=True)
+                    self.assertIn("concurrent_test_jobs.ConcurrentTestJob", get_jobs().keys())
+
+                    errors = []
+                    num_threads = 4
+                    barrier = threading.Barrier(num_threads)
+
+                    def call_import_jobs():
+                        try:
+                            barrier.wait(timeout=5)
+                            import_jobs()
+                        except Exception as e:
+                            errors.append(e)
+
+                    threads = [threading.Thread(target=call_import_jobs) for _ in range(num_threads)]
+                    for t in threads:
+                        t.start()
+                    for t in threads:
+                        t.join(timeout=30)
+
+                    self.assertEqual(errors, [], f"Concurrent import_jobs() raised exceptions: {errors}")
+        finally:
+            # Clean up back to normal behavior
+            get_jobs(reload=True)
+
     @tag("example_app")
     def test_app_dynamic_jobs(self):
         """
@@ -777,14 +827,16 @@ class JobTransactionTest(TransactionTestCase):
         module = "profiling"
         name = "TestProfilingJob"
 
-        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
         job_result = create_job_result_and_run_job(module, name, profile=True)
 
         self.assertJobResultStatus(job_result)
 
-        profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
-        self.assertTrue(profiling_result.exists())
-        profiling_result.unlink()
+        # Profiling data is available as a downloadable FileProxy linked to the JobResult
+        job_result.refresh_from_db()
+        self.assertEqual(job_result.files.count(), 1)
+        file_proxy = job_result.files.first()
+        self.assertEqual(file_proxy.name, f"nautobot-jobresult-{job_result.id}.pstats")
+        self.assertGreater(len(file_proxy.file.read()), 0)
 
     def test_job_singleton(self):
         module = "singleton"
