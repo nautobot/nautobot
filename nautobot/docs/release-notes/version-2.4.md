@@ -166,11 +166,13 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
-## v2.4.30 (2026-03-27)
+## v2.4.30 (2026-03-30)
 
 ### Security in v2.4.30
 
 - [#8710](https://github.com/nautobot/nautobot/issues/8710) - Updated dependency `pyasn1` to `0.6.3` to mitigate CVE-2026-30922. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
 
 ### Added in v2.4.30
 
@@ -180,6 +182,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 ### Fixed in v2.4.30
 
 - [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
+- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
+- [#8614](https://github.com/nautobot/nautobot/issues/8614) - Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
 - [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
 - [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
 - [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
