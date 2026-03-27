@@ -228,7 +228,7 @@ class ConfigUIViewSetTestCase(TestCase):
         response = self.client.get(self.url)
         config_values = response.context["config_values"]
         # each fieldset item exists
-        for _, names in CONSTANCE_CONFIG_FIELDSETS.items():
+        for names in CONSTANCE_CONFIG_FIELDSETS.values():
             for name in names:
                 self.assertTrue(any(item["name"] == name for item in config_values))
 

@@ -527,10 +527,9 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
         fieldsets = {k: CONSTANCE_CONFIG_FIELDSETS[k] for k in sorted(CONSTANCE_CONFIG_FIELDSETS)}
         form = context["form"]
         config_values = []
-        for _, fields in fieldsets.items():
+        for fields in fieldsets.values():
             for name in fields:  # order comes from fieldset list
                 item = constance_config[name]
-                print(form[name], "form field for", name)
                 config_values.append(
                     {
                         "name": name,
@@ -538,7 +537,7 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
                         "help_text": item.help_text,
                         "value": getattr(config, name),
                         "form_field": form[name],
-                        "is_file": True,  # adjust if file fields exist
+                        "is_file": False,  # adjust if file fields exist
                     }
                 )
 
