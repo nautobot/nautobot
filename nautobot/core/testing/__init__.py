@@ -1,6 +1,10 @@
 import collections
+from contextlib import contextmanager
+import os
+from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
@@ -132,3 +136,30 @@ class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
         statuses present in the database in order to run tests."""
         super().setUp()
         self.setUpNautobot(client=True, populate_status=True)
+
+
+class CelerySubprocessTestCase(TransactionTestCase):
+    """
+    A base class for testing Celery tasks (E2E) that spawn subprocesses.
+    Ensures that subprocesses receive environment variables pointing to
+    a test database and a test configuration file.
+    """
+
+    @contextmanager
+    def celery_subprocess_env(self, **extra_env):
+        """
+        A context manager that injects a test environment into subprocesses.
+        It allows to optionally add additional variables via **extra_env.
+        """
+        test_db_name = connection.settings_dict["NAME"]
+
+        env_overrides = {
+            "NAUTOBOT_DB_NAME": test_db_name,
+            "NAUTOBOT_CONFIG": "nautobot/core/tests/nautobot_config.py",
+        }
+
+        # Optionall set additional extra_env
+        env_overrides.update(extra_env)
+
+        with mock.patch.dict(os.environ, env_overrides):
+            yield
