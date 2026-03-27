@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import sys
-import tempfile
 from textwrap import dedent
 from typing import final
 import warnings
@@ -166,22 +165,22 @@ class BaseJob:
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
-                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-                # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                profile_filename = f"nautobot-jobresult-{self.job_result.id}.pstats"
                 self.logger.info(
-                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                    "Profiling job execution; results will be available for download upon completion.",
+                    extra={"grouping": "initialization"},
                 )
 
-                with cProfile.Profile() as pr:
-                    try:
-                        output = self.run(*args, **deserialized_kwargs)
-                    except Exception as err:
-                        pr.dump_stats(profiling_path)
-                        raise err
-                    else:
-                        pr.dump_stats(profiling_path)
-                        return output
+                pr = None
+                try:
+                    with cProfile.Profile() as pr:
+                        return self.run(*args, **deserialized_kwargs)
+                finally:
+                    if pr:
+                        import marshal
+
+                        pr.create_stats()
+                        self.create_file(profile_filename, content=marshal.dumps(pr.stats))
             else:
                 return self.run(*args, **deserialized_kwargs)
 
@@ -488,7 +487,7 @@ class BaseJob:
             required=False,
             initial=False,
             label="Profile job execution",
-            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+            help_text="Profiles the job execution using cProfile and attaches a report to the job result",
         )
         form.fields["_profile"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
