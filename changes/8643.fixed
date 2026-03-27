@@ -1,1 +1,0 @@
-Fixed a bug in "Update Group Assignment" modal where modal title rendering is broken, after applying the fix, the close button is on the top right corner and the title is on the far left margin.

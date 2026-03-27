@@ -1,0 +1,1 @@
+Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
