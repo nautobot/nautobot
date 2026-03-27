@@ -809,7 +809,7 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = DynamicGroup
-        fields = "__all__"
+        fields = ("id", "name", "description", "group_type", "tags")
 
     def filter_descendants(self, queryset, name, value):
         if not value:

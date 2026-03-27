@@ -2314,6 +2314,8 @@ class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = DynamicGroup.objects.all()
     filterset = DynamicGroupFilterSet
 
+    generic_filter_tests = [("name",), ("description",), ("group_type",)]
+
     @classmethod
     def setUpTestData(cls):
         cls.device_ct = ContentType.objects.get_for_model(Device)
