@@ -814,7 +814,7 @@ def build_example_app_docs(context):
         "keep": "Keep existing change fragment files. Useful for testing. (default: False).",
     }
 )
-def generate_release_notes(context, version="", date="", keep=False):
+def generate_release_notes(context, version="", date="", keep=False):  # pylint: disable=redefined-outer-name
     """Generate Release Notes using Towncrier."""
     command = "poetry run towncrier build"
     if not version:
