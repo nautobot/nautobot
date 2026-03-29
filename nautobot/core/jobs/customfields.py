@@ -14,6 +14,8 @@ from nautobot.extras.jobs import (
 )
 from nautobot.extras.models import CustomField
 
+name = "CustomField Jobs"
+
 
 class CleanupCustomFieldsData(Job):
     """System Job to cleanup Custom Fields."""
