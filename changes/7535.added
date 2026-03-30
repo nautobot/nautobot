@@ -1,0 +1,1 @@
+Added `extra_columns` parameter to ObjectDetailView to allow additional table columns in the UI.

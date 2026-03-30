@@ -998,7 +998,7 @@ class ObjectsTablePanel(Panel):
     enable_bulk_actions = False
     enable_related_link = True
     exclude_columns = ()
-    extra_columns=None,
+    extra_columns = ()
     footer_buttons = ()
     footer_content_template_path = "components/panel/footer_content_table.html"
     form_id = None
