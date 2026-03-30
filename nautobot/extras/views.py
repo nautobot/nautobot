@@ -3104,7 +3104,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 if value and getattr(value, "get_absolute_url", None):
                     return helpers.hyperlinked_object(value)
                 else:
-                    return getattr(obj, "object_repr") or helpers.HTML_NONE
+                    return obj.object_repr or helpers.HTML_NONE
 
             return super().render_value(key, value, context)
 
