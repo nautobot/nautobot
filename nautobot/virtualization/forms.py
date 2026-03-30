@@ -484,9 +484,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         if self.instance is not None and self.instance.present_in_database:
             self.fields["virtual_machine"].disabled = True
 
-        virtual_machine = VirtualMachine.objects.get(
-            pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
-        )
+        if isinstance(self.data.get("virtual_machine"), VirtualMachine):
+            virtual_machine = self.data.get("virtual_machine")
+        else:
+            virtual_machine = VirtualMachine.objects.get(
+                pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+            )
 
         # Add current location to VLANs query params
         location = virtual_machine.location
@@ -495,7 +498,12 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
             self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
 
 
-class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequiredModelFormMixin):
+class VMInterfaceCreateForm(
+    form_from_model(VMInterface, ["tags"]),
+    BootstrapMixin,
+    InterfaceCommonForm,
+    RoleNotRequiredModelFormMixin,
+):
     model = VMInterface
     virtual_machine = DynamicModelChoiceField(queryset=VirtualMachine.objects.all())
     name_pattern = ExpandableNameField(label="Name")
@@ -560,15 +568,18 @@ class VMInterfaceCreateForm(BootstrapMixin, InterfaceCommonForm, RoleNotRequired
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+        if isinstance(self.initial.get("virtual_machine"), VirtualMachine):
+            virtual_machine = self.initial["virtual_machine"]
+            vm_id = virtual_machine.pk
+        else:
+            vm_id = self.initial.get("virtual_machine") or self.data.get("virtual_machine")
+            if isinstance(vm_id, list):
+                vm_id = vm_id[0]
+            virtual_machine = VirtualMachine.objects.get(pk=vm_id)
 
         # Restrict parent interface assignment by VM
         self.fields["parent_interface"].widget.add_query_param("virtual_machine_id", vm_id)
         self.fields["bridge"].widget.add_query_param("virtual_machine_id", vm_id)
-
-        virtual_machine = VirtualMachine.objects.get(
-            pk=self.initial.get("virtual_machine") or self.data.get("virtual_machine")
-        )
 
         # Add current location to VLANs query params
         location = virtual_machine.location

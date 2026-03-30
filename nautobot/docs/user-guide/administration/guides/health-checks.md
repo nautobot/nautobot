@@ -69,6 +69,36 @@ Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping
 !!! tip
     If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
 
+If you have implemented a custom redis `CLIENT_CLASS` for use within `CACHES`, you can provide a custom health check to register. This must be in the format shown below.
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": parse_redis_connection(redis_database=1),
+        "OPTIONS": {
+            "CLIENT_CLASS": "my_app.redis.CustomRedisClient",
+            "CUSTOM_HEALTH_CHECK_CLASS": "my_app.redis.MyCustomRedisHealthCheck",
+        },
+    },
+}
+```
+
+In the example above a custom app named `my_app` is used to hold the custom implementation. An example check is shown below.
+
+```python
+from health_check.backends import BaseHealthCheckBackend
+from health_check.exceptions import ServiceUnavailable
+from netutils.ping import tcp_ping
+
+class MyCustomRedisHealthCheck(BaseHealthCheckBackend):
+    def check_status(self):
+        if not tcp_ping("198.51.100.100", 6379):
+            self.add_error(ServiceUnavailable("Custom Redis health check error"))
+```
+
+The result will now show up in `/health/` and via `nautobot-server health_check`.
+
 ## Deployments with systemd
 
 For systemd deployments, the underlying services of PostgreSQL/MySQL and Redis integrate natively with systemd's `sd_notify` API to provide additional status information to the system, and `uwsgi` does as well. We recommend following the standard deployment patterns provided by your OS for PostgreSQL/MySQL and Redis. For the Nautobot service and Celery/Beat services, follow the Nautobot installation documentation at [Setup systemd](../installation/services.md#setup-systemd).
@@ -140,6 +170,9 @@ livenessProbe:
 ```
 
 It is advised though to enable the custom [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting in order to use files for probes in Kubernetes. That way even if you have concurrency of `1` in your environment, probes will still work:
+
+!!! warning
+    If you are using Celery version `5.6.1` breaks the creation of Worker's heartbeat file, but still generate readiness files as expected. Upgrading to Celery `5.6.2` resolves the issue. Affected Nautobot versions are `3.0.4` & `3.0.5`.
 
 ```yaml
 readinessProbe:

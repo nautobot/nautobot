@@ -54,7 +54,9 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
 
         # `clusters` for Device, `cluster` for VirtualMachine
-        if obj._meta.model_name == "device":
+        from nautobot.dcim.models import Device
+
+        if isinstance(obj, Device):
             query.append(Q(clusters__in=obj.clusters.all()) | Q(clusters=None))
             query.append(
                 Q(cluster_groups__in=obj.clusters.values_list("cluster_group", flat=True)) | Q(cluster_groups=None)
@@ -134,10 +136,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         )
         base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
 
-        from nautobot.dcim.models import Location
+        from nautobot.dcim.models import Device, Location
         from nautobot.tenancy.models import TenantGroup
 
-        if self.model._meta.model_name == "device":
+        if issubclass(self.model, Device):
             location_query_string = "location"
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add((Q(device_families=OuterRef("device_type__device_family")) | Q(device_families=None)), Q.AND)

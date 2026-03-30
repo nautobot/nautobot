@@ -37,6 +37,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
@@ -1360,6 +1361,27 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(ctx1.get("device_family"), "Device Family 1")
         self.assertEqual(ctx2.get("device_family"), None)
 
+    def test_get_for_object_inheritance(self):
+        """
+        Verify that get_for_object handles models inheriting from Device.
+        """
+
+        # We use an existing device but mock its model_name to something else, to emulate inheritance.
+        with mock.patch.object(self.device._meta, "model_name", "proxy_device"):
+            self.assertEqual(self.device._meta.model_name, "proxy_device")
+            contexts = ConfigContext.objects.get_for_object(self.device)
+            self.assertEqual(contexts.count(), 1)
+
+    def test_annotate_config_context_data_inheritance(self):
+        """
+        Verify that annotate_config_context_data() works for models inheriting from Device.
+        """
+
+        # Mock the model_name at the class level to prove issubclass() is used.
+        with mock.patch.object(Device._meta, "model_name", "proxy_device"):
+            annotated_device = Device.objects.filter(pk=self.device.pk).annotate_config_context_data().first()
+            self.assertEqual(self.device.get_config_context(), annotated_device.get_config_context())
+
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
@@ -2270,6 +2292,34 @@ class JobQueueTest(ModelTestCases.BaseModelTestCase):
     """
 
     model = JobQueue
+
+    def test_job_queue_name_rejects_path_traversal(self):
+        """Job queue name cannot contain '..' or path separators for any queue type."""
+        for queue_type in (JobQueueTypeChoices.TYPE_CELERY, JobQueueTypeChoices.TYPE_KUBERNETES):
+            with self.subTest(queue_type=queue_type, name="contains .."):
+                job_queue = JobQueue(
+                    name="../../etc",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="contains slash"):
+                job_queue = JobQueue(
+                    name="My/Job/Queue",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="valid name passes"):
+                job_queue = JobQueue(
+                    name="valid-queue-name",
+                    queue_type=queue_type,
+                )
+                job_queue.full_clean()
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):

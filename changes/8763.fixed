@@ -1,0 +1,1 @@
+Fix get_config_context and ConfigContexModel annotation for subclasses of Device model
