@@ -10,7 +10,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
 <table>
   <tr>
     <th>Disclosure&nbsp;Date</th>
-    <td>March 27, 2026</td>
+    <td>March 30, 2026</td>
   </tr>
   <tr>
     <th>Summary</th>
