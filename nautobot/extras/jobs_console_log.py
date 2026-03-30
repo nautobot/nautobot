@@ -2,10 +2,10 @@ import functools
 import logging
 from queue import Empty, Queue
 import subprocess
-import sys
 import threading
 from typing import Any, Dict
 
+from django.conf import settings
 from django.utils import timezone
 
 from nautobot.core.utils.logging import sanitize
@@ -139,7 +139,7 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        return [f"{sys.argv[0]}", "execute_job_result", f"{self.job_result_pk}"]
+        return ["nautobot-server", "execute_job_result", f"{self.job_result_pk}", f"--config={settings.SETTINGS_PATH}"]
 
     def _print_output(self):
         """Print output in real-time while process runs."""

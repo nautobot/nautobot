@@ -155,7 +155,6 @@ class CelerySubprocessTestCase(TransactionTestCase):
 
         env_overrides = {
             "NAUTOBOT_DB_NAME": test_db_name,
-            "NAUTOBOT_CONFIG": "nautobot/core/tests/nautobot_config.py",
         }
 
         # Optionall set additional extra_env
