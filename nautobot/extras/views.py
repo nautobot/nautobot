@@ -2884,9 +2884,21 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
+    class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+
+            if key == "changed_object":
+                if value and getattr(value, "get_absolute_url", None):
+                    return helpers.hyperlinked_object(value)
+                else:
+                    return getattr(obj, "object_repr") or helpers.HTML_NONE
+
+            return super().render_value(key, value, context)
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            ChangeObjectFieldsPanel(
                 label="Change",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
@@ -2927,6 +2939,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         )
     )
 
+    # Remove "Advanced" tab while keeping the main.
     object_detail_content.tabs = object_detail_content.tabs[:1]
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
@@ -2957,7 +2970,7 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         if self.action == "retrieve":
             related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
             related_changes_table = tables.ObjectChangeTable(
-                data=related_changes[:50],  # Limit for performance
+                data=related_changes,
                 orderable=False,
             )
             paginate = {
