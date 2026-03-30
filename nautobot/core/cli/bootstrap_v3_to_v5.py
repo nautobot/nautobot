@@ -71,9 +71,11 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
         # Move plain active from <li> to child <a> or <button>
         li_tag, n_active = re.subn(
             r'(<li[^>]+)class=(["\'])([^"\']*\bactive\b[^"\']*)\2',
-            lambda m: f'{m.group(1)}class="{" ".join([c for c in m.group(3).split() if c != "active"])}"'
-            if "active" in m.group(3).split()
-            else m.group(0),
+            lambda m: (
+                f'{m.group(1)}class="{" ".join([c for c in m.group(3).split() if c != "active"])}"'
+                if "active" in m.group(3).split()
+                else m.group(0)
+            ),
             li_tag,
         )
         if n_active:

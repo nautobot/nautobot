@@ -1,0 +1,3 @@
+Changed "dependent object search" modal behavior so that when first opened, an initial search query is automatically triggered.
+Changed global search behavior to display only a single loading spinner while search is in progress.
+Changed Location and Prefix list view behavior so that when table subtrees are toggled, the "Showing X of Y" pagination info is hidden.

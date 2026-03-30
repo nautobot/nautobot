@@ -1,12 +1,13 @@
 import contextlib
-import inspect
 import re
+import traceback
 from typing import Optional, Sequence
 from unittest import mock, skipIf
 import uuid
 
+from django import forms as django_forms
 from django.apps import apps
-from django.conf import global_settings, settings
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
@@ -22,6 +23,14 @@ from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
 
+from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
+from nautobot.core.forms import (
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+    NullableDateField,
+    NumericArrayField,
+    TagFilterField,
+)
 from nautobot.core.jobs.bulk_actions import BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
@@ -37,7 +46,6 @@ from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFo
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.jobs import JobResult
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -282,7 +290,7 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                self.assertBodyContains(response, date(instance.created, settings.DATETIME_FORMAT), html=True)
                 # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
                 # therefore is subject to off-by-one timing failures.
 
@@ -959,14 +967,15 @@ class ViewTestCases:
                 self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
 
         def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+            # TODO: see updated implementation in nautobot.ipam.tests.test_views.PrefixTestCase, generalize it here
             self.user.is_superuser = True
             self.user.save()
 
-            if not issubclass(self.model, (TreeModel)) and self.model is not Prefix:
+            if not issubclass(self.model, (TreeModel)):
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
-                response = self.client.get(f"{self._get_url('list')}")
+                response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
                 self.assertBodyContains(response, '<i class="mdi mdi-circle-small"></i>', html=True)
 
             with self.subTest("Assert indentation is removed on filter"):
@@ -974,38 +983,56 @@ class ViewTestCases:
                     self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
                 )
                 filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
-                response = self.client.get(f"{self._get_url('list')}?{filter_values}")
+                response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
             with self.subTest("Assert indentation is removed on sort"):
-                response = self.client.get(f"{self._get_url('list')}?sort={self.sort_on_field}")
+                response = self.client.get(
+                    f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+                )
                 response_body = response.content.decode(response.charset)
                 self.assertNotIn('<i class="mdi mdi-circle-small"></i>', response_body)
 
         def test_model_properties_as_table_columns_are_not_orderable(self):
             """
-            Check for table columns that are property-based and not orderable.
+            Check for table columns that each sortable columns works.
             """
-            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            # Add model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            table_class = getattr(view, "table_class", getattr(view, "table", None))
             if not table_class:
-                return
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a table or table_class defined."
+                )
 
             queryset = self._get_queryset()
             table = table_class(queryset)
-            model_cls = table._meta.model
-
-            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
-
-            for name, column in table.base_columns.items():
-                if hasattr(column, "order_by") and column.order_by:
-                    continue
-                if name in property_fields and name != "pk":
-                    with self.subTest(column_name=name):
-                        self.assertFalse(
-                            column.orderable,
-                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
-                        )
+            column_names = list(table.base_columns.keys())
+            # We need to make sure all columns are shown, as some of the logic only works when the column is actually present
+            self.user.set_config(f"tables.{table_class.__name__}.columns", column_names, commit=True)
+            for name in column_names:
+                column = table.base_columns[name]
+                with self.subTest(column_name=name):
+                    if hasattr(column, "orderable") and column.orderable is False:
+                        continue
+                    if name in ["actions", "pk"]:
+                        continue
+                    try:
+                        response = self.client.get(self._get_url("list") + f"?sort={name}")
+                    except Exception as error:
+                        print(f"Exception while sorting column `{name}`: {error}")
+                        traceback.print_exc()
+                        raise  # re-raise so the test still fails
+                    self.assertHttpStatus(
+                        response, 200, msg=f"Column `{name}` on Table `{table_class.__name__}` does not sort properly."
+                    )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -1020,9 +1047,14 @@ class ViewTestCases:
         def test_list_objects_anonymous_with_exempt_permission_for_one_view_only(self):
             # Make the request as an unauthenticated user
             self.client.logout()
-            # Test if AnonymousUser can properly render the whole list view
+
             with override_settings(EXEMPT_VIEW_PERMISSIONS=[self.model._meta.label_lower]):
+                # Test if AnonymousUser can properly render the whole list view
                 response = self.client.get(self._get_url("list"))
+                self.assertHttpStatus(response, 200)
+
+                # Test if AnonymousUser can properly render the table contents via HTMX
+                response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
                 self.assertHttpStatus(response, 200)
                 # There should be some rows
                 self.assertBodyContains(response, 'class="even')
@@ -1035,11 +1067,16 @@ class ViewTestCases:
                 instance2.name += "X"
                 instance2.save()
 
+            # Non-HTMX request should succeed
             response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
+
+            # HTMX request should succeed and retrieve the filtered table
+            response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}", headers={"HX-Request": "true"})
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
             # There should be only one row in the table
-            self.assertEqual(content.split("<main")[1].count("<tr "), 1)
+            self.assertEqual(content.count("<tr "), 1)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1051,10 +1088,14 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
-            response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            response = self.client.get(
+                f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
+            )
+            # Note: If this breaks, update `test_filter_form_fields_are_working` as well
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
-            self.assertBodyContains(response, "None")
+            self.assertBodyContains(response, f"No {self.model._meta.verbose_name_plural} found")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
@@ -1064,6 +1105,7 @@ class ViewTestCases:
                 instance2.name += "X"
                 instance2.save()
 
+            # Non-HTMX request should contain appropriate page structure
             with self.assertLogs("nautobot.core.filters") as cm:
                 response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
             filterset = self.get_filterset()
@@ -1083,8 +1125,23 @@ class ViewTestCases:
             content = utils.extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Unknown filter field", content, msg=content)
             self.assertIn("None", content, msg=content)
+
+            # HTMX request should contain the table contents
+            with self.assertLogs("nautobot.core.filters") as cm:
+                response = self.client.get(
+                    f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
+                )
+            self.assertEqual(
+                cm.output,
+                [
+                    f'WARNING:nautobot.core.filters:{filterset.__name__}: Unknown filter field "ice_cream_flavor"',
+                ],
+            )
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
+            self.assertNotIn("Unknown filter field", content, msg=content)
             # There should be at least two rows in the table
-            self.assertGreaterEqual(content.split("<main")[1].count("<tr "), 2)
+            self.assertGreaterEqual(content.count("<tr "), 2)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1092,6 +1149,105 @@ class ViewTestCases:
                 # Some models, such as ObjectMetadata, don't have a detail URL
                 if instance1.get_absolute_url() in content:
                     self.assertIn(instance2.get_absolute_url(), content, msg=content)
+
+        def test_filter_form_fields_are_working(self):
+            """
+            Check that each field in the NautobotFilterForm works with a valid value.
+            """
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            filter_form_class = getattr(view, "filterset_form_class", getattr(view, "filterset_form", None))
+            if not filter_form_class:
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a filterset_form_class or filterset_form defined."
+                )
+
+            messages = []
+            messages.append(f"Testing {filter_form_class.__name__} on {self.model.__name__}")
+
+            # Get the filterset class so we can compare to the FilterForm fields for a match
+            filterset_class = self.get_filterset()
+
+            if not filterset_class:
+                messages.append(f"No filterset found for model {self.model}")
+                self.fail("\n".join(messages))
+
+            for field_name, form_field in filter_form_class().fields.items():
+                if field_name.startswith(("cr_", "cf_", "cpf_")):
+                    continue
+                value = None
+                filter_field = None
+                if not filterset_class.base_filters.get(field_name):
+                    messages.append(
+                        f"{filter_form_class.__name__} field `{field_name}` does not have a corresponding filter on {filterset_class.__name__}."
+                    )
+                    self.fail("\n".join(messages))
+                filter_field = filterset_class.base_filters[field_name]
+                messages.append(f"Testing FormFilter field `{field_name}` and type `{form_field.__class__.__name__}")
+
+                if hasattr(form_field, "choices") and form_field.choices:
+                    # This logic could result in a "flaky" test if the first value is valid, but subsequent values are not.
+                    # Flatten grouped choices and skip group labels
+                    def iter_choices(choices):
+                        for c in choices:
+                            if isinstance(c[1], (list, tuple)):
+                                # This is a group: c[1] is a list of (value, label)
+                                yield from c[1]
+                            else:
+                                yield c
+
+                    valid_choices = [c[0] for c in iter_choices(form_field.choices) if c[0] is not None]
+                    # Skip if no valid choices (only None or empty), this is a gap in the testing
+                    if not valid_choices:
+                        continue
+                    value = valid_choices[0]
+
+                elif type(form_field) in [django_forms.CharField, django_forms.TypedChoiceField]:
+                    value = "test-name"
+                    if type(filter_field) in [MACAddressFilter, MultiValueMACAddressFilter]:
+                        value = "aa:bb:cc:dd:ee:ff"
+                elif type(form_field) in [django_forms.IntegerField, django_forms.ModelChoiceField, NumericArrayField]:
+                    value = 1
+                elif type(form_field) in [django_forms.BooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.DateField, NullableDateField]:
+                    value = "2026-01-01"
+                elif type(form_field) in [django_forms.DateTimeField]:
+                    value = "2026-01-01T00:00:00"
+                elif type(form_field) in [django_forms.ModelMultipleChoiceField, DynamicModelMultipleChoiceField]:
+                    # Use the first valid choice from the queryset, if available
+                    queryset = getattr(form_field, "queryset", None)
+                    value = None
+                    if queryset is not None and queryset.exists():
+                        value = queryset.first().pk
+                    else:
+                        # We currently do not cover use cases where the queryset is empty, this is a gap in the testing
+                        continue
+                elif type(form_field) in [django_forms.NullBooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.URLField]:
+                    value = "https://example.com"
+                elif type(form_field) in [MultiValueCharField, TagFilterField]:
+                    value = "test-tag"
+                else:
+                    # Unsupported type, if missing a case above add it to the elif block with appropriate test value.
+                    messages.append(f"Field `{field_name}` has an unsupported type `{form_field.__class__.__name__}`.")
+                    self.fail("\n".join(messages))
+
+                url = f"{self._get_url('list')}?{field_name}={value!s}"
+
+                messages.append(f"Testing URL: {url}")
+                try:
+                    response = self.client.get(url)
+                except Exception:
+                    self.fail("\n".join(messages))
+                self.assertHttpStatus(response, 200, msg="\n".join(messages))
+                self.assertNotContains(response, "Invalid filters were specified", msg_prefix="\n".join(messages))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -1153,9 +1309,10 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Try GET with object-level permission
-            response = self.client.get(self._get_url("list"))
+            # HTMX request for the table content should succeed and contain relevant contents
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
             self.assertHttpStatus(response, 200)
-            content = utils.extract_page_body(response.content.decode(response.charset))
+            content = response.content.decode(response.charset)
             if hasattr(self.model, "name"):
                 self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
                 self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
@@ -1163,6 +1320,10 @@ class ViewTestCases:
                 self.assertIn(instance1.get_absolute_url(), content, msg=content)
                 self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
 
+            # Non-HTMX request for the page structure should also succeed and contain relevant contents
+            response = self.client.get(self._get_url("list"))
+            self.assertHttpStatus(response, 200)
+            content = utils.extract_page_body(response.content.decode(response.charset))
             view = self.get_list_view()
             if view and hasattr(view, "action_buttons") and "import" in view.action_buttons:
                 # Check if import button is present due to user permissions
@@ -1882,7 +2043,9 @@ class ViewTestCases:
             with self.subTest("Assert if no valid objects selected return with error"):
                 for values in ([], [str(uuid.uuid4())]):
                     data["pk"] = values
-                    response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+                    response = self.client.post(
+                        self._get_url("bulk_rename"), data, follow=True, headers={"HX-Request": "true"}
+                    )
                     expected_message = f"No valid {verbose_name_plural} were selected."
                     self.assertBodyContains(response, expected_message)
 
