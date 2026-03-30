@@ -218,6 +218,7 @@ Added the JavaScript Library ECharts version 6.0.0.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
 - [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated development npm dependency `flatted` to `~3.4.2` to mitigate CVE-2026-33228.
+- [#8778](https://github.com/nautobot/nautobot/issues/8778) - Added missing enforcement of any configured Django password validators when managing users via the REST API (CVE-2026-34203).
 
 ### Added in v3.0.10
 
