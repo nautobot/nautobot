@@ -3151,9 +3151,6 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         )
     )
 
-    # Remove "Advanced" tab while keeping the main.
-    object_detail_content.tabs = object_detail_content.tabs[:1]
-
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
         # Remappings below allow previous queries of time_before and time_after to use
