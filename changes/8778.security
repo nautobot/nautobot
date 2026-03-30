@@ -1,0 +1,1 @@
+Added missing enforcement of any configured Django password validators when managing users via the REST API (CVE-2026-34203).
