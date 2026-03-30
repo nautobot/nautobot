@@ -166,6 +166,48 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.30 (2026-03-30)
+
+### Security in v2.4.30
+
+- [#8710](https://github.com/nautobot/nautobot/issues/8710) - Updated dependency `pyasn1` to `0.6.3` to mitigate CVE-2026-30922. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8779](https://github.com/nautobot/nautobot/issues/8779) - Added missing enforcement of any configured Django password validators when managing users via the REST API (CVE-2026-34203).
+
+### Added in v2.4.30
+
+- [#8463](https://github.com/nautobot/nautobot/issues/8463) - Added default values for additional Kubernetes settings variables.
+- [#8736](https://github.com/nautobot/nautobot/issues/8736) - Added `clear_cache` step to `nautobot-server post_upgrade` command.
+
+### Fixed in v2.4.30
+
+- [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
+- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
+- [#8614](https://github.com/nautobot/nautobot/issues/8614) - Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
+- [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
+- [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
+- [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
+
+### Housekeeping in v2.4.30
+
+- [#8734](https://github.com/nautobot/nautobot/issues/8734) - Changed ObjectChangeFactory to use set start and end dates for deterministic timestamps for the `time` field for tests.
+
+## v2.4.29 (2026-03-17)
+
+### Security in v2.4.29
+
+- [#8663](https://github.com/nautobot/nautobot/issues/8663) - Updated dependency `Django` to `~4.2.29` to mitigate CVE-2026-25673 and CVE-2026-25674.
+- [#8691](https://github.com/nautobot/nautobot/issues/8691) - Updated dependency `pyjwt` to `2.12.1` to mitigate CVE-2026-32597. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.29
+
+- [#8488](https://github.com/nautobot/nautobot/issues/8488) - Added the ability to configure multiple Kubernetes job manifests via file-based configuration.
+
+### Fixed in v2.4.29
+
+- [#8473](https://github.com/nautobot/nautobot/issues/8473) - Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.
+
 ## v2.4.28 (2026-03-02)
 
 ### Fixed in v2.4.28

@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.0.9"
+version = "3.0.10"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -35,11 +35,11 @@ exclude = [
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
 # Background task processing
-celery = "~5.6.2"
+celery = "~5.6.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.5"
+cryptography = "~46.0.6"
 # Fundamental web framework for Nautobot
 Django = "~4.2.29"
 # Adds AJAX capabilities to django-tables2
@@ -120,7 +120,7 @@ netaddr = "~1.3.0"
 #       we permit a looser (^) version constraint here.
 netutils = "^1.14.0"
 # HTML sanitization
-nh3 = "~0.3.3"
+nh3 = "~0.3.4"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
@@ -188,17 +188,17 @@ markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
 markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
-mkdocs-gen-files = "~0.6.0"
+mkdocs-gen-files = "~0.6.1"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
-mkdocs-material = "~9.7.5"
+mkdocs-material = "~9.7.6"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.10"
+mkdocs-section-index = "~0.3.11"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~0.30.1"
 # Python-specific extension to mkdocstrings
@@ -222,13 +222,13 @@ yamllint = "~1.37.1"
 
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement
-coverage = "~7.13.4"
+coverage = "~7.13.5"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = "~2.32.5"
+requests = "~2.33.0"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
