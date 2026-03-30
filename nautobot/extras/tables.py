@@ -127,14 +127,13 @@ class="badge bg-{% if entry.content_identifier in record.provided_contents %}suc
 
 GITREPOSITORY_BUTTONS = """
 <li>
-    <button
-        data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
-        type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
-    >
-        <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
-        Sync
-    </button>
+    <form action="{% url 'extras:gitrepository_sync' pk=record.pk %}" method="post">
+        {% csrf_token %}
+        <button class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %} type="submit">
+            <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+            Sync
+        </button>
+    </form>
 </li>
 """
 
