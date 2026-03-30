@@ -33,8 +33,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.30 (<a href="TODO">patch</a>)</li>
-        <li>3.0.10 (<a href="TODO">patch</a>)</li>
+        <li>2.4.30 (<a href="https://github.com/nautobot/nautobot/pull/8779">patch</a>)</li>
+        <li>3.0.10 (<a href="https://github.com/nautobot/nautobot/pull/8778">patch</a>)</li>
       </ul>
     </td>
   </tr>
