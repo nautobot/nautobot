@@ -76,7 +76,7 @@
                                                         </label>
                                                         <div class="col-12 col-md-9">
 
-                                                        {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                            {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                             {{ item.form_field }}
                                                             <div class="text-danger">
                                                                 {{ item.form_field.errors }}
@@ -109,7 +109,7 @@
                                                     </label>
                                                     <div class="col-12 col-md-9">
 
-                                                    {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
+                                                        {% if item.is_file %}{% trans "Current file" %}: <a href="{% get_media_prefix as MEDIA_URL %}{{ MEDIA_URL }}{{ item.value }}" target="_blank">{{ item.value }}</a>{% endif %}
                                                         {{ item.form_field }}
                                                         <div class="text-danger">
                                                             {{ item.form_field.errors }}
