@@ -142,7 +142,7 @@ class CelerySubprocessTestCase(TransactionTestCase):
     """
     A base class for testing Celery tasks (E2E) that spawn subprocesses.
     Ensures that subprocesses receive environment variables pointing to
-    a test database and a test configuration file.
+    a test database.
     """
 
     @contextmanager
