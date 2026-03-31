@@ -194,6 +194,10 @@ OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
 """
 
+OBJECTMETADATA_BUTTONS = """
+<li><a href="{% url 'extras:objectmetadata' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
+"""
+
 MEMBERS_COUNT = """
 {% load helpers %}
 {% with urlname=record.model|validated_viewname:"list" %}
@@ -1421,7 +1425,6 @@ class MetadataChoiceTable(BaseTable):
 
 class ObjectMetadataTable(BaseTable):
     pk = ToggleColumn()
-    id = tables.Column(linkify=True, verbose_name="ID")
     # NOTE: there is no identity column in this table; this is intentional as we have no detail view for ObjectMetadata
     metadata_type = tables.Column(linkify=True)
     assigned_object = tables.TemplateColumn(
@@ -1430,13 +1433,12 @@ class ObjectMetadataTable(BaseTable):
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
     value = tables.Column(empty_values=[], order_by=("_value",))
-    actions = ButtonsColumn(ObjectMetadata)
+    actions = ButtonsColumn(ObjectMetadata, prepend_template=OBJECTMETADATA_BUTTONS)
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
         fields = (
             "pk",
-            "id",
             "assigned_object",
             "metadata_type",
             "scoped_fields",
@@ -1445,7 +1447,6 @@ class ObjectMetadataTable(BaseTable):
         )
         default_columns = (
             "pk",
-            "id",
             "assigned_object",
             "scoped_fields",
             "value",
