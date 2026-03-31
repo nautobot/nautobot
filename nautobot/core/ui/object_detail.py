@@ -998,7 +998,6 @@ class ObjectsTablePanel(Panel):
     enable_bulk_actions = False
     enable_related_link = True
     exclude_columns = ()
-    extra_columns = ()
     footer_buttons = ()
     footer_content_template_path = "components/panel/footer_content_table.html"
     form_id = None
@@ -1016,6 +1015,7 @@ class ObjectsTablePanel(Panel):
     show_table_config_button = True
     tab_id = None
     table_attribute = None
+    extra_columns = None
     table_class = None
     table_filter = None
     # TODO: Is `table_title` redundant with the base Panel's `label`
@@ -1040,6 +1040,7 @@ class ObjectsTablePanel(Panel):
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
+            extra_columns (list, optional): Extra columns to pass through to the table constructor.
             distinct (bool, optional): If True, apply `.distinct()` to the table queryset.
             select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
             prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
@@ -1055,7 +1056,6 @@ class ObjectsTablePanel(Panel):
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
             exclude_columns (list, optional): A list of field names to exclude from the table display.
-            extra_columns (list, optional): Extra columns to pass through to the table constructor.
             add_button_route (str, optional): The route used to generate the "add" button URL. Defaults to "default",
                 which uses the default table's model `add` route.
             add_permissions (list, optional): A list of permissions required for the "add" button to be displayed.
@@ -1095,10 +1095,10 @@ class ObjectsTablePanel(Panel):
         super().__init__(**kwargs)
         if self.context_table_key and any(
             [
-                self.extra_columns,
                 self.table_class,
                 self.table_filter,
                 self.table_attribute,
+                self.extra_columns,
                 self.distinct,
                 self.select_related_fields,
                 self.prefetch_related_fields,
@@ -1251,9 +1251,14 @@ class ObjectsTablePanel(Panel):
 
         if self.include_columns:
             for column in self.include_columns:
-                if column not in body_content_table.columns:
+                if column not in body_content_table.columns.columns:
                     raise ValueError(f"You are specifying a non-existent column `{column}`")
                 body_content_table.columns.show(column)
+                if column not in body_content_table.sequence:
+                    if "actions" in body_content_table.sequence:
+                        body_content_table.sequence.insert(body_content_table.sequence.index("actions"), column)
+                    else:
+                        body_content_table.sequence.append(column)
 
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user
