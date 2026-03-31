@@ -11,7 +11,8 @@ from nautobot.apps.filters import (
     TenancyModelFilterSetMixin,
 )
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import IPAddress, RouteTarget
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.virtualization.models import VMInterface
 
 from . import models
 
@@ -139,7 +140,9 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
         fields = "__all__"
 
 
-class VPNFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNFilterSet(
+    RoleModelFilterSetMixin, StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet
+):  # pylint: disable=too-many-ancestors
     """Filter for VPN."""
 
     q = SearchFilter(
@@ -247,55 +250,38 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         fields = "__all__"
 
 
-#
-# L2VPN FilterSets
-#
-
-
-class L2VPNFilterSet(
-    StatusModelFilterSetMixin,
-    TenancyModelFilterSetMixin,
-    NautobotFilterSet
-):
-    """Filter for L2VPN."""
+class VPNAttachmentFilterSet(NautobotFilterSet):
+    """Filter for VPNAttachment."""
 
     q = SearchFilter(
         filter_predicates={
-            "name": "icontains",
-            "description": "icontains",
-            "identifier": "exact",
+            "vpn__name": "icontains",
+            "vlan__name": "icontains",
+            "interface__name": "icontains",
+            "vm_interface__name": "icontains",
         }
     )
-    import_targets = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=RouteTarget.objects.all(),
+    vpn = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPN.objects.all(),
         to_field_name="name",
-        label="Import Target (name or ID)",
+        label="VPN (name or ID)",
     )
-    export_targets = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=RouteTarget.objects.all(),
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VLAN.objects.all(),
         to_field_name="name",
-        label="Export Target (name or ID)",
+        label="VLAN (name or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interface (name or ID)",
+    )
+    vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VMInterface.objects.all(),
+        to_field_name="name",
+        label="VM Interface (name or ID)",
     )
 
     class Meta:
-        model = models.L2VPN
-        fields = ["id", "name", "type", "identifier", "description"]
-
-
-class L2VPNTerminationFilterSet(NautobotFilterSet):
-    """Filter for L2VPNTermination."""
-
-    q = SearchFilter(
-        filter_predicates={
-            "l2vpn__name": "icontains",
-        }
-    )
-    l2vpn = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=models.L2VPN.objects.all(),
-        to_field_name="name",
-        label="L2VPN (name or ID)",
-    )
-
-    class Meta:
-        model = models.L2VPNTermination
-        fields = ["id", "l2vpn"]
+        model = models.VPNAttachment
+        fields = ["id", "vpn", "vlan", "interface", "vm_interface"]

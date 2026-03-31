@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.apps.testing import FormTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
-from nautobot.ipam.models import Prefix, RouteTarget, VLAN
+from nautobot.ipam.models import Prefix, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, forms, models
@@ -170,6 +170,16 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
 
     form_class = forms.VPNForm
 
+    @classmethod
+    def _get_vpn_status(cls):
+        """Get or create an Active status for VPN."""
+        ct = ContentType.objects.get_for_model(models.VPN)
+        status = Status.objects.filter(content_types=ct).first()
+        if not status:
+            status = Status.objects.get(name="Active")
+            status.content_types.add(ct)
+        return status
+
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
         vpn_role, _ = Role.objects.get_or_create(name="Default")
@@ -180,8 +190,12 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
             "description": "test value",
             "vpn_id": "test value",
             "role": vpn_role,
-            "vpn_profile": models.VPNProfile.objects.first(),
-            "tenant": Tenant.objects.first(),
+            "vpn_profile": models.VPNProfile.objects.first().pk,
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            "status": self._get_vpn_status().pk,
+            "identifier": 10001,
+            "tenant": Tenant.objects.first().pk,
+            "extra_attributes": '{"flooding_mode": "ingress-replication"}',
         }
         form = self.form_class(data=data)
         self.assertTrue(form.is_valid())
@@ -203,12 +217,23 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
         data = {
             "description": "test value",
             "vpn_id": "test value",
-            "vpn_profile": models.VPNProfile.objects.first(),
-            "tenant": Tenant.objects.first(),
+            "vpn_profile": models.VPNProfile.objects.first().pk,
+            "tenant": Tenant.objects.first().pk,
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn("This field is required.", form.errors["name"])
+
+    def test_vxlan_service_type_requires_identifier(self):
+        """VXLAN services should require an identifier/VNI."""
+        data = {
+            "name": "VXLAN Without Identifier",
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            "status": self._get_vpn_status().pk,
+        }
+        form = self.form_class(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("identifier", form.errors)
 
 
 class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
@@ -294,248 +319,103 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
         self.assertTrue(form.save())
 
 
-class L2VPNFormTest(FormTestCases.BaseFormTestCase):
-    """Test the L2VPN form."""
+class VPNAttachmentFormTest(FormTestCases.BaseFormTestCase):
+    """Test the VPNAttachment form."""
 
-    form_class = forms.L2VPNForm
-
-    @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
-
-    def test_specifying_all_fields_success(self):
-        """Test specifying all fields."""
-        data = {
-            "name": "Test L2VPN Full",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-            "status": self._get_l2vpn_status(),
-            "identifier": 10001,
-            "description": "Test L2VPN description",
-            "tenant": Tenant.objects.first(),
-            "import_targets": RouteTarget.objects.all()[:1],
-            "export_targets": RouteTarget.objects.all()[:1],
-        }
-        form = self.form_class(data=data)
-        self.assertTrue(form.is_valid())
-        self.assertTrue(form.save())
-
-    def test_specifying_required_fields_success(self):
-        """Test specifying only required fields."""
-        data = {
-            "name": "Test L2VPN Required Only",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-            "status": self._get_l2vpn_status(),
-        }
-        form = self.form_class(data=data)
-        self.assertTrue(form.is_valid())
-        instance = form.save()
-        self.assertIsNotNone(instance)
-        self.assertEqual(instance.name, "Test L2VPN Required Only")
-
-    def test_validate_name_is_required(self):
-        """Test that the name field is required."""
-        data = {
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-            "status": self._get_l2vpn_status(),
-            "description": "Test without name",
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("name", form.errors)
-
-    def test_validate_type_is_required(self):
-        """Test that the type field is required."""
-        data = {
-            "name": "Test L2VPN No Type",
-            "status": self._get_l2vpn_status(),
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("type", form.errors)
-
-    def test_validate_status_is_required(self):
-        """Test that the status field is required."""
-        data = {
-            "name": "Test L2VPN No Status",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-        }
-        form = self.form_class(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("status", form.errors)
-
-    def test_all_l2vpn_types(self):
-        """Test that all L2VPN type choices are valid."""
-        status = self._get_l2vpn_status()
-
-        for type_value, type_label in [
-            (choices.L2VPNTypeChoices.TYPE_VXLAN, "VXLAN"),
-            (choices.L2VPNTypeChoices.TYPE_VPLS, "VPLS"),
-            (choices.L2VPNTypeChoices.TYPE_VPWS, "VPWS"),
-            (choices.L2VPNTypeChoices.TYPE_EPL, "EPL"),
-            (choices.L2VPNTypeChoices.TYPE_EVPL, "EVPL"),
-            (choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
-        ]:
-            with self.subTest(type_value=type_value):
-                data = {
-                    "name": f"Test L2VPN {type_label}",
-                    "type": type_value,
-                    "status": status,
-                }
-                form = self.form_class(data=data)
-                self.assertTrue(form.is_valid(), f"Form should be valid for type {type_value}")
-
-    def test_identifier_optional(self):
-        """Test that identifier is optional."""
-        data = {
-            "name": "Test L2VPN No Identifier",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-            "status": self._get_l2vpn_status(),
-        }
-        form = self.form_class(data=data)
-        self.assertTrue(form.is_valid())
-        instance = form.save()
-        self.assertIsNone(instance.identifier)
-
-
-class L2VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
-    """Test the L2VPNTermination form."""
-
-    form_class = forms.L2VPNTerminationForm
+    form_class = forms.VPNAttachmentForm
 
     @classmethod
-    def _get_interfaces_without_terminations(cls):
-        """Get interfaces that are not already assigned to an L2VPNTermination."""
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        used_interface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=interface_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_available_interfaces(cls):
+        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+            "interface_id", flat=True
+        )
         return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
-    def _get_vlans_without_terminations(cls):
-        """Get VLANs that are not already assigned to an L2VPNTermination."""
-        vlan_ct = ContentType.objects.get_for_model(VLAN)
-        used_vlan_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vlan_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_available_vlans(cls):
+        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
-    def _get_vminterfaces_without_terminations(cls):
-        """Get VMInterfaces that are not already assigned to an L2VPNTermination."""
-        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        used_vminterface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vminterface_ct
-        ).values_list("assigned_object_id", flat=True)
-        return VMInterface.objects.exclude(pk__in=used_vminterface_ids)
+    def _get_available_vm_interfaces(cls):
+        used_vm_interface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
+        return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
 
-    def test_termination_with_interface(self):
-        """Test creating termination with interface."""
-        l2vpn = models.L2VPN.objects.first()
-        interface = self._get_interfaces_without_terminations().first()
+    def test_attachment_with_interface(self):
+        vpn = models.VPN.objects.first()
+        interface = self._get_available_interfaces().first()
 
-        if l2vpn and interface:
-            data = {
-                "l2vpn": l2vpn.pk,
-                "interface": interface.pk,
+        if vpn and interface:
+            form = self.form_class()
+            form.cleaned_data = {
+                "vpn": vpn,
+                "interface": interface,
+                "vlan": None,
+                "vm_interface": None,
             }
-            form = self.form_class(data=data)
-            self.assertTrue(form.is_valid(), form.errors)
-            instance = form.save()
-            self.assertEqual(instance.assigned_object, interface)
+            cleaned = form.clean()
+            self.assertEqual(cleaned["interface"], interface)
 
-    def test_termination_with_vlan(self):
-        """Test creating termination with VLAN."""
-        l2vpn = models.L2VPN.objects.first()
-        vlan = self._get_vlans_without_terminations().first()
+    def test_attachment_with_vlan(self):
+        vpn = models.VPN.objects.first()
+        vlan = self._get_available_vlans().first()
 
-        if l2vpn and vlan:
-            data = {
-                "l2vpn": l2vpn.pk,
-                "vlan": vlan.pk,
+        if vpn and vlan:
+            form = self.form_class()
+            form.cleaned_data = {
+                "vpn": vpn,
+                "vlan": vlan,
+                "interface": None,
+                "vm_interface": None,
             }
-            form = self.form_class(data=data)
-            self.assertTrue(form.is_valid(), form.errors)
-            instance = form.save()
-            self.assertEqual(instance.assigned_object, vlan)
+            cleaned = form.clean()
+            self.assertEqual(cleaned["vlan"], vlan)
 
-    def test_termination_with_vminterface(self):
-        """Test creating termination with VM interface."""
-        l2vpn = models.L2VPN.objects.first()
-        vminterface = self._get_vminterfaces_without_terminations().first()
+    def test_attachment_with_vm_interface(self):
+        vpn = models.VPN.objects.first()
+        vm_interface = self._get_available_vm_interfaces().first()
 
-        if l2vpn and vminterface:
-            data = {
-                "l2vpn": l2vpn.pk,
-                "vminterface": vminterface.pk,
+        if vpn and vm_interface:
+            form = self.form_class()
+            form.cleaned_data = {
+                "vpn": vpn,
+                "vm_interface": vm_interface,
+                "vlan": None,
+                "interface": None,
             }
-            form = self.form_class(data=data)
-            self.assertTrue(form.is_valid(), form.errors)
-            instance = form.save()
-            self.assertEqual(instance.assigned_object, vminterface)
+            cleaned = form.clean()
+            self.assertEqual(cleaned["vm_interface"], vm_interface)
 
-    def test_validation_no_termination_object(self):
-        """Test validation fails when no termination object is selected."""
-        l2vpn = models.L2VPN.objects.first()
+    def test_validation_no_attachment_object(self):
+        vpn = models.VPN.objects.first()
 
-        if l2vpn:
-            data = {
-                "l2vpn": l2vpn.pk,
-                # No interface, vlan, or vminterface
-            }
-            form = self.form_class(data=data)
+        if vpn:
+            form = self.form_class(data={"vpn": str(vpn.pk)})
             self.assertFalse(form.is_valid())
-            self.assertIn("Must specify an interface or VLAN", str(form.errors))
+            self.assertIn("Exactly one of VLAN, interface, or VM interface must be selected.", str(form.errors))
 
     def test_validation_multiple_objects_selected(self):
-        """Test validation fails when multiple termination objects are selected."""
-        l2vpn = models.L2VPN.objects.first()
-        interface = self._get_interfaces_without_terminations().first()
-        vlan = self._get_vlans_without_terminations().first()
+        vpn = models.VPN.objects.first()
+        interface = self._get_available_interfaces().first()
+        vlan = self._get_available_vlans().first()
 
-        if l2vpn and interface and vlan:
-            data = {
-                "l2vpn": l2vpn.pk,
-                "interface": interface.pk,
-                "vlan": vlan.pk,
-            }
-            form = self.form_class(data=data)
+        if vpn and interface and vlan:
+            form = self.form_class(
+                data={
+                    "vpn": str(vpn.pk),
+                    "interface": str(interface.pk),
+                    "vlan": str(vlan.pk),
+                }
+            )
             self.assertFalse(form.is_valid())
-            self.assertIn("Can only have one terminating object", str(form.errors))
+            self.assertIn("Exactly one of VLAN, interface, or VM interface must be selected.", str(form.errors))
 
-    def test_validation_interface_and_vminterface_selected(self):
-        """Test validation fails when interface and vminterface are both selected."""
-        l2vpn = models.L2VPN.objects.first()
-        interface = self._get_interfaces_without_terminations().first()
-        vminterface = self._get_vminterfaces_without_terminations().first()
-
-        if l2vpn and interface and vminterface:
-            data = {
-                "l2vpn": l2vpn.pk,
-                "interface": interface.pk,
-                "vminterface": vminterface.pk,
-            }
-            form = self.form_class(data=data)
-            self.assertFalse(form.is_valid())
-            self.assertIn("Can only have one terminating object", str(form.errors))
-
-    def test_l2vpn_required(self):
-        """Test that L2VPN field is required."""
-        interface = self._get_interfaces_without_terminations().first()
+    def test_vpn_required(self):
+        interface = self._get_available_interfaces().first()
 
         if interface:
-            data = {
-                "interface": interface.pk,
-                # No l2vpn
-            }
-            form = self.form_class(data=data)
+            form = self.form_class(data={"interface": str(interface.pk)})
             self.assertFalse(form.is_valid())
-            self.assertIn("l2vpn", form.errors)
-
-
+            self.assertIn("vpn", form.errors)

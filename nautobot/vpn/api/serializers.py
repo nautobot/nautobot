@@ -1,10 +1,7 @@
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
-from nautobot.core.api.fields import ContentTypeField
-from nautobot.core.api.utils import get_nested_serializer_depth, return_nested_serializer_data_based_on_depth
 
 from .. import choices, models
 
@@ -116,53 +113,15 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
         model = models.VPNTunnelEndpoint
         fields = "__all__"
 
-#
-# L2VPN Serializers
-#
 
-class L2VPNSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
-    """Serializer for L2VPN."""
+class VPNAttachmentSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
+    """Serializer for VPNAttachment."""
 
-    class Meta:
-        model = models.L2VPN
-        fields = "__all__"
-
-
-class L2VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
-    """Serializer for L2VPNTermination."""
-
-    assigned_object_type = ContentTypeField(
-        queryset=ContentType.objects.filter(
-            model__in=["interface", "vlan", "vminterface"]
-        ),
-    )
-    assigned_object = serializers.SerializerMethodField(read_only=True)
+    assigned_object_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = models.L2VPNTermination
+        model = models.VPNAttachment
         fields = "__all__"
 
-    def get_assigned_object(self, obj):
-        """Return the assigned object (Interface, VLAN, or VMInterface)."""
-        if obj.assigned_object is None:
-            return None
-        try:
-            depth = get_nested_serializer_depth(self)
-            return return_nested_serializer_data_based_on_depth(
-                self, depth, obj, obj.assigned_object
-            )
-        except (KeyError, AttributeError, TypeError):
-            # Fallback when nested serializer lookup fails for this content type.
-            # Returns minimal representation matching depth=0 format.
-            depth = get_nested_serializer_depth(self)
-            ct = obj.assigned_object_type
-            result = {
-                "id": str(obj.assigned_object_id),
-                "object_type": f"{ct.app_label}.{ct.model}",
-                "url": f"/api/{ct.app_label}/{ct.model}s/{obj.assigned_object_id}/",
-            }
-            if depth > 0:
-                assigned_obj = obj.assigned_object
-                if hasattr(assigned_obj, "name"):
-                    result["display"] = str(assigned_obj)
-            return result
+    def get_assigned_object_type(self, obj):
+        return obj.assigned_object_type

@@ -229,7 +229,7 @@ class VPNProfilePhase2PolicyAssignmentTable(BaseTable):
         )
 
 
-class VPNTable(RoleTableMixin, BaseTable):
+class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
     # pylint: disable=too-few-public-methods
     """Table for VPN list view."""
 
@@ -238,6 +238,11 @@ class VPNTable(RoleTableMixin, BaseTable):
     tunnel_count = LinkedCountColumn(
         viewname="vpn:vpntunnel_list",
         verbose_name="VPN Tunnels",
+        url_params={"vpn": "pk"},
+    )
+    attachment_count = LinkedCountColumn(
+        viewname="vpn:vpnattachment_list",
+        verbose_name="Attachments",
         url_params={"vpn": "pk"},
     )
     vpn_profile = tables.Column(linkify=True)
@@ -254,8 +259,12 @@ class VPNTable(RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
+            "attachment_count",
             "vpn_profile",
             "vpn_id",
+            "service_type",
+            "status",
+            "identifier",
             "role",
             "tenant",
         )
@@ -265,7 +274,11 @@ class VPNTable(RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
+            "attachment_count",
             "vpn_id",
+            "service_type",
+            "status",
+            "identifier",
             "role",
             "tenant",
             "actions",
@@ -379,95 +392,31 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         )
 
 
-#
-# L2VPN Tables
-#
-
-#  for Route Targets, clikable link to RouteTarget
-L2VPN_TARGETS = """
-{% for rt in value.all %}
-  <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
-{% endfor %}
-"""
-
-
-class L2VPNTable(StatusTableMixin, BaseTable):
+class VPNAttachmentTable(BaseTable):
     # pylint: disable=too-few-public-methods
-    """Table for L2VPN list view."""
-    # ToggleColumn Checkbox for bulk operations (select all, delete selected)
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    import_targets = tables.TemplateColumn(
-        template_code="""
-        {% for obj in value.all %}
-            <a href="{{ obj.get_absolute_url }}">{{ obj }}</a>{% if not forloop.last %}<br>{% endif %}
-        {% endfor %}
-        """,
-        orderable=False,
-        verbose_name="Import Targets",
-    )
-    export_targets = tables.TemplateColumn(
-        template_code=L2VPN_TARGETS,
-        orderable=False,
-        verbose_name="Export Targets",
-    )
-    # column that links to tenant
-    tenant = TenantColumn()
-    actions = ButtonsColumn(models.L2VPN)
-    # Displays tags with links to filter by tag
-    tags = TagColumn(url_name="vpn:l2vpn_list")
-
-    class Meta(BaseTable.Meta):
-        """Meta attributes."""
-
-        model = models.L2VPN
-        fields = (
-            "pk",
-            "name",
-            "status",
-            "identifier",
-            "type",
-            "import_targets",
-            "export_targets",
-            "tenant",
-            "description",
-        )
-        default_columns = (
-            "pk",
-            "name",
-            "status",
-            "identifier",
-            "type",
-            "description",
-            "actions",
-        )
-
-
-class L2VPNTerminationTable(BaseTable):
-    # pylint: disable=too-few-public-methods
-    """Table for L2VPNTermination list view."""
+    """Table for VPNAttachment list view."""
 
     pk = ToggleColumn()
-    l2vpn = tables.Column(linkify=True)
+    vpn = tables.Column(linkify=True)
     assigned_object_type = tables.Column(verbose_name="Object Type")
     assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Object")
     assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Parent")
-    actions = ButtonsColumn(models.L2VPNTermination)
+    actions = ButtonsColumn(models.VPNAttachment)
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = models.L2VPNTermination
+        model = models.VPNAttachment
         fields = (
             "pk",
-            "l2vpn",
+            "vpn",
             "assigned_object_type",
-            "assigned_object",
             "assigned_object_parent",
+            "assigned_object",
         )
         default_columns = (
             "pk",
-            "l2vpn",
+            "vpn",
             "assigned_object_type",
             "assigned_object_parent",
             "assigned_object",

@@ -24,8 +24,8 @@ from nautobot.apps.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import DynamicGroup, SecretsGroup
-from nautobot.ipam.models import IPAddress, Prefix, RouteTarget, VLAN
+from nautobot.extras.models import DynamicGroup, SecretsGroup, Status
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
@@ -403,12 +403,36 @@ class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ances
         required=False,
         label="VPN Profile",
     )
+    service_type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.VPNServiceTypeChoices),
+        widget=StaticSelect2,
+        label="Service Type",
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=False,
+        query_params={"content_types": models.VPN._meta.label_lower},
+    )
 
     class Meta:
         """Meta attributes."""
 
         model = models.VPN
-        fields = "__all__"
+        fields = [
+            "name",
+            "description",
+            "vpn_id",
+            "vpn_profile",
+            "service_type",
+            "status",
+            "identifier",
+            "role",
+            "tenant_group",
+            "tenant",
+            "extra_attributes",
+            "tags",
+        ]
 
 
 class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
@@ -426,6 +450,18 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
         required=False,
         label="Tenant",
     )
+    service_type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(choices.VPNServiceTypeChoices),
+        widget=StaticSelect2,
+        label="Service Type",
+    )
+    status = DynamicModelChoiceField(
+        queryset=Status.objects.all(),
+        required=False,
+        query_params={"content_types": models.VPN._meta.label_lower},
+    )
+    identifier = forms.IntegerField(required=False, label="Identifier")
 
     class Meta:
         """Meta attributes."""
@@ -434,6 +470,7 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
         nullable_fields = [
             "description",
             "vpn_profile",
+            "identifier",
         ]
 
 
@@ -448,11 +485,19 @@ class VPNFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterF
         queryset=models.VPNProfile.objects.all(),
         label="VPN Profile",
     )
+    service_type = forms.MultipleChoiceField(
+        choices=choices.VPNServiceTypeChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
+    identifier = forms.IntegerField(required=False, label="Identifier")
     tags = TagFilterField(model)
 
     field_order = [
         "vpn_profile",
+        "service_type",
         "role",
+        "identifier",
         "tenant",
         "tenant_group",
         "tags",
@@ -711,156 +756,57 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, 
     ]
 
 #
-# L2VPN Forms
+# VPN attachment forms
 #
 
 
-class L2VPNForm(NautobotModelForm):
-    """Form for creating and updating L2VPN."""
+class VPNAttachmentForm(NautobotModelForm):
+    """Form for creating and updating VPNAttachment."""
 
-    import_targets = DynamicModelMultipleChoiceField(
-        queryset=RouteTarget.objects.all(),
-        required=False,
-        label="Import Targets",
-    )
-    export_targets = DynamicModelMultipleChoiceField(
-        queryset=RouteTarget.objects.all(),
-        required=False,
-        label="Export Targets",
-    )
-    class Meta:
-        model = models.L2VPN
-        fields = [
-            "name",
-            "status",
-            "type",
-            "identifier",
-            "description",
-            "import_targets",
-            "export_targets",
-            "tenant",
-            "tags",
-        ]
-
-
-class L2VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    """L2VPN bulk edit form."""
-
-    pk = forms.ModelMultipleChoiceField(
-        queryset=models.L2VPN.objects.all(),
-        widget=forms.MultipleHiddenInput
-    )
-    type = forms.ChoiceField(
-        choices=add_blank_choice(choices.L2VPNTypeChoices),
-        required=False,
-        widget=StaticSelect2(),
-    )
-    identifier = forms.IntegerField(required=False)
-    description = forms.CharField(required=False)
-
-    class Meta:
-        model = models.L2VPN
-        nullable_fields = ["identifier", "description", "tenant"]
-
-
-class L2VPNFilterForm(NautobotFilterForm, TenancyFilterForm):
-    """Filter form for L2VPN list view."""
-
-    model = models.L2VPN
-    q = forms.CharField(required=False, label="Search")
-    type = forms.MultipleChoiceField(
-        choices=choices.L2VPNTypeChoices,
-        required=False,
-        widget=StaticSelect2Multiple(),
-    )
-    tags = TagFilterField(model)
-
-
-class L2VPNTerminationForm(forms.ModelForm):
-    """Form for creating and updating L2VPNTermination.
-
-    Note: Uses plain Django ModelForm to avoid complexity with GenericForeignKey handling.
-     plain forms.ModelForm instead of NautobotModelForm
-     because NautobotModelForm calls get_relationships()
-     which wasn't working with L2VPNTermination
-    """
-    # The model has ONE generic field (assigned_object)
-    # But the form has THREE separate fields for UI
-    # VLAN,Interface,VM Interface
-    # self.instance.assigned_object = selected_one
-    # L2VPNTermination Model
-    # assigned_object_type = ContentType (auto)
-    # assigned_object_id = UUID (auto)
-    #assigned_object = GenericFK (the actual object)
-    l2vpn = DynamicModelChoiceField(
-        queryset=models.L2VPN.objects.all(),
+    vpn = forms.ModelChoiceField(
+        queryset=models.VPN.objects.all(),
         required=True,
-        label="L2VPN",
+        label="VPN",
     )
-    vlan = DynamicModelChoiceField(
+    vlan = forms.ModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         label="VLAN",
     )
-    interface = DynamicModelChoiceField(
+    interface = forms.ModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Interface",
     )
-    vminterface = DynamicModelChoiceField(
+    vm_interface = forms.ModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="VM Interface",
     )
 
     class Meta:
-        model = models.L2VPNTermination
-        fields = ["l2vpn"]
-
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.get("instance")
-        initial = kwargs.get("initial", {}).copy()
-        # If editing existing termination, pre-populate the right field
-        if instance and instance.pk:
-            if isinstance(instance.assigned_object, Interface):
-                initial["interface"] = instance.assigned_object
-            elif isinstance(instance.assigned_object, VLAN):
-                initial["vlan"] = instance.assigned_object
-            elif isinstance(instance.assigned_object, VMInterface):
-                initial["vminterface"] = instance.assigned_object
-            kwargs["initial"] = initial
-
-        super().__init__(*args, **kwargs)
+        model = models.VPNAttachment
+        fields = ["vpn", "vlan", "interface", "vm_interface", "tags"]
 
     def clean(self):
-        super().clean()
-        # Rule 1: At least one must be selected
-        # Rule 2: Only ONE can be selected
-        interface = self.cleaned_data.get("interface")
-        vminterface = self.cleaned_data.get("vminterface")
-        vlan = self.cleaned_data.get("vlan")
-
-        if not (interface or vminterface or vlan):
-            raise forms.ValidationError(
-                "Must specify an interface or VLAN."
-            )
-
-        selected = [x for x in (interface, vminterface, vlan) if x]
-        if len(selected) > 1:
-            raise forms.ValidationError(
-                "Can only have one terminating object."
-            )
-        # Set the model's assigned_object to whichever was selected
-        self.instance.assigned_object = interface or vminterface or vlan
+        cleaned_data = getattr(self, "cleaned_data", None) or super().clean() or {}
+        selected = []
+        for field in ("vlan", "interface", "vm_interface"):
+            if cleaned_data.get(field) or self.data.get(field):
+                selected.append(field)
+        if len(selected) != 1:
+            raise forms.ValidationError("Exactly one of VLAN, interface, or VM interface must be selected.")
+        return cleaned_data
 
 
-class L2VPNTerminationFilterForm(NautobotFilterForm):
-    """Filter form for L2VPNTermination list view."""
+class VPNAttachmentFilterForm(NautobotFilterForm):
+    """Filter form for VPNAttachment list view."""
 
-    model = models.L2VPNTermination
+    model = models.VPNAttachment
     q = forms.CharField(required=False, label="Search")
-    l2vpn = DynamicModelChoiceField(
-        queryset=models.L2VPN.objects.all(),
+    vpn = DynamicModelChoiceField(
+        queryset=models.VPN.objects.all(),
         required=False,
-        label="L2VPN",
+        label="VPN",
     )
+    tags = TagFilterField(model)

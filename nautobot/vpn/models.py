@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -260,6 +259,7 @@ class VPNProfilePhase2PolicyAssignment(BaseModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
@@ -285,6 +285,27 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
     )
+    service_type = models.CharField(
+        max_length=50,
+        choices=choices.VPNServiceTypeChoices,
+        blank=True,
+        help_text="Optional classification of this VPN service, for example IPSec or VXLAN-EVPN.",
+    )
+    status = StatusField(
+        blank=True,
+        null=True,
+        help_text="Optional initially for migration safety; can be made required later if desired.",
+    )
+    identifier = models.BigIntegerField(
+        blank=True,
+        null=True,
+        help_text="Numeric service identifier, for example a VNI for VXLAN-based services.",
+    )
+    extra_attributes = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text="Free-form scalar service metadata only; not for references to real Nautobot objects.",
+    )
 
     clone_fields = [
         "description",
@@ -292,6 +313,10 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         "vpn_profile",
         "role",
         "tenant",
+        "service_type",
+        "status",
+        "identifier",
+        "extra_attributes",
     ]
 
     class Meta:
@@ -303,6 +328,37 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    @property
+    def can_add_attachment(self):
+        """P2P VPN services are limited to two attachments."""
+        if self.service_type in choices.VPNServiceTypeChoices.P2P:
+            return self.attachments.count() < 2
+        return True
+
+    def clean(self):
+        super().clean()
+
+        if self.identifier is not None and self.identifier <= 0:
+            raise ValidationError({"identifier": "Identifier must be a positive number."})
+
+        if self.service_type in choices.VPNServiceTypeChoices.VXLAN_TYPES:
+            if self.identifier is None:
+                raise ValidationError({"identifier": "Identifier is required for VXLAN-based VPN services."})
+
+            if not (
+                choices.VPNServiceTypeChoices.VXLAN_VNI_MIN
+                <= self.identifier
+                <= choices.VPNServiceTypeChoices.VXLAN_VNI_MAX
+            ):
+                raise ValidationError(
+                    {
+                        "identifier": (
+                            f"VNI must be between {choices.VPNServiceTypeChoices.VXLAN_VNI_MIN} "
+                            f"and {choices.VPNServiceTypeChoices.VXLAN_VNI_MAX}."
+                        )
+                    }
+                )
 
 
 @extras_features(
@@ -549,189 +605,104 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_validators",
     "export_templates",
     "graphql",
-    "statuses",
     "webhooks",
 )
-class L2VPN(PrimaryModel):
-    """
-    L2VPN (Layer 2 Virtual Private Network) model.
-    Represents layer 2 overlay technologies like VXLAN, VPLS, EVPN.
-    """
+class VPNAttachment(PrimaryModel):
+    """Bind a VPN service to exactly one VLAN, Interface, or VMInterface."""
 
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        unique=True,
-        help_text="Unique name for this L2VPN"
-    )
-    type = models.CharField(
-        max_length=50,
-        choices=choices.L2VPNTypeChoices,
-        help_text="L2VPN technology type"
-    )
-    status = StatusField(blank=False, null=False)
-    identifier = models.BigIntegerField(
-        null=True,
-        blank=True,
-        help_text="Numeric identifier (e.g., VNI for VXLAN)"
-    )
-    description = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        blank=True
-    )
-    tenant = models.ForeignKey(
-        to="tenancy.Tenant",
-        on_delete=models.PROTECT,
-        related_name="l2vpns",
-        blank=True,
-        null=True,
-    )
-    import_targets = models.ManyToManyField(
-        to="ipam.RouteTarget",
-        related_name="importing_l2vpns",
-        blank=True,
-        help_text="Route targets to import"
-    )
-    export_targets = models.ManyToManyField(
-        to="ipam.RouteTarget",
-        related_name="exporting_l2vpns",
-        blank=True,
-        help_text="Route targets to export"
-    )
-
-    clone_fields = ["type", "status", "description", "tenant"]
-    natural_key_field_names = ["name"]
-
-    class Meta:
-        ordering = ("name", "identifier")
-        verbose_name = "L2VPN"
-        verbose_name_plural = "L2VPNs"
-
-    def __str__(self):
-        if self.identifier:
-            return f"{self.name} ({self.identifier})"
-        return self.name
-
-    @property
-    def can_add_termination(self):
-        """Check if more terminations can be added (P2P limited to 2)."""
-        if self.type in choices.L2VPNTypeChoices.P2P:
-            return self.terminations.count() < 2
-        return True
-
-    def clean(self):
-        super().clean()
-
-        if self.identifier is not None:
-            if self.identifier < 0:
-                raise ValidationError({"identifier": "Identifier must be a positive number."})
-
-            if self.type in choices.L2VPNTypeChoices.VXLAN_TYPES:
-                if not (choices.L2VPNTypeChoices.VXLAN_VNI_MIN <= self.identifier <= choices.L2VPNTypeChoices.VXLAN_VNI_MAX):
-                    raise ValidationError({
-                        "identifier": (
-                            f"VNI for {self.get_type_display()} must be between "
-                            f"{choices.L2VPNTypeChoices.VXLAN_VNI_MIN} and {choices.L2VPNTypeChoices.VXLAN_VNI_MAX}."
-                        )
-                    })
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-
-@extras_features(
-    "custom_links",
-    "custom_validators",
-    "export_templates",
-    "graphql",
-    "webhooks",
-)
-class L2VPNTermination(PrimaryModel):
-    """
-    Links an L2VPN to an Interface, VMInterface, or VLAN.
-    """
-
-    l2vpn = models.ForeignKey(
-        to="vpn.L2VPN",
+    vpn = models.ForeignKey(
+        to="vpn.VPN",
         on_delete=models.CASCADE,
-        related_name="terminations",
+        related_name="attachments",
     )
-    assigned_object_type = models.ForeignKey(
-        to="contenttypes.ContentType",
-        on_delete=models.PROTECT,
-        related_name="+",
+    vlan = models.ForeignKey(
+        to="ipam.VLAN",
+        on_delete=models.CASCADE,
+        related_name="vpn_attachments",
+        blank=True,
+        null=True,
     )
-    assigned_object_id = models.UUIDField(db_index=True)
-    assigned_object = GenericForeignKey(
-        ct_field="assigned_object_type",
-        fk_field="assigned_object_id"
+    interface = models.ForeignKey(
+        to="dcim.Interface",
+        on_delete=models.CASCADE,
+        related_name="vpn_attachments",
+        blank=True,
+        null=True,
+    )
+    vm_interface = models.ForeignKey(
+        to="virtualization.VMInterface",
+        on_delete=models.CASCADE,
+        related_name="vpn_attachments",
+        blank=True,
+        null=True,
     )
 
-    clone_fields = ["l2vpn"]
-    natural_key_field_names = ["pk"]
+    clone_fields = ["vpn"]
 
     class Meta:
-        ordering = ("l2vpn",)
+        ordering = ("vpn",)
+        verbose_name = "VPN Attachment"
+        verbose_name_plural = "VPN Attachments"
         constraints = [
             models.UniqueConstraint(
-                fields=["assigned_object_type", "assigned_object_id"],
-                name="vpn_l2vpntermination_unique_assignment"
-            )
+                fields=["vlan"],
+                condition=models.Q(vlan__isnull=False),
+                name="vpn_vpnattachment_unique_vlan",
+            ),
+            models.UniqueConstraint(
+                fields=["interface"],
+                condition=models.Q(interface__isnull=False),
+                name="vpn_vpnattachment_unique_interface",
+            ),
+            models.UniqueConstraint(
+                fields=["vm_interface"],
+                condition=models.Q(vm_interface__isnull=False),
+                name="vpn_vpnattachment_unique_vm_interface",
+            ),
         ]
-        verbose_name = "L2VPN Termination"
-        verbose_name_plural = "L2VPN Terminations"
 
     def __str__(self):
         if self.pk and self.assigned_object:
-            return f"{self.assigned_object} <> {self.l2vpn}"
+            return f"{self.assigned_object} <> {self.vpn}"
         return super().__str__()
 
     @property
+    def assigned_object(self):
+        return self.vlan or self.interface or self.vm_interface
+
+    @property
+    def assigned_object_type(self):
+        if self.vlan:
+            return "ipam.vlan"
+        if self.interface:
+            return "dcim.interface"
+        if self.vm_interface:
+            return "virtualization.vminterface"
+        return None
+
+    @property
     def assigned_object_parent(self):
-        """Return the parent object of the assigned termination target.
-
-        - Interface → Device
-        - VMInterface → VirtualMachine
-        - VLAN → VLANGroup (or None if ungrouped)
-        """
-        from nautobot.dcim.models import Interface
-        from nautobot.virtualization.models import VMInterface
-        from nautobot.ipam.models import VLAN
-
-        obj = self.assigned_object
-        if isinstance(obj, Interface):
-            return obj.device
-        if isinstance(obj, VMInterface):
-            return obj.virtual_machine
-        if isinstance(obj, VLAN):
-            return obj.vlan_group
+        if self.interface:
+            return self.interface.device
+        if self.vm_interface:
+            return self.vm_interface.virtual_machine
+        if self.vlan:
+            return self.vlan.vlan_group
         return None
 
     def clean(self):
-        from django.contrib.contenttypes.models import ContentType
-
         super().clean()
 
-        # Validate: object can only be terminated once
-        if self.assigned_object:
-            obj_type = ContentType.objects.get_for_model(self.assigned_object)
-            existing = L2VPNTermination.objects.filter(
-                assigned_object_type=obj_type,
-                assigned_object_id=self.assigned_object.pk
-            ).exclude(pk=self.pk)
+        selected = [obj for obj in (self.vlan, self.interface, self.vm_interface) if obj is not None]
+        if len(selected) != 1:
+            raise ValidationError("Exactly one of vlan, interface, or vm_interface must be set.")
 
-            if existing.exists():
-                raise ValidationError(
-                    f"L2VPN Termination already assigned to {self.assigned_object}"
-                )
+        if not self.vpn_id:
+            return
 
-        # Validate: P2P types limited to 2 terminations
-        if hasattr(self, "l2vpn") and self.l2vpn.type in choices.L2VPNTypeChoices.P2P:
-            count = L2VPNTermination.objects.filter(
-                l2vpn=self.l2vpn
-            ).exclude(pk=self.pk).count()
-
+        if self.vpn.service_type in choices.VPNServiceTypeChoices.P2P:
+            count = self.vpn.attachments.exclude(pk=self.pk).count()
             if count >= 2:
                 raise ValidationError(
-                    f"{self.l2vpn.get_type_display()} L2VPNs cannot have more than 2 terminations."
+                    f"{self.vpn.get_service_type_display()} VPNs cannot have more than 2 attachments."
                 )
-

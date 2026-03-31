@@ -6,7 +6,7 @@ from rest_framework import status
 from nautobot.apps.testing import APIViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
-from nautobot.ipam.models import RouteTarget, VLAN, VLANGroup
+from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, models
@@ -215,13 +215,42 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
     """VPN API tests."""
 
     model = models.VPN
-    choices_fields = ()
+    choices_fields = ("service_type",)
+
+    @classmethod
+    def _get_vpn_status(cls):
+        """Get or create an Active status for VPN."""
+        ct = ContentType.objects.get_for_model(models.VPN)
+        vpn_status = Status.objects.filter(content_types=ct).first()
+        if not vpn_status:
+            vpn_status = Status.objects.get(name="Active")
+            vpn_status.content_types.add(ct)
+        return vpn_status
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
         profiles = models.VPNProfile.objects.all()
+        vpn_status = cls._get_vpn_status()
+
+        models.VPN.objects.create(
+            name="Existing VXLAN VPN API Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=vpn_status,
+            identifier=19001,
+        )
+        models.VPN.objects.create(
+            name="Existing VPLS VPN API Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+            status=vpn_status,
+            identifier=19002,
+        )
+        models.VPN.objects.create(
+            name="Existing IPSec VPN API Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_IPSEC,
+            status=vpn_status,
+        )
 
         cls.create_data = [
             {
@@ -229,25 +258,68 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
                 "description": "test value",
                 "vpn_id": "test value",
                 "vpn_profile": profiles[1].pk,
+                "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
+                "status": vpn_status.pk,
+                "identifier": 12001,
+                "extra_attributes": {"flooding_mode": "ingress-replication"},
             },
             {
                 "name": "test 2",
                 "description": "test value",
                 "vpn_id": "test value",
                 "vpn_profile": profiles[2].pk,
+                "service_type": choices.VPNServiceTypeChoices.TYPE_VPLS,
+                "status": vpn_status.pk,
+                "identifier": 12002,
             },
             {
                 "name": "test 3",
                 "description": "test value",
                 "vpn_id": "test value",
                 "vpn_profile": profiles[3].pk,
+                "service_type": choices.VPNServiceTypeChoices.TYPE_IPSEC,
+                "status": vpn_status.pk,
             },
         ]
 
         cls.update_data = {
             "name": "test 3",
             "vpn_profile": profiles[4].pk,
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN_EVPN,
+            "identifier": 13001,
         }
+
+    def test_filter_by_service_type(self):
+        """Test filtering VPNs by service type via API."""
+        self.add_permissions("vpn.view_vpn")
+        url = self._get_list_url()
+        response = self.client.get(f"{url}?service_type={choices.VPNServiceTypeChoices.TYPE_VXLAN}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_filter_by_identifier(self):
+        """Test filtering VPNs by identifier via API."""
+        self.add_permissions("vpn.view_vpn")
+        vpn = models.VPN.objects.filter(identifier__isnull=False).first()
+        self.assertIsNotNone(vpn)
+        url = self._get_list_url()
+        response = self.client.get(f"{url}?identifier={vpn.identifier}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_partial_update_overlay_fields(self):
+        """Test updating overlay-specific VPN fields via PATCH."""
+        self.add_permissions("vpn.change_vpn")
+        vpn = models.VPN.objects.first()
+        url = self._get_detail_url(vpn)
+        data = {
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN_EVPN,
+            "identifier": 14001,
+            "description": "Updated via PATCH",
+        }
+        response = self.client.patch(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        vpn.refresh_from_db()
+        self.assertEqual(vpn.identifier, 14001)
+        self.assertEqual(vpn.service_type, choices.VPNServiceTypeChoices.TYPE_VXLAN_EVPN)
 
 
 class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
@@ -342,456 +414,156 @@ class VPNTunnelEndpointAPITest(APIViewTestCases.APIViewTestCase):
         }
 
 
-class L2VPNAPITest(APIViewTestCases.APIViewTestCase):
-    """L2VPN API tests."""
+class VPNAttachmentAPITest(APIViewTestCases.APIViewTestCase):
+    """VPNAttachment API tests."""
 
-    model = models.L2VPN
-    choices_fields = ("type",)
-
-    @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        l2vpn_status = Status.objects.filter(content_types=ct).first()
-        if not l2vpn_status:
-            l2vpn_status = Status.objects.get(name="Active")
-            l2vpn_status.content_types.add(ct)
-        return l2vpn_status
+    model = models.VPNAttachment
+    choices_fields = ()
 
     @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        l2vpn_status = cls._get_l2vpn_status()
-
-        # Create at least 3 L2VPN objects for GET tests (required by base class)
-        models.L2VPN.objects.create(
-            name="L2VPN API Existing 1",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
-            identifier=1001,
-            description="Existing L2VPN 1 for API tests",
-        )
-        models.L2VPN.objects.create(
-            name="L2VPN API Existing 2",
-            type=choices.L2VPNTypeChoices.TYPE_VPLS,
-            status=l2vpn_status,
-            identifier=1002,
-            description="Existing L2VPN 2 for API tests",
-        )
-        models.L2VPN.objects.create(
-            name="L2VPN API Existing 3",
-            type=choices.L2VPNTypeChoices.TYPE_VPWS,
-            status=l2vpn_status,
-            identifier=1003,
-            description="Existing L2VPN 3 for API tests",
-        )
-
-        cls.create_data = [
-            {
-                "name": "L2VPN API Test 1",
-                "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-                "status": l2vpn_status.pk,
-                "identifier": 10001,
-                "description": "Test L2VPN via API",
-            },
-            {
-                "name": "L2VPN API Test 2",
-                "type": choices.L2VPNTypeChoices.TYPE_VPLS,
-                "status": l2vpn_status.pk,
-                "identifier": 10002,
-                "description": "Another test L2VPN",
-            },
-            {
-                "name": "L2VPN API Test 3",
-                "type": choices.L2VPNTypeChoices.TYPE_VPWS,
-                "status": l2vpn_status.pk,
-                "identifier": 10003,
-            },
-        ]
-
-        cls.update_data = {
-            "name": "L2VPN API Updated",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN,
-            "description": "Updated via API",
-            "identifier": 20001,
-        }
-
-    def test_create_l2vpn_with_route_targets(self):
-        """Test creating L2VPN with import/export route targets."""
-        route_targets = list(RouteTarget.objects.all()[:2])
-        if len(route_targets) >= 2:
-            self.add_permissions("vpn.add_l2vpn")
-            # Get status fresh within the test
-            ct = ContentType.objects.get_for_model(models.L2VPN)
-            l2vpn_status = Status.objects.filter(content_types=ct).first()
-            if not l2vpn_status:
-                l2vpn_status = Status.objects.get(name="Active")
-                l2vpn_status.content_types.add(ct)
-
-            data = {
-                "name": "L2VPN With Route Targets",
-                "type": choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN,
-                "status": l2vpn_status.pk,
-                "import_targets": [rt.pk for rt in route_targets[:1]],
-                "export_targets": [rt.pk for rt in route_targets[1:2]],
-            }
-
-            url = self._get_list_url()
-            response = self.client.post(url, data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-
-            l2vpn = models.L2VPN.objects.get(pk=response.data["id"])
-            self.assertEqual(l2vpn.import_targets.count(), 1)
-            self.assertEqual(l2vpn.export_targets.count(), 1)
-
-    def test_create_l2vpn_with_tenant(self):
-        """Test creating L2VPN with tenant."""
-        tenant = Tenant.objects.first()
-        if tenant:
-            self.add_permissions("vpn.add_l2vpn")
-            # Get status fresh within the test
-            ct = ContentType.objects.get_for_model(models.L2VPN)
-            l2vpn_status = Status.objects.filter(content_types=ct).first()
-            if not l2vpn_status:
-                l2vpn_status = Status.objects.get(name="Active")
-                l2vpn_status.content_types.add(ct)
-
-            data = {
-                "name": "L2VPN With Tenant",
-                "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-                "status": l2vpn_status.pk,
-                "tenant": tenant.pk,
-            }
-
-            url = self._get_list_url()
-            response = self.client.post(url, data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_201_CREATED)
-
-            l2vpn = models.L2VPN.objects.get(pk=response.data["id"])
-            self.assertEqual(l2vpn.tenant, tenant)
-
-
-    def test_filter_by_type(self):
-        """Test filtering L2VPNs by type via API."""
-        self.add_permissions("vpn.view_l2vpn")
-
-        url = self._get_list_url()
-        response = self.client.get(
-            f"{url}?type={choices.L2VPNTypeChoices.TYPE_VXLAN}",
-            **self.header
-        )
-        self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    def test_filter_by_identifier(self):
-        """Test filtering L2VPNs by identifier via API."""
-        self.add_permissions("vpn.view_l2vpn")
-        l2vpn = models.L2VPN.objects.filter(identifier__isnull=False).first()
-
-        if l2vpn:
-            url = self._get_list_url()
-            response = self.client.get(
-                f"{url}?identifier={l2vpn.identifier}",
-                **self.header
-            )
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-            self.assertGreaterEqual(len(response.data["results"]), 1)
-
-    def test_partial_update_l2vpn(self):
-        """Test partial update (PATCH) of L2VPN via API."""
-        self.add_permissions("vpn.change_l2vpn")
-        l2vpn = models.L2VPN.objects.first()
-
-        if l2vpn:
-            url = self._get_detail_url(l2vpn)
-            data = {
-                "description": "Updated via PATCH",
-            }
-            response = self.client.patch(url, data, format="json", **self.header)
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-
-            l2vpn.refresh_from_db()
-            self.assertEqual(l2vpn.description, "Updated via PATCH")
-
-    def test_delete_l2vpn(self):
-        """Test deleting L2VPN via API."""
-        self.add_permissions("vpn.delete_l2vpn")
-        l2vpn_status = self._get_l2vpn_status()
-
-        l2vpn = models.L2VPN.objects.create(
-            name="L2VPN To Delete",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
-        )
-        l2vpn_pk = l2vpn.pk
-
-        url = self._get_detail_url(l2vpn)
-        response = self.client.delete(url, **self.header)
-        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-
-        self.assertFalse(models.L2VPN.objects.filter(pk=l2vpn_pk).exists())
-
-
-
-class L2VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
-    """L2VPNTermination API tests."""
-
-    model = models.L2VPNTermination
-    choices_fields = ("assigned_object_type",)
+    def _get_vpn_status(cls):
+        ct = ContentType.objects.get_for_model(models.VPN)
+        vpn_status = Status.objects.filter(content_types=ct).first()
+        if not vpn_status:
+            vpn_status = Status.objects.get(name="Active")
+            vpn_status.content_types.add(ct)
+        return vpn_status
 
     @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        l2vpn_status = Status.objects.filter(content_types=ct).first()
-        if not l2vpn_status:
-            l2vpn_status = Status.objects.get(name="Active")
-            l2vpn_status.content_types.add(ct)
-        return l2vpn_status
-
-    @classmethod
-    def _get_interfaces_without_terminations(cls):
-        """Get interfaces that are not already assigned to an L2VPNTermination."""
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        used_interface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=interface_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_available_interfaces(cls):
+        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+            "interface_id", flat=True
+        )
         return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
-    def _get_vlans_without_terminations(cls):
-        """Get VLANs that are not already assigned to an L2VPNTermination."""
-        vlan_ct = ContentType.objects.get_for_model(VLAN)
-        used_vlan_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vlan_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_available_vlans(cls):
+        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
-    def _get_vminterfaces_without_terminations(cls):
-        """Get VMInterfaces that are not already assigned to an L2VPNTermination."""
-        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        used_vminterface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vminterface_ct
-        ).values_list("assigned_object_id", flat=True)
-        return VMInterface.objects.exclude(pk__in=used_vminterface_ids)
+    def _get_available_vm_interfaces(cls):
+        used_vm_interface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
+        return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
 
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
-        # Create L2VPN for tests
-        l2vpn_status = cls._get_l2vpn_status()
-        cls.l2vpn = models.L2VPN.objects.create(
-            name="L2VPN For Termination API Test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+        vpn_status = cls._get_vpn_status()
+        cls.vpn = models.VPN.objects.create(
+            name="VPN For Attachment API Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=vpn_status,
+            identifier=20001,
+        )
+        cls.vpn2 = models.VPN.objects.create(
+            name="VPN For Attachment API Update Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+            status=vpn_status,
+            identifier=20002,
         )
 
-        # Get interfaces without existing terminations
-        interfaces = list(cls._get_interfaces_without_terminations()[:9])
-
-        # If not enough interfaces, create VLANs for testing
-        if len(interfaces) < 6:
-            # Create VLAN group and VLANs for termination tests
-            vlan_status = Status.objects.get(name="Active")
+        vlans = list(cls._get_available_vlans()[:6])
+        if len(vlans) < 6:
             vlan_group = VLANGroup.objects.first()
-            if not vlan_group:
-                vlan_group = VLANGroup.objects.create(name="L2VPN Test VLAN Group")
-
-            # Create 9 VLANs for testing
-            vlans = []
-            for i in range(9):
-                vlan = VLAN.objects.create(
-                    vid=3000 + i,
-                    name=f"L2VPN Test VLAN {i}",
-                    status=vlan_status,
-                    vlan_group=vlan_group,
-                )
-                vlans.append(vlan)
-
+            if vlan_group is None:
+                vlan_group = VLANGroup.objects.create(name="VPN Attachment API VLAN Group")
+            active = Status.objects.get(name="Active")
             vlan_ct = ContentType.objects.get_for_model(VLAN)
-
-            # Create 3 terminations for base class tests
-            for i in range(3):
-                models.L2VPNTermination.objects.create(
-                    l2vpn=cls.l2vpn,
-                    assigned_object=vlans[i]
+            active.content_types.add(vlan_ct)
+            for i in range(6 - len(vlans)):
+                vlans.append(
+                    VLAN.objects.create(
+                        vid=4500 + i,
+                        name=f"VPN Attachment API VLAN {i}",
+                        status=active,
+                        vlan_group=vlan_group,
+                    )
                 )
 
-            # Set up create_data for POST tests
-            cls.create_data = [
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{vlan_ct.app_label}.{vlan_ct.model}",
-                    "assigned_object_id": vlans[3].pk,
-                },
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{vlan_ct.app_label}.{vlan_ct.model}",
-                    "assigned_object_id": vlans[4].pk,
-                },
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{vlan_ct.app_label}.{vlan_ct.model}",
-                    "assigned_object_id": vlans[5].pk,
-                },
-            ]
-        else:
-            interface_ct = ContentType.objects.get_for_model(Interface)
+        for vlan in vlans[:3]:
+            models.VPNAttachment.objects.create(vpn=cls.vpn, vlan=vlan)
 
-            # Create 3 terminations for base class tests
-            for i in range(3):
-                models.L2VPNTermination.objects.create(
-                    l2vpn=cls.l2vpn,
-                    assigned_object=interfaces[i]
-                )
+        cls.create_data = [
+            {"vpn": cls.vpn.pk, "vlan": vlans[3].pk},
+            {"vpn": cls.vpn.pk, "vlan": vlans[4].pk},
+            {"vpn": cls.vpn.pk, "vlan": vlans[5].pk},
+        ]
+        cls.update_data = {"vpn": cls.vpn2.pk}
 
-            # Set up create_data for POST tests
-            cls.create_data = [
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{interface_ct.app_label}.{interface_ct.model}",
-                    "assigned_object_id": interfaces[3].pk,
-                },
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{interface_ct.app_label}.{interface_ct.model}",
-                    "assigned_object_id": interfaces[4].pk,
-                },
-                {
-                    "l2vpn": cls.l2vpn.pk,
-                    "assigned_object_type": f"{interface_ct.app_label}.{interface_ct.model}",
-                    "assigned_object_id": interfaces[5].pk,
-                },
-            ]
+    def test_filter_by_vpn(self):
+        """Test filtering attachments by VPN via API."""
+        self.add_permissions("vpn.view_vpnattachment")
+        url = self._get_list_url()
+        response = self.client.get(f"{url}?vpn={self.vpn.pk}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
 
-        # Create a second L2VPN for update test
-        cls.l2vpn2 = models.L2VPN.objects.create(
-            name="L2VPN For Termination API Update Test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+    def test_create_attachment_with_interface(self):
+        """Test creating an attachment to an interface via API."""
+        interface = self._get_available_interfaces().first()
+        if interface is None:
+            self.skipTest("No unused interface available.")
+
+        self.add_permissions("vpn.add_vpnattachment")
+        url = self._get_list_url()
+        response = self.client.post(url, {"vpn": self.vpn.pk, "interface": interface.pk}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    def test_create_attachment_with_vm_interface(self):
+        """Test creating an attachment to a VM interface via API."""
+        vm_interface = self._get_available_vm_interfaces().first()
+        if vm_interface is None:
+            self.skipTest("No unused VM interface available.")
+
+        self.add_permissions("vpn.add_vpnattachment")
+        url = self._get_list_url()
+        response = self.client.post(
+            url, {"vpn": self.vpn.pk, "vm_interface": vm_interface.pk}, format="json", **self.header
         )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
 
-        cls.update_data = {
-            "l2vpn": cls.l2vpn2.pk,
-        }
-
-    # Note: test_create_object from the base class already tests creating L2VPNTerminations
-    # with VLANs. The custom termination tests below validate specific model-level behavior
-    # rather than API creation (which is covered by test_create_object).
-
-    def test_filter_by_l2vpn(self):
-        """Test filtering terminations by L2VPN via API."""
-        self.add_permissions("vpn.view_l2vpntermination")
-        termination = models.L2VPNTermination.objects.first()
-
-        if termination:
-            url = self._get_list_url()
-            response = self.client.get(
-                f"{url}?l2vpn={termination.l2vpn.pk}",
-                **self.header
-            )
-            self.assertHttpStatus(response, status.HTTP_200_OK)
-
-    def test_p2p_termination_limit_via_api(self):
-        """Test that P2P L2VPN cannot have more than 2 terminations via API."""
-        # Create a P2P L2VPN
-        l2vpn_status = self._get_l2vpn_status()
-        p2p_l2vpn = models.L2VPN.objects.create(
-            name="P2P L2VPN API Limit Test",
-            type=choices.L2VPNTypeChoices.TYPE_VPWS,  # P2P type
-            status=l2vpn_status,
+    def test_p2p_attachment_limit_via_api(self):
+        """Test that P2P VPNs cannot have more than 2 attachments via API."""
+        vpn_status = self._get_vpn_status()
+        p2p_vpn = models.VPN.objects.create(
+            name="P2P VPN API Limit Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
+            status=vpn_status,
         )
+        interfaces = list(self._get_available_interfaces()[:3])
+        if len(interfaces) < 3:
+            self.skipTest("Need at least three unused interfaces.")
 
-        interfaces = self._get_interfaces_without_terminations()[:3]
+        models.VPNAttachment.objects.create(vpn=p2p_vpn, interface=interfaces[0])
+        models.VPNAttachment.objects.create(vpn=p2p_vpn, interface=interfaces[1])
 
-        if interfaces.count() >= 3:
-            self.add_permissions("vpn.add_l2vpntermination")
-            interface_ct = ContentType.objects.get_for_model(Interface)
-
-            # Create first 2 terminations
-            models.L2VPNTermination.objects.create(
-                l2vpn=p2p_l2vpn,
-                assigned_object=interfaces[0]
-            )
-            models.L2VPNTermination.objects.create(
-                l2vpn=p2p_l2vpn,
-                assigned_object=interfaces[1]
-            )
-
-            # Try to create a 3rd termination
-            data = {
-                "l2vpn": p2p_l2vpn.pk,
-                "assigned_object_type": f"{interface_ct.app_label}.{interface_ct.model}",
-                "assigned_object_id": str(interfaces[2].pk),
-            }
-
-            url = self._get_list_url()
-            response = self.client.post(url, data, format="json", **self.header)
-            # Should fail validation
-            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-
-    def test_duplicate_termination_fails_via_api(self):
-        """Test that creating duplicate termination for same object fails via API."""
-        l2vpn_status = self._get_l2vpn_status()
-        l2vpn1 = models.L2VPN.objects.create(
-            name="L2VPN Dup API Test 1",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+        self.add_permissions("vpn.add_vpnattachment")
+        url = self._get_list_url()
+        response = self.client.post(
+            url, {"vpn": p2p_vpn.pk, "interface": interfaces[2].pk}, format="json", **self.header
         )
-        l2vpn2 = models.L2VPN.objects.create(
-            name="L2VPN Dup API Test 2",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_duplicate_attachment_fails_via_api(self):
+        """Test that reusing the same object on another VPN attachment fails."""
+        interface = self._get_available_interfaces().first()
+        if interface is None:
+            self.skipTest("No unused interface available.")
+
+        other_vpn = models.VPN.objects.create(
+            name="VPN Duplicate Attachment Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=self._get_vpn_status(),
+            identifier=21000,
         )
+        models.VPNAttachment.objects.create(vpn=self.vpn, interface=interface)
 
-        interface = self._get_interfaces_without_terminations().first()
-
-        if interface:
-            self.add_permissions("vpn.add_l2vpntermination")
-            interface_ct = ContentType.objects.get_for_model(Interface)
-
-            # Create first termination
-            models.L2VPNTermination.objects.create(
-                l2vpn=l2vpn1,
-                assigned_object=interface
-            )
-
-            # Try to create second termination to same interface
-            data = {
-                "l2vpn": l2vpn2.pk,
-                "assigned_object_type": f"{interface_ct.app_label}.{interface_ct.model}",
-                "assigned_object_id": str(interface.pk),
-            }
-
-            url = self._get_list_url()
-            response = self.client.post(url, data, format="json", **self.header)
-            # Should fail validation
-            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-
-    def test_delete_termination(self):
-        """Test deleting L2VPNTermination via API."""
-        self.add_permissions("vpn.delete_l2vpntermination")
-
-        l2vpn_status = self._get_l2vpn_status()
-        l2vpn = models.L2VPN.objects.create(
-            name="L2VPN Delete Term Test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+        self.add_permissions("vpn.add_vpnattachment")
+        url = self._get_list_url()
+        response = self.client.post(
+            url, {"vpn": other_vpn.pk, "interface": interface.pk}, format="json", **self.header
         )
-
-        interface = self._get_interfaces_without_terminations().first()
-
-        if interface:
-            termination = models.L2VPNTermination.objects.create(
-                l2vpn=l2vpn,
-                assigned_object=interface
-            )
-            termination_pk = termination.pk
-
-            url = self._get_detail_url(termination)
-            response = self.client.delete(url, **self.header)
-            self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
-
-            self.assertFalse(models.L2VPNTermination.objects.filter(pk=termination_pk).exists())
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)

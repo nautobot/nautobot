@@ -195,11 +195,38 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """Set up test data."""
         super().setUpTestData()
 
+        ct = ContentType.objects.get_for_model(models.VPN)
+        vpn_status = Status.objects.filter(content_types=ct).first()
+        if not vpn_status:
+            vpn_status = Status.objects.get(name="Active")
+            vpn_status.content_types.add(ct)
+
+        models.VPN.objects.create(
+            name="Existing VXLAN VPN View Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=vpn_status,
+            identifier=16011,
+        )
+        models.VPN.objects.create(
+            name="Existing VPLS VPN View Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+            status=vpn_status,
+            identifier=16012,
+        )
+        models.VPN.objects.create(
+            name="Existing IPSec VPN View Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_IPSEC,
+            status=vpn_status,
+        )
+
         cls.form_data = {
             "name": "test value",
             "description": "test value",
             "vpn_id": "test value",
             "vpn_profile": models.VPNProfile.objects.first().pk,
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            "status": vpn_status.pk,
+            "identifier": 16001,
         }
 
         cls.update_data = {
@@ -207,11 +234,33 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "updated value",
             "vpn_id": "updated value",
             "vpn_profile": models.VPNProfile.objects.last().pk,
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VPLS,
+            "status": vpn_status.pk,
+            "identifier": 16002,
         }
 
         cls.bulk_edit_data = {
             "description": "bulk updated value",
+            "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN_EVPN,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vpn_list_filter_by_service_type(self):
+        """Test filtering VPN list by service type."""
+        self.add_permissions("vpn.view_vpn")
+        url = reverse("vpn:vpn_list")
+        response = self.client.get(f"{url}?service_type={choices.VPNServiceTypeChoices.TYPE_VXLAN}")
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vpn_list_filter_by_identifier(self):
+        """Test filtering VPN list by identifier."""
+        self.add_permissions("vpn.view_vpn")
+        vpn = models.VPN.objects.filter(identifier__isnull=False).first()
+        if vpn:
+            url = reverse("vpn:vpn_list")
+            response = self.client.get(f"{url}?identifier={vpn.identifier}")
+            self.assertHttpStatus(response, 200)
 
 
 class VPNTunnelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -301,119 +350,13 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
 
 
-class L2VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
-    """Test the L2VPN views."""
+    """Test the VPNAttachment views."""
 
-    model = models.L2VPN
+    model = models.VPNAttachment
 
-    @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        l2vpn_status = Status.objects.filter(content_types=ct).first()
-        if not l2vpn_status:
-            l2vpn_status = Status.objects.get(name="Active")
-            l2vpn_status.content_types.add(ct)
-        return l2vpn_status
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-
-        l2vpn_status = cls._get_l2vpn_status()
-
-        # Create at least 3 L2VPN objects for view tests (required by base class)
-        models.L2VPN.objects.create(
-            name="L2VPN View Existing 1",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
-            identifier=2001,
-            description="Existing L2VPN 1 for view tests",
-        )
-        models.L2VPN.objects.create(
-            name="L2VPN View Existing 2",
-            type=choices.L2VPNTypeChoices.TYPE_VPLS,
-            status=l2vpn_status,
-            identifier=2002,
-            description="Existing L2VPN 2 for view tests",
-        )
-        models.L2VPN.objects.create(
-            name="L2VPN View Existing 3",
-            type=choices.L2VPNTypeChoices.TYPE_VPWS,
-            status=l2vpn_status,
-            identifier=2003,
-            description="Existing L2VPN 3 for view tests",
-        )
-
-        cls.form_data = {
-            "name": "L2VPN View Test",
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN,
-            "status": l2vpn_status.pk,
-            "identifier": 10001,
-            "description": "Test L2VPN for views",
-        }
-
-        cls.update_data = {
-            "name": "L2VPN View Test Updated",
-            "type": choices.L2VPNTypeChoices.TYPE_VPLS,
-            "status": l2vpn_status.pk,
-            "identifier": 20002,
-            "description": "Updated L2VPN for views",
-        }
-
-        cls.bulk_edit_data = {
-            "type": choices.L2VPNTypeChoices.TYPE_VXLAN_EVPN,
-            "description": "Bulk updated L2VPN",
-        }
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_list_filter_by_type(self):
-        """Test filtering L2VPN list by type."""
-        self.add_permissions("vpn.view_l2vpn")
-
-        url = reverse("vpn:l2vpn_list")
-        response = self.client.get(
-            f"{url}?type={choices.L2VPNTypeChoices.TYPE_VXLAN}"
-        )
-        self.assertHttpStatus(response, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_list_filter_by_identifier(self):
-        """Test filtering L2VPN list by identifier."""
-        self.add_permissions("vpn.view_l2vpn")
-        l2vpn = models.L2VPN.objects.filter(identifier__isnull=False).first()
-
-        if l2vpn:
-            url = reverse("vpn:l2vpn_list")
-            response = self.client.get(
-                f"{url}?identifier={l2vpn.identifier}"
-            )
-            self.assertHttpStatus(response, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_list_search(self):
-        """Test searching L2VPN list by name."""
-        self.add_permissions("vpn.view_l2vpn")
-        l2vpn = models.L2VPN.objects.first()
-
-        if l2vpn:
-            url = reverse("vpn:l2vpn_list")
-            # Search by name filter instead of generic 'q' which may have type issues
-            response = self.client.get(
-                f"{url}?name__ic={l2vpn.name[:10]}"
-            )
-            self.assertHttpStatus(response, 200)
-
-
-class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    # pylint: disable=too-many-ancestors
-    """Test the L2VPNTermination views."""
-
-    model = models.L2VPNTermination
-
-    # Bulk edit not yet supported for L2VPNTermination
+    # Bulk edit not currently supported for attachments.
     def test_bulk_edit_form_contains_all_pks(self):
         pass
 
@@ -433,40 +376,35 @@ class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         pass
 
     @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        l2vpn_status = Status.objects.filter(content_types=ct).first()
-        if not l2vpn_status:
-            l2vpn_status = Status.objects.get(name="Active")
-            l2vpn_status.content_types.add(ct)
-        return l2vpn_status
+    def _get_vpn_status(cls):
+        """Get or create a Status for VPN."""
+        ct = ContentType.objects.get_for_model(models.VPN)
+        vpn_status = Status.objects.filter(content_types=ct).first()
+        if not vpn_status:
+            vpn_status = Status.objects.get(name="Active")
+            vpn_status.content_types.add(ct)
+        return vpn_status
 
     @classmethod
-    def _get_interfaces_without_terminations(cls):
-        """Get interfaces that are not already assigned to an L2VPNTermination."""
-        interface_ct = ContentType.objects.get_for_model(Interface)
-        used_interface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=interface_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_interfaces_without_attachments(cls):
+        """Get interfaces not already assigned to a VPNAttachment."""
+        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+            "interface_id", flat=True
+        )
         return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
-    def _get_vlans_without_terminations(cls):
-        """Get VLANs that are not already assigned to an L2VPNTermination."""
-        vlan_ct = ContentType.objects.get_for_model(VLAN)
-        used_vlan_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vlan_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_vlans_without_attachments(cls):
+        """Get VLANs not already assigned to a VPNAttachment."""
+        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
-    def _get_vminterfaces_without_terminations(cls):
-        """Get VMInterfaces that are not already assigned to an L2VPNTermination."""
-        vminterface_ct = ContentType.objects.get_for_model(VMInterface)
-        used_vminterface_ids = models.L2VPNTermination.objects.filter(
-            assigned_object_type=vminterface_ct
-        ).values_list("assigned_object_id", flat=True)
+    def _get_vm_interfaces_without_attachments(cls):
+        """Get VM interfaces not already assigned to a VPNAttachment."""
+        used_vminterface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
         return VMInterface.objects.exclude(pk__in=used_vminterface_ids)
 
     @classmethod
@@ -474,25 +412,21 @@ class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """Set up test data."""
         super().setUpTestData()
 
-        # Create L2VPN for tests
-        l2vpn_status = cls._get_l2vpn_status()
-        l2vpn = models.L2VPN.objects.create(
-            name="L2VPN For Termination View Test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=l2vpn_status,
+        vpn_status = cls._get_vpn_status()
+        vpn = models.VPN.objects.create(
+            name="VPN For Attachment View Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=vpn_status,
+            identifier=17001,
+        )
+        vpn2 = models.VPN.objects.create(
+            name="VPN For Attachment View Test 2",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+            status=vpn_status,
+            identifier=17002,
         )
 
-        # Create a second L2VPN for bulk edit tests
-        l2vpn2 = models.L2VPN.objects.create(
-            name="L2VPN For Termination View Test 2",
-            type=choices.L2VPNTypeChoices.TYPE_VPLS,
-            status=l2vpn_status,
-        )
-
-        # Get VLANs without existing terminations (more reliable than interfaces)
-        vlans = list(cls._get_vlans_without_terminations()[:10])
-
-        # If not enough VLANs exist, create some
+        vlans = list(cls._get_vlans_without_attachments()[:10])
         if len(vlans) < 6:
             vlan_status = Status.objects.get(name="Active")
             vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -500,139 +434,106 @@ class L2VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 vlan_status.content_types.add(vlan_ct)
 
             vlan_group, _ = VLANGroup.objects.get_or_create(
-                name="L2VPN View Test Group",
+                name="VPN Attachment View Test Group",
             )
             for i in range(6 - len(vlans)):
                 vlan = VLAN.objects.create(
                     vid=4000 + i,
-                    name=f"L2VPN View Test VLAN {i}",
+                    name=f"VPN Attachment View Test VLAN {i}",
                     status=vlan_status,
                     vlan_group=vlan_group,
                 )
                 vlans.append(vlan)
 
-        # Create at least 3 termination objects for base class tests
         for i in range(min(3, len(vlans))):
-            models.L2VPNTermination.objects.create(
-                l2vpn=l2vpn,
-                assigned_object=vlans[i]
-            )
+            models.VPNAttachment.objects.create(vpn=vpn, vlan=vlans[i])
 
-        # Use remaining VLANs for form_data and update_data
         form_vlan = vlans[3] if len(vlans) > 3 else vlans[0]
         update_vlan = vlans[4] if len(vlans) > 4 else vlans[1] if len(vlans) > 1 else vlans[0]
 
         cls.form_data = {
-            "l2vpn": l2vpn.pk,
+            "vpn": vpn.pk,
             "vlan": form_vlan.pk,
         }
 
         cls.update_data = {
-            "l2vpn": l2vpn.pk,
+            "vpn": vpn.pk,
             "vlan": update_vlan.pk,
         }
 
-        # bulk_edit_data with l2vpn to change terminations to l2vpn2
         cls.bulk_edit_data = {
-            "l2vpn": l2vpn2.pk,
+            "vpn": vpn2.pk,
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_list_filter_by_l2vpn(self):
-        """Test filtering termination list by L2VPN."""
-        self.add_permissions("vpn.view_l2vpntermination")
-        termination = models.L2VPNTermination.objects.first()
+    def test_attachment_list_filter_by_vpn(self):
+        """Test filtering attachment list by VPN."""
+        self.add_permissions("vpn.view_vpnattachment")
+        attachment = models.VPNAttachment.objects.first()
 
-        if termination:
-            url = reverse("vpn:l2vpntermination_list")
-            response = self.client.get(
-                f"{url}?l2vpn={termination.l2vpn.pk}"
-            )
+        if attachment:
+            url = reverse("vpn:vpnattachment_list")
+            response = self.client.get(f"{url}?vpn={attachment.vpn.pk}")
             self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_create_with_interface(self):
-        """Test creating termination with interface via web form."""
-        self.add_permissions("vpn.add_l2vpntermination")
+    def test_attachment_create_with_interface(self):
+        """Test creating an attachment with interface via web form."""
+        self.add_permissions("vpn.add_vpnattachment")
 
-        l2vpn = models.L2VPN.objects.first()
-        interface = self._get_interfaces_without_terminations().first()
+        vpn = models.VPN.objects.first()
+        interface = self._get_interfaces_without_attachments().first()
 
-        if l2vpn and interface:
-            url = reverse("vpn:l2vpntermination_add")
+        if vpn and interface:
+            url = reverse("vpn:vpnattachment_add")
             data = {
-                "l2vpn": l2vpn.pk,
+                "vpn": vpn.pk,
                 "interface": interface.pk,
             }
             response = self.client.post(url, data)
             self.assertIn(response.status_code, [200, 302])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_create_with_vlan(self):
-        """Test creating termination with VLAN via web form."""
-        self.add_permissions("vpn.add_l2vpntermination")
+    def test_attachment_create_with_vlan(self):
+        """Test creating an attachment with VLAN via web form."""
+        self.add_permissions("vpn.add_vpnattachment")
 
-        l2vpn = models.L2VPN.objects.first()
-        vlan = self._get_vlans_without_terminations().first()
+        vpn = models.VPN.objects.first()
+        vlan = self._get_vlans_without_attachments().first()
 
-        if l2vpn and vlan:
-            url = reverse("vpn:l2vpntermination_add")
+        if vpn and vlan:
+            url = reverse("vpn:vpnattachment_add")
             data = {
-                "l2vpn": l2vpn.pk,
+                "vpn": vpn.pk,
                 "vlan": vlan.pk,
             }
             response = self.client.post(url, data)
             self.assertIn(response.status_code, [200, 302])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_list_search(self):
-        """Test searching termination list by L2VPN name."""
-        self.add_permissions("vpn.view_l2vpntermination")
-        termination = models.L2VPNTermination.objects.first()
+    def test_attachment_list_search(self):
+        """Test searching attachment list by VPN name."""
+        self.add_permissions("vpn.view_vpnattachment")
+        attachment = models.VPNAttachment.objects.first()
 
-        if termination:
-            url = reverse("vpn:l2vpntermination_list")
-            response = self.client.get(
-                f"{url}?q={termination.l2vpn.name[:5]}"
-            )
+        if attachment:
+            url = reverse("vpn:vpnattachment_list")
+            response = self.client.get(f"{url}?q={attachment.vpn.name[:5]}")
             self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_create_with_vminterface(self):
-        """Test creating termination with VMInterface via web form."""
-        self.add_permissions("vpn.add_l2vpntermination")
+    def test_attachment_create_with_vm_interface(self):
+        """Test creating an attachment with VM interface via web form."""
+        self.add_permissions("vpn.add_vpnattachment")
 
-        l2vpn = models.L2VPN.objects.first()
-        vminterface = self._get_vminterfaces_without_terminations().first()
+        vpn = models.VPN.objects.first()
+        vm_interface = self._get_vm_interfaces_without_attachments().first()
 
-        if l2vpn and vminterface:
-            url = reverse("vpn:l2vpntermination_add")
+        if vpn and vm_interface:
+            url = reverse("vpn:vpnattachment_add")
             data = {
-                "l2vpn": l2vpn.pk,
-                "vminterface": vminterface.pk,
+                "vpn": vpn.pk,
+                "vm_interface": vm_interface.pk,
             }
             response = self.client.post(url, data)
-            # Should redirect on success
             self.assertIn(response.status_code, [200, 302])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_termination_detail_view(self):
-        """Test L2VPNTermination detail view."""
-        self.add_permissions("vpn.view_l2vpntermination")
-        termination = models.L2VPNTermination.objects.first()
-
-        if termination:
-            url = reverse("vpn:l2vpntermination", kwargs={"pk": termination.pk})
-            response = self.client.get(url)
-            self.assertHttpStatus(response, 200)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_l2vpn_detail_view(self):
-        """Test L2VPN detail view."""
-        self.add_permissions("vpn.view_l2vpn")
-        l2vpn = models.L2VPN.objects.first()
-
-        if l2vpn:
-            url = reverse("vpn:l2vpn", kwargs={"pk": l2vpn.pk})
-            response = self.client.get(url)
-            self.assertHttpStatus(response, 200)

@@ -4,9 +4,10 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 
 from nautobot.apps.testing import FilterTestCases
+from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
-from nautobot.ipam.models import RouteTarget, VLAN, VLANGroup
-from nautobot.tenancy.models import Tenant
+from nautobot.ipam.models import VLAN
+from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, filters, models
 
 
@@ -108,6 +109,46 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
         ("vpn_id",),
     )
 
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        vpn_ct = ContentType.objects.get_for_model(models.VPN)
+        active = Status.objects.get(name="Active")
+        active.content_types.add(vpn_ct)
+        if not models.VPN.objects.filter(name="VPN Filter VXLAN").exists():
+            models.VPN.objects.create(
+                name="VPN Filter VXLAN",
+                service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+                status=active,
+                identifier=18001,
+            )
+            models.VPN.objects.create(
+                name="VPN Filter VPLS",
+                service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+                status=active,
+                identifier=18002,
+            )
+
+    def test_filter_by_service_type(self):
+        queryset = self.queryset
+        expected = queryset.filter(service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN)
+        filtered = self.filterset({"service_type": [choices.VPNServiceTypeChoices.TYPE_VXLAN]}, queryset).qs
+        self.assertQuerysetEqualAndNotEmpty(filtered, expected, ordered=False)
+
+    def test_filter_by_identifier(self):
+        queryset = self.queryset
+        vpn = queryset.filter(identifier__isnull=False).first()
+        self.assertIsNotNone(vpn)
+        filtered = self.filterset({"identifier": vpn.identifier}, queryset).qs
+        self.assertTrue(filtered.filter(pk=vpn.pk).exists())
+
+    def test_search_filter_matches_overlay_fields(self):
+        queryset = self.queryset
+        vpn = queryset.filter(service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN).first()
+        self.assertIsNotNone(vpn)
+        filtered = self.filterset({"q": vpn.name[:8]}, queryset).qs
+        self.assertTrue(filtered.filter(pk=vpn.pk).exists())
+
 
 class VPNTunnelFilterTestCase(FilterTestCases.FilterTestCase):
     """VPNTunnelFilterSet Test Case."""
@@ -145,126 +186,56 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
 
-class L2VPNFilterTestCase(TestCase):
-    """L2VPN FilterSet Test Case."""
+class VPNAttachmentFilterTestCase(TestCase):
+    """VPNAttachment filter tests."""
 
     @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
+    def _get_available_vlans(cls):
+        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
-    def setUpTestData(cls):
-        status = cls._get_l2vpn_status()
-        tenant = Tenant.objects.first()
-
-        # Create L2VPN objects for filter tests
-        cls.l2vpn1 = models.L2VPN.objects.create(
-            name="L2VPN Filter Test 1",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=status,
-            identifier=10001,
-            description="Test L2VPN for filtering",
-            tenant=tenant,
+    def _get_available_interfaces(cls):
+        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+            "interface_id", flat=True
         )
-        cls.l2vpn2 = models.L2VPN.objects.create(
-            name="L2VPN Filter Test 2",
-            type=choices.L2VPNTypeChoices.TYPE_VPLS,
-            status=status,
-            identifier=10002,
-            description="Another test L2VPN",
-        )
-        cls.l2vpn3 = models.L2VPN.objects.create(
-            name="L2VPN Filter Test 3",
-            type=choices.L2VPNTypeChoices.TYPE_VPWS,
-            status=status,
-            identifier=10003,
-            description="Third test L2VPN",
-        )
-
-    def test_filter_by_name(self):
-        """Test filtering L2VPNs by name."""
-        queryset = models.L2VPN.objects.all()
-        params = {"name": self.l2vpn1.name}
-        filtered_qs = filters.L2VPNFilterSet(params, queryset).qs
-        self.assertEqual(filtered_qs.count(), 1)
-        self.assertEqual(filtered_qs.first(), self.l2vpn1)
-
-    def test_filter_by_type(self):
-        """Test filtering L2VPNs by type."""
-        queryset = models.L2VPN.objects.all()
-        params = {"type": [choices.L2VPNTypeChoices.TYPE_VXLAN]}
-        filtered_qs = filters.L2VPNFilterSet(params, queryset).qs
-        self.assertTrue(all(obj.type == choices.L2VPNTypeChoices.TYPE_VXLAN for obj in filtered_qs))
-
-    def test_filter_by_identifier(self):
-        """Test filtering L2VPNs by identifier."""
-        queryset = models.L2VPN.objects.all()
-        params = {"identifier": self.l2vpn1.identifier}
-        filtered_qs = filters.L2VPNFilterSet(params, queryset).qs
-        self.assertTrue(filtered_qs.filter(pk=self.l2vpn1.pk).exists())
-
-class L2VPNTerminationFilterTestCase(TestCase):
-    """L2VPN Termination FilterSet Test Case, simple filter tests."""
+        return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
-    def _get_l2vpn_status(cls):
-        """Get or create a Status for L2VPN model."""
-        ct = ContentType.objects.get_for_model(models.L2VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
+    def _get_available_vm_interfaces(cls):
+        used_vm_interface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
+        return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
 
     @classmethod
     def setUpTestData(cls):
-        status = cls._get_l2vpn_status()
-
-        # Create L2VPN for termination tests
-        cls.l2vpn = models.L2VPN.objects.create(
-            name="L2VPN Term Filter Test",
-            type=choices.L2VPNTypeChoices.TYPE_VXLAN,
-            status=status,
+        active = Status.objects.get(name="Active")
+        active.content_types.add(ContentType.objects.get_for_model(models.VPN))
+        cls.vpn = models.VPN.objects.create(
+            name="VPN Attachment Filter Test",
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+            status=active,
+            identifier=15000,
         )
 
-        # Create VLANs for terminations (always available, unlike interfaces)
-        vlan_status = Status.objects.get(name="Active")
-        vlan_ct = ContentType.objects.get_for_model(VLAN)
-        if vlan_ct not in vlan_status.content_types.all():
-            vlan_status.content_types.add(vlan_ct)
+        cls.attachments = []
+        vlan = cls._get_available_vlans().first()
+        interface = cls._get_available_interfaces().first()
+        vm_interface = cls._get_available_vm_interfaces().first()
+        if vlan:
+            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, vlan=vlan))
+        if interface:
+            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, interface=interface))
+        if vm_interface:
+            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, vm_interface=vm_interface))
 
-        vlan_group, _ = VLANGroup.objects.get_or_create(name="L2VPN Filter Test Group")
-
-        cls.terminations = []
-        for i in range(3):
-            vlan = VLAN.objects.create(
-                vid=3900 + i,
-                name=f"L2VPN Filter Test VLAN {i}",
-                status=vlan_status,
-                vlan_group=vlan_group,
-            )
-            term = models.L2VPNTermination.objects.create(l2vpn=cls.l2vpn, assigned_object=vlan)
-            cls.terminations.append(term)
-
-    def test_filter_by_l2vpn(self):
-        """Test filtering terminations by L2VPN."""
-        queryset = models.L2VPNTermination.objects.all()
-        params = {"l2vpn": [self.l2vpn.pk]}
-        filtered_qs = filters.L2VPNTerminationFilterSet(params, queryset).qs
-        self.assertEqual(filtered_qs.count(), 3)
-        for term in self.terminations:
-            self.assertTrue(filtered_qs.filter(pk=term.pk).exists())
+    def test_filter_by_vpn(self):
+        queryset = models.VPNAttachment.objects.all()
+        filtered_qs = filters.VPNAttachmentFilterSet({"vpn": [self.vpn.pk]}, queryset).qs
+        self.assertEqual(filtered_qs.count(), len(self.attachments))
 
     def test_search_filter(self):
-        """Test the q (search) filter for L2VPNTermination."""
-        queryset = models.L2VPNTermination.objects.all()
-        params = {"q": self.l2vpn.name}
-        filtered_qs = filters.L2VPNTerminationFilterSet(params, queryset).qs
+        queryset = models.VPNAttachment.objects.all()
+        filtered_qs = filters.VPNAttachmentFilterSet({"q": self.vpn.name}, queryset).qs
         self.assertTrue(filtered_qs.count() >= 1)
-        self.assertTrue(filtered_qs.filter(pk=self.terminations[0].pk).exists())

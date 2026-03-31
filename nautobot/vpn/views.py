@@ -303,7 +303,12 @@ class VPNUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=["vpn_profile", "name", "description", "vpn_id", "role", "tenant"],
+                fields=["name", "description", "vpn_id", "vpn_profile", "role", "tenant"],
+            ),
+            ObjectFieldsPanel(
+                weight=150,
+                section=SectionChoices.RIGHT_HALF,
+                fields=["service_type", "status", "identifier", "extra_attributes"],
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -311,6 +316,13 @@ class VPNUIViewSet(NautobotUIViewSet):
                 table_filter="vpn",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
+            ),
+            ObjectsTablePanel(
+                weight=300,
+                table_class=tables.VPNAttachmentTable,
+                table_filter="vpn",
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Attachments",
             ),
         ],
     )
@@ -497,22 +509,16 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
 
 
 #
-# L2VPN Views
-#
+class VPNAttachmentUIViewSet(NautobotUIViewSet):
+    """ViewSet for VPNAttachment."""
 
-
-class L2VPNUIViewSet(NautobotUIViewSet):
-    """ViewSet for L2VPN."""
-
-    bulk_update_form_class = forms.L2VPNBulkEditForm
-    filterset_class = filters.L2VPNFilterSet
-    filterset_form_class = forms.L2VPNFilterForm
-    # for creating, editing single object
-    form_class = forms.L2VPNForm
+    filterset_class = filters.VPNAttachmentFilterSet
+    filterset_form_class = forms.VPNAttachmentFilterForm
+    form_class = forms.VPNAttachmentForm
     lookup_field = "pk"
-    queryset = models.L2VPN.objects.all()
-    serializer_class = serializers.L2VPNSerializer
-    table_class = tables.L2VPNTable
+    queryset = models.VPNAttachment.objects.all()
+    serializer_class = serializers.VPNAttachmentSerializer
+    table_class = tables.VPNAttachmentTable
 
     object_detail_content = ObjectDetailContent(
         panels=[
@@ -520,55 +526,10 @@ class L2VPNUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
-                    "name",
-                    "status",
-                    "type",
-                    "identifier",
-                    "description",
-                    "tenant",
-                ],
-            ),
-            ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.RIGHT_HALF,
-                fields=[
-                    "import_targets",
-                    "export_targets",
-                ],
-            ),
-            ObjectsTablePanel(
-                weight=200,
-                table_class=tables.L2VPNTerminationTable,
-                table_filter="l2vpn",
-                section=SectionChoices.FULL_WIDTH,
-                table_title="Terminations",
-            ),
-        ],
-    )
-
-
-class L2VPNTerminationUIViewSet(NautobotUIViewSet):
-    """ViewSet for L2VPNTermination."""
-
-    filterset_class = filters.L2VPNTerminationFilterSet
-    filterset_form_class = forms.L2VPNTerminationFilterForm
-    form_class = forms.L2VPNTerminationForm
-    lookup_field = "pk"
-    queryset = models.L2VPNTermination.objects.all()
-    serializer_class = serializers.L2VPNTerminationSerializer
-    table_class = tables.L2VPNTerminationTable
-
-    object_detail_content = ObjectDetailContent(
-        panels=[
-            ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields=[
-                    "l2vpn",
+                    "vpn",
                     "assigned_object_type",
                     "assigned_object",
                 ],
             ),
         ],
     )
-

@@ -172,13 +172,15 @@ class EncapsulationChoices(ChoiceSet):
 
 
 #
-# L2VPN
+# VPN service types
 #
 
 
-class L2VPNTypeChoices(ChoiceSet):
-    """L2VPN technology type choices."""
-    # Adding all choices as in netbox but focusing on vxlan first .
+class VPNServiceTypeChoices(ChoiceSet):
+    """VPN service type choices for both tunnel and overlay use cases."""
+
+    TYPE_IPSEC = "ipsec"
+
     # VPLS types
     TYPE_VPWS = "vpws"
     TYPE_VPLS = "vpls"
@@ -187,7 +189,7 @@ class L2VPNTypeChoices(ChoiceSet):
     TYPE_VXLAN = "vxlan"
     TYPE_VXLAN_EVPN = "vxlan-evpn"
 
-    # L2VPN E-VPN types
+    # EVPN types
     TYPE_MPLS_EVPN = "mpls-evpn"
     TYPE_PBB_EVPN = "pbb-evpn"
     TYPE_EVPN_VPWS = "evpn-vpws"
@@ -208,6 +210,9 @@ class L2VPNTypeChoices(ChoiceSet):
     TYPE_SPB = "spb"
 
     CHOICES = (
+        ("Tunnel", (
+            (TYPE_IPSEC, "IPSec"),
+        )),
         ("VPLS", (
             (TYPE_VPWS, "VPWS"),
             (TYPE_VPLS, "VPLS"),
@@ -216,7 +221,7 @@ class L2VPNTypeChoices(ChoiceSet):
             (TYPE_VXLAN, "VXLAN"),
             (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
         )),
-        ("L2VPN E-VPN", (
+        ("EVPN", (
             (TYPE_MPLS_EVPN, "MPLS EVPN"),
             (TYPE_PBB_EVPN, "PBB EVPN"),
             (TYPE_EVPN_VPWS, "EVPN VPWS"),
