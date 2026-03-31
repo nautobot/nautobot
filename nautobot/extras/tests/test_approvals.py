@@ -6,6 +6,7 @@ from django.utils.timezone import now
 
 from nautobot.core.jobs import BulkDeleteObjects, ExportObjectList
 from nautobot.core.testing import APITestCase, APIViewTestCases, TestCase
+from nautobot.core.testing.utils import get_deletable_objects
 from nautobot.extras import choices, models
 from nautobot.users.models import User
 
@@ -254,6 +255,36 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
             "model_constraints": {"approval_required": True},
         }
 
+    def get_deletable_object(self):
+        """
+        Return the first ApprovalWorkflowDefinition instance that has no associated ApprovalWorkflows.
+
+        Overrides the default implementation to ensure the selected instance can be safely deleted
+        without triggering the pre_delete signal that prevents deletion of definitions with
+        pending approval workflows.
+        """
+        instance = get_deletable_objects(
+            self.model, self._get_queryset().filter(approval_workflows__isnull=True)
+        ).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to ApprovalWorkflowDefinition objects that can be safely bulk-deleted.
+
+        Overrides the default implementation to ensure selected instances can be safely deleted
+        without triggering the pre_delete signal. Only instances with no associated
+        ApprovalWorkflow in a pending state are considered deletable.
+        """
+        instances = get_deletable_objects(
+            self.model, self._get_queryset().filter(approval_workflows__isnull=True)
+        ).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
+
 
 class ApprovalWorkflowDefinitionManagerTest(TestCase):
     def setUp(self):
@@ -443,6 +474,36 @@ class ApprovalWorkflowStageDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewT
             "denial_message": "Updated Denial Message",
             "approver_group": cls.approver_group_1.pk,
         }
+
+    def get_deletable_object(self):
+        """
+        Return the first ApprovalWorkflowStageDefinition instance that has no associated ApprovalWorkflowStages.
+
+        Overrides the default implementation to ensure the selected instance can be safely deleted
+        without triggering the pre_delete signal that prevents deletion of definitions with
+        pending approval workflows.
+        """
+        instance = get_deletable_objects(
+            self.model, self._get_queryset().filter(approval_workflow_stages__isnull=True)
+        ).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
+
+    def get_deletable_object_pks(self):
+        """
+        Get a list of PKs corresponding to ApprovalWorkflowStageDefinition objects that can be safely bulk-deleted.
+
+        Overrides the default implementation to ensure selected instances can be safely deleted
+        without triggering the pre_delete signal. Only instances with no associated
+        ApprovalWorkflowStages in a pending state are considered deletable.
+        """
+        instances = get_deletable_objects(
+            self.model, self._get_queryset().filter(approval_workflow_stages__isnull=True)
+        ).values_list("pk", flat=True)[:3]
+        if len(instances) < 3:
+            self.fail(f"Couldn't find 3 deletable objects, only found {len(instances)}!")
+        return instances
 
 
 class ApprovalWorkflowAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

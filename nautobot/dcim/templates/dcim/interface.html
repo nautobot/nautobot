@@ -45,6 +45,10 @@
                 <td>{{ object.get_type_display }}</td>
             </tr>
             <tr>
+                <td>Port Type</td>
+                <td>{{ object.get_port_type_display|placeholder }}</td>
+            </tr>
+            <tr>
                 <td>Speed</td>
                 <td>{{ object.speed|humanize_speed|placeholder }}</td>
             </tr>
