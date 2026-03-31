@@ -1,0 +1,13 @@
+{% if scheduled_job.status == 'denied' %}
+    <span class="badge bg-danger">Denied</span>
+{% elif scheduled_job.status == 'canceled' %}
+    <span class="badge bg-danger">Canceled</span>
+{% elif scheduled_job.status == 'pending' %}
+    <span class="badge bg-body-secondary border">Pending</span>
+{% elif scheduled_job.status == 'active' %}
+    <span class="badge bg-warning">Active</span>
+{% elif scheduled_job.status == 'completed' %}
+    <span class="badge bg-success">Completed</span>
+{% else %}
+    <span class="badge bg-body-secondary border">N/A</span>
+{% endif %}
