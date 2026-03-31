@@ -48,7 +48,7 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
         elif (
             query_param_name not in NON_FILTER_QUERY_PARAMS
             and not isinstance(query_param_value, (list, tuple))
-            and not query_param_value.startswith("$")
+            and (not isinstance(query_param_value, str) or not query_param_value.startswith("$"))
         ):
             embedded_create_query_params.append((query_param_name, query_param_value))
             embedded_search_query_params.append((query_param_name, query_param_value))
