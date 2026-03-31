@@ -1,8 +1,8 @@
 from io import StringIO
 import re
-import sys
 from unittest import mock
 
+from django.conf import settings
 from django.test import override_settings
 from django.utils import timezone
 
@@ -177,11 +177,7 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
         executor = JobConsoleLogExecutor(self.job_result.pk)
         executor.execute()
         mock_popen.assert_called_once_with(
-            [
-                sys.argv[0],
-                "execute_job_result",
-                f"{self.job_result.pk}",
-            ],
+            ["nautobot-server", "execute_job_result", f"{self.job_result.pk}", f"--config={settings.SETTINGS_PATH}"],
             stdout=mock.ANY,
             stderr=mock.ANY,
             universal_newlines=True,

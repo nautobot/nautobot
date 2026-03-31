@@ -38,6 +38,10 @@ Nautobot's [dependency update to Django 5.2](#django-52), as typical of Django m
 
 See [HTMX List View Rendering](#htmx-list-view-rendering) below.
 
+#### Support Dependent Object Creation and Search In Forms
+
+See [Dependent Object Creation and Search](#dependent-object-creation-and-search) below.
+
 ## Release Overview
 
 ### Breaking Changes
@@ -61,6 +65,8 @@ As a consequence of the [dependency update to Django 5.2](#django-52), Nautobot 
 Dependent objects can now be created directly from the current page using an embedded modal, without interrupting your workflow. Additionally, dependent object search supports advanced filtering, making it easier to find related records, especially in cases like interfaces where simple string matching was not sufficient.
 
 Both creation and search are handled within a modal, so you don't have to leave the main form.
+
+Form migration guide for App developers is available in [Embedded Actions](../development/apps/migration/embedded_actions.md).
 
 #### Configurable Columns
 

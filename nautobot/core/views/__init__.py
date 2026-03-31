@@ -367,14 +367,35 @@ class SearchView(AccessMixin, View):
         if "q" not in request.GET:
             return render(request, "search.html", {})
 
-        # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
+        # Build the set of "app_label.modelname" strings, representing all models included in the global search,
         # based on the `app_config.searchable_models` list (if any) defined by each app
-        searchable_models = []
+        searchable_models_set = set()
         for app_config in apps.get_app_configs():
             if hasattr(app_config, "searchable_models"):
-                searchable_models += [
+                searchable_models_set.update(
                     f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
-                ]
+                )
+
+        # Sort the searchable_models set into the below "logical" order:
+        # - Device
+        # - Location
+        # - Prefix
+        # - IPAddress
+        # - core models in alphabetical order by app_label.modelname
+        # - app models in alphabetical order by app_label.modelname
+        searchable_models = []
+        for initial_entry in ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"]:
+            if initial_entry in searchable_models_set:  # should always be true, but just in case
+                searchable_models.append(initial_entry)
+                searchable_models_set.remove(initial_entry)
+        # Remaining core models
+        for remaining_entry in sorted(searchable_models_set):
+            if remaining_entry.split(".", 1)[0] in settings.PLUGINS:
+                continue
+            searchable_models.append(remaining_entry)
+            searchable_models_set.remove(remaining_entry)
+        # Remaining app models
+        searchable_models += sorted(searchable_models_set)
 
         if not request.headers.get("HX-Request", False):
             # Initial page-load request

@@ -24,6 +24,7 @@ from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.core.testing import (
+    CelerySubprocessTestCase,
     create_job_result_and_run_job,
     get_job_class_and_model,
     TestCase,
@@ -1895,26 +1896,92 @@ class JobResultEnqueueJobCase(TransactionTestCase):
                 self.assertEqual(actual_job_result_arg.celery_kwargs.get("nautobot_job_console_log"), console_log)
 
 
-class RunConsoleLogJobTestCase(TestCase):
-    """Test run_console_log_job_and_return_job_result"""
+class RunConsoleLogJobTestCase(CelerySubprocessTestCase):
+    """Test run_console_log_job_and_return_job_result E2E"""
 
-    @mock.patch("nautobot.extras.jobs.JobConsoleLogExecutor.execute")
-    def test_task_runs_job_console_log_execute(self, mock_job_console_log_execute):
-        job = Job.objects.first()
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
+        self.job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+
+    def _prepare_job_result(self, class_path: str) -> JobResult:
+        """Helper method to prepare Job and JobResult."""
+        job = Job.objects.get_for_class_path(class_path)
+        job.enabled = True
+        job.save()
+
         job_result = JobResult.objects.create(
             job_model=job,
+            user=self.user,
             name=job.class_path,
-            date_done=timezone.now(),
-            status=JobResultStatusChoices.STATUS_SUCCESS,
+            status=JobResultStatusChoices.STATUS_PENDING,
         )
-        # Simulate a Celery request context so self.request.id is available inside the task,
-        # as it would be when dispatched via .delay() or .apply_async() in production.
-        run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
-        try:
-            run_console_log_job_and_return_job_result.run()
-        finally:
-            run_console_log_job_and_return_job_result.pop_request()
-        mock_job_console_log_execute.assert_called_once()
+
+        job_result.celery_kwargs = JobResult._build_celery_kwargs(
+            job_model=job,
+            user=self.user,
+            task_queue=self.job_queue.name,
+            console_log=True,
+        )
+        job_result.save()
+        return job_result
+
+    def test_task_runs_job_console_log_execute_e2e(self):
+        job_result = self._prepare_job_result("pass_job.TestPassJob")
+        with self.celery_subprocess_env():
+            run_console_log_job_and_return_job_result.apply(task_id=str(job_result.pk))
+
+        # subprocess finish task, so we have to refresh database to have new result
+        job_result.refresh_from_db()
+
+        # check job_result
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertIsNone(job_result.traceback)
+
+        # Check console entries
+        job_console_entries = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list(
+            "text", flat=True
+        )
+        expected_logs = [
+            "Running job",  # from _prepare_job
+            "before_start() was called as expected",  # from TestPassJob
+            "Success",  # from TestPassJob
+            "on_success() was called as expected",  # from TestPassJob
+            "after_return() was called as expected",  # from TestPassJob
+            "Job completed",  # from _cleanup_job
+        ]
+        for log in expected_logs:
+            self.assertIn(log, job_console_entries)
+
+    def test_fail_task_runs_job_console_log_execute_e2e(self):
+        job_result = self._prepare_job_result("fail.TestFailJob")
+        with self.celery_subprocess_env():
+            run_console_log_job_and_return_job_result.apply(task_id=str(job_result.pk))
+
+        # subprocess finish task, so we have to refresh database to have new result
+        job_result.refresh_from_db()
+
+        # check job_result
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIsNotNone(job_result.traceback)
+        self.assertIn("Test failure", job_result.traceback)
+
+        # Check console entries
+        job_console_entries = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list(
+            "text", flat=True
+        )
+
+        expected_logs = [
+            "Running job",  # from _prepare_job
+            "before_start() was called as expected",  # from TestFailJob
+            "I'm a test job that fails!",  # from TestFailJob
+            "on_failure() was called as expected",  # from TestFailJob
+            "after_return() was called as expected",  # from TestFailJob
+        ]
+        for log in expected_logs:
+            self.assertIn(log, job_console_entries)
 
 
 class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):

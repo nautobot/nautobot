@@ -1,0 +1,8 @@
+Updated dependency `django-filter` to `>=25.2,<25.3`.
+Updated dependency `django-silk` to `>=5.5.0,<5.6`.
+Updated dependency `djangorestframework` to `>=3.17.0,<3.18`.
+Updated dependency `kubernetes` to `>=35.0.0,<36`.
+Updated dependency `Markdown` to `>=3.10.2,<3.11`.
+Updated dependency `prometheus-client` to `>=0.24.1,<0.25`.
+Updated dependency `social-auth-app-django` to `>=5.7.0,<5.8`.
+Updated optional dependency `django-auth-ldap` to `>=5.3.0,<5.4`.

@@ -94,6 +94,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
@@ -236,9 +237,44 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
         if stages.is_valid():
             stages.save()
         else:
+            non_form_errors = stages.non_form_errors()
+            # this error comming from https://docs.djangoproject.com/en/6.0/topics/forms/formsets/#validate-min
+            if "Please submit at least 1 form." in non_form_errors:
+                raise ValidationError("At least one Approval Workflow Stage Definition is required.")
             raise ValidationError(stages.errors)
 
         return obj
+
+    def _handle_validation_error(self, e):
+        """
+        Override to handle ValidationError raised during delete operations
+        from pre_delete signals (e.g. pending workflows).
+
+        Catches ValidationError with specific error code (PENDING_WORKFLOWS_ERROR_CODE)
+        raised by signals.
+        Displays formatted HTML error message with link to the object's workflow.
+        For other errors, delegates to parent implementation.
+        """
+        if isinstance(e, ValidationError) and e.code == PENDING_WORKFLOWS_ERROR_CODE:
+            if self.action == "update":
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Stage Definition(s). "
+                    "There are still pending Approval <a href='{}'>Workflows</a> including this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.get_absolute_url(),
+                )
+            else:
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Definition '{}'. "
+                    "There are still pending Approval <a href='{}'>Workflows</a> using this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.name,
+                    self.obj.get_absolute_url(),
+                )
+            messages.error(self.request, cannot_delete_msg)
+            self.has_error = True
+        else:
+            super()._handle_validation_error(e)
 
 
 class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
@@ -2396,6 +2432,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
                         "nautobot_job_ignore_singleton_lock", False
                     )
+                    initial["_console_log"] = job_result.celery_kwargs.get("nautobot_job_console_log", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -3177,8 +3214,8 @@ class JobResultUIViewSet(
                 icon="mdi-database-export",
                 required_permissions=["extras.view_jobconsoleentry"],
                 render_on_tab_id=["job_console_entries"],
-                link_name=lambda ctx: (
-                    reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk})
+                link_name=lambda ctx: reverse(
+                    "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
         ),
