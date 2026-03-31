@@ -1238,7 +1238,7 @@ class ObjectsTablePanel(Panel):
             }
             if self.extra_columns is not None:
                 table_kwargs["extra_columns"] = self.extra_columns
-            body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)
+            body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)  # pylint: disable=not-callable
             if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
                 # to redirect the user back to the correct tab after editing/deleteing an object
