@@ -1,1 +1,0 @@
-Job profiling results are now available for download as a file attached to the Job Result, rather than only being written to the worker's local filesystem.
