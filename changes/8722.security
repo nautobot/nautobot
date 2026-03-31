@@ -1,2 +1,0 @@
-Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
-Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
