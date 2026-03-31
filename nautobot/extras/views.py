@@ -23,7 +23,6 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
-from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action

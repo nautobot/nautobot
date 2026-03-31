@@ -42,7 +42,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
-from nautobot.extras.models import Job, JobQueue, JobResult, JobResult
+from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
 
