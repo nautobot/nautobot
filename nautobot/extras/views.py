@@ -1016,17 +1016,14 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
-class ValidationObjectsTablePanel(object_detail.ObjectsTablePanel):
-    def __init__(self, *, extra_columns=None, **kwargs):
-        super().__init__(extra_columns=extra_columns, **kwargs)
-
-
 class ConfigContextSchemaDataPanel(object_detail.Panel):
     def get_extra_context(self, context: Dict[str, Any]):
         extra = super().get_extra_context(context)
-        obj = context.get("object")
-        extra["data"] = getattr(obj, "data_schema", None)
+        obj = get_obj_from_context(context)
+
+        extra["data"] = obj.data_schema
         extra["format"] = context.get("data_format", "json")
+
         return extra
 
 
@@ -1065,13 +1062,14 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         )
 
         # Bail out early if no usable schema
-        if instance is None or not isinstance(instance.data_schema, dict):
+        if not isinstance(instance.data_schema, dict):
             return object_detail.ObjectDetailContent(panels=panels_common)
 
         try:
             validator = Draft7Validator(instance.data_schema)
         except SchemaError:
-            validator = {}
+            validator = None
+
         extra_tabs = (
             object_detail.DistinctViewTab(
                 weight=300,
@@ -1079,7 +1077,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                 label="Validation",
                 url_name="extras:configcontextschema_validation",
                 panels=(
-                    ValidationObjectsTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
                         table_title="Config Contexts",
@@ -1096,7 +1094,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                         ],
                         include_columns=["validation_state", "actions"],
                     ),
-                    ValidationObjectsTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=200,
                         table_title="Devices",
@@ -1114,7 +1112,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                         ],
                         include_columns=["validation_state"],
                     ),
-                    ValidationObjectsTablePanel(
+                    object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=300,
                         table_title="Virtual Machines",
@@ -1139,18 +1137,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                                 ),
                             ),
                         ],
-                        include_columns=[
-                            "name",
-                            "status",
-                            "cluster",
-                            "role",
-                            "tenant",
-                            "vcpus",
-                            "memory",
-                            "disk",
-                            "dynamic_group_count",
-                            "validation_state",
-                        ],
+                        include_columns=["dynamic_group_count", "validation_state"],
                     ),
                 ),
             ),

@@ -1,1 +1,1 @@
-Added `extra_columns` parameter to ObjectDetailView to allow additional table columns in the UI.
+Added an `extra_columns` argument to `object_detail.ObjectsTablePanel` to allow dynamically adding custom columns to related object tables in object detail views.
