@@ -4,6 +4,8 @@ from django import template
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 
+from nautobot.core.api.constants import NON_FILTER_QUERY_PARAMS
+
 register = template.Library()
 
 
@@ -40,6 +42,16 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
                     embedded_search_query_params.append((query_param_name, content_type))
                 except (AttributeError, ObjectDoesNotExist, ValueError):
                     pass
+        # Directly forward all query params other than `content_type` and `content_types` with a few exceptions - omit
+        # non-filter query params because they are irrelevant in the context of create or filter form, and make sure
+        # that query param value is not a list or a tuple, and that it is not parametrized (`$`).
+        elif (
+            query_param_name not in NON_FILTER_QUERY_PARAMS
+            and not isinstance(query_param_value, (list, tuple))
+            and not query_param_value.startswith("$")
+        ):
+            embedded_create_query_params.append((query_param_name, query_param_value))
+            embedded_search_query_params.append((query_param_name, query_param_value))
 
     embedded_search_content_type = ""
     try:

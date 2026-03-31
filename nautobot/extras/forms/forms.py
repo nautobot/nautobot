@@ -1034,6 +1034,9 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     content_type = MultipleContentTypeField(
         feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
     )
+    group_type = forms.MultipleChoiceField(
+        choices=DynamicGroupTypeChoices, required=False, widget=StaticSelect2Multiple()
+    )
     tags = TagFilterField(model)
 
 
