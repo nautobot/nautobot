@@ -1,1 +1,0 @@
-Fixed an issue where cable terminations for module interfaces incorrectly displayed as "Circuit" instead of showing the device, type, and component fields.
