@@ -86,6 +86,7 @@
     <div class="card">
         <div class="card-header"><strong>Properties</strong></div>
         <div class="card-body">
+            {% include "extras/inc/overridable_field.html" with field=form.console_log_default override_field=form.console_log_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.dryrun_default override_field=form.dryrun_default_override %}
             {% include "extras/inc/overridable_field.html" with field=form.hidden override_field=form.hidden_override %}
             {% include "extras/inc/overridable_field.html" with field=form.soft_time_limit override_field=form.soft_time_limit_override %}

@@ -40,8 +40,8 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import BaseJob, get_job, get_jobs
-from nautobot.extras.models import Job, JobQueue, JobResult
+from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.models import Job, JobQueue, JobResult, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
 
@@ -53,7 +53,7 @@ class JobTest(TestCase):
     def test_as_form_no_job_model(self):
         """Job.as_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
         form = BaseJob.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), [])
 
     def test_field_default(self):
         """
@@ -64,14 +64,13 @@ class JobTest(TestCase):
         name = "TestFieldDefault"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-
         self.assertInHTML(
             """<tr><th><label for="id_var_int">Var int:</label></th><td>
-<input class="form-control" id="id_var_int" max="3600" name="var_int" placeholder="None" required type="number" value="0">
-<br><span class="helptext">Test default of 0 Falsey</span></td></tr>
-<tr><th><label for="id_var_int_no_default">Var int no default:</label></th><td>
-<input class="form-control" id="id_var_int_no_default" max="3600" name="var_int_no_default" placeholder="None" type="number">
-<br><span class="helptext">Test default without default</span></td></tr>""",
+<input type="number" name="var_int" value="0" max="3600" class="form-control" required placeholder="None" aria-describedby="id_var_int_helptext" id="id_var_int">
+<br><span class="helptext" id="id_var_int_helptext">Test default of 0 Falsey</span></td></tr>
+<tr><th><label for="id_var_int_no_default">Var int no default:</label></th> <td>
+<input type="number" name="var_int_no_default" max="3600" class="form-control" placeholder="None" aria-describedby="id_var_int_no_default_helptext" id="id_var_int_no_default">
+<br><span class="helptext" id="id_var_int_no_default_helptext">Test default without default</span></td></tr>""",
             form.as_table(),
         )
 
@@ -83,7 +82,7 @@ class JobTest(TestCase):
         name = "TestFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var1", "var2", "var23"])
 
     def test_no_field_order(self):
         """
@@ -93,7 +92,7 @@ class JobTest(TestCase):
         name = "TestNoFieldOrder"
         job_class = get_job(f"{module}.{name}")
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["var23", "var2"])
 
     def test_no_field_order_inherited_variable(self):
         """
@@ -105,7 +104,7 @@ class JobTest(TestCase):
         form = job_class.as_form()
         self.assertSequenceEqual(
             list(form.fields.keys()),
-            ["testvar1", "b_testvar2", "a_testvar3", "_job_queue", "_profile"],
+            ["testvar1", "b_testvar2", "a_testvar3"],
         )
 
     def test_dryrun_default(self):
@@ -153,7 +152,7 @@ class JobTest(TestCase):
             name="irrelevant", defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY}
         )
         job_model.job_queues.set([jq_1, jq_2])
-        form = job_class.as_form()
+        form = job_class.as_execution_form()
         self.assertQuerySetEqual(
             form.fields["_job_queue"].queryset,
             models.JobQueue.objects.filter(jobs=job_model),
@@ -175,6 +174,28 @@ class JobTest(TestCase):
         job_class, job_model = get_job_class_and_model(module, name)
         self.assertFalse(job_class.supports_dryrun)
         self.assertFalse(job_model.supports_dryrun)
+
+    def test_as_form_approval_view_disables_all_fields(self):
+        """
+        approval_view=True should disable all fields in the execution form.
+        """
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_form(approval_view=True)
+        for field_name, field in form.fields.items():
+            self.assertTrue(field.disabled, msg=f"Field '{field_name}' should be disabled in approval view")
+
+    def test_as_form_approval_view_false_fields_enabled(self):
+        """
+        approval_view=False (default) should leave all fields enabled.
+        """
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_form(approval_view=False)
+        for field_name, field in form.fields.items():
+            self.assertFalse(field.disabled, msg=f"Field '{field_name}' should not be disabled")
 
     def test_submodule_in_jobs_root(self):
         """
@@ -352,6 +373,164 @@ register_jobs(ConcurrentTestJob)
             # example_app does NOT provide dynamic jobs
             get_job("example_app.jobs.ExampleEverythingJob", reload=True)
             mock_get_jobs.assert_called_once_with(reload=False)
+
+    def test_as_execution_form_no_job_model(self):
+        """Job.as_execution_form() test with no corresponding job_model (https://github.com/nautobot/nautobot/issues/6773)."""
+        form = BaseJob.as_execution_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
+
+    def test_as_execution_form_base_fields(self):
+        """
+        as_execution_form() should always return the same base fields regardless of job-specific
+        variables or field_order - job data fields never bleed into the execution form.
+        """
+        for module, name in [
+            ("field_order", "TestFieldOrder"),
+            ("no_field_order", "TestNoFieldOrder"),
+            ("pass_job", "TestPassJob"),
+        ]:
+            with self.subTest(job=f"{module}.{name}"):
+                job_class = get_job(f"{module}.{name}")
+                form = job_class.as_execution_form()
+                self.assertIn("_profile", form.fields)
+                self.assertIn("_console_log", form.fields)
+                self.assertIn("_job_queue", form.fields)
+
+    def test_as_execution_form_console_log_initial_reflects_job_class(self):
+        """
+        _console_log initial value should match job class console_log_default attribute
+        when console_log_default_override is False on the job model.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        job_model.console_log_default_override = False
+        job_model.save()
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_console_log"].initial, job_class.console_log_default)
+
+    def test_as_execution_form_console_log_initial_reflects_job_model_override(self):
+        """
+        _console_log initial value should match job_model.console_log_default when console_log_default_override is True.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+
+        job_model.console_log_default_override = True
+        job_model.console_log_default = not job_class.console_log_default
+        job_model.save()
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_console_log"].initial, job_model.console_log_default)
+
+    def test_as_execution_form_job_queue_initial_is_default_queue(self):
+        """
+        _job_queue initial value should be set to job_model.default_job_queue.pk.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+        form = job_class.as_execution_form()
+        self.assertEqual(form.fields["_job_queue"].initial, job_model.default_job_queue.pk)
+
+    def test_as_execution_form_singleton_has_ignore_lock_field(self):
+        """
+        Singleton jobs should have _ignore_singleton_lock field in execution form.
+        """
+        module = "singleton"
+        name = "TestSingletonJob"
+        job_class, _ = get_job_class_and_model(module, name)
+        self.assertTrue(job_class.is_singleton)
+        form = job_class.as_execution_form()
+        self.assertIn("_ignore_singleton_lock", form.fields)
+
+    def test_as_execution_form_non_singleton_has_no_ignore_lock_field(self):
+        """
+        Non-singleton jobs should NOT have _ignore_singleton_lock field in execution form.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, _ = get_job_class_and_model(module, name)
+        self.assertFalse(job_class.is_singleton)
+        form = job_class.as_execution_form()
+        self.assertNotIn("_ignore_singleton_lock", form.fields)
+
+    @override_settings(DEBUG=False)
+    def test_as_execution_form_profile_hidden_when_not_debug(self):
+        """
+        _profile field should use HiddenInput widget when DEBUG=False.
+        """
+        from django import forms as django_forms
+
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        self.assertIsInstance(form.fields["_profile"].widget, django_forms.HiddenInput)
+
+    @override_settings(DEBUG=True)
+    def test_as_execution_form_profile_visible_when_debug(self):
+        """
+        _profile field should NOT use HiddenInput widget when DEBUG=True.
+        """
+        from django import forms as django_forms
+
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        self.assertNotIsInstance(form.fields["_profile"].widget, django_forms.HiddenInput)
+
+    def test_as_execution_form_approval_view_disables_all_fields(self):
+        """
+        approval_view=True should disable all fields in the execution form.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form(approval_view=True)
+        for field_name, field in form.fields.items():
+            self.assertTrue(field.disabled, msg=f"Field '{field_name}' should be disabled in approval view")
+
+    def test_as_execution_form_approval_view_false_fields_enabled(self):
+        """
+        approval_view=False (default) should leave all fields enabled.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form(approval_view=False)
+        for field_name, field in form.fields.items():
+            self.assertFalse(field.disabled, msg=f"Field '{field_name}' should not be disabled")
+
+    def test_as_execution_form_valid_with_post_data(self):
+        """
+        as_execution_form() should validate correctly when given valid POST data.
+        """
+        module = "pass_job"
+        name = "TestPassJob"
+        job_class, job_model = get_job_class_and_model(module, name)
+        post_data = {
+            "_profile": False,
+            "_console_log": False,
+            "_job_queue": str(job_model.default_job_queue.pk),
+        }
+        form = job_class.as_execution_form(data=post_data)
+        self.assertTrue(form.is_valid(), msg=f"Form errors: {form.errors}")
+
+    def test_as_execution_form_does_not_contain_job_data_fields(self):
+        """
+        Job-specific variable fields must never appear in the execution form,
+        even for jobs that define many variables.
+        """
+        module = "ipaddress_vars"
+        name = "TestIPAddresses"
+        job_class = get_job(f"{module}.{name}")
+        form = job_class.as_execution_form()
+        fields = {name: var.as_field() for name, var in job_class._get_vars().items()}
+        self.assertNotEqual(fields, {})
+        self.assertFalse(any(name in form.fields for name in fields))
 
 
 class JobTransactionTest(TransactionTestCase):
@@ -606,6 +785,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_decorator_job_pass_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_pass(self):
         """
         Job with `with transaction.atomic()` context manager test with pass result.
@@ -624,6 +821,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_context_manager_job_pass_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -641,6 +856,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    def test_atomic_transaction_decorator_job_fail_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_fail(self):
         """
         Job with `with transaction.atomic()` context manager test with fail result.
@@ -657,6 +889,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
+
+    def test_atomic_transaction_context_manager_job_fail_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
 
     def test_ip_address_vars(self):
         """
@@ -715,6 +964,22 @@ class JobTransactionTest(TransactionTestCase):
         for log in logs:
             if log.message != "Job completed":
                 self.assertEqual(log.message, "The secret is (redacted)")
+
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_console_log_redaction(self):
+        """
+        Test that an attempt is made at console log redaction.
+        """
+        module = "log_redaction"
+        name = "TestLogRedaction"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+
+        console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result)
+        for console_log in console_logs:
+            if "The secret is" in console_log.text:
+                self.assertEqual(console_log.text, "The secret is (redacted)")
 
     def test_log_skip_db_logging(self):
         """
@@ -1155,7 +1420,14 @@ class JobButtonReceiverTest(TestCase):
         name = "TestJobButtonReceiverSimple"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_pk", "object_model_name"])
+
+    def test_execution_form_field(self):
+        module = "job_button_receiver"
+        name = "TestJobButtonReceiverSimple"
+        job_class, _ = get_job_class_and_model(module, name)
+        execution_form = job_class.as_execution_form()
+        self.assertSequenceEqual(list(execution_form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
 
     def test_hidden(self):
         module = "job_button_receiver"
@@ -1218,7 +1490,14 @@ class JobHookReceiverTest(TestCase):
         name = "TestJobHookReceiverLog"
         job_class, _job_model = get_job_class_and_model(module, name)
         form = job_class.as_form()
-        self.assertSequenceEqual(list(form.fields.keys()), ["object_change", "_job_queue", "_profile"])
+        self.assertSequenceEqual(list(form.fields.keys()), ["object_change"])
+
+    def test_execution_form_field(self):
+        module = "job_hook_receiver"
+        name = "TestJobHookReceiverLog"
+        job_class, _ = get_job_class_and_model(module, name)
+        form = job_class.as_execution_form()
+        self.assertSequenceEqual(list(form.fields.keys()), ["_profile", "_console_log", "_job_queue"])
 
     def test_hidden(self):
         module = "job_hook_receiver"
@@ -1349,7 +1628,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 created by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1375,7 +1654,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
-            ("info", f"change: dcim | location Test Job Hook Location 1 updated by {self.user.username}"),
+            ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
             ("info", "Test Job Hook Location 1"),
@@ -1520,3 +1799,325 @@ class JobLogsDBConnectionTest(TransactionTestCase):
         # If the connection was reopened, a new close at value should be present.
         new_conn_close_at = conn.close_at
         self.assertGreater(new_conn_close_at, original_conn_close_at)
+
+
+class JobResultEnqueueJobCase(TransactionTestCase):
+    """Test JobResult.enqueue_job behavior"""
+
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_true_uses_console_log_task(
+        self,
+        mock_run_job,
+        mock_console_log_task,
+        mock_kubernetes_job,
+    ):
+        job_kwargs = {"foo": "bar"}
+        job_result = JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=False,
+            console_log=True,
+            **job_kwargs,
+        )
+
+        mock_kubernetes_job.assert_not_called()
+        mock_console_log_task.apply_async.assert_called_once()
+        mock_run_job.apply_async.assert_not_called()
+
+        job_result.refresh_from_db()
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), True)
+
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_false_uses_run_job_task(self, mock_run_job, mock_console_log_task, mock_kubernetes_job):
+        job_kwargs = {"foo": "bar"}
+
+        job_result = JobResult.enqueue_job(
+            job_model=self.job_model,
+            user=self.user,
+            synchronous=False,
+            console_log=False,
+            **job_kwargs,
+        )
+
+        mock_kubernetes_job.assert_not_called()
+        mock_console_log_task.apply_async.assert_not_called()
+        mock_run_job.apply_async.assert_called_once()
+
+        job_result.refresh_from_db()
+        # when console log is false job_result is not updated before run task
+        self.assertEqual(job_result.task_kwargs, {})
+        self.assertEqual(job_result.celery_kwargs.get("nautobot_job_console_log"), False)
+
+    @mock.patch("nautobot.extras.models.jobs.run_kubernetes_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_console_log_job_and_return_job_result")
+    @mock.patch("nautobot.extras.jobs.run_job")
+    def test_console_log_with_kubernetes_queue_uses_kubernetes_task_with_celery_kwargs(
+        self,
+        mock_run_job,
+        mock_console_log_task,
+        mock_kubernetes_job,
+    ):
+        job_kwargs = {"foo": "bar"}
+        kubernetes_queue = JobQueue.objects.create(
+            name="Empty Job Queue 1",
+            queue_type=JobQueueTypeChoices.TYPE_KUBERNETES,
+        )
+        for console_log in (True, False):
+            with self.subTest(console_log=console_log):
+                mock_kubernetes_job.reset_mock()
+                mock_run_job.reset_mock()
+                mock_console_log_task.reset_mock()
+
+                mock_kubernetes_job.return_value = mock.MagicMock()
+                JobResult.enqueue_job(
+                    job_model=self.job_model,
+                    user=self.user,
+                    synchronous=False,
+                    console_log=console_log,
+                    job_queue=kubernetes_queue,
+                    **job_kwargs,
+                )
+
+                mock_kubernetes_job.assert_called_once()
+                mock_run_job.apply_async.assert_not_called()
+                mock_console_log_task.apply_async.assert_not_called()
+
+                call_args = mock_kubernetes_job.call_args
+                actual_job_result_arg = call_args[0][0]  # first positional arg
+                self.assertEqual(actual_job_result_arg.celery_kwargs.get("nautobot_job_console_log"), console_log)
+
+
+class RunConsoleLogJobTestCase(TestCase):
+    """Test run_console_log_job_and_return_job_result"""
+
+    @mock.patch("nautobot.extras.jobs.JobConsoleLogExecutor.execute")
+    def test_task_runs_job_console_log_execute(self, mock_job_console_log_execute):
+        job = Job.objects.first()
+        job_result = JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            date_done=timezone.now(),
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+        # Simulate a Celery request context so self.request.id is available inside the task,
+        # as it would be when dispatched via .delay() or .apply_async() in production.
+        run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
+        try:
+            run_console_log_job_and_return_job_result.run()
+        finally:
+            run_console_log_job_and_return_job_result.pop_request()
+        mock_job_console_log_execute.assert_called_once()
+
+
+class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.enabled = True
+        job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=job_model,
+            user=self.user,
+            name=job_model.class_path,
+            date_done=timezone.now(),
+            celery_kwargs={"nautobot_job_console_log": True},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_used(
+        self,
+        mock_report_job_status,
+        mock_execute_job,
+        mock_executor_console_log,
+    ):
+        """Command should use JobConsoleLogExecutor when console logging is enabled."""
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_executor_console_log.assert_called_once_with(str(self.job_result.pk))
+        mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_report_job_status.assert_called_once()
+        mock_execute_job.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_not_used(
+        self,
+        mock_report_job_status,
+        mock_call_command,
+        mock_executor_console_log,
+    ):
+        """Command should not use JobConsoleLogExecutor when console logging is disabled."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_call_command.assert_called_once_with(
+            "execute_job_result", str(self.job_result.pk), profile=False, stdout=mock.ANY
+        )
+        mock_executor_console_log.assert_not_called()
+        mock_report_job_status.assert_called_once()
+
+
+class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.job_model.enabled = True
+        self.job_model.save()
+        self.job_result = JobResult.objects.create(
+            job_model=self.job_model,
+            user=self.user,
+            name=self.job_model.class_path,
+            celery_kwargs={"nautobot_job_profile": False},
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+    def test_invalid_job_result_pk_raises_error(self):
+        """Command should raise CommandError when JobResult UUID does not exist."""
+        invalid_id = "00000000-0000-0000-0000-000000000000"
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", invalid_id)
+        self.assertEqual(str(err.exception), f"Job result with pk {invalid_id} not found.")
+
+    def test_missing_celery_kwargs_raises_error(self):
+        """Command should raise CommandError when celery_kwargs is not set on the JobResult."""
+        self.job_result.celery_kwargs = {}
+        self.job_result.save()
+
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk))
+        self.assertEqual(
+            str(err.exception), f"Job result with pk {self.job_result.pk} does not have `celery_kwargs` defined."
+        )
+
+    def test_invalid_json_data_raises_error(self):
+        """Command should raise CommandError when --data is not valid JSON."""
+        with self.assertRaises(CommandError) as err:
+            call_command("execute_job_result", str(self.job_result.pk), data="not-valid-json")
+        self.assertIn("Invalid JSON data:", str(err.exception))
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_data_option_skips_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should use --data directly and skip validate_job_and_job_data when --data is provided."""
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+            data='{"foo": "bar"}',
+        )
+
+        mock_validate.assert_not_called()
+        mock_run_job.apply.assert_called_once()
+        call_kwargs = mock_run_job.apply.call_args[1]["kwargs"]
+        self.assertEqual(call_kwargs.get("foo"), "bar")
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    def test_no_data_option_calls_validate_job_and_job_data(
+        self,
+        mock_sync,
+        mock_run_job,
+        mock_validate,
+    ):
+        """Command should call validate_job_and_job_data with task_kwargs when --data is not provided."""
+        self.job_result.task_kwargs = {"baz": "qux"}
+        self.job_result.save()
+        mock_validate.return_value = self.job_result.task_kwargs
+
+        call_command(
+            "execute_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_validate.assert_called_once_with(
+            mock.ANY, self.user, self.job_model.class_path, self.job_result.task_kwargs
+        )
+        mock_run_job.apply.assert_called_once()
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_successful_execution_sets_date_started(self, mock_validate, mock_sync, mock_run_job):
+        """Command should stamp date_started on the JobResult before executing."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        self.job_result.refresh_from_db()
+        self.assertIsNotNone(self.job_result.date_started)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_sync_eager_result_is_called(self, mock_validate, mock_sync, mock_run_job):
+        """Command should sync the eager result back to the JobResult after execution."""
+        call_command("execute_job_result", str(self.job_result.pk))
+
+        mock_sync.assert_called_once()
+        first_arg = mock_sync.call_args[0][0]
+        self.assertEqual(first_arg.pk, self.job_result.pk)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.handle_eager_result_failure")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_handle_eager_result_failure_called_only_when_failed_and_console_log_enabled(
+        self, mock_validate, mock_sync, mock_run_job, mock_handle_failure
+    ):
+        """handle_eager_result_failure should only be called when both eager result failed and nautobot_job_console_log is True."""
+        cases = [
+            {"failed": True, "nautobot_job_console_log": True, "expected_called": True},
+            {"failed": True, "nautobot_job_console_log": False, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": True, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": False, "expected_called": False},
+        ]
+
+        for case in cases:
+            with self.subTest(**case):
+                mock_handle_failure.reset_mock()
+
+                self.job_result.celery_kwargs = {
+                    "nautobot_job_profile": False,
+                    "nautobot_job_console_log": case["nautobot_job_console_log"],
+                }
+                self.job_result.save()
+
+                eager_result = mock.MagicMock()
+                eager_result.failed.return_value = case["failed"]
+                mock_run_job.apply.return_value = eager_result
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                if case["expected_called"]:
+                    mock_handle_failure.assert_called_once()
+                else:
+                    mock_handle_failure.assert_not_called()

@@ -69,6 +69,8 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
                     lookup_value = request_querydict.getlist(filter_field_name)
                 else:
                     lookup_value = request_querydict.get(filter_field_name)
+                if not isinstance(lookup_value, list):
+                    lookup_value = [lookup_value]
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
                 query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])

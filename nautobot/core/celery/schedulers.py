@@ -31,7 +31,10 @@ class NautobotScheduleEntry(ModelEntry):
 
         # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
-        self.task = "nautobot.extras.jobs.run_job"
+        if model.celery_kwargs.get("nautobot_job_console_log", False):
+            self.task = "nautobot.extras.jobs.run_console_log_job_and_return_job_result"
+        else:
+            self.task = "nautobot.extras.jobs.run_job"
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,
             # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed
@@ -124,9 +127,11 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         try:
             entry_args = _evaluate_entry_args(entry.args)
             entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
+
             if task:
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
+
                 # Distinguish between Celery and Kubernetes job queues
                 if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
                     celery_kwargs = dict(entry.options)
@@ -161,6 +166,19 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry.total_run_count = entry.model.total_run_count
             entry.model.save()
         return resp
+
+    def enabled_models_qs(self):
+        """
+        Replace the django-celery-beat 2.8.x implementation with a simpler (less optimal) one for now.
+
+        This should hopefully avoid issues like:
+
+        - https://github.com/celery/django-celery-beat/issues/894
+        - https://github.com/celery/django-celery-beat/issues/922
+        - https://github.com/celery/django-celery-beat/issues/927
+        - https://github.com/celery/django-celery-beat/issues/956
+        """
+        return self.Model.objects.enabled()
 
     def tick(self, *args, **kwargs):
         """

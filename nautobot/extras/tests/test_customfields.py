@@ -1,5 +1,6 @@
 import json
 import logging
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -26,6 +27,83 @@ from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
+
+SIMPLE_FIELDS_DATA = (
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_TEXT,
+        "field_value": "Foobar!",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+        "field_value": 0,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
+        "field_value": 42,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+        "field_value": True,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
+        "field_value": False,
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_DATE,
+        "field_value": "2016-06-23",
+        "empty_value": None,
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_URL,
+        "field_value": "http://example.com/",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_MARKDOWN,
+        "field_value": "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": {"dict_key": "key value"},
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": ["a", "list"],
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": "A string",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_JSON,
+        "field_value": None,
+        "empty_value": "",
+    },
+)
+
+ALL_FIELDS_DATA = (
+    *SIMPLE_FIELDS_DATA,
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_SELECT,
+        "field_value": "Select one",
+        "empty_value": "",
+    },
+    {
+        "field_type": CustomFieldTypeChoices.TYPE_MULTISELECT,
+        "field_value": ["Select one", "Select two"],
+        "empty_value": "",
+    },
+)
 
 
 # TODO: this needs to be both a BaseModelTestCase (as it tests the model class) and a (views) TestCase,
@@ -63,72 +141,9 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             instance.validated_save()
 
     def test_simple_fields(self):
-        DATA = (
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_TEXT,
-                "field_value": "Foobar!",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
-                "field_value": 0,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_INTEGER,
-                "field_value": 42,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-                "field_value": True,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_BOOLEAN,
-                "field_value": False,
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_DATE,
-                "field_value": "2016-06-23",
-                "empty_value": None,
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_URL,
-                "field_value": "http://example.com/",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_MARKDOWN,
-                "field_value": "### Hello world!\n\n- Item 1\n- Item 2\n- Item 3",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": {"dict_key": "key value"},
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": ["a", "list"],
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": "A string",
-                "empty_value": "",
-            },
-            {
-                "field_type": CustomFieldTypeChoices.TYPE_JSON,
-                "field_value": None,
-                "empty_value": "",
-            },
-        )
-
         obj_type = ContentType.objects.get_for_model(Location)
 
-        for data in DATA:
+        for data in SIMPLE_FIELDS_DATA:
             cf = CustomField(type=data["field_type"], label="My Field", required=False)
             cf.save()  # not validated_save this time, as we're testing backwards-compatibility
             cf.content_types.set([obj_type])
@@ -397,6 +412,199 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
             self.assertIsInstance(filter_field, IntegerField)
             self.assertIsInstance(filter_field.widget, NumberInput)
 
+    def test_scope_filter(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location_in_scope = Location.objects.get(name="Location A")
+        location_out_of_scope = Location.objects.get(name="Location B")
+
+        for data in ALL_FIELDS_DATA:
+            cf = CustomField(
+                type=data["field_type"],
+                label=f"Location-Custom-Field-{data['field_type']!s}",
+                required=False,
+                scope_filter={"name": ["Location A"]},
+            )
+            cf.validated_save()
+            cf.content_types.set([obj_type])
+
+        self.add_permissions("dcim.view_location")
+        url = reverse("dcim:location", kwargs={"pk": location_in_scope.pk})
+        response = self.client.get(url)
+        self.assertBodyContains(response, '<span title="">Location-Custom-Field', count=len(ALL_FIELDS_DATA))
+
+        url = reverse("dcim:location", kwargs={"pk": location_out_of_scope.pk})
+        response = self.client.get(url)
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn(
+            '<span title="">Location-Custom-Field',
+            response_raw_content,
+        )
+
+    def test_scope_filter_with_invalid_data_stored(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Invalid-Scope-Filter has `scope_filter` set, but stored data is not valid: * asn\n  * Enter a whole number."
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Invalid-Scope-Filter",
+            required=False,
+            scope_filter={"asn": ["invalid value"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
+
+    @mock.patch("nautobot.extras.models.customfields.get_filterset_for_model", return_value=None)
+    def test_scope_filter_for_model_without_filterset(self, _):
+        obj_type = ContentType.objects.get_for_model(Location)
+        location = Location.objects.get(name="Location A")
+        expected_warning = "WARNING:nautobot.extras.models.customfields:Custom field Location-Custom-Field-Without-Filterset has `scope_filter` set, but there is no `filterset_class` for dcim.Location"
+
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Location-Custom-Field-Without-Filterset",
+            required=False,
+            scope_filter={"name": ["Location A"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertLogs("nautobot.extras.models.customfields", level="WARNING") as cm:
+            should_render = cf.should_render(location)
+
+        self.assertTrue(should_render)
+        self.assertEqual(cm.output, [expected_warning])
+
+    def test_set_scope_filter_invalid_form_raises_validation_error(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        with self.assertRaises(ValidationError) as cm:
+            cf.set_scope_filter({"asn": "invalid str"})
+
+        self.assertEqual(cm.exception.message_dict, {"asn": ["Enter a whole number."]})
+
+    def test_set_scope_filter_drops_empty_values(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter(
+            {
+                "name": "",
+                "asn": None,
+                "tags": [],
+                "contacts": (),
+            }
+        )
+
+        self.assertEqual(cf.scope_filter, {})
+
+    def test_set_scope_filter_model_choice_stores_pk(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        location_a = Location.objects.get(name="Location A")
+        location_b = Location.objects.get(name="Location B")
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.set_scope_filter({"parent": [location_a, location_b]})
+
+        self.assertEqual(cf.scope_filter, {"parent": ["Location A", "Location B"]})
+
+    def test_set_scope_filter_overrides_previous_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(label="Test CF", type=CustomFieldTypeChoices.TYPE_TEXT)
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        cf.scope_filter = {"name": ["Old Value"]}
+
+        cf.set_scope_filter({"asn": [123]})
+
+        self.assertEqual(cf.scope_filter, {"asn": [123]})
+
+    def test_all_custom_field_types_are_tested(self):
+        """Ensure every CustomFieldTypeChoices value is covered by field test data."""
+
+        tested_fields = {entry["field_type"] for entry in ALL_FIELDS_DATA}
+        defined_field_types = {choice for choice, _ in CustomFieldTypeChoices.CHOICES}
+
+        missing = defined_field_types - tested_fields
+
+        self.assertEqual(
+            missing,
+            set(),
+            f"The following CustomFieldTypeChoices are missing test coverage: {sorted(missing)}",
+        )
+
+    def test_scope_filter_prefixed_return_prefixed_data(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            scope_filter={"name": ["Test name"], "location": ["Test location"]},
+        )
+        cf.validated_save()
+        cf.content_types.set([obj_type])
+
+        expected_prefixed_data = {"scope-name": ["Test name"], "scope-location": ["Test location"]}
+        prefixed = cf.scope_filter_prefixed
+        self.assertEqual(prefixed, expected_prefixed_data)
+
+    def test_validate_enforce_required(self):
+        cf = CustomField(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+        )
+        value = cf.validate("", enforce_required=False)
+        self.assertEqual(value, "")
+
+        with self.assertRaisesRegex(ValidationError, "Required field cannot be empty."):
+            cf.validate("", enforce_required=True)
+
+    def test_scope_filter_and_required_cant_be_set_both(self):
+        """
+        Test if validation works properly and setting both required=True and scope filter is blocked.
+        """
+        cf = CustomField(
+            label="Test transitioning",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            required=True,
+            scope_filter={"description__ic": "in-scope"},
+        )
+
+        with self.assertRaisesRegex(ValidationError, "Scope filter can't be set, if field is required."):
+            cf.validated_save()
+
+        cf.required = False
+        cf.validated_save()
+
+        self.assertEqual(cf.scope_filter, {"description__ic": "in-scope"})
+        self.assertEqual(cf.required, False)
+
+        cf.required = True
+        cf.scope_filter = {}
+        cf.validated_save()
+
+        self.assertEqual(cf.scope_filter, {})
+        self.assertEqual(cf.required, True)
+
 
 @tag("example_app")
 class CustomFieldManagerTest(TestCase):
@@ -427,7 +635,7 @@ class CustomFieldManagerTest(TestCase):
             listing = CustomField.objects.get_for_model(Location, get_queryset=False)
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that different values of exclude_filter_disabled are cached separately
         with self.assertNumQueries(1):
@@ -441,7 +649,7 @@ class CustomFieldManagerTest(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(1, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that different models are cached separately
         with self.assertNumQueries(1):
@@ -470,7 +678,7 @@ class CustomFieldManagerTest(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(3, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that the cache is invalidated when removing a CustomField.content_types m2m relationship
         custom_field.content_types.set([])
@@ -483,7 +691,7 @@ class CustomFieldManagerTest(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(2, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that the cache is invalidated on object delete
         custom_field.delete()
@@ -496,7 +704,7 @@ class CustomFieldManagerTest(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(2, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
 
 class ComputedFieldManagerTestCase(TestCase):
@@ -527,7 +735,7 @@ class ComputedFieldManagerTestCase(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(1, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that different models are cached separately
         with self.assertNumQueries(1):
@@ -555,7 +763,7 @@ class ComputedFieldManagerTestCase(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(2, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
         # Assert that the cache is invalided on object delete
         computed_field.delete()
@@ -568,7 +776,7 @@ class ComputedFieldManagerTestCase(TestCase):
         self.assertIsInstance(qs, QuerySet)
         self.assertIsInstance(listing, list)
         self.assertEqual(1, len(listing))
-        self.assertQuerysetEqualAndNotEmpty(qs, listing)
+        self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
 
 @tag("example_app")
@@ -1357,6 +1565,10 @@ class CustomFieldModelTest(TestCase):
             weight=200,
         )
 
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_a = Location.objects.create(name="Location A", status=location_status, location_type=cls.lt)
+        cls.location_b = Location.objects.create(name="Location B", status=location_status, location_type=cls.lt)
+
     def test_custom_field_dict_population(self):
         """Test that custom_field_data is properly populated when no data is passed in."""
         label = "Custom Field"
@@ -1698,334 +1910,334 @@ class CustomFieldFilterTest(TestCase):
         )
 
     def test_filter_integer(self):
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1": 100}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf1=100),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1__n": [100]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf1=100)
             | self.queryset.filter(_custom_field_data__cf1__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1__lte": [101]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf1__lte=100),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1__lt": [101]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf1__lt=101),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1__gte": [199]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf1__gte=199),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf1__gt": [199]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf1__gt=199),
         )
 
     def test_filter_boolean(self):
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf2": True}, self.queryset).qs, self.queryset.filter(_custom_field_data__cf2=True)
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf2": False}, self.queryset).qs, self.queryset.filter(_custom_field_data__cf2=False)
         )
 
     def test_filter_text(self):
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf3": "foo"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf3__contains="foo"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4": "foo"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__icontains="foo"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__n": ["foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4="foo")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__ic": ["OOB"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__icontains="OOB"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__nic": ["OOB"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__icontains="OOB")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__iew": ["Bar"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__iendswith="Bar"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__niew": ["Bar"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__iendswith="Bar")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__isw": ["Foob"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__istartswith="Foob"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__nisw": ["Foob"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__istartswith="Foob")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__ie": ["Foo"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__iexact="Foo"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__nie": ["Foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__iexact="Foo")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__re": ["f.*b"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__regex="f.*b"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__nre": ["f.*b"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__regex="f.*b")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__ire": ["F.*b"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf4__iregex="F.*b"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf4__nire": ["F.*b"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__iregex="F.*b")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
 
     def test_filter_date(self):
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5": "2016-06-26"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5="2016-06-26"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__n": "2016-06-26"}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf5="2016-06-26")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__lte": ["2016-06-28"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__lte="2016-06-28"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__lte": ["2016-06-27"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__lte="2016-06-27"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__lte": ["2016-06-26"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__lte="2016-06-26"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__lte": ["2016-06-25"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__lte="2016-06-25"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__gte": ["2016-06-25"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__gte="2016-06-25"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__gte": ["2016-06-26"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__gte="2016-06-26"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__gte": ["2016-06-27"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__gte="2016-06-27"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf5__gte": ["2016-06-28"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__gte="2016-06-28"),
         )
         params = {"cf_cf5__gte": ["2016-06-25"], "cf_cf5__lt": ["2016-06-27"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf5__gte="2016-06-25", _custom_field_data__cf5__lt="2016-06-27"),
         )
 
     def test_filter_url(self):
         params = {"cf_cf6": "http://foo.example.com/"}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6="http://foo.example.com/"),
         )
         params = {"cf_cf6__n": ["http://foo.example.com/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6="http://foo.example.com/")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf7": "example.com"}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf7__icontains="example.com"),
         )
         params = {"cf_cf7__n": ["http://foo.example.com/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf7="http://foo.example.com/")
             | self.queryset.filter(_custom_field_data__cf7__isnull=True),
         )
         params = {"cf_cf6__ic": ["FOO.example.COM"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__icontains="FOO.example.COM"),
         )
         params = {"cf_cf6__nic": ["FOO.example.COM"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__icontains="FOO.example.COM")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf6__iew": ["FOO.example.COM/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__iendswith="FOO.example.COM/"),
         )
         params = {"cf_cf6__niew": ["FOO.example.COM/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__iendswith="FOO.example.COM/")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf6__isw": ["HTTP://FOO"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__istartswith="HTTP://FOO"),
         )
         params = {"cf_cf6__nisw": ["HTTP://FOO"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__istartswith="HTTP://FOO")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf6__ie": ["http://FOO.example.COM/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__iexact="http://FOO.example.COM/"),
         )
         params = {"cf_cf6__nie": ["http://FOO.example.COM/"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__iexact="http://FOO.example.COM/")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf6__re": ["foo.*com"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__regex="foo.*com"),
         )
         params = {"cf_cf6__nre": ["foo.*com"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__regex="foo.*com")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
         params = {"cf_cf6__ire": ["FOO.*COM"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf6__iregex="FOO.*COM"),
         )
         params = {"cf_cf6__nire": ["FOO.*COM"]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf6__iregex="FOO.*COM")
             | self.queryset.filter(_custom_field_data__cf6__isnull=True),
         )
 
     def test_filter_select(self):
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8": ["Foo", "AR"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__in=["Foo", "AR"]),
         )
-        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+        self.assertQuerySetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
             self.filterset({"cf_cf8": [str(choice.pk) for choice in self.select_choices]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__in=[choice.value for choice in self.select_choices]),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__n": ["Foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8="Foo")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__ic": ["FOO"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__icontains="FOO"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__nic": ["FOO"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__icontains="FOO")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__iew": ["AR"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__iendswith="AR"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__niew": ["AR"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__iendswith="AR")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__isw": ["FO"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__istartswith="FO"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__nisw": ["FO"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__istartswith="FO")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__ie": ["foo"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__iexact="foo"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__nie": ["foo"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__istartswith="FO")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__re": ["F.o"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__regex="F.o"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__nre": ["F.o"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__regex="F.o")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__ire": ["F.O"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf8__iregex="F.o"),
         )
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf8__nire": ["F.O"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf8__iregex="F.o")
             | self.queryset.filter(_custom_field_data__cf8__isnull=True),
         )
 
     def test_filter_multi_select(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Foo"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": "Bar"}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": ["Foo"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Foo"),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf9": ["Bar"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains="Bar"),
         )
-        self.assertQuerysetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
+        self.assertQuerySetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
             self.filterset({"cf_cf9": str(self.multiselect_choices[0].pk)}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains=self.multiselect_choices[0].value),
         )
