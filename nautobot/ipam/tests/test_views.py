@@ -1,11 +1,12 @@
 import datetime
 import random
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
-from django.utils.html import strip_tags
+from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
@@ -253,6 +254,174 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=1000)
+    def test_list_objects_default_filters(self):
+        """Test the PREFIX_LIST_DEFAULT_CONTAINER_ONLY and PREFIX_LIST_DEFAULT_MAX_DEPTH settings."""
+        self.add_permissions("ipam.view_prefix")
+        list_url = self.get_list_url()
+
+        with self.subTest("By default, all prefixes are listed"):
+            response = self.client.get(list_url, headers={"HX-Request": True})
+            for prefix in self._get_queryset().all():
+                self.assertBodyContains(response, str(prefix.pk))
+            # Indentation should be present in table rendering
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None or prefix.parent.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With both settings, both should apply"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=4):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER and (
+                        prefix.parent is None
+                        or prefix.parent.parent is None
+                        or prefix.parent.parent.parent is None
+                        or prefix.parent.parent.parent.parent is None
+                    ):
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=0):
+                # Check for un-filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                for prefix in self._get_queryset().all():
+                    self.assertBodyContains(response, str(prefix.pk))
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+                prefix_status = Status.objects.get_for_model(Prefix).first()
+                # Check for filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url + f"?status={prefix_status.name}", headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY", count=0)
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH", count=0)
+                for prefix in self._get_queryset().all():
+                    if prefix.status == prefix_status:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation and subtree filtering should NOT be present in table rendering,
+                # due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, "nb-subtree", count=0)
+                self.assertBodyContains(response, "mdi-table-filter", count=0)
+
+        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url + "?ip_version=4", headers={"HX-Request": True})
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_CONTAINER_ONLY")
+                self.assertBodyContains(response, "PREFIX_LIST_DEFAULT_MAX_DEPTH")
+                for prefix in self._get_queryset().all():
+                    if (
+                        prefix.ip_version == 4
+                        and prefix.parent is None
+                        and prefix.type == PrefixTypeChoices.TYPE_CONTAINER
+                    ):
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+                self.assertBodyContains(response, "nb-subtree")
+                self.assertBodyContains(response, "mdi-table-filter")
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        """Override base ListObjectsViewTestCase.test_table_with_indentation_is_removed_on_filter_or_sort for Prefix."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is removed on most filters"):
+            queryset = (
+                self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+            )
+            filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+            response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(
+                f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is present on hierarchy-preserving filter alone"):
+            response = self.client.get(f"{self._get_url('list')}?ip_version=4", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is not present on mixed filtering"):
+            response = self.client.get(
+                f"{self._get_url('list')}?ip_version=4&status=Active", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
         """
@@ -318,11 +487,11 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             + "?"
             + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
         )
-        add_ip_button = f'<a href="{add_ip_link}" class="btn btn-primary"><span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address</a>'
-        self.assertInHTML(add_ip_button, content)
+        self.assertIn(f'href="{escape(add_ip_link)}"', content)
+        self.assertIn("Add an IP Address", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_prefix_child_prefixes_table_list(self):
+    def test_prefix_descendant_prefixes_table_list(self):
         instance = Prefix.objects.create(
             prefix="5.5.10.0/23",
             namespace=self.namespace,
@@ -343,10 +512,20 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         content = extract_page_body(response.content.decode(response.charset))
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.0/30", strip_tags(content))
-        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Child Prefixes <span class="badge bg-primary">1</span></a></li>'
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Descendant Prefixes <span class="badge bg-primary">1</span></a></li>'
         self.assertInHTML(prefixes_tab, content)
         # Checks if the button is in the content.
         self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
+
+    def test_prefix_children_action(self):
+        self.add_permissions("ipam.view_prefix")
+        pfx_with_children = Prefix.objects.filter(children__isnull=False).first()
+        self.assertIsNotNone(pfx_with_children)
+        url = reverse("ipam:prefix_children", kwargs={"pk": pfx_with_children.pk})
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "components/htmx/subtree_children.html")
+        for child in pfx_with_children.children.all():
+            self.assertBodyContains(response, str(child.pk))
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1206,6 +1385,6 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            ' <strong>Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            '<strong>Ports</strong>: <ul class="errorlist" id="id_ports_error"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
             response_content,
         )

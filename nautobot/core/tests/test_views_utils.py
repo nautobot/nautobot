@@ -87,6 +87,23 @@ class CheckFilterForDisplayTest(TestCase):
                 expected_output,
             )
 
+        with self.subTest("Test prefixed field is still processed correctly"):
+            expected_output = {
+                "name": "scope-has_interfaces",
+                "display": "Has interfaces",
+                "values": [{"name": "example_field_value", "display": "example_field_value"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(
+                    device_filter_set_filters,
+                    "scope-has_interfaces",
+                    ["example_field_value"],
+                    prefix="scope",
+                ),
+                expected_output,
+            )
+
         # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
         # with self.subTest("Test get value display (also legacy filter ModelMultipleChoiceFilter)"):
         #     example_obj = DeviceType.objects.first()
@@ -267,7 +284,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, [self.vrfs[2], self.vrfs[4]], ordered=False)
+        self.assertQuerySetEqual(qs, [self.vrfs[2], self.vrfs[4]], ordered=False)
 
     def test_not_is_all_and_no_pk_list(self):
         """!is_all and !pk_list: Return empty queryset. This should not normally happen in practice."""
@@ -293,7 +310,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_all_filters_removed_flag_ignores_saved_view(self):
         """
@@ -310,7 +327,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             edit_all=True,
         )
         # Should return all VRFs, not just the one from the saved view
-        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_is_all_and_filter_query_params(self):
         """is_all and filter_query_params: Return queryset filtered by filter_query_params (description)"""
@@ -323,7 +340,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.filter(description="desc-1"), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.filter(description="desc-1"), ordered=False)
 
     def test_is_all_and_saved_view_id(self):
         """is_all and saved_view_id: Return queryset filtered by saved_view_filter_params (name)"""
@@ -336,7 +353,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=self.saved_view.id,
             action="change",
         )
-        self.assertQuerysetEqual(qs, [self.vrfs[5]], ordered=False)
+        self.assertQuerySetEqual(qs, [self.vrfs[5]], ordered=False)
 
     def test_is_all_and_not_saved_view_id_but_saved_view_filter_params(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
@@ -349,7 +366,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, [self.vrfs[7]], ordered=False)
+        self.assertQuerySetEqual(qs, [self.vrfs[7]], ordered=False)
 
     def test_queryset_respects_permissions(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
@@ -377,7 +394,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.filter(name=self.vrfs[2].name), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.filter(name=self.vrfs[2].name), ordered=False)
 
     def test_querydict_ignores(self):
         """is_all and not saved_view_id: Return queryset filtered by filter_query_params (name)"""
@@ -391,7 +408,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=None,
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.filter(name=self.vrfs[7].name), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.filter(name=self.vrfs[7].name), ordered=False)
 
     def test_no_valid_operation_found_raises(self):
         """If no valid operation is found, raise RuntimeError."""
@@ -439,7 +456,7 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id=self.saved_view_empty.id,
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.all(), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.all(), ordered=False)
 
     def test_bad_saved_view(self):
         """Test with a saved view ID that does not exist: Return no objects"""
@@ -452,4 +469,4 @@ class GetBulkQuerysetFromViewTestCase(TestCase):
             saved_view_id="00000000-0000-4000-8000-000000000000",  # valid UUID but does not exist
             action="change",
         )
-        self.assertQuerysetEqual(qs, VRF.objects.none(), ordered=False)
+        self.assertQuerySetEqual(qs, VRF.objects.none(), ordered=False)

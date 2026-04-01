@@ -1,0 +1,2 @@
+Fixed displaying Django messages after dependent objects creation.
+Fixed form error message wrapping.

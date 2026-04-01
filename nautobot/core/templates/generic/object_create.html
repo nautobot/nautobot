@@ -76,9 +76,72 @@
             {% endblock %}
         </div>
     </form>
+    <div class="modal fade" data-bs-backdrop="static" id="embedded_action_modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl" role="document">
+            <div
+                class="modal-content"
+                hx-on:htmx:before-swap="window.nb.embeddedAction.handleEnd(event);"
+                hx-on:htmx:load="jsify_form(this);"
+            ></div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block javascript %}
     {{ block.super }}
     {{ form.media }}
+    <script>
+        (() => {
+            const handleEnd = (event) => {
+                const obj = (() => {
+                    try {
+                        const obj = JSON.parse(event.detail.serverResponse);
+                        return obj?.id ? obj : undefined; // Valid object `id` indicates valid record.
+                    } catch (exception) {
+                        return undefined;
+                    }
+                })();
+
+                /*
+                 * Valid JSON object is returned only when object creation or search was successful, otherwise it is
+                 * expected to receive a rendered HTML template, a standard content eligible for HTMX swap, in which
+                 * case do nothing here and let HTMX default behaviors handle the rest.
+                 */
+                if (obj) {
+                    event.preventDefault(); // Prevent HTMX swap - JSON does not look nice when rendered as text.
+
+                    const targetField = document.querySelector(
+                        `#nb-create-form [name="${window.nb.embeddedAction.targetFieldName}"]`,
+                    );
+                    if (targetField) {
+                        const targetFieldValue = [...targetField.selectedOptions].map((option) => ({
+                            text: option.innerText,
+                            value: option.value,
+                        }));
+                        // If `multiple`, add selected object to already existing Select2 target field array of values.
+                        window.nb.select2.setSelect2Value(targetField, [
+                            ...(targetField.getAttribute('multiple') !== null ? targetFieldValue : []),
+                            { text: obj.display, value: obj.id },
+                        ]);
+                    }
+
+                    const modal = document.querySelector('#embedded_action_modal');
+                    bootstrap.Modal.getInstance(modal).hide();
+
+                    window.nb.messages.refreshMessages('{% url "messages" %}');
+                }
+            };
+
+            const handleStart = ({ targetFieldName }) => {
+                const modal = document.querySelector('#embedded_action_modal');
+                const content = modal.querySelector('.modal-content');
+                content.innerHTML =
+                    '<div class="spinner-border mx-auto my-16"><span class="visually-hidden">Loading...</span></div>';
+                window.nb.embeddedAction.targetFieldName = targetFieldName;
+            };
+
+            window.nb = window.nb || {};
+            window.nb.embeddedAction = { handleEnd, handleStart, targetFieldName: null };
+        })();
+    </script>
 {% endblock %}

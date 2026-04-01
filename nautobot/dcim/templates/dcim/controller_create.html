@@ -43,6 +43,7 @@
 {% endblock form %}
 
 {% block javascript %}
+    {{ block.super }}
     <script type="text/javascript">
         const controllerDevice = $('#id_controller_device');
         const controllerDeviceRedundancyGroup = $('#id_controller_device_redundancy_group');

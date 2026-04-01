@@ -244,7 +244,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assert https://github.com/nautobot/nautobot/issues/3503 is fixed.
         self.add_permissions("virtualization.view_virtualmachine")
         url = self._get_url("list") + "?sort=primary_ip"
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertBodyContains(response, "Virtual Machine 1")
         self.assertBodyContains(response, "Virtual Machine 2")
         self.assertBodyContains(response, "Virtual Machine 3")
