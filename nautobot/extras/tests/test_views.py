@@ -3143,7 +3143,35 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_custom_actions(self, _):
+        """GitRepository custom actions redirect instead of returning 403/404."""
+        instance = self._get_queryset().first()
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                # Without permissions, should get 403
+                response = self.client.post(url)
+                self.assertHttpStatus(response, 403)
+
+                # With permissions, should redirect to job result
+                self.add_permissions("extras.change_gitrepository")
+                self.add_permissions("extras.view_gitrepository")
+                with mock.patch(
+                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
+                    if action_name == "dryrun"
+                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
+                ) as mock_enqueue:
+                    job_result = mock.Mock()
+                    job_result.get_absolute_url.return_value = reverse(
+                        "extras:gitrepository_result", kwargs={"pk": instance.pk}
+                    )
+                    mock_enqueue.return_value = job_result
+                    response = self.client.post(url, follow=True)
+                    self.assertHttpStatus(response, 200)
+                    mock_enqueue.assert_called_once()
+                self.remove_permissions("extras.change_gitrepository")
+                self.remove_permissions("extras.view_gitrepository")
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):

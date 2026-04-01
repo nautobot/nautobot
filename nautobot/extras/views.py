@@ -2030,12 +2030,20 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
-        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
-    else:
-        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-        job_result = func(repository, request.user)
+        return HttpResponse("Unable to process request: No celery workers found.", status=503)
 
-    return redirect(job_result.get_absolute_url())
+    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+    job_result = func(repository, request.user)
+
+    # Guard against non-standard return values from enqueue helpers.
+    if not hasattr(job_result, "get_absolute_url"):
+        return HttpResponse(status=500)
+
+    job_url = job_result.get_absolute_url()
+    if not job_url:
+        return HttpResponse(status=500)
+
+    return redirect(job_url)
 
 
 class DatasourceContentsPanel(object_detail.Panel):
