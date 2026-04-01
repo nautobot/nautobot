@@ -16,6 +16,7 @@ from django.db import models
 from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
+from django.middleware.csrf import get_token
 from django.template import Context
 from django.template.defaultfilters import truncatechars
 from django.template.loader import render_to_string
@@ -465,6 +466,18 @@ class FormButton(Button):
         return {
             **super().get_extra_context(context),
             "form_id": self.form_id,
+        }
+
+
+class PostButton(Button):
+    """A Button that submits a POST request to the link URL."""
+
+    template_path = "components/button/postbutton.html"
+
+    def get_extra_context(self, context: Context):
+        return {
+            **super().get_extra_context(context),
+            "csrf_token": get_token(context.get("request")),
         }
 
 

@@ -39,6 +39,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
@@ -2049,6 +2050,8 @@ def check_and_call_git_repository_function(request, pk, func):
 class DatasourceContentsPanel(object_detail.Panel):
     """Panel that displays the 'Provided Data Types' table for Git repositories."""
 
+    context_object_key = None
+
     def __init__(self, *, context_data_key="datasource_contents", **kwargs):
         self.context_data_key = context_data_key
         kwargs.setdefault("body_wrapper_template_path", "components/panel/body_wrapper_key_value_table.html")
@@ -2056,7 +2059,7 @@ class DatasourceContentsPanel(object_detail.Panel):
 
     def render_body_content(self, context):
         datasource_contents = context.get(self.context_data_key, [])
-        obj = context.get("object")
+        obj = get_obj_from_context(context, self.context_object_key)
 
         if not datasource_contents:
             return format_html('<tr><td colspan="2">{}</td></tr>', helpers.placeholder(None))
@@ -2065,21 +2068,19 @@ class DatasourceContentsPanel(object_detail.Panel):
         for entry in datasource_contents:
             name_cell = format_html(
                 """
-                <span class="d-inline-flex align-items-center gap-2 text-nowrap">
-                    <span class="badge bg-info">
-                        <i class="mdi {}"></i>
-                    </span>
-                    <span>{}</span>
+                <span style="display: inline-block" class="badge bg-info">
+                    <span class="mdi {}"></span>
                 </span>
+                {}
                 """,
                 entry.icon,
-                entry.name.title(),
+                bettertitle(entry.name),
             )
-            provided = entry.content_identifier in getattr(obj, "provided_contents", [])
+            provided = entry.content_identifier in obj.provided_contents
             provided_cell = helpers.render_boolean(provided)
             rows.append(
                 format_html(
-                    '<tr><td class="align-middle">{}</td><td class="text-center align-middle">{}</td></tr>',
+                    "<tr><td>{}</td><td>{}</td></tr>",
                     name_cell,
                     provided_cell,
                 )
@@ -2097,13 +2098,27 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     table_class = tables.GitRepositoryTable
     view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
 
+    class GitRepositoryObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+            if key == "branch":
+                branch_display = format_html("<code>{}</code>", value)
+                if obj.current_head:
+                    branch_display = format_html(
+                        "{} (checked out locally at commit <code>{}</code>)", branch_display, obj.current_head
+                    )
+                else:
+                    branch_display = format_html("{} (not locally checked out yet)", branch_display)
+                return branch_display
+            return super().render_value(key, value, context)
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            GitRepositoryObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 label="Repository Details",
-                fields=["remote_url", "branch", "current_head", "secrets_group"],
+                fields=["remote_url", "branch", "secrets_group"],
             ),
             DatasourceContentsPanel(
                 weight=100,
@@ -2121,7 +2136,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             ),
         ),
         extra_buttons=(
-            object_detail.Button(
+            object_detail.PostButton(
                 weight=100,
                 color=ButtonActionColorChoices.INFO,
                 link_name="extras:gitrepository_dryrun",
@@ -2129,7 +2144,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
                 icon="mdi-book-refresh",
                 required_permissions=["extras.change_gitrepository"],
             ),
-            object_detail.Button(
+            object_detail.PostButton(
                 weight=200,
                 color=ButtonColorChoices.BLUE,
                 link_name="extras:gitrepository_sync",

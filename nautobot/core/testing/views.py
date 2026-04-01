@@ -389,7 +389,7 @@ class ViewTestCases:
                     if not getattr(self.model, "is_data_compliance_model", False):
                         continue
                     if not getattr(base_view, "object_detail_content", None):
-                        self.skipTest("Model is not using data compliance validation")
+                        continue
                 with self.subTest(action=action_func.url_name):
                     if action_func.url_name in self.custom_action_required_permissions:
                         required_permissions = self.custom_action_required_permissions[action_func.url_name]
