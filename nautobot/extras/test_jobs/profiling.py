@@ -1,6 +1,3 @@
-import pstats
-import tempfile
-
 from nautobot.core.celery import register_jobs
 from nautobot.extras.jobs import get_task_logger, Job
 
@@ -22,10 +19,6 @@ class TestProfilingJob(Job):
         logger.info("Profiling test.")
 
         return []
-
-    def after_return(self, status, retval, task_id, args, kwargs, einfo):
-        super().after_return(status, retval, task_id, args, kwargs, einfo=einfo)
-        pstats.Stats(f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats")
 
 
 register_jobs(TestProfilingJob)
