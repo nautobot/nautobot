@@ -43,6 +43,7 @@ from nautobot.extras.choices import (
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
+    ScheduledJobStatusChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -3197,15 +3198,71 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
 
+    def test_on_workflow_initiated(self):
+        """Should set status to PENDING, approval_required to True and disable the job."""
+        approval_workflow = mock.Mock()
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.daily_utc_job.on_workflow_initiated(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.PENDING)
+        self.assertTrue(self.daily_utc_job.approval_required)
+        self.assertFalse(self.daily_utc_job.enabled)
+
+    def test_on_workflow_approved(self):
+        """Should set status to ACTIVE, enable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_approved(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.ACTIVE)
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+
+    def test_on_workflow_denied(self):
+        """Should set status to DENIED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_denied(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.DENIED)
+        self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+
     def test_on_workflow_canceled(self):
-        """Should change decision_date and schedule_job should be disabled."""
-        decision_date = datetime(2025, 1, 1)
+        """Should set status to CANCELED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         approval_workflow = mock.Mock()
         approval_workflow.decision_date = decision_date
         self.assertIsNone(self.daily_utc_job.decision_date)
         self.daily_utc_job.on_workflow_canceled(approval_workflow)
-        self.assertEqual(self.daily_utc_job.decision_date, approval_workflow.decision_date)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.CANCELED)
         self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+
+    def test_save_sets_completed_when_enabled_turned_off(self):
+        """When celery beat finishes a one-off job it sets enabled=False — status should flip to COMPLETED."""
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.ACTIVE)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.status, ScheduledJobStatusChoices.COMPLETED)
+
+    def test_save_does_not_override_non_active_status_when_disabled(self):
+        """Disabling a job that is already PENDING/DENIED/CANCELED should not overwrite the status."""
+        for status in [
+            ScheduledJobStatusChoices.PENDING,
+            ScheduledJobStatusChoices.DENIED,
+            ScheduledJobStatusChoices.CANCELED,
+        ]:
+            with self.subTest(status=status):
+                self.daily_utc_job.enabled = False
+                self.daily_utc_job.status = status
+                self.daily_utc_job.save()
+                self.daily_utc_job.refresh_from_db()
+                self.assertEqual(self.daily_utc_job.status, status)
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")

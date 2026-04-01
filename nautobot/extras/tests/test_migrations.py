@@ -8,7 +8,13 @@ from django.utils.timezone import now
 from django_test_migrations.migrator import Migrator
 
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    CustomFieldTypeChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+    ScheduledJobStatusChoices,
+)
 from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
@@ -234,3 +240,100 @@ class TestFailingApprovalMigration(TestCase):
         self.assertIn("Migration passed: No approval_required jobs or scheduled jobs found.", output)
         self.assertNotIn(self.job.name, output)
         self.assertNotIn(self.scheduled_job.name, output)
+
+
+@tag("migration_test")
+class TestScheduledJobStatusMigration(TestCase):
+    def setUp(self):
+        self.migrator = Migrator(database="default")
+        old_state = self.migrator.apply_initial_migration(("extras", "0134_scheduledjob_status"))
+
+        Job = old_state.apps.get_model("extras", "Job")
+        ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")
+        JobQueue = old_state.apps.get_model("extras", "JobQueue")
+        User = old_state.apps.get_model("users", "User")
+        ApprovalWorkflow = old_state.apps.get_model("extras", "ApprovalWorkflow")
+        ApprovalWorkflowDefinition = old_state.apps.get_model("extras", "ApprovalWorkflowDefinition")
+        ContentType = old_state.apps.get_model("contenttypes", "ContentType")
+
+        default_job_queue = JobQueue.objects.create(
+            name="Test Queue",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
+        job = Job.objects.create(
+            module_name="test_migration_job",
+            job_class_name="TestMigrationJob",
+            grouping="test",
+            name="test_job",
+            default_job_queue=default_job_queue,
+        )
+        user = User.objects.create(username="user1", is_active=True)
+        scheduled_job_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
+
+        common = dict(
+            task="test_migration_job.TestMigrationJob",
+            job_model=job,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=user,
+            start_time=now(),
+        )
+
+        self.active_job = ScheduledJob.objects.create(name="active-job", enabled=True, **common)
+        self.pending_job = ScheduledJob.objects.create(name="pending-job", enabled=True, **common)
+        self.denied_job = ScheduledJob.objects.create(name="denied-job", enabled=False, **common)
+        self.canceled_job = ScheduledJob.objects.create(name="canceled-job", enabled=False, **common)
+        self.completed_job = ScheduledJob.objects.create(name="completed-job", enabled=False, **common)
+        self.completed_after_approval_job = ScheduledJob.objects.create(
+            name="completed-after-approval-job", enabled=False, **common
+        )
+
+        approval_workflow_definition = ApprovalWorkflowDefinition.objects.filter(
+            model_content_type=scheduled_job_ct,
+        ).first()
+
+        def make_workflow(scheduled_job, state):
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=approval_workflow_definition,
+                object_under_review_content_type=scheduled_job_ct,
+                object_under_review_object_id=scheduled_job.pk,
+                current_state=state,
+            )
+
+        make_workflow(self.pending_job, ApprovalWorkflowStateChoices.PENDING)
+        make_workflow(self.denied_job, ApprovalWorkflowStateChoices.DENIED)
+        make_workflow(self.canceled_job, ApprovalWorkflowStateChoices.CANCELED)
+        # completed_after_approval_job simulates a one-off that was approved and ran —
+        # workflow exists but in APPROVED state, so it doesn't affect status resolution
+        make_workflow(self.completed_after_approval_job, ApprovalWorkflowStateChoices.APPROVED)
+
+    def test_active_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(ScheduledJob.objects.get(name="active-job").status, ScheduledJobStatusChoices.ACTIVE)
+
+    def test_pending_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(ScheduledJob.objects.get(name="pending-job").status, ScheduledJobStatusChoices.PENDING)
+
+    def test_denied_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(ScheduledJob.objects.get(name="denied-job").status, ScheduledJobStatusChoices.DENIED)
+
+    def test_canceled_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(ScheduledJob.objects.get(name="canceled-job").status, ScheduledJobStatusChoices.CANCELED)
+
+    def test_completed_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(ScheduledJob.objects.get(name="completed-job").status, ScheduledJobStatusChoices.COMPLETED)
+
+    def test_completed_after_approval_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0135_scheduledjob_status_data_migration"))
+        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+        self.assertEqual(
+            ScheduledJob.objects.get(name="completed-after-approval-job").status, ScheduledJobStatusChoices.COMPLETED
+        )
