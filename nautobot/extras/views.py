@@ -2596,7 +2596,7 @@ class JobUIViewSet(NautobotUIViewSet):
     @action(
         detail=False,
         methods=["get", "post"],
-        url_path=r"(?P<class_path>[^/]+(?:\.[^/]+)+)/run",
+        url_path=r"(?P<class_path>[^/]*\.[^/]+|[^/]+/[^/]+/[^/]+)/run",
         url_name="run_by_class_path",
         custom_view_base_action="run",
     )
