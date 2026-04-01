@@ -537,7 +537,6 @@ class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
                         "help_text": item.help_text,
                         "value": getattr(config, name),
                         "form_field": form[name],
-                        "is_file": False,  # adjust if file fields exist
                     }
                 )
 

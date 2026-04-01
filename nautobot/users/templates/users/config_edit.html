@@ -1,4 +1,4 @@
-{% extends "admin/base.html" %}
+{% extends "admin/constance/change_list.html" %}
 {% load admin_list static i18n %}
 {% load helpers %}
 {% if messages %}
@@ -12,7 +12,7 @@
 {% block breadcrumbs %}
     <ol class="breadcrumb">
         <li class="breadcrumb-item">Administration</li>
-        <li class="breadcrumb-item active" aria-current="page">Configuration</li>
+        <li class="breadcrumb-item active" aria-current="page">Config</li>
     </ol>
 {% endblock %}
 
