@@ -155,11 +155,9 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
         }
     )
     name = MultiValueCharFilter(
-        lookup_expr="icontains",
         label="Name",
     )
     vpn_id = MultiValueCharFilter(
-        lookup_expr="icontains",
         label="VPN ID",
     )
     vpn_profile = NaturalKeyOrPKMultipleChoiceFilter(
