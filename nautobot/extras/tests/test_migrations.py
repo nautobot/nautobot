@@ -270,13 +270,13 @@ class TestScheduledJobStatusMigration(TestCase):
         user = User.objects.create(username="user1", is_active=True)
         scheduled_job_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
 
-        common = dict(
-            task="test_migration_job.TestMigrationJob",
-            job_model=job,
-            interval=JobExecutionType.TYPE_IMMEDIATELY,
-            user=user,
-            start_time=now(),
-        )
+        common = {
+            "task": "test_migration_job.TestMigrationJob",
+            "job_model": job,
+            "interval": JobExecutionType.TYPE_IMMEDIATELY,
+            "user": user,
+            "start_time": now(),
+        }
 
         self.active_job = ScheduledJob.objects.create(name="active-job", enabled=True, **common)
         self.pending_job = ScheduledJob.objects.create(name="pending-job", enabled=True, **common)
