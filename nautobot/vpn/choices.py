@@ -243,12 +243,12 @@ class VPNServiceTypeChoices(ChoiceSet):
         )),
     )
 
-    # Point-to-Point types (limited to 2 terminations)
+    # Point-to-point service types (limited to 2 terminations)
     P2P = (
         TYPE_VPWS,
+        TYPE_EVPN_VPWS,
         TYPE_EPL,
-        TYPE_EPLAN,
-        TYPE_EPTREE,
+        TYPE_EVPL,
     )
 
     # Types that use VNI (VXLAN Network Identifier) — range 1 to 16,777,214

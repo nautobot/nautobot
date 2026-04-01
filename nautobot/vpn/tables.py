@@ -240,9 +240,9 @@ class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
         verbose_name="VPN Tunnels",
         url_params={"vpn": "pk"},
     )
-    attachment_count = LinkedCountColumn(
-        viewname="vpn:vpnattachment_list",
-        verbose_name="Attachments",
+    termination_count = LinkedCountColumn(
+        viewname="vpn:vpntermination_list",
+        verbose_name="Terminations",
         url_params={"vpn": "pk"},
     )
     vpn_profile = tables.Column(linkify=True)
@@ -259,12 +259,11 @@ class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
-            "attachment_count",
+            "termination_count",
             "vpn_profile",
             "vpn_id",
             "service_type",
             "status",
-            "identifier",
             "role",
             "tenant",
         )
@@ -274,11 +273,10 @@ class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
-            "attachment_count",
+            "termination_count",
             "vpn_id",
             "service_type",
             "status",
-            "identifier",
             "role",
             "tenant",
             "actions",
@@ -392,27 +390,29 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         )
 
 
-class VPNAttachmentTable(BaseTable):
+class VPNTerminationTable(BaseTable):
     # pylint: disable=too-few-public-methods
-    """Table for VPNAttachment list view."""
+    """Table for VPNTermination list view."""
 
     pk = ToggleColumn()
     vpn = tables.Column(linkify=True)
-    assigned_object_type = tables.Column(verbose_name="Object Type")
+    assigned_object_type = tables.Column(verbose_name="Object Type", orderable=False)
     assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Object")
     assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Parent")
-    actions = ButtonsColumn(models.VPNAttachment)
+    actions = ButtonsColumn(models.VPNTermination)
+    tags = TagColumn(url_name="vpn:vpntermination_list")
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
 
-        model = models.VPNAttachment
+        model = models.VPNTermination
         fields = (
             "pk",
             "vpn",
             "assigned_object_type",
             "assigned_object_parent",
             "assigned_object",
+            "tags",
         )
         default_columns = (
             "pk",

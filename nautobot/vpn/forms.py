@@ -409,6 +409,7 @@ class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ances
         widget=StaticSelect2,
         label="Service Type",
     )
+    vpn_id = forms.CharField(required=False, label="Identifier")
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         required=False,
@@ -426,7 +427,6 @@ class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ances
             "vpn_profile",
             "service_type",
             "status",
-            "identifier",
             "role",
             "tenant_group",
             "tenant",
@@ -456,12 +456,12 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
         widget=StaticSelect2,
         label="Service Type",
     )
+    vpn_id = forms.CharField(required=False, label="Identifier")
     status = DynamicModelChoiceField(
         queryset=Status.objects.all(),
         required=False,
         query_params={"content_types": models.VPN._meta.label_lower},
     )
-    identifier = forms.IntegerField(required=False, label="Identifier")
 
     class Meta:
         """Meta attributes."""
@@ -470,7 +470,7 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
         nullable_fields = [
             "description",
             "vpn_profile",
-            "identifier",
+            "vpn_id",
         ]
 
 
@@ -490,7 +490,7 @@ class VPNFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterF
         required=False,
         widget=StaticSelect2Multiple(),
     )
-    identifier = forms.IntegerField(required=False, label="Identifier")
+    vpn_id = forms.CharField(required=False, label="Identifier")
     tags = TagFilterField(model)
 
     field_order = [
@@ -756,57 +756,89 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, 
     ]
 
 #
-# VPN attachment forms
+# VPN termination forms
 #
 
 
-class VPNAttachmentForm(NautobotModelForm):
-    """Form for creating and updating VPNAttachment."""
+class VPNTerminationForm(NautobotModelForm):
+    """Form for creating and updating VPNTermination."""
 
-    vpn = forms.ModelChoiceField(
+    vpn = DynamicModelChoiceField(
         queryset=models.VPN.objects.all(),
         required=True,
         label="VPN",
     )
-    vlan = forms.ModelChoiceField(
+    vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         label="VLAN",
     )
-    interface = forms.ModelChoiceField(
+    interface = DynamicModelChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Interface",
     )
-    vm_interface = forms.ModelChoiceField(
+    vm_interface = DynamicModelChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="VM Interface",
     )
 
     class Meta:
-        model = models.VPNAttachment
+        model = models.VPNTermination
         fields = ["vpn", "vlan", "interface", "vm_interface", "tags"]
 
     def clean(self):
-        cleaned_data = getattr(self, "cleaned_data", None) or super().clean() or {}
-        selected = []
-        for field in ("vlan", "interface", "vm_interface"):
-            if cleaned_data.get(field) or self.data.get(field):
-                selected.append(field)
+        super().clean()
+        cleaned_data = self.cleaned_data
+        selected = [field for field in ("vlan", "interface", "vm_interface") if cleaned_data.get(field)]
         if len(selected) != 1:
             raise forms.ValidationError("Exactly one of VLAN, interface, or VM interface must be selected.")
         return cleaned_data
 
 
-class VPNAttachmentFilterForm(NautobotFilterForm):
-    """Filter form for VPNAttachment list view."""
+class VPNTerminationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+    """VPNTermination bulk edit form."""
 
-    model = models.VPNAttachment
+    pk = forms.ModelMultipleChoiceField(
+        queryset=models.VPNTermination.objects.all(), widget=forms.MultipleHiddenInput
+    )
+    vpn = DynamicModelChoiceField(
+        queryset=models.VPN.objects.all(),
+        required=False,
+        label="VPN",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.VPNTermination
+        nullable_fields = []
+
+
+class VPNTerminationFilterForm(NautobotFilterForm):
+    """Filter form for VPNTermination list view."""
+
+    model = models.VPNTermination
     q = forms.CharField(required=False, label="Search")
     vpn = DynamicModelChoiceField(
         queryset=models.VPN.objects.all(),
         required=False,
         label="VPN",
+    )
+    vlan = DynamicModelChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        label="VLAN",
+    )
+    interface = DynamicModelChoiceField(
+        queryset=Interface.objects.all(),
+        required=False,
+        label="Interface",
+    )
+    vm_interface = DynamicModelChoiceField(
+        queryset=VMInterface.objects.all(),
+        required=False,
+        label="VM Interface",
     )
     tags = TagFilterField(model)

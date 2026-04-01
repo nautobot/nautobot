@@ -94,18 +94,18 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
-                name="Attachments",
+                name="Terminations",
                 weight=200,
                 items=(
                     NavMenuItem(
-                        link="vpn:vpnattachment_list",
-                        name="VPN Attachments",
+                        link="vpn:vpntermination_list",
+                        name="VPN Terminations",
                         weight=100,
-                        permissions=["vpn.view_vpnattachment"],
+                        permissions=["vpn.view_vpntermination"],
                         buttons=(
                             NavMenuAddButton(
-                                link="vpn:vpnattachment_add",
-                                permissions=["vpn.add_vpnattachment"],
+                                link="vpn:vpntermination_add",
+                                permissions=["vpn.add_vpntermination"],
                             ),
                         ),
                     ),

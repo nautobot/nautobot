@@ -175,31 +175,36 @@ class VPNOverlayModelTestCase(TestCase):
 
     @classmethod
     def _get_available_interfaces(cls):
-        used = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
+        used = models.VPNTermination.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
         return Interface.objects.exclude(pk__in=used).filter(device__isnull=False)
+
+    @classmethod
+    def _get_available_vlans(cls):
+        used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        return VLAN.objects.exclude(pk__in=used)
 
     @classmethod
     def setUpTestData(cls):
         cls.status = cls._get_vpn_status()
 
-    def test_can_add_attachment_non_p2p(self):
+    def test_can_add_termination_non_p2p(self):
         vpn = models.VPN.objects.create(
             name="VXLAN Service",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=10001,
+            vpn_id="10001",
         )
-        self.assertTrue(vpn.can_add_attachment)
+        self.assertTrue(vpn.can_add_termination)
 
-    def test_can_add_attachment_p2p_under_limit(self):
+    def test_can_add_termination_p2p_under_limit(self):
         vpn = models.VPN.objects.create(
             name="VPWS Service",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
             status=self.status,
         )
-        self.assertTrue(vpn.can_add_attachment)
+        self.assertTrue(vpn.can_add_termination)
 
-    def test_can_add_attachment_p2p_at_limit(self):
+    def test_can_add_termination_p2p_at_limit(self):
         vpn = models.VPN.objects.create(
             name="VPWS Limited Service",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
@@ -207,22 +212,53 @@ class VPNOverlayModelTestCase(TestCase):
         )
         interfaces = list(self._get_available_interfaces()[:2])
         if len(interfaces) < 2:
-            self.skipTest("Need at least two unused interfaces for attachment testing.")
+            self.skipTest("Need at least two unused interfaces for termination testing.")
 
-        models.VPNAttachment.objects.create(vpn=vpn, interface=interfaces[0])
-        models.VPNAttachment.objects.create(vpn=vpn, interface=interfaces[1])
-        self.assertFalse(vpn.can_add_attachment)
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
+        self.assertFalse(vpn.can_add_termination)
 
-    def test_identifier_valid_vxlan_vni(self):
+    def test_can_add_termination_eplan_not_limited_to_two(self):
+        vpn = models.VPN.objects.create(
+            name="EPLAN Service",
+            service_type=choices.VPNServiceTypeChoices.TYPE_EPLAN,
+            status=self.status,
+        )
+        vlans = list(self._get_available_vlans()[:3])
+        if len(vlans) < 3:
+            self.skipTest("Need at least three unused VLANs for EPLAN termination testing.")
+
+        models.VPNTermination.objects.create(vpn=vpn, vlan=vlans[0])
+        models.VPNTermination.objects.create(vpn=vpn, vlan=vlans[1])
+        self.assertTrue(vpn.can_add_termination)
+
+        termination = models.VPNTermination(vpn=vpn, vlan=vlans[2])
+        termination.clean()
+
+    def test_can_add_termination_evpn_vpws_at_limit(self):
+        vpn = models.VPN.objects.create(
+            name="EVPN VPWS Service",
+            service_type=choices.VPNServiceTypeChoices.TYPE_EVPN_VPWS,
+            status=self.status,
+        )
+        interfaces = list(self._get_available_interfaces()[:2])
+        if len(interfaces) < 2:
+            self.skipTest("Need at least two unused interfaces for EVPN VPWS termination testing.")
+
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
+        self.assertFalse(vpn.can_add_termination)
+
+    def test_vpn_id_valid_vxlan_vni(self):
         vpn = models.VPN(
             name="Valid VNI Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=10000,
+            vpn_id="10000",
         )
         vpn.full_clean()
 
-    def test_identifier_required_for_vxlan_service(self):
+    def test_vpn_id_required_for_vxlan_service(self):
         vpn = models.VPN(
             name="Missing VNI Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
@@ -230,50 +266,50 @@ class VPNOverlayModelTestCase(TestCase):
         )
         with self.assertRaises(ValidationError) as context:
             vpn.full_clean()
-        self.assertIn("identifier", context.exception.message_dict)
+        self.assertIn("vpn_id", context.exception.message_dict)
 
-    def test_identifier_vxlan_vni_too_high(self):
+    def test_vpn_id_vxlan_vni_too_high(self):
         vpn = models.VPN(
             name="High VNI Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=16777215,
+            vpn_id="16777215",
         )
         with self.assertRaises(ValidationError) as context:
             vpn.full_clean()
-        self.assertIn("identifier", context.exception.message_dict)
+        self.assertIn("vpn_id", context.exception.message_dict)
 
-    def test_identifier_vxlan_boundary_values(self):
-        for identifier in (
+    def test_vpn_id_vxlan_boundary_values(self):
+        for vpn_id in (
             choices.VPNServiceTypeChoices.VXLAN_VNI_MIN,
             choices.VPNServiceTypeChoices.VXLAN_VNI_MAX,
         ):
-            with self.subTest(identifier=identifier):
+            with self.subTest(vpn_id=vpn_id):
                 vpn = models.VPN(
-                    name=f"Boundary VNI {identifier}",
+                    name=f"Boundary VNI {vpn_id}",
                     service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
                     status=self.status,
-                    identifier=identifier,
+                    vpn_id=str(vpn_id),
                 )
                 vpn.full_clean()
 
-    def test_identifier_negative_rejected(self):
+    def test_vpn_id_negative_rejected(self):
         vpn = models.VPN(
             name="Negative ID Test",
-            service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+            service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=-1,
+            vpn_id="-1",
         )
         with self.assertRaises(ValidationError) as context:
             vpn.full_clean()
-        self.assertIn("identifier", context.exception.message_dict)
+        self.assertIn("vpn_id", context.exception.message_dict)
 
-    def test_identifier_non_vxlan_type_allows_large_value(self):
+    def test_vpn_id_non_vxlan_type_allows_large_value(self):
         vpn = models.VPN(
             name="Large VPLS ID Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
             status=self.status,
-            identifier=99999999,
+            vpn_id="99999999",
         )
         vpn.full_clean()
 
@@ -286,15 +322,15 @@ class VPNOverlayModelTestCase(TestCase):
             name="VPN Tenant Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=11000,
+            vpn_id="11000",
             tenant=tenant,
         )
         self.assertEqual(vpn.tenant, tenant)
         self.assertIn(vpn, tenant.vpns.all())
 
 
-class VPNAttachmentModelTestCase(TestCase):
-    """Behavioral tests for VPNAttachment."""
+class VPNTerminationModelTestCase(TestCase):
+    """Behavioral tests for VPNTermination."""
 
     @classmethod
     def _get_vpn_status(cls):
@@ -307,27 +343,27 @@ class VPNAttachmentModelTestCase(TestCase):
 
     @classmethod
     def _get_available_interfaces(cls):
-        used = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
+        used = models.VPNTermination.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
         return Interface.objects.exclude(pk__in=used).filter(device__isnull=False)
 
     @classmethod
     def _get_available_vlans(cls):
-        used = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used)
 
     @classmethod
     def _get_available_vm_interfaces(cls):
-        used = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list("vm_interface_id", flat=True)
+        used = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list("vm_interface_id", flat=True)
         return VMInterface.objects.exclude(pk__in=used)
 
     @classmethod
     def setUpTestData(cls):
         cls.status = cls._get_vpn_status()
         cls.vpn = models.VPN.objects.create(
-            name="VPN For Attachment Tests",
+            name="VPN For Termination Tests",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=cls.status,
-            identifier=12000,
+            vpn_id="12000",
         )
 
     def test_str_with_assigned_object(self):
@@ -335,13 +371,13 @@ class VPNAttachmentModelTestCase(TestCase):
         if vlan is None:
             self.skipTest("No unused VLAN available.")
 
-        attachment = models.VPNAttachment.objects.create(vpn=self.vpn, vlan=vlan)
-        self.assertEqual(str(attachment), f"{vlan} <> {self.vpn}")
+        termination = models.VPNTermination.objects.create(vpn=self.vpn, vlan=vlan)
+        self.assertEqual(str(termination), f"{vlan} <> {self.vpn}")
 
     def test_clean_requires_exactly_one_object(self):
-        attachment = models.VPNAttachment(vpn=self.vpn)
+        termination = models.VPNTermination(vpn=self.vpn)
         with self.assertRaises(ValidationError):
-            attachment.clean()
+            termination.clean()
 
     def test_clean_rejects_multiple_objects(self):
         vlan = self._get_available_vlans().first()
@@ -349,13 +385,13 @@ class VPNAttachmentModelTestCase(TestCase):
         if vlan is None or interface is None:
             self.skipTest("Need both an unused VLAN and interface.")
 
-        attachment = models.VPNAttachment(vpn=self.vpn, vlan=vlan, interface=interface)
+        termination = models.VPNTermination(vpn=self.vpn, vlan=vlan, interface=interface)
         with self.assertRaises(ValidationError):
-            attachment.clean()
+            termination.clean()
 
     def test_clean_p2p_limit_exceeded(self):
         vpn = models.VPN.objects.create(
-            name="P2P Attachment Test",
+            name="P2P Termination Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
             status=self.status,
         )
@@ -363,49 +399,49 @@ class VPNAttachmentModelTestCase(TestCase):
         if len(interfaces) < 3:
             self.skipTest("Need at least three unused interfaces.")
 
-        models.VPNAttachment.objects.create(vpn=vpn, interface=interfaces[0])
-        models.VPNAttachment.objects.create(vpn=vpn, interface=interfaces[1])
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
+        models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
 
-        attachment = models.VPNAttachment(vpn=vpn, interface=interfaces[2])
+        termination = models.VPNTermination(vpn=vpn, interface=interfaces[2])
         with self.assertRaises(ValidationError):
-            attachment.clean()
+            termination.clean()
 
-    def test_duplicate_attachment_rejected_by_constraint(self):
+    def test_duplicate_termination_rejected_by_constraint(self):
         interface = self._get_available_interfaces().first()
         if interface is None:
             self.skipTest("No unused interface available.")
 
-        models.VPNAttachment.objects.create(vpn=self.vpn, interface=interface)
+        models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
         with self.assertRaises(IntegrityError):
-            models.VPNAttachment.objects.create(vpn=self.vpn, interface=interface)
+            models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
 
-    def test_attachment_with_interface(self):
+    def test_termination_with_interface(self):
         interface = self._get_available_interfaces().first()
         if interface is None:
             self.skipTest("No unused interface available.")
 
-        attachment = models.VPNAttachment.objects.create(vpn=self.vpn, interface=interface)
-        self.assertEqual(attachment.assigned_object, interface)
-        self.assertEqual(attachment.assigned_object_type, "dcim.interface")
-        self.assertEqual(attachment.assigned_object_parent, interface.device)
+        termination = models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
+        self.assertEqual(termination.assigned_object, interface)
+        self.assertEqual(termination.assigned_object_type, "dcim.interface")
+        self.assertEqual(termination.assigned_object_parent, interface.device)
 
-    def test_attachment_with_vlan(self):
+    def test_termination_with_vlan(self):
         vlan = self._get_available_vlans().first()
         if vlan is None:
             self.skipTest("No unused VLAN available.")
 
-        attachment = models.VPNAttachment.objects.create(vpn=self.vpn, vlan=vlan)
-        self.assertEqual(attachment.assigned_object, vlan)
-        self.assertEqual(attachment.assigned_object_type, "ipam.vlan")
+        termination = models.VPNTermination.objects.create(vpn=self.vpn, vlan=vlan)
+        self.assertEqual(termination.assigned_object, vlan)
+        self.assertEqual(termination.assigned_object_type, "ipam.vlan")
 
-    def test_attachment_with_vm_interface(self):
+    def test_termination_with_vm_interface(self):
         vm_interface = self._get_available_vm_interfaces().first()
         if vm_interface is None:
             self.skipTest("No unused VM interface available.")
 
-        attachment = models.VPNAttachment.objects.create(vpn=self.vpn, vm_interface=vm_interface)
-        self.assertEqual(attachment.assigned_object, vm_interface)
-        self.assertEqual(attachment.assigned_object_type, "virtualization.vminterface")
+        termination = models.VPNTermination.objects.create(vpn=self.vpn, vm_interface=vm_interface)
+        self.assertEqual(termination.assigned_object, vm_interface)
+        self.assertEqual(termination.assigned_object_type, "virtualization.vminterface")
 
     def test_cascade_delete_on_vpn_delete(self):
         interface = self._get_available_interfaces().first()
@@ -413,13 +449,13 @@ class VPNAttachmentModelTestCase(TestCase):
             self.skipTest("No unused interface available.")
 
         vpn = models.VPN.objects.create(
-            name="Cascade Delete Attachment Test",
+            name="Cascade Delete Termination Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=self.status,
-            identifier=13000,
+            vpn_id="13000",
         )
-        attachment = models.VPNAttachment.objects.create(vpn=vpn, interface=interface)
-        attachment_pk = attachment.pk
+        termination = models.VPNTermination.objects.create(vpn=vpn, interface=interface)
+        termination_pk = termination.pk
 
         vpn.delete()
-        self.assertFalse(models.VPNAttachment.objects.filter(pk=attachment_pk).exists())
+        self.assertFalse(models.VPNTermination.objects.filter(pk=termination_pk).exists())

@@ -250,8 +250,8 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         fields = "__all__"
 
 
-class VPNAttachmentFilterSet(NautobotFilterSet):
-    """Filter for VPNAttachment."""
+class VPNTerminationFilterSet(NautobotFilterSet):
+    """Filter for VPNTermination."""
 
     q = SearchFilter(
         filter_predicates={
@@ -268,20 +268,17 @@ class VPNAttachmentFilterSet(NautobotFilterSet):
     )
     vlan = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
-        to_field_name="name",
-        label="VLAN (name or ID)",
+        label="VLAN",
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
-        to_field_name="name",
-        label="Interface (name or ID)",
+        label="Interface",
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
-        to_field_name="name",
-        label="VM Interface (name or ID)",
+        label="VM Interface",
     )
 
     class Meta:
-        model = models.VPNAttachment
-        fields = ["id", "vpn", "vlan", "interface", "vm_interface"]
+        model = models.VPNTermination
+        fields = "__all__"

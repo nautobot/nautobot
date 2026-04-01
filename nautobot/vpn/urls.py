@@ -11,10 +11,9 @@ router.register("vpn-phase-2-policies", views.VPNPhase2PolicyUIViewSet)
 router.register("vpns", views.VPNUIViewSet)
 router.register("vpn-tunnels", views.VPNTunnelUIViewSet)
 router.register("vpn-tunnel-endpoints", views.VPNTunnelEndpointUIViewSet)
-router.register("vpn-attachments", views.VPNAttachmentUIViewSet)
+router.register("vpn-terminations", views.VPNTerminationUIViewSet)
 
 
 
 urlpatterns = []
 urlpatterns += router.urls
-

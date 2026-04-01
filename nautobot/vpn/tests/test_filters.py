@@ -120,13 +120,13 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
                 name="VPN Filter VXLAN",
                 service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
                 status=active,
-                identifier=18001,
+                vpn_id="18001",
             )
             models.VPN.objects.create(
                 name="VPN Filter VPLS",
                 service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
                 status=active,
-                identifier=18002,
+                vpn_id="18002",
             )
 
     def test_filter_by_service_type(self):
@@ -135,11 +135,11 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
         filtered = self.filterset({"service_type": [choices.VPNServiceTypeChoices.TYPE_VXLAN]}, queryset).qs
         self.assertQuerysetEqualAndNotEmpty(filtered, expected, ordered=False)
 
-    def test_filter_by_identifier(self):
+    def test_filter_by_vpn_id(self):
         queryset = self.queryset
-        vpn = queryset.filter(identifier__isnull=False).first()
+        vpn = queryset.exclude(vpn_id="").first()
         self.assertIsNotNone(vpn)
-        filtered = self.filterset({"identifier": vpn.identifier}, queryset).qs
+        filtered = self.filterset({"vpn_id": vpn.vpn_id}, queryset).qs
         self.assertTrue(filtered.filter(pk=vpn.pk).exists())
 
     def test_search_filter_matches_overlay_fields(self):
@@ -186,24 +186,24 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
 
-class VPNAttachmentFilterTestCase(TestCase):
-    """VPNAttachment filter tests."""
+class VPNTerminationFilterTestCase(TestCase):
+    """VPNTermination filter tests."""
 
     @classmethod
     def _get_available_vlans(cls):
-        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        used_vlan_ids = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
     def _get_available_interfaces(cls):
-        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+        used_interface_ids = models.VPNTermination.objects.exclude(interface__isnull=True).values_list(
             "interface_id", flat=True
         )
         return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
     def _get_available_vm_interfaces(cls):
-        used_vm_interface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+        used_vm_interface_ids = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
             "vm_interface_id", flat=True
         )
         return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
@@ -213,29 +213,38 @@ class VPNAttachmentFilterTestCase(TestCase):
         active = Status.objects.get(name="Active")
         active.content_types.add(ContentType.objects.get_for_model(models.VPN))
         cls.vpn = models.VPN.objects.create(
-            name="VPN Attachment Filter Test",
+            name="VPN Termination Filter Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=active,
-            identifier=15000,
+            vpn_id="15000",
         )
 
-        cls.attachments = []
+        cls.terminations = []
         vlan = cls._get_available_vlans().first()
         interface = cls._get_available_interfaces().first()
         vm_interface = cls._get_available_vm_interfaces().first()
         if vlan:
-            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, vlan=vlan))
+            cls.terminations.append(models.VPNTermination.objects.create(vpn=cls.vpn, vlan=vlan))
         if interface:
-            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, interface=interface))
+            cls.terminations.append(models.VPNTermination.objects.create(vpn=cls.vpn, interface=interface))
         if vm_interface:
-            cls.attachments.append(models.VPNAttachment.objects.create(vpn=cls.vpn, vm_interface=vm_interface))
+            cls.terminations.append(models.VPNTermination.objects.create(vpn=cls.vpn, vm_interface=vm_interface))
 
     def test_filter_by_vpn(self):
-        queryset = models.VPNAttachment.objects.all()
-        filtered_qs = filters.VPNAttachmentFilterSet({"vpn": [self.vpn.pk]}, queryset).qs
-        self.assertEqual(filtered_qs.count(), len(self.attachments))
+        queryset = models.VPNTermination.objects.all()
+        filtered_qs = filters.VPNTerminationFilterSet({"vpn": [self.vpn.pk]}, queryset).qs
+        self.assertEqual(filtered_qs.count(), len(self.terminations))
+
+    def test_filter_by_interface_pk(self):
+        interface_termination = next((termination for termination in self.terminations if termination.interface_id), None)
+        if interface_termination is None:
+            self.skipTest("No interface termination fixture available.")
+
+        queryset = models.VPNTermination.objects.all()
+        filtered_qs = filters.VPNTerminationFilterSet({"interface": [interface_termination.interface.pk]}, queryset).qs
+        self.assertEqual(list(filtered_qs), [interface_termination])
 
     def test_search_filter(self):
-        queryset = models.VPNAttachment.objects.all()
-        filtered_qs = filters.VPNAttachmentFilterSet({"q": self.vpn.name}, queryset).qs
+        queryset = models.VPNTermination.objects.all()
+        filtered_qs = filters.VPNTerminationFilterSet({"q": self.vpn.name}, queryset).qs
         self.assertTrue(filtered_qs.count() >= 1)

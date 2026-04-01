@@ -114,13 +114,13 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
         fields = "__all__"
 
 
-class VPNAttachmentSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
-    """Serializer for VPNAttachment."""
+class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
+    """Serializer for VPNTermination."""
 
     assigned_object_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
-        model = models.VPNAttachment
+        model = models.VPNTermination
         fields = "__all__"
 
     def get_assigned_object_type(self, obj):

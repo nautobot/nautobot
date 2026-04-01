@@ -8,7 +8,7 @@ from nautobot.apps.testing import ViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Status
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup
-from nautobot.virtualization.models import VMInterface
+from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
 from nautobot.vpn import choices, models
 
 
@@ -205,13 +205,13 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             name="Existing VXLAN VPN View Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=vpn_status,
-            identifier=16011,
+            vpn_id="16011",
         )
         models.VPN.objects.create(
             name="Existing VPLS VPN View Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
             status=vpn_status,
-            identifier=16012,
+            vpn_id="16012",
         )
         models.VPN.objects.create(
             name="Existing IPSec VPN View Test",
@@ -222,21 +222,19 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.form_data = {
             "name": "test value",
             "description": "test value",
-            "vpn_id": "test value",
             "vpn_profile": models.VPNProfile.objects.first().pk,
             "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
             "status": vpn_status.pk,
-            "identifier": 16001,
+            "vpn_id": "16001",
         }
 
         cls.update_data = {
             "name": "updated value",
             "description": "updated value",
-            "vpn_id": "updated value",
+            "vpn_id": "16002",
             "vpn_profile": models.VPNProfile.objects.last().pk,
             "service_type": choices.VPNServiceTypeChoices.TYPE_VPLS,
             "status": vpn_status.pk,
-            "identifier": 16002,
         }
 
         cls.bulk_edit_data = {
@@ -253,14 +251,14 @@ class VPNViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_vpn_list_filter_by_identifier(self):
-        """Test filtering VPN list by identifier."""
+    def test_vpn_list_filter_by_vpn_id(self):
+        """Test filtering VPN list by VPN ID."""
         self.add_permissions("vpn.view_vpn")
-        vpn = models.VPN.objects.filter(identifier__isnull=False).first()
-        if vpn:
-            url = reverse("vpn:vpn_list")
-            response = self.client.get(f"{url}?identifier={vpn.identifier}")
-            self.assertHttpStatus(response, 200)
+        vpn = models.VPN.objects.exclude(vpn_id="").first()
+        self.assertIsNotNone(vpn)
+        url = reverse("vpn:vpn_list")
+        response = self.client.get(f"{url}?vpn_id={vpn.vpn_id}")
+        self.assertHttpStatus(response, 200)
 
 
 class VPNTunnelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -350,30 +348,11 @@ class VPNTunnelEndpointViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
 
 
-class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+class VPNTerminationViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     # pylint: disable=too-many-ancestors
-    """Test the VPNAttachment views."""
+    """Test the VPNTermination views."""
 
-    model = models.VPNAttachment
-
-    # Bulk edit not currently supported for attachments.
-    def test_bulk_edit_form_contains_all_pks(self):
-        pass
-
-    def test_bulk_edit_form_contains_all_filtered(self):
-        pass
-
-    def test_bulk_edit_objects_with_permission(self):
-        pass
-
-    def test_bulk_edit_objects_with_constrained_permission(self):
-        pass
-
-    def test_bulk_edit_objects_without_permission(self):
-        pass
-
-    def test_bulk_edit_objects_nullable_fields(self):
-        pass
+    model = models.VPNTermination
 
     @classmethod
     def _get_vpn_status(cls):
@@ -386,24 +365,65 @@ class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         return vpn_status
 
     @classmethod
-    def _get_interfaces_without_attachments(cls):
-        """Get interfaces not already assigned to a VPNAttachment."""
-        used_interface_ids = models.VPNAttachment.objects.exclude(interface__isnull=True).values_list(
+    def _get_interfaces_without_terminations(cls):
+        """Get interfaces not already used by a VPNTermination."""
+        used_interface_ids = models.VPNTermination.objects.exclude(interface__isnull=True).values_list(
             "interface_id", flat=True
         )
         return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
 
     @classmethod
-    def _get_vlans_without_attachments(cls):
-        """Get VLANs not already assigned to a VPNAttachment."""
-        used_vlan_ids = models.VPNAttachment.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+    def _get_vlans_without_terminations(cls):
+        """Get VLANs not already used by a VPNTermination."""
+        used_vlan_ids = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
         return VLAN.objects.exclude(pk__in=used_vlan_ids)
 
     @classmethod
-    def _get_vm_interfaces_without_attachments(cls):
-        """Get VM interfaces not already assigned to a VPNAttachment."""
-        used_vminterface_ids = models.VPNAttachment.objects.exclude(vm_interface__isnull=True).values_list(
+    def _get_vm_interfaces_without_terminations(cls):
+        """Get VM interfaces not already used by a VPNTermination."""
+        used_vminterface_ids = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
             "vm_interface_id", flat=True
+        )
+        available_vm_interfaces = VMInterface.objects.exclude(pk__in=used_vminterface_ids)
+        if available_vm_interfaces.exists():
+            return available_vm_interfaces
+
+        vm = VirtualMachine.objects.first()
+        if vm is None:
+            cluster_type, _ = ClusterType.objects.get_or_create(name=f"{cls.__name__} Cluster Type")
+            cluster, _ = Cluster.objects.get_or_create(
+                name=f"{cls.__name__} Cluster",
+                defaults={"cluster_type": cluster_type},
+            )
+            if cluster.cluster_type_id != cluster_type.id:
+                cluster.cluster_type = cluster_type
+                cluster.save()
+
+            vm_status = Status.objects.get_for_model(VirtualMachine).first()
+            if vm_status is None:
+                vm_ct = ContentType.objects.get_for_model(VirtualMachine)
+                vm_status = Status.objects.get(name="Active")
+                vm_status.content_types.add(vm_ct)
+
+            vm, _ = VirtualMachine.objects.get_or_create(
+                name=f"{cls.__name__} VM",
+                defaults={"cluster": cluster, "status": vm_status},
+            )
+            if vm.cluster_id != cluster.id or vm.status_id != vm_status.id:
+                vm.cluster = cluster
+                vm.status = vm_status
+                vm.save()
+
+        vm_interface_status = Status.objects.get_for_model(VMInterface).first()
+        if vm_interface_status is None:
+            vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
+            vm_interface_status = Status.objects.get(name="Active")
+            vm_interface_status.content_types.add(vm_interface_ct)
+
+        VMInterface.objects.create(
+            virtual_machine=vm,
+            name=f"vpn-termination-view-{cls.__name__.lower()}",
+            status=vm_interface_status,
         )
         return VMInterface.objects.exclude(pk__in=used_vminterface_ids)
 
@@ -414,19 +434,19 @@ class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         vpn_status = cls._get_vpn_status()
         vpn = models.VPN.objects.create(
-            name="VPN For Attachment View Test",
+            name="VPN For Termination View Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=vpn_status,
-            identifier=17001,
+            vpn_id="17001",
         )
         vpn2 = models.VPN.objects.create(
-            name="VPN For Attachment View Test 2",
+            name="VPN For Termination View Test 2",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
             status=vpn_status,
-            identifier=17002,
+            vpn_id="17002",
         )
 
-        vlans = list(cls._get_vlans_without_attachments()[:10])
+        vlans = list(cls._get_vlans_without_terminations()[:10])
         if len(vlans) < 6:
             vlan_status = Status.objects.get(name="Active")
             vlan_ct = ContentType.objects.get_for_model(VLAN)
@@ -434,19 +454,19 @@ class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 vlan_status.content_types.add(vlan_ct)
 
             vlan_group, _ = VLANGroup.objects.get_or_create(
-                name="VPN Attachment View Test Group",
+                name="VPN Termination View Test Group",
             )
             for i in range(6 - len(vlans)):
                 vlan = VLAN.objects.create(
                     vid=4000 + i,
-                    name=f"VPN Attachment View Test VLAN {i}",
+                    name=f"VPN Termination View Test VLAN {i}",
                     status=vlan_status,
                     vlan_group=vlan_group,
                 )
                 vlans.append(vlan)
 
         for i in range(min(3, len(vlans))):
-            models.VPNAttachment.objects.create(vpn=vpn, vlan=vlans[i])
+            models.VPNTermination.objects.create(vpn=vpn, vlan=vlans[i])
 
         form_vlan = vlans[3] if len(vlans) > 3 else vlans[0]
         update_vlan = vlans[4] if len(vlans) > 4 else vlans[1] if len(vlans) > 1 else vlans[0]
@@ -466,74 +486,77 @@ class VPNAttachmentViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_attachment_list_filter_by_vpn(self):
-        """Test filtering attachment list by VPN."""
-        self.add_permissions("vpn.view_vpnattachment")
-        attachment = models.VPNAttachment.objects.first()
+    def test_termination_list_filter_by_vpn(self):
+        """Test filtering termination list by VPN."""
+        self.add_permissions("vpn.view_vpntermination")
+        termination = models.VPNTermination.objects.first()
 
-        if attachment:
-            url = reverse("vpn:vpnattachment_list")
-            response = self.client.get(f"{url}?vpn={attachment.vpn.pk}")
-            self.assertHttpStatus(response, 200)
+        self.assertIsNotNone(termination)
+        url = reverse("vpn:vpntermination_list")
+        response = self.client.get(f"{url}?vpn={termination.vpn.pk}")
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_attachment_create_with_interface(self):
-        """Test creating an attachment with interface via web form."""
-        self.add_permissions("vpn.add_vpnattachment")
+    def test_termination_create_with_interface(self):
+        """Test creating a termination with interface via web form."""
+        self.add_permissions("vpn.add_vpntermination")
 
         vpn = models.VPN.objects.first()
-        interface = self._get_interfaces_without_attachments().first()
+        interface = self._get_interfaces_without_terminations().first()
 
-        if vpn and interface:
-            url = reverse("vpn:vpnattachment_add")
-            data = {
-                "vpn": vpn.pk,
-                "interface": interface.pk,
-            }
-            response = self.client.post(url, data)
-            self.assertIn(response.status_code, [200, 302])
+        self.assertIsNotNone(vpn)
+        self.assertIsNotNone(interface)
+        url = reverse("vpn:vpntermination_add")
+        data = {
+            "vpn": vpn.pk,
+            "interface": interface.pk,
+        }
+        response = self.client.post(url, data)
+        self.assertIn(response.status_code, [200, 302])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_attachment_create_with_vlan(self):
-        """Test creating an attachment with VLAN via web form."""
-        self.add_permissions("vpn.add_vpnattachment")
+    def test_termination_create_with_vlan(self):
+        """Test creating a termination with VLAN via web form."""
+        self.add_permissions("vpn.add_vpntermination")
 
         vpn = models.VPN.objects.first()
-        vlan = self._get_vlans_without_attachments().first()
+        vlan = self._get_vlans_without_terminations().first()
 
-        if vpn and vlan:
-            url = reverse("vpn:vpnattachment_add")
-            data = {
-                "vpn": vpn.pk,
-                "vlan": vlan.pk,
-            }
-            response = self.client.post(url, data)
-            self.assertIn(response.status_code, [200, 302])
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_attachment_list_search(self):
-        """Test searching attachment list by VPN name."""
-        self.add_permissions("vpn.view_vpnattachment")
-        attachment = models.VPNAttachment.objects.first()
-
-        if attachment:
-            url = reverse("vpn:vpnattachment_list")
-            response = self.client.get(f"{url}?q={attachment.vpn.name[:5]}")
-            self.assertHttpStatus(response, 200)
+        self.assertIsNotNone(vpn)
+        self.assertIsNotNone(vlan)
+        url = reverse("vpn:vpntermination_add")
+        data = {
+            "vpn": vpn.pk,
+            "vlan": vlan.pk,
+        }
+        response = self.client.post(url, data)
+        self.assertIn(response.status_code, [200, 302])
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_attachment_create_with_vm_interface(self):
-        """Test creating an attachment with VM interface via web form."""
-        self.add_permissions("vpn.add_vpnattachment")
+    def test_termination_list_search(self):
+        """Test searching termination list by VPN name."""
+        self.add_permissions("vpn.view_vpntermination")
+        termination = models.VPNTermination.objects.first()
+
+        self.assertIsNotNone(termination)
+        url = reverse("vpn:vpntermination_list")
+        response = self.client.get(f"{url}?q={termination.vpn.name[:5]}")
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_termination_create_with_vm_interface(self):
+        """Test creating a termination with VM interface via web form."""
+        self.add_permissions("vpn.add_vpntermination")
 
         vpn = models.VPN.objects.first()
-        vm_interface = self._get_vm_interfaces_without_attachments().first()
+        vm_interface = self._get_vm_interfaces_without_terminations().first()
 
-        if vpn and vm_interface:
-            url = reverse("vpn:vpnattachment_add")
-            data = {
-                "vpn": vpn.pk,
-                "vm_interface": vm_interface.pk,
-            }
-            response = self.client.post(url, data)
-            self.assertIn(response.status_code, [200, 302])
+        self.assertIsNotNone(vpn)
+        self.assertIsNotNone(vm_interface)
+        url = reverse("vpn:vpntermination_add")
+        data = {
+            "vpn": vpn.pk,
+            "vm_interface": vm_interface.pk,
+        }
+        response = self.client.post(url, data)
+        self.assertIn(response.status_code, [200, 302])
