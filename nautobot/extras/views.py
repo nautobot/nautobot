@@ -2209,7 +2209,8 @@ class JobUIViewSet(NautobotUIViewSet):
     def get_object(self):
         # Reload the job class to ensure we have the latest version
         obj = super().get_object()
-        get_job(obj.class_path, reload=True)
+        if self.action == "update":
+            get_job(obj.class_path, reload=True)
         return obj
 
     def alter_queryset(self, request):
