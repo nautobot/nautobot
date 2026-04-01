@@ -254,11 +254,13 @@ class Token(BaseModel, ChangeLoggedModel):
     def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
         """Remove token key from changelog to prevent secret exposure."""
         fields_to_exclude = ["key"]
-        if not object_data_exclude:
-            object_data_exclude = fields_to_exclude
+        object_data_exclude = [] if object_data_exclude is None else list(object_data_exclude)
+        object_data_exclude += fields_to_exclude
+
         data_v2 = serialize_object_v2(self)
         for field in fields_to_exclude:
             data_v2.pop(field, None)
+
         return ObjectChange(
             changed_object=self,
             object_repr=str(self),
