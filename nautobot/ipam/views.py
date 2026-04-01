@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
@@ -43,6 +44,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
+from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.load_balancers.tables import LoadBalancerPoolMemberTable, VirtualServerTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
@@ -338,6 +340,8 @@ class PrefixUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PrefixSerializer
     table_class = tables.PrefixDetailTable
 
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
+
     queryset = Prefix.objects.select_related(
         "parent",
         "rir",
@@ -354,7 +358,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 InstanceBreadcrumbItem(instance=context_object_attr("namespace")),
                 ModelBreadcrumbItem(
                     model=Prefix,
-                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.pk},
+                    reverse_query_params=lambda context: {"namespace": context["object"].namespace.name},
                     label_type="plural",
                 ),
             ]
@@ -366,6 +370,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
             "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
         }
     )
+
+    class PrefixSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            """Override the body_content_table_list_url as it derives from obj.parent.pk instead of obj.pk."""
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('ipam:prefix_list')}?parent={obj.parent_id or 'null'}",
+            }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -398,12 +411,35 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=100,
                 table_class=tables.PrefixTable,
                 table_attribute="default_ancestors",
-                table_title="Parent Prefixes",
+                table_title="Ancestor Prefixes",
                 exclude_columns=["namespace"],
                 related_field_name="ancestors",
                 add_button_route=None,
                 paginate=False,
-                show_table_config_button=False,
+            ),
+            PrefixSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=130,
+                table_class=tables.PrefixTable,
+                table_attribute="default_siblings",
+                table_title="Sibling Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+                hide_hierarchy_ui=True,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=160,
+                table_class=tables.PrefixTable,
+                table_attribute="children",
+                table_title="Child Prefixes",
+                exclude_columns=["namespace"],
+                related_field_name="parent",
+                add_button_route=None,
+                max_display_count=10,
+                hide_hierarchy_ui=True,
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -453,7 +489,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.DistinctViewTab(
                 weight=800,
                 tab_id="prefixes",
-                label="Child Prefixes",
+                label="Descendant Prefixes",
                 related_object_attribute="default_descendants",
                 url_name="ipam:prefix_prefixes",
                 panels=(
@@ -501,7 +537,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="prefixes",
+                render_on_tab_id=["prefixes"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddChildPrefixButton(
@@ -511,12 +547,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
-                render_on_tab_id="prefixes",
+                render_on_tab_id=["prefixes"],
             ),
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="ip-addresses",
+                render_on_tab_id=["ip-addresses"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddIPAddressButton(
@@ -526,10 +562,56 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
-                render_on_tab_id="ip-addresses",
+                render_on_tab_id=["ip-addresses"],
             ),
         ],
     )
+
+    def _filter_params_imply_hide_hierarchy_ui(self, filter_params):
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
+        # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
+        if all(
+            key
+            in [
+                "ip_version",
+                "max_depth",
+                "namespace",
+                "prefix_and_descendants",
+                "prefix_length__lte",
+                "type",  # *only* for type=container, see below
+                "within_include",
+            ]
+            for key in filter_params
+        ) and ("type" not in filter_params or filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
+            return False
+        return True
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self._filter_params_imply_hide_hierarchy_ui(self.filter_params):
+            self.hide_hierarchy_ui = False
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        """If `PREFIX_LIST_DEFAULT_*` are set, redirect any query-param-free request to `?max_depth=...&type=...`."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response, HttpResponseRedirect):
+            # already a redirect
+            return response
+        if request.GET:
+            # query params explicitly provided by user, defaults don't apply
+            return response
+        default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+        default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
+        if not default_max_depth and not default_container_only:
+            # no relevant defaults to apply
+            return response
+        query_dict = request.GET.copy()
+        if default_max_depth:
+            query_dict["max_depth"] = default_max_depth
+        if default_container_only:
+            query_dict["type"] = PrefixTypeChoices.TYPE_CONTAINER
+        return redirect(request.path + "?" + query_dict.urlencode())
 
     def get_extra_context(self, request, instance):
         if self.action == "retrieve" and instance is not None:
@@ -546,7 +628,52 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         "Check/Fix IPAM Parents",
                     ),
                 )
-        return super().get_extra_context(request, instance)
+        extra_context = super().get_extra_context(request, instance)
+        if self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            extra_context["table_expandable"] = True
+        return extra_context
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        child_prefixes = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        prefix_table = tables.PrefixDetailTable(
+            child_prefixes,
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
+            prefix_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(prefix_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "next_page_url": reverse("ipam:prefix_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
+                "template": "panel_table.html",
+                "table": prefix_table,
+                "table_expandable": True,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, child_prefixes.count() - (paginate["per_page"] * prefix_table.page.number)),
+            }
+        )
 
     @action(
         detail=True,

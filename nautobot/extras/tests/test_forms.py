@@ -15,7 +15,6 @@ from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoi
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
-    CustomFieldModelFormMixin,
     JobButtonForm,
     JobHookForm,
     WebhookForm,
@@ -94,8 +93,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same content_types, same action and different job from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
         """
         form = JobHookForm(data=self.job_hooks_data[0])
 
@@ -109,8 +108,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same content_types, same job and different actions from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[1])
 
@@ -124,8 +123,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same job, same actions and different content types from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[2])
 
@@ -139,8 +138,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same job, common actions and same content types as a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[3])
 
@@ -151,11 +150,11 @@ class JobHookFormTestCase(TestCase):
         self.assertIn("type_create", error_msg)
         self.assertEqual(
             error_msg["type_create"][0]["message"],
-            "A job hook already exists for create on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for create on DCIM | device type to job TestJobHookReceiverLog",
         )
         self.assertEqual(
             error_msg["type_update"][0]["message"],
-            "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for update on DCIM | device type to job TestJobHookReceiverLog",
         )
 
 
@@ -195,8 +194,8 @@ class JobButtonFormTestCase(TestCase):
         Create a new job button with the same content_types and different job from a job button that exists
 
         Example:
-            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
-            Job button 2: dcim | device, Job(job_class_name="TestJobButtonReceiverSimple")
+            Job button 1: DCIM | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: DCIM | device, Job(job_class_name="TestJobButtonReceiverSimple")
         """
         form = JobButtonForm(data=self.job_buttons_data[0])
 
@@ -210,8 +209,8 @@ class JobButtonFormTestCase(TestCase):
         Create a new job button with the same job and different content types from a job button that exists
 
         Example:
-            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
-            Job button 2: dcim | location, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 1: DCIM | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: DCIM | location, Job(job_class_name="TestJobButtonReceiverComplex")
         """
         form = JobButtonForm(data=self.job_buttons_data[1])
 
@@ -1041,8 +1040,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with different content_types, same url and same action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | location, create, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | location, create, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[0])
 
@@ -1056,8 +1055,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with same content_types, same url and diff action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | console port, delete, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | console port, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[1])
 
@@ -1071,8 +1070,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with same content_types, same url and common action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | console port, create, update, delete, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | console port, create, update, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[2])
 
@@ -1083,11 +1082,11 @@ class WebhookFormTestCase(TestCase):
         self.assertIn("type_create", error_msg)
         self.assertEqual(
             error_msg["type_create"][0]["message"],
-            "A webhook already exists for create on dcim | console port to URL http://example.com/test",
+            "A webhook already exists for create on DCIM | console port to URL http://example.com/test",
         )
         self.assertEqual(
             error_msg["type_update"][0]["message"],
-            "A webhook already exists for update on dcim | console port to URL http://example.com/test",
+            "A webhook already exists for update on DCIM | console port to URL http://example.com/test",
         )
 
 
@@ -1169,30 +1168,6 @@ class ConfigContextFilterFormTestCase(TestCase):
         """Asserts that `ConfigContextFilterForm.dynamic_group` is NOT present when feature flag is disabled."""
         context_filter_form = ConfigContextFilterForm()
         self.assertNotIn("dynamic_groups", context_filter_form.fields)
-
-
-class CustomFieldModelFormMixinTestCase(TestCase):
-    def test_custom_field_data_removed_in_all(self):
-        """Asserts that when `__all__` is set on a CustomFieldModelFormMixin, _custom_field_data is stripped."""
-
-        class TestForm(CustomFieldModelFormMixin):
-            class Meta:
-                model = dcim_models.InterfaceRedundancyGroup
-                fields = "__all__"
-
-        custom_field_form = TestForm()
-        self.assertNotIn("_custom_field_data", custom_field_form.fields)
-
-    def test_custom_field_data_kept_if_explicit(self):
-        """Asserts that _custom_field_data will still show up if explicitly set."""
-
-        class TestForm(CustomFieldModelFormMixin):
-            class Meta:
-                model = dcim_models.InterfaceRedundancyGroup
-                fields = ["_custom_field_data"]
-
-        custom_field_form = TestForm()
-        self.assertIn("_custom_field_data", custom_field_form.fields)
 
 
 class CustomFieldTestCase(TestCase):

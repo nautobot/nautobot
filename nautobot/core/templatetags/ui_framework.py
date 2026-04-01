@@ -2,6 +2,7 @@ from functools import partial
 import logging
 
 from django import template
+from django.template.loader import render_to_string
 from django.utils.html import format_html_join, strip_spaces_between_tags
 
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
@@ -24,6 +25,12 @@ def render_tabs_labels(context, tabs):
 
 
 @register.simple_tag(takes_context=True)
+def render_component(context, component):
+    """Render a single component to HTML."""
+    return component.render(context)
+
+
+@register.simple_tag(takes_context=True)
 def render_components(context, components):
     """Render each component in the given `components` with the given `context`."""
     if components is not None:
@@ -33,16 +40,33 @@ def render_components(context, components):
 
 @register.simple_tag(takes_context=True)
 def render_table_config_forms(context, tabs):
+    """
+    Render all table config forms for the given tabs, filtering out duplicates when same table is used multiple times.
+    """
     if tabs is not None:
+        table_config_form_contexts = [
+            panel.get_table_config_form_context(context)
+            for tab in tabs
+            if tab.should_render_content(context)
+            for panel in tab.panels
+            if hasattr(panel, "render_table_config_form")
+        ]
+        filtered_table_config_form_contexts = []
+        for form_context in table_config_form_contexts:
+            if not form_context:
+                # Non-rendered table
+                continue
+            if form_context["table_name"] in [ffc["table_name"] for ffc in filtered_table_config_form_contexts]:
+                # Duplicate entry
+                continue
+            filtered_table_config_form_contexts.append(form_context)
+
         return format_html_join(
             "\n",
             "{}",
             (
-                [panel.render_table_config_form(context)]
-                for tab in tabs
-                if tab.should_render_content(context)
-                for panel in tab.panels
-                if hasattr(panel, "render_table_config_form")
+                [render_to_string("utilities/templatetags/table_config_form.html", form_context)]
+                for form_context in filtered_table_config_form_contexts
             ),
         )
     return ""

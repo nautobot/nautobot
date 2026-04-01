@@ -1053,6 +1053,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log_default",
             "dryrun_default",
             "hidden",
             "read_only",
@@ -1063,6 +1064,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_singleton",
             "grouping_override",
             "name_override",
+            "console_log_default_override",
             "description_override",
             "dryrun_default_override",
             "hidden_override",
@@ -1176,6 +1178,10 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Scheduled Job (name or ID)",
     )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    has_job_console_entries = RelatedMembershipBooleanFilter(
+        field_name="job_console_entries",
+        label="Has Job Console Entries",
+    )
 
     class Meta:
         model = JobResult

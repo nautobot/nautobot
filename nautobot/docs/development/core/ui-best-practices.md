@@ -28,7 +28,7 @@ To get a better picture of why putting effort into finding the best matching exi
 </div>
 ```
 
-Component presented above is - to simply put it - an antipattern. Although initial effort of writing it from scratch, or copying it over from somewhere else, is low, other than that it has virtually no advantages. It uses basic `style` HTML attributes and hardcoded color and pixel values. Not only is it difficult to decipher its purpose, but it is also prone to all sorts of errors.
+The component presented above is - to simply put it - an antipattern. Although initial effort of writing it from scratch, or copying it over from somewhere else, is low, other than that it has virtually no advantages. It uses basic `style` HTML attributes and hardcoded color and pixel values. Not only is it difficult to decipher its purpose, but it is also prone to all sorts of errors.
 
 ```html
 <div class="bg-body border d-flex flex-column overflow-hidden position-relative rounded text-break text-body">
@@ -178,6 +178,18 @@ When implementing your own custom JavaScript logic, our recommendation is to wra
 ```javascript
 document.addEventListener('DOMContentLoaded', () => {
     // Your JavaScript logic goes here.
+});
+```
+
+If parts of the DOM are loaded or reloaded via [HTMX](htmx.md), and need custom JavaScript to set them up after they are retrieved, you may want to reuse the same logic as a function linked to the `htmx.onLoad()` event handler, for example:
+
+```javascript
+document.addEventListener('DOMContentLoaded', () => {
+    doTheThing(document);
+});
+
+htmx.onLoad((content) => {
+    doTheThing(content);
 });
 ```
 
