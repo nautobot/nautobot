@@ -1,6 +1,8 @@
 from http import HTTPStatus
 import logging
 
+from constance import config
+from constance.admin import ConstanceForm
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -8,20 +10,27 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
+from django.contrib.messages.views import SuccessMessageMixin
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
+from django.views.generic.edit import FormView
 
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
+from nautobot.core.forms.forms import BootstrapMixin
+from nautobot.core.settings import CONSTANCE_CONFIG, CONSTANCE_CONFIG_FIELDSETS
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import (
+    AdminRequiredMixin,
+)
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 from ..core.views.mixins import GetReturnURLMixin
@@ -486,3 +495,54 @@ class AdvancedProfileSettingsEditView(GenericView):
                 "is_django_auth_user": is_django_auth_user(request),
             },
         )
+
+
+class ConfigForm(BootstrapMixin, ConstanceForm):
+    """Apply Bootstrap styling to ConstanceForm."""
+
+
+class ConfigUIViewSet(AdminRequiredMixin, SuccessMessageMixin, FormView):
+    template_name = "users/config_edit.html"
+    form_class = ConfigForm
+    success_url = reverse_lazy("user:config_edit")
+    success_message = "Live settings updated successfully."
+
+    def get_initial(self):
+        # Populate the form's initial values from the current Constance config
+        initial = {}
+        for name in CONSTANCE_CONFIG:
+            initial[name] = getattr(config, name)
+        return initial
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        # Build a list of config items with their current values and metadata for display in the template
+        fieldsets = CONSTANCE_CONFIG_FIELDSETS
+        constance_config = CONSTANCE_CONFIG
+        context = super().get_context_data(**kwargs)
+        # Sort fieldsets by key to ensure consistent ordering
+        fieldsets = {k: CONSTANCE_CONFIG_FIELDSETS[k] for k in sorted(CONSTANCE_CONFIG_FIELDSETS)}
+        form = context["form"]
+        config_values = []
+        for fields in fieldsets.values():
+            for name in fields:  # order comes from fieldset list
+                item = constance_config[name]
+                config_values.append(
+                    {
+                        "name": name,
+                        "default": item.default,
+                        "help_text": item.help_text,
+                        "value": getattr(config, name),
+                        "form_field": form[name],
+                    }
+                )
+
+        context["config_values"] = config_values
+        context["fieldsets"] = fieldsets
+        context["title"] = "Configuration"
+        if form.errors:
+            context["form_errors"] = form.errors
+        return context

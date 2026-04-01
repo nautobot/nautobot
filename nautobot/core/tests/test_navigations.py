@@ -57,7 +57,13 @@ class NavMenuTestCase(TestCase):
                             # Not a model view?
                             self.assertIn(
                                 item_details["name"],
-                                {"Apps Marketplace", "Installed Apps", "Interface Connections", "Device Constraints"},
+                                {
+                                    "Apps Marketplace",
+                                    "Installed Apps",
+                                    "Interface Connections",
+                                    "Device Constraints",
+                                    "Config",
+                                },
                             )
 
                     for button, button_details in item_details["buttons"].items():
