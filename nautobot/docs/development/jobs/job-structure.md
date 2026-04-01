@@ -108,6 +108,45 @@ Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
+### `console_log_default`
+
++++ 3.1.0
+
+Default: `False`
+
+A boolean controls how job stdout/stderr is handled and where the job is executed. Set to `True` enables live, line-by-line job output by executing the job in a subprocess.
+
+#### Configuration precedence
+
+The effective value of `console_log` is determined by the following roles,
+evaluated in order (lowest to highest priority):
+
+1. **Job Author**
+   Declares the default behavior in the job code.
+
+2. **Job Admin**
+   May override the author-defined default using Nautobot job settings.
+
+3. **Job Runner**
+   May override both the author and admin settings at execution time.
+
+The **Job Runner setting always takes precedence**, followed by the Job Admin,
+and finally the Job Author default.
+
+#### Examples
+
+| Job Author | Job Admin Override | Job Runner | Effective Value |
+|------------|--------------------|------------|-----------------|
+| ON         | -                  | -          | ON              |
+| ON         | OFF                | -          | OFF             |
+| ON         | OFF                | ON         | ON              |
+| OFF        | -                  | -          | OFF             |
+| OFF        | ON                 | -          | ON              |
+| OFF        | ON                 | OFF        | OFF             |
+
+This precedence model allows job authors to provide sensible defaults, administrators
+to enforce platform-wide behavior, and runners to make execution-specific decisions.
+
 ### `dryrun_default`
 
 +/- 2.0.0 "Replacement for `commit_default`"

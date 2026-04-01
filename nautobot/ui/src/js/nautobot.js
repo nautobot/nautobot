@@ -43,11 +43,13 @@ import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
+import { refreshMessages } from './messages.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
+import { initializeSubtrees } from './tree.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   window.nb ??= {};
@@ -79,6 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
 
+  // Messages
+  window.nb.messages = { refreshMessages };
+
   // Search
   initializeSearch();
 
@@ -98,6 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
    *   ```
    */
   observeCollapseTabs();
+
+  // Trees
+  initializeSubtrees();
 
   // Theme
   initializeTheme();

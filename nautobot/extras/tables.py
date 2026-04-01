@@ -1,7 +1,6 @@
 import logging
 from textwrap import dedent
 
-from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
@@ -1023,14 +1022,14 @@ class GitRepositoryTable(BaseTable):
 
     def render_last_sync_time(self, record):
         if hasattr(self, "context"):
-            if record.name in self.context.get("job_results", {}):
-                return self.context["job_results"][record.name].date_done
+            if str(record.pk) in self.context.get("job_results", {}):
+                return self.context["job_results"][str(record.pk)].date_done
         return self.default
 
     def render_last_sync_user(self, record):
         if hasattr(self, "context"):
-            if record.name in self.context.get("job_results", {}):
-                user = self.context["job_results"][record.name].user
+            if str(record.pk) in self.context.get("job_results", {}):
+                user = self.context["job_results"][str(record.pk)].user
                 return user
         return self.default
 
@@ -1099,6 +1098,7 @@ class JobTable(BaseTable):
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
+    console_log_default = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
     dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
@@ -1116,12 +1116,11 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.date_created|date:SHORT_DATETIME_FORMAT }} by {{ value.user }}
+                {{ value.date_created|date:"SHORT_DATETIME_FORMAT" }} by {{ value.user }}
             {% else %}
                 <span class="text-secondary">Never</span>
             {% endif %}
         """,
-        extra_context={"SHORT_DATETIME_FORMAT": settings.SHORT_DATETIME_FORMAT},
         linkify=lambda value: value.get_absolute_url() if value else None,
     )
     last_status = tables.TemplateColumn(
@@ -1149,6 +1148,7 @@ class JobTable(BaseTable):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log_default",
             "description",
             "dryrun_default",
             "hidden",
@@ -1271,9 +1271,9 @@ class JobQueueTable(BaseTable):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
-    date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
-    date_started = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
-    date_done = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_created = tables.DateTimeColumn(linkify=True, short=True)
+    date_started = tables.DateTimeColumn(linkify=True, short=True)
+    date_done = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -1329,7 +1329,6 @@ class JobResultTable(BaseTable):
             "job_model",
             "scheduled_job",
             "duration",
-            "date_done",
             "user",
             "status",
             "summary",
@@ -1498,8 +1497,8 @@ class ScheduledJobTable(BaseTable):
     job_model = tables.Column(verbose_name="Job", linkify=True)
     enabled = BooleanColumn()
     interval = tables.Column(verbose_name="Execution Type")
-    start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
-    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
+    start_time = tables.DateTimeColumn(verbose_name="First Run", short=True)
+    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", short=True)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
     actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
@@ -1559,7 +1558,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
 
 class ObjectChangeTable(BaseTable):
-    time = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    time = tables.DateTimeColumn(linkify=True, short=True)
     action = ChoiceFieldColumn()
     changed_object_type = tables.Column(verbose_name="Type")
     object_repr = tables.TemplateColumn(template_code=OBJECTCHANGE_OBJECT, verbose_name="Object")

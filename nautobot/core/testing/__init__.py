@@ -44,7 +44,7 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
+def run_job_for_testing(job, username="test-user", profile=False, console_log=False, **kwargs):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
@@ -74,6 +74,7 @@ def run_job_for_testing(job, username="test-user", profile=False, **kwargs):
         job_model=job,
         user=user_instance,
         profile=profile,
+        console_log=console_log,
         **kwargs,
     )
     return job_result

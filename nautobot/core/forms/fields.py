@@ -9,10 +9,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.postgres.forms import SimpleArrayField
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, ValidationError
 from django.db.models import Q
-from django.forms.fields import BoundField, CallableChoiceIterator, InvalidJSONInput, JSONField as _JSONField
+from django.forms.fields import BoundField, InvalidJSONInput, JSONField as _JSONField
 from django.templatetags.static import static
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.choices import CallableChoiceIterator
 from django.utils.html import format_html
 import django_filters
 from netaddr import EUI
@@ -22,6 +23,7 @@ from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
+from nautobot.core.utils.permissions import get_permission_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -493,6 +495,10 @@ class DynamicModelChoiceMixin:
         disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
             choice
         depth (int): Nested serialization depth when making API requests (default: `0` or a flat representation)
+        embedded_create (Optional[boolean]): Indicates "Embedded Create" availability for this field, its actual render
+            conditions are later evaluated on the template level
+        embedded_search (Optional[boolean]): Indicates "Embedded Search" availability for this field, its actual render
+            conditions are later evaluated on the template level
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -507,6 +513,8 @@ class DynamicModelChoiceMixin:
         null_option=None,
         disabled_indicator=None,
         depth=0,
+        embedded_create=None,
+        embedded_search=None,
         *args,
         **kwargs,
     ):
@@ -518,6 +526,8 @@ class DynamicModelChoiceMixin:
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
         self.depth = depth
+        self.embedded_create = embedded_create
+        self.embedded_search = embedded_search
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
@@ -525,6 +535,10 @@ class DynamicModelChoiceMixin:
         self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def embedded_create_permissions(self):
+        return [get_permission_for_model(self.queryset.model, "add")]
 
     def widget_attrs(self, widget):
         attrs = {

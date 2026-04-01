@@ -707,6 +707,7 @@ nav:
           - Docs Media Standards: "development/core/docs-media-standards.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
+          - HTMX: "development/core/htmx.md"
           - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
@@ -721,6 +722,7 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"
       - Version 2.4: "release-notes/version-2.4.md"
       - Version 2.3: "release-notes/version-2.3.md"

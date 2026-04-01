@@ -1,8 +1,10 @@
 import datetime
 from decimal import Decimal
+import signal
 import unittest
 import zoneinfo
 
+from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
@@ -48,6 +50,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
     ControllerFilterSet,
@@ -108,6 +111,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
+    DeviceUIViewSet,
     InterfaceConnectionsListView,
     PowerConnectionsListView,
 )
@@ -278,6 +282,75 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def _get_queryset(self):
         return super()._get_queryset().filter(location_type__name="Campus")
 
+    @override_settings(PAGINATE_COUNT=1000)
+    def test_list_objects_default_filters(self):
+        """Test the LOCATION_LIST_DEFAULT_MAX_DEPTH setting/Constance config."""
+        self.add_permissions("dcim.view_location")
+        list_url = self.get_list_url()
+
+        # Hide the 'parent' column so it doesn't cause test failures due to unexpected PKs appearing
+        self.user.set_config("tables.LocationTable.columns", ["name", "status"], commit=True)
+
+        with self.subTest("By default, all locations are listed"):
+            response = self.client.get(list_url, headers={"HX-Request": True})
+            for location in self._get_queryset().all():
+                self.assertBodyContains(response, str(location.pk))
+            # Indentation should be present in table rendering
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
+            with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for filtered location list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                for loc in self._get_queryset().all():
+                    if loc.parent is None or loc.parent.parent is None:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
+                # Check for filtered location list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                for loc in self._get_queryset().all():
+                    if loc.parent is None or loc.parent.parent is None or loc.parent.parent.parent is None:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
+            with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=1):
+                loc_status = Status.objects.get_for_model(Location).first()
+                # Check for filtered location list and no message in HTMX response
+                response = self.client.get(list_url + f"?status={loc_status.name}", headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH", count=0)
+                for loc in self._get_queryset().all():
+                    if loc.status == loc_status:
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True, count=0)
+
+        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
+            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
+                root = Location.objects.first()
+                # Check for filtered location list and message in HTMX response
+                response = self.client.get(list_url + f"?subtree={root.pk}", headers={"HX-Request": True})
+                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                for loc in self._get_queryset().all():
+                    if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
+                        self.assertBodyContains(response, str(loc.pk))
+                    else:
+                        self.assertBodyContains(response, str(loc.pk), count=0)
+                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(
         self,
@@ -439,6 +512,55 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(location.contact_name, "")
         self.assertEqual(location.contact_phone, "")
         self.assertEqual(location.contact_email, "")
+
+    def test_location_children_action(self):
+        self.add_permissions("dcim.view_location")
+        location_with_children = Location.objects.filter(children__isnull=False).first()
+        self.assertIsNotNone(location_with_children)
+        url = reverse("dcim:location_children", kwargs={"pk": location_with_children.pk})
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "components/htmx/subtree_children.html")
+        for child in location_with_children.children.all():
+            self.assertBodyContains(response, str(child.pk))
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        """Override base ListObjectsViewTestCase implementation for Location tree view."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is removed on most filters"):
+            queryset = (
+                self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+            )
+            filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+            response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(
+                f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is present on hierarchy-preserving filter alone"):
+            response = self.client.get(
+                f"{self._get_url('list')}?subtree={Location.objects.first().pk}", headers={"HX-Request": "true"}
+            )
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is not present on mixed filtering"):
+            response = self.client.get(
+                f"{self._get_url('list')}?subtree={Location.objects.first().pk}&status=Active",
+                headers={"HX-Request": "true"},
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
 
 
 class RackGroupTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
@@ -944,6 +1066,7 @@ power-outlets:
 interfaces:
   - name: Interface 1
     type: 1000base-t
+    port_type: 8p8c
     mgmt_only: true
   - name: Interface 2
     type: 1000base-t
@@ -1027,6 +1150,7 @@ module-bays:
         iface1 = dt.interface_templates.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
+        self.assertEqual(iface1.port_type, PortTypeChoices.TYPE_8P8C)
         self.assertTrue(iface1.mgmt_only)
 
         self.assertEqual(dt.rear_port_templates.count(), 3)
@@ -1216,7 +1340,7 @@ module-bays:
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            '<strong>U height</strong>: <ul class="errorlist"><li>Ensure this value is greater than or equal to 0.</li></ul>',
+            '<strong>U height</strong>: <ul class="errorlist" id="id_u_height_error"><li>Ensure this value is greater than or equal to 0.</li></ul>',
             response_content,
         )
 
@@ -1356,6 +1480,7 @@ power-outlets:
 interfaces:
   - name: Interface 1
     type: 1000base-t
+    port_type: 8p8c
     mgmt_only: true
   - name: Interface 2
     type: 1000base-t
@@ -1433,6 +1558,7 @@ module-bays:
         iface1 = mt.interface_templates.first()
         self.assertEqual(iface1.name, "Interface 1")
         self.assertEqual(iface1.type, InterfaceTypeChoices.TYPE_1GE_FIXED)
+        self.assertEqual(iface1.port_type, PortTypeChoices.TYPE_8P8C)
         self.assertTrue(iface1.mgmt_only)
 
         self.assertEqual(mt.rear_port_templates.count(), 3)
@@ -1786,6 +1912,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": devicetypes[1].pk,
             "name": "Interface Template X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "mgmt_only": True,
         }
 
@@ -1796,11 +1923,13 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "label_pattern": "Interface Template Label [3-5]",
             "description": "View Test Bulk Create Interfaces",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "mgmt_only": True,
         }
 
         cls.bulk_edit_data = {
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_LC_APC,
             "mgmt_only": True,
         }
 
@@ -1810,6 +1939,7 @@ class InterfaceTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "device_type": getattr(getattr(test_instance, "device_type", None), "pk", None),
             "module_type": getattr(getattr(test_instance, "module_type", None), "pk", None),
             "type": test_instance.type,
+            "port_type": test_instance.port_type,
             "label": "new test label",
             "description": "new test description",
         }
@@ -2381,6 +2511,78 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
+    def _build_device_bay_chain(self, parent_count):
+        """Create a parent->child DeviceBay chain and return (devices, bays)."""
+        device_type = DeviceType.objects.create(
+            model=f"Breadcrumb Chain Type {parent_count}",
+            manufacturer=Manufacturer.objects.first(),
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
+        status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+
+        devices = [
+            Device.objects.create(
+                name=f"breadcrumb-chain-device-{parent_count}-{idx}",
+                device_type=device_type,
+                location=location,
+                status=status,
+                role=role,
+            )
+            for idx in range(parent_count + 1)
+        ]
+
+        bays = []
+        for idx in range(parent_count):
+            bays.append(
+                DeviceBay.objects.create(
+                    name=f"breadcrumb-chain-bay-{parent_count}-{idx}",
+                    device=devices[idx],
+                    installed_device=devices[idx + 1],
+                )
+            )
+
+        return devices, bays
+
+    def test_get_breadcrumb_objects_no_parent_returns_empty_list(self):
+        device = Device.objects.first()
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(device)
+
+        self.assertEqual(breadcrumb_objects, [])
+
+    def test_get_breadcrumb_objects_at_depth_limit_returns_full_breadcrumb(self):
+        parent_count = DEVICE_RECURSION_DEPTH_LIMIT
+        devices, bays = self._build_device_bay_chain(parent_count=parent_count)
+        leaf = devices[-1]
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(leaf)
+        expected_objects = []
+        for idx in range(parent_count):
+            expected_objects.extend([devices[idx], bays[idx]])
+
+        self.assertEqual(breadcrumb_objects, expected_objects)
+
+    def test_get_breadcrumb_objects_over_depth_limit_truncates(self):
+        parent_count = DEVICE_RECURSION_DEPTH_LIMIT + 1
+        devices, bays = self._build_device_bay_chain(parent_count=parent_count)
+        leaf = devices[-1]
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(leaf)
+
+        # Multiply by 2 because both device and bay are included in the breadcrumb.
+        self.assertEqual(len(breadcrumb_objects), DEVICE_RECURSION_DEPTH_LIMIT * 2)
+
+        # Verify the top-most device is not in the truncated chain
+        self.assertNotIn(devices[0], breadcrumb_objects)
+        self.assertNotIn(bays[0], breadcrumb_objects)
+
+        # Verify immediate parent device and bay are the last two breadcrumb elements.
+        self.assertEqual(breadcrumb_objects[-2], devices[-2])
+        self.assertEqual(breadcrumb_objects[-1], bays[-1])
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
@@ -2419,6 +2621,47 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML(parent_device.display, response_body)
         self.assertInHTML(str(device_bay), response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_view_handles_parent_bay_loop(self):
+        """Ensure the device detail view does not hang on parent bay loops."""
+
+        def alarm_handler(_signum, _frame):
+            raise AssertionError("Timed out rendering device detail view")
+
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            model="Device Type Loop Guard",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
+        status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+
+        device = Device.objects.create(
+            name="LoopDevice",
+            device_type=device_type,
+            location=location,
+            status=status,
+            role=role,
+        )
+        device_bay = DeviceBay.objects.create(device=device, name="Bay1")
+
+        # Bypass validation to create a loop in the database
+        DeviceBay.objects.filter(pk=device_bay.pk).update(installed_device=device)
+
+        previous_handler = signal.signal(signal.SIGALRM, alarm_handler)
+        try:
+            signal.alarm(10)
+            url = reverse("dcim:device", kwargs={"pk": device.pk})
+            response = self.client.get(url)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous_handler)
+
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_detail_with_rack(self):
@@ -3285,6 +3528,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "device": device.pk,
             "name": "Interface X",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": False,
             "status": status_active.pk,
             "role": role.pk,
@@ -3305,6 +3549,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "name_pattern": "Interface [4-6]",
             "label_pattern": "Interface Number [4-6]",
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": False,
             "bridge": interfaces[4].pk,
             "lag": interfaces[3].pk,
@@ -3314,7 +3559,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
-            "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "add_tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
             "role": role.pk,
@@ -3329,6 +3574,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "status": status_active.pk,
             "role": role.pk,
             "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+            "port_type": PortTypeChoices.TYPE_8P8C,
             "enabled": True,
             "mtu": 1500,
             "mgmt_only": False,
@@ -3340,6 +3586,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
         cls.bulk_edit_data = {
             "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "port_type": PortTypeChoices.TYPE_LC_APC,
             "enabled": True,
             "lag": interfaces[3].pk,
             "mac_address": EUI("01:02:03:04:05:06"),
@@ -3348,7 +3595,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
-            "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "add_tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[2].pk,
@@ -3361,6 +3608,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "module": getattr(getattr(test_instance, "module", None), "pk", None),
             "status": test_instance.status.pk,
             "type": test_instance.type,
+            "port_type": test_instance.port_type,
             "label": "new test label",
             "description": "new test description",
         }
@@ -3371,6 +3619,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.add_permissions("dcim.add_interface")
         form_data = self.form_data.copy()
         del form_data["name"]
+        del form_data["port_type"]  # Virtual (LAG) interfaces cannot have a port type
         form_data["name_pattern"] = "LAG.0"
         form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
         form_data["parent_interface"] = self.lag_interface
@@ -3399,6 +3648,24 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertBodyContains(response, valid_ipaddress_link)
         response_content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn(invalid_ipaddress_link, response_content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_virtual_interface_with_port_type_fails(self):
+        """Test that a virtual interface cannot have a port type"""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        del form_data["lag"]
+        form_data["name_pattern"] = "VIRTUAL.0"
+        form_data["type"] = InterfaceTypeChoices.TYPE_VIRTUAL
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        response_content = extract_page_body(response.content.decode(response.charset))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("Virtual and wireless interfaces cannot have a port type.", response_content)
 
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -4281,7 +4548,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
         # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
         instance1, instance2 = self.interfaces[1], self.interfaces[2]
-        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}")
+        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}", headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         if hasattr(self.model, "name"):
@@ -4398,7 +4665,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
         self.assertBodyContains(
             response,
-            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            '<th class="orderable"><a href="?sort=device">Device</a></th>',
             html=True,
         )
 
@@ -4414,13 +4681,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
         self.assertNotIn(
-            '<th class="orderable"><a data-column-name="device" href="?sort=device">Device</a></th>',
+            '<th class="orderable"><a href="?sort=device">Device</a></th>',
             strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
         )
         # Sanity check:
-        self.assertBodyContains(
-            response, '<th class="orderable"><a data-column-name="name" href="?sort=name">Name</a></th>', html=True
-        )
+        self.assertBodyContains(response, '<th class="orderable"><a href="?sort=name">Name</a></th>', html=True)
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""

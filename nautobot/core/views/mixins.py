@@ -19,6 +19,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -704,6 +705,14 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         app_label = model_opts.app_label
         action = self.action
 
+        if self.request.headers.get("HX-Request", False):
+            if action == "create":
+                return "components/htmx/object_embedded_create.html"
+            if action == "list":
+                return "components/htmx/list_view_table.html"
+            if self.detail and "component_id" in self.request.GET:
+                return "components/htmx/component.html"
+
         try:
             template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
             select_template([template_name])
@@ -965,7 +974,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if global_saved_view:
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
-        return Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
+        response = Response(
+            {"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view}
+        )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -1061,7 +1074,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             except AttributeError:
                 msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
-            if "_addanother" in request.POST:
+            if self.request.headers.get("HX-Request", False):
+                self.success_url = reverse(lookup.get_route_for_model(obj, "detail", api=True), args=[obj.pk])
+            elif "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"

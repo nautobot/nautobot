@@ -5,8 +5,10 @@ import re
 import tempfile
 from unittest import mock
 import urllib.parse
+import uuid
 
 from django.apps import apps
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -16,18 +18,22 @@ from django.urls import get_script_prefix, reverse
 from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
-from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.circuits.tables import ProviderTable
+from nautobot.circuits.views import ProviderUIViewSet
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
+from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, Status
+from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -374,6 +380,81 @@ class MediaViewTestCase(TestCase):
                 self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
+class SearchContentTypeView(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_search_content_type(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
+        self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_with_initial_value(self):
+        location_type = LocationType.objects.create(name="Test Location Type")
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"})
+            + f"?location_type={location_type.name}",
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, f'<option selected value="{location_type.name}">{location_type.name}</option>', html=True
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
+class MessagesViewTestCase(TestCase):
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_empty(self):
+        """When there are no messages queued, response contains an empty header_messages container."""
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+
+    def test_messages(self):
+        """When there are messages queued, response contains them in the header_messages container."""
+        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
+        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
+        request._messages = messages.storage.cookie.CookieStorage(request)
+        request.user = self.user
+        messages.info(request, "Test info message")
+        messages.success(request, "Test success message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div id="header_messages">
+                    <div class="alert alert-info alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test info message
+                    </div>
+                    <div class="alert alert-success alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test success message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        """Request made from a client other than HTMX results in HTTP 400 response."""
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_search_bar_redirect_to_login(self):
@@ -424,6 +505,144 @@ class SearchFieldsTestCase(TestCase):
             """,
             html=True,
         )
+
+
+class SearchViewTestCase(TestCase):
+    """Unit tests for the SearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.get(name="Campus")
+        active_status = Status.objects.get(name="Active")
+        cls.location = Location.objects.create(
+            name="SearchViewTestUniqueLocation",
+            location_type=location_type,
+            status=active_status,
+        )
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_unauthenticated_redirects_htmx(self):
+        """Unauthenticated HTMX access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_no_query_renders_search_form(self):
+        """GET without ?q renders the search page, not the results page."""
+        response = self.client.get(reverse("search"))
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # The search form should be present
+        self.assertBodyContains(response, "Please enter your desired search in the above search box.")
+        # The results container should NOT be present when there is no query
+        self.assertNotContains(response, "nb-search-results-tables")
+
+    def test_get_with_query_non_htmx(self):
+        """GET with ?q but without an HTMX header renders search.html with all searchable models."""
+        response = self.client.get(reverse("search"), {"q": "test"})
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # search.html renders the results container with an HTMX trigger for each model in parallel
+        self.assertIn("searchable_models", response.context)
+        self.assertContains(response, "nb-search-results-tables")
+
+    def test_htmx_with_matching_results(self):
+        """HTMX request for dcim.location with a matching query returns a populated table."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "SearchViewTestUniqueLocation", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNotNone(response.context["table"])
+        self.assertContains(response, str(self.location.pk))
+
+    def test_htmx_with_no_matching_results(self):
+        """HTMX request for dcim.location with a non-matching query returns table=None."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "zzz_no_match_xyzzy_abc123", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_invalid_model_falls_back_gracefully(self):
+        """HTMX request with an unrecognised model parameter falls back without error."""
+        response = self.client.get(
+            reverse("search"),
+            {"q": "test", "model": "notanapp.notamodel"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_all_searchable_models_return_valid_responses(self):
+        """HTMX request for each model in the searchable_models list returns a valid response."""
+        searchable_models = []
+        for app_config in apps.get_app_configs():
+            if hasattr(app_config, "searchable_models"):
+                searchable_models += [
+                    f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
+                ]
+        for label in searchable_models:
+            with self.subTest(label=label):
+                self.add_permissions(f"{label.split('.')[0]}.view_{label.split('.')[1]}")
+                model = get_model_from_name(label)
+                filterset_class = get_filterset_for_model(model)
+                if filterset_class is not None:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "1"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "a", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "a"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+                else:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    self.assertIsNone(response.context["table"])
 
 
 class FilterFormsTestCase(TestCase):
@@ -477,7 +696,7 @@ class FilterFormsTestCase(TestCase):
             f"&cf_{select_cf.key}={choices[0]}&cf_{select_cf.key}={choices[1]}"
         )
         url = reverse("dcim:location_list") + query_param
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertBodyContains(response, locations[0].name, html=True)
         self.assertBodyContains(response, locations[1].name, html=True)
 
@@ -526,6 +745,119 @@ class ForceScriptNameTestcase(TestCase):
         for route in routes:
             url = reverse(route)
             self.assertTrue(url.startswith(prefix))
+
+
+class TableConfigDrawerTestCase(TestCase):
+    """Test TableConfigForm logic for column order."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("circuits.view_provider", "extras.view_savedview")
+        self.request = RequestFactory().get("/circuits/providers/")
+        self.request.id = uuid.uuid4()
+        self.request.user = self.user
+
+        table = ProviderTable(Provider.objects.all(), user=self.user)
+        table.request = self.request
+        self.form = TableConfigForm(table)
+        self.default_order = [col[0] for col in self.form.fields["columns"].choices]
+        self.default_visible_columns = table.visible_columns.copy()
+
+        custom_order = self.default_order.copy()
+        custom_order[0], custom_order[-1] = custom_order[-1], custom_order[0]
+        self.saved_order = custom_order.copy()
+
+        self.custom_visible_columns = table.visible_columns.copy()
+        self.custom_visible_columns.remove("asn")
+
+        saved_view_config = {
+            "filter_params": {},
+            "pagination_count": 50,
+            "sort_order": [],
+            "table_config": {
+                "ProviderTable": {
+                    "columns": self.custom_visible_columns,
+                    "columns_order": self.saved_order,
+                }
+            },
+        }
+
+        self.saved_view = SavedView.objects.create(
+            name="Saved View 1",
+            owner=self.user,
+            view="circuits:provider_list",
+            is_global_default=False,
+            config=saved_view_config,
+        )
+
+    def test_intitial_order_matches_table_columns(self):
+        """Assert that the initial columns in the table match the default form."""
+        fields_columns = list(ProviderTable.base_columns.keys())
+        # Note:, this adjusts for the pk that is not considered in filter form. If more columns
+        # change in future you may need to update this logic to account for these differences.
+        fields_columns.remove("pk")
+        self.assertEqual(fields_columns, self.default_order)
+
+    def test_filter_column_default(self):
+        """Assert that the default order is used when no user preference is set."""
+        table = ProviderTable(Provider.objects.all(), user=self.user)
+        table.request = self.request
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertEqual(new_order, self.default_order)
+        self.assertEqual(table.visible_columns, self.default_visible_columns)
+
+    def test_filter_column_change_order(self):
+        """Assert that a custom user order is used when set."""
+        custom_order = list(reversed(self.default_order))
+        self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
+        selected_columns = custom_order[0:2]
+        self.user.set_config(f"tables.{self.form.table_name}.columns", selected_columns, commit=True)
+        table = ProviderTable(Provider.objects.all(), user=self.user)
+        table.request = self.request
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, custom_order)
+        self.assertEqual(selected_columns, table.visible_columns)
+
+    def test_filter_column_saved_view(self):
+        """Assert that a custom user order is used when a saved view is set."""
+        table = ProviderTable(Provider.objects.all(), user=self.user, saved_view=self.saved_view)
+        request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
+        request.id = uuid.uuid4()
+        request.user = self.user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, self.saved_order)
+        self.assertEqual(self.custom_visible_columns, table.visible_columns)
+
+    def test_filter_column_saved_view_but_revert(self):
+        """Assert that when a saved view is set but overwritten, the local custom order is used."""
+        custom_order = list(reversed(self.default_order))
+        self.user.set_config(f"tables.{self.form.table_name}.columns_order", custom_order, commit=True)
+        selected_columns = custom_order[0:2]
+        self.user.set_config(f"tables.{self.form.table_name}.columns", selected_columns, commit=True)
+
+        table = ProviderTable(
+            Provider.objects.all(), user=self.user, saved_view=self.saved_view, table_changes_pending=True
+        )
+        request = RequestFactory().get(
+            "/circuits/providers/", data={"saved_view": self.saved_view.pk, "table_changes_pending": "true"}
+        )
+        request.id = uuid.uuid4()
+        request.user = self.user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertNotEqual(new_order, self.saved_order)
+        self.assertEqual(new_order, custom_order)
+        self.assertEqual(selected_columns, table.visible_columns)
 
 
 class NavAppsUITestCase(TestCase):
@@ -922,17 +1254,15 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @override_settings(PAGINATE_COUNT=5)
-    def test_object_table_panel(self):
-        provider = Provider.objects.create(name="A Test Provider 1")
-        circuit_type = CircuitType.objects.create(
-            name="A Test Circuit Type",
-        )
+    def setUp(self):
+        super().setUp()
+        self.provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(name="A Test Circuit Type")
         circuit_status = Status.objects.get_for_model(Circuit).first()
 
         circuits = [
             Circuit(
-                provider=provider,
+                provider=self.provider,
                 cid=f"00121{x}",
                 circuit_type=circuit_type,
                 status=circuit_status,
@@ -942,11 +1272,14 @@ class TestObjectDetailView(TestCase):
         Circuit.objects.bulk_create(circuits)
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
-        url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(url)
+        self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        response = self.client.get(self.url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
-        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={self.provider.id}"
 
         # Assert Badge Count in table panel header
         panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
@@ -959,7 +1292,7 @@ class TestObjectDetailView(TestCase):
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
         <span>
-            <span id="_value_name">{provider.name}</span>
+            <span id="_value_name">{self.provider.name}</span>
             <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
@@ -968,6 +1301,22 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(name_copy, response_data)
         # ASN do not have a value, therefore no copy btn
         self.assertNotIn("#asn_copy", response_data)
+
+    def test_get_component_via_htmx(self):
+        panels = ProviderUIViewSet.object_detail_content.tabs[0].panels
+        for panel in panels:
+            if panel.__class__.__name__.startswith("_"):
+                # automagical panel like `_CustomFieldsPanel`, which may not always render unconditionally, skip it.
+                continue
+            with self.subTest(panel=panel):
+                response = self.client.get(
+                    self.url + f"?component_id={panel.component_id}", headers={"HX-Request": "true"}
+                )
+                self.assertHttpStatus(response, 200)
+                response_data = response.content.decode(response.charset)
+                self.assertIn(panel.component_id, response_data)
+                for other_panel in [other_panel for other_panel in panels if other_panel != panel]:
+                    self.assertNotIn(other_panel.component_id, response_data)
 
 
 class SearchRobotsTestCase(TestCase):

@@ -75,6 +75,7 @@
 {% endblock form %}
 
 {% block javascript %}
+    {{ block.super }}
     <script type="text/javascript">
         const controllerUrl = '{% url 'dcim-api:controller-list' %}';
         const controllerGroupUrl = '{% url 'dcim-api:controllermanageddevicegroup-list' %}';
