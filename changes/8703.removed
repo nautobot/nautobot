@@ -1,0 +1,1 @@
+Removed `Re-Run` button from `Console Log` tab in Job Result detail view. `Re-Run` button it's only available on `Job Result` tab.

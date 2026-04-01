@@ -1,16 +1,21 @@
 import os
+from unittest.mock import patch
 
 from django.apps import apps
-from django.test import tag, TestCase
+from django.contrib.auth import get_user_model
+from django.test import override_settings, RequestFactory, tag, TestCase
 from django.urls import resolve
 
 from nautobot.core.apps import NavMenuTab
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
+from nautobot.core.context_processors import nav_menu
 from nautobot.core.testing.utils import get_expected_menu_item_name
 from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.module_loading import import_string_optional
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.dcim.models import Device
+from nautobot.extras.models import Job
 from nautobot.extras.registry import registry
 
 
@@ -156,3 +161,74 @@ class NavMenuTestCase(TestCase):
             if not os.path.isfile(svg_path):
                 missing.append(svg_path)
         self.assertFalse(missing, f"Missing SVG files for NavigationIconChoices: {missing}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_menu_item_is_active(self):
+        """Verify that the correct menu item is marked as active."""
+        User = get_user_model()
+        user = User.objects.create(username="User 1", is_active=True, is_superuser=True)
+        request_factory = RequestFactory()
+        request = request_factory.get("/dcim/devices/")
+        request.resolver_match = resolve("/dcim/devices/")
+        request.user = user
+
+        nav = nav_menu(request)["nav_menu"]
+
+        # Assert that only one menu item is active
+        active_items = {
+            f"{tabname}-{groupname}-{itemname}": itemvalue
+            for tabname, tabvalue in nav["tabs"].items()
+            for groupname, groupvalue in tabvalue["groups"].items()
+            for itemname, itemvalue in groupvalue["items"].items()
+            if itemvalue["is_active"]
+        }
+        self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+        # Assert that the correct devices menu item is active
+        self.assertTrue(nav["tabs"]["Devices"]["groups"]["Devices"]["items"]["/dcim/devices/"]["is_active"])
+
+        # Force get_model_for_view_name to return the Device model
+        with patch("nautobot.core.context_processors.lookup") as mock_lookup:
+            mock_lookup.get_model_for_view_name.return_value = Device
+            mock_lookup.get_route_for_model.return_value = "dcim:device_list"
+            request = request_factory.get("/extras/jobs/")
+            request.resolver_match = resolve("/extras/jobs/")
+            request.user = user
+
+            nav = nav_menu(request)["nav_menu"]
+
+            # Assert that only one menu item is active
+            active_items = {
+                f"{tabname}-{groupname}-{itemname}": itemvalue
+                for tabname, tabvalue in nav["tabs"].items()
+                for groupname, groupvalue in tabvalue["groups"].items()
+                for itemname, itemvalue in groupvalue["items"].items()
+                if itemvalue["is_active"]
+            }
+            self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+            # Assert that the menu item for the requested URL is active
+            self.assertTrue(nav["tabs"]["Jobs"]["groups"]["Jobs"]["items"]["/extras/jobs/"]["is_active"])
+
+        # Force get_model_for_view_name to return the Job model
+        with patch("nautobot.core.context_processors.lookup") as mock_lookup:
+            mock_lookup.get_model_for_view_name.return_value = Job
+            mock_lookup.get_route_for_model.return_value = "extras:job_list"
+            request = request_factory.get("/dcim/devices/")
+            request.resolver_match = resolve("/dcim/devices/")
+            request.user = user
+
+            nav = nav_menu(request)["nav_menu"]
+
+            # Assert that only one menu item is active
+            active_items = {
+                f"{tabname}-{groupname}-{itemname}": itemvalue
+                for tabname, tabvalue in nav["tabs"].items()
+                for groupname, groupvalue in tabvalue["groups"].items()
+                for itemname, itemvalue in groupvalue["items"].items()
+                if itemvalue["is_active"]
+            }
+            self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+            # Assert that the menu item for the requested URL is active
+            self.assertTrue(nav["tabs"]["Devices"]["groups"]["Devices"]["items"]["/dcim/devices/"]["is_active"])

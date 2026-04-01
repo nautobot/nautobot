@@ -1,7 +1,7 @@
 import inspect
+import json
 import logging
 
-from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
-from django.urls.base import reverse
+from django.urls.base import reverse, reverse_lazy
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -103,8 +103,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.signals import change_context_state
-from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -156,6 +154,7 @@ __all__ = (
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
+    "CustomFieldContentTypesForm",
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
@@ -330,6 +329,8 @@ ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
     model=ApprovalWorkflowStageDefinition,
     exclude=("_custom_field_data",),
     extra=5,
+    min_num=1,
+    validate_min=True,
     widgets={
         "name": forms.TextInput(attrs={"class": "form-control"}),
         "sequence": forms.NumberInput(attrs={"class": "form-control"}),
@@ -767,7 +768,18 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         required=False,
     )
     content_types = MultipleContentTypeField(
-        feature="custom_fields", help_text="The object(s) to which this field applies."
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        widget=StaticSelect2Multiple(
+            attrs={
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+                "hx-include": "[name='required']",
+            }
+        ),
     )
 
     class Meta:
@@ -795,6 +807,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         if self.initial.get("key"):
             self.fields["key"].disabled = True
 
+        self.fields["required"].widget.attrs.update(
+            {
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+                "hx-include": "[name='content_types']",
+            }
+        )
+
 
 class CustomFieldFilterForm(NautobotFilterForm):
     model = CustomField
@@ -805,6 +828,18 @@ class CustomFieldFilterForm(NautobotFilterForm):
         required=False,
         label="Content Type(s)",
     )
+
+
+class CustomFieldContentTypesForm(BootstrapMixin, forms.ModelForm):
+    content_types = MultipleContentTypeField(
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        required=False,
+    )
+
+    class Meta:
+        model = CustomField
+        fields = ("content_types",)
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
@@ -834,36 +869,27 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
         )
 
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(queryset)
-            context["context_detail"] = "bulk delete custom field data"
-        tasks = []
-        for obj in queryset:
-            pk_set = set(obj.content_types.values_list("pk", flat=True))
-            if pk_set:
-                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
-        return tasks
-
     def perform_pre_delete(self, queryset):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
+        from nautobot.core.jobs import DeleteCustomFieldData
+        from nautobot.extras.customfields import enqueue_custom_field_job
+
         if not get_worker_count():
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
-        tasks = self.construct_custom_field_delete_tasks(queryset)
-        if tasks:
-            # Executing the tasks in the background sequentially using chain() aligns with how a single
-            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-            # to be active and comes with extra performance penalty.
-            chain(*tasks).apply_async()
+
+        field_specs = [
+            {
+                "field_key": obj.key,
+                "content_types": [str(pk) for pk in obj.content_types.values_list("pk", flat=True)],
+            }
+            for obj in queryset
+            if obj.content_types.exists()
+        ]
+        if field_specs:
+            enqueue_custom_field_job(DeleteCustomFieldData, field_specs=json.dumps(field_specs))
 
 
 #
@@ -1078,10 +1104,11 @@ class SavedViewForm(BootstrapMixin, forms.ModelForm):
         required=False,
         help_text="If checked, all users will be able to see this saved view",
     )
+    config = JSONField(widget=forms.Textarea, required=False, help_text="Read-only config data", disabled=True)
 
     class Meta:
         model = SavedView
-        fields = ["name", "is_global_default", "is_shared"]
+        fields = ["name", "is_global_default", "is_shared", "config"]
 
 
 class SavedViewModalForm(BootstrapMixin, forms.ModelForm):
@@ -1405,6 +1432,8 @@ class JobEditForm(NautobotModelForm):
             "name",
             "grouping_override",
             "grouping",
+            "console_log_default_override",
+            "console_log_default",
             "description_override",
             "description",
             "dryrun_default_override",
@@ -1483,6 +1512,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
     )
+    console_log_default = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to running with console log argument set to true",
+    )
     hidden = forms.NullBooleanField(
         required=False,
         widget=BulkEditNullBooleanSelect,
@@ -1549,6 +1583,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
+    clear_console_log_default_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of console log will be reverted to the default values defined in each Job's source code",
+    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1629,6 +1667,10 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    console_log_default = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
@@ -1904,6 +1946,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         queryset=ScheduledJob.objects.all(),
         required=False,
         to_field_name="name",
+    )
+    has_job_console_entries = forms.NullBooleanField(
+        required=False,
+        label="Has Job Console Entries",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
 
 

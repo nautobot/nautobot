@@ -742,6 +742,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         "nautobot-server",
         "runjob_with_job_result",
         f"{job_result.pk}",
+        f"--config={settings.SETTINGS_PATH}",
     ]
 
     def create_kubernetes_job():
@@ -942,7 +943,7 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         try:
             queued_object_changes = []
             change_context.defer_object_changes = True
-            for obj in qs.iterator():
+            for obj in qs.iterator(chunk_size=1000):
                 if not hasattr(obj, "to_objectchange"):
                     break
                 if len(queued_object_changes) >= batch_size:

@@ -273,6 +273,7 @@
         {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
+    {% include 'inc/generic_modal.html' %}
 {% endblock content %}
 
 
@@ -318,5 +319,50 @@
 
         window.addEventListener('popstate', (event) => show_tab(event.state.id));
     </script>
-    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
+    <script>
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            // Check if the swap happened inside our shared modal
+            if (event.detail?.target?.id === "modal-content-container") {
+                // Re-initialize Select2 for any new fields
+                if (window.nb && window.nb.select2) {
+                    window.nb.select2.initializeSelect2Fields(event.detail.target);
+                }
+            }
+        });
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail?.target?.id === "modal-content-container") {
+                const modalBody = document.querySelector('#nautobot-generic-modal .modal-body');
+                const modalTitle = document.querySelector('#nautobot-generic-modal .modal-title');
+
+                modalTitle.innerText = "Error Occurred";
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <p><strong>Failed to load content.</strong></p>
+                        <p>The server responded with status: ${event.detail.xhr.status}</p>
+                    </div>
+                `;
+            }
+        });
+        document.addEventListener('hidden.bs.modal', function (event) {
+            // Only reset if it's the nautobot generic modal
+            if (event.target.id === 'nautobot-generic-modal') {
+                const container = document.getElementById('modal-content-container');
+
+                // Restore the fallback HTML, this will reset the modal, ensuring that any HTMX state is cleared
+                // and the loading spinner is shown for the next use.
+                container.innerHTML = `
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="modal-fallback-title">Loading...</h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Please wait while we fetch the content...</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
 {% endblock javascript %}

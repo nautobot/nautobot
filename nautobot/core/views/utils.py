@@ -40,7 +40,7 @@ always_generated_metrics = [
 ]
 
 
-def check_filter_for_display(filters, field_name, values):
+def check_filter_for_display(filters, field_name, values, prefix=None):
     """
     Return any additional context data for the template.
 
@@ -48,6 +48,7 @@ def check_filter_for_display(filters, field_name, values):
         filters (dict): The filters of a desired FilterSet
         field_name (str): The name of the filter to get a label for and lookup values
         values (list[str]): List of strings that may be PKs to look up
+        prefix (str): Prefix for the fields
 
     Returns:
         (dict): A dict containing:
@@ -58,16 +59,20 @@ def check_filter_for_display(filters, field_name, values):
     values = values if isinstance(values, (list, tuple)) else [values]
     values = [v if v != "null" else None for v in values]
 
+    filters_field_name = field_name
+    if prefix is not None:
+        filters_field_name = field_name.removeprefix(f"{prefix}-")
+
     resolved_filter = {
         "name": field_name,
         "display": field_name,
         "values": [{"name": value, "display": value} for value in values],
     }
 
-    if field_name not in filters.keys():
+    if filters_field_name not in filters.keys():
         return resolved_filter
 
-    filter_field = filters[field_name]
+    filter_field = filters[filters_field_name]
 
     resolved_filter["display"] = get_filter_field_label(filter_field)
 

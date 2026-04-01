@@ -98,3 +98,116 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 +++ 2.4.5 "`logger.failure()` added"
     You can now use `self.logger.failure()` to log a message at the level `FAILURE`, which is located between the standard `WARNING` and `ERROR` log levels.
+
+## Console Logging
+
++++ 3.1.0
+
+The console_log_default flag controls how job stdout/stderr is handled and where the job is executed.
+
+*If not explicitly provided, `console_log_default` defaults to False.*
+
+### Asynchronous execution (synchronous=False)
+
+```mermaid
+flowchart LR
+    start[JobResult.enqueue_job]
+
+    subgraph CeleryWorker [Celery Worker]
+        direction TB
+        direct_call[run_job task
+        calls my_app.jobs.my_job directly]
+
+        subgraph console_log_task [run_console_log_job_and_return_job_result]
+            executor_celery[JobConsoleLogExecutor
+            Celery Task]
+        end
+    end
+
+    subgraph K8sCluster [Kubernetes Cluster]
+        direction TB
+        subgraph k8s_pod [K8s Job/Pod - runjob_with_job_result]
+            direction TB
+            k8s_check{console_log?}
+            executor_k8s[JobConsoleLogExecutor]
+        end
+    end
+
+    subgraph Subprocess [Local Subprocess]
+        execute_job_result['nautobot-server execute_job_result'
+        runs job via run_job.apply]
+    end
+
+    start -- "Default (Enqueue Celery Task)" --> direct_call
+    start -- "console_log=True (Enqueue Celery Task)" --> console_log_task
+    start -- "K8s Queue (K8s API directly)" --> k8s_pod
+
+    k8s_check -- "True" --> executor_k8s
+    k8s_check -- "False" --> execute_job_result
+
+    executor_celery -- "subprocess.Popen" --> execute_job_result
+    executor_k8s -- "subprocess.Popen" --> execute_job_result
+```
+
+When `console_log=True` and the job is executed asynchronously:
+
+- The `JobResult.celery_kwargs` field is populated and `nautobot_job_console_log` is set.
+
+#### Celery Queue
+
+- A dedicated Celery task `run_console_log_job_and_return_job_result` is queued instead of the standard `run_job` task.
+- That task instantiates `JobConsoleLogExecutor` which:
+    - Starts a subprocess using:
+
+    ```no-highlight
+        nautobot-server execute_job_result <job_result_id>
+    ```
+
+    - Reads stdout and stderr line by line from the subprocess.
+    - Streams output into the `JobConsoleEntry` table in real time.
+    - This allows the UI to display live job output as the job runs.
+
+#### Kubernetes Queue
+
+- A Kubernetes Job/Pod is created via the K8s API running:
+
+    ```no-highlight
+        nautobot-server runjob_with_job_result <job_result_id>
+    ```
+
+- Inside the pod, `runjob_with_job_result` checks `nautobot_job_console_log` in the `JobResult.celery_kwargs`:
+    - **`console_log=True`** — instantiates `JobConsoleLogExecutor` which starts a subprocess:
+
+    ```no-highlight
+            nautobot-server execute_job_result <job_result_id>
+    ```
+
+    and streams stdout/stderr into the `JobConsoleEntry` table in real time.
+    - **`console_log=False`** — calls `JobResult.execute_job()` directly without console log capturing.
+
+### Exporting Console Logs
+
+**Export Console Logs** button is available on the *Console Log* tab of the Job Result detail view.
+
+Clicking the button downloads a plain-text file containing all `JobConsoleEntry` records associated with that Job Result, sorted chronologically. Each line follows the format:
+
+```no-highlight
+[HH:MM:SS.mmm] <message>
+```
+
+For example:
+
+```no-highlight
+[10:23:41.004] Starting job execution
+[10:23:41.512] Connected to device 192.0.2.1
+[10:23:44.210] Job completed successfully
+```
+
+The downloaded file is named `nautobot_job_console_entries_<job_result_pk>.txt`.
+
+!!! note
+    The **Export Console Logs** button requires the `extras.view_jobconsoleentry` permission.
+
+### Use cases
+
+1. For debugging

@@ -1,0 +1,1 @@
+Added `export_job_console_entries` action to JobResult to download console entries to plain text file.
