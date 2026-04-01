@@ -16,6 +16,7 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
@@ -54,6 +55,7 @@ from nautobot.core.ui.bulk_buttons import (
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -78,7 +80,7 @@ from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
-from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, Status, Team
+from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.ipam.models import IPAddress
 from nautobot.ipam.tables import (
@@ -103,7 +105,7 @@ from nautobot.wireless.tables import (
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NONCONNECTABLE_IFACE_TYPES
+from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
@@ -408,6 +410,15 @@ class LocationUIViewSet(NautobotUIViewSet):
         }
     )
     view_titles = Titles(titles={"detail": "{{ object.name }}"})
+    non_filter_params = [*NautobotUIViewSet.non_filter_params, "expanded_subtree"]
+
+    class LocationSiblingsTablePanel(object_detail.ObjectsTablePanel):
+        def get_extra_context(self, context: object_detail.Context):
+            obj = get_obj_from_context(context)
+            return {
+                **super().get_extra_context(context),
+                "body_content_table_list_url": f"{reverse('dcim:location_list')}?parent={obj.parent_id or 'null'}",
+            }
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -462,6 +473,18 @@ class LocationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 api_url_name="dcim-api:location-stats",
             ),
+            LocationSiblingsTablePanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=150,
+                table_title="Sibling Locations",
+                table_class=tables.LocationTable,
+                table_attribute="siblings",
+                related_field_name="parent",
+                order_by_fields=["name"],
+                add_button_route=None,
+                hide_hierarchy_ui=True,
+                max_display_count=10,
+            ),
             LocationRackGroupsPanel(
                 label="Rack Groups",
                 section=SectionChoices.RIGHT_HALF,
@@ -481,15 +504,53 @@ class LocationUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=100,
-                table_title="Children",
+                table_title="Child Locations",
                 table_class=tables.LocationTable,
                 table_attribute="children",
                 related_field_name="parent",
                 order_by_fields=["name"],
                 hide_hierarchy_ui=True,
+                max_display_count=10,
             ),
         )
     )
+
+    def _filter_params_imply_hide_hierarchy_ui(self, filter_params):
+        # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
+        # no other filters are applied, as they do not generally alter the hierarchy of the filtered locations:
+        if all(
+            key
+            in [
+                "max_depth",
+                "subtree",
+            ]
+            for key in filter_params
+        ):
+            return False
+        return True
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self._filter_params_imply_hide_hierarchy_ui(self.filter_params):
+            self.hide_hierarchy_ui = False
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        """If `LOCATION_LIST_DEFAULT_MAX_DEPTH` is set, redirect any query-param-free request to `?max_depth=...`."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response, HttpResponseRedirect):
+            # already a redirect
+            return response
+        if request.GET:
+            # query params explicitly provided by user, defaults don't apply
+            return response
+        default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+        if not default_max_depth:
+            # no relevant default to apply
+            return response
+        query_dict = request.GET.copy()
+        query_dict["max_depth"] = default_max_depth
+        return redirect(request.path + "?" + query_dict.urlencode())
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -514,7 +575,52 @@ class LocationUIViewSet(NautobotUIViewSet):
                 }
             )
 
+        elif self.action in ["list", "children"] and not self.hide_hierarchy_ui:
+            context["table_expandable"] = True
+
         return context
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        instance = self.get_object()
+        children = instance.children.restrict(request.user, "view")
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        children_table = self.table_class(
+            children,
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("dcim.change_location") or request.user.has_perm("dcim.delete_location"):
+            children_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "next_page_url": reverse("dcim:location_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
+                "template": "panel_table.html",
+                "table": children_table,
+                "table_expandable": True,
+                "tree_depth": instance.ancestors().count() + 1,
+                "additional_count": max(0, children.count() - (paginate["per_page"] * children_table.page.number)),
+            }
+        )
 
 
 class MigrateLocationDataToContactView(generic.ObjectEditView):
@@ -2430,22 +2536,67 @@ class DeviceUIViewSet(NautobotUIViewSet):
         ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
         """
 
+        @staticmethod
+        def _get_parent_bay_or_none(device):
+            """Return the parent bay for a device, or None if it has no parent bay."""
+            try:
+                return device.parent_bay
+            except DeviceBay.DoesNotExist:
+                return None
+
+        @classmethod
+        def _get_breadcrumb_objects(cls, instance):
+            """
+            Build an ordered list of breadcrumb objects from top-level parent down to immediate parent bay.
+
+            Output shape (for nested devices):
+                [parent_device, parent_device_bay, intermediate_device, intermediate_device_bay, ...]
+            """
+            current_bay = cls._get_parent_bay_or_none(instance)
+            if current_bay is None:
+                return []
+
+            visited_device_ids = set()
+            breadcrumb_segments = []
+            hop_count = 0
+
+            #
+            # Walk up the chain starting at the bay at which the passed instance is installed. The side-effect of
+            # this is that, in the event the chain is longer than the depth limit, the top-most device(s) will
+            # not be included.
+            while current_bay is not None and hop_count < DEVICE_RECURSION_DEPTH_LIMIT:
+                current_device = current_bay.device
+                if current_device.pk in visited_device_ids:
+                    break
+
+                visited_device_ids.add(current_device.pk)
+                breadcrumb_segments.extend([current_bay, current_device])
+
+                current_bay = cls._get_parent_bay_or_none(current_device)
+                hop_count += 1
+
+            # Convert from child-upward order to top-down order to display the breadcrumb from
+            # top-level parent down to immediate parent bay from left to right.
+            return list(reversed(breadcrumb_segments))
+
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
-                try:
-                    if instance.parent_bay is not None:
-                        parent = instance.parent_bay.device
-                        display = format_html(
-                            "{} / {}",
-                            helpers.hyperlinked_object(parent),
-                            helpers.hyperlinked_object(instance.parent_bay),
-                        )
-                        if parent.position is not None:
-                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
-                        return display
-                except DeviceBay.DoesNotExist:
-                    pass
+                breadcrumb_objects = self._get_breadcrumb_objects(instance)
+
+                if breadcrumb_objects:
+                    breadcrumb_links = [helpers.hyperlinked_object(obj) for obj in breadcrumb_objects]
+                    display = format_html(" / ".join(["{}"] * len(breadcrumb_links)), *breadcrumb_links)
+
+                    # Add top-level device position if it has one
+                    if hasattr(breadcrumb_objects[0], "position"):
+                        top_device_position = breadcrumb_objects[0].position
+                        if top_device_position is not None:
+                            display += format_html(
+                                " (U{} / {})", top_device_position, breadcrumb_objects[0].get_face_display()
+                            )
+                    return display
+
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
@@ -2482,6 +2633,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     class DevicePowerUtilizationPanel(object_detail.Panel):
         """Panel showing a table of PDU calculated power utilization per power-port on the device."""
+
+        deferred_render = True  # render_body_content is moderately expensive at scale
 
         def should_render(self, context):
             """Only render if the device is a PDU, i.e. has both power-ports and power-outlets."""
@@ -3510,13 +3663,17 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
                 ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_device"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_device is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_device is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_module"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_module is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_module is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(instance=context_object_attr("parent_module_bay")),
                 AncestorsInstanceBreadcrumbItem(

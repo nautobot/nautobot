@@ -8,7 +8,6 @@ from django.urls import reverse
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import testing
-from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.views import paginator
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
@@ -50,6 +49,20 @@ class PaginatorTestCase(testing.TestCase):
         request.user = self.user
         self.assertEqual(paginator.get_paginate_count(request), 400)
 
+    def test_get_paginate_count_request_params_save_user_config(self):
+        """Get the paginate count from the request's GET params, saving it in user configuration (default behavior)."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request)
+        self.assertEqual(self.user.get_config("pagination.per_page"), 400)
+
+    def test_get_paginate_count_request_params_do_not_save_user_config(self):
+        """Get the paginate count from the request's GET params, without saving it in user configuration."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request, save_user_config=False)
+        self.assertIsNone(self.user.get_config("pagination.per_page"))
+
     @override_settings(MAX_PAGE_SIZE=10)
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
@@ -69,36 +82,44 @@ class PaginatorTestCase(testing.TestCase):
         self.add_permissions("circuits.view_provider")
         self.client.force_login(self.user)
         with self.subTest("query parameter per_page=20 returns 10 rows"):
-            response = self.client.get(url, {"per_page": 20})
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 10)
-            self.assertEqual(len(response.context["table"].page), 10)
+            page_response = self.client.get(url, {"per_page": 20})
+            table_response = self.client.get(url, {"per_page": 20}, headers={"HX-Request": "true"})
+            self.assertHttpStatus(page_response, 200)
+            self.assertHttpStatus(table_response, 200)
+            self.assertEqual(table_response.context["paginator"].per_page, 10)
+            self.assertEqual(len(table_response.context["table"].page), 10)
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, extract_page_body(response.content.decode(response.charset)))
+            self.assertIn(warning_message, table_response.content.decode(table_response.charset))
         with self.subTest("query parameter per_page=5 returns 5 rows"):
-            response = self.client.get(url, {"per_page": 5})
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 5)
-            self.assertEqual(len(response.context["table"].page), 5)
+            page_response = self.client.get(url, {"per_page": 5})
+            table_response = self.client.get(url, {"per_page": 5}, headers={"HX-Request": "true"})
+            self.assertHttpStatus(page_response, 200)
+            self.assertHttpStatus(table_response, 200)
+            self.assertEqual(table_response.context["paginator"].per_page, 5)
+            self.assertEqual(len(table_response.context["table"].page), 5)
         with self.subTest("user config per_page=200 returns 10 rows"):
             self.user.set_config("pagination.per_page", 200, commit=True)
-            response = self.client.get(url)
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 10)
-            self.assertEqual(len(response.context["table"].page), 10)
+            page_response = self.client.get(url)
+            table_response = self.client.get(url, headers={"HX-Request": "true"})
+            self.assertHttpStatus(page_response, 200)
+            self.assertHttpStatus(table_response, 200)
+            self.assertEqual(table_response.context["paginator"].per_page, 10)
+            self.assertEqual(len(table_response.context["table"].page), 10)
         with self.subTest("global config PAGINATE_COUNT=50 returns 10 rows"):
             self.user.clear_config("pagination.per_page", commit=True)
             # Asserting `max_page` restriction on `NautobotUIViewSet`.
-            response = self.client.get(reverse("circuits:provider_list"))
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 10)
-            self.assertEqual(len(response.context["table"].page), 10)
+            page_response = self.client.get(reverse("circuits:provider_list"))
+            table_response = self.client.get(reverse("circuits:provider_list"), headers={"HX-Request": "true"})
+            self.assertHttpStatus(page_response, 200)
+            self.assertHttpStatus(table_response, 200)
+            self.assertEqual(table_response.context["paginator"].per_page, 10)
+            self.assertEqual(len(table_response.context["table"].page), 10)
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, extract_page_body(response.content.decode(response.charset)))
+            self.assertIn(warning_message, table_response.content.decode(table_response.charset))
 
     @override_settings(MAX_PAGE_SIZE=0)
     def test_error_warning_not_shown_when_max_page_size_is_0(self):
@@ -114,9 +135,11 @@ class PaginatorTestCase(testing.TestCase):
         # Test on both default views and NautobotUIViewset views
         urls = [reverse("dcim:manufacturer_list"), reverse("circuits:provider_list")]
         for url in urls:
-            response = self.client.get(url, {"per_page": 20})
-            self.assertHttpStatus(response, 200)
-            self.assertEqual(response.context["paginator"].per_page, 20)
-            self.assertEqual(len(response.context["table"].page), 20)
+            page_response = self.client.get(url, {"per_page": 20})
+            table_response = self.client.get(url, {"per_page": 20}, headers={"HX-Request": "true"})
+            self.assertHttpStatus(page_response, 200)
+            self.assertHttpStatus(table_response, 200)
+            self.assertEqual(table_response.context["paginator"].per_page, 20)
+            self.assertEqual(len(table_response.context["table"].page), 20)
             warning_message = "Requested &quot;per_page&quot; is too large."
-            self.assertNotIn(warning_message, extract_page_body(response.content.decode(response.charset)))
+            self.assertNotIn(warning_message, table_response.content.decode(table_response.charset))

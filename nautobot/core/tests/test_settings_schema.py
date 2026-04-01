@@ -138,6 +138,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "EXEMPT_EXCLUDE_MODELS",
             "FILTERS_NULL_CHOICE_LABEL",
             "FILTERS_NULL_CHOICE_VALUE",
+            "FORMAT_MODULE_PATH",
             "GRAPHENE",
             "HOSTNAME",
             "INSTALLED_APPS",
@@ -146,6 +147,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "LOGIN_URL",
             "LOGIN_REDIRECT_URL",
             "MEDIA_URL",
+            "MESSAGE_STORAGE",
             "MESSAGE_TAGS",
             "MIDDLEWARE",
             "PROMETHEUS_EXPORT_MIGRATIONS",
@@ -192,7 +194,7 @@ class SettingsJSONSchemaTestCase(TestCase):
         # Test that settings variables are accurately described in the schema
         for key in keys:
             with self.subTest(f"Checking for settings attribute {key} in the settings schema"):
-                self.assertIn(key, self.settings_schema["properties"])
+                self.assertIn(key, self.settings_schema["properties"].keys())
             if key not in self.settings_schema["properties"]:
                 continue
 

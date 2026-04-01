@@ -8,8 +8,6 @@ SEARCH_MAX_RESULTS = 15
 # Filter lookup expressions
 #
 
-SEARCH_MAX_RESULTS = 15
-
 FILTER_CHAR_BASED_LOOKUP_MAP = {
     "n": "exact",
     "ic": "icontains",
@@ -165,6 +163,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "jobqueue",
     "jobqueueassignment",
     "jobresult",
+    "jobconsoleentry",
     "locationtype",
     "manufacturer",
     "metadatachoice",

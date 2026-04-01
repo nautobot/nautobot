@@ -745,6 +745,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "mgmt_only",
@@ -772,6 +773,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "description",
         )
@@ -804,6 +806,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "parent_interface",
@@ -834,6 +837,8 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
+            "speed",
             "parent_interface",
             "lag",
             "mtu",
@@ -1429,6 +1434,8 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         url_params={"software_version": "pk"},
         verbose_name="Inventory Items",
     )
+    long_term_support = BooleanColumn()
+    pre_release = BooleanColumn()
     tags = TagColumn(url_name="dcim:softwareversion_list")
     actions = ButtonsColumn(SoftwareVersion)
 

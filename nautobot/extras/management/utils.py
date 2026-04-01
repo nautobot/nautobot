@@ -1,4 +1,5 @@
 import json
+import sys
 
 from django.core.management.base import CommandError
 from django.utils import timezone
@@ -103,3 +104,31 @@ def report_job_status(command, job_result):
     # Wrap things up
     command.stdout.write(f"[{timezone.now():%H:%M:%S}] {job_class_path}: Duration {job_result.duration}")
     command.stdout.write(f"[{timezone.now():%H:%M:%S}] Finished")
+
+
+def handle_eager_result_failure(command, eager_result):
+    """
+    Handle a failed Celery eager result by writing the exception to stderr and exiting non-zero.
+
+    When run_job.apply() executes in Celery eager mode, any exception raised inside run_job
+    is caught internally by Celery and stored as EagerResult.result rather than propagated.
+    As a result, the subprocess always exits with code 0 even if the job failed, which causes
+    the parent JobConsoleLogExecutor to miss the failure and return successfully, leading
+    store_result() to overwrite the correct FAILURE status with SUCCESS.
+
+    To fix this, we manually write the traceback to stderr (so StreamReaders capture it into
+    JobConsoleEntry rows) and exit with code 1 (so _handle_failure() raises
+    JobConsoleLogSubprocessError, the wrapper task fails, and store_result() is called with
+    the correct FAILURE status).
+
+    Args:
+        command: The Django management command instance, used to write to stderr.
+        eager_result: The Celery EagerResult returned from run_job.apply().
+    """
+    exc = eager_result.result
+    traceback_str = eager_result.traceback
+    if traceback_str:
+        command.stderr.write(traceback_str)
+    else:
+        command.stderr.write(f"{type(exc).__name__}: {exc}\n")
+    sys.exit(1)
