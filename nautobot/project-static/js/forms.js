@@ -194,7 +194,7 @@ function initializeVLANModeSelection(context) {
             // Fallback: return empty jQuery object (setRowVisible will handle it)
             return $();
         }
-        
+
         const $rowUntagged = findFieldRow($untagged);
         const $rowAddTagged = findFieldRow($add_tagged);
         const $rowRemoveTagged = findFieldRow($remove_tagged);

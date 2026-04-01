@@ -742,6 +742,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         "nautobot-server",
         "runjob_with_job_result",
         f"{job_result.pk}",
+        f"--config={settings.SETTINGS_PATH}",
     ]
 
     def create_kubernetes_job():
