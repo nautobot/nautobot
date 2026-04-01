@@ -2969,7 +2969,7 @@ class GitRepositoryTestCase(
         self.assertHttpStatus(response, [403, 404])
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_custom_actions(self, _):
+    def test_git_repository_custom_actions(self, _):
         """GitRepository custom actions redirect instead of returning 403/404."""
         instance = self._get_queryset().first()
         for action_name in ["dryrun", "sync"]:
