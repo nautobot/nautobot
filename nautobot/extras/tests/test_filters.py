@@ -1763,14 +1763,14 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_change_context(self):
         params = {"change_context": ["job", "web"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(change_context__in=["job", "web"]),
         )
 
     def test_changed_object_change_context_detail(self):
         params = {"change_context_detail__nic": ["Lorem ipsum dolor sit amet"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(change_context_detail__icontains="Lorem ipsum dolor sit amet"),
         )
@@ -2384,7 +2384,7 @@ class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_filter_descendants_returns_none(self):
         params = {"descendants": [self.unrelated_group.pk]}
         filtered = self.filterset(params, self.queryset).qs
-        self.assertQuerysetEqual(filtered, self.queryset.none())
+        self.assertQuerySetEqual(filtered, self.queryset.none())
 
     def test_filter_ancestors_returns_expected_groups(self):
         params = {"ancestors": [self.grandchild_group.pk]}
@@ -2399,7 +2399,7 @@ class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_filter_ancestors_returns_none(self):
         params = {"ancestors": [self.parent_group.pk]}
         filtered = self.filterset(params, self.queryset).qs
-        self.assertQuerysetEqual(filtered, self.queryset.none())
+        self.assertQuerySetEqual(filtered, self.queryset.none())
 
 
 class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
