@@ -1006,7 +1006,7 @@ class ObjectsTablePanel(Panel):
     hide_hierarchy_ui = False
     include_columns = ()
     include_paginator = False
-    list_url_extra_params= None,
+    list_url_extra_params = None
     max_display_count = None
     order_by_fields = ()
     paginate = True
