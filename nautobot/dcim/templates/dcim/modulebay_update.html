@@ -3,8 +3,8 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var position_field = document.getElementById('id_position');
+        document.addEventListener('nb-form:load:{{ obj_type }}', () => {
+            var position_field = document.getElementById(window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'position', false));
             var source_arr = position_field.getAttribute('source').split(" ");
             var length = position_field.getAttribute('maxlength');
             position_field.setAttribute('_changed', Boolean(position_field.value))
@@ -17,14 +17,14 @@
                     if (str != "") {
                         str += " ";
                     }
-                    let source_id = 'id_' + source_str;
+                    let source_id = window.nb.form.getFieldAutoId('{{ form.auto_id }}', source_str, false);
                     let source = document.getElementById(source_id)
                     str += source.value;
                 }
                 position_field.value = str.slice(0, length ? length : 255);
             };
             for (source_str of source_arr) {
-                let source_id = 'id_' + source_str;
+                let source_id = window.nb.form.getFieldAutoId('{{ form.auto_id }}', source_str, false);
                 let source = document.getElementById(source_id);
                 source.addEventListener('keyup', function() {
                     if (position_field && position_field.getAttribute('_changed')=="false") {

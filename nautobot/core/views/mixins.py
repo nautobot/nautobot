@@ -706,8 +706,6 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         action = self.action
 
         if self.request.headers.get("HX-Request", False):
-            if action == "create":
-                return "components/htmx/object_embedded_create.html"
             if action == "list":
                 return "components/htmx/list_view_table.html"
             if self.detail and "component_id" in self.request.GET:
@@ -1099,7 +1097,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         context = {}
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
-        return Response(context)
+        response = Response(context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
     def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
@@ -1129,7 +1129,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         context = {}
         if request.method == "POST":
             return self.perform_update(request, *args, **kwargs)
-        return Response(context)
+        response = Response(context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     # TODO: this conflicts with DRF's UpdateModelMixin.perform_update(self, serializer) API
     def perform_update(self, request, *args, **kwargs):  # pylint: disable=arguments-differ

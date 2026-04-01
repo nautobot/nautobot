@@ -3,7 +3,9 @@ import csv
 from datetime import timedelta
 from io import StringIO
 import json
+import logging
 from pathlib import Path
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -14,13 +16,14 @@ import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
-from nautobot.core.jobs import ExportObjectList
+from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import Device, DeviceType, FrontPortTemplate, Location, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
+from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
     Contact,
     ContactAssociation,
@@ -1604,3 +1607,111 @@ class ValidateModelDataTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
         self.assertIn("Unable to apply access permissions to users.user", log_fail.message)
+
+
+class DeleteCustomFieldDataTest(TransactionTestCase):
+    """Test input normalization/validation in DeleteCustomFieldData.run()."""
+
+    def setUp(self):
+        super().setUp()
+        self.job = DeleteCustomFieldData()
+        self.job.logger = logging.getLogger("test")
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_field_specs_valid_json(self, mock_fn):
+        self.job.run(field_specs='[{"field_key": "k", "content_types": ["ct1"]}]')
+        mock_fn.assert_called_once_with(
+            field_key="k", content_type_pk_set=["ct1"], verbose=False, job_logger=self.job.logger
+        )
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_field_specs_multiple_items(self, mock_fn):
+        specs = json.dumps(
+            [
+                {"field_key": "k1", "content_types": ["ct1"]},
+                {"field_key": "k2", "content_types": ["ct2", "ct3"]},
+            ]
+        )
+        self.job.run(field_specs=specs)
+        self.assertEqual(mock_fn.call_count, 2)
+        mock_fn.assert_any_call(field_key="k1", content_type_pk_set=["ct1"], verbose=False, job_logger=self.job.logger)
+        mock_fn.assert_any_call(
+            field_key="k2", content_type_pk_set=["ct2", "ct3"], verbose=False, job_logger=self.job.logger
+        )
+
+    def test_field_specs_invalid_json(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs="not json")
+
+    def test_field_specs_not_a_list(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='{"field_key": "k"}')
+
+    def test_field_specs_bad_item_schema(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='[{"wrong_key": 1}]')
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_fallback_to_single_spec(self, mock_fn):
+        ct = mock.Mock()
+        ct.pk = "fake-pk"
+        self.job.run(field_key="my_key", content_types=[ct])
+        mock_fn.assert_called_once_with(
+            field_key="my_key", content_type_pk_set=["fake-pk"], verbose=False, job_logger=self.job.logger
+        )
+
+    def test_no_input_raises(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run()
+
+
+class UpdateCustomFieldChoiceDataTest(TransactionTestCase):
+    """Test input normalization/validation in UpdateCustomFieldChoiceData.run()."""
+
+    def setUp(self):
+        super().setUp()
+        self.job = UpdateCustomFieldChoiceData()
+        self.job.logger = logging.getLogger("test")
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_field_specs_valid_json(self, mock_fn):
+        self.job.run(field_specs='[{"field_id": "f1", "old_value": "old", "new_value": "new"}]')
+        mock_fn.assert_called_once_with(field_id="f1", old_value="old", new_value="new", job_logger=self.job.logger)
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_field_specs_multiple_items(self, mock_fn):
+        specs = json.dumps(
+            [
+                {"field_id": "f1", "old_value": "a", "new_value": "b"},
+                {"field_id": "f2", "old_value": "c", "new_value": "d"},
+            ]
+        )
+        self.job.run(field_specs=specs)
+        self.assertEqual(mock_fn.call_count, 2)
+        mock_fn.assert_any_call(field_id="f1", old_value="a", new_value="b", job_logger=self.job.logger)
+        mock_fn.assert_any_call(field_id="f2", old_value="c", new_value="d", job_logger=self.job.logger)
+
+    def test_field_specs_invalid_json(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs="not json")
+
+    def test_field_specs_not_a_list(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='{"field_id": "f1"}')
+
+    def test_field_specs_bad_item_schema(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='[{"wrong_key": 1}]')
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_fallback_to_single_spec(self, mock_fn):
+        field = mock.Mock()
+        field.pk = "fake-field-pk"
+        self.job.run(field=field, old_value="old", new_value="new")
+        mock_fn.assert_called_once_with(
+            field_id="fake-field-pk", old_value="old", new_value="new", job_logger=self.job.logger
+        )
+
+    def test_no_input_raises(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run()

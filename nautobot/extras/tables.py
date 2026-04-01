@@ -127,14 +127,13 @@ class="badge bg-{% if entry.content_identifier in record.provided_contents %}suc
 
 GITREPOSITORY_BUTTONS = """
 <li>
-    <button
-        data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
-        type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
-    >
-        <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
-        Sync
-    </button>
+    <form action="{% url 'extras:gitrepository_sync' pk=record.pk %}" method="post">
+        {% csrf_token %}
+        <button class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %} type="submit">
+            <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+            Sync
+        </button>
+    </form>
 </li>
 """
 
@@ -175,6 +174,22 @@ JOB_RESULT_BUTTONS = """
             </a>
         </li>
     {% endif %}
+{% endif %}
+{% if perms.extras.view_joblogentry %}
+    <li>
+        <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_jobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:jobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
 {% endif %}
 """
 
@@ -1289,6 +1304,7 @@ class JobResultTable(BaseTable):
     )
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+    console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
 
     def render_summary(self, record):
         """
@@ -1333,6 +1349,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
             "actions",
+            "console_log",
         )
         default_columns = (
             "pk",

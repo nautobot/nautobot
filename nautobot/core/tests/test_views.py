@@ -552,6 +552,31 @@ class SearchViewTestCase(TestCase):
         # search.html renders the results container with an HTMX trigger for each model in parallel
         self.assertIn("searchable_models", response.context)
         self.assertContains(response, "nb-search-results-tables")
+        # Assert no duplicate entries in searchable_models context
+        self.assertEqual(len(response.context["searchable_models"]), len(set(response.context["searchable_models"])))
+        # Assert special-case ordering of searchable_models
+        self.assertEqual(
+            ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"],
+            response.context["searchable_models"][:4],
+        )
+        # Others are ordered alphabetically by app label then by model name - spot check a few
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.devicefamily"),
+            response.context["searchable_models"].index("dcim.devicetype"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.rack"),
+            response.context["searchable_models"].index("dcim.rackgroup"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.virtualdevicecontext"),
+            response.context["searchable_models"].index("extras.contact"),
+        )
+        # Apps come after core models - spot check
+        self.assertLess(
+            response.context["searchable_models"].index("virtualization.virtualmachine"),
+            response.context["searchable_models"].index("example_app.examplemodel"),
+        )
 
     def test_htmx_with_matching_results(self):
         """HTMX request for dcim.location with a matching query returns a populated table."""

@@ -101,6 +101,7 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -1483,6 +1484,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 status=JobResultStatusChoices.STATUS_STARTED,
                 scheduled_job=scheduled_jobs[idx],
             )
+        # at least one job result must to have at least one job console entry to pass test `test_boolean_filters_generic`
+        JobConsoleEntry.objects.create(job_result=JobResult.objects.first(), timestamp=now(), text="Processing data...")
 
     def test_scheduled_job(self):
         scheduled_jobs = list(self.scheduled_jobs[:2])

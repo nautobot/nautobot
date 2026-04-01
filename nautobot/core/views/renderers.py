@@ -340,8 +340,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 }
             )
         elif view.action in ["create", "update"]:
+            base_template = (
+                "components/htmx/object_embedded_create.html"
+                if request.headers.get("HX-Request", False)
+                else "generic/object_create_base.html"
+            )
             context.update(
                 {
+                    "base_template": base_template,
                     "editing": instance.present_in_database,
                 }
             )
