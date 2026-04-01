@@ -2970,8 +2970,26 @@ class GitRepositoryTestCase(
 
     def test_custom_actions(self):
         """GitRepository custom actions redirect instead of returning 403/404."""
+        instance = self._get_queryset().first()
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                # Without permissions, should get 403
+                response = self.client.post(url)
+                self.assertHttpStatus(response, 403)
 
-    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+                # With permissions, should redirect to job result
+                self.add_permissions("extras.change_gitrepository")
+                with mock.patch(
+                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
+                    if action_name == "dryrun"
+                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
+                ) as mock_enqueue:
+                    mock_enqueue.return_value = mock.Mock()
+                    response = self.client.post(url, follow=True)
+                    self.assertHttpStatus(response, 200)
+                    mock_enqueue.assert_called_once()
+                self.remove_permissions("extras.change_gitrepository")
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
