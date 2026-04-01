@@ -7,21 +7,24 @@ from django import forms
 from nautobot.apps.forms import (
     add_blank_choice,
     APISelect,
-    BulkEditNullBooleanSelect,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     JSONArrayFormField,
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
+    RoleModelBulkEditFormMixin,
+    RoleModelFilterFormMixin,
     StaticSelect2,
     StaticSelect2Multiple,
+    StatusModelFilterFormMixin,
     TagFilterField,
     TagsBulkEditFormMixin,
 )
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
+from nautobot.extras.models import DynamicGroup, SecretsGroup
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
@@ -61,23 +64,24 @@ class VPNProfileForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-man
         ]
 
 
-class VPNProfileBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNProfileBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPNProfile bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNProfile.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(required=False, label="Description")
-    keepalive_interval = forms.IntegerField(
-        min_value=0,
-        required=False,
-    )
-    keepalive_retries = forms.IntegerField(
-        min_value=0,
-        required=False,
-    )
+    keepalive_interval = forms.IntegerField(min_value=0, required=False, label="Keepalive Interval (seconds)")
+    keepalive_retries = forms.IntegerField(min_value=0, required=False, label="Keepalive Retries")
     keepalive_enabled = forms.NullBooleanField(
-        required=False, widget=BulkEditNullBooleanSelect, label="Keepalive Enabled"
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Keepalive Enabled"
     )
-    nat_traversal = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Nat Traversal")
+    nat_traversal = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="NAT Traversal"
+    )
+    tenant = DynamicModelChoiceField(
+        required=False,
+        queryset=Tenant.objects.all(),
+        label="Tenant",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -114,7 +118,7 @@ VPNProfilePh2FormSet = forms.inlineformset_factory(
 )
 
 
-class VPNProfileFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=too-many-ancestors
+class VPNProfileFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterForm):  # pylint: disable=too-many-ancestors
     """Filter form for VPNProfile."""
 
     model = models.VPNProfile
@@ -131,28 +135,18 @@ class VPNProfileFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: di
     )
     keepalive_enabled = forms.NullBooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
         label="Keepalive Enabled",
     )
     nat_traversal = forms.NullBooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
         label="NAT Traversal Enabled",
-    )
-    role = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Role.objects.all(),
-        label="Role",
     )
     secrets_group = DynamicModelMultipleChoiceField(
         required=False,
         queryset=SecretsGroup.objects.all(),
         label="Secrets Group",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
     )
     tags = TagFilterField(model)
 
@@ -203,7 +197,9 @@ class VPNPhase1PolicyBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm): 
         widget=StaticSelect2,
         label="Ike Version",
     )
-    aggressive_mode = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Aggressive Mode")
+    aggressive_mode = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES), label="Aggressive Mode"
+    )
     encryption_algorithm = JSONArrayFormField(
         choices=choices.EncryptionAlgorithmChoices,
         base_field=forms.CharField(),
@@ -260,13 +256,14 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 
     ike_version = forms.ChoiceField(
         required=False,
+        initial=choices.IkeVersionChoices.ike_v2,
         choices=choices.IkeVersionChoices.CHOICES,
         widget=StaticSelect2,
         label="IKE Version",
     )
     aggressive_mode = forms.NullBooleanField(
         required=False,
-        widget=BulkEditNullBooleanSelect,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
         label="IKEv1 Aggressive Mode Enabled",
     )
     encryption_algorithm = forms.MultipleChoiceField(
@@ -292,11 +289,6 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
         choices=choices.AuthenticationMethodChoices.CHOICES,
         widget=StaticSelect2Multiple(),
         label="Authentication Method",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
     )
     tags = TagFilterField(model)
 
@@ -387,11 +379,6 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
         widget=StaticSelect2Multiple(),
         label="PFS Group",
     )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
-    )
     tags = TagFilterField(model)
 
     field_order = [
@@ -420,7 +407,7 @@ class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ances
         fields = "__all__"
 
 
-class VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPN bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPN.objects.all(), widget=forms.MultipleHiddenInput)
@@ -429,6 +416,11 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: d
         queryset=models.VPNProfile.objects.all(),
         required=False,
         label="VPN Profile",
+    )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
     )
 
     class Meta:
@@ -441,7 +433,7 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: d
         ]
 
 
-class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=too-many-ancestors
+class VPNFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterForm):  # pylint: disable=too-many-ancestors
     """Filter form for VPN."""
 
     model = models.VPN
@@ -450,16 +442,6 @@ class VPNFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=t
         required=False,
         queryset=models.VPNProfile.objects.all(),
         label="VPN Profile",
-    )
-    role = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Role.objects.all(),
-        label="Role",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
     )
     tags = TagFilterField(model)
 
@@ -509,7 +491,7 @@ class VPNTunnelForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many
         fields = "__all__"
 
 
-class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNTunnelBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPNTunnel bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNTunnel.objects.all(), widget=forms.MultipleHiddenInput)
@@ -535,6 +517,11 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
         widget=StaticSelect2,
         label="Encapsulation",
     )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -548,7 +535,7 @@ class VPNTunnelBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pyl
         ]
 
 
-class VPNTunnelFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=too-many-ancestors
+class VPNTunnelFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin, TenancyFilterForm):  # pylint: disable=too-many-ancestors
     """Filter form for VPNTunnel."""
 
     model = models.VPNTunnel
@@ -579,25 +566,10 @@ class VPNTunnelFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: dis
         label="Encapsulation",
         widget=StaticSelect2Multiple(),
     )
-    role = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Role.objects.all(),
-        label="Role",
-    )
     secrets_group = DynamicModelMultipleChoiceField(
         required=False,
         queryset=SecretsGroup.objects.all(),
         label="Secrets Group",
-    )
-    status = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Status.objects.all(),
-        label="Status",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
     )
     tags = TagFilterField(model)
 
@@ -678,7 +650,7 @@ class VPNTunnelEndpointForm(NautobotModelForm, TenancyForm):  # pylint: disable=
         fields = "__all__"
 
 
-class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNTunnelEndpointBulkEditForm(RoleModelBulkEditFormMixin, TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPNTunnelEndpoint bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(
@@ -690,6 +662,11 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         label="VPN Profile",
         help_text="VPN Profile for the tunnel endpoint.",
     )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
 
     class Meta:
         """Meta attributes."""
@@ -700,7 +677,7 @@ class VPNTunnelEndpointBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
         ]
 
 
-class VPNTunnelEndpointFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint: disable=too-many-ancestors
+class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterForm):  # pylint: disable=too-many-ancestors
     """Filter form for VPNTunnelEndpoint."""
 
     model = models.VPNTunnelEndpoint
@@ -714,16 +691,6 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, TenancyFilterForm):  # pyl
         required=False,
         queryset=Device.objects.all(),
         label="Device",
-    )
-    role = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Role.objects.all(),
-        label="Role",
-    )
-    tenant = DynamicModelMultipleChoiceField(
-        required=False,
-        queryset=Tenant.objects.all(),
-        label="Tenant",
     )
     tags = TagFilterField(model)
 

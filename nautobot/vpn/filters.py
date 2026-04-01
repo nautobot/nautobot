@@ -10,6 +10,7 @@ from nautobot.apps.filters import (
     TenancyModelFilterSetMixin,
 )
 from nautobot.dcim.models import Device, Interface
+from nautobot.extras.models import Role
 from nautobot.ipam.models import IPAddress
 
 from . import models
@@ -33,6 +34,11 @@ class VPNProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pyl
         queryset=models.VPNPhase2Policy.objects.all(),
         to_field_name="name",
         label="Phase 2 Policies (name or ID)",
+    )
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Role.objects.all(),
+        to_field_name="name",
+        label="Role",
     )
 
     class Meta:
@@ -161,6 +167,11 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
         label="VPN Profile (name or ID)",
         to_field_name="name",
     )
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Role.objects.all(),
+        to_field_name="name",
+        label="Role",
+    )
 
     class Meta:
         """Meta attributes for filter."""
@@ -189,6 +200,11 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         queryset=models.VPNProfile.objects.all(),
         label="VPN Profile (name or ID)",
         to_field_name="name",
+    )
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Role.objects.all(),
+        to_field_name="name",
+        label="Role",
     )
 
     class Meta:
@@ -237,6 +253,11 @@ class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         queryset=models.VPNTunnel.objects.all(),
         to_field_name="name",
         label="Endpoint Z",
+    )
+    role = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Role.objects.all(),
+        to_field_name="name",
+        label="Role",
     )
 
     class Meta:

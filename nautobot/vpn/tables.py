@@ -34,6 +34,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         verbose_name="Phase 2 Policies",
         url_params={"vpn_profiles": "pk"},
     )
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")

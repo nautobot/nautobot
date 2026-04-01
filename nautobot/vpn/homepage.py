@@ -1,5 +1,5 @@
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.vpn.models import VPN, VPNTunnel
+from nautobot.vpn.models import VPN, VPNTunnel, VPNTunnelEndpoint
 
 layout = (
     HomePagePanel(
@@ -20,15 +20,15 @@ layout = (
                 model=VPNTunnel,
                 description="VPN Tunnels",
                 permissions=["vpn.view_vpntunnel"],
-                weight=100,
+                weight=200,
             ),
             HomePageItem(
                 name="VPN Tunnel Endpoints",
                 link="vpn:vpntunnelendpoint_list",
-                model=VPNTunnel,
+                model=VPNTunnelEndpoint,
                 description="VPN Tunnel Endpoints",
                 permissions=["vpn.view_vpntunnelendpoint"],
-                weight=100,
+                weight=300,
             ),
         ),
     ),
