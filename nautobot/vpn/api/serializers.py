@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
@@ -123,5 +124,6 @@ class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
         model = models.VPNTermination
         fields = "__all__"
 
-    def get_assigned_object_type(self, obj):
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_assigned_object_type(self, obj: models.VPNTermination) -> str | None:
         return obj.assigned_object_type
