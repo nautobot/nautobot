@@ -34,6 +34,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         verbose_name="Phase 2 Policies",
         url_params={"vpn_profiles": "pk"},
     )
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")
@@ -282,6 +283,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vpn_profile = tables.Column(linkify=True)
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNTunnel)
     tags = TagColumn(url_name="vpn:vpntunnel_list")
@@ -302,6 +304,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "encapsulation",
             "role",
             "status",
+            "secrets_group",
             "tenant",
         )
         default_columns = (
@@ -339,12 +342,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         url_params={"vpn_tunnel_endpoints": "pk"},
         reverse_lookup="vpn_tunnel_endpoints",
     )
-    protected_prefixes_dg_count = LinkedCountColumn(
-        viewname="extras:dynamicgroup_list",
-        verbose_name="Protected Prefixes Dynamic Group",
-        url_params={"vpn_tunnel_endpoints": "pk"},
-        reverse_lookup="vpn_tunnel_endpoints",
-    )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
     tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
@@ -362,7 +359,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
             "tenant",

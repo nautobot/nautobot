@@ -7,7 +7,6 @@ from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     BootstrapMixin,
     BulkEditNullBooleanSelect,
-    DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     MultipleContentTypeField,
     MultiValueCharField,
@@ -15,6 +14,7 @@ from nautobot.core.forms import (
     TagFilterField,
 )
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.fields import DynamicModelChoiceField
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.data_validation.models import (
     DataCompliance,
@@ -42,9 +42,8 @@ class RegularExpressionValidationRuleForm(NautobotModelForm):
     """Base model form for the RegularExpressionValidationRule model."""
 
     content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()),
+        query_params={"feature": "custom_validators"},
     )
 
     class Meta:
@@ -93,12 +92,7 @@ class RegularExpressionValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(
-        feature="custom_validators",
-        queryset=ContentType.objects.all().order_by("app_label", "model"),
-        choices_as_strings=True,
-        required=False,
-    )
+    content_type = MultipleContentTypeField(feature="custom_validators", choices_as_strings=True, required=False)
     tags = TagFilterField(model)
 
 
@@ -111,9 +105,8 @@ class MinMaxValidationRuleForm(NautobotModelForm):
     """Base model form for the MinMaxValidationRule model."""
 
     content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()),
+        query_params={"feature": "custom_validators"},
     )
 
     class Meta:
@@ -148,12 +141,7 @@ class MinMaxValidationRuleFilterForm(NautobotFilterForm):
     model = MinMaxValidationRule
     field_order = ["q", "name", "enabled", "content_type", "field", "min", "max", "error_message"]
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(
-        feature="custom_validators",
-        queryset=ContentType.objects.all().order_by("app_label", "model"),
-        choices_as_strings=True,
-        required=False,
-    )
+    content_type = MultipleContentTypeField(feature="custom_validators", choices_as_strings=True, required=False)
     min = forms.IntegerField(required=False)
     max = forms.IntegerField(required=False)
     tags = TagFilterField(model)
@@ -168,9 +156,8 @@ class RequiredValidationRuleForm(NautobotModelForm):
     """Base model form for the RequiredValidationRule model."""
 
     content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()),
+        query_params={"feature": "custom_validators"},
     )
 
     class Meta:
@@ -212,12 +199,7 @@ class RequiredValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(
-        feature="custom_validators",
-        queryset=ContentType.objects.all().order_by("app_label", "model"),
-        choices_as_strings=True,
-        required=False,
-    )
+    content_type = MultipleContentTypeField(feature="custom_validators", choices_as_strings=True, required=False)
     tags = TagFilterField(model)
 
 
@@ -230,9 +212,8 @@ class UniqueValidationRuleForm(NautobotModelForm):
     """Base model form for the UniqueValidationRule model."""
 
     content_type = DynamicModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()).order_by(
-            "app_label", "model"
-        ),
+        queryset=ContentType.objects.filter(FeatureQuery("custom_validators").get_query()),
+        query_params={"feature": "custom_validators"},
     )
 
     class Meta:
@@ -274,12 +255,7 @@ class UniqueValidationRuleFilterForm(NautobotFilterForm):
         "error_message",
     ]
     q = forms.CharField(required=False, label="Search")
-    content_type = MultipleContentTypeField(
-        feature="custom_validators",
-        queryset=ContentType.objects.all().order_by("app_label", "model"),
-        choices_as_strings=True,
-        required=False,
-    )
+    content_type = MultipleContentTypeField(feature="custom_validators", choices_as_strings=True, required=False)
     max_instances = forms.IntegerField(required=False)
     tags = TagFilterField(model)
 
@@ -296,12 +272,7 @@ class DataComplianceFilterForm(BootstrapMixin, forms.Form):
     compliance_class_name = MultiValueCharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     validated_attribute = MultiValueCharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     valid = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
-    content_type = MultipleContentTypeField(
-        feature="custom_validators",
-        queryset=ContentType.objects.all().order_by("app_label", "model"),
-        choices_as_strings=True,
-        required=False,
-    )
+    content_type = MultipleContentTypeField(feature="custom_validators", choices_as_strings=True, required=False)
     q = forms.CharField(required=False, label="Search")
 
 

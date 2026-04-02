@@ -211,6 +211,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsolePortTemplate(ModularComponentTemplateModel):
     """
@@ -225,6 +227,8 @@ class ConsolePortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
@@ -239,6 +243,8 @@ class ConsoleServerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerPortTemplate(ModularComponentTemplateModel):
     """
@@ -289,6 +295,8 @@ class PowerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerOutletTemplate(ModularComponentTemplateModel):
     """
@@ -341,6 +349,8 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class InterfaceTemplate(ModularComponentTemplateModel):
     """
@@ -399,6 +409,8 @@ class InterfaceTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class FrontPortTemplate(ModularComponentTemplateModel):
     """
@@ -465,6 +477,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class RearPortTemplate(ModularComponentTemplateModel):
     """
@@ -492,6 +506,8 @@ class RearPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """
@@ -512,7 +528,7 @@ class DeviceBayTemplate(ComponentTemplateModel):
             )
 
 
-@extras_features("custom_validators")
+@extras_features("custom_validators", "graphql", "webhooks")
 class ModuleBayTemplate(ModularComponentTemplateModel):
     """Template for a slot in a Device or Module which can contain Modules."""
 

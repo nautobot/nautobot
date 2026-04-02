@@ -10,17 +10,12 @@ This document is intended for Nautobot maintainers and covers the steps to perfo
     3. [Link to the New Release Notes Page](#link-to-the-new-release-notes-page)
     4. [Verify and Revise the Install Documentation](#verify-and-revise-the-install-documentation)
 2. [Verify CI Build Status](#verify-ci-build-status)
-3. [Create a Release Branch](#create-a-release-branch)
-4. [Bump the Version](#bump-the-version)
-5. [Update the Changelog](#update-the-changelog)
-6. [Submit Release Pull Request](#submit-release-pull-request)
-7. [Merge Release Pull Request](#merge-release-pull-request)
-8. [Create a New Release](#create-a-new-release)
-9. If needed due to CI failures:
-    1. [Publish to PyPI Manually (if needed)](#publish-to-pypi-manually-if-needed)
-    2. [Publish Docker Images Manually (if needed)](#publish-docker-images-manually-if-needed)
-10. [Bump the Development Version in `develop`](#bump-the-development-version-in-develop)
-11. [Sync Changes into `next`](#sync-changes-into-next)
+3. [Prepare Release Pull Request](#prepare-release-pull-request)
+4. [Merge Release Pull Request](#merge-release-pull-request)
+5. [Publish Release on GitHub](#publish-release-on-github)
+6. [Publish Release to PyPI and Docker Registries](#publish-release-to-pypi-and-docker-registries)
+7. [Bump the Development Version in `develop`](#bump-the-development-version-in-develop)
+8. [Sync Changes into `next`](#sync-changes-into-next)
 
 ## Prerequisites for New Minor or Major Versions
 
@@ -44,6 +39,10 @@ Use the [`poetry update`](https://python-poetry.org/docs/cli/#update) command as
 After making any changes to `pyproject.toml` or `poetry.lock` with the above commands, you should of course commit the changes and re-run Nautobot tests and CI to verify that the dependency updates have not broken anything before proceeding with the release preparation.
 
 ### Update UI Libraries
+
+As with Python dependencies, the UI-compilation dependencies managed by `npm` are generally kept up-to-date by Renovate,and before releasing a new minor or major version of Nautobot, you should review any open Renovate PRs for suitability and merge them if appropriate.
+
+#### Manually Updating UI Libraries
 
 Update UI libraries to their latest version (specified by the tag config) respecting the semver constraints of both package and its dependencies:
 
@@ -77,203 +76,228 @@ Commit any necessary changes to the documentation before proceeding with the rel
 
 Ensure that continuous integration testing on the `develop` branch is completing successfully.
 
-### Create a Release Branch
+### Prepare Release Pull Request
 
-Create a release branch off of `develop` (`git checkout -b release/3.0.1 develop`).
+=== "Automated Release Preparation"
 
-### Bump the Version
+    As of Nautobot 3.1 and later, preparation of a release pull request is automated and can be carried out by running the "prepare-release" GitHub Action. For release preparation from an older branch such as `ltm-2.4`, refer to "Manual Release Preparation" instead.
 
-Update the package version using `invoke version`. This command shows the current version of the project or bumps the version of the project and writes the new version back to `pyproject.toml` (for the Nautobot Python package) if a valid bump rule is provided.
+=== "Manual Release Preparation"
 
-The new version should ideally be a valid semver string or a valid bump rule: `patch`, `minor`, `major`, `prepatch`, `preminor`, `premajor`, `prerelease`. Always try to use a bump rule when you can.
+    <h4>Create a Release Branch</h4>
 
-Display the current version with no arguments:
+    Create a release branch off of `develop` (`git checkout -b release/3.0.1 develop`).
 
-```no-highlight
-invoke version
-```
+    <h4>Bump the Version</h4>
 
-Example output:
+    Update the package version using `invoke version`. This command shows the current version of the project or bumps the version of the project and writes the new version back to `pyproject.toml` (for the Nautobot Python package) if a valid bump rule is provided.
 
-```no-highlight
-3.0.1.b1
-```
+    The new version should ideally be a valid semver string or a valid bump rule: `patch`, `minor`, `major`, `prepatch`, `preminor`, `premajor`, `prerelease`. Always try to use a bump rule when you can.
 
-To prepare for a patch release, use `patch`:
+    Display the current version with no arguments:
 
-```no-highlight
-invoke version -v patch
-```
+    ```no-highlight
+    invoke version
+    ```
 
-Example output:
+    Example output:
 
-```no-highlight
-3.0.2
-```
+    ```no-highlight
+    3.0.1.b1
+    ```
 
-For minor versions, use `minor`:
+    To prepare for a patch release, use `patch`:
 
-```no-highlight
-invoke version -v minor
-```
+    ```no-highlight
+    invoke version -v patch
+    ```
 
-Example output:
+    Example output:
 
-```no-highlight
-3.1.0
-```
+    ```no-highlight
+    3.0.2
+    ```
 
-And for major versions, use `major`:
+    For minor versions, use `minor`:
 
-```no-highlight
-invoke version -v major
-```
+    ```no-highlight
+    invoke version -v minor
+    ```
 
-Example output:
+    Example output:
 
-```no-highlight
-4.0.0
-```
+    ```no-highlight
+    3.1.0
+    ```
 
-The `invoke version [-v <version>]` command internally runs the [`poetry version`](https://python-poetry.org/docs/cli/#version) command to handle the versioning process. However, there might be cases where you need to manually configure the version. Refer to the Poetry documentation linked above for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
+    And for major versions, use `major`:
 
-After updating the version correctly, be sure to `git add pyproject.toml`. You'll commit it after the next step.
+    ```no-highlight
+    invoke version -v major
+    ```
 
-### Update the Changelog
+    Example output:
 
-Generate release notes with `towncrier build --version <new-version-number>` and answer `yes` to the prompt `Is it okay if I remove those files? [Y/n]:`. This will update the release notes in `nautobot/docs/release-notes/version-<major.minor>.md`, stage that file in Git, and `git rm` all of the fragments that have now been incorporated into the release notes.
+    ```no-highlight
+    4.0.0
+    ```
 
-Run `invoke markdownlint` to make sure the generated release notes pass the linter checks, and manually review them for completeness/correctness as well.
+    The `invoke version [-v <version>]` command internally runs the [`poetry version`](https://python-poetry.org/docs/cli/#version) command to handle the versioning process. However, there might be cases where you need to manually configure the version. Refer to the Poetry documentation linked above for detailed instructions. It provides information on how to set the version directly in the `pyproject.toml` file or update it using the `poetry version` command.
 
-!!! important
-    The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
+    After updating the version correctly, be sure to `git add pyproject.toml`. You'll commit it after the next step.
 
-Check the git diff to verify the changes are correct (`git diff --cached`). You should see:
+    <h4>Update the Changelog</h4>
 
-* a one-line change to `pyproject.toml` updating the version number (from the previous step)
-* release-notes added to `nautobot/docs/release-notes/version-<major.minor>.md`
-* all change fragments removed from the `changes/` folder
+    Generate release notes with `invoke generate-release-notes --version <new-version-number>`. This will update the release notes in `nautobot/docs/release-notes/version-<major.minor>.md`, stage that file in Git, and `git rm` all of the fragments that have now been incorporated into the release notes.
 
-Commit (the traditional commit message is "Towncrier and version bump" but that's not required) and push the staged changes upstream to GitHub.
+    Run `invoke markdownlint` to make sure the generated release notes pass the linter checks, and manually review them for completeness/correctness as well.
 
-### Submit Release Pull Request
+    !!! warning
+        The changelog must adhere to the [Keep a Changelog](https://keepachangelog.com/) style guide.
 
-Submit a pull request titled **"Release vX.Y.Z"** to merge your release branch into `main`. Copy the documented release notes into the pull request's body.
+    Check the git diff to verify the changes are correct (`git diff --cached`). You should see:
+
+    * a one-line change to `pyproject.toml` updating the version number (from the previous step)
+    * release-notes added to `nautobot/docs/release-notes/version-<major.minor>.md`
+    * all change fragments removed from the `changes/` folder
+
+    Commit (the traditional commit message is "Towncrier and version bump" but that's not required) and push the staged changes upstream to GitHub.
+
+    <h4>Submit Release Pull Request</h4>
+
+    Submit a pull request titled **"Release vX.Y.Z"** to merge your release branch into `main`. Copy the documented release notes into the pull request's body.
 
 ### Merge Release Pull Request
 
 Once CI has completed on the PR, and you have obtained the required approval(s), merge it.
 
-!!! important
+!!! warning
     Do not squash merge this branch into `main`. Make sure to select `Create a merge commit` when merging in GitHub.
 
-### Create a New Release
+### Publish Release on GitHub
 
-Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
+=== "Automated Release Preparation"
 
-* **Tag:** Version to be released, prefixed with `v` (e.g. `v3.0.1`)
-* **Target:** `main`
-* **Title:** Version and date (e.g. `v3.0.1 - 2025-11-24`)
-* **Release notes:** Follow the steps below:
-    1. Click on **Generate release notes** button and you should see some release notes auto-generated by GitHub.
-    2. Change the heading **What's Changed** to **Contributors**.
-    3. Create a new **What's Changed** heading before the **Contributors** heading and here, copy and paste the changelog entries for the new release from `nautobot/docs/release-notes/version-<major.minor>.md` (or from your previous pull request).
-    4. Change the entries under the **Contributors** heading to be a list of the usernames of the contributors, for example `* Updated dockerfile by @nautobot_user in https://github.com/nautobot/nautobot/pull/123` --> `* @nautobot_user`, removing duplicate usernames as you go.
-    5. Leave the **New Contributors** list (if any) at the end of the release note as is.
-    6. When done, the release note should look similar to any other recent Nautobot release, for example [v2.4.22](https://github.com/nautobot/nautobot/releases/tag/v2.4.22)
-* **Set as the latest release** should be checked if this release will be the latest for Nautobot. It should **not** be checked for prereleases or for releases from an LTM (long-term maintenance) branch such as `ltm-2.4`.
-* **Create a discussion for this release** should be checked as well.
+    If you successfully ran the "prepare-release" GitHub Action above, it will have automatically created a draft of the release for you. Find it under the [Nautobot releases page](https://github.com/nautobot/nautobot/releases). Verify that the release notes are correct (including any required changes or updates resulting from the PR review). Also confirm that the **Set as the latest release** check is correctly set (or unset, for releases from LTM or pre-releases), and that **Create a discussion for this release** is checked.
+
+=== "Manual Release Preparation"
+
+    Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with the following parameters.
+
+    * **Tag:** Version to be released, prefixed with `v` (e.g. `v3.0.1`)
+    * **Target:** `main`
+    * **Title:** Version and date (e.g. `v3.0.1 - 2025-11-24`)
+    * **Release notes:** Follow the steps below:
+        1. Click on **Generate release notes** button and you should see some release notes auto-generated by GitHub.
+        2. Change the heading **What's Changed** to **Contributors**.
+        3. Create a new **What's Changed** heading before the **Contributors** heading and here, copy and paste the changelog entries for the new release from `nautobot/docs/release-notes/version-<major.minor>.md` (or from your previous pull request).
+        4. Change the entries under the **Contributors** heading to be a list of the usernames of the contributors, for example `* Updated dockerfile by @nautobot_user in https://github.com/nautobot/nautobot/pull/123` --> `* @nautobot_user`, removing duplicate usernames as you go.
+        5. Leave the **New Contributors** list (if any) at the end of the release note as is.
+        6. When done, the release note should look similar to any other recent Nautobot release, for example [v2.4.22](https://github.com/nautobot/nautobot/releases/tag/v2.4.22)
+    * **Set as the latest release** should be checked if this release will be the latest for Nautobot. It should **not** be checked for prereleases or for releases from an LTM (long-term maintenance) branch such as `ltm-2.4`.
+    * **Create a discussion for this release** should be checked as well.
 
 Once you have verified that all of the above is correct, publish the release and wait for the release CI to run in GitHub Actions.
 
-### Publish to PyPI Manually (if needed)
+### Publish Release to PyPI and Docker Registries
 
-!!! tip
-    This is normally done automatically by GitHub Actions after you create the release above. The below is only needed if the automated release fails for some reason.
+=== "Automated Release Preparation"
 
-Now that there is a tagged release, the final step is to upload the package to the Python Package Index.
+    This should occur automatically as a GitHub Action after you publish the release. If for some reason it fails, refer to "Manual Release Preparation".
 
-First, you'll need to render the documentation.
+=== "Manual Release Preparation"
 
-```no-highlight
-poetry run mkdocs build --no-directory-urls --strict
-```
+    <h4>Publish to PyPI Manually</h4>
 
-Second, you'll need to build the Python package distributions (which will include the rendered documentation):
+    Now that there is a tagged release, the final step is to upload the package to the Python Package Index.
 
-```no-highlight
-poetry build
-```
+    First, you'll need to render the documentation.
 
-Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
+    ```no-highlight
+    poetry run mkdocs build --no-directory-urls --strict
+    ```
 
-```no-highlight
-poetry publish --username __token__ --password <api_token>
-```
+    Second, you'll need to build the Python package distributions (which will include the rendered documentation):
 
-### Publish Docker Images Manually (if needed)
+    ```no-highlight
+    poetry build
+    ```
 
-!!! tip
-    This is normally done automatically by GitHub Actions after you create the release above. The below is only needed if the automated release fails for some reason.
+    Finally, publish to PyPI using the username `__token__` and the Nautobot PyPI API token as the password. The API token can be found in the Nautobot maintainers vault (if you're a maintainer, you'll have access to this vault):
 
-Build the images locally:
+    ```no-highlight
+    poetry publish --username __token__ --password <api_token>
+    ```
 
-```no-highlight
-for ver in 3.10 3.11 3.12 3.13; do
-  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-  invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
-done
-```
+    <h4>Publish Docker Images Manually</h4>
 
-Test the images locally as needed - to do this you need to set the following in your `invoke.yml`:
+    Build the images locally:
 
-```yaml
----
-nautobot:
-  compose_files:
-    - "docker-compose.yml"
-    - "docker-compose.postgres.yml"
-    - "docker-compose.final.yml"  # or "docker-compose.final-dev.yml" as appropriate
-```
+    ```no-highlight
+    for ver in 3.10 3.11 3.12 3.13; do
+      export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+      invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+      invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
+    done
+    ```
 
-!!! warning
-    You should *not* include `docker-compose.dev.yml` in this test scenario!
+    Test the images locally as needed - to do this you need to set the following in your `invoke.yml`:
 
-Push the images to GitHub Container Registry and Docker Hub
+    ```yaml
+    ---
+    nautobot:
+      compose_files:
+        - "docker-compose.yml"
+        - "docker-compose.postgres.yml"
+        - "docker-compose.final.yml"  # or "docker-compose.final-dev.yml" as appropriate
+    ```
 
-```no-highlight
-docker login
-docker login ghcr.io
-for ver in 3.10 3.11 3.12 3.13; do
-  export INVOKE_NAUTOBOT_PYTHON_VER=$ver
-  invoke docker-push main
-done
-```
+    !!! warning
+        You should *not* include `docker-compose.dev.yml` in this test scenario!
+
+    Push the images to GitHub Container Registry and Docker Hub
+
+    ```no-highlight
+    docker login
+    docker login ghcr.io
+    for ver in 3.10 3.11 3.12 3.13; do
+      export INVOKE_NAUTOBOT_PYTHON_VER=$ver
+      invoke docker-push main
+    done
+    ```
 
 ### Bump the Development Version in `develop`
 
-Create a new branch off of `main` (typically named `main-to-develop-post-<x.y.z>`) and use `invoke version -v prepatch` to bump the version in preparation for developing the next release. Then open a pull request from this branch to the `develop` branch to update the version and sync the release notes and changelog fragment updates from `main`.
+=== "Automated Release Preparation"
 
-For example, if you just released `v3.0.1`:
+    A pull request to update the `develop` branch should be created automatically as a part of the release CI process. If for some reason this fails, see "Manual Release Preparation" for steps to follow.
 
-```no-highlight
-invoke version -v prepatch
-```
+=== "Manual Release Preparation"
 
-Example output:
+    Create a new branch off of `main` (typically named `main-to-develop-post-<x.y.z>`) and use `invoke version -v prepatch` to bump the version in preparation for developing the next release. Then open a pull request from this branch to the `develop` branch to update the version and sync the release notes and changelog fragment updates from `main`.
 
-```no-highlight
-Bumping version from 3.0.1 to 3.0.2a0
-```
+    For example, if you just released `v3.0.1`:
 
-!!! tip
-    We normally use `beta` version numbers rather than `alpha` versions for `develop`, so you may need to manually edit `pyproject.toml` after the above, for example to change `"3.0.2a0"` to `"3.0.2b1"` to follow our convention.
+    ```no-highlight
+    invoke version -v prepatch
+    ```
 
-!!! important
-    Do not squash merge this branch into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.
+    Example output:
+
+    ```no-highlight
+    Bumping version from 3.0.1 to 3.0.2a0
+    ```
+
+    !!! tip
+        We normally use `beta` version numbers rather than `alpha` versions for `develop`, so you may need to manually edit `pyproject.toml` after the above, for example to change `"3.0.2a0"` to `"3.0.2b1"` to follow our convention.
+
+!!! warning
+    Do not squash merge this PR into `develop`. Make sure to select `Create a merge commit` when merging in GitHub.
 
 ### Sync Changes into `next`
+
+!!! tip
+    This step is not yet automated, but may be in the future.
 
 After the main-to-develop pull request is merged into `develop`, create a new branch off of `next` (typically named `develop-to-next-post-<x.y.z>`) and `git merge develop`. Resolve any merge conflicts as appropriate (if you're lucky, there may only be one, a version number clash in `pyproject.toml`), then open a pull request to `next`.
 
@@ -281,5 +305,5 @@ When resolving conflicts, always keep the Nautobot app version number from the *
 
 During the pull request, the CI pipeline may fail at the **changelog** step. This is expected in this case and should not be a cause for concern (the error can be safely ignored).
 
-!!! important
+!!! warning
     Do not squash merge this branch into `next`. Make sure to select `Create a merge commit` when merging in GitHub.

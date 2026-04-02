@@ -1,0 +1,180 @@
+---
+name: "Prepare Release"
+on: # yamllint disable-line rule:truthy rule:comments
+  workflow_dispatch:
+    inputs:
+      bump_rule:
+        description: "Select the version bump type"
+        required: true
+        default: "patch"
+        type: "choice"
+        options:
+          - "prerelease"
+          - "patch"
+          - "minor"
+          - "major"
+      target_branch:
+        description: "Create the release from this branch (default: main)."
+        required: true
+        default: "main"
+      date:
+        description: "Date of the release YYYY-MM-DD (defaults to today's date in the US Eastern TZ)."
+        required: false
+        default: ""
+
+jobs:
+  prepare-release:
+    permissions:
+      contents: "write"
+      pull-requests: "write"
+    name: "Prepare Release"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: "Checkout code"
+        uses: "actions/checkout@v4"
+        with:
+          # If target_branch is 'main', use 'develop' as the source branch. Otherwise, the source and target branch are the same.
+          ref: "${{ github.event.inputs['target_branch'] == 'main' && 'develop' || github.event.inputs['target_branch'] }}"
+          fetch-depth: 0  # Fetch all history for git tags
+
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-install-options: "--with dev"
+          poetry-version: "2.1.4"
+
+      - name: "Validate Branch and Tags"
+        run: |
+          # 1. Verify branch exists
+          if ! git rev-parse --verify origin/${{ github.event.inputs.target_branch }} > /dev/null 2>&1; then
+            echo "Error: Branch ${{ github.event.inputs.target_branch }} does not exist."
+            exit 1
+          fi
+
+          # 2. Try to get the previous version tag
+          # If it fails (no tags), get the hash of the first commit
+          if PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null); then
+            echo "PREVIOUS_TAG=$PREV_TAG" >> $GITHUB_ENV
+            echo "Found previous tag: $PREV_TAG"
+          else
+            # Fallback to the first commit in the repository
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+            echo "PREVIOUS_TAG=$FIRST_COMMIT" >> $GITHUB_ENV
+            echo "No tags found. Falling back to initial commit: $FIRST_COMMIT"
+          fi
+
+      - name: "Determine New Version"
+        id: "versioning"
+        run: |
+          if [[ "${{ github.event.inputs.bump_rule }}" != "prerelease" ]]; then
+            # Perform the bump based on the user input
+            poetry version ${{ github.event.inputs.bump_rule }}
+          fi
+
+          # Capture the New version string for use in other steps
+          NEW_VER=$(poetry version --short)
+          echo "NEW_VERSION=$NEW_VER" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH=release/$NEW_VER" >> $GITHUB_ENV
+
+      - name: "Set Date Variable"
+        run: |
+          if [ -z "${{ github.event.inputs.date }}" ]; then
+            RELEASE_DATE=$(TZ=America/New_York date +%Y-%m-%d)
+          else
+            RELEASE_DATE="${{ github.event.inputs.date }}"
+          fi
+          echo "RELEASE_DATE=$RELEASE_DATE" >> $GITHUB_ENV
+
+      - name: "Create Release Branch"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          # Ensure release branch doesn't already exist
+          if git rev-parse --verify origin/${{ env.RELEASE_BRANCH }} > /dev/null 2>&1; then
+            echo "Error: Release branch ${{ env.RELEASE_BRANCH }} already exists."
+            exit 1
+          fi
+
+          # Create a new branch for the release
+          git checkout -b "${{ env.RELEASE_BRANCH }}"
+
+      - name: "Regenerate poetry.lock"
+        run: "poetry lock --regenerate"
+
+      - name: "Generate Github Release Notes"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          # 1. Get Towncrier Draft
+          TOWNCRIER_NOTES=$(poetry run towncrier build --version "${{ env.NEW_VERSION }}" --date "${{ env.RELEASE_DATE }}" --draft)
+
+          # 2. Call GitHub API to generate raw notes
+          RAW_GH_NOTES=$(gh api /repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="v${{ env.NEW_VERSION }}" \
+            -f target_commitish="${{ github.event.inputs['target_branch'] == 'main' && 'develop' || github.event.inputs['target_branch'] }}" \
+            -f previous_tag_name="${{ env.PREVIOUS_TAG }}" --jq '.body')
+
+          # 3. Parse usernames (Regex match)
+          # We use grep to find "@user" patterns, sort, and uniq them
+          USERNAMES=$(echo "$RAW_GH_NOTES" | grep -oP 'by @\K[a-zA-Z0-9-]+' | sort -u | grep -vE 'dependabot|nautobot-bot|github-actions' || true)
+
+          # 4. Format the Contributors section
+          CONTRIBUTORS_SECTION="## Contributors"
+          for user in $USERNAMES; do
+            CONTRIBUTORS_SECTION="$CONTRIBUTORS_SECTION"$'\n'"* @$user"
+          done
+
+          # 5. Extract the "Full Changelog" or "New Contributors" part
+          # Using awk to grab everything from '## New Contributors' or '**Full Changelog**' to the end
+          GH_FOOTER=$(echo "$RAW_GH_NOTES" | awk '/## New Contributors/ || /\*\*Full Changelog\*\*/ {found=1} found {print}')
+          if [ -z "$GH_FOOTER" ]; then
+            GH_FOOTER=$(echo "$RAW_GH_NOTES" | sed -n '/**Full Changelog**/,$p')
+          fi
+
+          # 6. Combine everything
+          FINAL_NOTES="$TOWNCRIER_NOTES"$'\n\n'"$CONTRIBUTORS_SECTION"$'\n\n'"$GH_FOOTER"
+
+          # 7. Save to a temporary file to avoid shell argument length limits
+          echo "$FINAL_NOTES" > ../consolidated_notes.md
+
+      - name: "Generate App Release Notes and update mkdocs.yml"
+        run: "poetry run inv generate-release-notes --version '${{ env.NEW_VERSION }}' --date '${{ env.RELEASE_DATE }}'"
+
+      - name: "Commit Changes and Push"
+        run: |
+          # Add all changes (pyproject.toml, poetry.lock, etc.)
+          git add .
+          git commit -m "prepare release v${{ env.NEW_VERSION }}"
+          git push origin "${{ env.RELEASE_BRANCH }}"
+
+      - name: "Create Pull Request"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          gh pr create \
+            --title "Release v${{ env.NEW_VERSION }}" \
+            --body-file "../consolidated_notes.md" \
+            --base "${{ github.event.inputs.target_branch }}" \
+            --head "${{ env.RELEASE_BRANCH }}"
+
+      - name: "Create Draft Release"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          if [[ "${{ github.event.inputs.bump_rule }}" == "prerelease" ]]; then
+            RELEASE_FLAGS="--prerelease"
+          elif [[ "${{ github.event.inputs.target_branch }}" == "main" ]]; then
+            RELEASE_FLAGS="--latest"
+          else
+            RELEASE_FLAGS="--latest=false"
+          fi
+
+          gh release create "v${{ env.NEW_VERSION }}" \
+            --draft \
+            $RELEASE_FLAGS \
+            --title "v${{ env.NEW_VERSION }} - ${{ env.RELEASE_DATE }}" \
+            --notes-file "../consolidated_notes.md" \
+            --target "${{ github.event.inputs.target_branch }}"
