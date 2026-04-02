@@ -170,7 +170,6 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8635](https://github.com/nautobot/nautobot/issues/8635) - Updated UI to hide scope filter section when required is marked.
 - [#8644](https://github.com/nautobot/nautobot/issues/8644) - Changed Device detail view "Power Utilization" panel to deferred rendering via HTMX to improve page loading performance.
 - [#8650](https://github.com/nautobot/nautobot/issues/8650) - Report for status is also displayed and saved to `JobConsoleEntry` when console log is enabled.
-- [#8656](https://github.com/nautobot/nautobot/issues/8656) - Synced in latest fixes and updates from v3.0.8.
 - [#8696](https://github.com/nautobot/nautobot/issues/8696) - Changed "dependent object search" modal behavior so that when first opened, an initial search query is automatically triggered.
 - [#8696](https://github.com/nautobot/nautobot/issues/8696) - Changed global search behavior to display only a single loading spinner while search is in progress.
 - [#8696](https://github.com/nautobot/nautobot/issues/8696) - Changed Location and Prefix list view behavior so that when table subtrees are toggled, the "Showing X of Y" pagination info is hidden.
@@ -180,7 +179,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8738](https://github.com/nautobot/nautobot/issues/8738) - Changed `ApprovalWorkflowStage.approval_workflow_stage_definition` on_delete behavior from CASCADE to SET_NULL.
 - [#8753](https://github.com/nautobot/nautobot/issues/8753) - Changed the default ordering of models in the global Search results to place Device, Location, Prefix, and IPAddress first in the results, followed by all remaining core models, followed by all app models.
 - [#8753](https://github.com/nautobot/nautobot/issues/8753) - Changed behavior of `LOCATION_LIST_DEFAULT_MAX_DEPTH`, `PREFIX_LIST_DEFAULT_MAX_DEPTH`, and `PREFIX_LIST_DEFAULT_CONTAINER_ONLY` settings to simply redirect unfiltered access to the Prefix and Location list views to a filtered equivalent, rather than automagically filtering the data behind the scenes.
-- [#8770](https://github.com/nautobot/nautobot/issues/8770) - Changed handling of NAUTOBOT_CONFIG to be passed explicitly via `--config=settings.SETTINGS_PATH` in job execution commands.
+- [#8770](https://github.com/nautobot/nautobot/issues/8770) - Changed handling of `nautobot_config.py` to be passed explicitly via `--config=settings.SETTINGS_PATH` in job execution commands.
 - [#8777](https://github.com/nautobot/nautobot/issues/8777) - Updated the CustomField's Job name.
 - [#8787](https://github.com/nautobot/nautobot/issues/8787) - Replaced Bootstrap FileStyle library with standard Bootstrap 5 file input.
 
@@ -201,7 +200,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8650](https://github.com/nautobot/nautobot/issues/8650) - Fixed `task_name` when job is run immediately with console log.
 - [#8662](https://github.com/nautobot/nautobot/issues/8662) - Fixed component ID generation crash caused by non-string dictionary keys.
 - [#8693](https://github.com/nautobot/nautobot/issues/8693) - Fixed styling for two boolean columns.
-- [#8717](https://github.com/nautobot/nautobot/issues/8717) - Fixed bug with _JobModalButton modifying class instead of context.
+- [#8717](https://github.com/nautobot/nautobot/issues/8717) - Fixed bug with `_JobModalButton` modifying class instead of context.
 - [#8720](https://github.com/nautobot/nautobot/issues/8720) - Fixed validation of ApprovalWorkflowDefinition formset to require at least one stage on create and update.
 - [#8750](https://github.com/nautobot/nautobot/issues/8750) - Fixed JobResult rerun behavior to persist the "console log" field properly.
 - [#8769](https://github.com/nautobot/nautobot/issues/8769) - Fixed Git Repositories table "Sync" action button.
@@ -220,7 +219,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 ### Documentation in v3.1.0a4
 
-- [#8692](https://github.com/nautobot/nautobot/issues/8692) - Update the 3.1 release documentation with the new features.
+- [#8692](https://github.com/nautobot/nautobot/issues/8692) - Updated the 3.1 release documentation with the new features.
 - [#8716](https://github.com/nautobot/nautobot/issues/8716) - Added Embedded Actions migration guide for Nautobot App developers.
 - [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated release process documentation to reflect available automation.
 
@@ -228,6 +227,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 - [#6267](https://github.com/nautobot/nautobot/issues/6267) - Replaced third-party GitHub action in release CI.
 - [#8632](https://github.com/nautobot/nautobot/issues/8632) - Improved reliability of `nautobot.ipam.tests.integration.test_prefixes` integration test cases.
+- [#8656](https://github.com/nautobot/nautobot/issues/8656) - Merged in latest fixes and updates from v3.0.8.
 - [#8689](https://github.com/nautobot/nautobot/issues/8689) - Refactored GitHub CI to use multi-architecture runners for Docker image build and publish.
 - [#8697](https://github.com/nautobot/nautobot/issues/8697) - Fixed Docker image publication for integration branches and releases.
 - [#8699](https://github.com/nautobot/nautobot/issues/8699) - Fixed isolation of docker image digests by cache scope when building multiple images in a single workflow.
