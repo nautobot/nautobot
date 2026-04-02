@@ -14,6 +14,5 @@ router.register("vpn-tunnel-endpoints", views.VPNTunnelEndpointUIViewSet)
 router.register("vpn-terminations", views.VPNTerminationUIViewSet)
 
 
-
 urlpatterns = []
 urlpatterns += router.urls

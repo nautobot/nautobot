@@ -340,13 +340,11 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
             try:
                 vni = int(self.vpn_id)
             except (TypeError, ValueError) as exc:
-                raise ValidationError({"vpn_id": "Identifier must be a numeric VNI for VXLAN-based VPN services."}) from exc
+                raise ValidationError(
+                    {"vpn_id": "Identifier must be a numeric VNI for VXLAN-based VPN services."}
+                ) from exc
 
-            if not (
-                choices.VPNServiceTypeChoices.VXLAN_VNI_MIN
-                <= vni
-                <= choices.VPNServiceTypeChoices.VXLAN_VNI_MAX
-            ):
+            if not (choices.VPNServiceTypeChoices.VXLAN_VNI_MIN <= vni <= choices.VPNServiceTypeChoices.VXLAN_VNI_MAX):
                 raise ValidationError(
                     {
                         "vpn_id": (

@@ -800,9 +800,7 @@ class VPNTerminationForm(NautobotModelForm):
 class VPNTerminationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
     """VPNTermination bulk edit form."""
 
-    pk = forms.ModelMultipleChoiceField(
-        queryset=models.VPNTermination.objects.all(), widget=forms.MultipleHiddenInput
-    )
+    pk = forms.ModelMultipleChoiceField(queryset=models.VPNTermination.objects.all(), widget=forms.MultipleHiddenInput)
     vpn = DynamicModelChoiceField(
         queryset=models.VPN.objects.all(),
         required=False,

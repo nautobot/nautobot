@@ -1,13 +1,12 @@
 """Test vpn Filters."""
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
 
 from nautobot.apps.testing import FilterTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN
-from nautobot.virtualization.models import VMInterface
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 from nautobot.vpn import choices, filters, models
 
 
@@ -186,8 +185,12 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
 
-class VPNTerminationFilterTestCase(TestCase):
+class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
     """VPNTermination filter tests."""
+
+    queryset = models.VPNTermination.objects.all()
+    filterset = filters.VPNTerminationFilterSet
+    generic_filter_tests = ()
 
     @classmethod
     def _get_available_vlans(cls):
@@ -205,6 +208,45 @@ class VPNTerminationFilterTestCase(TestCase):
     def _get_available_vm_interfaces(cls):
         used_vm_interface_ids = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
             "vm_interface_id", flat=True
+        )
+        available_vm_interfaces = VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
+        if available_vm_interfaces.exists():
+            return available_vm_interfaces
+
+        vm = VirtualMachine.objects.first()
+        if vm is None:
+            cluster_type, _ = ClusterType.objects.get_or_create(name=f"{cls.__name__} Cluster Type")
+            cluster, _ = Cluster.objects.get_or_create(
+                name=f"{cls.__name__} Cluster",
+                defaults={"cluster_type": cluster_type},
+            )
+            if cluster.cluster_type_id != cluster_type.id:
+                cluster.cluster_type = cluster_type
+                cluster.save()
+
+            vm_status = Status.objects.get_for_model(VirtualMachine).first()
+            if vm_status is None:
+                vm_status = Status.objects.get(name="Active")
+                vm_status.content_types.add(ContentType.objects.get_for_model(VirtualMachine))
+
+            vm, _ = VirtualMachine.objects.get_or_create(
+                name=f"{cls.__name__} VM",
+                defaults={"cluster": cluster, "status": vm_status},
+            )
+            if vm.cluster_id != cluster.id or vm.status_id != vm_status.id:
+                vm.cluster = cluster
+                vm.status = vm_status
+                vm.save()
+
+        vm_interface_status = Status.objects.get_for_model(VMInterface).first()
+        if vm_interface_status is None:
+            vm_interface_status = Status.objects.get(name="Active")
+            vm_interface_status.content_types.add(ContentType.objects.get_for_model(VMInterface))
+
+        VMInterface.objects.create(
+            virtual_machine=vm,
+            name=f"vpn-termination-filter-{cls.__name__.lower()}",
+            status=vm_interface_status,
         )
         return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
 
@@ -236,7 +278,9 @@ class VPNTerminationFilterTestCase(TestCase):
         self.assertEqual(filtered_qs.count(), len(self.terminations))
 
     def test_filter_by_interface_pk(self):
-        interface_termination = next((termination for termination in self.terminations if termination.interface_id), None)
+        interface_termination = next(
+            (termination for termination in self.terminations if termination.interface_id), None
+        )
         if interface_termination is None:
             self.skipTest("No interface termination fixture available.")
 

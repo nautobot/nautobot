@@ -8,7 +8,7 @@ from django.test import TestCase
 from nautobot.apps.testing import ModelTestCases
 from nautobot.dcim.models import Device, Interface, Module
 from nautobot.extras.models import Status
-from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, models
@@ -329,8 +329,10 @@ class VPNOverlayModelTestCase(TestCase):
         self.assertIn(vpn, tenant.vpns.all())
 
 
-class VPNTerminationModelTestCase(TestCase):
+class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
     """Behavioral tests for VPNTermination."""
+
+    model = models.VPNTermination
 
     @classmethod
     def _get_vpn_status(cls):
@@ -349,11 +351,29 @@ class VPNTerminationModelTestCase(TestCase):
     @classmethod
     def _get_available_vlans(cls):
         used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        available_vlans = VLAN.objects.exclude(pk__in=used)
+        if available_vlans.exists():
+            return available_vlans
+
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        if vlan_status is None:
+            vlan_status = Status.objects.get(name="Active")
+            vlan_status.content_types.add(ContentType.objects.get_for_model(VLAN))
+
+        vlan_group, _ = VLANGroup.objects.get_or_create(name=f"{cls.__name__} VLAN Group")
+        VLAN.objects.create(
+            vid=4900,
+            name=f"{cls.__name__} VLAN",
+            status=vlan_status,
+            vlan_group=vlan_group,
+        )
         return VLAN.objects.exclude(pk__in=used)
 
     @classmethod
     def _get_available_vm_interfaces(cls):
-        used = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list("vm_interface_id", flat=True)
+        used = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
         return VMInterface.objects.exclude(pk__in=used)
 
     @classmethod
@@ -365,6 +385,9 @@ class VPNTerminationModelTestCase(TestCase):
             status=cls.status,
             vpn_id="12000",
         )
+        seed_vlan = cls._get_available_vlans().first()
+        if seed_vlan is not None:
+            cls.seed_termination = models.VPNTermination.objects.create(vpn=cls.vpn, vlan=seed_vlan)
 
     def test_str_with_assigned_object(self):
         vlan = self._get_available_vlans().first()

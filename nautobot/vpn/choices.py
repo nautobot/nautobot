@@ -210,37 +210,51 @@ class VPNServiceTypeChoices(ChoiceSet):
     TYPE_SPB = "spb"
 
     CHOICES = (
-        ("Tunnel", (
-            (TYPE_IPSEC, "IPSec"),
-        )),
-        ("VPLS", (
-            (TYPE_VPWS, "VPWS"),
-            (TYPE_VPLS, "VPLS"),
-        )),
-        ("VXLAN", (
-            (TYPE_VXLAN, "VXLAN"),
-            (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
-        )),
-        ("EVPN", (
-            (TYPE_MPLS_EVPN, "MPLS EVPN"),
-            (TYPE_PBB_EVPN, "PBB EVPN"),
-            (TYPE_EVPN_VPWS, "EVPN VPWS"),
-        )),
-        ("E-Line", (
-            (TYPE_EPL, "EPL"),
-            (TYPE_EVPL, "EVPL"),
-        )),
-        ("E-LAN", (
-            (TYPE_EPLAN, "Ethernet Private LAN"),
-            (TYPE_EVPLAN, "Ethernet Virtual Private LAN"),
-        )),
-        ("E-Tree", (
-            (TYPE_EPTREE, "Ethernet Private Tree"),
-            (TYPE_EVPTREE, "Ethernet Virtual Private Tree"),
-        )),
-        ("Other", (
-            (TYPE_SPB, "SPB"),
-        )),
+        ("Tunnel", ((TYPE_IPSEC, "IPSec"),)),
+        (
+            "VPLS",
+            (
+                (TYPE_VPWS, "VPWS"),
+                (TYPE_VPLS, "VPLS"),
+            ),
+        ),
+        (
+            "VXLAN",
+            (
+                (TYPE_VXLAN, "VXLAN"),
+                (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
+            ),
+        ),
+        (
+            "EVPN",
+            (
+                (TYPE_MPLS_EVPN, "MPLS EVPN"),
+                (TYPE_PBB_EVPN, "PBB EVPN"),
+                (TYPE_EVPN_VPWS, "EVPN VPWS"),
+            ),
+        ),
+        (
+            "E-Line",
+            (
+                (TYPE_EPL, "EPL"),
+                (TYPE_EVPL, "EVPL"),
+            ),
+        ),
+        (
+            "E-LAN",
+            (
+                (TYPE_EPLAN, "Ethernet Private LAN"),
+                (TYPE_EVPLAN, "Ethernet Virtual Private LAN"),
+            ),
+        ),
+        (
+            "E-Tree",
+            (
+                (TYPE_EPTREE, "Ethernet Private Tree"),
+                (TYPE_EVPTREE, "Ethernet Virtual Private Tree"),
+            ),
+        ),
+        ("Other", ((TYPE_SPB, "SPB"),)),
     )
 
     # Point-to-point service types (limited to 2 terminations)

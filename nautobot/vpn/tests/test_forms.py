@@ -7,7 +7,7 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
 from nautobot.ipam.models import Prefix, VLAN
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType, VMInterface, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 from nautobot.vpn import choices, forms, models
 
 

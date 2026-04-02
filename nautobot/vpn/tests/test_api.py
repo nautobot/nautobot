@@ -7,7 +7,6 @@ from nautobot.apps.testing import APIViewTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN, VLANGroup
-from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, models
 
@@ -491,6 +490,7 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
             {"vpn": cls.vpn.pk, "vlan": vlans[5].pk},
         ]
         cls.update_data = {"vpn": cls.vpn2.pk}
+        cls.bulk_update_data = {"vpn": cls.vpn2.pk}
 
     def test_filter_by_vpn(self):
         """Test filtering terminations by VPN via API."""
@@ -581,7 +581,5 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
             "dcim.view_interface",
         )
         url = self._get_list_url()
-        response = self.client.post(
-            url, {"vpn": other_vpn.pk, "interface": interface.pk}, format="json", **self.header
-        )
+        response = self.client.post(url, {"vpn": other_vpn.pk, "interface": interface.pk}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
