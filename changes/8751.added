@@ -1,1 +1,0 @@
-Added logic to `object_list.html` to handle error responses when loading table contents over HTMX.

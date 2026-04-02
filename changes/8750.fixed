@@ -1,1 +1,0 @@
-Fixed JobResult rerun behavior to persist the "console log" field properly.
