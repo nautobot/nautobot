@@ -42,6 +42,12 @@ See [HTMX List View Rendering](#htmx-list-view-rendering) below.
 
 See [Dependent Object Creation and Search](#dependent-object-creation-and-search) below.
 
+#### Bootstrap FileStyle Deprecation
+
+The Bootstrap FileStyle library is now deprecated and will be removed in Nautobot 4.0. The `ClearableFileInput` widget, which previously depended on Bootstrap FileStyle, has already been migrated to the standard Bootstrap 5 file input.
+
+If you do not directly reference the `bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js` script in your code, no action is required. Otherwise, we encourage you to transition to the Bootstrap 5 file input or import an external library of your choice.
+
 ## Release Overview
 
 ### Breaking Changes
