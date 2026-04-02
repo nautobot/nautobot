@@ -148,7 +148,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8650](https://github.com/nautobot/nautobot/issues/8650) - Added `Re-Run` button to `Console Log` tab.
 - [#8650](https://github.com/nautobot/nautobot/issues/8650) - Added saving the same data in `JonConsoleEntry` which are stored in `JobLogEntry` when console log is enabled.
 - [#8650](https://github.com/nautobot/nautobot/issues/8650) - Added `sanitize` data before saving it to `JobConsoleEntry`.
-- [#8672](https://github.com/nautobot/nautobot/issues/8672) - Added experimental _JobModalButton as an ObjectDetail Component.
+- [#8672](https://github.com/nautobot/nautobot/issues/8672) - Added experimental `_JobModalButton` as an ObjectDetail Component.
 - [#8689](https://github.com/nautobot/nautobot/issues/8689) - Added ARM64 variants for all published Docker images.
 - [#8693](https://github.com/nautobot/nautobot/issues/8693) - Added support for bulk adding and removing VLANs from interfaces.
 - [#8703](https://github.com/nautobot/nautobot/issues/8703) - Added `export_job_console_entries` action to JobResult to download console entries to plain text file.
