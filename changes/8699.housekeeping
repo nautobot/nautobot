@@ -1,0 +1,1 @@
+Fixed isolation of docker image digests by cache scope when building multiple images in a single workflow.
