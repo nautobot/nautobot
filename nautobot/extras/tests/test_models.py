@@ -3196,6 +3196,141 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
 
+    def test_last_run_at_not_set_on_save(self):
+        """Test that save() does not set a fake last_run_at for any interval type."""
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_utc_job, JobExecutionType.TYPE_CUSTOM),
+            (self.one_off_utc_job, JobExecutionType.TYPE_FUTURE),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+        for interval_type in [JobExecutionType.TYPE_WEEKLY, JobExecutionType.TYPE_HOURLY]:
+            with self.subTest(interval_type=interval_type):
+                job = ScheduledJob.objects.create(
+                    name=f"{interval_type} Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    interval=interval_type,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+                    time_zone=get_default_timezone(),
+                )
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+    def test_disabled_job_last_run_at_cleared(self):
+        """Test that disabling a job clears last_run_at."""
+        self.daily_utc_job.last_run_at = now()
+        self.daily_utc_job.save()
+        self.assertIsNotNone(self.daily_utc_job.last_run_at)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.assertIsNone(self.daily_utc_job.last_run_at)
+
+    def test_schedule_entry_sets_last_run_at(self):
+        """Test that NautobotScheduleEntry sets last_run_at to start_time - 1 minute when model has no last_run_at."""
+        from nautobot.core.celery.schedulers import NautobotScheduleEntry
+
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_est_job, JobExecutionType.TYPE_CUSTOM),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+                entry = NautobotScheduleEntry(model=job)
+                expected = job.start_time - timedelta(minutes=1)
+                self.assertEqual(entry.last_run_at, expected)
+
+    def test_schedule_entry_is_due_not_immediate(self):
+        """Test that new scheduled jobs with last_run_at=None do not run immediately.
+
+        Integration test verifying that NautobotScheduleEntry.is_due() (called by celery-beat
+        on each tick) correctly waits for the next crontab match instead of running ASAP.
+        Regression test for https://github.com/nautobot/nautobot/issues/8316
+        """
+        from nautobot.core.celery.schedulers import NautobotScheduleEntry
+
+        with self.subTest("TYPE_CUSTOM crontab job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                crontab_job = ScheduledJob.objects.create(
+                    name="Crontab Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_CUSTOM,
+                    start_time=datetime(year=2050, month=1, day=22, hour=11, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                    crontab="0 17 * * *",  # 5 PM UTC — 5 hours away from "now"
+                )
+                self.assertIsNone(crontab_job.last_run_at)
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_CUSTOM job should not be immediately due")
+                self.assertGreater(next_run_delay, 3600, "Next run delay should be hours away, not seconds")
+
+        with self.subTest("TYPE_CUSTOM crontab job should be due at crontab match time"):
+            with time_machine.travel("2050-01-22 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_CUSTOM job should be due when crontab matches")
+
+        with self.subTest("TYPE_DAILY job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                daily_job = ScheduledJob.objects.create(
+                    name="Daily Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_DAILY,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                )
+                self.assertIsNone(daily_job.last_run_at)
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_DAILY job should not be immediately due")
+
+        with self.subTest("TYPE_DAILY job should be due at scheduled time"):
+            with time_machine.travel("2050-01-23 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_DAILY job should be due at its scheduled time")
+
+    def test_custom_schedule_start_time_is_next_crontab_match(self):
+        """Test that create_schedule sets start_time to the next crontab match when no start_time is provided."""
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom No Start Time",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 17 * * *",  # 5 PM daily
+            )
+            # start_time should be the next crontab match (2050-01-22 17:00 UTC), not ~now
+            self.assertEqual(job.start_time.hour, 17)
+            self.assertEqual(job.start_time.minute, 0)
+            self.assertEqual(job.start_time.date(), datetime(2050, 1, 22).date())
+
+    def test_custom_schedule_start_time_all_crontab_fields(self):
+        """Test that create_schedule correctly computes the next match for a fully specified crontab."""
+        # "5 4 3 2 1" = minute=5, hour=4, day_of_month=3, month=February, day_of_week=Monday
+        # Next Feb 3 from 2050-01-22 is 2050-02-03 at 04:05 UTC
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom All Fields",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+            )
+            self.assertEqual(job.start_time.minute, 5)
+            self.assertEqual(job.start_time.hour, 4)
+            self.assertEqual(job.start_time.month, 2)
+            self.assertEqual(job.start_time.day, 3)
+
     def test_on_workflow_canceled(self):
         """Should change decision_date and schedule_job should be disabled."""
         decision_date = datetime(2025, 1, 1)
