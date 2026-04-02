@@ -1362,6 +1362,27 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(ctx1.get("device_family"), "Device Family 1")
         self.assertEqual(ctx2.get("device_family"), None)
 
+    def test_get_for_object_inheritance(self):
+        """
+        Verify that get_for_object handles models inheriting from Device.
+        """
+
+        # We use an existing device but mock its model_name to something else, to emulate inheritance.
+        with mock.patch.object(self.device._meta, "model_name", "proxy_device"):
+            self.assertEqual(self.device._meta.model_name, "proxy_device")
+            contexts = ConfigContext.objects.get_for_object(self.device)
+            self.assertEqual(contexts.count(), 1)
+
+    def test_annotate_config_context_data_inheritance(self):
+        """
+        Verify that annotate_config_context_data() works for models inheriting from Device.
+        """
+
+        # Mock the model_name at the class level to prove issubclass() is used.
+        with mock.patch.object(Device._meta, "model_name", "proxy_device"):
+            annotated_device = Device.objects.filter(pk=self.device.pk).annotate_config_context_data().first()
+            self.assertEqual(self.device.get_config_context(), annotated_device.get_config_context())
+
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
