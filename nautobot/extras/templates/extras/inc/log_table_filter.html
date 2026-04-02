@@ -1,10 +1,29 @@
-{% load ajax_table %}
 <div class="card-header">
     <strong>Logs</strong>
     <div class="float-end d-print-none">
-        <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
+        <input
+            class="form-control"
+            id="log-filter"
+            name="q"
+            type="text"
+            placeholder="Filter log level or message"
+            title="Filter log level or message"
+            style="height: 23px"
+
+            hx-get="{% url 'extras:jobresult_log-table' pk=result.pk %}"
+            hx-target="#log-table-wrapper"
+            hx-trigger="input changed delay:500ms"
+        />
     </div>
 </div>
 {% if result and result.pk %}
-    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+    <div
+        id="log-table-wrapper"
+        hx-get="{% url 'extras:jobresult_log-table' pk=result.pk %}?{{ request.GET.urlencode }}"
+        hx-trigger="load"
+        hx-target="#log-table-wrapper"
+        hx-swap="innerHTML"
+        hx-boost="true"
+    >
+    </div>
 {% endif %}

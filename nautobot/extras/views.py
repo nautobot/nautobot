@@ -17,6 +17,7 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.templatetags.static import static
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -3032,10 +3033,7 @@ class JobResultUIViewSet(
         custom_view_base_action="view",
     )
     def log_table(self, request, pk=None):
-        """
-        Custom action to return a rendered JobLogEntry table for a JobResult.
-        """
-
+        """Custom action to return a rendered JobLogEntry table for a JobResult."""
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
 
         filter_q = request.GET.get("q")
@@ -3052,6 +3050,25 @@ class JobResultUIViewSet(
             "per_page": get_paginate_count(request),
         }
         RequestConfig(request, paginate).configure(log_table)
+
+        if request.headers.get("HX-Request"):
+            job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
+
+            # trigger for final reload when job is finished
+            hx_trigger = request.headers.get("HX-Trigger", "")
+            trigger_reload = not job_is_pending and hx_trigger == "log-table-poller"
+
+            context = {
+                "job_result": instance,
+                "job_is_pending": job_is_pending,
+                "has_logs": queryset.exists(),
+                "table_html": log_table.as_html(request),
+                "log_table_url": request.get_full_path(),
+                "trigger_reload": trigger_reload,
+            }
+            response = render(request, "extras/inc/jobresult_log_table_partial.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
 
         return HttpResponse(log_table.as_html(request))
 
