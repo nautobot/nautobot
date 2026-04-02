@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import sys
-import tempfile
 from textwrap import dedent
 from typing import final
 import warnings
@@ -172,22 +171,22 @@ class BaseJob:
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
-                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-                # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                profile_filename = f"nautobot-jobresult-{self.job_result.id}.pstats"
                 self.logger.info(
-                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                    "Profiling job execution; results will be available for download upon completion.",
+                    extra={"grouping": "initialization"},
                 )
 
-                with cProfile.Profile() as pr:
-                    try:
-                        output = self.run(*args, **deserialized_kwargs)
-                    except Exception as err:
-                        pr.dump_stats(profiling_path)
-                        raise err
-                    else:
-                        pr.dump_stats(profiling_path)
-                        return output
+                pr = None
+                try:
+                    with cProfile.Profile() as pr:
+                        return self.run(*args, **deserialized_kwargs)
+                finally:
+                    if pr:
+                        import marshal
+
+                        pr.create_stats()
+                        self.create_file(profile_filename, content=marshal.dumps(pr.stats))
             else:
                 return self.run(*args, **deserialized_kwargs)
 
@@ -534,7 +533,7 @@ class BaseJob:
             required=False,
             initial=False,
             label="Profile job execution",
-            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+            help_text="Profiles the job execution using cProfile and attaches a report to the job result",
         )
         form.fields["_profile"].widget.attrs["class"] = "form-check-input"
 
@@ -629,25 +628,40 @@ class BaseJob:
         These are converted back during job execution.
         """
 
-        return_data = {}
-        for field_name, value in data.items():
+        def _serialize_value(value):
+            """Recursively convert job kwargs into JSON-serializable primitives.
+
+            This is particularly important for Kubernetes job execution where `task_kwargs` is stored as JSON and
+            Django's JSON encoder will otherwise convert Django model instances into `__nautobot_type__` dicts.
+            """
+
             # MultiObjectVar
             if isinstance(value, QuerySet):
-                return_data[field_name] = list(value.values_list("pk", flat=True))
-            # ObjectVar
-            elif isinstance(value, Model):
-                return_data[field_name] = value.pk
-            # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, UploadedFile):
-                return_data[field_name] = BaseJob._save_file_to_proxy(value)
-            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
-            elif isinstance(value, netaddr.ip.BaseIP):
-                return_data[field_name] = str(value)
-            # Everything else...
-            else:
-                return_data[field_name] = value
+                return list(value.values_list("pk", flat=True))
 
-        return return_data
+            # ObjectVar
+            if isinstance(value, Model):
+                return value.pk
+
+            # FileVar (Save each FileVar as a FileProxy)
+            if isinstance(value, UploadedFile):
+                return BaseJob._save_file_to_proxy(value)
+
+            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
+            if isinstance(value, netaddr.ip.BaseIP):
+                return str(value)
+
+            # Recurse into containers/dicts to handle nested Model instances (e.g. BulkEdit `form_data`).
+            if isinstance(value, dict):
+                return {k: _serialize_value(v) for k, v in value.items()}
+
+            if isinstance(value, (list, tuple, set)):
+                return [_serialize_value(v) for v in value]
+
+            # Everything else...
+            return value
+
+        return {field_name: _serialize_value(value) for field_name, value in data.items()}
 
     # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
