@@ -1,2 +1,0 @@
-Changed `runjob --local` now delegates execution to `execute_job_result` instead `JobResult.execute_job`.
-Changed `runjob_with_job_result` now delegates to `execute_job_result` directly (non-console path) or via JobConsoleLogExecutor subprocess (console path), replacing its previous execution logic.

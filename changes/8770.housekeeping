@@ -1,1 +1,0 @@
-Added `CelerySubprocessTestCase` utility to facilitate E2E testing of Celery tasks that spawn subprocesses.
