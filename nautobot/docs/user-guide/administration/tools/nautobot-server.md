@@ -507,6 +507,7 @@ Performs common server post-upgrade operations using a single entrypoint.
 This will run the following management commands with default settings, in order:
 
 - `migrate`
+- `clear_cache`
 - `trace_paths`
 - `collectstatic`
 - `remove_stale_contenttypes`
@@ -516,7 +517,7 @@ This will run the following management commands with default settings, in order:
 - `refresh_dynamic_group_member_caches`
 
 !!! note
-    Commands listed here that are not covered in this document here are Django built-in commands.
+    Commands listed here that are not covered in this document here are Django built-in commands, with the exception of `clear_cache`, which is provided by Nautobot's dependency `django-extensions`.
 
 --- 2.0.0
     With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
@@ -529,6 +530,12 @@ This will run the following management commands with default settings, in order:
 
 --- 2.1.1
     Removed the `--build_ui` flag.
+
++++ 3.0.10
+    Added `clear_cache` to this command's default behavior.
+
+`--no-clear-cache`
+Do not automatically clear the cache.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
@@ -567,6 +574,9 @@ Operations to perform:
 Running migrations:
   No migrations to apply.
 
+Clearing cache...
+Cache "default" has been cleared!
+
 Generating cable paths...
 Found no missing circuit termination paths; skipping
 Found no missing console port paths; skipping
@@ -584,6 +594,13 @@ Collecting static files...
 Removing stale content types...
 
 Removing expired sessions...
+
+Sending installation metrics...
+Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping.
+
+Refreshing _content_type cache
+
+Refreshing dynamic group member caches...
 ```
 
 ### `refresh_dynamic_group_member_caches`
@@ -643,7 +660,7 @@ virtualization.VMInterface.name (_name)... 0
 Done.
 ```
 
-You may optionally specify or more specific models (each prefixed with its app_label) to renaturalize:
+You may optionally specify or more specific models (each prefixed with its `app_label`) to renaturalize:
 
 ```no-highlight
 nautobot-server renaturalize dcim.Device

@@ -113,6 +113,20 @@ properties:
     items:
       type: "string"
     type: "array"
+  AUTH_PASSWORD_VALIDATORS:
+    default: []
+    description: >-
+      A list of dictionaries, describing password validator classes (as strings) and any associated configuration, to
+      manage validation of passwords for local user accounts. By default, this is an empty list, meaning any password
+      is permitted.
+
+      A future release of Nautobot may change the default value of this setting to increase security.
+    items:
+      type: "object"
+    see_also:
+      "Django documentation for `AUTH_PASSWORD_VALIDATORS`": "https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-AUTH_PASSWORD_VALIDATORS"
+      "Django documentation for password validators": "https://docs.djangoproject.com/en/stable/topics/auth/passwords/#module-django.contrib.auth.password_validation"
+    type: "array"
   AUTHENTICATION_BACKENDS:
     default:
     - "nautobot.core.authentication.ObjectPermissionBackend"
