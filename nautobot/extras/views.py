@@ -3515,14 +3515,12 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
 
     class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
-            obj = get_obj_from_context(context, self.context_object_key)
-
             if key == "changed_object":
                 if value and getattr(value, "get_absolute_url", None):
                     return helpers.hyperlinked_object(value)
                 else:
-                    return obj.object_repr or helpers.HTML_NONE
-
+                    obj = get_obj_from_context(context, self.context_object_key)
+                    return helpers.placeholder(obj.object_repr)
             return super().render_value(key, value, context)
 
     object_detail_content = object_detail.ObjectDetailContent(
