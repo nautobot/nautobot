@@ -14,7 +14,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
+from django.db import connections, InterfaceError, models, OperationalError, transaction
 from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -1152,7 +1152,20 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if not self.use_job_logs_db or not JOB_LOGS:
             log.save()
         else:
-            log.save(using=JOB_LOGS)
+            try:
+                conn = connections[JOB_LOGS]
+                # Close the existing connection if it has encountered errors or if the CONN_MAX_AGE is exceeded.
+                # Without this, job logs connections persist indefinitely, regardless of the CONN_MAX_AGE setting.
+                # A subsequent ORM call will automatically open a new connection.
+                conn.close_if_unusable_or_obsolete()
+                log.save(using=JOB_LOGS)
+            # Some failure scenarios, such as a DB connection closed by the server, cannot be easily detected.
+            # In these cases, we manually clear the connection and retry.
+            except (InterfaceError, OperationalError):
+                # Explicitly clear the connection socket due to MySQL not playing nicely with conn.close()
+                conn.connection = None
+                conn.ensure_connection()
+                log.save(using=JOB_LOGS)
 
         if self.celery_kwargs.get("nautobot_job_console_log", False):
             job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)

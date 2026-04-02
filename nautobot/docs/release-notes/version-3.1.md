@@ -138,7 +138,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added `Prefix.next_sibling` property.
 - [#2516](https://github.com/nautobot/nautobot/issues/2516) - Added `/ipam/prefixes/<uuid>/children/` URL endpoint in support of enhanced Prefix list view functionality.
 - [#8516](https://github.com/nautobot/nautobot/issues/8516) - Added dynamically rendered scope filter fields to the Custom Field edit form.
-- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Added `Console Log` tab to Job Result detial view.
+- [#8524](https://github.com/nautobot/nautobot/issues/8524) - Added `Console Log` tab to Job Result detail view.
 - [#8524](https://github.com/nautobot/nautobot/issues/8524) - Added `job_console_entries` action to `JobResultUIViewSet` to stream output from SQL into the UI in realtime.
 - [#8524](https://github.com/nautobot/nautobot/issues/8524) - Modified `runjob_with_job_result.py` command to `run_job` instead of `execute_job`.
 - [#8524](https://github.com/nautobot/nautobot/issues/8524) - Improved `job_result.js` and `job_level_filtering.js`.

@@ -37,7 +37,7 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry, registry_jobs_lock
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
@@ -735,32 +735,35 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
             return
         raise ValueError(f"The repository_slug {repository_slug!r} is invalid as it is {reason}")
 
-    # Unload any previous version of this module and its submodules if present
-    for job_class_path in list(registry["jobs"]):
-        if job_class_path.startswith(f"{repository_slug}."):
-            del registry["jobs"][job_class_path]
+    with registry_jobs_lock:
+        # Unload any previous version of this module and its submodules if present
+        for job_class_path in list(registry["jobs"]):
+            if job_class_path.startswith(f"{repository_slug}."):
+                registry["jobs"].pop(job_class_path, None)
 
-    if skip_reimport:
-        return
+        if skip_reimport:
+            return
 
-    try:
-        repository = GitRepository.objects.get(slug=repository_slug)
-        if "extras.job" in repository.provided_contents:
-            if not (
-                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
-                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
-            ):
-                logger.error("No `jobs` submodule found in Git repository %s", repository)
-                if not ignore_import_errors:
-                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
-            else:
-                import_modules_privately(
-                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
-                )
-    except GitRepository.DoesNotExist as exc:
-        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-        if not ignore_import_errors:
-            raise
+        try:
+            repository = GitRepository.objects.get(slug=repository_slug)
+            if "extras.job" in repository.provided_contents:
+                if not (
+                    os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                    or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+                ):
+                    logger.error("No `jobs` submodule found in Git repository %s", repository)
+                    if not ignore_import_errors:
+                        raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
+                else:
+                    import_modules_privately(
+                        settings.GIT_ROOT,
+                        module_path=[repository_slug, "jobs"],
+                        ignore_import_errors=ignore_import_errors,
+                    )
+        except GitRepository.DoesNotExist as exc:
+            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+            if not ignore_import_errors:
+                raise
 
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
