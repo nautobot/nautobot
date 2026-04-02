@@ -3,9 +3,9 @@
 {% elif scheduled_job.status == 'canceled' %}
     <span class="badge bg-danger">Canceled</span>
 {% elif scheduled_job.status == 'pending' %}
-    <span class="badge bg-body-secondary border">Pending</span>
+    <span class="badge bg-warning border">Pending</span>
 {% elif scheduled_job.status == 'active' %}
-    <span class="badge bg-warning">Active</span>
+    <span class="badge bg-info">Active</span>
 {% elif scheduled_job.status == 'completed' %}
     <span class="badge bg-success">Completed</span>
 {% else %}
