@@ -1497,7 +1497,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             name = name or f"{job_model.name} - {start_time}"
         elif interval == JobExecutionType.TYPE_CUSTOM:
             if start_time is None:
-                # Calculate the next crontab match as the start_time.
+                # Calculate the next crontab match as the start_time so that the scheduled job
+                # accurately reflects when it will first run, rather than using creation time.
+                # Note: start_time is validated against ScheduledJob.earliest_possible_time()
+                # (now + 15s) in the API serializer; the next crontab match always exceeds this.
                 crontab_schedule = cls.get_crontab(crontab)
                 now = timezone.now()
                 next_run_delta = crontab_schedule.remaining_estimate(now)
