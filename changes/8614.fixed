@@ -1,1 +1,0 @@
-Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
