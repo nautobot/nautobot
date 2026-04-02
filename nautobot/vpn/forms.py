@@ -123,6 +123,7 @@ class VPNProfileFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, Tenancy
 
     model = models.VPNProfile
 
+    q = forms.CharField(required=False, label="Search")
     vpn_phase1_policies = DynamicModelMultipleChoiceField(
         required=False,
         queryset=models.VPNPhase1Policy.objects.all(),
@@ -254,6 +255,7 @@ class VPNPhase1PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 
     model = models.VPNPhase1Policy
 
+    q = forms.CharField(required=False, label="Search")
     ike_version = forms.ChoiceField(
         required=False,
         initial=choices.IkeVersionChoices.ike_v2,
@@ -361,6 +363,7 @@ class VPNPhase2PolicyFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylin
 
     model = models.VPNPhase2Policy
 
+    q = forms.CharField(required=False, label="Search")
     encryption_algorithm = forms.MultipleChoiceField(
         required=False,
         choices=choices.EncryptionAlgorithmChoices.CHOICES,
@@ -438,6 +441,7 @@ class VPNFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterF
 
     model = models.VPN
 
+    q = forms.CharField(required=False, label="Search")
     vpn_profile = DynamicModelMultipleChoiceField(
         required=False,
         queryset=models.VPNProfile.objects.all(),
@@ -540,6 +544,7 @@ class VPNTunnelFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, StatusMo
 
     model = models.VPNTunnel
 
+    q = forms.CharField(required=False, label="Search")
     vpn = DynamicModelMultipleChoiceField(
         required=False,
         queryset=models.VPN.objects.all(),
@@ -682,6 +687,7 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, 
 
     model = models.VPNTunnelEndpoint
 
+    q = forms.CharField(required=False, label="Search")
     vpn_profile = DynamicModelMultipleChoiceField(
         required=False,
         queryset=models.VPNProfile.objects.all(),
