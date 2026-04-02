@@ -23,18 +23,16 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         """
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
+        self.click_navbar_entry("Extensibility", "Config Context Schemas")
 
         # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.click_add_item()
 
         # Fill out form
-        self.browser.fill("name", "Integration Schema 1")
-        self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
-        self.browser.find_by_text("Create").click()
+        self.fill_input("name", "Integration Schema 1")
+        self.fill_input("description", "Description")
+        self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "string"}}}')
+        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
 
         # Verify form redirect
         self.assertTrue(self.browser.is_text_present("Created config context schema Integration Schema 1"))
@@ -51,18 +49,16 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         """
         # Navigate to ConfigContextSchema list view
         self.browser.visit(self.live_server_url)
-        self.browser.links.find_by_partial_text("Extensibility").click()
-        self.browser.links.find_by_partial_text("Config Context Schemas").click()
+        self.click_navbar_entry("Extensibility", "Config Context Schemas")
 
         # Click add button
-        # Need to be a bit clever in our search here to avoid accidentally hitting "IP Addresses -> Add" in the nav
-        self.browser.find_by_xpath("//div[contains(@class, 'wrapper')]//a[contains(., 'Add')]").click()
+        self.click_add_item()
 
         # Fill out form
-        self.browser.fill("name", "Integration Schema 2")
-        self.browser.fill("description", "Description")
-        self.browser.fill("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
-        self.browser.find_by_text("Create").click()
+        self.fill_input("name", "Integration Schema 2")
+        self.fill_input("description", "Description")
+        self.fill_input("data_schema", '{"type": "object", "properties": {"a": {"type": "not a valid type"}}}')
+        self.browser.find_by_xpath("//button[normalize-space()='Create']").click()
 
         # Verify validation error raised to user within form
         self.assertTrue(self.browser.is_text_present("'not a valid type' is not valid under any of the given schemas"))
