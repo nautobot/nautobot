@@ -1501,8 +1501,9 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 # accurately reflects when it will first run, rather than using creation time.
                 # Note: start_time is validated against ScheduledJob.earliest_possible_time()
                 # (now + 15s) in the API serializer; the next crontab match always exceeds this.
-                crontab_schedule = cls.get_crontab(crontab)
-                now = timezone.now()
+                tz = timezone.get_current_timezone()
+                crontab_schedule = cls.get_crontab(crontab, tz=tz)
+                now = timezone.localtime()
                 next_run_delta = crontab_schedule.remaining_estimate(now)
                 # Round up to the nearest minute to compensate for floating-point
                 # precision loss in celery's remaining_estimate (e.g., 4:59:59.999991 -> 5:00:00)
