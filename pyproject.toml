@@ -23,11 +23,11 @@ classifiers = [
 requires-python = ">=3.10,<3.15"
 dependencies = [
     # Background task processing
-    "celery (>=5.6.2,<5.7)",
+    "celery (>=5.6.3,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.5,<46.1)",
+    "cryptography (>=46.0.6,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.12,<5.3)",
     # Adds AJAX capabilities to django-tables2
@@ -97,7 +97,7 @@ dependencies = [
     #       we permit a looser (^) version constraint here.
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.3,<0.4)",
+    "nh3 (>=0.3.4,<0.4)",
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library
@@ -191,17 +191,17 @@ markdown-data-tables = "~1.0.0"
 # Render custom markdown for version added/changed/remove notes
 markdown-version-annotations = "~1.0.1"
 # Automatically generate some files as part of mkdocs build
-mkdocs-gen-files = "~0.6.0"
+mkdocs-gen-files = "~0.6.1"
 # Image lightboxing in mkdocs
 mkdocs-glightbox = "~0.5.2"
 # Use Jinja2 templating in docs - see settings.md
 mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
-mkdocs-material = "~9.7.5"
+mkdocs-material = "~9.7.6"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.2"
 # Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.10"
+mkdocs-section-index = "~0.3.11"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~1.0.3"
 # Python-specific extension to mkdocstrings
@@ -231,7 +231,7 @@ django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.8.4"
 # Integration Tests
-requests = "~2.32.5"
+requests = "~2.33.0"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
