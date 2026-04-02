@@ -643,7 +643,6 @@ jobs:
           arch: "${{ matrix.arch }}"
           push: false
           target: "final"
-          default-python-version: "3.13"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
 
 #   container-merge-test:
