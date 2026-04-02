@@ -507,7 +507,6 @@ jobs:
           arch: "${{ matrix.arch }}"
           push: false
           target: "final"
-          default-python-version: "3.12"
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
 
 #   container-merge-test:
