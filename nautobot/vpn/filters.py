@@ -5,18 +5,18 @@ from nautobot.apps.filters import (
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
+    RoleModelFilterSetMixin,
     SearchFilter,
     StatusModelFilterSetMixin,
     TenancyModelFilterSetMixin,
 )
 from nautobot.dcim.models import Device, Interface
-from nautobot.extras.models import Role
 from nautobot.ipam.models import IPAddress
 
 from . import models
 
 
-class VPNProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNProfileFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNProfile."""
 
     q = SearchFilter(
@@ -34,11 +34,6 @@ class VPNProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pyl
         queryset=models.VPNPhase2Policy.objects.all(),
         to_field_name="name",
         label="Phase 2 Policies (name or ID)",
-    )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        to_field_name="name",
-        label="Role",
     )
 
     class Meta:
@@ -144,7 +139,7 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
         fields = "__all__"
 
 
-class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPN."""
 
     q = SearchFilter(
@@ -165,11 +160,6 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
         label="VPN Profile (name or ID)",
         to_field_name="name",
     )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        to_field_name="name",
-        label="Role",
-    )
 
     class Meta:
         """Meta attributes for filter."""
@@ -178,7 +168,9 @@ class VPNFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: di
         fields = "__all__"
 
 
-class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNTunnelFilterSet(
+    RoleModelFilterSetMixin, StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet
+):  # pylint: disable=too-many-ancestors
     """Filter for VPNTunnel."""
 
     q = SearchFilter(
@@ -199,11 +191,6 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         label="VPN Profile (name or ID)",
         to_field_name="name",
     )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        to_field_name="name",
-        label="Role",
-    )
 
     class Meta:
         """Meta attributes for filter."""
@@ -212,7 +199,7 @@ class VPNTunnelFilterSet(StatusModelFilterSetMixin, TenancyModelFilterSetMixin, 
         fields = "__all__"
 
 
-class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPNTunnelEndpoint."""
 
     q = SearchFilter(
@@ -251,11 +238,6 @@ class VPNTunnelEndpointFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         queryset=models.VPNTunnel.objects.all(),
         to_field_name="name",
         label="Endpoint Z",
-    )
-    role = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Role.objects.all(),
-        to_field_name="name",
-        label="Role",
     )
 
     class Meta:
