@@ -3199,7 +3199,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.assertTrue(is_due)
 
     def test_on_workflow_initiated(self):
-        """Should set status to PENDING, approval_required to True and disable the job."""
+        """Should set status to PENDING and disable the job."""
         approval_workflow = mock.Mock()
         self.assertTrue(self.daily_utc_job.enabled)
         self.daily_utc_job.on_workflow_initiated(approval_workflow)

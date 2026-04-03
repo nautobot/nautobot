@@ -1449,7 +1449,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
             ScheduledJob.objects.create(
@@ -1458,7 +1457,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_DAILY,
                 user=user,
-                approval_required=True,
                 start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
                 time_zone=ZoneInfo("America/New_York"),
             ),
@@ -1470,7 +1468,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 crontab="34 12 * * *",
                 enabled=False,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
         ]

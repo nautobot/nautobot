@@ -1563,8 +1563,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
 
     # todoindex:
-    approval_required = models.BooleanField(default=False)
-
     decision_date = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1621,7 +1619,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set approval required to True."""
-        self.approval_required = True  # TBD: maybe we can delete this flag and based only on status now?
         self.state = ScheduledJobStateChoices.PENDING
         self.enabled = False
         self.save()
@@ -1667,6 +1664,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.one_off and self.start_time < timezone.now():
             return "extras/job_approval_confirmation.html"
         return None
+
+    @property
+    def approval_required(self):
+        return self.state == ScheduledJobStateChoices.PENDING
 
     @property
     def runnable(self):
