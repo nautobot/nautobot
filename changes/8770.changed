@@ -1,1 +1,0 @@
-Changed handling of NAUTOBOT_CONFIG to be passed explicitly via `--config=settings.SETTINGS_PATH` in job execution commands.
