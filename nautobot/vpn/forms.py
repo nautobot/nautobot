@@ -755,6 +755,7 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, 
         "tags",
     ]
 
+
 #
 # VPN termination forms
 #
