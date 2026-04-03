@@ -1513,7 +1513,7 @@ class ScheduledJobTable(BaseTable):
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     enabled = BooleanColumn()
-    status = tables.TemplateColumn(
+    state = tables.TemplateColumn(
         template_code="{% include 'extras/inc/scheduled_job_label.html' with scheduled_job=record %}",
     )
     interval = tables.Column(verbose_name="Execution Type")
@@ -1544,7 +1544,7 @@ class ScheduledJobTable(BaseTable):
             "crontab",
             "time_zone",
             "actions",
-            "status",
+            "state",
         )
         default_columns = (
             "pk",
@@ -1555,7 +1555,7 @@ class ScheduledJobTable(BaseTable):
             "interval",
             "last_run_at",
             "actions",
-            "status",
+            "state",
         )
 
 

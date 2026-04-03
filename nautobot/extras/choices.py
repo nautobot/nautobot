@@ -377,7 +377,7 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 #
 
 
-class ScheduledJobStatusChoices(ChoiceSet):
+class ScheduledJobStateChoices(ChoiceSet):
     ACTIVE = "active"
     PENDING = "pending"
     DENIED = "denied"
@@ -386,9 +386,9 @@ class ScheduledJobStatusChoices(ChoiceSet):
 
     CHOICES = (
         (ACTIVE, "Active"),
-        (PENDING, "Pending"),
-        (DENIED, "Denied"),
-        (CANCELED, "Canceled"),
+        (PENDING, "Pending Approval"),
+        (DENIED, "Approval Denied"),
+        (CANCELED, "Approval Canceled"),
         (COMPLETED, "Completed"),
     )
 

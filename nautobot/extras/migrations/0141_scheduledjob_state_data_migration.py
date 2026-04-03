@@ -1,13 +1,13 @@
 from django.db import migrations
 
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, ScheduledJobStatusChoices
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, ScheduledJobStateChoices
 
 
-def update_status(apps, schema_editor):
+def populate_state(apps, schema_editor):
     """
-    Migrates existing ScheduledJob records to populate the new `status` field.
+    Migrates existing ScheduledJob records to populate the new `state` field.
 
-    Status is derived from the combination of `enabled` and any associated
+    State is derived from the combination of `enabled` and any associated
     ApprovalWorkflow state, because prior to this migration approval state was
     tracked implicitly via `approval_required` + `enabled` flags:
 
@@ -22,10 +22,7 @@ def update_status(apps, schema_editor):
     ApprovalWorkflow = apps.get_model("extras", "ApprovalWorkflow")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    try:
-        scheduled_job_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
-    except ContentType.DoesNotExist:
-        return
+    scheduled_job_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
 
     job_workflow_state = dict(
         ApprovalWorkflow.objects.filter(
@@ -39,32 +36,32 @@ def update_status(apps, schema_editor):
     )
 
     to_update = []
-    for scheduled_job in ScheduledJob.objects.only("pk", "enabled", "status"):
+    for scheduled_job in ScheduledJob.objects.only("pk", "enabled", "state"):
         workflow_state = job_workflow_state.get(scheduled_job.pk)
 
         if workflow_state == ApprovalWorkflowStateChoices.PENDING:
-            new_status = ScheduledJobStatusChoices.PENDING
+            new_state = ScheduledJobStateChoices.PENDING
         elif scheduled_job.enabled:
-            new_status = ScheduledJobStatusChoices.ACTIVE
+            new_state = ScheduledJobStateChoices.ACTIVE
         elif workflow_state == ApprovalWorkflowStateChoices.DENIED:
-            new_status = ScheduledJobStatusChoices.DENIED
+            new_state = ScheduledJobStateChoices.DENIED
         elif workflow_state == ApprovalWorkflowStateChoices.CANCELED:
-            new_status = ScheduledJobStatusChoices.CANCELED
+            new_state = ScheduledJobStateChoices.CANCELED
         else:
-            new_status = ScheduledJobStatusChoices.COMPLETED
+            new_state = ScheduledJobStateChoices.COMPLETED
 
-        if scheduled_job.status != new_status:
-            scheduled_job.status = new_status
+        if scheduled_job.state != new_state:
+            scheduled_job.state = new_state
             to_update.append(scheduled_job)
 
-    ScheduledJob.objects.bulk_update(to_update, ["status"], 1000)
+    ScheduledJob.objects.bulk_update(to_update, ["state"], 1000)
 
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0140_scheduledjob_status"),
+        ("extras", "0140_scheduledjob_state"),
     ]
 
     operations = [
-        migrations.RunPython(update_status, migrations.RunPython.noop),
+        migrations.RunPython(populate_state, migrations.RunPython.noop),
     ]
