@@ -89,12 +89,15 @@ class RackElevationSVG:
         return drawing
 
     def _draw_device(self, drawing, device, start, end, text, front_face=True):
-        device_bay_details = ""
-        if device.device_bay_count:
-            device_bay_details += f" ({device.get_children().count()}/{device.device_bay_count})"
+        device_fullname = str(device)
+        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device))
 
-        device_fullname = str(device) + device_bay_details
-        device_shortname = settings.UI_RACK_VIEW_TRUNCATE_FUNCTION(str(device)) + device_bay_details
+        if front_face:
+            device_bay_details = ""
+            if device.device_bay_count:
+                device_bay_details += f" ({device.get_children().count()}/{device.device_bay_count})"
+            device_fullname += device_bay_details
+            device_shortname += device_bay_details
 
         role_color = device.role.color
         status_color = device.status.color
@@ -108,9 +111,9 @@ class RackElevationSVG:
             )
         )
         link.set_desc(self._get_device_description(device))
-        link.add(drawing.rect(start, end, style=f"fill: #{role_color}", class_="slot"))
 
         if front_face:
+            link.add(drawing.rect(start, end, style=f"fill: #{role_color}", class_="slot"))
             # Draw status square only in front face to distinguish sides
             status_rect = drawing.add(
                 drawing.a(
@@ -122,8 +125,12 @@ class RackElevationSVG:
             status_rect.set_desc(device.status.name)
             status_end = (end[0] / 20, end[1])  # width, y
             status_rect.add(drawing.rect(start, status_end, style=f"fill: #{status_color}"))
+        else:
+            blocked_rect = drawing.rect(start, end, class_="slot blocked")
+            blocked_rect.set_desc(self._get_device_description(device))
+            link.add(blocked_rect)
 
-        # Embed front device type image if one exists
+        # Embed device type image if one exists
         if self.include_images:
             if front_face and device.device_type.front_image:
                 image = drawing.image(
@@ -242,9 +249,13 @@ class RackElevationSVG:
             # Draw the device
             if device and device.pk in self.permitted_device_ids:
                 if device.face == face:
-                    self._draw_device(drawing, device, start_coordinates, end_coordinates, text_coordinates, True)
+                    self._draw_device(
+                        drawing, device, start_coordinates, end_coordinates, text_coordinates, front_face=True
+                    )
                 elif device.device_type.is_full_depth:
-                    self._draw_device(drawing, device, start_coordinates, end_coordinates, text_coordinates, False)
+                    self._draw_device(
+                        drawing, device, start_coordinates, end_coordinates, text_coordinates, front_face=False
+                    )
                 else:
                     # Half-depth devices add an empty box that is partially blocked
                     self._draw_empty(
