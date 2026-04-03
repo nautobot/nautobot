@@ -907,6 +907,171 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
 
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_front_face_device_rendering(self):
+        """Test that a front-facing device is rendered with role color rect and status square on front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        content = response.content.decode()
+        # Device link should be present
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Role color fill should be present
+        self.assertIn(f"fill: #{device.role.color}", content)
+        # Status color fill should be present (status square only on front face)
+        self.assertIn(f"fill: #{device.status.color}", content)
+        # Device name text should be present
+        self.assertIn(str(device), content)
+        # Full name text element should be present
+        self.assertIn("rack-device-fullname", content)
+        self.assertIn("rack-device-shortname", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_full_depth_device(self):
+        """Test that a full-depth front-facing device renders as blocked on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device full depth so it appears on the rear face
+        device.device_type.is_full_depth = True
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device link should still be present on rear face
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Rear face should show "slot blocked" class (not role color)
+        self.assertIn("slot blocked", content)
+        # Status color should NOT be present (no status square on rear face)
+        self.assertNotIn(f"fill: #{device.status.color}", content)
+        # Device name text should still be present
+        self.assertIn(str(device), content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_half_depth_device(self):
+        """Test that a half-depth front-facing device renders as blocked_partial on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device half depth so it shows as blocked_partial on the rear
+        device.device_type.is_full_depth = False
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Half-depth devices on opposite face should show blocked_partial
+        self.assertIn("slot blocked_partial", content)
+        # Should show "add device" text (it's treated as a partially-available slot)
+        self.assertIn("add device", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_display_fullname_false(self):
+        """Test that display_fullname=false toggles the hidden class on name elements."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&display_fullname=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # When display_fullname is false, fullname should have "hidden" class
+        self.assertIn("rack-device-fullname hidden", content)
+        # And shortname should NOT have "hidden" class
+        self.assertRegex(content, r'class="rack-device-shortname"')
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_false(self):
+        """Test that include_images=false prevents image embedding in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&include_images=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # No device-image elements should be present
+        self.assertNotIn("device-image", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_with_reservation(self):
+        """Test that reserved units are rendered with the reserved class in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        user = self.user
+        RackReservation.objects.create(rack=rack, units=[1, 2, 3], user=user, description="Test Reservation")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Reserved units should have the "reserved" class
+        self.assertIn("reserved", content)
+        # Reservation description should be in the SVG
+        self.assertIn("Test Reservation", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_device_with_bays(self):
+        """Test that devices with device bays show bay count details in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Create a device bay on the device
+        DeviceBay.objects.create(device=device, name="Bay 1")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device bay count should appear in the device name text (0/1 since no child installed)
+        self.assertIn("(0/1)", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_unpermitted_device(self):
+        """Test that devices a user cannot view are rendered as blocked (no link or details)."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Grant only rack view, NOT device view — device should render as blocked
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device should be rendered as blocked (no device link, just a blocked rect)
+        device_url = reverse("dcim:device", kwargs={"pk": device.pk})
+        self.assertNotIn(device_url, content)
+        # Should have a blocked rect for the device's position
+        self.assertIn('class="blocked"', content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_multi_u_device(self):
+        """Test that multi-U devices span the correct height in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device 2U
+        device.device_type.u_height = 2
+        device.device_type.save()
+        device.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # The device rect should have height of 2 * unit_height = 44
+        self.assertIn('height="44"', content)
+        # Device name should still be present
+        self.assertIn(str(device), content)
+
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
