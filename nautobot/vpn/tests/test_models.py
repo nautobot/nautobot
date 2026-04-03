@@ -2,7 +2,6 @@
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 from django.test import TestCase
 
 from nautobot.apps.testing import ModelTestCases
@@ -429,14 +428,14 @@ class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTest
         with self.assertRaises(ValidationError):
             termination.clean()
 
-    def test_duplicate_termination_rejected_by_constraint(self):
+    def test_duplicate_termination_rejected_by_validation(self):
         interface = self._get_available_interfaces().first()
         if interface is None:
             self.skipTest("No unused interface available.")
 
         models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
-        with self.assertRaises(IntegrityError):
-            models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
+        with self.assertRaises(ValidationError):
+            models.VPNTermination(vpn=self.vpn, interface=interface).validated_save()
 
     def test_termination_with_interface(self):
         interface = self._get_available_interfaces().first()

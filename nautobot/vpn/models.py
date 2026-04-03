@@ -642,17 +642,14 @@ class VPNTermination(PrimaryModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["vlan"],
-                condition=models.Q(vlan__isnull=False),
                 name="vpn_vpntermination_unique_vlan",
             ),
             models.UniqueConstraint(
                 fields=["interface"],
-                condition=models.Q(interface__isnull=False),
                 name="vpn_vpntermination_unique_interface",
             ),
             models.UniqueConstraint(
                 fields=["vm_interface"],
-                condition=models.Q(vm_interface__isnull=False),
                 name="vpn_vpntermination_unique_vm_interface",
             ),
         ]
@@ -692,6 +689,17 @@ class VPNTermination(PrimaryModel):
         selected = [obj for obj in (self.vlan, self.interface, self.vm_interface) if obj is not None]
         if len(selected) != 1:
             raise ValidationError("Exactly one of vlan, interface, or vm_interface must be set.")
+
+        duplicate_fields = {
+            "vlan": self.vlan,
+            "interface": self.interface,
+            "vm_interface": self.vm_interface,
+        }
+        for field_name, value in duplicate_fields.items():
+            if value is None:
+                continue
+            if self.__class__.objects.exclude(pk=self.pk).filter(**{field_name: value}).exists():
+                raise ValidationError({field_name: "This object is already assigned to another VPN termination."})
 
         if self.vpn_id is None:
             return
