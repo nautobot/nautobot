@@ -136,7 +136,7 @@
                         {% job_buttons object %}
                         {% block buttons %}
                             {% plugin_buttons object %}
-                            {% render_detail_view_extra_buttons %}
+                            {% render_detail_view_extra_buttons tab_id="main" %}
                             {% block extra_buttons %}{% endblock extra_buttons %}
                             {% consolidate_detail_view_action_buttons %}
                         {% endblock buttons %}
@@ -286,8 +286,12 @@
         const DEFAULT_TAB_ID = 'main';
 
         function show_tab(tab_id) {
-            const tabs = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
-            [...tabs].forEach(tab => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
+            const tabsByHref = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
+            const tabs =
+                tabsByHref.length > 0
+                    ? tabsByHref
+                    : document.querySelectorAll(`.nav.nav-tabs a[aria-controls="${tab_id}"]`);
+            [...tabs].forEach((tab) => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
         }
 
         function switch_tab(tab_href, reload = false) {
@@ -307,15 +311,36 @@
         }
 
         // Set initial history state
-        if (window.location.pathname === '{{ object.get_absolute_url }}') {
+        const tab_id = (() => {
+            if (window.location.pathname === '{{ object.get_absolute_url }}') {
+                const search_params = new URLSearchParams(window.location.search);
+                return search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
+            }
+
+            return [...document.querySelectorAll(`.nav.nav-tabs a`)]
+                .find((tab) => tab.href === window.location.href)
+                ?.getAttribute('aria-controls');
+        })();
+
+        if (tab_id) {
             const tab_url = window.location.origin + window.location.pathname + window.location.search;
-            const search_params = new URLSearchParams(window.location.search);
-
-            const tab_id = search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
-
             window.history.replaceState({ id: tab_id }, document.title, tab_url);
             show_tab(tab_id);
         }
+
+        /*
+         * `pageshow` event listener is required to properly set the active tab when browser `bfcache` is used, i.e.
+         * when users press "Back" or "Forward" button in their browsers.
+         */
+        window.addEventListener('pageshow', () => {
+            /*
+             * Check for tab `id` that should already be recorded in `history.state`, because `pageshow` should be
+             * dispatched no sooner than the initial logic or `switch_tab` function execution.
+             */
+            if (window.history.state?.id) {
+                show_tab(window.history.state.id);
+            }
+        });
 
         window.addEventListener('popstate', (event) => show_tab(event.state.id));
     </script>
