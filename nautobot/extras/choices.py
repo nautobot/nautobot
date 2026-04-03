@@ -372,7 +372,7 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
     )
 
 
-#   
+#
 # ScheduledJob
 #
 

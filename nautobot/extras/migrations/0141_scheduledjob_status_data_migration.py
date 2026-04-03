@@ -62,7 +62,7 @@ def update_status(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0134_scheduledjob_status"),
+        ("extras", "0140_scheduledjob_status"),
     ]
 
     operations = [

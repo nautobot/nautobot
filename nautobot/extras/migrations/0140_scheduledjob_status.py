@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0133_alter_approvalworkflowstageresponse_options_and_more"),
+        ("extras", "0139_alter_approvalworkflow_approval_workflow_definition_and_more"),
     ]
 
     operations = [
