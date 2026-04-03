@@ -49,11 +49,9 @@
 </div>
 
 <div class="modal-footer">
-    {% if not job_is_pending %}
-        <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
-            -->View job results
-        </a>
-    {% endif %}
+    <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
+        -->View job results
+    </a>
     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
         <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
         -->Close
