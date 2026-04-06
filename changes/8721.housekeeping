@@ -1,5 +1,0 @@
-Updated documentation dependency `mkdocstrings` to `~1.0.3`.
-Updated documentation dependency `mkdocstrings-python` to `~2.0.3`.
-Updated development dependency `pylint` to `~4.0.5`.
-Updated development dependency `pylint-django` to `~2.7.0`.
-Updated development dependency `ruff` to `~0.15.7`.

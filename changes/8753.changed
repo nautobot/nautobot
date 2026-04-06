@@ -1,2 +1,0 @@
-Changed the default ordering of models in the global Search results to place Device, Location, Prefix, and IPAddress first in the results, followed by all remaining core models, followed by all app models.
-Changed behavior of `LOCATION_LIST_DEFAULT_MAX_DEPTH`, `PREFIX_LIST_DEFAULT_MAX_DEPTH`, and `PREFIX_LIST_DEFAULT_CONTAINER_ONLY` settings to simply redirect unfiltered access to the Prefix and Location list views to a filtered equivalent, rather than automagically filtering the data behind the scenes.

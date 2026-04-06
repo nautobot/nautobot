@@ -122,7 +122,10 @@
                         // If `multiple`, add selected object to already existing Select2 target field array of values.
                         window.nb.select2.setSelect2Value(targetField, [
                             ...(targetField.getAttribute('multiple') !== null ? targetFieldValue : []),
-                            { text: obj.display, value: obj.id },
+                            {
+                                text: _.get(obj, targetField.getAttribute('display-field')) || obj.name,
+                                value: _.get(obj, targetField.getAttribute('value-field')) || obj.id,
+                            },
                         ]);
                     }
 
