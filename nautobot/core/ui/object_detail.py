@@ -1292,12 +1292,7 @@ class ObjectsTablePanel(Panel):
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
 
-        if self.related_field_name:
-            related_field_name = self.related_field_name
-        elif isinstance(self.table_filter, str):
-            related_field_name = self.table_filter
-        else:
-            related_field_name = obj._meta.model_name
+        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
         body_content_table_list_url = None
         body_content_table_add_url = self._get_table_add_url(context)

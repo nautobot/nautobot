@@ -858,9 +858,9 @@ class RackUIViewSet(NautobotUIViewSet):
 
     class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
         def _get_table_add_url(self, context):
-            obj = get_obj_from_context(context)
             request = context["request"]
             if request.user.has_perms(self.add_permissions or []):
+                obj = get_obj_from_context(context)
                 return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
             return None
 
