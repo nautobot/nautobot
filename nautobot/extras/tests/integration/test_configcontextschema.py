@@ -143,7 +143,8 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
             )
 
         # Edit the schema
-        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/edit/")
+        self.switch_tab("Config Context")
+        self.click_button("#edit-button")
         # Change property "a" to be type string
         self.browser.fill(
             "data_schema",
