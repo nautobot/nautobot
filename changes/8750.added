@@ -1,3 +1,0 @@
-Added boolean column for JobResult table showing whether a record has a console log or not, set as default column.
-Added `has_job_console_entries` filter for JobResults.
-Added action buttons on JobResult list view for downloading console output and job logs.

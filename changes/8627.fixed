@@ -1,1 +1,0 @@
-Fixed missing fallback value for `last_timestamp` when no console log entries exist.

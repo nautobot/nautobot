@@ -23,11 +23,11 @@ classifiers = [
 requires-python = ">=3.10,<3.15"
 dependencies = [
     # Background task processing
-    "celery (>=5.6.2,<5.7)",
+    "celery (>=5.6.3,<5.7)",
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.5,<46.1)",
+    "cryptography (>=46.0.6,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.12,<5.3)",
     # Adds AJAX capabilities to django-tables2
@@ -97,7 +97,7 @@ dependencies = [
     #       we permit a looser (^) version constraint here.
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.3,<0.4)",
+    "nh3 (>=0.3.4,<0.4)",
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library

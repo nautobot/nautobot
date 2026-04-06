@@ -35,6 +35,10 @@ window.$ = window.jQuery;
 
 import 'jquery-ui';
 import 'jquery-ui/ui/widgets/sortable.js';
+
+import get from 'lodash.get';
+window._ = { get }; // eslint-disable-line id-length
+
 import 'select2';
 
 import { initializeCheckboxes } from './checkbox.js';

@@ -1,1 +1,0 @@
-Changed `render_on_tab_id` from `Button` class to support also a list.
