@@ -1,1 +1,2 @@
-Fixed console log mode when job has set has_sensitive_variables.
+Fixed console log mode when job has set `has_sensitive_variables`.
+Fixed setting of `result` data when running a job with console logging enabled.

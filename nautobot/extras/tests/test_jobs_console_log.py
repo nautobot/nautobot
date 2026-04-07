@@ -1,12 +1,13 @@
 from io import StringIO
 import re
+import subprocess
 from unittest import mock
 
 from django.conf import settings
 from django.test import override_settings
 from django.utils import timezone
 
-from nautobot.core.testing import TestCase, TransactionTestCase
+from nautobot.core.testing import CelerySubprocessTestCase, TestCase
 from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices, JobResultStatusChoices
 from nautobot.extras.jobs_console_log import (
     JobConsoleLogExecutor,
@@ -146,19 +147,31 @@ class MockStream:
         self.closed = True
 
 
-class JobConsoleLogExecutorTestCase(TransactionTestCase):
+class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
     """Test JobConsoleLogExecutor class."""
 
     def setUp(self):
-        job = Job.objects.first()
+        super().setUp()
+        job = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job.enabled = True
+        job.save()
         self.job_result = JobResult.objects.create(
             job_model=job,
             name=job.class_path,
             date_done=timezone.now(),
+            user=self.user,
             status=JobResultStatusChoices.STATUS_STARTED,
+            celery_kwargs={
+                "nautobot_job_console_log": True,
+                "nautobot_job_user_id": self.user.id,
+                "nautobot_job_job_model_id": job.id,
+                "nautobot_job_profile": False,
+                "queue": "default",
+            },
         )
+        self.add_permissions("extras.run_job")
 
-    @mock.patch("nautobot.extras.jobs_console_log.subprocess.Popen")
+    @mock.patch("nautobot.extras.jobs_console_log.subprocess.Popen", wraps=subprocess.Popen)
     def test_executor_runs_subprocess(self, mock_popen):
         """Test that executor runs subprocess with correct command."""
         # Create mock streams
@@ -169,13 +182,10 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
         process = mock.MagicMock()
         process.stdout = stdout_stream
         process.stderr = stderr_stream
-        process.wait.return_value = 0
-        process.poll.return_value = 0
-        # Mock context manager
-        mock_popen.return_value.__enter__.return_value = process
 
         executor = JobConsoleLogExecutor(self.job_result.pk)
-        executor.execute()
+        with self.celery_subprocess_env():
+            result = executor.execute()
         mock_popen.assert_called_once_with(
             ["nautobot-server", "execute_job_result", f"{self.job_result.pk}", f"--config={settings.SETTINGS_PATH}"],
             stdout=mock.ANY,
@@ -183,6 +193,9 @@ class JobConsoleLogExecutorTestCase(TransactionTestCase):
             universal_newlines=True,
             bufsize=1,
         )
+        self.assertTrue(result)
+        self.job_result.refresh_from_db()
+        self.assertTrue(self.job_result.result)
 
     @mock.patch("nautobot.extras.jobs_console_log.subprocess.Popen")
     def test_executor_stores_output_to_database(self, mock_popen):

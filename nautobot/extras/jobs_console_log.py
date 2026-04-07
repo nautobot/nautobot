@@ -205,3 +205,10 @@ class JobConsoleLogExecutor:
             self.stderr_reader.join()
 
             self._handle_failure()
+
+        # This is important as it bubbles up to the return value of `run_console_log_job_and_return_job_result()`,
+        # which, as it is a Celery task itself, its return value will be set into the job_result.result automatically
+        # by django-celery-result. In other words, it doesn't actually matter what job_result.result is *now*,
+        # what really matters is what `run_console_log_and_return_job_result()` returns.
+        self.job_result.refresh_from_db()
+        return self.job_result.result
