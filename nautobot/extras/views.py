@@ -104,6 +104,7 @@ from nautobot.extras.utils import (
 )
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
+from nautobot.users.utils import user_is_staffed
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
@@ -118,7 +119,6 @@ from .choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
 )
-from .constants import OBJECTCHANGE_STAFF_USER_FIELDS
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
@@ -3162,11 +3162,8 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
-            staff_authored_logs = Q()
-            for field_name in OBJECTCHANGE_STAFF_USER_FIELDS:
-                staff_authored_logs |= Q(**{f"user__{field_name}": True})
-            queryset = queryset.exclude(staff_authored_logs)
+        if not user_is_staffed(self.request.user):
+            queryset = queryset.filter(user=self.request.user)
 
         return queryset
 
