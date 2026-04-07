@@ -289,8 +289,8 @@
             const tabsByHref = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
             const tabs =
                 tabsByHref.length > 0
-                    ? tabsByHref
-                    : document.querySelectorAll(`.nav.nav-tabs a[aria-controls="${tab_id}"]`);
+                ? tabsByHref
+                : document.querySelectorAll(`.nav.nav-tabs a[aria-controls="${tab_id}"]`);
             [...tabs].forEach((tab) => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
         }
 
@@ -319,7 +319,7 @@
 
             return [...document.querySelectorAll(`.nav.nav-tabs a`)]
                 .find((tab) => tab.href === window.location.href)
-                ?.getAttribute('aria-controls');
+            ?.getAttribute('aria-controls');
         })();
 
         if (tab_id) {
