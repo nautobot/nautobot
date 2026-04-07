@@ -1928,7 +1928,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log,
     ):
         """Command should use JobConsoleLogExecutor when console logging is enabled."""
-        data = '{}'
+        data = "{}"
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),
@@ -1936,7 +1936,9 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
             data,
         )
 
-        mock_executor_console_log.assert_called_once_with(job_result_pk=str(self.job_result.pk), job_kwargs=json.loads(data))
+        mock_executor_console_log.assert_called_once_with(
+            job_result_pk=str(self.job_result.pk), job_kwargs=json.loads(data)
+        )
         mock_executor_console_log.return_value.execute.assert_called_once()
         mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
@@ -1954,7 +1956,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         self.job_result.celery_kwargs = {}
         self.job_result.save()
 
-        data = '{}'
+        data = "{}"
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),

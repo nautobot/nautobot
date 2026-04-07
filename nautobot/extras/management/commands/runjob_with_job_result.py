@@ -51,6 +51,8 @@ class Command(BaseCommand):
                 job_kwargs = json.loads(job_data)
             except json.JSONDecodeError as error:
                 raise CommandError(f"Invalid JSON data:\n{error!s}") from error
+        else:
+            job_kwargs = {}
         job_result = None
         job_result_id = options["job_result"]
         try:
