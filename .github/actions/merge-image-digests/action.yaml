@@ -101,13 +101,13 @@ runs:
     - name: "Download digests"
       uses: "actions/download-artifact@v4"
       with:
-        path: "${{ runner.temp }}/digests"
+        path: "${{ runner.temp }}/digests/${{ env.DIGEST_SCOPE }}/${{ inputs.python-version }}"
         pattern: "digests-${{ env.DIGEST_SCOPE }}-${{ inputs.python-version }}-*"
         merge-multiple: true
 
     - name: "Create and publish manifest list"
       shell: "bash"
-      working-directory: "${{ runner.temp }}/digests"
+      working-directory: "${{ runner.temp }}/digests/${{ env.DIGEST_SCOPE }}/${{ inputs.python-version }}"
       run: |
         docker buildx imagetools create \
           $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
