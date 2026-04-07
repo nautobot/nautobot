@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 from queue import Empty, Queue
 import subprocess
@@ -115,7 +116,7 @@ class JobConsoleLogExecutor:
     Main class for executing console log jobs and capturing output.
     """
 
-    def __init__(self, job_result_pk: str, print_output: bool = False):
+    def __init__(self, job_result_pk: str, job_kwargs: dict | None = None, print_output: bool = False):
         """
         Initialize job executor.
 
@@ -126,6 +127,7 @@ class JobConsoleLogExecutor:
 
         self.job_result_pk = job_result_pk
         self.job_result = JobResult.objects.get(pk=job_result_pk)
+        self.job_kwargs = job_kwargs or {}
         self.print_output = print_output
 
         store_stdout = functools.partial(store_job_output_line, job_result=self.job_result, output_type="stdout")
@@ -139,7 +141,10 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        return ["nautobot-server", "execute_job_result", f"{self.job_result_pk}", f"--config={settings.SETTINGS_PATH}"]
+        cmd = ["nautobot-server", "execute_job_result", f"{self.job_result_pk}", f"--config={settings.SETTINGS_PATH}"]
+        if self.job_kwargs:
+            cmd += ["--data", json.dumps(self.job_kwargs)]
+        return cmd
 
     def _print_output(self):
         """Print output in real-time while process runs."""
