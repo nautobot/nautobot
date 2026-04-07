@@ -3,18 +3,34 @@ from django.test import override_settings
 
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
-from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
+from nautobot.dcim.choices import (
+    InterfaceDuplexChoices,
+    InterfaceSpeedChoices,
+    InterfaceTypeChoices,
+    PortTypeChoices,
+    SubdeviceRoleChoices,
+)
 from nautobot.dcim.models import (
+    ConsolePortTemplate,
+    ConsoleServerPortTemplate,
     Controller,
     Device,
+    DeviceBayTemplate,
     DeviceType,
+    FrontPortTemplate,
     Interface,
+    InterfaceTemplate,
     Location,
     LocationType,
     Manufacturer,
+    ModuleBayTemplate,
     Platform,
+    PowerOutletTemplate,
+    PowerPortTemplate,
+    RearPortTemplate,
 )
 from nautobot.extras.models import DynamicGroup, Role, Status
+from nautobot.users.models import ObjectPermission
 
 
 class GraphQLTestCase(TestCase):
@@ -174,3 +190,152 @@ class GraphQLTestCase(TestCase):
             names = {i["name"] for i in resp.data["interfaces"]}
             self.assertIn("eth2", names)
             self.assertNotIn("eth3", names)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_optimizer_fk_resolution(self):
+        """Test that nested forward FK fields don't cause N+1 queries.
+
+        Regression test for graphene-django 3.x changes around FK resolution.
+        """
+        interface_status = Status.objects.get_for_model(Interface).first()
+
+        # Amplify the N+1 issue by creating many interfaces with the same status object.
+        for i in range(30):
+            interface = Interface(
+                device=self.device,
+                name=f"eth_perf_{i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                mac_address=f"00:00:00:00:00:{i:02x}",
+            )
+            interface.validated_save()
+
+        query = "query { interfaces { name status { name } } }"
+        execute_query(query, user=self.user)  # prewarm
+
+        with self.assertApproximateNumQueries(minimum=1, maximum=10):
+            result = execute_query(query, user=self.user)
+
+        self.assertIsNone(result.errors)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_component_templates(self):
+        """Verify that all ComponentTemplateModel subclasses are queryable via GraphQL."""
+        parent_device_type = DeviceType.objects.create(
+            model="Parent Model",
+            manufacturer=self.manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        rear_port_template = RearPortTemplate.objects.create(
+            device_type=self.device_type,
+            name="Rear Port 1",
+            type=PortTypeChoices.TYPE_8P8C,
+        )
+        cases = [
+            (
+                "console_port_templates",
+                ConsolePortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Console Port 1",
+                ),
+            ),
+            (
+                "console_server_port_templates",
+                ConsoleServerPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Console Server Port 1",
+                ),
+            ),
+            (
+                "power_port_templates",
+                PowerPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Power Port 1",
+                ),
+            ),
+            (
+                "power_outlet_templates",
+                PowerOutletTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Power Outlet 1",
+                ),
+            ),
+            (
+                "interface_templates",
+                InterfaceTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="eth0-template",
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                ),
+            ),
+            ("rear_port_templates", rear_port_template),
+            (
+                "front_port_templates",
+                FrontPortTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Front Port 1",
+                    type=PortTypeChoices.TYPE_8P8C,
+                    rear_port_template=rear_port_template,
+                    rear_port_position=1,
+                ),
+            ),
+            (
+                "device_bay_templates",
+                DeviceBayTemplate.objects.create(
+                    device_type=parent_device_type,
+                    name="Device Bay 1",
+                ),
+            ),
+            (
+                "module_bay_templates",
+                ModuleBayTemplate.objects.create(
+                    device_type=self.device_type,
+                    name="Module Bay 1",
+                ),
+            ),
+        ]
+        for query_name, instance in cases:
+            with self.subTest(query_name=query_name):
+                query = f"{{ {query_name} {{ id name }} }}"
+                resp = execute_query(query, user=self.user)
+                self.assertIsNone(resp.errors)
+                names = [t["name"] for t in resp.data[query_name]]
+                self.assertIn(instance.name, names)
+
+
+class GraphQLFKPermissionTest(GraphQLTestCase):
+    def setUp(self):
+        super().setUp()
+
+        self.interface_content_type = ContentType.objects.get_for_model(Interface)
+        self.status_content_type = ContentType.objects.get_for_model(Status)
+
+        interface_statuses = list(Status.objects.get_for_model(Interface).order_by("name"))
+        self.allowed_status = interface_statuses[0]
+        if len(interface_statuses) > 1:
+            self.denied_status = interface_statuses[1]
+        else:
+            # Ensure we have a distinct status object we can explicitly deny via ObjectPermission constraints.
+            self.denied_status = Status.objects.create(name="DeniedStatusForGraphQLFKTest")
+            self.denied_status.content_types.add(self.interface_content_type)
+
+        allowed_status_perm = ObjectPermission.objects.create(
+            name="View Status allowed",
+            actions=["view"],
+            constraints={"name": self.allowed_status.name},
+        )
+        allowed_status_perm.object_types.add(self.status_content_type)
+        allowed_status_perm.users.add(self.user)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_status_id_lookup_enforces_object_permissions(self):
+        query = "query ($id: ID!) { status(id: $id) { name } }"
+
+        allowed_result = execute_query(query, user=self.user, variables={"id": str(self.allowed_status.pk)})
+        self.assertIsNone(allowed_result.errors)
+        self.assertIsNotNone(allowed_result.data["status"])
+        self.assertEqual(allowed_result.data["status"]["name"], self.allowed_status.name)
+
+        denied_result = execute_query(query, user=self.user, variables={"id": str(self.denied_status.pk)})
+        self.assertIsNone(denied_result.errors)
+        self.assertIsNone(denied_result.data["status"])

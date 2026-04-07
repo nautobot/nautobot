@@ -1,2 +1,0 @@
-Changed `ApprovalWorkflow.approval_workflow_definition` on_delete behavior from CASCADE to SET_NULL.
-Changed `ApprovalWorkflowStage.approval_workflow_stage_definition` on_delete behavior from CASCADE to SET_NULL.
