@@ -732,6 +732,10 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     pod_token = settings.KUBERNETES_TOKEN_PATH
 
+    if not getattr(job_result.job_model, "has_sensitive_variables", False):
+        job_result.task_kwargs = job_kwargs
+        job_result.save()
+
     pod_name = settings.KUBERNETES_JOB_POD_NAME + "-" + str(job_result.pk)
     pod_manifest.setdefault("metadata", {})
     pod_manifest["metadata"]["name"] = pod_name

@@ -354,7 +354,14 @@ class UtilsTestCase(TestCase):
         self.assertEqual(body["metadata"]["name"], f"test-pod-{job_result.pk}")
         self.assertEqual(
             body["spec"]["template"]["spec"]["containers"][0]["command"],
-            ["nautobot-server", "runjob_with_job_result", str(job_result.pk), f"--config={settings.SETTINGS_PATH}"],
+            [
+                "nautobot-server",
+                "runjob_with_job_result",
+                str(job_result.pk),
+                f"--config={settings.SETTINGS_PATH}",
+                "--data",
+                json.dumps(job_kwargs),
+            ],
         )
         self.assertEqual(create_call[1]["namespace"], "test-namespace")
 
