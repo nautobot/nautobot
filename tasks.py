@@ -83,6 +83,10 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
+            # Sticking with 3.13 rather than 3.14 as our default for now, because Django 5.2's test runner doesn't
+            # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+            # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+            # https://code.djangoproject.com/ticket/36531
             "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
@@ -805,6 +809,31 @@ def build_example_app_docs(context):
     else:
         docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
+
+
+@task(
+    help={
+        "version": "Nautobot version number to associate with the release notes.",
+        "date": "Date of the release (default: today).",
+        "keep": "Keep existing change fragment files. Useful for testing. (default: False).",
+    }
+)
+def generate_release_notes(context, version="", date="", keep=False):  # pylint: disable=redefined-outer-name
+    """Generate Release Notes using Towncrier."""
+    command = "poetry run towncrier build"
+    if not version:
+        version = context.run("poetry version --short", hide=True).stdout.strip()
+    command += f" --version {version}"
+    if date:
+        command += f" --date {date}"
+    command += " --keep" if keep else " --yes"
+
+    # N/A for Nautobot core; we create `nautobot/docs/release-notes/version-X.Y.md` for new X.Y versions in advance
+    # version_major_minor = ".".join(version.split(".")[:2])
+    # context.run(f"poetry run python scripts/ensure_release_notes.py --version {version_major_minor}")
+
+    # Due to issues with git repo ownership in the containers, this must always run locally.
+    context.run(command)
 
 
 def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):

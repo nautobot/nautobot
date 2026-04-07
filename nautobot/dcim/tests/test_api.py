@@ -1046,6 +1046,40 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
             },
         ]
 
+    def test_filter_subdevice_role(self):
+        self.add_permissions("dcim.view_devicetype")
+        manufacturer = Manufacturer.objects.first()
+        device_family = DeviceFamily.objects.first()
+
+        roles = [
+            (SubdeviceRoleChoices.ROLE_PARENT_CHILD, "Device Type ParentChild API", 0),
+            (SubdeviceRoleChoices.ROLE_PARENT, "Device Type Parent API", None),
+            (SubdeviceRoleChoices.ROLE_CHILD, "Device Type Child API", 0),
+        ]
+        device_types = {}
+        for role, model, u_height in roles:
+            kwargs = {
+                "manufacturer": manufacturer,
+                "device_family": device_family,
+                "model": model,
+                "subdevice_role": role,
+            }
+            if u_height is not None:
+                kwargs["u_height"] = u_height
+            device_types[role] = DeviceType.objects.create(**kwargs)
+
+        url = self._get_list_url()
+        for role, _, _ in roles:
+            with self.subTest(role=role):
+                response = self.client.get(url, {"subdevice_role": role}, **self.header)
+
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_ids = {item["id"] for item in response.data["results"]}
+                self.assertIn(str(device_types[role].pk), result_ids)
+                for other_role, other_device_type in device_types.items():
+                    if other_role != role:
+                        self.assertNotIn(str(other_device_type.pk), result_ids)
+
 
 class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
     model = ModuleType
@@ -1179,7 +1213,7 @@ class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins
 
 class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
-    choices_fields = ["duplex", "type"]
+    choices_fields = ["duplex", "type", "port_type"]
     modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
@@ -1189,17 +1223,19 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
             {
                 "device_type": cls.device_type.pk,
                 "name": "Interface Template 4",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
             },
             {
                 "module_type": cls.module_type.pk,
                 "name": "Interface Template 5",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Interface Template 6",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
             },
         ]
 
@@ -1423,6 +1459,9 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        parent_child_device_type = DeviceType.objects.filter(
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD
+        ).first()
 
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 1")
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 2")
@@ -1440,6 +1479,10 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
             {
                 "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
+            },
+            {
+                "device_type": parent_child_device_type.pk,
+                "name": "Device Bay Template 7",
             },
         ]
 
@@ -2229,7 +2272,7 @@ class PowerOutletTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMix
 class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
-    choices_fields = ["duplex", "mode", "type"]
+    choices_fields = ["duplex", "mode", "type", "port_type"]
     validation_excluded_fields = [
         "tagged_vlans",  # M2M field, excluded by default
     ]
@@ -2274,6 +2317,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[0],
                 name="Test Interface 1",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
@@ -2281,6 +2325,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[0],
                 name="Test Interface 2",
                 type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
             ),
             Interface.objects.create(
@@ -2294,6 +2339,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[1],
                 name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
@@ -2314,6 +2360,15 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[2],
                 name="Test Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
+                status=non_default_status,
+                role=intf_role,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Test Interface 8",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
@@ -2332,6 +2387,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 8",
                 "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2343,6 +2399,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 9",
                 "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2406,6 +2463,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
@@ -2429,6 +2487,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "port_type": PortTypeChoices.TYPE_8P8C,
                     "role": intf_role.pk,
                     "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
@@ -2440,6 +2499,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "port_type": PortTypeChoices.TYPE_8P8C,
                     "status": interface_status.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
@@ -2870,6 +2930,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD).first(),
         )
 
         devices = (
@@ -2902,6 +2963,13 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 name="Device 5",
                 location=cls.location,
             ),
+            Device.objects.create(
+                device_type=device_types[2],
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 6",
+                location=cls.location,
+            ),
         )
 
         DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
@@ -2923,6 +2991,11 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "device": devices[0].pk,
                 "name": "Device Bay 6",
                 "installed_device": devices[3].pk,
+            },
+            {
+                "device": devices[0].pk,
+                "name": "Device Bay 7",
+                "installed_device": devices[4].pk,
             },
         ]
 

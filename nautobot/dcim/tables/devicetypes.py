@@ -281,8 +281,8 @@ class InterfaceTemplateTable(ComponentTemplateTable):
 
     class Meta(BaseTable.Meta):
         model = InterfaceTemplate
-        fields = ("pk", "name", "label", "mgmt_only", "type", "speed", "duplex", "description", "actions")
-        default_columns = ("pk", "name", "label", "mgmt_only", "type", "speed", "description", "actions")
+        fields = ("pk", "name", "label", "mgmt_only", "type", "port_type", "speed", "duplex", "description", "actions")
+        default_columns = ("pk", "name", "label", "mgmt_only", "type", "port_type", "speed", "description", "actions")
         empty_text = "None"
 
     def render_speed(self, record):

@@ -14,9 +14,3 @@
         {{ result.name }}
     {% endif %}
 {% endblock %}
-
-
-{% block javascript %}
-    {{ block.super }}
-    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
-{% endblock %}

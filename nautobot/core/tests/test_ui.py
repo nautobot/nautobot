@@ -1,5 +1,6 @@
 """Test cases for nautobot.core.ui module."""
 
+import json
 from unittest.mock import patch
 
 from django.db.models import Sum
@@ -11,7 +12,7 @@ from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
 from nautobot.core.models.querysets import count_related
-from nautobot.core.templatetags.helpers import HTML_NONE
+from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.choices import EChartsTypeChoices
 from nautobot.core.ui.echarts import (
@@ -20,11 +21,16 @@ from nautobot.core.ui.echarts import (
     queryset_to_nested_dict_records_as_series,
 )
 from nautobot.core.ui.object_detail import (
+    _JobModalButton,
     _ObjectDetailAdvancedTab,
+    _ObjectDetailContactsTab,
+    _ObjectDetailDataComplianceTab,
     _ObjectDetailMainTab,
+    _ObjectDetailMetadataTab,
     BaseTextPanel,
     DataTablePanel,
     DistinctViewTab,
+    EChartsPanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
@@ -37,6 +43,89 @@ from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
 from nautobot.ipam.models import Prefix
+from nautobot.ipam.views import PrefixUIViewSet
+
+
+class ObjectDetailContentTest(TestCase):
+    def test_component_iteration_and_ids(self):
+        """Test that components() iterator is comprehensive, and that component IDs are not repeated within a view."""
+        for odc in [DeviceUIViewSet.object_detail_content, PrefixUIViewSet.object_detail_content]:
+            with self.subTest(object_detail_content=odc):
+                seen_ids = set()
+                for component in odc.components():
+                    self.assertIsNotNone(component.component_id)
+                    self.assertNotIn(component.component_id, seen_ids)
+                    seen_ids.add(component.component_id)
+
+                    self.assertEqual(odc.get_component_by_id(component.component_id), component)
+
+                # Make sure we're reasonably comprehensive in `components()` implementation:
+                # Likely to increase as we componentize and enhance more, but unlikely to decrease!
+                self.assertGreaterEqual(len(seen_ids), 30)
+                for tab in odc.tabs:
+                    self.assertIn(tab.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(tab.component_id), tab)
+                    for panel in tab.panels:
+                        self.assertIn(panel.component_id, seen_ids)
+                        self.assertEqual(odc.get_component_by_id(panel.component_id), panel)
+                        if hasattr(panel, "components"):
+                            for component in panel.components():
+                                self.assertIn(component.component_id, seen_ids)
+                                self.assertEqual(odc.get_component_by_id(component.component_id), component)
+                for button in odc.extra_buttons:
+                    self.assertIn(button.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(button.component_id), button)
+
+    def test_consistent_component_ids_across_odcs(self):
+        """Creating the same component class with the same kwargs in different views should have same component_id."""
+        odc1 = DeviceUIViewSet.object_detail_content
+        odc2 = PrefixUIViewSet.object_detail_content
+        tabs1 = [
+            tab
+            for tab in odc1.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+        tabs2 = [
+            tab
+            for tab in odc2.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+
+        for tab1, tab2 in zip(tabs1, tabs2):
+            with self.subTest(tab1=tab1, tab2=tab2):
+                self.assertEqual(tab1.component_id, tab2.component_id)
+
+    def test_get_component_by_id_negative(self):
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(None))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(0))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id("00000000000000000000000000000000"))
+
+    def test_get_component_id_non_string_key(self):
+        """Verify that component ID generation handles non-string dictionary keys (None, Bool, Int) without crashing."""
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {None: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {True: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {123: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
 
 
 class DataTablePanelTest(TestCase):
@@ -124,6 +213,7 @@ class BaseTextPanelTest(TestCase):
     def test_init_passes_args_and_kwargs(self, panel_init_mock):
         custom_template_path = "custom_template_path.html"
 
+        panel_init_mock.return_value = None
         BaseTextPanel(weight=100, body_content_template_path=custom_template_path)
 
         panel_init_mock.assert_called_once_with(weight=100, body_content_template_path=custom_template_path)
@@ -202,9 +292,7 @@ class ObjectTextPanelTest(TestCase):
         )
         context = Context({"object": device})
         result = panel.render_body_content(context)
-        self.assertHTMLEqual(
-            result, f'<a href="{location.get_absolute_url()}" title="{location.description}">{location.display}</a>'
-        )
+        self.assertHTMLEqual(result, hyperlinked_object(location))
 
 
 class ObjectsTablePanelTest(TestCase):
@@ -726,3 +814,106 @@ class ObjectDetailContentExtraTabsTest(TestCase):
                 with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
                     self.assertEqual(tab.render(context), "")
                     panel_render.assert_not_called()
+
+
+class _JobModalButtonTest(TestCase):
+    """Test suite for the _JobModalButton UI component."""
+
+    def test_init_validation(self):
+        """Verify that class_path is a required argument."""
+        # Should raise TypeError if class_path is missing
+        with self.assertRaises(TypeError) as cm:
+            _JobModalButton(weight=100, label="Test")
+        self.assertIn("class_path is required", str(cm.exception))
+
+        # Should initialize fine with class_path
+        btn = _JobModalButton(weight=100, label="Run Test", class_path="nautobot.core.jobs.ValidateModelData")
+        self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
+
+    def test_get_link(self):
+        """Verify get_link returns None because the button uses htmx to open a modal."""
+        btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
+        self.assertIsNone(btn.get_link(Context({})))
+
+    def test_get_extra_context_and_mapping(self):
+        """Verify that initial_field_mapping correctly resolves object attributes into hx_vals."""
+        # Create a test object (Device)
+        device = Device.objects.first()
+
+        mapping = {"job_field_name": "name", "job_location": "location__name"}
+
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.SampleJob",
+            initial_field_mapping=mapping,
+            run_button_label="Execute!",
+            job_result_key="output_data",
+        )
+
+        context = Context({"object": device})
+        context = btn.get_extra_context(context)
+
+        # Check the generated hx-vals
+        self.assertIn("hx-vals", context["attributes"])
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+
+        # Check resolved mapping values
+        self.assertEqual(hx_vals["job_field_name"], device.name)
+        self.assertEqual(hx_vals["job_location"], device.location.name)
+
+        # Check static modal configuration
+        self.assertTrue(hx_vals["job_form_modal"])
+        self.assertEqual(hx_vals["run_button_label"], "Execute!")
+        self.assertEqual(hx_vals["job_result_key"], "output_data")
+
+        # Verify Bootstrap and HTMX target attributes
+        self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
+        self.assertEqual(context["attributes"]["data-bs-target"], "#nautobot-generic-modal")
+        self.assertEqual(context["attributes"]["hx-target"], "#modal-content-container")
+
+        # Verify URL generation
+        expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
+        self.assertEqual(context["attributes"]["hx-get"], expected_url)
+        # Since the class_path is not a real job, ensure disabled in attributes.
+        self.assertIn("disabled", context["attributes"])
+
+        # Ensure real job class paths are not disabled
+        real_job_btn = _JobModalButton(
+            weight=100,
+            label="Run Real Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        context = Context({"object": device})
+        context = real_job_btn.get_extra_context(context)
+        self.assertNotIn("disabled", context["attributes"])
+
+    def test_get_extra_context_no_leakage(self):
+        """Verify that state does not leak between multiple calls or instances."""
+        device = Device.objects.first()
+        context = Context({"object": device})
+
+        # 1. Create a button for a non-existent job (should be disabled)
+        btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
+        ctx_fail = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail["attributes"])
+        # Crucially: ensure the instance attribute didn't get polluted
+        self.assertIsNone(btn_fail.attributes)
+
+        # 2. Create a button for a real job (should be enabled)
+        btn_success = _JobModalButton(
+            weight=100,
+            label="Success",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            attributes={"custom": "value"},
+        )
+        ctx_success = btn_success.get_extra_context(context)
+
+        # Verify result in context
+        self.assertNotIn("disabled", ctx_success["attributes"])
+
+        # If we run the failed button again, it shouldn't affect the success instance
+        # and it should still be disabled in its own context
+        ctx_fail_again = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail_again["attributes"])
+        self.assertNotIn("disabled", btn_success.attributes)

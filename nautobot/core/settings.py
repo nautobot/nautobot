@@ -130,19 +130,21 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
-# (Deprecated) the storage backend to use for Job input files and Job output files
-if "NAUTOBOT_JOB_FILE_IO_STORAGE" in os.environ and os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"] != "":
-    JOB_FILE_IO_STORAGE = os.environ["NAUTOBOT_JOB_FILE_IO_STORAGE"]
-
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Default filters for Location list view
+if (
+    "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
 
 # `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
 # Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
 if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
     LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
-
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
@@ -194,6 +196,18 @@ PLUGINS_CONFIG = {}
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Default filters for Prefix list view
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+):
+    PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
 
 # Publish a simple "no-index" robots.txt for Nautobot?
 PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
@@ -493,6 +507,7 @@ DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
+FORMAT_MODULE_PATH = "nautobot.core.formats"
 
 TESTING = "test" in sys.argv
 
@@ -698,6 +713,7 @@ MEDIA_URL = "media/"
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 # Messages
+MESSAGE_STORAGE = "nautobot.core.messages.NautobotMessageStorage"
 MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
@@ -801,6 +817,14 @@ CONSTANCE_CONFIG = {
         ),
         field_type=int,
     ),
+    "LOCATION_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Location list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "LOCATION_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
         default=False,
         help_text="Location names are not guaranteed globally-unique by Nautobot but in practice they often are. "
@@ -826,6 +850,22 @@ CONSTANCE_CONFIG = {
         "For proper user experience, this list should include the PAGINATE_COUNT and MAX_PAGE_SIZE values as options.",
         # Use custom field type defined above
         field_type="per_page_defaults_field",
+    ),
+    "PREFIX_LIST_DEFAULT_CONTAINER_ONLY": ConstanceConfigItem(
+        default=False,
+        help_text=mark_safe(
+            "Enable a default <code>type=container</code> filter on Prefix list views.\n"
+            "Enabling this may improve performance when the number of records is large."
+        ),
+        field_type=bool,
+    ),
+    "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Prefix list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
     ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
@@ -898,7 +938,12 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": [
+        "JOB_CREATE_FILE_MAX_SIZE",
+        "LOCATION_LIST_DEFAULT_MAX_DEPTH",
+        "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
+        "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+    ],
     "Rack Elevation Rendering": [
         "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",

@@ -1,5 +1,6 @@
 {% extends 'generic/object_list.html' %}
 {% load helpers %}
+{% load querystring from django_tables2 %}
 
 {% block buttons %}
     <div class="dropdown">
@@ -11,8 +12,14 @@
             {% for i in "4,8,12,16,20,24,28,32,40,48,56,64"|split %}
                 <li>
                     <a class="dropdown-item"
-                       href="{% url 'ipam:prefix_list' %}{% legacy_querystring request prefix_length__lte=i page=1 %}">
-                        {{ i }} {% if request.GET.prefix_length__lte == i %}<span class="mdi mdi-check-bold"></span>{% endif %}
+                       {% if request.GET.prefix_length__lte == i %}
+                           href="{% querystring 'page'=1 without 'prefix_length__lte' %}"
+                       {% else %}
+                           href="{% querystring 'prefix_length__lte'=i 'page'=1 %}"
+                       {% endif %}
+                    >
+                        {{ i }}
+                        {% if request.GET.prefix_length__lte == i %}<span class="mdi mdi-check-bold"></span>{% endif %}
                     </a>
                 </li>
             {% endfor %}

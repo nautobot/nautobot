@@ -1,0 +1,59 @@
+{% load helpers %}
+{% include 'inc/modal_header.html' with title=title %}
+
+<div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+    {# Polling Logic: Only present if the job is not finished #}
+    <div id="job-polling-container"
+         {% if job_is_pending %}
+             hx-get="{% url 'extras:jobresult_modal' pk=result.pk %}"
+             hx-trigger="every 2s"
+             hx-target="#modal-content-container"
+             hx-swap="innerHTML"
+             hx-vals='{"title": "{{ title }}", "job_result_key": "{{ job_result_key }}"}'
+         {% endif %}>
+        <div class="container-fluid gy-3">
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Job Status:</div>
+                <div class="col-8">
+                    {% include 'extras/inc/job_label.html' with result=result %}
+                </div>
+            </div>
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Duration:</div>
+                <div class="col-8">
+                    {% if job_is_pending %}
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                        </div>
+                    {% else %}
+                        <span>{{ result.duration }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row align-items-center" style="margin-bottom: 12px;">
+                <div class="col-4 text-end fw-semibold">Details</div>
+                <div class="col-8">
+                    {% if job_is_pending %}
+                        <div class="d-flex align-items-center">
+                            <span class="text-secondary">Job is running, please wait...</span>
+                        </div>
+                    {% else %}
+                        <pre class="form-control bg-body-tertiary" style="min-height: 44px;"><!--
+                            --><code>{{ detail_value }}</code>
+                        </pre>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer">
+    <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
+        -->View job results
+    </a>
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Close
+    </button>
+</div>

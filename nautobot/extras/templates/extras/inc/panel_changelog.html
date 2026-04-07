@@ -21,7 +21,7 @@
                 <br />
                 <small>
                     <span class="text-secondary">{{ change.user_name }} -</span>
-                    <a href="{{ change.get_absolute_url }}" class="text-secondary">{{ change.time|date:settings.SHORT_DATETIME_FORMAT }}</a>
+                    <a href="{{ change.get_absolute_url }}" class="text-secondary">{{ change.time|date:"SHORT_DATETIME_FORMAT" }}</a>
                 </small>
             </div>
         {% endwith %}
