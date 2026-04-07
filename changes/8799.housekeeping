@@ -1,0 +1,1 @@
+Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
