@@ -1,0 +1,1 @@
+Fixed config_context_schema value failing to update when syncing a config context repository.
