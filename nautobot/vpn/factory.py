@@ -16,6 +16,19 @@ from nautobot.tenancy.models import Tenant
 from nautobot.vpn import choices, models
 
 
+def _generate_vpn_identifier(service_type):
+    """Generate a valid VPN identifier for the selected service type."""
+    fake = faker.Faker()
+    if service_type in choices.VPNServiceTypeChoices.VXLAN_TYPES:
+        return str(
+            fake.pyint(
+                min_value=choices.VPNServiceTypeChoices.VXLAN_VNI_MIN,
+                max_value=choices.VPNServiceTypeChoices.VXLAN_VNI_MAX,
+            )
+        )
+    return fake.word()
+
+
 class VPNPhase1PolicyFactory(PrimaryModelFactory):
     class Meta:
         model = models.VPNPhase1Policy
@@ -113,14 +126,38 @@ class VPNProfileFactory(PrimaryModelFactory):
 class VPNFactory(PrimaryModelFactory):
     class Meta:
         model = models.VPN
-        exclude = ("has_description", "has_profile", "has_role", "has_tenant")
+        exclude = (
+            "has_description",
+            "has_profile",
+            "has_role",
+            "has_service_type",
+            "has_status",
+            "has_tenant",
+            "has_extra_attributes",
+        )
 
     name = UniqueFaker("word")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
-    vpn_id = factory.Faker("word")
+    has_service_type = NautobotBoolIterator()
+    service_type = factory.Maybe(
+        "has_service_type",
+        factory.Faker("random_element", elements=choices.VPNServiceTypeChoices.values()),
+        "",
+    )
+
+    @factory.lazy_attribute
+    def vpn_id(self):
+        return _generate_vpn_identifier(self.service_type)
+
     has_profile = NautobotBoolIterator()
     vpn_profile = factory.Maybe("has_profile", random_instance(models.VPNProfile), None)
+    has_status = NautobotBoolIterator()
+    status = factory.Maybe(
+        "has_status",
+        random_instance(lambda: Status.objects.get_for_model(models.VPN)),
+        None,
+    )
     has_role = NautobotBoolIterator()
     role = factory.Maybe(
         "has_role",
@@ -129,6 +166,10 @@ class VPNFactory(PrimaryModelFactory):
     )
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
+    has_extra_attributes = NautobotBoolIterator()
+    extra_attributes = factory.Maybe(
+        "has_extra_attributes", factory.Faker("pydict", nb_elements=2, value_types=[str, bool, int]), {}
+    )
 
 
 class VPNTunnelFactory(PrimaryModelFactory):
