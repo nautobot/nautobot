@@ -3162,6 +3162,9 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        if not self.request.user.is_authenticated:
+            return queryset.none()
+
         if not user_is_staffed(self.request.user):
             queryset = queryset.filter(user=self.request.user)
 
