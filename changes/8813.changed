@@ -1,1 +1,0 @@
-Changed job form modal to replace the Run button with a disabled "Enqueuing..." button and spinner when the form is submitted.

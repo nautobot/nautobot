@@ -128,6 +128,21 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.0a5 (2026-04-07)
+
+### Changed in v3.1.0a5
+
+- [#8805](https://github.com/nautobot/nautobot/issues/8805) - JobResult modal now displays link to View job results as soon as the modal loads.
+- [#8813](https://github.com/nautobot/nautobot/issues/8813) - Changed job form modal to replace the Run button with a disabled "Enqueuing..." button and spinner when the form is submitted.
+
+### Fixed in v3.1.0a5
+
+- [#8784](https://github.com/nautobot/nautobot/issues/8784) - Fixed invalid results in Static Assignment to Dynamic Groups embedded search.
+
+### Housekeeping in v3.1.0a5
+
+- [#8799](https://github.com/nautobot/nautobot/issues/8799) - Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
+
 ## v3.1.0a4 (2026-04-02)
 
 ### Security in v3.1.0a4
