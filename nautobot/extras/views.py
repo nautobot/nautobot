@@ -3513,11 +3513,58 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.object_detail_content = object_detail.ObjectDetailContent()
-        # Remove "Advanced" tab while keeping the main.
-        self.object_detail_content.tabs = self.object_detail_content.tabs[:1]
+    class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "changed_object":
+                if value and getattr(value, "get_absolute_url", None):
+                    return helpers.hyperlinked_object(value)
+                else:
+                    obj = get_obj_from_context(context, self.context_object_key)
+                    return helpers.placeholder(obj.object_repr)
+            return super().render_value(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ChangeObjectFieldsPanel(
+                label="Change",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=(
+                    "time",
+                    "user_name",
+                    "action",
+                    "changed_object_type",
+                    "changed_object",
+                    "request_id",
+                    "change_context",
+                    "change_context_detail",
+                ),
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="object_data",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.TextPanel(
+                label="Difference",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_placeholder=False,
+                body_content_template_path="extras/inc/objectchange_diff_panel.html",
+                header_extra_content_template_path="extras/inc/objectchange_diff_header.html",
+            ),
+            object_detail.ObjectsTablePanel(
+                table_title="Related Changes",
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="related_changes_table",
+                header_extra_content_template_path="extras/inc/related_changes_header.html",
+                footer_content_template_path=None,
+            ),
+        )
+    )
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
@@ -3547,9 +3594,14 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         if self.action == "retrieve":
             related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
             related_changes_table = tables.ObjectChangeTable(
-                data=related_changes[:50],  # Limit for performance
+                data=related_changes,
                 orderable=False,
             )
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(related_changes_table)
             snapshots = instance.get_snapshots()
 
             context.update(
