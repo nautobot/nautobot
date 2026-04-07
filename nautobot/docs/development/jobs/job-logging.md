@@ -27,6 +27,21 @@ Nautobot supports standard logging levels, with additional custom levels for suc
 !!! note
     `logger.success()` and `logger.failure()` were introduced in versions 2.4.0 and 2.4.5, respectively.
 
+## Configuring Log Levels
+
+You can configure the minimum log level for a specific Job by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired logging level for the Job(e.g., "DEBUG", "INFO", "WARNING", etc.).
+The pattern in the following example allows you to control the verbosity of logs for that Job, taking into account the (optional) `debug` parameter passed to the Job.
+
+<!-- pyml disable-num-lines 10 proper-names -->
+!!! example
+    ```py
+    from django.conf import settings
+
+    class MyJob(Job):
+        def run(self, arg, another_arg, debug):
+            self.logger.setLevel("DEBUG" if debug else settings.LOG_LEVEL)
+    ```
+
 ## Writing Log Messages
 
 <!-- pyml disable-num-lines 10 proper-names -->
