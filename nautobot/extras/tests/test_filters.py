@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -49,6 +50,7 @@ from nautobot.extras.filters import (
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
+    DynamicGroupFilterSet,
     ExportTemplateFilterSet,
     ExternalIntegrationFilterSet,
     FileProxyFilterSet,
@@ -93,6 +95,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -1760,14 +1763,14 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_change_context(self):
         params = {"change_context": ["job", "web"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(change_context__in=["job", "web"]),
         )
 
     def test_changed_object_change_context_detail(self):
         params = {"change_context_detail__nic": ["Lorem ipsum dolor sit amet"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(change_context_detail__icontains="Lorem ipsum dolor sit amet"),
         )
@@ -2335,6 +2338,95 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             StaticGroupAssociation.objects.filter(associated_object_type=ct),
             ordered=False,
         )
+
+
+class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DynamicGroup.objects.all()
+    filterset = DynamicGroupFilterSet
+
+    generic_filter_tests = [("name",), ("description",), ("group_type",)]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.parent_group = DynamicGroup.objects.create(
+            name="Filter Root Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.child_group = DynamicGroup.objects.create(
+            name="Filter Child Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.sibling_group = DynamicGroup.objects.create(
+            name="Filter Sibling Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.grandchild_group = DynamicGroup.objects.create(
+            name="Filter Grandchild Group",
+            content_type=cls.device_ct,
+        )
+        cls.unrelated_group = DynamicGroup.objects.create(
+            name="Filter Unrelated Group",
+            content_type=cls.device_ct,
+        )
+
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.child_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.sibling_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.child_group,
+            group=cls.grandchild_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=30,
+        )
+
+    def test_filter_descendants_returns_expected_groups(self):
+        params = {"descendants": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_accepts_name(self):
+        params = {"descendants": [self.parent_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_returns_none(self):
+        params = {"descendants": [self.unrelated_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
+
+    def test_filter_ancestors_returns_expected_groups(self):
+        params = {"ancestors": [self.grandchild_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_accepts_name(self):
+        params = {"ancestors": [self.grandchild_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_returns_none(self):
+        params = {"ancestors": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
 
 
 class StatusTestCase(FilterTestCases.FilterTestCase):
