@@ -1843,27 +1843,6 @@ class ConsolePortTemplateUIViewSet(
             return selected_object.module_type.display
         return ""
 
-    @action(
-        detail=False,
-        methods=["GET", "POST"],
-        url_path="rename",
-        url_name="bulk_rename",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_consoleporttemplate"],
-    )
-    def bulk_rename(self, request, *args, **kwargs):
-        return self._bulk_rename(request, *args, **kwargs)
-
-
-class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    filterset = filters.ConsolePortTemplateFilterSet
-
 
 #
 # Console server port templates

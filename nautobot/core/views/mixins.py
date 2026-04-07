@@ -1703,7 +1703,14 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     queryset: QuerySet
     template_name = "generic/object_bulk_rename.html"
 
-    def _bulk_rename(self, request):
+    @drf_action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+    )
+    def bulk_rename(self, request, *args, **kwargs):
         self.form_class = self._create_bulk_rename_form_class()
         query_pks = request.POST.getlist("pk")
         selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
@@ -1765,18 +1772,16 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
     def get_selected_objects_parents_name(self, selected_objects):
         """
-        Return selected_objects parent name.
-
-        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+        Return the parent display name of the selected objects.
 
         Args:
-            selected_objects (list[BaseModel]): The objects being renamed
+            selected_objects (list[BaseModel]): The objects being renamed.
 
         Returns:
-            (str): The parent name of the selected objects
+            str: The display name of the parent of the first selected object.
         """
 
-        return ""
+        return selected_objects.first().parent.display
 
     def _render_form_response(self, request, form, selected_objects):
         return Response(
