@@ -286,6 +286,10 @@
         const DEFAULT_TAB_ID = 'main';
 
         function show_tab(tab_id) {
+            /*
+             * "Distinct view tabs" do not use URL hashes to represent tab IDs. In their case, fall back to tab link
+             * `aria-controls` attribute.
+             */
             const tabsByHref = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
             const tabs =
                 tabsByHref.length > 0
@@ -312,11 +316,19 @@
 
         // Set initial history state
         const tab_id = (() => {
+            /*
+             * Standard case for SPA-style tabs such as "main", "advanced", "contacts", etc. In their case, active tab
+             * can be identified by the `?tab=...` query param from the object detail view URL.
+             */
             if (window.location.pathname === '{{ object.get_absolute_url }}') {
                 const search_params = new URLSearchParams(window.location.search);
                 return search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
             }
 
+            /*
+             * In case tab defines its own URL, it's most likely a "distinct tab view", in which case active tab ID
+             * identification has to be done with `aria-controls` attribute.
+             */
             return [...document.querySelectorAll(`.nav.nav-tabs a`)]
                 .find((tab) => tab.href === window.location.href)
             ?.getAttribute('aria-controls');
