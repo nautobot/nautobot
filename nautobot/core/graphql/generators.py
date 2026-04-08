@@ -106,7 +106,7 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             info.context._gql_filter_cache[cache_key] = set(resolved_obj.qs.values_list("pk", flat=True))
 
         matching_ids = info.context._gql_filter_cache[cache_key]
-        return field.filter(pk__in=matching_ids)
+        return [obj for obj in field.all() if obj.pk in matching_ids]
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
