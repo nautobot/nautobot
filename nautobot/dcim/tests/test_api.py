@@ -1,10 +1,12 @@
 import datetime
 import json
+import tempfile
 from unittest import skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
@@ -663,6 +665,15 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
         )
 
 
+# Minimal 1x1 pixel PNG used for testing rack images.
+_MINIMAL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00"
+    b"\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00"
+    b"\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     choices_fields = ["outer_unit", "type", "width"]
@@ -1000,6 +1011,53 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         content = response.content.decode()
         # No device-image elements should be present
         self.assertNotIn("device-image", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_front(self):
+        """Test that a front device type image is embedded in the front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.front_image = SimpleUploadedFile(
+                    name="front.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_rear(self):
+        """Test that a rear device type image is embedded in the rear face SVG for a full-depth device."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        device.device_type.is_full_depth = True
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.rear_image = SimpleUploadedFile(
+                    name="rear.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
 
     @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
     def test_get_rack_elevation_svg_with_reservation(self):
