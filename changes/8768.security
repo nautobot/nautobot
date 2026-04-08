@@ -1,2 +1,0 @@
-Updated dependency `Django` to `~4.2.30` to mitigate CVE-2026-33033 and others.
-Updated dependency `cryptography` to `~46.0.7` to mitigate CVE-2026-39892.
