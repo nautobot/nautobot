@@ -125,7 +125,7 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
 
 
 @register.simple_tag(takes_context=True)
-def render_detail_view_extra_buttons(context):
+def render_detail_view_extra_buttons(context, tab_id=None):
     """
     Render the "extra_buttons" from the context's object_detail_content, or as fallback, from the base detail view.
 
@@ -149,5 +149,13 @@ def render_detail_view_extra_buttons(context):
             return ""
         object_detail_content = getattr(base_detail_view, "object_detail_content", None)
     if object_detail_content is not None and object_detail_content.extra_buttons:
-        return render_components(context, object_detail_content.extra_buttons)
+        extra_buttons_on_current_tab = [
+            extra_button
+            for extra_button in object_detail_content.extra_buttons
+            if tab_id is None  # `tab_id` *should* be given, but keep `is None` condition for backward compatibility
+            or extra_button.render_on_tab_id == "__all__"
+            or (isinstance(extra_button.render_on_tab_id, str) and tab_id == extra_button.render_on_tab_id)
+            or (isinstance(extra_button.render_on_tab_id, (list, tuple)) and tab_id in extra_button.render_on_tab_id)
+        ]
+        return render_components(context, extra_buttons_on_current_tab)
     return ""

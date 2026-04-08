@@ -94,6 +94,27 @@
                     });
                 }
 
+                document.addEventListener('htmx:beforeSend', (event) => {
+                    if (event.target.id !== 'job-form-modal') return; // We are only applying this to modal-based job forms
+                    const modalFooter = event.detail.target.querySelector('.modal-footer');
+                    const newRunButton = document.createElement('button');
+                    newRunButton.classList.add('btn', 'btn-primary');
+                    newRunButton.setAttribute('type', 'button');
+                    newRunButton.disabled = true;
+
+                    const loadingSpinner = document.createElement('span');
+                    loadingSpinner.classList.add('spinner-border', 'spinner-border-sm');
+                    loadingSpinner.setAttribute('aria-hidden', 'true');
+                    const loadingText = document.createElement('span');
+                    loadingText.textContent = ' Enqueuing...';
+
+                    newRunButton.appendChild(loadingSpinner);
+                    newRunButton.appendChild(loadingText);
+
+                    modalFooter.innerHTML = ''; // Clear existing buttons
+                    modalFooter.appendChild(newRunButton);
+                });
+
                 // 2. Define the DryRun toggle logic
                 const toggleExecutionType = () => {
                     const dryrunInput = container.querySelector('#id_dryrun');
