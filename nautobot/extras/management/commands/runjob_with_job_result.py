@@ -13,6 +13,7 @@ class Command(BaseCommand):
             "job_result",
             help="Pass in an existing job result id from the database to continue executing the job on a local system",
         )
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
         parser.add_argument(
             "--profile",
             action="store_true",
@@ -36,7 +37,10 @@ class Command(BaseCommand):
         job_model = job_result.job_model
         job_class_path = job_model.class_path
 
-        data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
+        if job_data := options.get("data"):
+            data = validate_job_and_job_data(self, job_user, job_class_path, job_data)
+        else:
+            data = validate_job_and_job_data(self, job_user, job_class_path, job_result.task_kwargs)
 
         # execute_job here implies "--local"
         job_result = JobResult.execute_job(
