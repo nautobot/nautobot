@@ -8,7 +8,7 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import Status
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import VMInterface
-from nautobot.vpn import choices, factory as vpn_factory, models
+from nautobot.vpn import choices, models
 
 
 class VPNProfileAPITest(APIViewTestCases.APIViewTestCase):
@@ -233,19 +233,19 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
         profiles = models.VPNProfile.objects.all()
         vpn_status = cls._get_vpn_status()
 
-        vpn_factory.VPNFactory.create(
+        models.VPN.objects.create(
             name="Existing VXLAN VPN API Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
             status=vpn_status,
             vpn_id="19001",
         )
-        vpn_factory.VPNFactory.create(
+        models.VPN.objects.create(
             name="Existing VPLS VPN API Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
             status=vpn_status,
             vpn_id="19002",
         )
-        vpn_factory.VPNFactory.create(
+        models.VPN.objects.create(
             name="Existing IPSec VPN API Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_IPSEC,
             status=vpn_status,
