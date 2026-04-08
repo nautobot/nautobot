@@ -4,6 +4,7 @@ import logging
 import random
 import re
 import string
+import unittest
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -180,7 +181,7 @@ class AssertNoRepeatedQueries:
         (re.compile(r"IN \([^)]+\)"), "IN (?)"),
     ]
 
-    def __init__(self, test_case, threshold=10):
+    def __init__(self, test_case: "unittest.TestCase", threshold: int = 10):
         self.test_case = test_case
         self.threshold = threshold
         self._context = CaptureQueriesContext(connection)
