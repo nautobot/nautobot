@@ -383,6 +383,7 @@ class ScheduledJobStateChoices(ChoiceSet):
     DENIED = "denied"
     CANCELED = "canceled"
     COMPLETED = "completed"
+    ERRORED = "errored"
 
     CHOICES = (
         (ACTIVE, "Active"),
@@ -390,6 +391,7 @@ class ScheduledJobStateChoices(ChoiceSet):
         (DENIED, "Approval Denied"),
         (CANCELED, "Approval Canceled"),
         (COMPLETED, "Completed"),
+        (ERRORED, "Errored"),
     )
 
 

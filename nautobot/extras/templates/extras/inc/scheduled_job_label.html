@@ -10,6 +10,8 @@
     <span class="badge bg-info">Active</span>
 {% elif scheduled_job.state == 'completed' %}
     <span class="badge bg-success">Completed</span>
+{% elif scheduled_job.state == 'errored' %}
+    <span class="badge bg-danger">Errored</span>
 {% else %}
     <span class="badge bg-body-secondary border">{{ scheduled_job.state | bettertitle }}</span>
 {% endif %}

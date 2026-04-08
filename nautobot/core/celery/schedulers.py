@@ -11,7 +11,7 @@ from django.conf import settings
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
-from nautobot.extras.choices import JobQueueTypeChoices
+from nautobot.extras.choices import JobQueueTypeChoices, ScheduledJobStateChoices
 from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
 from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
@@ -23,6 +23,18 @@ class NautobotScheduleEntry(ModelEntry):
     Nautobot variant of the django-celery-beat ModelEntry which uses the
     nautobot.extras.models.ScheduledJob model
     """
+
+    def _disable(self, model):
+        """
+        Override of the parent ModelEntry._disable() method.
+
+        In addition to disabling the scheduled job (via the parent implementation),
+        sets the job's state to ERRORED to reflect that the schedule was disabled
+        due to an error condition.
+        """
+        super()._disable(model)
+        model.state = ScheduledJobStateChoices.ERRORED
+        model.save(update_fields=["state"])
 
     def __init__(self, model, app=None):  # pylint:disable=super-init-not-called  # we must copy-and-paste from super
         """Initialize the model entry."""
