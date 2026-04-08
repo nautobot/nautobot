@@ -54,6 +54,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
@@ -1969,6 +1970,11 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+    state = forms.MultipleChoiceField(
+        choices=ScheduledJobStateChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
 
 
 #
