@@ -3218,6 +3218,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
         self.assertTrue(self.daily_utc_job.enabled)
         self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
 
     def test_on_workflow_denied(self):
         """Should set status to DENIED, disable the job and set decision_date."""
@@ -3229,6 +3230,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.DENIED)
         self.assertFalse(self.daily_utc_job.enabled)
         self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
 
     def test_on_workflow_canceled(self):
         """Should set status to CANCELED, disable the job and set decision_date."""
@@ -3241,6 +3243,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.CANCELED)
         self.assertFalse(self.daily_utc_job.enabled)
         self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
 
     def test_save_sets_completed_when_enabled_turned_off(self):
         """When celery beat finishes a one-off job it sets enabled=False — status should flip to COMPLETED."""
@@ -3249,6 +3252,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.daily_utc_job.save()
         self.daily_utc_job.refresh_from_db()
         self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.COMPLETED)
+        self.assertFalse(self.daily_utc_job.approval_required)
 
     def test_save_does_not_override_non_active_status_when_disabled(self):
         """Disabling a job that is already PENDING/DENIED/CANCELED should not overwrite the status."""

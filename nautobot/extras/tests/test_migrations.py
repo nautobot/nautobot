@@ -306,34 +306,30 @@ class TestScheduledJobStateMigration(TestCase):
         # workflow exists but in APPROVED state, so it doesn't affect status resolution
         make_workflow(self.completed_after_approval_job, ApprovalWorkflowStateChoices.APPROVED)
 
-    def test_active_job_status(self):
+    def test_job_status(self):
         new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(ScheduledJob.objects.get(name="active-job").state, ScheduledJobStateChoices.ACTIVE)
+        with self.subTest("active_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="active-job").state, ScheduledJobStateChoices.ACTIVE)
 
-    def test_pending_job_status(self):
-        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(ScheduledJob.objects.get(name="pending-job").state, ScheduledJobStateChoices.PENDING)
+        with self.subTest("pending_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="pending-job").state, ScheduledJobStateChoices.PENDING)
 
-    def test_denied_job_status(self):
-        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(ScheduledJob.objects.get(name="denied-job").state, ScheduledJobStateChoices.DENIED)
+        with self.subTest("denied_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="denied-job").state, ScheduledJobStateChoices.DENIED)
 
-    def test_canceled_job_status(self):
-        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(ScheduledJob.objects.get(name="canceled-job").state, ScheduledJobStateChoices.CANCELED)
+        with self.subTest("canceled_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="canceled-job").state, ScheduledJobStateChoices.CANCELED)
 
-    def test_completed_job_status(self):
-        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(ScheduledJob.objects.get(name="completed-job").state, ScheduledJobStateChoices.COMPLETED)
+        with self.subTest("completed_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="completed-job").state, ScheduledJobStateChoices.COMPLETED)
 
-    def test_completed_after_approval_job_status(self):
-        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
-        ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
-        self.assertEqual(
-            ScheduledJob.objects.get(name="completed-after-approval-job").state, ScheduledJobStateChoices.COMPLETED
-        )
+        with self.subTest("completed_after_approval_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(
+                ScheduledJob.objects.get(name="completed-after-approval-job").state, ScheduledJobStateChoices.COMPLETED
+            )

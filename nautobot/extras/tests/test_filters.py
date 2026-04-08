@@ -32,6 +32,7 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -70,6 +71,7 @@ from nautobot.extras.filters import (
     RelationshipFilterSet,
     RoleFilterSet,
     SavedViewFilterSet,
+    ScheduledJobFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -1631,6 +1633,91 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
                 job_result=cls.job_result,
                 message=f"I am a {log_level} log.",
             )
+
+
+class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ScheduledJob.objects.all()
+    filterset = ScheduledJobFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("job_model", "job_model__id"),
+        ("job_model", "job_model__name"),
+        ("job_model_id", "job_model__id"),
+        ("start_time",),
+        ("last_run_at",),
+        ("total_run_count",),
+        ("time_zone",),
+        ("state",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="scheduledjobfilteruser", is_active=True)
+        jobs = Job.objects.all()[:3]
+
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 1",
+                task=jobs[0].class_path,
+                job_model=jobs[0],
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                start_time=datetime(2021, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC")),
+                description="First scheduled job for filter tests",
+                total_run_count=1,
+                state=ScheduledJobStateChoices.PENDING,
+                enabled=False,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 2",
+                task=jobs[1].class_path,
+                job_model=jobs[1],
+                interval=JobExecutionType.TYPE_DAILY,
+                user=user,
+                start_time=datetime(2022, 6, 15, 12, 0, 0, tzinfo=ZoneInfo("America/New_York")),
+                time_zone=ZoneInfo("America/New_York"),
+                description="Second scheduled job for filter tests",
+                total_run_count=2,
+                state=ScheduledJobStateChoices.ACTIVE,
+                enabled=True,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 3",
+                task=jobs[2].class_path,
+                job_model=jobs[2],
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 9 * * 1",
+                enabled=False,
+                user=user,
+                start_time=datetime(2023, 12, 31, 23, 59, 59, tzinfo=ZoneInfo("Europe/London")),
+                time_zone=ZoneInfo("Europe/London"),
+                description="Third scheduled job for filter tests",
+                total_run_count=3,
+                state=ScheduledJobStateChoices.COMPLETED,
+            ),
+        ]
+        # set last_run_at to distinct values so it can be used in generic filter tests
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[0].pk).update(
+            last_run_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[1].pk).update(
+            last_run_at=datetime(2024, 6, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[2].pk).update(
+            last_run_at=datetime(2024, 12, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+
+    def test_enabled(self):
+        params = {"enabled": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=True),
+        )
+        params = {"enabled": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=False),
+        )
 
 
 class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
