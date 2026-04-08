@@ -212,8 +212,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
-    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
-    parent_bay = tables.Column()
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE, orderable=False)
+    parent_bay = tables.Column(orderable=False)
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
