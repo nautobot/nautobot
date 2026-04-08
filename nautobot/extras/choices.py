@@ -373,6 +373,29 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 
 
 #
+# ScheduledJob
+#
+
+
+class ScheduledJobStateChoices(ChoiceSet):
+    ACTIVE = "active"
+    PENDING = "pending"
+    DENIED = "denied"
+    CANCELED = "canceled"
+    COMPLETED = "completed"
+    ERRORED = "errored"
+
+    CHOICES = (
+        (ACTIVE, "Active"),
+        (PENDING, "Pending Approval"),
+        (DENIED, "Approval Denied"),
+        (CANCELED, "Approval Canceled"),
+        (COMPLETED, "Completed"),
+        (ERRORED, "Errored"),
+    )
+
+
+#
 # Metadata
 #
 

@@ -1,3 +1,5 @@
+import json
+
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
@@ -20,6 +22,7 @@ class Command(BaseCommand):
             "job_result",
             help="Pass in an existing job result id from the database to continue executing the job on a local system",
         )
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
         parser.add_argument(
             "--profile",
             action="store_true",
@@ -43,6 +46,13 @@ class Command(BaseCommand):
         This command is the leaf entrypoint for Kubernetes-based job execution and is not
         intended to be called directly by humans.
         """
+        if job_data := options.get("data"):
+            try:
+                job_kwargs = json.loads(job_data)
+            except json.JSONDecodeError as error:
+                raise CommandError(f"Invalid JSON data:\n{error!s}") from error
+        else:
+            job_kwargs = {}
         job_result = None
         job_result_id = options["job_result"]
         try:
@@ -55,9 +65,15 @@ class Command(BaseCommand):
                 f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
             )
         if job_result.celery_kwargs.get("nautobot_job_console_log", False):
-            executor = JobConsoleLogExecutor(job_result_id)
+            executor = JobConsoleLogExecutor(job_result_pk=job_result_id, job_kwargs=job_kwargs)
             executor.execute()
         else:
-            call_command("execute_job_result", f"{job_result_id}", profile=options["profile"], stdout=self.stdout)
+            call_command(
+                "execute_job_result",
+                f"{job_result_id}",
+                profile=options["profile"],
+                data=options["data"],
+                stdout=self.stdout,
+            )
             job_result.refresh_from_db()
         report_job_status(self, job_result)

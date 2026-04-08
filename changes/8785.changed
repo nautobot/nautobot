@@ -1,0 +1,1 @@
+Changed `approval_required` field to property based on `state`.
