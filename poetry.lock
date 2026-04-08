@@ -926,6 +926,18 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-ajax-tables"
+version = "1.1.1"
+description = "Django tag for ajax-enabled tables"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django_ajax_tables-1.1.1-py3-none-any.whl", hash = "sha256:62e0138949153c0a994eefbf469f5496b1ad98bc073e170bc021a1aada7a32d0"},
+    {file = "django_ajax_tables-1.1.1.tar.gz", hash = "sha256:5a7e7bc7940aa6332a564916cde22010a858a3d29fc1090ce8061010ec76337c"},
+]
+
+[[package]]
 name = "django-auth-ldap"
 version = "5.3.0"
 description = "Django LDAP authentication backend"
@@ -5679,4 +5691,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "0aeaf6f85c76450fcaecb9c081e2e07b6e9dce5b202e4a824fafb2c66aa257da"
+content-hash = "ef2c9a886ba2e4f32da25a2c415adc63e959a18a4e8a70a75a36951b8031f9b2"

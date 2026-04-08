@@ -48,6 +48,12 @@ The Bootstrap FileStyle library is now deprecated and will be removed in Nautobo
 
 If you do not directly reference the `bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js` script in your code, no action is required. Otherwise, we encourage you to transition to the Bootstrap 5 file input or import an external library of your choice.
 
+#### django-ajax-tables Deprecation
+
+The `django-ajax-tables` library is now deprecated and will be removed in Nautobot 4.0. The dynamic table rendering, filtering, and pagination features, which previously depended on this library, have been migrated to use standard `django-tables2` combined with HTMX.
+
+If you do not directly reference `django-ajax-tables` components or its associated JavaScript handlers in your code, no action is required. Otherwise, we encourage you to transition your dynamic tables to the new HTMX-based approach.
+
 ## Release Overview
 
 ### Breaking Changes
