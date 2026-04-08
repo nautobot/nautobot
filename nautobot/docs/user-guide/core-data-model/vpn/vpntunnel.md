@@ -4,7 +4,7 @@ A VPN Tunnel represents a secure communication channel established between two e
 
 For convenience, users can also assign a VPN Profile to the tunnel which will allow them to easily apply a predefined set of parameters for IKE and IPSec policies as well as keepalive settings. However, it remains the user's responsibility to decide how to use and consume these features in their configuration templates. We consider introducing an inheritance mechanism in a later version that will make VPN Profiles even easier to use.
 
-+++ 3.1.0
++++ 3.0.11
     In addition to VPN Profiles, a Secrets Group may be assigned directly to a VPN Tunnel to manage sensitive information. This approach enables administrators to apply a common, secret-free VPN Profile across multiple VPN Tunnels, even when those tunnels require distinct credentials. Furthermore, it facilitates the independent management of secrets and VPN Profiles, offering enhanced flexibility for various deployment scenarios.
 
 ![VPN Tunnel Detail View](../../../media/models/vpn_models_vpntunnel_detail_light.png#only-light){ .on-glb }
