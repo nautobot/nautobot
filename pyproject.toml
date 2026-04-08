@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.1.0a4"
+version = "3.1.0a5"
 description = "Source of truth and network automation platform."
 authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
@@ -29,7 +29,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=46.0.6,<46.1)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.12,<5.3)",
+    "django (>=5.2.13,<5.3)",
     # Adds AJAX capabilities to django-tables2
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
