@@ -1,0 +1,2 @@
+Updated dependency `pygments` to `2.20.0` to mitigate CVE-2026-4539. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+Updated dependency `pymdown-extensions` to `10.21.2` to address an incompatibility with `pygments` version `2.20`. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
