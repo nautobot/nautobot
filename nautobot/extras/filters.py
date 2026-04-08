@@ -32,6 +32,7 @@ from nautobot.extras.choices import (
     MetadataTypeDataTypeChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -1269,6 +1270,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
         label="Approval state",
         choices=ApprovalWorkflowStateChoices,
     )
+    state = django_filters.MultipleChoiceFilter(choices=ScheduledJobStateChoices, null_value=None)
 
     class Meta:
         model = ScheduledJob
