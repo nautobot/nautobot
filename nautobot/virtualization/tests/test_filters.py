@@ -219,8 +219,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         ("comments",),
         ("disk",),
         ("interfaces", "interfaces__id"),
-        ("location", "cluster__location__id"),
-        ("location", "cluster__location__name"),
         ("mac_address", "interfaces__mac_address"),
         ("memory",),
         ("name",),
@@ -238,8 +236,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         ("status", "status__id"),
         ("status", "status__name"),
         ("vcpus",),
-        ("vrfs", "vrfs__id"),
-        ("vrfs", "vrfs__rd"),
     )
 
     @classmethod
@@ -448,12 +444,12 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
 
-        vrfs = (
-            VRF.objects.create(name="VRF 1", rd="1:1"),
-            VRF.objects.create(name="VRF 2", rd="1:2"),
+        cls.vrfs = (
+            VRF.objects.create(name="VRF 1", rd="1:1", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 2", rd="1:2", namespace=cls.namespace),
         )
-        VRFDeviceAssignment.objects.create(virtual_machine=vms[0], vrf=vrfs[0])
-        VRFDeviceAssignment.objects.create(virtual_machine=vms[1], vrf=vrfs[1])
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[0], vrf=cls.vrfs[0])
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[1], vrf=cls.vrfs[1])
 
     def test_filters_generic(self):
         # Assign more than 2 different software versions to VirtualMachine before we test generic filters
@@ -471,6 +467,22 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     def test_comments(self):
         params = {"comments": ["This is VM 1", "This is VM 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+
+    def test_location(self):
+        params = {"location": [self.locations[0].pk]}
+        expected_location_pks = self.locations[0].cacheable_descendants_pks(include_self=True)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(cluster__location__pk__in=expected_location_pks).distinct(),
+            ordered=False,
+        )
+
+        params = {"location": [self.locations[0].name]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(cluster__location__pk__in=expected_location_pks).distinct(),
+            ordered=False,
+        )
 
     def test_ip_addresses(self):
         ipaddresses = list(IPAddress.objects.filter(vm_interfaces__isnull=False)[:2])
@@ -510,6 +522,21 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertQuerysetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(local_config_context_data__isnull=True),
+        )
+
+    def test_vrfs(self):
+        params = {"vrfs": [self.vrfs[0].pk, self.vrfs[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrfs__in=self.vrfs).distinct(),
+            ordered=False,
+        )
+
+        params = {"vrfs": [self.vrfs[0].rd, self.vrfs[1].rd]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrfs__rd__in=params["vrfs"]).distinct(),
+            ordered=False,
         )
 
 
