@@ -92,7 +92,6 @@ __all__ = (
     "ModuleFamilyTable",
     "ModuleModuleBayTable",
     "ModuleTable",
-    "NonRackedDevicesTable",
     "PlatformTable",
     "PowerOutletTable",
     "PowerPortTable",
@@ -213,6 +212,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
+    parent_bay = tables.Column()
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
@@ -246,6 +247,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "secrets_group",
             "capabilities",
             "manufacturer",
+            "parent_device",
+            "parent_bay",
             "tags",
             "actions",
         )
@@ -1635,18 +1638,3 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "primary_ip",
             "interface_count",
         )
-
-
-class NonRackedDevicesTable(RoleTableMixin, BaseTable):
-    name = tables.TemplateColumn(order_by=("_name",), template_code=DEVICE_LINK)
-    device_type = tables.Column(
-        linkify=True,
-        verbose_name="Type",
-    )
-    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE)
-    parent_bay = tables.Column()
-
-    class Meta(BaseTable.Meta):
-        model = Device
-        fields = ("pk", "name", "role", "device_type", "parent_device", "parent_bay")
-        default_columns = ("name", "role", "device_type", "parent_device", "parent_bay")

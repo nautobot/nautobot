@@ -16,7 +16,6 @@ from .template_code import UTILIZATION_GRAPH
 
 __all__ = (
     "PowerFeedTable",
-    "PowerFeedUtilizationTable",
     "PowerPanelTable",
 )
 
@@ -85,6 +84,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     connection = tables.Column(orderable=False)
     available_power = tables.Column(verbose_name="Available power (VA)")
+    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization")
     tags = TagColumn(url_name="dcim:powerfeed_list")
     actions = ButtonsColumn(PowerFeed)
 
@@ -108,6 +108,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "cable_peer",
             "connection",
             "available_power",
+            "utilization",
             "tags",
         )
         default_columns = (
@@ -125,15 +126,3 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "cable",
             "cable_peer",
         )
-
-
-class PowerFeedUtilizationTable(StatusTableMixin, BaseTable):
-    name = tables.Column(verbose_name="Feed", linkify=True)
-    power_panel = tables.Column(linkify=True)
-    type = ChoiceFieldColumn()
-    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization")
-
-    class Meta(BaseTable.Meta):
-        model = PowerFeed
-        fields = ("power_panel", "name", "status", "type", "utilization")
-        default_columns = ("power_panel", "name", "status", "type", "utilization")

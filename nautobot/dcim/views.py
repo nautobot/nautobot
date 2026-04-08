@@ -872,7 +872,7 @@ class RackUIViewSet(NautobotUIViewSet):
             if key == "devices":
                 request = context["request"]
                 obj = get_obj_from_context(context)
-                device_count = Device.objects.restrict(request.user, "view").filter(rack=obj).count()
+                device_count = obj.devices.restrict(request.user, "view").filter(rack=obj).count()
                 if not device_count:
                     return helpers.HTML_NONE
                 full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
@@ -890,8 +890,6 @@ class RackUIViewSet(NautobotUIViewSet):
             obj = get_obj_from_context(context, self.context_object_key)
 
             if key == "u_height":
-                if not value:
-                    return helpers.HTML_NONE
                 orientation = "descending" if obj.desc_units else "ascending"
                 return format_html("{}U ({})", value, orientation)
 
@@ -910,10 +908,9 @@ class RackUIViewSet(NautobotUIViewSet):
 
             obj = get_obj_from_context(context)
             params = []
-            if obj is not None:
-                params.append(("rack", obj.pk))
-                if obj.location is not None:
-                    params.append(("location", obj.location.pk))
+            params.append(("rack", obj.pk))
+            if obj.location is not None:
+                params.append(("location", obj.location.pk))
 
             params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
             return f"{reverse('dcim:device_add')}?{urlencode(params)}"
@@ -1000,9 +997,23 @@ class RackUIViewSet(NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=300,
-                table_class=tables.PowerFeedUtilizationTable,
+                table_class=tables.PowerFeedTable,
                 table_filter="rack",
                 add_button_route=None,
+                exclude_columns=[
+                    "rack",
+                    "power_path",
+                    "supply",
+                    "voltage",
+                    "amperage",
+                    "phase",
+                    "cable",
+                    "cable_peer",
+                    "max_utilization",
+                ],
+                include_columns=[
+                    "utilization",
+                ],
             ),
             ImageAttachmentObjectsTablePanel(
                 table_title="Images",
@@ -1047,10 +1058,14 @@ class RackUIViewSet(NautobotUIViewSet):
                     "location",
                     "rack",
                     "manufacturer",
+                    "example_app_manufacturer",
                     "primary_ip",
                     "actions",
                 ],
-                include_columns=["parent_device"],
+                include_columns=[
+                    "parent_device",
+                    "parent_bay",
+                ],
                 list_url_extra_params={"position__isnull": True},
             ),
         ),
@@ -1080,7 +1095,7 @@ class RackUIViewSet(NautobotUIViewSet):
             nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
                 "device_type__manufacturer"
             )
-            nonracked_devices_table = tables.NonRackedDevicesTable(nonracked_devices)
+            nonracked_devices_table = tables.DeviceTable(nonracked_devices)
             paginate = {
                 "paginator_class": EnhancedPaginator,
                 "per_page": get_paginate_count(request),
