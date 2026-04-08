@@ -2281,7 +2281,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 link_name="extras:job_run",
                 label="Run/Schedule",
                 icon="mdi-play",
-                color=ButtonActionColorChoices.SUBMIT,
+                color=ButtonActionColorChoices.RUN,
                 required_permissions=["extras.job_run"],
             ),
         ],
@@ -2303,6 +2303,10 @@ class JobUIViewSet(NautobotUIViewSet):
         if "installed" not in filter_params:
             queryset = queryset.filter(installed=True)
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        """Job records are system-managed and can't be created from the UI."""
+        raise Http404
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -3734,7 +3738,6 @@ class ObjectChangeLogView(generic.GenericView):
         RequestConfig(request, paginate).configure(objectchanges_table)
 
         base_template = get_base_template(self.base_template, model)
-        # Use "object_retrieve.html" explicitly; get_base_template() resolves to "job.html" for Job models, which uses the wrong layout for changelog.
 
         return render(
             request,
@@ -4462,18 +4465,3 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
-
-
-#
-# Job Extra Views
-#
-# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
-# constructed below # ObjectChangeLogView and ObjectNotesView.
-
-
-class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "generic/object_retrieve.html"
-
-
-class JobObjectNotesView(ObjectNotesView):
-    base_template = "generic/object_retrieve.html"
