@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.apps.testing import ModelTestCases
-from nautobot.core.templatetags.helpers import get_docs_url
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.factory import DeviceFactory
 from nautobot.dcim.models import Device, Interface, Module
@@ -381,10 +380,6 @@ class VPNTerminationModelTestCase(VPNTerminationFixtureMixin, ModelTestCases.Bas
     """Behavioral tests for VPNTermination."""
 
     model = models.VPNTermination
-
-    def test_get_docs_url(self):
-        """VPNTermination has no standalone user-facing docs page."""
-        self.assertIsNone(get_docs_url(self.model))
 
     @classmethod
     def _get_vpn_status(cls):
