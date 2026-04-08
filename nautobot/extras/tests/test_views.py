@@ -3162,14 +3162,12 @@ class GitRepositoryTestCase(
                     if action_name == "dryrun"
                     else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
                 ) as mock_enqueue:
-                    job_result = mock.Mock()
-                    job_result.get_absolute_url.return_value = reverse(
-                        "extras:gitrepository_result", kwargs={"pk": instance.pk}
-                    )
+                    job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
                     mock_enqueue.return_value = job_result
                     response = self.client.post(url, follow=True)
                     self.assertHttpStatus(response, 200)
-                    mock_enqueue.assert_called_once()
+                    self.assertRedirects(response, job_result.get_absolute_url())
+                    mock_enqueue.assert_called_once_with(instance, self.user)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
 

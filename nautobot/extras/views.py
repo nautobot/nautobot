@@ -30,7 +30,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -2031,20 +2031,12 @@ def check_and_call_git_repository_function(request, pk, func):
     # Allow execution only if a worker process is running.
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
-        return HttpResponse("Unable to process request: No celery workers found.", status=503)
+        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
+    else:
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+        job_result = func(repository, request.user)
 
-    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-    job_result = func(repository, request.user)
-
-    # Guard against non-standard return values from enqueue helpers.
-    if not hasattr(job_result, "get_absolute_url"):
-        return HttpResponse(status=500)
-
-    job_url = job_result.get_absolute_url()
-    if not job_url:
-        return HttpResponse(status=500)
-
-    return redirect(job_url)
+    return redirect(job_result.get_absolute_url())
 
 
 class DatasourceContentsPanel(object_detail.Panel):
@@ -2088,6 +2080,21 @@ class DatasourceContentsPanel(object_detail.Panel):
         return format_html("".join(rows))
 
 
+class GitRepositoryObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if key == "branch":
+            branch_display = format_html("<code>{}</code>", value)
+            if obj.current_head:
+                branch_display = format_html(
+                    "{} (checked out locally at commit <code>{}</code>)", branch_display, obj.current_head
+                )
+            else:
+                branch_display = format_html("{} (not locally checked out yet)", branch_display)
+            return branch_display
+        return super().render_value(key, value, context)
+
+
 class GitRepositoryUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.GitRepositoryBulkEditForm
     filterset_form_class = forms.GitRepositoryFilterForm
@@ -2097,20 +2104,6 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
     view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
-
-    class GitRepositoryObjectFieldsPanel(object_detail.ObjectFieldsPanel):
-        def render_value(self, key, value, context):
-            obj = get_obj_from_context(context, self.context_object_key)
-            if key == "branch":
-                branch_display = format_html("<code>{}</code>", value)
-                if obj.current_head:
-                    branch_display = format_html(
-                        "{} (checked out locally at commit <code>{}</code>)", branch_display, obj.current_head
-                    )
-                else:
-                    branch_display = format_html("{} (not locally checked out yet)", branch_display)
-                return branch_display
-            return super().render_value(key, value, context)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -2146,7 +2139,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
             ),
             object_detail.PostButton(
                 weight=200,
-                color=ButtonColorChoices.BLUE,
+                color=ButtonActionColorChoices.RUN,
                 link_name="extras:gitrepository_sync",
                 label="Sync",
                 icon="mdi-source-branch-sync",
