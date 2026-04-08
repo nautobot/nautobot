@@ -141,10 +141,14 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        cmd = ["nautobot-server", "execute_job_result", f"{self.job_result_pk}", f"--config={settings.SETTINGS_PATH}"]
-        if self.job_kwargs:
-            cmd += ["--data", json.dumps(self.job_kwargs)]
-        return cmd
+        return [
+            "nautobot-server",
+            "execute_job_result",
+            f"{self.job_result_pk}",
+            f"--config={settings.SETTINGS_PATH}",
+            "--data",
+            json.dumps(self.job_kwargs),
+        ]
 
     def _print_output(self):
         """Print output in real-time while process runs."""

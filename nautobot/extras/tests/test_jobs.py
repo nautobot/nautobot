@@ -1928,7 +1928,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log,
     ):
         """Command should use JobConsoleLogExecutor when console logging is enabled."""
-        data = "{}"
+        data = '{"foo": "bar"}'
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),
@@ -1939,6 +1939,27 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log.assert_called_once_with(
             job_result_pk=str(self.job_result.pk), job_kwargs=json.loads(data)
         )
+        mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_report_job_status.assert_called_once()
+        mock_execute_job.assert_not_called()
+
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
+    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
+    def test_console_log_executor_is_used_without_data_options(
+        self,
+        mock_report_job_status,
+        mock_execute_job,
+        mock_executor_console_log,
+    ):
+        """Command should set job_kwargs to {} when data it's not defined"""
+
+        call_command(
+            "runjob_with_job_result",
+            str(self.job_result.pk),
+        )
+
+        mock_executor_console_log.assert_called_once_with(job_result_pk=str(self.job_result.pk), job_kwargs={})
         mock_executor_console_log.return_value.execute.assert_called_once()
         mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
@@ -1956,7 +1977,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         self.job_result.celery_kwargs = {}
         self.job_result.save()
 
-        data = "{}"
+        data = '{"foo": "bar"}'
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),
@@ -2014,23 +2035,22 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
     @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
-    def test_data_option_skips_validate_job_and_job_data(
+    def test_data_option_no_skip_validate_job_and_job_data(
         self,
         mock_sync,
         mock_run_job,
         mock_validate,
     ):
-        """Command should use --data directly and skip validate_job_and_job_data when --data is provided."""
+        """Command should use --data and check it using validate_job_and_job_data when --data is provided."""
+        data = '{"foo": "bar"}'
         call_command(
             "execute_job_result",
             str(self.job_result.pk),
-            data='{"foo": "bar"}',
+            data=data,
         )
 
-        mock_validate.assert_not_called()
+        mock_validate.assert_called_once_with(mock.ANY, self.user, self.job_model.class_path, data)
         mock_run_job.apply.assert_called_once()
-        call_kwargs = mock_run_job.apply.call_args[1]["kwargs"]
-        self.assertEqual(call_kwargs.get("foo"), "bar")
 
     @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")

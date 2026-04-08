@@ -1,4 +1,5 @@
 from io import StringIO
+import json
 import re
 import subprocess
 from unittest import mock
@@ -183,11 +184,20 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
         process.stdout = stdout_stream
         process.stderr = stderr_stream
 
-        executor = JobConsoleLogExecutor(self.job_result.pk)
+        job_kwargs = {}  # it has to be empty, because TestPassJob expected kwargs empty
+        executor = JobConsoleLogExecutor(job_result_pk=self.job_result.pk, job_kwargs=job_kwargs)
+
         with self.celery_subprocess_env():
             result = executor.execute()
         mock_popen.assert_called_once_with(
-            ["nautobot-server", "execute_job_result", f"{self.job_result.pk}", f"--config={settings.SETTINGS_PATH}"],
+            [
+                "nautobot-server",
+                "execute_job_result",
+                f"{self.job_result.pk}",
+                f"--config={settings.SETTINGS_PATH}",
+                "--data",
+                json.dumps(job_kwargs),
+            ],
             stdout=mock.ANY,
             stderr=mock.ANY,
             universal_newlines=True,
