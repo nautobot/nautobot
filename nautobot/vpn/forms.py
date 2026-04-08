@@ -17,6 +17,7 @@ from nautobot.apps.forms import (
     RoleModelFilterFormMixin,
     StaticSelect2,
     StaticSelect2Multiple,
+    StatusModelBulkEditFormMixin,
     StatusModelFilterFormMixin,
     TagFilterField,
     TagsBulkEditFormMixin,
@@ -420,22 +421,12 @@ class VPNForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ances
         """Meta attributes."""
 
         model = models.VPN
-        fields = [
-            "name",
-            "description",
-            "vpn_id",
-            "vpn_profile",
-            "service_type",
-            "status",
-            "role",
-            "tenant_group",
-            "tenant",
-            "extra_attributes",
-            "tags",
-        ]
+        fields = "__all__"
 
 
-class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNBulkEditForm(
+    TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, RoleModelBulkEditFormMixin, NautobotBulkEditForm
+):  # pylint: disable=too-many-ancestors
     """VPN bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPN.objects.all(), widget=forms.MultipleHiddenInput)
@@ -457,11 +448,6 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
         label="Service Type",
     )
     vpn_id = forms.CharField(required=False, label="Identifier")
-    status = DynamicModelChoiceField(
-        queryset=Status.objects.all(),
-        required=False,
-        query_params={"content_types": models.VPN._meta.label_lower},
-    )
 
     class Meta:
         """Meta attributes."""
@@ -471,6 +457,8 @@ class VPNBulkEditForm(TagsBulkEditFormMixin, RoleModelBulkEditFormMixin, Nautobo
             "description",
             "vpn_profile",
             "vpn_id",
+            "service_type",
+            "status",
         ]
 
 
@@ -820,22 +808,22 @@ class VPNTerminationFilterForm(NautobotFilterForm):
 
     model = models.VPNTermination
     q = forms.CharField(required=False, label="Search")
-    vpn = DynamicModelChoiceField(
+    vpn = DynamicModelMultipleChoiceField(
         queryset=models.VPN.objects.all(),
         required=False,
         label="VPN",
     )
-    vlan = DynamicModelChoiceField(
+    vlan = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         label="VLAN",
     )
-    interface = DynamicModelChoiceField(
+    interface = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(),
         required=False,
         label="Interface",
     )
-    vm_interface = DynamicModelChoiceField(
+    vm_interface = DynamicModelMultipleChoiceField(
         queryset=VMInterface.objects.all(),
         required=False,
         label="VM Interface",

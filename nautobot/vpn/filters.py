@@ -265,16 +265,22 @@ class VPNTerminationFilterSet(NautobotFilterSet):
         label="VPN (name or ID)",
     )
     vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="vid",
         queryset=VLAN.objects.all(),
-        label="VLAN",
+        label="VLAN (VID or ID)",
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
         queryset=Interface.objects.all(),
-        label="Interface",
+        label="Interface (name or ID)",
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
         queryset=VMInterface.objects.all(),
-        label="VM Interface",
+        label="VM Interface (name or ID)",
     )
 
     class Meta:

@@ -5,58 +5,134 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.apps.testing import ModelTestCases
+from nautobot.core.templatetags.helpers import get_docs_url
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.factory import DeviceFactory
 from nautobot.dcim.models import Device, Interface, Module
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup
+from nautobot.tenancy.factory import TenantFactory
 from nautobot.tenancy.models import Tenant
+from nautobot.virtualization.factory import ClusterFactory, ClusterTypeFactory, VirtualMachineFactory
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, models
 
 
-class VPNDocsTestMixin:
-    """VPN model tests don't rely on project-static documentation assets being present."""
+class VPNTerminationFixtureMixin:
+    """Helpers for creating deterministic termination-related fixtures."""
 
-    def test_get_docs_url(self):
-        self.skipTest("Static VPN documentation assets are not part of the tracked source tree.")
+    @classmethod
+    def _get_status_for_model(cls, model):
+        ct = ContentType.objects.get_for_model(model)
+        status = Status.objects.filter(content_types=ct).first()
+        if not status:
+            status = Status.objects.get(name="Active")
+            status.content_types.add(ct)
+        return status
+
+    @classmethod
+    def _available_interfaces(cls):
+        used = models.VPNTermination.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
+        return Interface.objects.exclude(pk__in=used).filter(device__isnull=False)
+
+    @classmethod
+    def _ensure_available_interfaces(cls, count):
+        interfaces = list(cls._available_interfaces()[:count])
+        while len(interfaces) < count:
+            device = DeviceFactory.create()
+            Interface.objects.create(
+                device=device,
+                name=f"{cls.__name__}-if-{Interface.objects.count()}",
+                status=cls._get_status_for_model(Interface),
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+            interfaces = list(cls._available_interfaces()[:count])
+        return interfaces
+
+    @classmethod
+    def _available_vlans(cls):
+        used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
+        return VLAN.objects.exclude(pk__in=used)
+
+    @classmethod
+    def _ensure_available_vlans(cls, count):
+        vlans = list(cls._available_vlans()[:count])
+        while len(vlans) < count:
+            vlan_group, _ = VLANGroup.objects.get_or_create(name=f"{cls.__name__} VLAN Group")
+            next_vid = max(VLAN.objects.values_list("vid", flat=True), default=4095) + 1
+            VLAN.objects.create(
+                vid=next_vid,
+                name=f"{cls.__name__} VLAN {next_vid}",
+                status=cls._get_status_for_model(VLAN),
+                vlan_group=vlan_group,
+            )
+            vlans = list(cls._available_vlans()[:count])
+        return vlans
+
+    @classmethod
+    def _available_vm_interfaces(cls):
+        used = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
+            "vm_interface_id", flat=True
+        )
+        return VMInterface.objects.exclude(pk__in=used)
+
+    @classmethod
+    def _ensure_available_vm_interfaces(cls, count):
+        vm_interfaces = list(cls._available_vm_interfaces()[:count])
+        while len(vm_interfaces) < count:
+            cluster_type = ClusterTypeFactory.create()
+            cluster = ClusterFactory.create(cluster_type=cluster_type)
+            virtual_machine = VirtualMachineFactory.create(cluster=cluster)
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine,
+                name=f"{cls.__name__}-vmif-{VMInterface.objects.count()}",
+                status=cls._get_status_for_model(VMInterface),
+            )
+            vm_interfaces = list(cls._available_vm_interfaces()[:count])
+        return vm_interfaces
+
+    @classmethod
+    def _ensure_tenant(cls):
+        return Tenant.objects.first() or TenantFactory.create()
 
 
-class TestVPNProfileModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNProfileModel(ModelTestCases.BaseModelTestCase):
     """Test VPNProfile model."""
 
     model = models.VPNProfile
 
 
-class TestVPNPhase1PolicyModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNPhase1PolicyModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase1Policy model."""
 
     model = models.VPNPhase1Policy
 
 
-class TestVPNPhase2PolicyModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNPhase2PolicyModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase2Policy model."""
 
     model = models.VPNPhase2Policy
 
 
-class VPNProfilePhase1PolicyAssignmentModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class VPNProfilePhase1PolicyAssignmentModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase1Policy model."""
 
     model = models.VPNProfilePhase1PolicyAssignment
 
 
-class VPNProfilePhase2PolicyAssignmentModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class VPNProfilePhase2PolicyAssignmentModel(ModelTestCases.BaseModelTestCase):
     """Test VPNPhase1Policy model."""
 
     model = models.VPNProfilePhase2PolicyAssignment
 
 
-class TestVPNModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNModel(ModelTestCases.BaseModelTestCase):
     """Test VPN model."""
 
     model = models.VPN
 
 
-class TestVPNTunnelModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNTunnelModel(ModelTestCases.BaseModelTestCase):
     """Test VPNTunnel model."""
 
     model = models.VPNTunnel
@@ -72,7 +148,7 @@ class TestVPNTunnelModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
             tunnel.clean()
 
 
-class TestVPNTunnelEndpointModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
     """Test VPNTunnelEndpoint model."""
 
     model = models.VPNTunnelEndpoint
@@ -159,28 +235,13 @@ class TestVPNTunnelEndpointModel(VPNDocsTestMixin, ModelTestCases.BaseModelTestC
             self.assertEqual(new_endpoint.name, new_endpoint._name())
 
 
-class VPNOverlayModelTestCase(TestCase):
+class VPNOverlayModelTestCase(VPNTerminationFixtureMixin, TestCase):
     """Behavioral tests for overlay-related VPN fields."""
 
     @classmethod
     def _get_vpn_status(cls):
         """Get or create an Active status for the VPN model."""
-        ct = ContentType.objects.get_for_model(models.VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
-
-    @classmethod
-    def _get_available_interfaces(cls):
-        used = models.VPNTermination.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
-        return Interface.objects.exclude(pk__in=used).filter(device__isnull=False)
-
-    @classmethod
-    def _get_available_vlans(cls):
-        used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
-        return VLAN.objects.exclude(pk__in=used)
+        return cls._get_status_for_model(models.VPN)
 
     @classmethod
     def setUpTestData(cls):
@@ -209,10 +270,7 @@ class VPNOverlayModelTestCase(TestCase):
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
             status=self.status,
         )
-        interfaces = list(self._get_available_interfaces()[:2])
-        if len(interfaces) < 2:
-            self.skipTest("Need at least two unused interfaces for termination testing.")
-
+        interfaces = self._ensure_available_interfaces(2)
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
         self.assertFalse(vpn.can_add_termination)
@@ -223,10 +281,7 @@ class VPNOverlayModelTestCase(TestCase):
             service_type=choices.VPNServiceTypeChoices.TYPE_EPLAN,
             status=self.status,
         )
-        vlans = list(self._get_available_vlans()[:3])
-        if len(vlans) < 3:
-            self.skipTest("Need at least three unused VLANs for EPLAN termination testing.")
-
+        vlans = self._ensure_available_vlans(3)
         models.VPNTermination.objects.create(vpn=vpn, vlan=vlans[0])
         models.VPNTermination.objects.create(vpn=vpn, vlan=vlans[1])
         self.assertTrue(vpn.can_add_termination)
@@ -240,10 +295,7 @@ class VPNOverlayModelTestCase(TestCase):
             service_type=choices.VPNServiceTypeChoices.TYPE_EVPN_VPWS,
             status=self.status,
         )
-        interfaces = list(self._get_available_interfaces()[:2])
-        if len(interfaces) < 2:
-            self.skipTest("Need at least two unused interfaces for EVPN VPWS termination testing.")
-
+        interfaces = self._ensure_available_interfaces(2)
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
         self.assertFalse(vpn.can_add_termination)
@@ -313,10 +365,7 @@ class VPNOverlayModelTestCase(TestCase):
         vpn.full_clean()
 
     def test_tenant_relationship(self):
-        tenant = Tenant.objects.first()
-        if tenant is None:
-            self.skipTest("No tenant fixture available.")
-
+        tenant = self._ensure_tenant()
         vpn = models.VPN.objects.create(
             name="VPN Tenant Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
@@ -328,52 +377,18 @@ class VPNOverlayModelTestCase(TestCase):
         self.assertIn(vpn, tenant.vpns.all())
 
 
-class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTestCase):
+class VPNTerminationModelTestCase(VPNTerminationFixtureMixin, ModelTestCases.BaseModelTestCase):
     """Behavioral tests for VPNTermination."""
 
     model = models.VPNTermination
 
+    def test_get_docs_url(self):
+        """VPNTermination has no standalone user-facing docs page."""
+        self.assertIsNone(get_docs_url(self.model))
+
     @classmethod
     def _get_vpn_status(cls):
-        ct = ContentType.objects.get_for_model(models.VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
-
-    @classmethod
-    def _get_available_interfaces(cls):
-        used = models.VPNTermination.objects.exclude(interface__isnull=True).values_list("interface_id", flat=True)
-        return Interface.objects.exclude(pk__in=used).filter(device__isnull=False)
-
-    @classmethod
-    def _get_available_vlans(cls):
-        used = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
-        available_vlans = VLAN.objects.exclude(pk__in=used)
-        if available_vlans.exists():
-            return available_vlans
-
-        vlan_status = Status.objects.get_for_model(VLAN).first()
-        if vlan_status is None:
-            vlan_status = Status.objects.get(name="Active")
-            vlan_status.content_types.add(ContentType.objects.get_for_model(VLAN))
-
-        vlan_group, _ = VLANGroup.objects.get_or_create(name=f"{cls.__name__} VLAN Group")
-        VLAN.objects.create(
-            vid=4900,
-            name=f"{cls.__name__} VLAN",
-            status=vlan_status,
-            vlan_group=vlan_group,
-        )
-        return VLAN.objects.exclude(pk__in=used)
-
-    @classmethod
-    def _get_available_vm_interfaces(cls):
-        used = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
-            "vm_interface_id", flat=True
-        )
-        return VMInterface.objects.exclude(pk__in=used)
+        return cls._get_status_for_model(models.VPN)
 
     @classmethod
     def setUpTestData(cls):
@@ -384,15 +399,10 @@ class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTest
             status=cls.status,
             vpn_id="12000",
         )
-        seed_vlan = cls._get_available_vlans().first()
-        if seed_vlan is not None:
-            cls.seed_termination = models.VPNTermination.objects.create(vpn=cls.vpn, vlan=seed_vlan)
+        cls.seed_termination = models.VPNTermination.objects.create(vpn=cls.vpn, vlan=cls._ensure_available_vlans(1)[0])
 
     def test_str_with_assigned_object(self):
-        vlan = self._get_available_vlans().first()
-        if vlan is None:
-            self.skipTest("No unused VLAN available.")
-
+        vlan = self._ensure_available_vlans(1)[0]
         termination = models.VPNTermination.objects.create(vpn=self.vpn, vlan=vlan)
         self.assertEqual(str(termination), f"{vlan} <> {self.vpn}")
 
@@ -402,11 +412,8 @@ class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTest
             termination.clean()
 
     def test_clean_rejects_multiple_objects(self):
-        vlan = self._get_available_vlans().first()
-        interface = self._get_available_interfaces().first()
-        if vlan is None or interface is None:
-            self.skipTest("Need both an unused VLAN and interface.")
-
+        vlan = self._ensure_available_vlans(1)[0]
+        interface = self._ensure_available_interfaces(1)[0]
         termination = models.VPNTermination(vpn=self.vpn, vlan=vlan, interface=interface)
         with self.assertRaises(ValidationError):
             termination.clean()
@@ -417,10 +424,7 @@ class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTest
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
             status=self.status,
         )
-        interfaces = list(self._get_available_interfaces()[:3])
-        if len(interfaces) < 3:
-            self.skipTest("Need at least three unused interfaces.")
-
+        interfaces = self._ensure_available_interfaces(3)
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[0])
         models.VPNTermination.objects.create(vpn=vpn, interface=interfaces[1])
 
@@ -429,47 +433,32 @@ class VPNTerminationModelTestCase(VPNDocsTestMixin, ModelTestCases.BaseModelTest
             termination.clean()
 
     def test_duplicate_termination_rejected_by_validation(self):
-        interface = self._get_available_interfaces().first()
-        if interface is None:
-            self.skipTest("No unused interface available.")
-
+        interface = self._ensure_available_interfaces(1)[0]
         models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
         with self.assertRaises(ValidationError):
             models.VPNTermination(vpn=self.vpn, interface=interface).validated_save()
 
     def test_termination_with_interface(self):
-        interface = self._get_available_interfaces().first()
-        if interface is None:
-            self.skipTest("No unused interface available.")
-
+        interface = self._ensure_available_interfaces(1)[0]
         termination = models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)
         self.assertEqual(termination.assigned_object, interface)
         self.assertEqual(termination.assigned_object_type, "dcim.interface")
         self.assertEqual(termination.assigned_object_parent, interface.device)
 
     def test_termination_with_vlan(self):
-        vlan = self._get_available_vlans().first()
-        if vlan is None:
-            self.skipTest("No unused VLAN available.")
-
+        vlan = self._ensure_available_vlans(1)[0]
         termination = models.VPNTermination.objects.create(vpn=self.vpn, vlan=vlan)
         self.assertEqual(termination.assigned_object, vlan)
         self.assertEqual(termination.assigned_object_type, "ipam.vlan")
 
     def test_termination_with_vm_interface(self):
-        vm_interface = self._get_available_vm_interfaces().first()
-        if vm_interface is None:
-            self.skipTest("No unused VM interface available.")
-
+        vm_interface = self._ensure_available_vm_interfaces(1)[0]
         termination = models.VPNTermination.objects.create(vpn=self.vpn, vm_interface=vm_interface)
         self.assertEqual(termination.assigned_object, vm_interface)
         self.assertEqual(termination.assigned_object_type, "virtualization.vminterface")
 
     def test_cascade_delete_on_vpn_delete(self):
-        interface = self._get_available_interfaces().first()
-        if interface is None:
-            self.skipTest("No unused interface available.")
-
+        interface = self._ensure_available_interfaces(1)[0]
         vpn = models.VPN.objects.create(
             name="Cascade Delete Termination Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,

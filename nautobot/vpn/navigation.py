@@ -102,12 +102,6 @@ menu_items = (
                         name="VPN Terminations",
                         weight=100,
                         permissions=["vpn.view_vpntermination"],
-                        buttons=(
-                            NavMenuAddButton(
-                                link="vpn:vpntermination_add",
-                                permissions=["vpn.add_vpntermination"],
-                            ),
-                        ),
                     ),
                 ),
             ),

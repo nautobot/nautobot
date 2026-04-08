@@ -291,10 +291,10 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         help_text="Optional classification of this VPN service, for example IPSec or VXLAN-EVPN.",
     )
+    # Nullable to support backwards-compatible migration of pre-existing VPN rows.
     status = StatusField(
         blank=True,
         null=True,
-        help_text="Optional initially for migration safety; can be made required later if desired.",
     )
     extra_attributes = models.JSONField(
         blank=True,
@@ -327,7 +327,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     def can_add_termination(self):
         """P2P VPN services are limited to two terminations."""
         if self.service_type in choices.VPNServiceTypeChoices.P2P:
-            return self.terminations.count() < 2
+            return self.vpn_terminations.count() < 2
         return True
 
     def clean(self):
@@ -609,7 +609,7 @@ class VPNTermination(PrimaryModel):
     vpn = models.ForeignKey(
         to="vpn.VPN",
         on_delete=models.CASCADE,
-        related_name="terminations",
+        related_name="vpn_terminations",
     )
     vlan = models.ForeignKey(
         to="ipam.VLAN",
@@ -705,7 +705,7 @@ class VPNTermination(PrimaryModel):
             return
 
         if self.vpn.service_type in choices.VPNServiceTypeChoices.P2P:
-            count = self.vpn.terminations.exclude(pk=self.pk).count()
+            count = self.vpn.vpn_terminations.exclude(pk=self.pk).count()
             if count >= 2:
                 raise ValidationError(
                     f"{self.vpn.get_service_type_display()} VPNs cannot have more than 2 terminations."

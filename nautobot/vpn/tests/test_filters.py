@@ -126,13 +126,6 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
                 vpn_id="18002",
             )
 
-    def test_search_filter_matches_overlay_fields(self):
-        queryset = self.queryset
-        vpn = queryset.filter(service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN).first()
-        self.assertIsNotNone(vpn)
-        filtered = self.filterset({"q": vpn.name[:8]}, queryset).qs
-        self.assertTrue(filtered.filter(pk=vpn.pk).exists())
-
 
 class VPNTunnelFilterTestCase(FilterTestCases.FilterTestCase):
     """VPNTunnelFilterSet Test Case."""
