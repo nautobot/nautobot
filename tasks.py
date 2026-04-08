@@ -807,6 +807,31 @@ def build_example_app_docs(context):
         docker_compose(context, docker_command, pty=True)
 
 
+@task(
+    help={
+        "version": "Nautobot version number to associate with the release notes.",
+        "date": "Date of the release (default: today).",
+        "keep": "Keep existing change fragment files. Useful for testing. (default: False).",
+    }
+)
+def generate_release_notes(context, version="", date="", keep=False):  # pylint: disable=redefined-outer-name
+    """Generate Release Notes using Towncrier."""
+    command = "poetry run towncrier build"
+    if not version:
+        version = context.run("poetry version --short", hide=True).stdout.strip()
+    command += f" --version {version}"
+    if date:
+        command += f" --date {date}"
+    command += " --keep" if keep else " --yes"
+
+    # N/A for Nautobot core; we create `nautobot/docs/release-notes/version-X.Y.md` for new X.Y versions in advance
+    # version_major_minor = ".".join(version.split(".")[:2])
+    # context.run(f"poetry run python scripts/ensure_release_notes.py --version {version_major_minor}")
+
+    # Due to issues with git repo ownership in the containers, this must always run locally.
+    context.run(command)
+
+
 def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):
     """Navigate to the default system application for a specified uri."""
     nautobot_raw_uri = docker_compose(context, f"port {service} {internal_port}").stdout.rstrip()
@@ -1064,6 +1089,7 @@ def check_schema(context, api_version=None):
     help={
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
+        "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
@@ -1085,6 +1111,7 @@ def tests(
     context,
     append_coverage=False,
     buffer=True,
+    pdb=False,
     cache_test_fixtures=True,
     config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
@@ -1139,6 +1166,8 @@ def tests(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if pdb:
+        command += " --pdb"
     if parallel:
         command += " --parallel"
         if parallel_workers:

@@ -1,14 +1,12 @@
----
 name: "Release"
 on:
   release:
     types: ["published"]  # covers releases, prereleases, and drafts
 
 jobs:
-  # Publish to GitHub followed by pypi
-  publish_python:
-    if: "${{ ! github.event.release.draft }}"
-    name: "Publish Python Packages"
+  build:
+    if: ${{ ! github.event.release.draft }}
+    name: "Build Python Packages"
     runs-on: "ubuntu-24.04"
     steps:
       - name: "Check out repository code"
@@ -20,42 +18,76 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.13"
       - name: "Build Documentation"
-        run: "poetry run mkdocs build --no-directory-urls --strict"
+        run: "poetry run invoke build-and-check-docs"
       - name: "Run Poetry Build"
         run: "poetry build"
       - name: "Upload binaries to release"
-        uses: "svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd" # v2
+        uses: "actions/upload-artifact@v4"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          file: "dist/*"
-          tag: "${{ github.ref }}"
-          overwrite: true
-          file_glob: true
+          name: "distfiles"
+          path: "dist/"
+          if-no-files-found: "error"
+
+  publish_github:
+    if: ${{ ! github.event.release.draft }}
+    name: "Publish to GitHub"
+    runs-on: "ubuntu-24.04"
+    permissions:
+      contents: "write"
+    needs: "build"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Retrieve built package from cache"
+        uses: "actions/download-artifact@v4"
+        with:
+          name: "distfiles"
+          path: "dist/"
+      - name: "Upload binaries to release"
+        run: "gh release upload ${{ github.ref_name }} dist/*.{tar.gz,whl}"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+  publish_pypi:
+    if: ${{ ! github.event.release.draft }}
+    name: "Publish to PyPI"
+    runs-on: "ubuntu-24.04"
+    needs: "build"
+    environment: "pypi"
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: "write"
+    steps:
+      - name: "Retrieve built package from cache"
+        uses: "actions/download-artifact@v4"
+        with:
+          name: "distfiles"
+          path: "dist/"
       - name: "Push to PyPI"
-        uses: "pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc" # release/v1
-        with:
-          user: "__token__"
-          password: "${{ secrets.PYPI_API_TOKEN }}"
+        uses: "pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e" # v1.13.0
 
   publish_containers:
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     name: "Build & Publish Container Images"
-    runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
-    env:
-      INVOKE_NAUTOBOT_PYTHON_VER: "${{ matrix.python-version }}"
+        arch: [ "amd64", "arm64" ]
+        os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
+        exclude:
+          - os: "ubuntu-24.04"
+            arch: "arm64"
+          - os: "ubuntu-24.04-arm"
+            arch: "amd64"
+    runs-on: "${{ matrix.os }}"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
       - run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_OUTPUT
         id: "gitbranch"
-      - name: "Set up QEMU"
-        uses: "docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7" # v2
       - name: "Set up Docker Buildx"
-        uses: "docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55" # v2
+        uses: "docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd" # v4
       - name: "Login to GitHub Container Registry"
         uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
         with:
@@ -67,79 +99,125 @@ jobs:
         with:
           username: "${{ secrets.DOCKERHUB_USERNAME }}"
           password: "${{ secrets.DOCKERHUB_TOKEN }}"
-      - name: "Docker Metadata"
-        id: "dockermeta"
-        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Build and Push (prod - final target)"
+        uses: "./.github/actions/build-nautobot-image"
         with:
           images: "networktocode/nautobot,ghcr.io/nautobot/nautobot"
-          flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-          tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.13 }}
-            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-            type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build"
-        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
-        with:
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          arch: "${{ matrix.arch }}"
           push: true
           target: "final"
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockermeta.outputs.tags }}"
-          labels: "${{ steps.dockermeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=false
-      - name: "Docker Dev Metadata"
-        id: "dockerdevmeta"
-        uses: "docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175" # v4
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Build and Push (dev - final-dev target)"
+        uses: "./.github/actions/build-nautobot-image"
         with:
           images: "networktocode/nautobot-dev,ghcr.io/nautobot/nautobot-dev"
-          flavor: |
-            latest=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-          tags: |
-            type=semver,pattern={{version}}-py${{ matrix.python-version }}
-            type=semver,pattern={{version}},enable=${{ matrix.python-version == 3.13 }}
-            type=semver,pattern={{major}}.{{minor}}-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-            type=raw,value=latest-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-            type=raw,value=stable,enable=${{ ! github.event.release.prerelease && matrix.python-version == 3.13 }}
-            type=raw,value=stable-py${{ matrix.python-version }},enable=${{ ! github.event.release.prerelease }}
-          labels: |
-            org.opencontainers.image.title=Nautobot
-      - name: "Build Dev Containers"
-        uses: "docker/build-push-action@0a97817b6ade9f46837855d676c4cca3a2471fc9" # v4
-        with:
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          arch: "${{ matrix.arch }}"
           push: true
           target: "final-dev"
-          file: "docker/Dockerfile"
-          platforms: "linux/amd64,linux/arm64"
-          tags: "${{ steps.dockerdevmeta.outputs.tags }}"
-          labels: "${{ steps.dockerdevmeta.outputs.labels }}"
-          cache-from: "type=gha,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          cache-to: "type=gha,mode=max,scope=nautobot-${{ steps.gitbranch.outputs.branch }}-${{ matrix.python-version }}"
-          context: "."
-          build-args: |
-            PYTHON_VER=${{ matrix.python-version }}
-            POETRY_INSTALLER_PARALLEL=false
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
+
+  merge_containers:
+    name: "Merge Manifests"
+    if: ${{ ! github.event.release.draft }}
+    needs:
+      - "publish_containers"
+    runs-on: "ubuntu-24.04"
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+    env:
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.13"
+      BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Set up Docker Buildx"
+        uses: "docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd" # v4
+      - name: "Login to GitHub Container Registry"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
+        with:
+          registry: "ghcr.io"
+          username: "${{ github.actor }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+      - name: "Login to Docker"
+        uses: "docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc" # v2
+        with:
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
+      - name: "Determine if nautobot-version is branch name or from tag name"
+        id: "versionname"
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "nautobot-version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "nautobot-version=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "Merge (prod - final target) to ghcr.io"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "ghcr.io/nautobot/nautobot"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (prod - final target) to dockerhub"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "networktocode/nautobot"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (dev - final-dev target) to ghcr.io"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "ghcr.io/nautobot/nautobot-dev"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
+
+      - name: "Merge (dev - final-dev target) to dockerhub"
+        uses: "./.github/actions/merge-image-digests"
+        with:
+          image: "networktocode/nautobot-dev"
+          python-version: "${{ matrix.python-version }}"
+          nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
+          default-python-version: "${{ env.BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION }}"
+          set-latest: "${{ env.BUILD_PUSH_CONTAINER_ACTION_SET_LATEST }}"
+          cache-scope: "nautobot-dev-${{ steps.versionname.outputs.nautobot-version }}"
 
   slack-notify:
-    if: "${{ ! github.event.release.draft }}"
+    if: ${{ ! github.event.release.draft }}
     needs:
-      - "publish_python"
-      - "publish_containers"
+      - "publish_github"
+      - "publish_pypi"
+      - "merge_containers"
     runs-on: "ubuntu-24.04"
     env:
       SLACK_WEBHOOK_URL: "${{ secrets.SLACK_WEBHOOK_URL }}"
+      SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
       SLACK_MESSAGE: >-
         *NOTIFICATION: NEW-RELEASE-PUBLISHED*\n
         Repository: <${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>\n
@@ -149,8 +227,8 @@ jobs:
       - name: "Send a notification to Slack"
         # ENVs cannot be used directly in job.if. This is a workaround to check
         # if SLACK_WEBHOOK_URL is present.
-        if: "${{ env.SLACK_WEBHOOK_URL != '' }}"
-        uses: "slackapi/slack-github-action@8157a0f4d70c5099e42dcff1258b19bdaabb030b" # v1.17.0
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        uses: "slackapi/slack-github-action@fcfb566f8b0aab22203f066d80ca1d7e4b5d05b3" # v1.27.1
         with:
           payload: |
             {
@@ -170,13 +248,74 @@ jobs:
           SLACK_WEBHOOK_TYPE: "INCOMING_WEBHOOK"
 
   deploy-sandbox:
-    if: "${{ ! github.event.release.draft && ! github.event.release.prerelease }}"
+    if: ${{ ! github.event.release.draft && ! github.event.release.prerelease }}
     needs:
-      - "publish_python"
-      - "publish_containers"
+      - "publish_github"
+      - "publish_pypi"
+      - "merge_containers"
     runs-on: "ubuntu-24.04"
     steps:
       - name: "Call deploy sandbox workflow for demo.nautobot.com"
         run: "gh workflow run deploy_sandbox.yml -R nautobot/sandboxes -f sandbox_environment=demo.nautobot.com"
         env:
           GH_TOKEN: "${{ secrets.GH_NAUTOBOT_BOT_TOKEN }}"
+
+  create-pr-to-develop:
+    if: "github.event.release.target_commitish == 'main'"
+    permissions:
+      contents: "write"
+      pull-requests: "write"
+    name: "Create a PR from main into develop"
+    needs:
+      - "publish_github"
+      - "publish_pypi"
+      - "merge_containers"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: "Checkout main"
+        uses: "actions/checkout@v4"
+        with:
+          ref: "main"
+          fetch-depth: 0
+
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-version: "2.1.4"
+          poetry-install-options: "--no-root"
+
+      - name: "Create release branch from main"
+        id: "branch"
+        run: |
+
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          VERSION="${TAG_NAME#v}"
+
+          BRANCH_NAME="release-${VERSION}-to-develop"
+
+          # Ensure release branch doesn't already exist
+          if git rev-parse --verify origin/$BRANCH_NAME > /dev/null 2>&1; then
+            echo "Error: Release branch $BRANCH_NAME already exists."
+            exit 1
+          fi
+
+          git checkout -b "$BRANCH_NAME"
+
+          poetry version prepatch
+          git add pyproject.toml && git commit -m "Bump version"
+          git push origin "$BRANCH_NAME"
+
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: "Create Pull Request to develop"
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          gh pr create \
+            --title "Post release ${{ github.event.release.tag_name }} to develop" \
+            --body "Please do a merge commit." \
+            --base "develop" \
+            --head "${{ steps.branch.outputs.branch_name }}"
