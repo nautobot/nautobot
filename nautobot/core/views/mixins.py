@@ -1,6 +1,6 @@
 import logging
-import multiprocessing
 import re
+import signal
 from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
@@ -14,7 +14,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, Model, ProtectedError, Q, QuerySet
+from django.db.models import CharField, ManyToManyField, Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -1617,7 +1617,8 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
         actions = super().get_extra_actions()
         if hasattr(cls, "queryset") and cls.queryset is not None:
             try:
-                cls.queryset.model._meta.get_field("name")
+                if not isinstance(cls.queryset.model._meta.get_field("name"), CharField):
+                    raise FieldDoesNotExist
             except FieldDoesNotExist:
                 actions = [a for a in actions if a.__name__ != "bulk_rename"]
         return actions
@@ -1633,6 +1634,12 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
         return self._bulk_rename(request)
 
     def _bulk_rename(self, request):
+        """Process the bulk rename form.
+
+        Note: Unlike bulk_edit/bulk_delete, this intentionally does not support the "_all" (select all matching query)
+        flow. Rename requires a preview step where users see old→new names before applying, which is impractical for
+        unbounded querysets. Only explicitly selected PKs are supported.
+        """
         self.form_class = self._create_bulk_rename_form_class()
         query_pks = request.POST.getlist("pk")
         selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
@@ -1662,13 +1669,15 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                         form.add_error("find", f"Invalid regex: {e}")
                         return self._render_form_response(request, form, selected_objects)
 
+                    # Test the regex on the first object with a timeout to catch catastrophic backtracking
+                    if self._safe_regex_sub(pattern, replace, selected_objects[0].name) is None:
+                        form.add_error("find", "Regex pattern timed out — simplify the expression and try again.")
+                        return self._render_form_response(request, form, selected_objects)
+
                 renamed_pks = []
                 for obj in selected_objects:
                     if use_regex:
-                        obj.new_name, ok = self._safe_regex_sub(pattern, replace, obj.name)
-                        if not ok:
-                            form.add_error("find", "Regex pattern timed out — simplify the expression and try again.")
-                            return self._render_form_response(request, form, selected_objects)
+                        obj.new_name = self._regex_sub(pattern, replace, obj.name)
                     else:
                         obj.new_name = obj.name.replace(find, replace)
                     renamed_pks.append(obj.pk)
@@ -1676,7 +1685,11 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                 if action == "_apply":
                     for obj in selected_objects:
                         obj.name = obj.new_name
-                        obj.save()
+                        try:
+                            obj.validated_save()
+                        except ValidationError as e:
+                            form.add_error(None, f"{obj.name}: {e}")
+                            raise
 
                     # Enforce constrained permissions
                     if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
@@ -1688,49 +1701,49 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                     )
                     return redirect(self.get_return_url(request))
 
+        except ValidationError:
+            pass  # Error already added to form above
         except ObjectDoesNotExist:
             msg = "Object update failed due to object-level permissions violation"
             form.add_error(None, msg)
 
         return self._render_form_response(request, form, selected_objects)
 
-    REGEX_TIMEOUT_SECONDS = 0.05  # 50ms per object — generous for short name strings
+    REGEX_TIMEOUT_SECONDS = 0.1
+
+    @staticmethod
+    def _regex_sub(pattern, replace, string):
+        """Run re.sub, returning the original string on regex errors."""
+        try:
+            return pattern.sub(replace, string)
+        except re.error:
+            return string
 
     @classmethod
     def _safe_regex_sub(cls, pattern, replace, string, timeout=REGEX_TIMEOUT_SECONDS):
-        """Run re.sub in a subprocess with a timeout to guard against complex regex's resulting in denial of service.
+        """Run _regex_sub with a SIGALRM timeout to guard against catastrophic backtracking (ReDoS).
 
-        Uses multiprocessing so the regex can be killed if it takes too long (threads can't be interrupted in CPython).
+        Only used on the first object as a probe — if the pattern is safe for one name, it's safe for all.
 
         Returns:
-            (str, bool): The result string and True if successful, or the original string and False if timed out.
+            (str or None): The substituted string, or None if the regex timed out.
         """
-        result_queue = multiprocessing.Queue()
-        process = multiprocessing.Process(
-            target=cls._regex_sub_worker,
-            args=(pattern.pattern, replace, string, result_queue),
-        )
-        process.start()
-        process.join(timeout=timeout)
-        if process.is_alive():
-            process.kill()
-            process.join()
+
+        def _alarm_handler(*args, **kwargs):
+            raise TimeoutError("Regex substitution timed out")
+
+        previous_handler = signal.signal(signal.SIGALRM, _alarm_handler)
+        signal.setitimer(signal.ITIMER_REAL, timeout)
+        try:
+            return cls._regex_sub(pattern, replace, string)
+        except TimeoutError:
             cls.logger.warning(
                 "Regex substitution timed out for pattern %r on input of length %d", pattern.pattern, len(string)
             )
-            return string, False
-        try:
-            return result_queue.get_nowait(), True
-        except Exception:
-            return string, True
-
-    @staticmethod
-    def _regex_sub_worker(pattern_str, replace, string, result_queue):
-        """Worker function for _safe_regex_sub, runs in a separate process."""
-        try:
-            result_queue.put(re.sub(pattern_str, replace, string))
-        except re.error:
-            result_queue.put(string)
+            return None
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
 
     def _create_bulk_rename_form_class(self):
         class _Form(BulkRenameForm):

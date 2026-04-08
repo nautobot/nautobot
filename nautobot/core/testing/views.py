@@ -1933,6 +1933,7 @@ class ViewTestCases:
             # Should return 200 (form with error), not hang or 500
             response = self.client.post(self._get_url("bulk_rename"), data)
             self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "Regex pattern timed out")
 
             # Name should be unchanged
             obj.refresh_from_db()

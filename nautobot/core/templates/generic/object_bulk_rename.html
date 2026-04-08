@@ -2,7 +2,7 @@
 {% load helpers %}
 {% load form_helpers %}
 
-{% block title %}Renaming {{ selected_objects|length }} {{ obj_type_plural|bettertitle }} on {{ parent_name }}{% endblock %}
+{% block title %}Renaming {{ selected_objects|length }} {{ obj_type_plural|bettertitle }}{% if parent_name %} on {{ parent_name }}{% endif %}{% endblock %}
 
 {% block content %}
     <form action="" method="post" class="h-100 vstack">

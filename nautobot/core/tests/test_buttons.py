@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import CharField
 from django.test import RequestFactory, TestCase
 
 from nautobot.core.templatetags.buttons import consolidate_bulk_action_buttons
@@ -17,9 +19,9 @@ class ConsolidateBulkActionButtonsTest(TestCase):
         """Build a minimal template context for the templatetag."""
         model = MagicMock()
         if has_rename:
-            model.name = "test"
+            model._meta.get_field.return_value = CharField()
         else:
-            del model.name
+            model._meta.get_field.side_effect = FieldDoesNotExist
         model.is_dynamic_group_associable_model = is_dg_associable
 
         request = self.factory.get("/")

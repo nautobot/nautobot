@@ -1,4 +1,6 @@
 from django import template
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import CharField
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
@@ -218,7 +220,13 @@ def consolidate_bulk_action_buttons(context):
             }
         )
 
-    if model and hasattr(model, "name") and context.get("bulk_rename_url") and context["permissions"]["change"]:
+    has_name_field = False
+    if model:
+        try:
+            has_name_field = isinstance(model._meta.get_field("name"), CharField)
+        except FieldDoesNotExist:
+            pass
+    if context.get("bulk_rename_url") and context["permissions"]["change"] and has_name_field:
         button_defs.append(
             {
                 "label": "Rename Selected",
