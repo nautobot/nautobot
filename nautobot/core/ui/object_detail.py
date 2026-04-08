@@ -361,19 +361,6 @@ class Button(Component):
             "size": self.size,
         }
 
-    def should_render(self, context: Context):
-        # Only show if the user has the permission, which is enforce in super.
-        if not super().should_render(context):
-            return False
-        if self.render_on_tab_id == "__all__":
-            return True
-        # this part is because we want to keep backwards-compatible
-        # when render_on_tab_id was only a string
-        render_on_tab_ids = (
-            self.render_on_tab_id if isinstance(self.render_on_tab_id, (list, tuple)) else [self.render_on_tab_id]
-        )
-        return context.get("active_tab", "main") in render_on_tab_ids
-
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
         if not self.should_render(context):

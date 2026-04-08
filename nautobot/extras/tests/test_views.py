@@ -1,5 +1,6 @@
 from datetime import timedelta
 from http import HTTPStatus
+import re
 from unittest import mock
 import urllib.parse
 import uuid
@@ -43,6 +44,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -70,6 +72,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -2494,6 +2497,178 @@ class DynamicGroupTestCase(
 
     def _get_queryset(self):
         return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
+
+    def _add_group_permissions(self, instance):
+        self.add_permissions(
+            "extras.view_dynamicgroup",
+            get_permission_for_model(instance.content_type.model_class(), "view"),
+        )
+
+    def _assert_members_tab_indicator(self, response_body, expected_count):
+        self.assertIn('aria-controls="members"', response_body)
+        self.assertIn("Members", response_body)
+        if expected_count > 0:
+            self.assertRegex(
+                response_body,
+                re.compile(
+                    rf'aria-controls="members".*?Members\s*<span[^>]*badge[^>]*>\s*{expected_count}\s*</span>',
+                    re.DOTALL,
+                ),
+            )
+
+    def create_dynamic_group(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+
+        dynamic_set_root = DynamicGroup.objects.create(
+            name="DG Root Set",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        dynamic_filter = DynamicGroup.objects.create(
+            name="DG Dynamic Filter",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 1"]},
+        )
+        dynamic_set = DynamicGroup.objects.create(
+            name="DG Dynamic Set",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        dynamic_set_child_a = DynamicGroup.objects.create(
+            name="DG Dynamic Set Child A",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 1"]},
+        )
+        dynamic_set_child_b = DynamicGroup.objects.create(
+            name="DG Dynamic Set Child B",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 3"]},
+        )
+        static_group = DynamicGroup.objects.create(
+            name="DG Static",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        static_group.add_members(Location.objects.filter(name__in=["Location 1", "Location 3"]))
+
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set_root,
+            group=dynamic_filter,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set_root,
+            group=dynamic_set,
+            weight=20,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set,
+            group=dynamic_set_child_a,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set,
+            group=dynamic_set_child_b,
+            weight=20,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+
+        for group in [dynamic_filter, dynamic_set_child_a, dynamic_set_child_b, dynamic_set]:
+            group.update_cached_members()
+
+        return dynamic_filter, dynamic_set, static_group
+
+    def test_dynamic_filter(self):
+        dynamic_filter, _, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_filter)
+
+        response = self.client.get(dynamic_filter.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn("Ancestors", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?ancestors={dynamic_filter.pk}[^>]*>\s*1\s*<", re.DOTALL),
+        )
+        self.assertIn("Descendants", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?descendants={dynamic_filter.pk}[^>]*>\s*0\s*<", re.DOTALL),
+        )
+        self._assert_members_tab_indicator(response_body, dynamic_filter.count)
+        self.assertIn("Filter", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(
+                r'<pre><code class="language-json">\{\s*&quot;name&quot;:\s*\[\s*&quot;Location 1&quot;\s*\]\s*\}</code></pre>',
+                re.DOTALL,
+            ),
+        )
+
+    def test_dynamic_set(self):
+        _, dynamic_set, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_set)
+
+        response = self.client.get(dynamic_set.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn("Ancestors", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?ancestors={dynamic_set.pk}[^>]*>\s*1\s*<", re.DOTALL),
+        )
+        self.assertIn("Descendants", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?descendants={dynamic_set.pk}[^>]*>\s*2\s*<", re.DOTALL),
+        )
+        self._assert_members_tab_indicator(response_body, dynamic_set.count)
+        self.assertIn("FILTER QUERY LOGIC", response_body)
+        self.assertIn("This is a raw representation of the underlying filter", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(
+                r"<pre>\(\s*name=&#x27;Location 1&#x27; OR name=&#x27;Location 3&#x27;\s*\)</pre>",
+                re.DOTALL,
+            ),
+        )
+
+    def test_static(self):
+        _, _, static_group = self.create_dynamic_group()
+        self._add_group_permissions(static_group)
+
+        response = self.client.get(static_group.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self._assert_members_tab_indicator(response_body, static_group.count)
+        self.assertIn("You can bulk-add and bulk-remove members of this group from the", response_body)
+        self.assertNotIn("Dynamic group membership is cached for performance reasons", response_body)
+        self.assertNotIn("Ancestors", response_body)
+        self.assertNotIn("Descendants", response_body)
+
+    @override_settings(PAGINATE_COUNT=1)
+    def test_get_object_dynamic_set_descendants_view_more(self):
+        _, dynamic_set, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_set)
+
+        response = self.client.get(dynamic_set.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_data = extract_page_body(response.content.decode(response.charset))
+        view_more_url = reverse("extras:dynamicgroup_list") + f"?descendants={dynamic_set.pk}"
+        view_more_link = (
+            f'<a href="{view_more_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>'
+            "View 1 more Descendants</a>"
+        )
+        self.assertInHTML(view_more_link, response_data)
 
     def test_get_object_with_permission(self):
         location_ct = ContentType.objects.get_for_model(Location)
