@@ -16,7 +16,6 @@ class VPNFactoryTestCase(testing.TestCase):
         if status is None:
             status = Status.objects.get(name="Active")
             status.content_types.add(content_type)
-        cls.vpn_status = status
 
     def test_vpn_factory_can_populate_overlay_fields(self):
         """VPNFactory can populate the new overlay-related fields."""
@@ -35,3 +34,24 @@ class VPNFactoryTestCase(testing.TestCase):
             self.assertTrue(vpn.vpn_id.isdigit())
             self.assertGreaterEqual(int(vpn.vpn_id), choices.VPNServiceTypeChoices.VXLAN_VNI_MIN)
             self.assertLessEqual(int(vpn.vpn_id), choices.VPNServiceTypeChoices.VXLAN_VNI_MAX)
+
+    def test_vpn_termination_factory_populates_exactly_one_target(self):
+        """VPNTerminationFactory populates one assigned object type per record."""
+        expected_types = {
+            "vlan": "ipam.vlan",
+            "interface": "dcim.interface",
+            "vm_interface": "virtualization.vminterface",
+        }
+
+        for target_type, assigned_object_type in expected_types.items():
+            with self.subTest(target_type=target_type):
+                termination = factory.VPNTerminationFactory.create(target_type=target_type)
+
+                self.assertEqual(termination.assigned_object_type, assigned_object_type)
+                self.assertEqual(
+                    sum(
+                        value is not None
+                        for value in (termination.vlan, termination.interface, termination.vm_interface)
+                    ),
+                    1,
+                )

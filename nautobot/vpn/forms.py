@@ -497,7 +497,7 @@ class VPNFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, TenancyFilterF
         "vpn_profile",
         "service_type",
         "role",
-        "identifier",
+        "vpn_id",
         "tenant",
         "tenant_group",
         "tags",
