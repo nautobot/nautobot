@@ -1444,7 +1444,7 @@ def run_console_log_job_and_return_job_result(self, *args, **kwargs):
     """
     Execute job with real-time console output.
     """
-    executor = JobConsoleLogExecutor(self.request.id)
+    executor = JobConsoleLogExecutor(job_result_pk=self.request.id, job_kwargs=kwargs)
     return executor.execute()
 
 
