@@ -145,7 +145,7 @@
          {% endif %}
     >
         {% block table %}
-            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
+            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" bulk_rename_url=content_type.model_class|validated_viewname:"bulk_rename" %}
                 {% if permissions.change or permissions.delete %}
                     <form id="object_list_form" method="post" class="form form-horizontal">
                         {% csrf_token %}

@@ -9,7 +9,7 @@ from django import forms as django_forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
@@ -1831,6 +1831,13 @@ class ViewTestCases:
             "use_regex": True,
         }
 
+        def setUp(self):
+            super().setUp()
+            try:
+                self.model._meta.get_field("name")
+            except FieldDoesNotExist:
+                self.skipTest(f"{self.model.__name__} does not have a name field")
+
         def test_bulk_rename_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
@@ -1902,6 +1909,35 @@ class ViewTestCases:
                 expected_name = getattr(objects[i], "name") + "X"
                 self.assertEqual(name, expected_name)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_regex_redos_protection(self):
+            """A catastrophic backtracking pattern should return a form error, not hang."""
+            objects = list(self._get_queryset().all()[:1])
+            pk_list = [obj.pk for obj in objects]
+
+            # Set the object name to a string that triggers catastrophic backtracking with the pattern below
+            obj = objects[0]
+            obj.name = "a" * 30 + "!"
+            obj.save()
+
+            data = {
+                "pk": pk_list,
+                "_apply": True,
+                "find": "(a+)+$",  # Classic ReDoS pattern
+                "replace": "X",
+                "use_regex": True,
+            }
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            # Should return 200 (form with error), not hang or 500
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+
+            # Name should be unchanged
+            obj.refresh_from_db()
+            self.assertEqual(obj.name, "a" * 30 + "!")
+
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
@@ -1911,6 +1947,7 @@ class ViewTestCases:
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
         BulkEditObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
@@ -1927,6 +1964,7 @@ class ViewTestCases:
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """

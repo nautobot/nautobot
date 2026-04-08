@@ -1,4 +1,6 @@
 import logging
+import multiprocessing
+import re
 from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
@@ -12,7 +14,7 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, Model, ProtectedError, Q
+from django.db.models import ManyToManyField, Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -35,6 +37,7 @@ from rest_framework.viewsets import GenericViewSet
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
+    BulkRenameForm,
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
@@ -1595,3 +1598,169 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
+
+
+class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin to bulk rename model instances that have a `name` field.
+
+    The bulk_rename route is only registered for models that have a `name` field;
+    models without one simply won't have the route.
+    """
+
+    logger = logging.getLogger(__name__)
+    queryset: QuerySet
+    bulk_rename_template_name = "generic/object_bulk_rename.html"
+
+    @classmethod
+    def get_extra_actions(cls):
+        actions = super().get_extra_actions()
+        if hasattr(cls, "queryset") and cls.queryset is not None:
+            try:
+                cls.queryset.model._meta.get_field("name")
+            except FieldDoesNotExist:
+                actions = [a for a in actions if a.__name__ != "bulk_rename"]
+        return actions
+
+    @drf_action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+    )
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request)
+
+    def _bulk_rename(self, request):
+        self.form_class = self._create_bulk_rename_form_class()
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.get_queryset().model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        action = "_preview" if "_preview" in request.POST else "_apply" if "_apply" in request.POST else None
+
+        form = self.form_class(request.POST if action else None, initial={"pk": query_pks})
+
+        if not form.is_valid():
+            return self._render_form_response(request, form, selected_objects)
+
+        try:
+            with transaction.atomic():
+                find = form.cleaned_data["find"]
+                replace = form.cleaned_data["replace"]
+                use_regex = form.cleaned_data["use_regex"]
+
+                if use_regex:
+                    try:
+                        pattern = re.compile(find)
+                    except re.error as e:
+                        form.add_error("find", f"Invalid regex: {e}")
+                        return self._render_form_response(request, form, selected_objects)
+
+                renamed_pks = []
+                for obj in selected_objects:
+                    if use_regex:
+                        obj.new_name, ok = self._safe_regex_sub(pattern, replace, obj.name)
+                        if not ok:
+                            form.add_error("find", "Regex pattern timed out — simplify the expression and try again.")
+                            return self._render_form_response(request, form, selected_objects)
+                    else:
+                        obj.new_name = obj.name.replace(find, replace)
+                    renamed_pks.append(obj.pk)
+
+                if action == "_apply":
+                    for obj in selected_objects:
+                        obj.name = obj.new_name
+                        obj.save()
+
+                    # Enforce constrained permissions
+                    if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
+                        raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Renamed {len(selected_objects)} {self.get_queryset().model._meta.verbose_name_plural}",
+                    )
+                    return redirect(self.get_return_url(request))
+
+        except ObjectDoesNotExist:
+            msg = "Object update failed due to object-level permissions violation"
+            form.add_error(None, msg)
+
+        return self._render_form_response(request, form, selected_objects)
+
+    REGEX_TIMEOUT_SECONDS = 0.05  # 50ms per object — generous for short name strings
+
+    @classmethod
+    def _safe_regex_sub(cls, pattern, replace, string, timeout=REGEX_TIMEOUT_SECONDS):
+        """Run re.sub in a subprocess with a timeout to guard against complex regex's resulting in denial of service.
+
+        Uses multiprocessing so the regex can be killed if it takes too long (threads can't be interrupted in CPython).
+
+        Returns:
+            (str, bool): The result string and True if successful, or the original string and False if timed out.
+        """
+        result_queue = multiprocessing.Queue()
+        process = multiprocessing.Process(
+            target=cls._regex_sub_worker,
+            args=(pattern.pattern, replace, string, result_queue),
+        )
+        process.start()
+        process.join(timeout=timeout)
+        if process.is_alive():
+            process.kill()
+            process.join()
+            cls.logger.warning(
+                "Regex substitution timed out for pattern %r on input of length %d", pattern.pattern, len(string)
+            )
+            return string, False
+        try:
+            return result_queue.get_nowait(), True
+        except Exception:
+            return string, True
+
+    @staticmethod
+    def _regex_sub_worker(pattern_str, replace, string, result_queue):
+        """Worker function for _safe_regex_sub, runs in a separate process."""
+        try:
+            result_queue.put(re.sub(pattern_str, replace, string))
+        except re.error:
+            result_queue.put(string)
+
+    def _create_bulk_rename_form_class(self):
+        class _Form(BulkRenameForm):
+            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
+
+        return _Form
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
+        Args:
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
+        """
+
+        return ""
+
+    def _render_form_response(self, request, form, selected_objects):
+        return Response(
+            {
+                "template": self.bulk_rename_template_name,
+                "form": form,
+                "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
+            }
+        )
