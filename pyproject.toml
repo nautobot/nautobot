@@ -39,9 +39,9 @@ celery = "~5.6.3"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.6"
+cryptography = "~46.0.7"
 # Fundamental web framework for Nautobot
-Django = "~4.2.29"
+Django = "~4.2.30"
 # Adds AJAX capabilities to django-tables2
 django-ajax-tables = "~1.1.1"
 # LDAP Support
@@ -104,7 +104,7 @@ graphene-django-optimizer = "~0.10.0"
 # Template rendering engine
 Jinja2 = "~3.1.6"
 # Optional data validation of config contexts - loose dependency since our usage is light but apps may be more specific
-jsonschema = "^4.7.0"
+jsonschema = "^4.26.0"
 # Library to access Kubernetes API used to develop K8s integration
 kubernetes = "^33.1.0"
 # Rendering of markdown files to HTML
@@ -112,17 +112,17 @@ Markdown = "~3.8.2"
 # MySQL database adapter
 mysqlclient = {version = "~2.2.8", optional = true}
 # NAPALM automation library
-napalm = {version = ">=4.1.0,<6.0.0", optional = true}
+napalm = {version = ">=5.1.0,<6.0.0", optional = true}
 # IP prefix and address handling
 netaddr = "~1.3.0"
 # Library of network related utilities including network driver mappings and Jinja Filters
 # Note: netutils is limited in scope, dependencies, and observes semver, as such
 #       we permit a looser (^) version constraint here.
-netutils = "^1.14.0"
+netutils = "^1.17.1"
 # HTML sanitization
 nh3 = "~0.3.4"
 # Handling of version numbers
-packaging = ">=23.1"
+packaging = ">=26.0"
 # Image processing library
 Pillow = "^12.1.1"
 # Custom prometheus metrics
@@ -196,7 +196,7 @@ mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
 mkdocs-material = "~9.7.6"
 # Handle docs redirections
-mkdocs-redirects = "~1.2.2"
+mkdocs-redirects = "~1.2.3"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.11"
 # Automatic documentation from sources, for MkDocs
@@ -206,7 +206,7 @@ mkdocstrings-python = "~1.19.0"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
-djhtml = "~3.0.10"
+djhtml = "~3.0.11"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
@@ -228,7 +228,7 @@ django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.7.2"
 # Integration Tests
-requests = "~2.33.0"
+requests = "~2.33.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
