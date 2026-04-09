@@ -2112,7 +2112,7 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf10__lte": ["2016-06-26T12:00:00Z"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf10__lte="2016-06-26T12:00:00Z"),
         )
-        self.assertQuerySetEqualAndNotEmpty(
+        self.assertQuerySetEqual(
             self.filterset({"cf_cf10__lte": ["2016-06-25T12:00:00Z"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf10__lte="2016-06-25T12:00:00Z"),
         )
@@ -2127,6 +2127,19 @@ class CustomFieldFilterTest(TestCase):
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"cf_cf10__gte": ["2016-06-27T12:00:00Z"]}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf10__gte="2016-06-27T12:00:00Z"),
+        )
+        self.assertQuerySetEqual(
+            self.filterset({"cf_cf10__gte": ["2016-06-28T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__gte="2016-06-28T12:00:00Z"),
+        )
+        self.assertQuerySetEqual(
+            self.filterset(
+                {"cf_cf10__gte": ["2016-06-25T12:00:00Z"], "cf_cf10__lt": ["2016-06-27T12:00:00Z"]}, self.queryset
+            ).qs,
+            self.queryset.filter(
+                _custom_field_data__cf10__gte="2016-06-25T12:00:00Z",
+                _custom_field_data__cf10__lt="2016-06-27T12:00:00Z",
+            ),
         )
 
     def test_filter_date(self):
