@@ -12,6 +12,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    Form,
     modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
@@ -26,6 +27,7 @@ from django.utils.html import format_html, format_html_join, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
+from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
@@ -61,8 +63,8 @@ from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
-    ComponentCreateViewMixin,
     GetReturnURLMixin,
+    NautobotViewSetMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -1810,6 +1812,105 @@ class ModuleTypeUIViewSet(
                 "template": "generic/object_import.html",
                 "form": form,
             }
+        )
+
+
+class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+    create_form_class: type[Form]
+    form_class: type[Form]
+
+    def get_create_form(self, request, data=None):
+        return self.create_form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+
+    def get_model_form(self, request, data=None):
+        return self.form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
+
+    def create(self, request, *args, **kwargs):
+        if request.method == "POST":
+            return self.process_form(request, *args, **kwargs)
+
+        return self.render_form_response(request)
+
+    def process_form(self, request, *args, **kwargs):
+        create_form = self.get_create_form(request, data=request.POST)
+
+        if not create_form.is_valid():
+            return self.render_form_response(request, create_form)
+
+        new_components = []
+        data = deepcopy(request.POST)
+
+        # Support for bulk creation using name_pattern and label_pattern
+        names = create_form.cleaned_data["name_pattern"]
+        labels = create_form.cleaned_data.get("label_pattern")
+
+        # Create multiple objects based on the name_pattern
+        for i, name in enumerate(names):
+            label = labels[i] if labels else None
+            # Initialize the individual component form
+            data["name"] = name
+            data["label"] = label
+            if hasattr(create_form, "get_iterative_data"):
+                data.update(create_form.get_iterative_data(i))
+
+            # Recreate the form for each iteration with updated data
+            component_form = self.get_model_form(request, data=data)
+            if component_form.is_valid():
+                new_components.append(component_form)
+            else:
+                for field, errors in component_form.errors.as_data().items():
+                    # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                    parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
+                    for e in errors:
+                        err_str = ", ".join(e)
+                        create_form.add_error(parent_field, f"{name}: {err_str}")
+
+        if create_form.errors:
+            return self.render_form_response(request, create_form)
+
+        try:
+            with transaction.atomic():
+                # Create the new components
+                new_objs = [component_form.save() for component_form in new_components]
+
+                # Enforce object-level permissions
+                if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                    raise ObjectDoesNotExist
+
+            messages.success(
+                request,
+                f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+            )
+
+            if "_addanother" in request.POST:
+                return redirect(request.get_full_path())
+            else:
+                return redirect(self.get_return_url(request))
+
+        except ObjectDoesNotExist:
+            create_form.add_error(None, "Component creation failed due to object-level permissions violation")
+        return self.render_form_response(request, create_form)
+
+    def render_form_response(self, request, create_form=None):
+        if create_form is None:
+            create_form = self.get_create_form(request, data=request.POST if request.method == "POST" else None)
+
+        model_form = self.get_model_form(request, data=request.POST if request.method == "POST" else None)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": create_form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
         )
 
 
