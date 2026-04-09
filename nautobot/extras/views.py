@@ -1135,7 +1135,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                             ),
                         ),
                     ],
-                    include_columns=["dynamic_group_count", "validation_state"],
+                    include_columns=["validation_state"],
                 ),
             ]
         )
