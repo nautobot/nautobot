@@ -1868,11 +1868,11 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
+            original_names = {obj.pk: obj.name for obj in objects}
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = original_names[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
@@ -1903,11 +1903,11 @@ class ViewTestCases:
             obj_perm.save()
 
             # Bulk rename permitted objects
+            original_names = {obj.pk: obj.name for obj in objects}
             self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = original_names[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_regex_redos_protection(self):
