@@ -1093,6 +1093,7 @@ def check_schema(context, api_version=None):
     help={
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
+        "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
@@ -1114,6 +1115,7 @@ def tests(
     context,
     append_coverage=False,
     buffer=True,
+    pdb=False,
     cache_test_fixtures=True,
     config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
@@ -1168,6 +1170,8 @@ def tests(
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if pdb:
+        command += " --pdb"
     if parallel:
         command += " --parallel"
         if parallel_workers:

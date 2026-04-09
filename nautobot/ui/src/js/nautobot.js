@@ -45,6 +45,7 @@ import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
+import { getEchartsOptionsThemeOverrides } from './echarts.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { refreshMessages } from './messages.js';
@@ -83,6 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Drawer
   initializeDrawers();
+
+  // ECharts
+  window.nb.echarts = { getEchartsOptionsThemeOverrides };
 
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
