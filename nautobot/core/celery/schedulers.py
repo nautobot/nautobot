@@ -99,12 +99,18 @@ class NautobotScheduleEntry(ModelEntry):
 
         if not model.last_run_at:
             model.last_run_at = self._default_now()
-            # if last_run_at is not set and
-            # model.start_time last_run_at should be in way past.
-            # This will trigger the job to run at start_time
-            # and avoid the heap block.
             if model.start_time:
-                model.last_run_at = model.last_run_at - timedelta(days=365 * 30)
+                # Set last_run_at to one minute before start_time so that celery's crontab
+                # remaining_delta (which uses strict less-than: last_run_at.minute < max(self.minute))
+                # correctly identifies the first crontab match at/after start_time as due.
+                model.last_run_at = model.start_time - timedelta(minutes=1)
+                # This replaces the upstream 30-year-ago hack from django-celery-beat PR #636,
+                # which was intended to avoid a "heap block" issue with interval-based schedules.
+                # That fix doesn't apply to Nautobot since we use DatabaseScheduler (max_interval=5s)
+                # and convert all schedules to crontab (ScheduledJob.to_cron()).
+                # The 30-year trick caused crontab-scheduled jobs to run once immediately (ASAP)
+                # before following their crontab schedule.
+                # See: https://github.com/nautobot/nautobot/issues/8316
 
         self.last_run_at = model.last_run_at
 
