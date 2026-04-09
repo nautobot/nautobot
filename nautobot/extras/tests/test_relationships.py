@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InventoryItem,
     Location,
     LocationType,
     Platform,
@@ -48,6 +49,7 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.models.jobs import JobLogEntry
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 
@@ -1432,6 +1434,8 @@ class RequiredRelationshipTestMixin:
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         ControllerManagedDeviceGroup.objects.all().delete()
         Controller.objects.all().delete()
