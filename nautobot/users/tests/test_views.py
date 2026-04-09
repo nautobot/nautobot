@@ -239,15 +239,6 @@ class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 302)
         self.assertIn("/login/", response.url)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_custom_actions(self):
-        self.skipTest("Token model does not support notes custom action.")
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_filter_form_fields_are_working(self):
-        """Filter behavior is covered in users/tests/test_filters.py TokenTestCase."""
-        self.skipTest("Filter behavior for Token is tested in users/tests/test_filters.py")
-
     def test_token_add_form_shows_key_field(self):
         self.add_permissions("users.add_token", "users.view_token")
         response = self.client.get(reverse("user:token_add"))
