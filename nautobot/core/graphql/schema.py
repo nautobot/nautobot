@@ -91,6 +91,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_TEXT: graphene.String(),
     CustomFieldTypeChoices.TYPE_BOOLEAN: graphene.Boolean(),
     CustomFieldTypeChoices.TYPE_DATE: DateType(),
+    CustomFieldTypeChoices.TYPE_DATETIME: graphene.DateTime(),
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
