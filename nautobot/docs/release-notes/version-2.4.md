@@ -184,10 +184,6 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 - [#8316](https://github.com/nautobot/nautobot/issues/8316) - Fixed scheduled jobs with custom crontab schedules running once immediately (ASAP) before following their crontab schedule.
 - [#8824](https://github.com/nautobot/nautobot/issues/8824) - Fixed k8s job with sensitive variables.
 
-### Documentation in v2.4.31
-
-- [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated release process documentation to reflect available automation.
-
 ### Housekeeping in v2.4.31
 
 - [#6267](https://github.com/nautobot/nautobot/issues/6267) - Replaced third-party GitHub action in release CI.
