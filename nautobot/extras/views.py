@@ -1066,9 +1066,79 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
             return object_detail.ObjectDetailContent(panels=panels_common)
 
         try:
+            Draft7Validator.check_schema(instance.data_schema)
             validator = Draft7Validator(instance.data_schema)
         except SchemaError:
             validator = None
+
+        validation_panels = []
+        if validator is None:
+            validation_panels.append(
+                object_detail.TextPanel(
+                    label="",
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=50,
+                    context_field="invalid_schema_message",
+                    render_as=object_detail.TextPanel.RenderOptions.PLAINTEXT,
+                )
+            )
+        validation_panels.extend(
+            [
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=100,
+                    table_title="Config Contexts",
+                    table_class=tables.ConfigContextTable,
+                    table_filter="config_context_schema",
+                    related_field_name="schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                        ),
+                    ],
+                    include_columns=["validation_state", "actions"],
+                ),
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=200,
+                    table_title="Devices",
+                    table_class=DeviceTable,
+                    table_filter="local_config_context_schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(
+                                validator, "local_config_context_data", empty_values=()
+                            ),
+                        ),
+                    ],
+                    include_columns=["validation_state"],
+                ),
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=300,
+                    table_title="Virtual Machines",
+                    table_class=VirtualMachineTable,
+                    table_filter="local_config_context_schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(
+                                validator, "local_config_context_data", empty_values=()
+                            ),
+                        ),
+                    ],
+                    include_columns=["dynamic_group_count", "validation_state"],
+                ),
+            ]
+        )
 
         extra_tabs = (
             object_detail.DistinctViewTab(
@@ -1076,61 +1146,7 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                 tab_id="validation",
                 label="Validation",
                 url_name="extras:configcontextschema_validation",
-                panels=(
-                    object_detail.ObjectsTablePanel(
-                        section=SectionChoices.FULL_WIDTH,
-                        weight=100,
-                        table_title="Config Contexts",
-                        table_class=tables.ConfigContextTable,
-                        table_filter="config_context_schema",
-                        related_field_name="schema",
-                        tab_id="validation",
-                        add_button_route=None,
-                        extra_columns=[
-                            (
-                                "validation_state",
-                                tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
-                            ),
-                        ],
-                        include_columns=["validation_state", "actions"],
-                    ),
-                    object_detail.ObjectsTablePanel(
-                        section=SectionChoices.FULL_WIDTH,
-                        weight=200,
-                        table_title="Devices",
-                        table_class=DeviceTable,
-                        table_filter="local_config_context_schema",
-                        tab_id="validation",
-                        add_button_route=None,
-                        extra_columns=[
-                            (
-                                "validation_state",
-                                tables.ConfigContextSchemaValidationStateColumn(
-                                    validator, "local_config_context_data", empty_values=()
-                                ),
-                            ),
-                        ],
-                        include_columns=["validation_state"],
-                    ),
-                    object_detail.ObjectsTablePanel(
-                        section=SectionChoices.FULL_WIDTH,
-                        weight=300,
-                        table_title="Virtual Machines",
-                        table_class=VirtualMachineTable,
-                        table_filter="local_config_context_schema",
-                        tab_id="validation",
-                        add_button_route=None,
-                        extra_columns=[
-                            (
-                                "validation_state",
-                                tables.ConfigContextSchemaValidationStateColumn(
-                                    validator, "local_config_context_data", empty_values=()
-                                ),
-                            ),
-                        ],
-                        include_columns=["dynamic_group_count", "validation_state"],
-                    ),
-                ),
+                panels=tuple(validation_panels),
             ),
         )
 
@@ -1153,6 +1169,11 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
 
         if instance:
             context["object_detail_content"] = self.get_object_detail_content(instance)
+            if isinstance(instance.data_schema, dict):
+                try:
+                    Draft7Validator.check_schema(instance.data_schema)
+                except SchemaError:
+                    context["invalid_schema_message"] = "No schema available"
 
         return context
 
