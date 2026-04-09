@@ -44,6 +44,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -695,6 +696,7 @@ class ScheduledJobSerializer(BaseModelSerializer):
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
     associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
+    state = ChoiceField(choices=ScheduledJobStateChoices, read_only=True)
 
     class Meta:
         model = ScheduledJob

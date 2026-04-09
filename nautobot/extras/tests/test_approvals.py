@@ -252,7 +252,7 @@ class ApprovalWorkflowDefinitionAPITest(ApprovalWorkflowTestMixin, APIViewTestCa
         cls.update_data = {
             "name": "Approval Workflow Definition 4",
             "model_content_type": "extras.scheduledjob",
-            "model_constraints": {"approval_required": True},
+            "model_constraints": {"name": "Bulk Delete Objects"},
         }
 
     def get_deletable_object(self):

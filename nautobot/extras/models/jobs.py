@@ -42,6 +42,7 @@ from nautobot.extras.choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
@@ -1444,6 +1445,14 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
 
+    state = models.CharField(
+        max_length=30,
+        choices=ScheduledJobStateChoices,
+        default=ScheduledJobStateChoices.ACTIVE,
+        help_text="Current state of the Scheduled Job",
+        db_index=True,
+    )
+
     # todoindex:
     # equivalent to PeriodicTask.enabled
     enabled = models.BooleanField(
@@ -1554,8 +1563,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
 
     # todoindex:
-    approval_required = models.BooleanField(default=False)
-
     decision_date = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1599,6 +1606,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.last_run_at = self.start_time - timedelta(
                     **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
                 )
+        # When celery beat finishes executing a one-off job, it sets enabled=False and calls save().
+        # At that point state is still ACTIVE (no workflow transition occurred), so we flip it to COMPLETED.
+        # Workflow transitions (on_workflow_initiated/approved/denied/canceled) set status explicitly before save(),
+        # so they won't be affected by this check.
+        if not self.enabled and self.state == ScheduledJobStateChoices.ACTIVE:
+            self.state = ScheduledJobStateChoices.COMPLETED
         is_new = not self.present_in_database
         super().save(*args, **kwargs)
         if is_new:
@@ -1606,12 +1619,15 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set approval required to True."""
-        self.approval_required = True
+        self.state = ScheduledJobStateChoices.PENDING
+        self.enabled = False
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.ACTIVE
+        self.enabled = True
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
@@ -1620,6 +1636,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.DENIED
         self.enabled = False
         self.save()
 
@@ -1629,6 +1646,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.CANCELED
         self.enabled = False
         self.save()
 
@@ -1646,6 +1664,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.one_off and self.start_time < timezone.now():
             return "extras/job_approval_confirmation.html"
         return None
+
+    @property
+    def approval_required(self):
+        return self.state == ScheduledJobStateChoices.PENDING
 
     @property
     def runnable(self):
