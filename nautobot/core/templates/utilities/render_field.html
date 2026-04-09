@@ -49,6 +49,7 @@
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
                             >
                                 <span class="mdi mdi-plus-thick"></span>
                                 <span class="visually-hidden">Add a new {{ verbose_name }}</span>
@@ -67,6 +68,7 @@
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
                             >
                                 <span class="mdi mdi-filter"></span>
                                 <span class="visually-hidden">Search {{ verbose_name_plural }}</span>

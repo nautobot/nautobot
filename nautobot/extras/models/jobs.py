@@ -14,7 +14,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
+from django.db import connections, InterfaceError, models, OperationalError, transaction
 from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -42,6 +42,7 @@ from nautobot.extras.choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
@@ -786,6 +787,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         return None
 
     @property
+    def console_log(self):
+        return self.celery_kwargs.get("nautobot_job_console_log", False)
+
+    @property
     def job_description(self):
         return self.job_model.description if self.job_model else None
 
@@ -1148,7 +1153,20 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if not self.use_job_logs_db or not JOB_LOGS:
             log.save()
         else:
-            log.save(using=JOB_LOGS)
+            try:
+                conn = connections[JOB_LOGS]
+                # Close the existing connection if it has encountered errors or if the CONN_MAX_AGE is exceeded.
+                # Without this, job logs connections persist indefinitely, regardless of the CONN_MAX_AGE setting.
+                # A subsequent ORM call will automatically open a new connection.
+                conn.close_if_unusable_or_obsolete()
+                log.save(using=JOB_LOGS)
+            # Some failure scenarios, such as a DB connection closed by the server, cannot be easily detected.
+            # In these cases, we manually clear the connection and retry.
+            except (InterfaceError, OperationalError):
+                # Explicitly clear the connection socket due to MySQL not playing nicely with conn.close()
+                conn.connection = None
+                conn.ensure_connection()
+                log.save(using=JOB_LOGS)
 
         if self.celery_kwargs.get("nautobot_job_console_log", False):
             job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
@@ -1427,6 +1445,14 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
 
+    state = models.CharField(
+        max_length=30,
+        choices=ScheduledJobStateChoices,
+        default=ScheduledJobStateChoices.ACTIVE,
+        help_text="Current state of the Scheduled Job",
+        db_index=True,
+    )
+
     # todoindex:
     # equivalent to PeriodicTask.enabled
     enabled = models.BooleanField(
@@ -1537,8 +1563,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
 
     # todoindex:
-    approval_required = models.BooleanField(default=False)
-
     decision_date = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1582,6 +1606,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 self.last_run_at = self.start_time - timedelta(
                     **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
                 )
+        # When celery beat finishes executing a one-off job, it sets enabled=False and calls save().
+        # At that point state is still ACTIVE (no workflow transition occurred), so we flip it to COMPLETED.
+        # Workflow transitions (on_workflow_initiated/approved/denied/canceled) set status explicitly before save(),
+        # so they won't be affected by this check.
+        if not self.enabled and self.state == ScheduledJobStateChoices.ACTIVE:
+            self.state = ScheduledJobStateChoices.COMPLETED
         is_new = not self.present_in_database
         super().save(*args, **kwargs)
         if is_new:
@@ -1589,12 +1619,15 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set approval required to True."""
-        self.approval_required = True
+        self.state = ScheduledJobStateChoices.PENDING
+        self.enabled = False
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.ACTIVE
+        self.enabled = True
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
@@ -1603,6 +1636,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.DENIED
         self.enabled = False
         self.save()
 
@@ -1612,6 +1646,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.CANCELED
         self.enabled = False
         self.save()
 
@@ -1629,6 +1664,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.one_off and self.start_time < timezone.now():
             return "extras/job_approval_confirmation.html"
         return None
+
+    @property
+    def approval_required(self):
+        return self.state == ScheduledJobStateChoices.PENDING
 
     @property
     def runnable(self):

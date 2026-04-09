@@ -54,6 +54,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
@@ -1034,6 +1035,9 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     content_type = MultipleContentTypeField(
         feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
     )
+    group_type = forms.MultipleChoiceField(
+        choices=DynamicGroupTypeChoices, required=False, widget=StaticSelect2Multiple()
+    )
     tags = TagFilterField(model)
 
 
@@ -1947,6 +1951,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="name",
     )
+    has_job_console_entries = forms.NullBooleanField(
+        required=False,
+        label="Has Job Console Entries",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
@@ -1961,6 +1970,11 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+    state = forms.MultipleChoiceField(
+        choices=ScheduledJobStateChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
 
 
 #

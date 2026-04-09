@@ -43,6 +43,7 @@ from nautobot.extras.choices import (
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -1361,6 +1362,27 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
         self.assertEqual(ctx1.get("device_family"), "Device Family 1")
         self.assertEqual(ctx2.get("device_family"), None)
+
+    def test_get_for_object_inheritance(self):
+        """
+        Verify that get_for_object handles models inheriting from Device.
+        """
+
+        # We use an existing device but mock its model_name to something else, to emulate inheritance.
+        with mock.patch.object(self.device._meta, "model_name", "proxy_device"):
+            self.assertEqual(self.device._meta.model_name, "proxy_device")
+            contexts = ConfigContext.objects.get_for_object(self.device)
+            self.assertEqual(contexts.count(), 1)
+
+    def test_annotate_config_context_data_inheritance(self):
+        """
+        Verify that annotate_config_context_data() works for models inheriting from Device.
+        """
+
+        # Mock the model_name at the class level to prove issubclass() is used.
+        with mock.patch.object(Device._meta, "model_name", "proxy_device"):
+            annotated_device = Device.objects.filter(pk=self.device.pk).annotate_config_context_data().first()
+            self.assertEqual(self.device.get_config_context(), annotated_device.get_config_context())
 
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
@@ -3176,15 +3198,75 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
 
+    def test_on_workflow_initiated(self):
+        """Should set status to PENDING and disable the job."""
+        approval_workflow = mock.Mock()
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.daily_utc_job.on_workflow_initiated(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.PENDING)
+        self.assertTrue(self.daily_utc_job.approval_required)
+        self.assertFalse(self.daily_utc_job.enabled)
+
+    def test_on_workflow_approved(self):
+        """Should set status to ACTIVE, enable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_approved(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_on_workflow_denied(self):
+        """Should set status to DENIED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_denied(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.DENIED)
+        self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
     def test_on_workflow_canceled(self):
-        """Should change decision_date and schedule_job should be disabled."""
-        decision_date = datetime(2025, 1, 1)
+        """Should set status to CANCELED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         approval_workflow = mock.Mock()
         approval_workflow.decision_date = decision_date
         self.assertIsNone(self.daily_utc_job.decision_date)
         self.daily_utc_job.on_workflow_canceled(approval_workflow)
-        self.assertEqual(self.daily_utc_job.decision_date, approval_workflow.decision_date)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.CANCELED)
         self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_sets_completed_when_enabled_turned_off(self):
+        """When celery beat finishes a one-off job it sets enabled=False — status should flip to COMPLETED."""
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.COMPLETED)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_does_not_override_non_active_status_when_disabled(self):
+        """Disabling a job that is already PENDING/DENIED/CANCELED should not overwrite the status."""
+        for state in [
+            ScheduledJobStateChoices.PENDING,
+            ScheduledJobStateChoices.DENIED,
+            ScheduledJobStateChoices.CANCELED,
+        ]:
+            with self.subTest(state=state):
+                self.daily_utc_job.enabled = False
+                self.daily_utc_job.state = state
+                self.daily_utc_job.save()
+                self.daily_utc_job.refresh_from_db()
+                self.assertEqual(self.daily_utc_job.state, state)
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
@@ -3981,6 +4063,21 @@ class JobResultTestCase(TestCase):
             JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
 
         save_mock.assert_called_once()
+
+    def test_console_log_property(self):
+        """console_log property should reflect nautobot_job_console_log from celery_kwargs."""
+
+        with self.subTest("Returns True when nautobot_job_console_log is True"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+            self.assertTrue(self.job_result.console_log)
+
+        with self.subTest("Returns False when nautobot_job_console_log is False"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": False}
+            self.assertFalse(self.job_result.console_log)
+
+        with self.subTest("Returns False when key is absent"):
+            self.job_result.celery_kwargs = {}
+            self.assertFalse(self.job_result.console_log)
 
     def test_log_creates_job_console_entry_when_console_log_enabled(self):
         """log() should create a JobConsoleEntry when nautobot_job_console_log is True."""

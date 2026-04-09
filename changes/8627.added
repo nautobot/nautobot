@@ -1,2 +1,0 @@
-Added the ability to run k8s jobs with the console log.
-Added `execute_job_result` management command introduced as the shared leaf executor for both `runjob --local` and `runjob_with_job_result` flows and JobConsoleLogExecutor subprocess mode.

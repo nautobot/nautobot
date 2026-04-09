@@ -1,8 +1,0 @@
-Updated development dependency `coverage` to `~7.13.5`.
-Updated development dependency `django-debug-toolbar` to `~6.2.0`.
-Updated development dependency `faker` to `^40.11.0`.
-Updated development dependency `openapi-spec-validator` to `~0.8.4`.
-Updated development dependency `rich` to `~14.3.3`.
-Updated development dependency `ruff` to `~0.15.6`.
-Updated development dependency `time-machine` to `~3.2.0`.
-Updated development dependency `yamllint` to `~1.38.0`.

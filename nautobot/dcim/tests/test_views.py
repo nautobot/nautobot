@@ -301,8 +301,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
                 # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url, headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=2")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -313,8 +313,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
                 # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url, headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=3")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None or loc.parent.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -337,19 +337,17 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
                 self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True, count=0)
 
-        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
-            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
-                root = Location.objects.first()
-                # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url + f"?subtree={root.pk}", headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
-                for loc in self._get_queryset().all():
-                    if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
-                        self.assertBodyContains(response, str(loc.pk))
-                    else:
-                        self.assertBodyContains(response, str(loc.pk), count=0)
-                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
-                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+        with self.subTest("Subtree is still rendered when explicit filters are present that preserve hierarchy"):
+            root = Location.objects.filter(parent__isnull=True).first()
+            # Check for filtered location list and message in HTMX response
+            response = self.client.get(list_url + f"?subtree={root.pk}&max_depth=2", headers={"HX-Request": True})
+            for loc in self._get_queryset().all():
+                if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
+                    self.assertBodyContains(response, str(loc.pk))
+                else:
+                    self.assertBodyContains(response, str(loc.pk), count=0)
+            # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(
