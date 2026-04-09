@@ -34,6 +34,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         verbose_name="Phase 2 Policies",
         url_params={"vpn_profiles": "pk"},
     )
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")
@@ -282,6 +283,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vpn_profile = tables.Column(linkify=True)
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNTunnel)
     tags = TagColumn(url_name="vpn:vpntunnel_list")
@@ -302,6 +304,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "encapsulation",
             "role",
             "status",
+            "secrets_group",
             "tenant",
         )
         default_columns = (

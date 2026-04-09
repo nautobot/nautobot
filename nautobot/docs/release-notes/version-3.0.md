@@ -210,6 +210,53 @@ Added the JavaScript Library ECharts version 6.0.0.
 
 <!-- towncrier release notes start -->
 
+## v3.0.11 (2026-04-08)
+
+### Security in v3.0.11
+
+- [#8768](https://github.com/nautobot/nautobot/issues/8768) - Updated dependency `Django` to `~4.2.30` to mitigate CVE-2026-33033 and others.
+- [#8768](https://github.com/nautobot/nautobot/issues/8768) - Updated dependency `cryptography` to `~46.0.7` to mitigate CVE-2026-39892.
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pygments` to `2.20.0` to mitigate CVE-2026-4539. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pymdown-extensions` to `10.21.2` to address an incompatibility with `pygments` version `2.20`. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.0.11
+
+- [#8432](https://github.com/nautobot/nautobot/issues/8432) - Added the capability to assign a Secrets Group to a VPN Tunnel.
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Added ARM64 variants for all published Docker images.
+- [#8791](https://github.com/nautobot/nautobot/issues/8791) - Added VPN, VPNTunnel to searchable models.
+
+### Changed in v3.0.11
+
+- [#8388](https://github.com/nautobot/nautobot/issues/8388) - Changed rear of full-length device in rack elevation view to be clickable
+
+### Fixed in v3.0.11
+
+- [#8316](https://github.com/nautobot/nautobot/issues/8316) - Fixed scheduled jobs with custom crontab schedules running once immediately (ASAP) before following their crontab schedule.
+- [#8730](https://github.com/nautobot/nautobot/issues/8730) - Fixed filtering for all VPN-related list views.
+- [#8802](https://github.com/nautobot/nautobot/issues/8802) - Fixed config_context_schema value failing to update when syncing a config context repository.
+
+### Dependencies in v3.0.11
+
+- [#8767](https://github.com/nautobot/nautobot/issues/8767) - Updated npm dependency `mini-css-extract-plugin` to `^2.10.2`.
+- [#8767](https://github.com/nautobot/nautobot/issues/8767) - Updated npm dependency `postcss` to `^8.5.9`.
+- [#8768](https://github.com/nautobot/nautobot/issues/8768) - Updated dependency `requests` to `~2.33.1`.
+
+### Documentation in v3.0.11
+
+- [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated release process documentation to reflect available automation.
+
+### Housekeeping in v3.0.11
+
+- [#6267](https://github.com/nautobot/nautobot/issues/6267) - Replaced third-party GitHub action in release CI.
+- [#8502](https://github.com/nautobot/nautobot/issues/8502) - Improved the Docker build process and tagging in CI.
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Refactored GitHub CI to use multi-architecture runners for Docker image build and publish.
+- [#8697](https://github.com/nautobot/nautobot/issues/8697) - Fixed Docker image publication for integration branches and releases.
+- [#8699](https://github.com/nautobot/nautobot/issues/8699) - Fixed isolation of docker image digests by cache scope when building multiple images in a single workflow.
+- [#8768](https://github.com/nautobot/nautobot/issues/8768) - Updated development dependency `djhtml` to `~3.0.11`.
+- [#8768](https://github.com/nautobot/nautobot/issues/8768) - Updated development dependency `mkdocs-redirects` to `~1.2.3`.
+- [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated PyPI publication to use Trusted Publisher.
+- [#8799](https://github.com/nautobot/nautobot/issues/8799) - Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
+
 ## v3.0.10 (2026-03-30)
 
 ### Security in v3.0.10
