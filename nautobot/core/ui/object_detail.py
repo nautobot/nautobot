@@ -1241,11 +1241,6 @@ class ObjectsTablePanel(Panel):
                 if column not in body_content_table.columns.columns:
                     raise ValueError(f"You are specifying a non-existent column `{column}`")
                 body_content_table.columns.show(column)
-                if column not in body_content_table.sequence:
-                    if "actions" in body_content_table.sequence:
-                        body_content_table.sequence.insert(body_content_table.sequence.index("actions"), column)
-                    else:
-                        body_content_table.sequence.append(column)
 
         # Enable bulk action toggle if the user has appropriate permissions
         user = request.user

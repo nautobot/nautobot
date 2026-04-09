@@ -25,3 +25,17 @@ class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
         self.assertIn("mdi-close-thick", rendered)
         self.assertIn("text-danger", rendered)
         self.assertIn(escape("'bar' is not of type 'integer'"), rendered)
+
+    def test_render_without_real_validator_shows_no_schema_available(self):
+        config_context = ConfigContext.objects.create(
+            name="Config Context 1",
+            weight=100,
+            data={"foo": "bar"},
+        )
+        column = ConfigContextSchemaValidationStateColumn(None, "data")
+
+        rendered = column.render(record=config_context)
+
+        self.assertIn("mdi-close-thick", rendered)
+        self.assertIn("text-danger", rendered)
+        self.assertIn("No schema available", rendered)

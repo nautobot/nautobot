@@ -1788,6 +1788,11 @@ class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase
         response = self.client.get(self._get_validation_url(instance))
         self.assertHttpStatus(response, 200)
         self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Devices", response_body)
+        self.assertIn("Virtual Machines", response_body)
+        self.assertIn("Validation state", response_body)
 
     def test_validation_action_with_constrained_permission(self):
         instance1, instance2 = self._get_queryset().all()[:2]
@@ -1803,9 +1808,25 @@ class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase
         response = self.client.get(self._get_validation_url(instance1))
         self.assertHttpStatus(response, 200)
         self.assertIn("text/html", response["Content-Type"])
-
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Validation state", response_body)
         response = self.client.get(self._get_validation_url(instance2))
         self.assertHttpStatus(response, 404)
+
+    def test_validation_action_with_invalid_schema_renders_no_schema_available(self):
+        instance = ConfigContextSchema.objects.create(
+            name="Invalid Schema",
+            data_schema={"type": 123},
+        )
+        self.add_permissions("extras.view_configcontextschema")
+
+        response = self.client.get(self._get_validation_url(instance))
+
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Validation state", response_body)
+        self.assertIn("No schema available", response_body)
 
 
 class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):

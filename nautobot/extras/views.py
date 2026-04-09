@@ -1122,15 +1122,6 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
                         add_button_route=None,
                         extra_columns=[
                             (
-                                "dynamic_group_count",
-                                tables.LinkedCountColumn(
-                                    viewname="extras:dynamicgroup_list",
-                                    url_params={"member_id": "pk"},
-                                    verbose_name="Dynamic Groups",
-                                    reverse_lookup="static_group_associations__associated_object_id",
-                                ),
-                            ),
-                            (
                                 "validation_state",
                                 tables.ConfigContextSchemaValidationStateColumn(
                                     validator, "local_config_context_data", empty_values=()
