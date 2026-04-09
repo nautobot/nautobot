@@ -259,6 +259,7 @@ class VPNProfilePhase2PolicyAssignment(BaseModel):
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
 class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
@@ -266,7 +267,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="VPN ID")
+    vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Identifier")
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
@@ -284,6 +285,22 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         blank=True,
         null=True,
     )
+    service_type = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        choices=choices.VPNServiceTypeChoices,
+        blank=True,
+        help_text="Optional classification of this VPN service, for example IPSec or VXLAN-EVPN.",
+    )
+    # Nullable to support backwards-compatible migration of pre-existing VPN rows.
+    status = StatusField(
+        blank=True,
+        null=True,
+    )
+    extra_attributes = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text="Free-form scalar service metadata only; not for references to real Nautobot objects.",
+    )
 
     clone_fields = [
         "description",
@@ -291,6 +308,9 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
         "vpn_profile",
         "role",
         "tenant",
+        "service_type",
+        "status",
+        "extra_attributes",
     ]
 
     class Meta:
@@ -302,6 +322,37 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
     def __str__(self):
         """Stringify instance."""
         return self.name
+
+    @property
+    def can_add_termination(self):
+        """P2P VPN services are limited to two terminations."""
+        if self.service_type in choices.VPNServiceTypeChoices.P2P:
+            return self.vpn_terminations.count() < 2
+        return True
+
+    def clean(self):
+        super().clean()
+
+        if self.service_type in choices.VPNServiceTypeChoices.VXLAN_TYPES:
+            if not self.vpn_id:
+                raise ValidationError({"vpn_id": "Identifier is required for VXLAN-based VPN services."})
+
+            try:
+                vni = int(self.vpn_id)
+            except (TypeError, ValueError) as exc:
+                raise ValidationError(
+                    {"vpn_id": "Identifier must be a numeric VNI for VXLAN-based VPN services."}
+                ) from exc
+
+            if not (choices.VPNServiceTypeChoices.VXLAN_VNI_MIN <= vni <= choices.VPNServiceTypeChoices.VXLAN_VNI_MAX):
+                raise ValidationError(
+                    {
+                        "vpn_id": (
+                            f"VNI must be between {choices.VPNServiceTypeChoices.VXLAN_VNI_MIN} "
+                            f"and {choices.VPNServiceTypeChoices.VXLAN_VNI_MAX}."
+                        )
+                    }
+                )
 
 
 @extras_features(
@@ -400,9 +451,9 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         return self.name
 
     def clean(self):
+        super().clean()
         if self.endpoint_a and self.endpoint_z and self.endpoint_a == self.endpoint_z:
             raise ValidationError("Endpoint A and Endpoint Z cannot be the same.")
-        return super().clean()
 
 
 @extras_features(
@@ -516,6 +567,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         return self.name
 
     def clean(self):
+        super().clean()
         if self.source_ipaddress and self.source_fqdn:
             raise ValidationError("Source IP Address and Source FQDN are mutually exclusive fields. Select only one.")
         if not any([self.source_interface, self.source_ipaddress, self.source_fqdn]):
@@ -534,10 +586,127 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             and (self.tunnel_interface not in self.source_interface.parent.all_interfaces)
         ):
             raise ValidationError("Tunnel Interface and Source Interface must be on the same device")
-        return super().clean()
 
     def save(self, *args, **kwargs):
         if self.source_interface:
             self.device = self.source_interface.parent
         self.name = self._name()
         super().save(*args, **kwargs)
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class VPNTermination(PrimaryModel):
+    """Bind a VPN service to exactly one VLAN, Interface, or VMInterface."""
+
+    natural_key_field_names = ["pk"]
+
+    vpn = models.ForeignKey(
+        to="vpn.VPN",
+        on_delete=models.CASCADE,
+        related_name="vpn_terminations",
+    )
+    vlan = models.ForeignKey(
+        to="ipam.VLAN",
+        on_delete=models.CASCADE,
+        related_name="vpn_terminations",
+        blank=True,
+        null=True,
+    )
+    interface = models.ForeignKey(
+        to="dcim.Interface",
+        on_delete=models.CASCADE,
+        related_name="vpn_terminations",
+        blank=True,
+        null=True,
+    )
+    vm_interface = models.ForeignKey(
+        to="virtualization.VMInterface",
+        on_delete=models.CASCADE,
+        related_name="vpn_terminations",
+        blank=True,
+        null=True,
+    )
+
+    clone_fields = ["vpn"]
+
+    class Meta:
+        ordering = ("vpn__name",)
+        verbose_name = "VPN Termination"
+        verbose_name_plural = "VPN Terminations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vlan"],
+                name="vpn_vpntermination_unique_vlan",
+            ),
+            models.UniqueConstraint(
+                fields=["interface"],
+                name="vpn_vpntermination_unique_interface",
+            ),
+            models.UniqueConstraint(
+                fields=["vm_interface"],
+                name="vpn_vpntermination_unique_vm_interface",
+            ),
+        ]
+
+    def __str__(self):
+        if self.pk and self.assigned_object:
+            return f"{self.assigned_object} <> {self.vpn}"
+        return super().__str__()
+
+    @property
+    def assigned_object(self):
+        return self.vlan or self.interface or self.vm_interface
+
+    @property
+    def assigned_object_type(self):
+        if self.vlan:
+            return "ipam.vlan"
+        if self.interface:
+            return "dcim.interface"
+        if self.vm_interface:
+            return "virtualization.vminterface"
+        return None
+
+    @property
+    def assigned_object_parent(self):
+        if self.interface:
+            return self.interface.device
+        if self.vm_interface:
+            return self.vm_interface.virtual_machine
+        if self.vlan:
+            return self.vlan.vlan_group
+        return None
+
+    def clean(self):
+        super().clean()
+
+        selected = [obj for obj in (self.vlan, self.interface, self.vm_interface) if obj is not None]
+        if len(selected) != 1:
+            raise ValidationError("Exactly one of vlan, interface, or vm_interface must be set.")
+
+        duplicate_fields = {
+            "vlan": self.vlan,
+            "interface": self.interface,
+            "vm_interface": self.vm_interface,
+        }
+        for field_name, value in duplicate_fields.items():
+            if value is None:
+                continue
+            if self.__class__.objects.exclude(pk=self.pk).filter(**{field_name: value}).exists():
+                raise ValidationError({field_name: "This object is already assigned to another VPN termination."})
+
+        if self.vpn_id is None:
+            return
+
+        if self.vpn.service_type in choices.VPNServiceTypeChoices.P2P:
+            count = self.vpn.vpn_terminations.exclude(pk=self.pk).count()
+            if count >= 2:
+                raise ValidationError(
+                    f"{self.vpn.get_service_type_display()} VPNs cannot have more than 2 terminations."
+                )

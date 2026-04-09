@@ -321,6 +321,7 @@ plugins:
         "models/vpn/vpnprofile.md": "user-guide/core-data-model/vpn/vpnprofile.md"
         "models/vpn/vpntunnel.md": "user-guide/core-data-model/vpn/vpntunnel.md"
         "models/vpn/vpntunnelendpoint.md": "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
+        "models/vpn/vpntermination.md": "user-guide/core-data-model/vpn/vpntermination.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -532,6 +533,7 @@ nav:
           - VPN:
               - "user-guide/core-data-model/vpn/index.md"
               - VPN: "user-guide/core-data-model/vpn/vpn.md"
+              - VPN Termination: "user-guide/core-data-model/vpn/vpntermination.md"
               - VPN Tunnel: "user-guide/core-data-model/vpn/vpntunnel.md"
               - VPN Tunnel Endpoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
               - VPN Profile: "user-guide/core-data-model/vpn/vpnprofile.md"

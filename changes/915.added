@@ -1,0 +1,1 @@
+Added overlay VPN service modeling to the `vpn` app: extended `VPN` with `service_type`, `status`, and `extra_attributes`; added `VPNTermination` to bind a VPN service to a VLAN, Interface, or VMInterface, with support for VXLAN VNI validation and point-to-point service type enforcement.
