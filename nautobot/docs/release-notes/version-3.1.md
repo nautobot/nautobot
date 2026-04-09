@@ -134,6 +134,25 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.0a5 (2026-04-07)
+
+### Security in v3.1.0a5
+
+- [#8819](https://github.com/nautobot/nautobot/issues/8819) - Updated dependency `Django` to `>=5.2.13,<5.3` to mitigate CVE-2026-33033 and others.
+
+### Changed in v3.1.0a5
+
+- [#8805](https://github.com/nautobot/nautobot/issues/8805) - JobResult modal now displays link to View job results as soon as the modal loads.
+- [#8813](https://github.com/nautobot/nautobot/issues/8813) - Changed job form modal to replace the Run button with a disabled "Enqueuing..." button and spinner when the form is submitted.
+
+### Fixed in v3.1.0a5
+
+- [#8784](https://github.com/nautobot/nautobot/issues/8784) - Fixed invalid results in Static Assignment to Dynamic Groups embedded search.
+
+### Housekeeping in v3.1.0a5
+
+- [#8799](https://github.com/nautobot/nautobot/issues/8799) - Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
+
 ## v3.1.0a4 (2026-04-02)
 
 ### Security in v3.1.0a4
@@ -181,8 +200,8 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8696](https://github.com/nautobot/nautobot/issues/8696) - Changed Location and Prefix list view behavior so that when table subtrees are toggled, the "Showing X of Y" pagination info is hidden.
 - [#8703](https://github.com/nautobot/nautobot/issues/8703) - Changed `render_on_tab_id` from `Button` class to support also a list.
 - [#8716](https://github.com/nautobot/nautobot/issues/8716) - Added rendering custom form templates capability to Embedded Create modal.
-- [#8738](https://github.com/nautobot/nautobot/issues/8738) - Changed `ApprovalWorkflow.approval_workflow_definition` on_delete behavior from CASCADE to SET_NULL.
-- [#8738](https://github.com/nautobot/nautobot/issues/8738) - Changed `ApprovalWorkflowStage.approval_workflow_stage_definition` on_delete behavior from CASCADE to SET_NULL.
+- [#8738](https://github.com/nautobot/nautobot/issues/8738) - Changed `ApprovalWorkflow.approval_workflow_definition` `on_delete` behavior from `CASCADE` to `SET_NULL`.
+- [#8738](https://github.com/nautobot/nautobot/issues/8738) - Changed `ApprovalWorkflowStage.approval_workflow_stage_definition` `on_delete` behavior from `CASCADE` to `SET_NULL`.
 - [#8753](https://github.com/nautobot/nautobot/issues/8753) - Changed the default ordering of models in the global Search results to place Device, Location, Prefix, and IPAddress first in the results, followed by all remaining core models, followed by all app models.
 - [#8753](https://github.com/nautobot/nautobot/issues/8753) - Changed behavior of `LOCATION_LIST_DEFAULT_MAX_DEPTH`, `PREFIX_LIST_DEFAULT_MAX_DEPTH`, and `PREFIX_LIST_DEFAULT_CONTAINER_ONLY` settings to simply redirect unfiltered access to the Prefix and Location list views to a filtered equivalent, rather than automagically filtering the data behind the scenes.
 - [#8770](https://github.com/nautobot/nautobot/issues/8770) - Changed handling of `nautobot_config.py` to be passed explicitly via `--config=settings.SETTINGS_PATH` in job execution commands.
