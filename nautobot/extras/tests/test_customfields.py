@@ -77,6 +77,11 @@ SIMPLE_FIELDS_DATA = (
         "empty_value": None,
     },
     {
+        "field_type": CustomFieldTypeChoices.TYPE_DATETIME,
+        "field_value": "2016-06-23T12:00:00Z",
+        "empty_value": None,
+    },
+    {
         "field_type": CustomFieldTypeChoices.TYPE_URL,
         "field_value": "http://example.com/",
         "empty_value": "",
@@ -354,6 +359,34 @@ class CustomFieldTest(ModelTestCases.BaseModelTestCase, TestCase):
         location.save()
         location.refresh_from_db()
         self.assertIsNone(location.cf.get(cf.key))
+
+        # Delete the custom field
+        cf.delete()
+
+    def test_datetime_field_value(self):
+        obj_type = ContentType.objects.get_for_model(Location)
+
+        # Create a custom field
+        cf = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATETIME,
+            label="My Datetime Field",
+            required=False,
+        )
+        cf.save()
+        cf.content_types.set([obj_type])
+
+        location = Location.objects.get(name="Location A")
+
+        # Assign a disallowed value (invalid ISO 8601 string) to the Location
+        location.cf[cf.key] = "2020/01/01 12:00:00"
+        with self.assertRaisesRegex(ValidationError, "DateTime values must be in ISO 8601 format."):
+            location.validated_save()
+
+        # Test non-UTC timezone-aware value (should be normalized to UTC)
+        location.cf[cf.key] = "2020-01-01T12:00:00+04:00"
+        location.validated_save()
+        location.refresh_from_db()
+        self.assertEqual(location.cf[cf.key], "2020-01-01T08:00:00Z")
 
         # Delete the custom field
         cf.delete()
@@ -851,6 +884,16 @@ class CustomFieldDataAPITest(APITestCase):
         self.cf_date.validated_save()
         self.cf_date.content_types.set([content_type])
 
+        # Datetime custom field
+        self.cf_datetime = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATETIME,
+            label="Datetime Field",
+            key="datetime_cf",
+            default="2020-01-01T12:00:00Z",
+        )
+        self.cf_datetime.validated_save()
+        self.cf_datetime.content_types.set([content_type])
+
         # URL custom field
         self.cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
@@ -914,6 +957,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_integer,
             self.cf_boolean,
             self.cf_date,
+            self.cf_datetime,
             self.cf_url,
             self.cf_select,
             self.cf_multi_select,
@@ -938,6 +982,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_integer.key: 456,
             self.cf_boolean.key: True,
             self.cf_date.key: "2020-01-02",
+            self.cf_datetime.key: "2020-01-02T12:00:00Z",
             self.cf_url.key: "http://example.com/2",
             self.cf_select.key: "Bar",
             self.cf_multi_select.key: ["Bar", "Baz"],
@@ -1011,6 +1056,7 @@ class CustomFieldDataAPITest(APITestCase):
                 self.cf_integer.key: 456,
                 self.cf_boolean.key: True,
                 self.cf_date.key: "2020-01-02",
+                self.cf_datetime.key: "2020-01-02T12:00:00Z",
                 self.cf_url.key: "http://example.com/2",
                 self.cf_select.key: "Bar",
                 self.cf_multi_select.key: ["Baz"],
@@ -1084,6 +1130,7 @@ class CustomFieldDataAPITest(APITestCase):
             self.cf_integer.key: 456,
             self.cf_boolean.key: True,
             self.cf_date.key: "2020-01-02",
+            self.cf_datetime.key: "2020-01-02T12:00:00Z",
             self.cf_url.key: "http://example.com/2",
             self.cf_select.key: "Bar",
             self.cf_multi_select.key: ["Foo", "Bar"],
@@ -1416,6 +1463,7 @@ class CustomFieldImportTest(TestCase):
             CustomField(label="Integer", type=CustomFieldTypeChoices.TYPE_INTEGER),
             CustomField(label="Boolean", type=CustomFieldTypeChoices.TYPE_BOOLEAN),
             CustomField(label="Date", type=CustomFieldTypeChoices.TYPE_DATE),
+            CustomField(label="Datetime", type=CustomFieldTypeChoices.TYPE_DATETIME),
             CustomField(label="URL", type=CustomFieldTypeChoices.TYPE_URL),
             CustomField(
                 label="Select",
@@ -1452,6 +1500,7 @@ class CustomFieldImportTest(TestCase):
                 "cf_integer",
                 "cf_boolean",
                 "cf_date",
+                "cf_datetime",
                 "cf_url",
                 "cf_select",
                 "cf_multiselect",
@@ -1465,6 +1514,7 @@ class CustomFieldImportTest(TestCase):
                 "123",
                 "True",
                 "2020-01-01",
+                "2020-01-01T12:00:00Z",
                 "http://example.com/1",
                 "Choice A",
                 "Choice A",
@@ -1478,12 +1528,13 @@ class CustomFieldImportTest(TestCase):
                 "456",
                 "False",
                 "2020-01-02",
+                "2020-01-02T12:00:00Z",
                 "http://example.com/2",
                 "Choice B",
                 '"Choice A,Choice B"',
                 "Another custom value",
             ],
-            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", "", ""],
+            ["Location 3", "Test Root", location_status.name, "", "", "", "", "", "", "", "", ""],
         )
         csv_data = "\n".join(",".join(row) for row in data)
         response = self.client.post(reverse("dcim:location_import"), {"csv_data": csv_data})
@@ -1494,11 +1545,12 @@ class CustomFieldImportTest(TestCase):
             location1 = Location.objects.get(name="Location 1")
         except Location.DoesNotExist:
             self.fail(extract_page_body(response.content.decode(response.charset)))
-        self.assertEqual(len(location1.cf), 8)
+        self.assertEqual(len(location1.cf), 9)
         self.assertEqual(location1.cf["text"], "ABC")
         self.assertEqual(location1.cf["integer"], 123)
         self.assertEqual(location1.cf["boolean"], True)
         self.assertEqual(location1.cf["date"], "2020-01-01")
+        self.assertEqual(location1.cf["datetime"], "2020-01-01T12:00:00Z")
         self.assertEqual(location1.cf["url"], "http://example.com/1")
         self.assertEqual(location1.cf["select"], "Choice A")
         self.assertEqual(location1.cf["multiselect"], ["Choice A"])
@@ -1506,11 +1558,12 @@ class CustomFieldImportTest(TestCase):
 
         # Validate data for location 2
         location2 = Location.objects.get(name="Location 2")
-        self.assertEqual(len(location2.cf), 8)
+        self.assertEqual(len(location2.cf), 9)
         self.assertEqual(location2.cf["text"], "DEF")
         self.assertEqual(location2.cf["integer"], 456)
         self.assertEqual(location2.cf["boolean"], False)
         self.assertEqual(location2.cf["date"], "2020-01-02")
+        self.assertEqual(location2.cf["datetime"], "2020-01-02T12:00:00Z")
         self.assertEqual(location2.cf["url"], "http://example.com/2")
         self.assertEqual(location2.cf["select"], "Choice B")
         self.assertEqual(location2.cf["multiselect"], ["Choice A", "Choice B"])
@@ -1879,6 +1932,11 @@ class CustomFieldFilterTest(TestCase):
             CustomFieldChoice.objects.create(custom_field=cf, value="Bar"),
         )
 
+        # Datetime filtering
+        cf = CustomField(label="CF10", type=CustomFieldTypeChoices.TYPE_DATETIME)
+        cf.save()
+        cf.content_types.set([obj_type])
+
         cls.location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         Location.objects.create(
@@ -1895,6 +1953,7 @@ class CustomFieldFilterTest(TestCase):
                 "cf7": "http://foo.example.com/",
                 "cf8": "Foo",
                 "cf9": [],
+                "cf10": "2016-06-26T12:00:00Z",
             },
         )
         Location.objects.create(
@@ -1911,6 +1970,7 @@ class CustomFieldFilterTest(TestCase):
                 "cf7": "http://bar.example.com/",
                 "cf8": "Bar",
                 "cf9": ["Foo"],
+                "cf10": "2016-06-27T12:00:00Z",
             },
         )
         Location.objects.create(
@@ -2028,6 +2088,58 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf4__nire": ["F.*b"]}, self.queryset).qs,
             self.queryset.exclude(_custom_field_data__cf4__iregex="F.*b")
             | self.queryset.filter(_custom_field_data__cf4__isnull=True),
+        )
+
+    def test_filter_datetime(self):
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10": "2016-06-26T12:00:00Z"}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10="2016-06-26T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__n": "2016-06-26T12:00:00Z"}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf10="2016-06-26T12:00:00Z")
+            | self.queryset.filter(_custom_field_data__cf10__isnull=True),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__lte": ["2016-06-28T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__lte="2016-06-28T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__lte": ["2016-06-27T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__lte="2016-06-27T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__lte": ["2016-06-26T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__lte="2016-06-26T12:00:00Z"),
+        )
+        self.assertQuerySetEqual(
+            self.filterset({"cf_cf10__lte": ["2016-06-25T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__lte="2016-06-25T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__gte": ["2016-06-25T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__gte="2016-06-25T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__gte": ["2016-06-26T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__gte="2016-06-26T12:00:00Z"),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf10__gte": ["2016-06-27T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__gte="2016-06-27T12:00:00Z"),
+        )
+        self.assertQuerySetEqual(
+            self.filterset({"cf_cf10__gte": ["2016-06-28T12:00:00Z"]}, self.queryset).qs,
+            self.queryset.filter(_custom_field_data__cf10__gte="2016-06-28T12:00:00Z"),
+        )
+        self.assertQuerySetEqual(
+            self.filterset(
+                {"cf_cf10__gte": ["2016-06-25T12:00:00Z"], "cf_cf10__lt": ["2016-06-27T12:00:00Z"]}, self.queryset
+            ).qs,
+            self.queryset.filter(
+                _custom_field_data__cf10__gte="2016-06-25T12:00:00Z",
+                _custom_field_data__cf10__lt="2016-06-27T12:00:00Z",
+            ),
         )
 
     def test_filter_date(self):
@@ -3997,6 +4109,15 @@ class CustomFieldTableTest(TestCase):
         cf_date.validated_save()
         cf_date.content_types.set([content_type])
 
+        # Datetime custom field
+        cf_datetime = CustomField(
+            type=CustomFieldTypeChoices.TYPE_DATETIME,
+            label="Datetime Field",
+            default="2020-01-01T12:00:00Z",
+        )
+        cf_datetime.validated_save()
+        cf_datetime.content_types.set([content_type])
+
         # URL custom field
         cf_url = CustomField(
             type=CustomFieldTypeChoices.TYPE_URL,
@@ -4062,6 +4183,7 @@ class CustomFieldTableTest(TestCase):
             cf_integer.key: 456,
             cf_boolean.key: True,
             cf_date.key: "2020-01-02",
+            cf_datetime.key: "2020-01-02T12:00:00Z",
             cf_url.key: "http://example.com/2",
             cf_select.key: "Bar",
             cf_multi_select.key: ["Bar", "Baz"],
@@ -4081,6 +4203,7 @@ class CustomFieldTableTest(TestCase):
             cf_integer.key: 0,
             cf_boolean.key: False,
             cf_date.key: None,
+            cf_datetime.key: None,
             cf_url.key: "",
             cf_select.key: None,
             cf_multi_select.key: [],
@@ -4100,6 +4223,7 @@ class CustomFieldTableTest(TestCase):
             "number_field": 456,
             "boolean_field": '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             "date_field": "2020-01-02",
+            "datetime_field": "2020-01-02T12:00:00Z",
             "url_field": '<a href="http://example.com/2">http://example.com/2</a>',
             "choice_field": '<span class="badge bg-secondary">Bar</span>',
             "multi_choice_field": (
@@ -4126,6 +4250,7 @@ class CustomFieldTableTest(TestCase):
             "number_field": 0,
             "boolean_field": '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>',
             "date_field": '<span class="text-secondary">&mdash;</span>',
+            "datetime_field": '<span class="text-secondary">&mdash;</span>',
             "url_field": '<span class="text-secondary">&mdash;</span>',
             "choice_field": '<span class="text-secondary">&mdash;</span>',
             "multi_choice_field": '<span class="text-secondary">&mdash;</span>',
