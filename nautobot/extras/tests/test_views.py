@@ -4161,6 +4161,22 @@ class JobResultTestCase(
         response = self.client.get(url)
         self.assertBodyContains(response, "This is a test")
 
+    def test_get_joblogentrytable_with_filter_q(self):
+        """Test that the q parameter filters log entries by message."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Matching filter
+        response = self.client.get(url, {"q": "This is a test"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "This is a test")
+
+        # Non-matching filter
+        response = self.client.get(url, {"q": "nonexistent-message-xyz"})
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("This is a test", response_content)
+
     def test_htmx_joblogentrytable_pending_job(self):
         """Test HTMX request for a pending job renders partial template."""
         url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
