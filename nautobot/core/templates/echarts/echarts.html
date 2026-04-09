@@ -18,22 +18,11 @@
             // Get current theme
             var currentTheme = document.documentElement.dataset.bsTheme || 'light';
 
-            if (options?.title) {
-                var themeColor = getComputedStyle(document.documentElement).getPropertyValue("--bs-secondary-color").trim();
-                // Only use theme aware color if it's not already explicitly set in the options
-                options.title.textStyle = {color: themeColor, ...options.title.textStyle};
-            }
-
-
             // Display the chart using the configuration items and data just specified.
             myChart.setOption({
                 ...options,
-                // Enable dark mode if the current theme is dark
-                darkMode: currentTheme === 'dark',
-                // Update colors based on theme
-                color: Array.isArray(options.color)
-                    ? options.color.map((colorObj) => colorObj?.[currentTheme] || colorObj?.light || colorObj)
-                    : options.color,
+                // Apply Nautobot theme overrides
+                ...window.nb.echarts.getEchartsOptionsThemeOverrides(options, currentTheme),
             });
             window.addEventListener('resize', function() {
                 myChart.resize();
