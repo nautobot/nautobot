@@ -188,6 +188,7 @@ Available tasks:
   docker-push                  Tags and pushes docker images to the appropriate repos, intended for release use only.
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.
+  generate-release-notes       Generate Release Notes using Towncrier.
   hadolint                     Check Dockerfile for hadolint compliance and other style issues.
   lint                         Run all linters.
   loaddata                     Load data from file.
