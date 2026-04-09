@@ -704,7 +704,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 key="backup_locations",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 source_type=ContentType.objects.get_for_model(Rack),
-                source_label="Backup location(s)",
+                source_label="Backup Location(s)",
                 destination_type=ContentType.objects.get_for_model(Location),
                 destination_label="Racks using this location as a backup",
             ),
@@ -878,12 +878,12 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, power_feed_12_html, html=True)
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
-        <td><div title="Used: 3789&#13;Count: 7680" class="progress text-center">
+        <div title="Used: 3789&#13;Count: 7680" class="progress text-center">
             <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
                 49%
             </div>
-        </div></td>
+        </div>
         """
         self.assertContains(response, total_utilization_html, html=True)
 
