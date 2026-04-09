@@ -56,6 +56,7 @@ from .template_code import (
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
+    PARENT_DEVICE,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -211,6 +212,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE, orderable=False)
+    parent_bay = tables.Column(orderable=False)
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
@@ -244,6 +247,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "secrets_group",
             "capabilities",
             "manufacturer",
+            "parent_device",
+            "parent_bay",
             "tags",
             "actions",
         )
