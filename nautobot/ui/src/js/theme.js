@@ -1,5 +1,6 @@
 import { Modal } from 'bootstrap';
 import { getCookie, setCookie } from './cookie.js';
+import { getEchartsOptionsThemeOverrides } from './echarts.js';
 
 const THEME_MODAL_ID = 'theme_modal';
 
@@ -79,19 +80,7 @@ const handleEchartsThemeChange = (theme) => {
   const echart_instances = document.querySelectorAll('div[_echarts_instance_]');
   echart_instances?.forEach((instance) => {
     const options = JSON.parse(document.getElementById(`echarts-config-${instance.id}`).textContent);
-    const colors = Array.isArray(options.color)
-      ? options.color.map((colorObj) => colorObj?.[theme] || colorObj?.light || colorObj)
-      : options.color;
-    const title = options?.title || {};
-    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--bs-secondary-color').trim();
-
-    // Only use theme aware color if it's not already explicitly set in the options
-    title.textStyle = { color: themeColor, ...title.textStyle };
-    window.echarts.getInstanceByDom(instance)?.setOption({
-      color: colors,
-      darkMode: theme === THEME_DARK,
-      title,
-    });
+    window.echarts.getInstanceByDom(instance)?.setOption(getEchartsOptionsThemeOverrides(options, theme));
   });
 };
 
