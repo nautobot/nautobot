@@ -1,7 +1,6 @@
 {% load helpers %}
 {% load custom_links %}
 {% load form_helpers %}
-{% load ajax_table %}
 {% load render_table from django_tables2 %}
 {% load log_levels %}
 {% load plugins %}
@@ -83,15 +82,6 @@
     </table>
 </div>
 
-
 <div class="card">
-    <div class="card-header">
-        <strong>Logs</strong>
-        <div class="float-end d-print-none">
-            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px; width: 190px;" />
-        </div>
-    </div>
-    {% if result and result.pk %}
-        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
-    {% endif %}
+    {% include 'extras/inc/log_table_filter.html' with result=result %}
 </div>

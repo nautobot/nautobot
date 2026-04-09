@@ -23,6 +23,14 @@ If your deployment of Nautobot had overridden any of the above settings (for exa
 
 If you have a large number of Location and/or Prefix records, you can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, with the potential to significantly improve the performance of these enhanced views as a result.
 
+#### Enforced Permissions for Job Log Entries
+
+Nautobot 3.1 introduces stricter permission enforcement for viewing job log entries in the log table view. Previously, the `extras.view_joblogentry` permission was not consistently required to access this data.
+
+As a result, users who were previously able to view job logs may now be restricted unless they have been explicitly granted the appropriate `extras.view_joblogentry` permission. This change may have unexpected impact on existing deployments where access to job logs was implicitly available.
+
+Administrators should review user roles and permissions to ensure that appropriate access to job logs is granted where needed.
+
 ### App Authors/Maintainers
 
 #### Changes For Django 5.2 Compatibility
@@ -47,6 +55,12 @@ See [Dependent Object Creation and Search](#dependent-object-creation-and-search
 The Bootstrap FileStyle library is now deprecated and will be removed in Nautobot 4.0. The `ClearableFileInput` widget, which previously depended on Bootstrap FileStyle, has already been migrated to the standard Bootstrap 5 file input.
 
 If you do not directly reference the `bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js` script in your code, no action is required. Otherwise, we encourage you to transition to the Bootstrap 5 file input or import an external library of your choice.
+
+#### `django-ajax-tables` Deprecation
+
+The `django-ajax-tables` library is now deprecated and will be removed in Nautobot 4.0. The dynamic table rendering, filtering, and pagination features, which previously depended on this library, have been migrated to use standard `django-tables2` combined with HTMX.
+
+If you do not directly reference `django-ajax-tables` components or its associated JavaScript handlers in your code, no action is required. Otherwise, we encourage you to transition your dynamic tables to the new HTMX-based approach.
 
 ## Release Overview
 
@@ -80,7 +94,7 @@ Configurable Columns have been redesigned for improved usability. You can now ea
 
 #### Job Console
 
-When running jobs, Nautobot now optionally captures and displays all console output in the Job Console tab, including logs previously omitted due to log settings or C-program output. You can now see the complete console log as if running the job interactively, creating a clear separation between job troubleshooting (Job Console) and job reporting (Job Log Entries).
+When running jobs, Nautobot now optionally captures and displays all console output in the [Job Console](../development/jobs/job-logging.md#console-logging) tab, including logs previously omitted due to log settings or C-program output. You can now see the complete console log as if running the job interactively, creating a clear separation between job troubleshooting (Job Console) and job reporting (Job Log Entries).
 
 #### Custom Field Scoping
 

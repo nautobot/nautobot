@@ -14,11 +14,3 @@
         {{ result.name }}
     {% endif %}
 {% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    {% if active_tab != 'job_console_entries' %}
-        {% include 'extras/inc/jobresult_js.html' with result=result %}
-    {% endif %}
-    <script src="{% versioned_static 'js/log_level_filtering.js' %}"></script>
-{% endblock %}

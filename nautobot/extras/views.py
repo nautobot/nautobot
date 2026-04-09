@@ -3394,19 +3394,16 @@ class JobResultUIViewSet(
         custom_view_base_action="view",
     )
     def log_table(self, request, pk=None):
-        """
-        Custom action to return a rendered JobLogEntry table for a JobResult.
-        """
-
+        """Custom action to return a rendered JobLogEntry table for a JobResult."""
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
 
         filter_q = request.GET.get("q")
         if filter_q:
-            queryset = instance.job_log_entries.filter(
+            queryset = instance.job_log_entries.restrict(request.user, "view").filter(
                 Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
             )
         else:
-            queryset = instance.job_log_entries.all()
+            queryset = instance.job_log_entries.restrict(request.user, "view")
 
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {
@@ -3415,7 +3412,28 @@ class JobResultUIViewSet(
         }
         RequestConfig(request, paginate).configure(log_table)
 
-        return HttpResponse(log_table.as_html(request))
+        if request.headers.get("HX-Request"):
+            job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
+
+            # trigger for final reload when job is finished
+            hx_trigger = request.headers.get("HX-Trigger", "")
+            trigger_reload = not job_is_pending and hx_trigger == "log-table-poller"
+
+            context = {
+                "job_result": instance,
+                "job_is_pending": job_is_pending,
+                "has_logs": queryset.exists(),
+                "table_html": log_table.as_html(request),
+                "log_table_url": request.get_full_path(),
+                "trigger_reload": trigger_reload,
+            }
+            response = render(request, "extras/inc/jobresult_log_table_partial.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
+
+        response = HttpResponse(log_table.as_html(request))
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     @action(
         detail=True,
