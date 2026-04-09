@@ -1389,13 +1389,8 @@ class ViewTestCases:
 
         def get_invalid_component_bulk_create_data(self):
             data = self.bulk_create_data.copy()
-            instance = self._get_queryset().first()
-            data["name_pattern"] = instance.name
-            data.pop("label_pattern", None)
-            for parent_attr in ("device", "device_type", "module", "module_type", "virtual_machine"):
-                parent = getattr(instance, parent_attr, None)
-                if parent is not None:
-                    data[parent_attr] = parent.pk
+            data["name_pattern"] = "Invalid child form"
+            data["label_pattern"] = "X" * 300
             return data
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
