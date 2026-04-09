@@ -4143,6 +4143,67 @@ class JobResultTestCase(
         response = self.client.get(url)
         self.assertBodyContains(response, "This is a test")
 
+    def test_htmx_joblogentrytable_pending_job(self):
+        """Test HTMX request for a pending job renders partial template."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        # Pending job should include the poller
+        self.assertBodyContains(response, "log-table-poller")
+
+    def test_htmx_joblogentrytable_completed_job(self):
+        """Test HTMX request for a completed job does not include the poller."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("log-table-poller", response_content)
+
+    def test_htmx_joblogentrytable_trigger_reload_on_completed_job(self):
+        """Test that poller trigger on a completed job sets trigger_reload=True."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(
+            url,
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TRIGGER="log-table-poller",
+        )
+        self.assertHttpStatus(response, 200)
+        # When trigger_reload is True the view should signal a full page reload
+        self.assertBodyContains(response, "window.location.reload();")
+
+    def test_htmx_joblogentrytable_no_trigger_reload_on_pending_job(self):
+        """Test that poller trigger on a pending job does NOT set trigger_reload."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(
+            url,
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TRIGGER="log-table-poller",
+        )
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("HX-Refresh", response_content)
+
+    def test_joblogentrytable_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
     # TODO test with constrained permissions on both JobResult and JobLogEntry records
 
     def test_get_console_entries_anonymous(self):
