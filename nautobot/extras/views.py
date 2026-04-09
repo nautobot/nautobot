@@ -3398,11 +3398,11 @@ class JobResultUIViewSet(
 
         filter_q = request.GET.get("q")
         if filter_q:
-            queryset = instance.job_log_entries.filter(
+            queryset = instance.job_log_entries.restrict(request.user, "view").filter(
                 Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
             )
         else:
-            queryset = instance.job_log_entries.all()
+            queryset = instance.job_log_entries.restrict(request.user, "view")
 
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {

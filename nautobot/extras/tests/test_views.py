@@ -4109,13 +4109,31 @@ class JobResultTestCase(
         cls.console_entry_1 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Starting job execution..."
         )
+        cls.log_entry_1 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Starting job execution...",
+        )
         cls.console_entry_2 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Processing data..."
+        )
+        cls.log_entry_2 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Processing data...",
         )
         cls.console_entry_3 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending,
             timestamp=timezone.now(),
             text="Restricted entry - requires special permission",
+        )
+        cls.log_entry_3 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Restricted entry - requires special permission",
         )
         cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         JobConsoleEntry.objects.create(
@@ -4204,7 +4222,30 @@ class JobResultTestCase(
         response = self.client.get(url, HTTP_HX_REQUEST="true")
         self.assertIn("HX-Request", response.get("Vary", ""))
 
-    # TODO test with constrained permissions on both JobResult and JobLogEntry records
+    def test_get_joblogentrytable_with_constrained_permission(self):
+        """Test that constrained permissions filter log entries correctly."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited log entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobLogEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.log_entry_1.id, self.log_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+
+    # TODO test with constrained permissions on JobResult records
 
     def test_get_console_entries_anonymous(self):
         """Test that anonymous users are redirected to login."""
