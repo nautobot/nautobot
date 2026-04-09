@@ -3349,7 +3349,7 @@ class JobResultUIViewSet(
             patch_vary_headers(response, ["HX-Request"])
             return response
 
-        response = HttpResponse(self.log_table.as_html(request))
+        response = HttpResponse(log_table.as_html(request))
         patch_vary_headers(response, ["HX-Request"])
         return response
 

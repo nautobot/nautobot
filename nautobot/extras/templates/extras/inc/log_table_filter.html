@@ -9,10 +9,11 @@
             placeholder="Filter log level or message"
             title="Filter log level or message"
             style="height: 1.4375rem; width: 11.875rem;"
-
-            hx-get="{% url 'extras:jobresult_log-table' pk=result.pk %}"
-            hx-target="#log-table-wrapper"
-            hx-trigger="input changed delay:500ms"
+            {% if result and result.pk %}
+                hx-get="{% url 'extras:jobresult_log-table' pk=result.pk %}"
+                hx-target="#log-table-wrapper"
+                hx-trigger="input changed delay:500ms"
+            {% endif %}
         />
     </div>
 </div>
