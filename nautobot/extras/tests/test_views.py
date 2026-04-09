@@ -4575,6 +4575,11 @@ class JobTestCase(
                     old_data[instance.pk][field] = getattr(job_class, field)
         self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_create_not_supported(self):
+        self.add_permissions("extras.add_job")
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 404)
+
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
     #

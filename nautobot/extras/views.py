@@ -23,7 +23,6 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
-from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
@@ -76,7 +75,6 @@ from nautobot.core.views.mixins import (
     ObjectEditViewMixin,
     ObjectListViewMixin,
     ObjectNotesViewMixin,
-    ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
@@ -2209,21 +2207,92 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-class JobListView(generic.ObjectListView):
-    """
-    Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
-    """
 
+
+class JobUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobBulkEditForm
     queryset = JobModel.objects.all()
-    table = tables.JobTable
-    filterset = filters.JobFilterSet
-    filterset_form = forms.JobFilterForm
+    serializer_class = serializers.JobSerializer
+    table_class = tables.JobTable
+    # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
+    form_class = forms.JobEditForm
+    filterset_class = filters.JobFilterSet
+    filterset_form_class = forms.JobFilterForm
     action_buttons = ()
-    non_filter_params = (
-        *generic.ObjectListView.non_filter_params,
-        "display",
+    non_filter_params = (*ObjectListViewMixin.non_filter_params, "display")
+    base_template = "generic/object_retrieve.html"
+    # Use "object_retrieve.html" explicitly; get_base_template() resolves to
+    # "job.html" for Job models, which uses the wrong layout for changelog.
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+                value_transforms={
+                    "description": [helpers.render_markdown],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="Job Results",
+                table_filter="job_model",
+                exclude_columns=["name", "job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "console_log_default",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.RUN,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
     )
-    template_name = "extras/job_list.html"
+
+    def get_object(self):
+        # Reload the job class to ensure we have the latest version
+        obj = super().get_object()
+        if self.action == "update":
+            get_job(obj.class_path, reload=True)
+        return obj
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
@@ -2235,42 +2304,44 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         return queryset
 
-    def extra_context(self):
-        # Determine user's preferred display
-        if self.request.GET.get("display") in ["list", "tiles"]:
-            display = self.request.GET.get("display")
-            if self.request.user.is_authenticated:
-                self.request.user.set_config("extras.job.display", display, commit=True)
-        elif self.request.user.is_authenticated:
-            display = self.request.user.get_config("extras.job.display", "list")
-        else:
-            display = "list"
+    def create(self, request, *args, **kwargs):
+        """Job records are system-managed and can't be created from the UI."""
+        raise Http404
 
-        return {
-            "table_inc_template": "extras/inc/job_tiles.html" if display == "tiles" else "extras/inc/job_table.html",
-            "display": display,
-        }
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
 
+        if self.action == "list":
+            # Determine user's preferred display
+            if self.request.GET.get("display") in ["list", "tiles"]:
+                display = self.request.GET.get("display")
+                if self.request.user.is_authenticated:
+                    self.request.user.set_config("extras.job.display", display, commit=True)
+            elif self.request.user.is_authenticated:
+                display = self.request.user.get_config("extras.job.display", "list")
+            else:
+                display = "list"
+            context.update(
+                {
+                    "table_inc_template": "extras/inc/job_tiles.html"
+                    if display == "tiles"
+                    else "extras/inc/job_table.html",
+                    "display": display,
+                }
+            )
 
-class JobRunView(ObjectPermissionRequiredMixin, View):
-    """
-    View the parameters of a Job and enqueue it if desired.
-    """
-
-    queryset = JobModel.objects.all()
-
-    def get_required_permission(self):
-        return "extras.run_job"
+        return context
 
     def _get_job_model_or_404(self, class_path=None, pk=None):
-        """Helper function for get() and post()."""
+        """Helper function for job run actions."""
+        queryset = self.get_queryset()
         if class_path:
             try:
-                job_model = self.queryset.get_for_class_path(class_path)
+                job_model = queryset.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(self.queryset, pk=pk)
+            job_model = get_object_or_404(queryset, pk=pk)
 
         return job_model
 
@@ -2414,10 +2485,10 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         patch_vary_headers(response, ["HX-Request"])
         return response
 
-    def get(self, request, class_path=None, pk=None):
+    def _job_run_get(self, request, class_path=None, pk=None):
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = request.GET.get("job_form_modal", False)
-        job_model = self._get_job_model_or_404(class_path, pk)
+        job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         try:
             job_class = get_job(job_model.class_path, reload=True)
@@ -2467,8 +2538,8 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
-    def post(self, request, class_path=None, pk=None):
-        job_model = self._get_job_model_or_404(class_path, pk)
+    def _job_run_post(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
@@ -2594,101 +2665,31 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
 
         return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
-
-class JobView(generic.ObjectView):
-    queryset = JobModel.objects.all()
-    template_name = "generic/object_retrieve.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                label="Source Code",
-                fields=[
-                    "module_name",
-                    "job_class_name",
-                    "class_path",
-                    "installed",
-                    "is_job_hook_receiver",
-                    "is_job_button_receiver",
-                ],
-            ),
-            jobs_ui.JobObjectFieldsPanel(
-                weight=200,
-                section=SectionChoices.LEFT_HALF,
-                label="Job",
-                fields=["grouping", "name", "description", "enabled"],
-                value_transforms={
-                    "description": [helpers.render_markdown],
-                },
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=100,
-                section=SectionChoices.FULL_WIDTH,
-                table_class=tables.JobResultTable,
-                table_title="Job Results",
-                table_filter="job_model",
-                exclude_columns=["name", "job_model"],
-            ),
-            jobs_ui.JobObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.RIGHT_HALF,
-                label="Properties",
-                fields=[
-                    "console_log_default",
-                    "supports_dryrun",
-                    "dryrun_default",
-                    "read_only",
-                    "hidden",
-                    "has_sensitive_variables",
-                    "is_singleton",
-                    "soft_time_limit",
-                    "time_limit",
-                    "job_queues",
-                    "default_job_queue",
-                ],
-            ),
-        ],
-        extra_buttons=[
-            jobs_ui.JobRunScheduleButton(
-                weight=100,
-                link_name="extras:job_run",
-                label="Run/Schedule",
-                icon="mdi-play",
-                color=ButtonActionColorChoices.SUBMIT,
-                required_permissions=["extras.run_job"],
-            ),
-        ],
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="run",
+        url_name="run",
+        custom_view_base_action="run",
     )
+    def run(self, request, pk=None):
+        """Run/schedule a Job by Job model PK."""
+        if request.method == "POST":
+            return self._job_run_post(request, pk=pk)
+        return self._job_run_get(request, pk=pk)
 
-
-class JobEditView(generic.ObjectEditView):
-    queryset = JobModel.objects.all()
-    model_form = forms.JobEditForm
-    template_name = "extras/job_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # Reload the job class to ensure we have the latest version
-        get_job(obj.class_path, reload=True)
-        return obj
-
-
-class JobBulkEditView(generic.BulkEditView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
-    form = forms.JobBulkEditForm
-    template_name = "extras/job_bulk_edit.html"
-
-
-class JobDeleteView(generic.ObjectDeleteView):
-    queryset = JobModel.objects.all()
-
-
-class JobBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
+    @action(
+        detail=False,
+        methods=["get", "post"],
+        url_path=r"(?P<class_path>[^/]*\.[^/]+|[^/]+/[^/]+/[^/]+)/run",
+        url_name="run_by_class_path",
+        custom_view_base_action="run",
+    )
+    def run_by_class_path(self, request, class_path=None):
+        """Run/schedule a Job by class_path (legacy route compatibility)."""
+        if request.method == "POST":
+            return self._job_run_post(request, class_path=class_path)
+        return self._job_run_get(request, class_path=class_path)
 
 
 class JobQueueUIViewSet(NautobotUIViewSet):
@@ -4464,18 +4465,3 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
-
-
-#
-# Job Extra Views
-#
-# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
-# constructed below # ObjectChangeLogView and ObjectNotesView.
-
-
-class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "generic/object_retrieve.html"
-
-
-class JobObjectNotesView(ObjectNotesView):
-    base_template = "generic/object_retrieve.html"

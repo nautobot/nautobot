@@ -214,6 +214,11 @@ def get_related_class_for_model(model, module_name, object_suffix):
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
     app_config = apps.get_app_config(model._meta.app_label)
+
+    # Job uses `JobEditForm` instead of `JobForm`, so we need to adjust the object_suffix accordingly.
+    if model._meta.label_lower == "extras.job" and object_suffix == "Form" and module_name == "forms":
+        object_suffix = "EditForm"
+
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
