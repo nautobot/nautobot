@@ -25,7 +25,7 @@ If you have a large number of Location and/or Prefix records, you can configure 
 
 #### Enforced Permissions for Job Log Entries
 
-Nautobot 3.1 introduces stricter permission enforcement for viewing job log entries in the log table view. Previously, the `extras.iew_joblogentry` permission was not consistently required to access this data.
+Nautobot 3.1 introduces stricter permission enforcement for viewing job log entries in the log table view. Previously, the `extras.view_joblogentry` permission was not consistently required to access this data.
 
 As a result, users who were previously able to view job logs may now be restricted unless they have been explicitly granted the appropriate `extras.view_joblogentry` permission. This change may have unexpected impact on existing deployments where access to job logs was implicitly available.
 
