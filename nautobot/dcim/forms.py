@@ -3596,6 +3596,7 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
+        label="Untagged VLAN",
     )
     add_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
@@ -3603,6 +3604,7 @@ class InterfaceBulkEditForm(
         query_params={
             "locations": "null",
         },
+        label="Add Tagged VLANs",
     )
     remove_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
@@ -3610,6 +3612,7 @@ class InterfaceBulkEditForm(
         query_params={
             "locations": "null",
         },
+        label="Remove Tagged VLANs",
     )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
