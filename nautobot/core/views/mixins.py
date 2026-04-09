@@ -1,6 +1,5 @@
 import logging
 import re
-import signal
 from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
@@ -1663,21 +1662,23 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                 use_regex = form.cleaned_data["use_regex"]
 
                 if use_regex:
+                    if not self._is_safe_regex(find):
+                        form.add_error(
+                            "find",
+                            "Regex pattern contains nested quantifiers which could cause performance issues. "
+                            "Please simplify the expression.",
+                        )
+                        return self._render_form_response(request, form, selected_objects)
                     try:
                         pattern = re.compile(find)
                     except re.error as e:
                         form.add_error("find", f"Invalid regex: {e}")
                         return self._render_form_response(request, form, selected_objects)
 
-                    # Test the regex on the first object with a timeout to catch catastrophic backtracking
-                    if self._safe_regex_sub(pattern, replace, selected_objects[0].name) is None:
-                        form.add_error("find", "Regex pattern timed out — simplify the expression and try again.")
-                        return self._render_form_response(request, form, selected_objects)
-
                 renamed_pks = []
                 for obj in selected_objects:
                     if use_regex:
-                        obj.new_name = self._regex_sub(pattern, replace, obj.name)
+                        obj.new_name = pattern.sub(replace, obj.name)
                     else:
                         obj.new_name = obj.name.replace(find, replace)
                     renamed_pks.append(obj.pk)
@@ -1709,41 +1710,14 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
         return self._render_form_response(request, form, selected_objects)
 
-    REGEX_TIMEOUT_SECONDS = 0.1
-
-    @staticmethod
-    def _regex_sub(pattern, replace, string):
-        """Run re.sub, returning the original string on regex errors."""
-        try:
-            return pattern.sub(replace, string)
-        except re.error:
-            return string
+    # Matches a group containing a quantifier, followed by another quantifier
+    # e.g. (a+)+, (a*)+, (a+)*, ([a-z]+){2,}, etc.
+    _NESTED_QUANTIFIER_RE = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
 
     @classmethod
-    def _safe_regex_sub(cls, pattern, replace, string, timeout=REGEX_TIMEOUT_SECONDS):
-        """Run _regex_sub with a SIGALRM timeout to guard against catastrophic backtracking (ReDoS).
-
-        Only used on the first object as a probe — if the pattern is safe for one name, it's safe for all.
-
-        Returns:
-            (str or None): The substituted string, or None if the regex timed out.
-        """
-
-        def _alarm_handler(*args, **kwargs):
-            raise TimeoutError("Regex substitution timed out")
-
-        previous_handler = signal.signal(signal.SIGALRM, _alarm_handler)
-        signal.setitimer(signal.ITIMER_REAL, timeout)
-        try:
-            return cls._regex_sub(pattern, replace, string)
-        except TimeoutError:
-            cls.logger.warning(
-                "Regex substitution timed out for pattern %r on input of length %d", pattern.pattern, len(string)
-            )
-            return None
-        finally:
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, previous_handler)
+    def _is_safe_regex(cls, pattern_str):
+        """Check that a regex pattern does not contain nested quantifiers that could cause catastrophic backtracking."""
+        return not cls._NESTED_QUANTIFIER_RE.search(pattern_str)
 
     def _create_bulk_rename_form_class(self):
         class _Form(BulkRenameForm):

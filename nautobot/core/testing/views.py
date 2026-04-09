@@ -1911,19 +1911,15 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_regex_redos_protection(self):
-            """A catastrophic backtracking pattern should return a form error, not hang."""
+            """A pattern with nested quantifiers should be rejected to prevent catastrophic backtracking."""
             objects = list(self._get_queryset().all()[:1])
             pk_list = [obj.pk for obj in objects]
-
-            # Set the object name to a string that triggers catastrophic backtracking with the pattern below
-            obj = objects[0]
-            obj.name = "a" * 30 + "!"
-            obj.save()
+            original_name = objects[0].name
 
             data = {
                 "pk": pk_list,
                 "_apply": True,
-                "find": "(a+)+$",  # Classic ReDoS pattern
+                "find": "(a+)+$",  # Classic ReDoS pattern — nested quantifiers
                 "replace": "X",
                 "use_regex": True,
             }
@@ -1933,11 +1929,11 @@ class ViewTestCases:
             # Should return 200 (form with error), not hang or 500
             response = self.client.post(self._get_url("bulk_rename"), data)
             self.assertHttpStatus(response, 200)
-            self.assertBodyContains(response, "Regex pattern timed out")
+            self.assertBodyContains(response, "nested quantifiers")
 
             # Name should be unchanged
-            obj.refresh_from_db()
-            self.assertEqual(obj.name, "a" * 30 + "!")
+            objects[0].refresh_from_db()
+            self.assertEqual(objects[0].name, original_name)
 
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
