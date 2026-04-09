@@ -872,7 +872,7 @@ class RackUIViewSet(NautobotUIViewSet):
             if key == "devices":
                 request = context["request"]
                 obj = get_obj_from_context(context)
-                device_count = obj.devices.restrict(request.user, "view").filter(rack=obj).count()
+                device_count = obj.devices.restrict(request.user, "view").count()
                 if not device_count:
                     return helpers.HTML_NONE
                 full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
@@ -1058,7 +1058,6 @@ class RackUIViewSet(NautobotUIViewSet):
                     "location",
                     "rack",
                     "manufacturer",
-                    "example_app_manufacturer",
                     "primary_ip",
                     "actions",
                 ],
