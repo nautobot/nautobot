@@ -82,6 +82,10 @@
                 <td>Enabled?</td>
                 <td>{{ object.enabled | render_boolean }}</td>
             </tr>
+             <tr>
+                <td>State</td>
+                <td>{% include 'extras/inc/scheduled_job_label.html' with scheduled_job=object %}</td>
+            </tr>
             <tr>
                 <td>Job Queue</td>
                 <td>{{ object.job_queue | hyperlinked_object }}</td>
