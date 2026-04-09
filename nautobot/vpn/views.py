@@ -342,6 +342,7 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "encapsulation",
                     "role",
                     "status",
+                    "secrets_group",
                     "tenant",
                 ],
             ),

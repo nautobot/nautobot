@@ -1592,20 +1592,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 raise ValidationError({"crontab": e})
         if not self.enabled:
             self.last_run_at = None
-        elif not self.last_run_at:
-            # I'm not sure if this is a bug, or "works as designed", but if self.last_run_at is not set,
-            # the celery beat scheduler will never pick up a recurring job. One-off jobs work just fine though.
-            if self.interval in [
-                JobExecutionType.TYPE_HOURLY,
-                JobExecutionType.TYPE_DAILY,
-                JobExecutionType.TYPE_WEEKLY,
-            ]:
-                # A week is 7 days, otherwise the iteration is set to 1
-                multiplier = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1
-                # Set the "last run at" time to one interval before the scheduled start time
-                self.last_run_at = self.start_time - timedelta(
-                    **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
-                )
         # When celery beat finishes executing a one-off job, it sets enabled=False and calls save().
         # At that point state is still ACTIVE (no workflow transition occurred), so we flip it to COMPLETED.
         # Workflow transitions (on_workflow_initiated/approved/denied/canceled) set status explicitly before save(),
@@ -1769,9 +1755,18 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             name = name or f"{job_model.name} - {start_time}"
         elif interval == JobExecutionType.TYPE_CUSTOM:
             if start_time is None:
-                # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
-                # which returns timezone.now() + timedelta(seconds=15)
-                start_time = timezone.localtime() + timedelta(seconds=20)
+                # Calculate the next crontab match as the start_time so that the scheduled job
+                # accurately reflects when it will first run, rather than using creation time.
+                # Note: start_time is validated against ScheduledJob.earliest_possible_time()
+                # (now + 15s) in the API serializer; the next crontab match always exceeds this.
+                tz = timezone.get_current_timezone()
+                crontab_schedule = cls.get_crontab(crontab, tz=tz)
+                now = timezone.localtime()
+                next_run_delta = crontab_schedule.remaining_estimate(now)
+                # Round up to the nearest minute to compensate for floating-point
+                # precision loss in celery's remaining_estimate (e.g., 4:59:59.999991 -> 5:00:00)
+                total_minutes = -(-int(next_run_delta.total_seconds()) // 60)  # ceiling division
+                start_time = now + timedelta(minutes=total_minutes)
 
         celery_kwargs = {
             "nautobot_job_profile": profile,

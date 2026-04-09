@@ -335,8 +335,16 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         verbose_name="VPN",
         help_text="VPN to which this tunnel belongs",
     )
-    status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)
+    status = StatusField(blank=False, null=False)
+    secrets_group = models.ForeignKey(
+        to="extras.SecretsGroup",
+        on_delete=models.SET_NULL,
+        related_name="vpn_tunnels",
+        default=None,
+        blank=True,
+        null=True,
+    )
     encapsulation = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         choices=choices.EncapsulationChoices,

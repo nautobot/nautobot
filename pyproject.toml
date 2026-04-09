@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.1.0a5"
+version = "3.1.0b1"
 description = "Source of truth and network automation platform."
 authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
@@ -27,7 +27,7 @@ dependencies = [
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.6,<46.1)",
+    "cryptography (>=46.0.7,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.13,<5.3)",
     # Adds AJAX capabilities to django-tables2
@@ -199,7 +199,7 @@ mkdocs-macros-plugin = "~1.5.0"
 # Material for mkdocs theme
 mkdocs-material = "~9.7.6"
 # Handle docs redirections
-mkdocs-redirects = "~1.2.2"
+mkdocs-redirects = "~1.2.3"
 # Automatically handle index pages for docs sections
 mkdocs-section-index = "~0.3.11"
 # Automatic documentation from sources, for MkDocs
@@ -209,7 +209,7 @@ mkdocstrings-python = "~2.0.3"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
-djhtml = "~3.0.10"
+djhtml = "~3.0.11"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
@@ -231,7 +231,7 @@ django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.8.4"
 # Integration Tests
-requests = "~2.33.0"
+requests = "~2.33.1"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
