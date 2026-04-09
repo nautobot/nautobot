@@ -4,6 +4,7 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType, SoftwareVersion
+from nautobot.dcim.tests.test_api import Mixins
 from nautobot.extras.models import ConfigContextSchema, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import (
@@ -118,7 +119,7 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
+class VirtualMachineTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = VirtualMachine
     choices_fields = []
 
