@@ -172,10 +172,11 @@ function initializeVLANModeSelection(context) {
         const $root = $mode.closest("form").length ? $mode.closest("form") : $mode.closest(".card, .card-body");
 
         const $untagged = $root.find("#id_untagged_vlan");
+        const $tagged = $root.find("#id_tagged_vlans");
         const $add_tagged = $root.find("#id_add_tagged_vlans");
         const $remove_tagged = $root.find("#id_remove_tagged_vlans");
 
-        if (!$untagged.length || !$add_tagged.length || !$remove_tagged.length) return;
+        if (!$untagged.length || (!$tagged.length && (!$add_tagged.length || !$remove_tagged.length))) return;
 
         // Find the container div for the field row
         // In filter drawer: .nb-form-group contains the field directly
@@ -196,6 +197,7 @@ function initializeVLANModeSelection(context) {
         }
 
         const $rowUntagged = findFieldRow($untagged);
+        const $rowTagged = findFieldRow($tagged);
         const $rowAddTagged = findFieldRow($add_tagged);
         const $rowRemoveTagged = findFieldRow($remove_tagged);
 
@@ -212,25 +214,32 @@ function initializeVLANModeSelection(context) {
             if (mode === "") {
                 // Clear values
                 $untagged.val("").trigger("change");
-                $add_tagged.val(null).trigger("change"); // better than [] for select2, works for multi
+                $tagged.val(null).trigger("change"); // better than [] for select2, works for multi
+                $add_tagged.val(null).trigger("change");
                 $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, false);
+                setRowVisible($rowTagged, false);
                 setRowVisible($rowAddTagged, false);
                 setRowVisible($rowRemoveTagged, false);
             } else if (mode === "access") {
+                $tagged.val(null).trigger("change");
                 $add_tagged.val(null).trigger("change");
                 $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, false);
                 setRowVisible($rowAddTagged, false);
                 setRowVisible($rowRemoveTagged, false);
             } else if (mode === "tagged") {
                 setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, true);
                 setRowVisible($rowAddTagged, true);
                 setRowVisible($rowRemoveTagged, true);
             } else if (mode === "tagged-all") {
+                $tagged.val(null).trigger("change");
                 $add_tagged.val(null).trigger("change");
                 $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
+                setRowVisible($rowTagged, false);
                 setRowVisible($rowAddTagged, false);
                 setRowVisible($rowRemoveTagged, false);
             }
