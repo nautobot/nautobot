@@ -56,6 +56,16 @@ def generate_null_choices_resolver(name, resolver_name):
     return resolve_fields_w_choices
 
 
+def _make_filter_cache_key(kwargs):
+    """Build a hashable cache key from filter kwargs."""
+    items = []
+    for k, v in sorted(kwargs.items()):
+        if isinstance(v, list):
+            v = tuple(v)
+        items.append((k, v))
+    return tuple(items)
+
+
 def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     Generate function to resolve filtering of ManyToOne and ManyToMany related objects.
@@ -80,21 +90,23 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             if "type" not in kwargs:
                 kwargs["type"] = _type
 
-        resolved_obj = filterset_class(kwargs, field.all())
+        if not hasattr(info.context, "_gql_filter_cache"):
+            info.context._gql_filter_cache = {}
 
-        # Check result filter for errors.
-        if not resolved_obj.errors:
-            return resolved_obj.qs.all()
+        related_model = field.model
+        cache_key = (related_model._meta.label, field_name, _make_filter_cache_key(kwargs))
 
-        errors = {}
+        if cache_key not in info.context._gql_filter_cache:
+            resolved_obj = filterset_class(kwargs, related_model.objects.all())
 
-        # Build error message from results
-        # Error messages are collected from each filter object
-        for key in resolved_obj.errors:
-            errors[key] = resolved_obj.errors[key]
+            if resolved_obj.errors:
+                raise GraphQLError(str(dict(resolved_obj.errors)))
 
-        # Raising this exception will send the error message in the response of the GraphQL request
-        raise GraphQLError(str(errors))
+            # Cache the filterset evaluation per request to avoid N+1 queries.
+            info.context._gql_filter_cache[cache_key] = set(resolved_obj.qs.values_list("pk", flat=True))
+
+        matching_ids = info.context._gql_filter_cache[cache_key]
+        return [obj for obj in field.all() if obj.pk in matching_ids]
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
