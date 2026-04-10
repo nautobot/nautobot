@@ -81,8 +81,6 @@ def discover_filterable_nested_list_fields(schema):
                 continue
             if not nested_field.args:
                 continue
-            if nested_name == "softwareversion":
-                continue
 
             filter_arg = _pick_string_filter_arg(nested_field)
             if filter_arg:
