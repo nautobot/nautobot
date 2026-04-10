@@ -22,8 +22,6 @@ from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
-from nautobot.core.views.mixins import ObjectBulkRenameViewMixin
-
 
 from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
 from nautobot.core.forms import (
@@ -41,7 +39,7 @@ from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
-from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
+from nautobot.core.views.mixins import NautobotViewSetMixin, ObjectBulkRenameViewMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ComponentModel, ModularComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
