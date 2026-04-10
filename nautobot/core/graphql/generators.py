@@ -302,9 +302,10 @@ def generate_single_item_resolver(schema_type, resolver_name):
     def single_resolver(self, info, **kwargs):
         obj_id = kwargs.get("id", None)
         if obj_id:
-            return gql_optimizer.query(
-                model.objects.restrict(info.context.user, "view").filter(pk=obj_id), info
-            ).first()
+            queryset = model.objects.all()
+            if hasattr(queryset, "restrict"):
+                queryset = queryset.restrict(info.context.user, "view")
+            return gql_optimizer.query(queryset.filter(pk=obj_id), info).first()
         return None
 
     single_resolver.__name__ = resolver_name
@@ -337,8 +338,12 @@ def generate_list_resolver(schema_type, resolver_name):
             if "type" not in kwargs:
                 kwargs["type"] = _type
 
+        queryset = model.objects.all()
+        if hasattr(queryset, "restrict"):
+            queryset = queryset.restrict(info.context.user, "view")
+
         if filterset_class is not None:
-            resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
+            resolved_obj = filterset_class(kwargs, queryset)
 
             # Check result filter for errors.
             if resolved_obj.errors:
@@ -354,7 +359,7 @@ def generate_list_resolver(schema_type, resolver_name):
             qs = resolved_obj.qs.all()
 
         else:
-            qs = model.objects.restrict(info.context.user, "view").all()
+            qs = queryset
 
         if offset:
             qs = qs[offset:]
