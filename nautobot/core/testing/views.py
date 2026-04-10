@@ -9,7 +9,7 @@ from django import forms as django_forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
 from django.db import connection
 from django.db.models import ManyToManyField, Model, QuerySet
@@ -1836,9 +1836,9 @@ class ViewTestCases:
         def setUp(self):
             super().setUp()
             try:
-                self.model._meta.get_field("name")
-            except FieldDoesNotExist:
-                self.skipTest(f"{self.model.__name__} does not have a name field")
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
 
         def _has_redos_protection(self):
             """Check if this model's bulk_rename uses the _is_safe_regex check from ObjectBulkRenameViewMixin.
@@ -1910,19 +1910,21 @@ class ViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Attempt to bulk edit permitted objects into a non-permitted state
-            response = self.client.post(self._get_url("bulk_rename"), data)
-            self.assertHttpStatus(response, 200)
+            # Attempt to bulk rename permitted objects into a non-permitted state
+            self.client.post(self._get_url("bulk_rename"), data, follow=True)
 
-            # Update permission constraints
+            # Update permission constraints to allow all objects
             obj_perm.constraints = {"pk__gt": 0}
             obj_perm.save()
 
+            # Capture names as they are now (may or may not have been renamed above depending on model)
+            names_before = {obj.pk: obj.name for obj in self._get_queryset().filter(pk__in=pk_list)}
+
             # Bulk rename permitted objects
-            original_names = {obj.pk: obj.name for obj in objects}
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data, follow=True), 200)
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            self.assertHttpStatus(response, 200)
             for instance in self._get_queryset().filter(pk__in=pk_list):
-                expected_name = original_names[instance.pk] + "X"
+                expected_name = names_before[instance.pk] + "X"
                 self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

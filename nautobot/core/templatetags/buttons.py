@@ -223,7 +223,8 @@ def consolidate_bulk_action_buttons(context):
     has_name_field = False
     if model:
         try:
-            has_name_field = isinstance(model._meta.get_field("name"), CharField)
+            field = model._meta.get_field("name")
+            has_name_field = isinstance(field, CharField) and field.editable
         except FieldDoesNotExist:
             pass
     if context.get("bulk_rename_url") and context["permissions"]["change"] and has_name_field:

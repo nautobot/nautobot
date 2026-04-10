@@ -1626,7 +1626,8 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
         actions = super().get_extra_actions()
         if hasattr(cls, "queryset") and cls.queryset is not None:
             try:
-                if not isinstance(cls.queryset.model._meta.get_field("name"), CharField):
+                field = cls.queryset.model._meta.get_field("name")
+                if not isinstance(field, CharField) or not field.editable:
                     raise FieldDoesNotExist
             except FieldDoesNotExist:
                 actions = [a for a in actions if a.__name__ != "bulk_rename"]
