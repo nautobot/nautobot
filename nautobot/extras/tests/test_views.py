@@ -1774,6 +1774,60 @@ class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase
             "description": "New description",
         }
 
+    def _get_validation_url(self, instance):
+        return reverse("extras:configcontextschema_validation", kwargs={"pk": instance.pk})
+
+    def test_validation_action_without_permission(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_validation_action_with_permission(self):
+        instance = self._get_queryset().first()
+        self.add_permissions("extras.view_configcontextschema")
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Devices", response_body)
+        self.assertIn("Virtual Machines", response_body)
+        self.assertIn("Validation state", response_body)
+
+    def test_validation_action_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+        obj_perm = ObjectPermission(
+            name="View ConfigContextSchema",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_validation_url(instance1))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Validation state", response_body)
+        response = self.client.get(self._get_validation_url(instance2))
+        self.assertHttpStatus(response, 404)
+
+    def test_validation_action_with_invalid_schema_renders_no_schema_available(self):
+        instance = ConfigContextSchema.objects.create(
+            name="Invalid Schema",
+            data_schema={"type": 123},
+        )
+        self.add_permissions("extras.view_configcontextschema")
+
+        response = self.client.get(self._get_validation_url(instance))
+
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Validation state", response_body)
+        self.assertIn("No schema available", response_body)
+
 
 class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Contact
@@ -3144,7 +3198,32 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions(self, _):
+        """GitRepository custom actions redirect instead of returning 403/404."""
+        instance = self._get_queryset().first()
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                # Without permissions, should get 403
+                response = self.client.post(url)
+                self.assertHttpStatus(response, 403)
+
+                # With permissions, should redirect to job result
+                self.add_permissions("extras.change_gitrepository")
+                self.add_permissions("extras.view_gitrepository")
+                with mock.patch(
+                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
+                    if action_name == "dryrun"
+                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
+                ) as mock_enqueue:
+                    job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
+                    mock_enqueue.return_value = job_result
+                    response = self.client.post(url)
+                    self.assertRedirects(response, job_result.get_absolute_url(), fetch_redirect_response=False)
+                    mock_enqueue.assert_called_once_with(instance, self.user)
+                self.remove_permissions("extras.change_gitrepository")
+                self.remove_permissions("extras.view_gitrepository")
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
