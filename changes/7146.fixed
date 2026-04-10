@@ -1,0 +1,1 @@
+Fixed an issue where filtering a nested relation (e.g. interfaces with role filter on devices) via GraphQL would produce N+1 queries.
