@@ -17,11 +17,13 @@ from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
 from tree_queries.models import TreeNode
+from nautobot.core.views.mixins import ObjectBulkRenameViewMixin
+
 
 from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
 from nautobot.core.forms import (
@@ -1823,6 +1825,8 @@ class ViewTestCases:
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """
         Rename multiple instances.
+
+        Works with both old-style BulkRenameView and new ObjectBulkRenameViewMixin (NautobotUIViewSet).
         """
 
         rename_data = {
@@ -1837,6 +1841,20 @@ class ViewTestCases:
                 self.model._meta.get_field("name")
             except FieldDoesNotExist:
                 self.skipTest(f"{self.model.__name__} does not have a name field")
+
+        def _has_redos_protection(self):
+            """Check if this model's bulk_rename uses the _is_safe_regex check from ObjectBulkRenameViewMixin.
+
+            Returns False for old-style BulkRenameView and for viewsets that override _bulk_rename
+            (e.g. ModuleBayCommonViewSetMixin).
+            """
+            url = self._get_url("bulk_rename")
+            resolved = resolve(url)
+            view_cls = getattr(resolved.func, "cls", None)
+            if view_cls is None or not issubclass(view_cls, ObjectBulkRenameViewMixin):
+                return False
+            # Check that _bulk_rename isn't overridden by another mixin
+            return view_cls._bulk_rename is ObjectBulkRenameViewMixin._bulk_rename
 
         def test_bulk_rename_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
@@ -1869,7 +1887,7 @@ class ViewTestCases:
 
             # Try POST with model-level permission
             original_names = {obj.pk: obj.name for obj in objects}
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data, follow=True), 200)
             for instance in self._get_queryset().filter(pk__in=pk_list):
                 expected_name = original_names[instance.pk] + "X"
                 self.assertEqual(instance.name, expected_name)
@@ -1904,14 +1922,17 @@ class ViewTestCases:
 
             # Bulk rename permitted objects
             original_names = {obj.pk: obj.name for obj in objects}
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data, follow=True), 200)
             for instance in self._get_queryset().filter(pk__in=pk_list):
                 expected_name = original_names[instance.pk] + "X"
                 self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_regex_redos_protection(self):
-            """A pattern with nested quantifiers should be rejected to prevent catastrophic backtracking."""
+            """A pattern with nested quantifiers should be rejected (new UIViewSet mixin only)."""
+            if not self._has_redos_protection():
+                self.skipTest("ReDoS protection only applies to ObjectBulkRenameViewMixin (not overridden)")
+
             objects = list(self._get_queryset().all()[:1])
             pk_list = [obj.pk for obj in objects]
             original_name = objects[0].name

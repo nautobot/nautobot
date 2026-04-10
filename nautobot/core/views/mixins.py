@@ -64,6 +64,16 @@ from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, Sc
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
 
+# Matches a group containing a quantifier, followed by another quantifier
+# e.g. (a+)+, (a*)+, (a+)*, ([a-z]+){2,}, etc.
+_NESTED_QUANTIFIER_RE = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
+
+
+def is_safe_regex(pattern_str):
+    """Check that a regex pattern does not contain nested quantifiers that could cause catastrophic backtracking."""
+    return not _NESTED_QUANTIFIER_RE.search(pattern_str)
+
+
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
     "retrieve": "view",
@@ -1710,14 +1720,9 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
         return self._render_form_response(request, form, selected_objects)
 
-    # Matches a group containing a quantifier, followed by another quantifier
-    # e.g. (a+)+, (a*)+, (a+)*, ([a-z]+){2,}, etc.
-    _NESTED_QUANTIFIER_RE = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
-
-    @classmethod
-    def _is_safe_regex(cls, pattern_str):
-        """Check that a regex pattern does not contain nested quantifiers that could cause catastrophic backtracking."""
-        return not cls._NESTED_QUANTIFIER_RE.search(pattern_str)
+    @staticmethod
+    def _is_safe_regex(pattern_str):
+        return is_safe_regex(pattern_str)
 
     def _create_bulk_rename_form_class(self):
         class _Form(BulkRenameForm):
