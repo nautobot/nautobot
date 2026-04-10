@@ -369,3 +369,13 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    def get_invalid_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["mtu"] = 100000
+        return data
+
+    def get_invalid_component_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["name_pattern"] = "BRIDGE"
+        return data
