@@ -1,0 +1,1 @@
+Fixed issue where ChangeLogs were not generated for child objects deleted via BulkDeleteJob

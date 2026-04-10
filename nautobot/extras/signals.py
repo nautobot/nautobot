@@ -377,6 +377,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
                 cached_related_change = change_context.deferred_object_changes[unique_object_change_id][-1]
                 if cached_related_change["action"] != ObjectChangeActionChoices.ACTION_CREATE:
                     cached_related_change["action"] = ObjectChangeActionChoices.ACTION_DELETE
+                    if "objectchange" in cached_related_change:
+                        cached_related_change["objectchange"].action = ObjectChangeActionChoices.ACTION_DELETE
                     save_new_objectchange = False
 
                 related_changes = ObjectChange.objects.filter(
@@ -399,16 +401,39 @@ def _handle_deleted_object(sender, instance, **kwargs):
                             save_new_objectchange = False
 
             if save_new_objectchange:
-                change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
-                    {
-                        "action": ObjectChangeActionChoices.ACTION_DELETE,
-                        "instance": instance,
-                        "user": user,
-                        "changed_object_id": changed_object_id,
-                        "changed_object_type": changed_object_type,
-                    }
-                )
-                if not change_context.defer_object_changes:
+                if change_context.defer_object_changes:
+                    # Eagerly serialize at pre_delete time while the instance is still in the DB.
+                    # This is critical for cascade-deleted objects that will be gone by flush time.
+                    objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+                    if objectchange is not None:
+                        objectchange.user = user
+                        objectchange.user_name = user.username
+                        objectchange.request_id = change_context.change_id
+                        objectchange.change_context = change_context.context
+                        objectchange.change_context_detail = change_context.context_detail[
+                            :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
+                        ]
+                        # Clear the GenericForeignKey to avoid Django's bulk_create complaining
+                        # about an "unsaved related object" after the instance is deleted.
+                        objectchange.changed_object = None
+                        objectchange.changed_object_id = changed_object_id
+                        objectchange.changed_object_type = changed_object_type
+                        change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
+                            {
+                                "action": ObjectChangeActionChoices.ACTION_DELETE,
+                                "objectchange": objectchange,
+                            }
+                        )
+                else:
+                    change_context.deferred_object_changes.setdefault(unique_object_change_id, []).append(
+                        {
+                            "action": ObjectChangeActionChoices.ACTION_DELETE,
+                            "instance": instance,
+                            "user": user,
+                            "changed_object_id": changed_object_id,
+                            "changed_object_type": changed_object_type,
+                        }
+                    )
                     objectchange = instance.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
                     if objectchange is not None:
                         objectchange.user = user
