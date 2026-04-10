@@ -21,6 +21,8 @@
 <script type="text/javascript">
     hljs.configure({ cssSelector: '.language-graphql, .language-json, .language-xml, .language-yaml' });
     hljs.highlightAll();
+    // Make HTMX 2.x behave more like HTMX 4.x will soon behave.
+    htmx.config.disableInheritance = true;
     htmx.config.historyRestoreAsHxRequest = false;
     htmx.config.refreshOnHistoryMiss = true;
 </script>

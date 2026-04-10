@@ -40,6 +40,7 @@ router.register("relationship-associations", views.RelationshipAssociationUIView
 router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
+router.register("scheduled-jobs", views.ScheduledJobUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("secrets-groups", views.SecretsGroupUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
@@ -94,15 +95,6 @@ urlpatterns = [
         "jobs/scheduled-jobs/delete/",
         RedirectView.as_view(url="/extras/scheduled-jobs/delete/"),
         name="scheduledjob_bulk_delete_legacy",
-    ),
-    # ScheduledJobs
-    path("scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
-    path("scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
-    path("scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
-    path(
-        "scheduled-jobs/delete/",
-        views.ScheduledJobBulkDeleteView.as_view(),
-        name="scheduledjob_bulk_delete",
     ),
     path(
         "scheduled-jobs/<uuid:pk>/approval-workflow/",
