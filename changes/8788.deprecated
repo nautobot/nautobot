@@ -1,0 +1,1 @@
+Deprecated `django_ajax_tables` dependency. It is recommended to use HTMX instead.
