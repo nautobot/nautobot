@@ -1900,10 +1900,12 @@ class ViewTestCases:
             }
             data.update(self.rename_data)
 
-            # Assign constrained permission
+            # Constraint: only allow changing objects whose name is in the original set.
+            # After renaming (appending "X"), the new names won't match, triggering a permissions violation.
+            original_names = [obj.name for obj in objects]
             obj_perm = users_models.ObjectPermission(
                 name="Test permission",
-                constraints={"name__regex": "[^X]$"},
+                constraints={"name__in": original_names},
                 actions=["change"],
             )
             obj_perm.save()
@@ -1911,7 +1913,9 @@ class ViewTestCases:
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
             # Attempt to bulk rename permitted objects into a non-permitted state
-            self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "object-level permissions violation")
 
             # Update permission constraints to allow all objects
             obj_perm.constraints = {"pk__gt": 0}
