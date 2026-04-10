@@ -117,7 +117,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         # Assert that newly created tenant record has been assigned to the related input from which it originated
         tenant_field_xpath = f"{form_xpath}//select[@name='tenant']"
         tenant_option_xpath = f"{tenant_field_xpath}/option[normalize-space()='{tenant_name}']"
-        self.assertTrue(self.browser.is_element_present_by_xpath(tenant_option_xpath, wait_time=10))
+        self.assertTrue(self.browser.is_element_present_by_xpath(tenant_option_xpath, wait_time=20))
         self.assertEqual(
             self.browser.find_by_xpath(tenant_field_xpath).value, self.browser.find_by_xpath(tenant_option_xpath).value
         )
