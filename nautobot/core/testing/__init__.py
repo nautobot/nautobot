@@ -7,6 +7,7 @@ from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.core.testing.utils import (
+    AssertNoRepeatedQueries,
     create_test_user,
     disable_warnings,
     extract_form_failures,
@@ -21,6 +22,7 @@ from nautobot.extras.models import Job, JobResult
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
+    "AssertNoRepeatedQueries",
     "FilterTestCases",
     "JobClassInfo",
     "ModelTestCase",
