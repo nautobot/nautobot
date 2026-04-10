@@ -25,6 +25,7 @@ from rest_framework import status
 from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
+    _make_filter_cache_key,
     generate_list_search_parameters,
     generate_schema_type,
 )
@@ -38,7 +39,7 @@ from nautobot.core.graphql.schema import (
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import create_test_user, NautobotTestClient, TestCase
+from nautobot.core.testing import AssertNoRepeatedQueries, create_test_user, NautobotTestClient, TestCase
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -2457,6 +2458,36 @@ query {
             result = self.execute_query(query)
         self.assertNotIn("error", str(result))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_filtered_nested_relation_no_n_plus_one(self):
+        """
+        Test that filtering a nested relation (e.g. interfaces with role filter on devices)
+        does not produce N+1 queries. The filterset should be evaluated once and cached,
+        and prefetched related objects should be filtered in memory.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/7146.
+        """
+        interface_role = Role.objects.get_for_model(Interface).first()
+        query = 'query { devices { name interfaces(role: "%s") { name } } }' % interface_role.name
+        # Prewarm caches
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        device_count = Device.objects.count()
+        self.assertGreater(device_count, 1, "Need multiple devices to verify N+1 is avoided")
+        # The query count should be constant regardless of the number of devices.
+        # Without the fix this would be ~3*N queries (interface fetch + 2 role lookups per device).
+        # With the fix: 1 devices query + 1 prefetch interfaces; the filterset is evaluated once
+        # and its matching PKs are cached on the request context for in-memory filtering.
+        with AssertNoRepeatedQueries(self, threshold=3):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Verify correctness: devices with the role should have matching interfaces
+        for device_data in result.data["devices"]:
+            device_obj = Device.objects.get(name=device_data["name"])
+            expected = set(device_obj.interfaces.filter(role=interface_role).values_list("name", flat=True))
+            actual = {iface["name"] for iface in device_data["interfaces"]}
+            self.assertEqual(actual, expected, f"Mismatch for device {device_data['name']}")
+
 
 class GraphQLTypeTestCase(UnitTestTestCase):
     def test_date_type(self):
@@ -2470,3 +2501,38 @@ class GraphQLTypeTestCase(UnitTestTestCase):
         with self.assertRaises(GraphQLError) as cm:
             DateType.serialize(obj_not_accepted)
         self.assertIn("Received not compatible date", str(cm.exception))
+
+
+class MakeFilterCacheKeyTestCase(UnitTestTestCase):
+    def test_empty_kwargs(self):
+        self.assertEqual(_make_filter_cache_key({}), ())
+
+    def test_single_kwarg(self):
+        self.assertEqual(_make_filter_cache_key({"name": "test"}), (("name", "test"),))
+
+    def test_kwargs_sorted_by_key(self):
+        result = _make_filter_cache_key({"z_field": "last", "a_field": "first"})
+        self.assertEqual(result, (("a_field", "first"), ("z_field", "last")))
+
+    def test_list_values_converted_to_tuples(self):
+        result = _make_filter_cache_key({"tags": ["red", "blue"]})
+        self.assertEqual(result, (("tags", ("red", "blue")),))
+
+    def test_non_list_values_unchanged(self):
+        result = _make_filter_cache_key({"name": "test", "count": 5, "active": True})
+        self.assertEqual(result, (("active", True), ("count", 5), ("name", "test")))
+
+    def test_result_is_hashable(self):
+        result = _make_filter_cache_key({"tags": ["a", "b"], "name": "test"})
+        # Should be usable as a dict key
+        {result: True}
+
+    def test_same_kwargs_different_order_produce_same_key(self):
+        key1 = _make_filter_cache_key({"a": 1, "b": 2})
+        key2 = _make_filter_cache_key({"b": 2, "a": 1})
+        self.assertEqual(key1, key2)
+
+    def test_different_kwargs_produce_different_keys(self):
+        key1 = _make_filter_cache_key({"name": "foo"})
+        key2 = _make_filter_cache_key({"name": "bar"})
+        self.assertNotEqual(key1, key2)
