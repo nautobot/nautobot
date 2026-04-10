@@ -12,9 +12,8 @@ from django.test.client import RequestFactory
 import graphene
 import graphene.types.definitions
 from graphene_django.settings import graphene_settings
-from graphql import get_default_backend, execute
+from graphql import get_default_backend
 from graphql.type import definition
-
 
 from nautobot.core.testing import AssertNoRepeatedQueries, TestCase
 
