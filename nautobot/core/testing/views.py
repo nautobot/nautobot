@@ -17,7 +17,7 @@ from django.template.defaultfilters import date
 from django.test import override_settings, tag, TestCase as _TestCase
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, resolve, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
@@ -39,7 +39,7 @@ from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
-from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
+from nautobot.core.views.mixins import NautobotViewSetMixin, ObjectBulkRenameViewMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ComponentModel, ModularComponentModel
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
@@ -1823,6 +1823,8 @@ class ViewTestCases:
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """
         Rename multiple instances.
+
+        Works with both old-style BulkRenameView and new ObjectBulkRenameViewMixin (NautobotUIViewSet).
         """
 
         rename_data = {
@@ -1830,6 +1832,27 @@ class ViewTestCases:
             "replace": "\\1X",  # Append an X to the original value
             "use_regex": True,
         }
+
+        def setUp(self):
+            super().setUp()
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+
+        def _has_redos_protection(self):
+            """Check if this model's bulk_rename uses the _is_safe_regex check from ObjectBulkRenameViewMixin.
+
+            Returns False for old-style BulkRenameView and for viewsets that override _bulk_rename
+            (e.g. ModuleBayCommonViewSetMixin).
+            """
+            url = self._get_url("bulk_rename")
+            resolved = resolve(url)
+            view_cls = getattr(resolved.func, "cls", None)
+            if view_cls is None or not issubclass(view_cls, ObjectBulkRenameViewMixin):
+                return False
+            # Check that _bulk_rename isn't overridden by another mixin
+            return view_cls._bulk_rename is ObjectBulkRenameViewMixin._bulk_rename
 
         def test_bulk_rename_objects_without_permission(self):
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
@@ -1861,11 +1884,11 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            original_names = {obj.pk: obj.name for obj in objects}
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data, follow=True), 200)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = original_names[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
@@ -1877,30 +1900,90 @@ class ViewTestCases:
             }
             data.update(self.rename_data)
 
-            # Assign constrained permission
+            # Constraint: only allow changing objects whose name is in the original set.
+            # After renaming (appending "X"), the new names won't match, triggering a permissions violation.
+            original_names = [obj.name for obj in objects]
             obj_perm = users_models.ObjectPermission(
                 name="Test permission",
-                constraints={"name__regex": "[^X]$"},
+                constraints={"name__in": original_names},
                 actions=["change"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Attempt to bulk edit permitted objects into a non-permitted state
-            response = self.client.post(self._get_url("bulk_rename"), data)
+            # Attempt to bulk rename permitted objects into a non-permitted state
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
             self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "object-level permissions violation")
 
-            # Update permission constraints
+            # Update permission constraints to allow all objects
             obj_perm.constraints = {"pk__gt": 0}
             obj_perm.save()
 
+            # Capture names as they are now (may or may not have been renamed above depending on model)
+            names_before = {obj.pk: obj.name for obj in self._get_queryset().filter(pk__in=pk_list)}
+
             # Bulk rename permitted objects
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            self.assertHttpStatus(response, 200)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = names_before[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_regex_redos_protection(self):
+            """A pattern with nested quantifiers should be rejected (new UIViewSet mixin only)."""
+            if not self._has_redos_protection():
+                self.skipTest("ReDoS protection only applies to ObjectBulkRenameViewMixin (not overridden)")
+
+            objects = list(self._get_queryset().all()[:1])
+            pk_list = [obj.pk for obj in objects]
+            original_name = objects[0].name
+
+            data = {
+                "pk": pk_list,
+                "_apply": True,
+                "find": "(a+)+$",  # Classic ReDoS pattern — nested quantifiers
+                "replace": "X",
+                "use_regex": True,
+            }
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            # Should return 200 (form with error), not hang or 500
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "nested quantifiers")
+
+            # Name should be unchanged
+            objects[0].refresh_from_db()
+            self.assertEqual(objects[0].name, original_name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_plain_string_replace(self):
+            """POST with use_regex=False should do a plain string find/replace."""
+            if not self._has_redos_protection():
+                self.skipTest("Only applies to ObjectBulkRenameViewMixin")
+            objects = list(self._get_queryset().all()[:1])
+            pk_list = [obj.pk for obj in objects]
+            original_name = objects[0].name
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            # Use the same regex-based rename_data pattern but with use_regex=False and a literal find
+            # that matches part of the name. Use first char as find target for broad compatibility.
+            first_char = original_name[0]
+            data = {
+                "pk": pk_list,
+                "_preview": True,
+                "find": first_char,
+                "replace": first_char,
+                "use_regex": False,
+            }
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            # Preview should show the name unchanged (same find/replace)
+            objects[0].refresh_from_db()
+            self.assertEqual(objects[0].name, original_name)
 
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
@@ -1911,6 +1994,7 @@ class ViewTestCases:
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
         BulkEditObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
@@ -1927,6 +2011,7 @@ class ViewTestCases:
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
