@@ -469,6 +469,12 @@ class FormButton(Button):
         }
 
 
+class PostButton(Button):
+    """A Button that submits a POST request to the link URL."""
+
+    template_path = "components/button/postbutton.html"
+
+
 class ExtraDetailViewActionButton(Button):
     action: str = None
     deferred_render = False  # TODO: deferred rendering of ExtraDetailViewActionButtons is not currently implemented
