@@ -56,6 +56,7 @@ from .template_code import (
     INTERFACE_TAGGED_VLANS,
     MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
+    PARENT_DEVICE,
     PATHENDPOINT,
     POWEROUTLET_BUTTONS,
     POWERPORT_BUTTONS,
@@ -211,6 +212,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     secrets_group = tables.Column(linkify=True)
     capabilities = tables.Column(orderable=False, accessor="controller_managed_device_group.capabilities")
     manufacturer = tables.Column(orderable=False, accessor="device_type.manufacturer")
+    parent_device = tables.TemplateColumn(template_code=PARENT_DEVICE, orderable=False)
+    parent_bay = tables.Column(orderable=False)
     tags = TagColumn(url_name="dcim:device_list")
     actions = ButtonsColumn(Device)
 
@@ -244,6 +247,8 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "secrets_group",
             "capabilities",
             "manufacturer",
+            "parent_device",
+            "parent_bay",
             "tags",
             "actions",
         )
@@ -745,6 +750,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "mgmt_only",
@@ -772,6 +778,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
             "label",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "description",
         )
@@ -804,6 +811,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
             "speed",
             "duplex",
             "parent_interface",
@@ -834,6 +842,8 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "module",
             "enabled",
             "type",
+            "port_type",
+            "speed",
             "parent_interface",
             "lag",
             "mtu",
@@ -1429,6 +1439,8 @@ class SoftwareVersionTable(StatusTableMixin, BaseTable):
         url_params={"software_version": "pk"},
         verbose_name="Inventory Items",
     )
+    long_term_support = BooleanColumn()
+    pre_release = BooleanColumn()
     tags = TagColumn(url_name="dcim:softwareversion_list")
     actions = ButtonsColumn(SoftwareVersion)
 

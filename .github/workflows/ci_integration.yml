@@ -30,7 +30,7 @@ jobs:
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -45,7 +45,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -62,7 +62,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Setup Node.js"
         uses: "actions/setup-node@v4"
         with:
@@ -91,6 +91,10 @@ jobs:
             exit 1
           fi
   tests-postgres:
+    # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+    # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+    # https://code.djangoproject.com/ticket/36531
     name: "Unit tests (PostgreSQL and Python 3.13)"
     runs-on: "ubuntu-24.04"
     env:
@@ -100,7 +104,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -119,6 +123,10 @@ jobs:
         with:
           poetry-install-options: "--extras=remote_storage"
           poetry-version: "2.1.4"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
           python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
@@ -193,7 +201,7 @@ jobs:
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.14)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -205,7 +213,7 @@ jobs:
       PGPASSWORD: "decinablesprewad"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -220,7 +228,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
   integration-test:
@@ -233,7 +241,7 @@ jobs:
       NAUTOBOT_SELENIUM_URL: "http://localhost:4444/wd/hub"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -256,6 +264,10 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
           python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
@@ -276,7 +288,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         arch: [ "amd64", "arm64" ]
         os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
         exclude:
@@ -341,9 +353,9 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
     env:
-      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.13"
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
       BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "false" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
       - name: "Check out repository code"

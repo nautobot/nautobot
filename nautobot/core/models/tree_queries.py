@@ -170,6 +170,10 @@ class TreeModel(TreeNode):
         cache.set(cache_key, display_str, timeout=5)
         return display_str
 
+    @property
+    def siblings(self):
+        return self.__class__.objects.without_tree_fields().filter(parent_id=self.parent_id).exclude(pk=self.pk)
+
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

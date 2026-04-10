@@ -23,6 +23,7 @@ from nautobot.core.forms import (
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    EmbeddedActionsFormMixin,
     ExpandableNameField,
     form_from_model,
     JSONArrayFormField,
@@ -253,7 +254,7 @@ class InterfaceCommonForm(forms.Form):
                 )
 
 
-class ComponentForm(BootstrapMixin, forms.Form):
+class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     """
     Subclass this form when facilitating the creation of one or more device component or component templates based on
     a name pattern.
@@ -416,7 +417,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "max_depth", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
@@ -424,6 +425,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    max_depth = forms.IntegerField(required=False, help_text="Maximum nesting depth within parent locations")
     tags = TagFilterField(model)
 
 
@@ -1471,6 +1473,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
             "name",
             "label",
             "type",
+            "port_type",
             "mgmt_only",
             "speed",
             "duplex",
@@ -1480,6 +1483,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
             "type": StaticSelect2(),
             "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
             "duplex": StaticSelect2(),
+            "port_type": StaticSelect2(),
         }
         labels = {
             "speed": "Speed (Kbps)",
@@ -1488,6 +1492,7 @@ class InterfaceTemplateForm(ModularComponentTemplateForm):
 
 class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
     type = forms.ChoiceField(choices=add_blank_choice(InterfaceTypeChoices), widget=StaticSelect2())
+    port_type = forms.ChoiceField(choices=add_blank_choice(PortTypeChoices), required=False, widget=StaticSelect2())
     mgmt_only = forms.BooleanField(required=False, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1502,6 +1507,7 @@ class InterfaceTemplateCreateForm(ModularComponentTemplateCreateForm):
         "name_pattern",
         "label_pattern",
         "type",
+        "port_type",
         "mgmt_only",
         "speed",
         "duplex",
@@ -1517,6 +1523,11 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
         required=False,
         widget=StaticSelect2(),
     )
+    port_type = forms.ChoiceField(
+        choices=add_blank_choice(PortTypeChoices),
+        required=False,
+        widget=StaticSelect2(),
+    )
     mgmt_only = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect, label="Management only")
     speed = forms.IntegerField(
         required=False, min_value=0, label="Speed (Kbps)", widget=NumberWithSelect(choices=InterfaceSpeedChoices)
@@ -1527,7 +1538,7 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
     description = forms.CharField(required=False)
 
     class Meta:
-        nullable_fields = ["label", "speed", "duplex", "description"]
+        nullable_fields = ["label", "port_type", "speed", "duplex", "description"]
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1757,7 +1768,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
 
 
-class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+class ModuleBayBaseCreateForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
@@ -1901,18 +1912,21 @@ class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
         choices = self.Meta.model._meta.get_field("type").choices
 
         try:
-            if data not in choices.values():
+            # As of Django 5.0 and later, choices is normalized to a list of tuples rather than a dict,
+            # for example: [('Serial', [('de-9', 'DE-9'), ('db-25', 'DB-25')]), ('USB', [('usb-a', 'USB Type A')])]
+            if data not in [inner[0] for outer in choices for inner in outer[1]]:
                 logger.debug(
                     'For %s "%s", the "type" value "%s" is unrecognized and will be replaced by "%s"',
                     self.Meta.model.__name__,
                     self.cleaned_data["name"],
                     data,
-                    choices.TYPE_OTHER,
+                    # Assume ('Other', [('other', 'Other')]) is the last entry in choices
+                    choices[-1][1][-1][0],
                 )
-                data = choices.TYPE_OTHER
+                data = choices[-1][1][-1][0]
         except AttributeError:
-            logger.warning(
-                "Either %s.type.choices is not a ChoiceSet, or %s.type.choices.TYPE_OTHER is not defined",
+            logger.exception(
+                "Either %s.type.choices is incorrectly defined, or %s.type.choices.TYPE_OTHER is incorrectly defined",
                 self.Meta.model.__name__,
                 self.Meta.model.__name__,
             )
@@ -1997,6 +2011,7 @@ class InterfaceTemplateImportForm(ComponentTemplateImportForm):
             "name",
             "label",
             "type",
+            "port_type",
             "mgmt_only",
             "speed",
             "duplex",
@@ -3174,6 +3189,7 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
+    port_type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
     speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
@@ -3264,6 +3280,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "role",
             "label",
             "type",
+            "port_type",
             "enabled",
             "parent_interface",
             "bridge",
@@ -3288,6 +3305,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "mode": StaticSelect2(),
             "speed": NumberWithSelect(choices=InterfaceSpeedChoices),
             "duplex": StaticSelect2(),
+            "port_type": StaticSelect2(),
         }
         labels = {
             "mode": "802.1Q Mode",
@@ -3296,6 +3314,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3320,6 +3340,11 @@ class InterfaceCreateForm(
     model = Interface
     type = forms.ChoiceField(
         choices=add_blank_choice(InterfaceTypeChoices),
+        widget=StaticSelect2(),
+    )
+    port_type = forms.ChoiceField(
+        choices=add_blank_choice(PortTypeChoices),
+        required=False,
         widget=StaticSelect2(),
     )
     status = DynamicModelChoiceField(
@@ -3421,6 +3446,7 @@ class InterfaceCreateForm(
         "status",
         "role",
         "type",
+        "port_type",
         "speed",
         "duplex",
         "enabled",
@@ -3440,9 +3466,13 @@ class InterfaceCreateForm(
         "tags",
     )
 
+    class Meta:
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
+
 
 class InterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "port_type", "tags"]),
     DeviceBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
@@ -3467,6 +3497,7 @@ class InterfaceBulkCreateForm(
         "status",
         "role",
         "type",
+        "port_type",
         "enabled",
         "mtu",
         "vrf",
@@ -3480,7 +3511,7 @@ class InterfaceBulkCreateForm(
 
 
 class ModuleInterfaceBulkCreateForm(
-    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "tags"]),
+    form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "port_type", "tags"]),
     ModuleBulkAddComponentForm,
     RoleNotRequiredModelFormMixin,
 ):
@@ -3505,6 +3536,7 @@ class ModuleInterfaceBulkCreateForm(
         "status",
         "role",
         "type",
+        "port_type",
         "enabled",
         "mtu",
         "vrf",
@@ -3523,6 +3555,7 @@ class InterfaceBulkEditForm(
         [
             "label",
             "type",
+            "port_type",
             "parent_interface",
             "bridge",
             "lag",
@@ -3563,13 +3596,23 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
+        label="Untagged VLAN",
     )
-    tagged_vlans = DynamicModelMultipleChoiceField(
+    add_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
             "locations": "null",
         },
+        label="Add Tagged VLANs",
+    )
+    remove_tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+        label="Remove Tagged VLANs",
     )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -3596,8 +3639,8 @@ class InterfaceBulkEditForm(
             "speed",
             "duplex",
             "untagged_vlan",
-            "tagged_vlans",
             "vrf",
+            "port_type",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -3623,9 +3666,11 @@ class InterfaceBulkEditForm(
                 # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
                 # to those available on the devices in that location and in the ancestors of the location.
                 self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", location.pk)
             else:
-                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
@@ -3643,9 +3688,26 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
+        tagged_vlans = bool(self.cleaned_data["add_tagged_vlans"] or self.cleaned_data["remove_tagged_vlans"])
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["tagged_vlans"]:
+        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
+
+        # In theory UI blocks this from happening, but to ensure on backend we enforce.
+        # An interface must be in tagged mode to have an untagged VLAN assigned
+        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+            non_tagged = (
+                Interface.objects.filter(pk__in=self.cleaned_data["pk"])
+                .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
+                .values_list("name", flat=True)
+            )
+            if non_tagged.exists():
+                raise forms.ValidationError(
+                    {
+                        "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
+                        + ", ".join(list(non_tagged))
+                    }
+                )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
@@ -3917,7 +3979,10 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,
-            device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            device_type__subdevice_role__in=[
+                SubdeviceRoleChoices.ROLE_CHILD,
+                SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            ],
         ).exclude(pk=device_bay.device.pk)
 
 
@@ -4291,6 +4356,8 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         help_texts = {
             "status": "Connection status",
         }
+        embedded_create = []
+        embedded_search = []
 
     def clean_termination_b_id(self):
         # Return the PK rather than the object

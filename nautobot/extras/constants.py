@@ -25,6 +25,7 @@ JOB_OVERRIDABLE_FIELDS = (
     "grouping",
     "name",
     "description",
+    "console_log_default",
     "dryrun_default",
     "hidden",
     "soft_time_limit",
@@ -50,9 +51,12 @@ CHANGELOG_MAX_OBJECT_REPR = 200
 # JobResult custom Celery kwargs
 JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_profile",
+    "nautobot_job_console_log",
     "nautobot_job_branch_name",
     "nautobot_job_job_model_id",
     "nautobot_job_scheduled_job_id",
     "nautobot_job_user_id",
     "nautobot_job_ignore_singleton_lock",
 )
+
+PENDING_WORKFLOWS_ERROR_CODE = "definition_has_pending_workflows"

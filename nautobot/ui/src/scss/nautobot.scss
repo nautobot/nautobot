@@ -402,6 +402,10 @@ $modal-title-line-height: $line-height-base;
 $list-group-item-padding-y: $table-cell-padding-y;
 $list-group-item-padding-x: $table-cell-padding-x;
 
+$list-group-hover-bg:     var(--#{$prefix}primary-bg-subtle);
+$list-group-active-color: var(--#{$prefix}primary-text-emphasis);
+$list-group-active-bg:    var(--#{$prefix}primary-bg-subtle);
+
 /* Breadcrumbs */
 $breadcrumb-item-padding-x: map.get($spacers, 4);
 $breadcrumb-margin-bottom:  0;
@@ -930,6 +934,100 @@ table.attr-table td:nth-child(1) {
   width: 25%;
 }
 
+@include color-mode(dark, true) {
+  .nb-subtree {
+    /* `$white-0` → `$gray-2-dark` */
+    --subtree-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(204%) contrast(100%);
+  }
+}
+
+.nb-subtree {
+  $subtree-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$white-0}'/></svg>";
+  $subtree-icon-height: 5.625rem; /* 90px */
+  $subtree-icon-width: 1.25rem; /* 20px */
+  $subtree-ancestor-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/></svg>";
+  $subtree-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
+  $subtree-no-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
+
+  /* `$white-0`	→ `$gray-2` */
+  --subtree-icon-color-filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
+
+  @mixin subtree-icon-color-filter() {
+    /*
+     * See other color filter mixins for context and explanation.
+     * Generated with: https://codepen.io/jumarjuaton/full/mdJYWYq
+     *
+     * Other color filters cheat sheet, all apply to base icon color of `$white-0: #ffffff;`:
+     * - $gray-1: #dedede;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(348%) contrast(100%);
+     * - $gray-1-dark: #2f2f2f;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(74%) contrast(100%);
+     * - $gray-2: #b0b0b0;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
+     * - $gray-2-dark: #828282;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(204%) contrast(100%);
+     * - $gray-3: #505d68;
+     *   filter: invert(38%) sepia(10%) saturate(731%) hue-rotate(166deg) brightness(54%) contrast(91%);
+     * - $gray-3-dark: #b5b5b5;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(284%) contrast(100%);
+     */
+    filter: var(--subtree-icon-color-filter);
+  }
+
+  td:has(> &) {
+    overflow: hidden;
+  }
+
+  &::before {
+    content: "";
+    padding-block: calc(($subtree-icon-height - 1rem /* `font-size` */) / 2);
+    padding-left: $subtree-icon-width;
+  }
+
+  &.nb-subtree-expandable {
+    /* Reset `<button>` default user agent styles. */
+    background: none;
+    border: 0;
+    padding: 0;
+
+    &::before {
+      @include subtree-icon-color-filter;
+      @include transition($accordion-icon-transition);
+      background: no-repeat center/1rem #{escape-svg(url("data:image/svg+xml,#{$subtree-chevron-svg}"))};
+      content: "";
+      display: inline-block;
+      font-size: 1rem;
+      line-height: 0;
+      padding-block: calc($subtree-icon-width / 2);
+      transform: rotate(180deg);
+      vertical-align: middle;
+    }
+
+    &.nb-subtree-expanded::before {
+      transform: rotate(270deg);
+    }
+  }
+
+  &.nb-subtree-ancestor-next-sibling::before {
+    @include subtree-icon-color-filter;
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-ancestor-next-sibling-icon-svg}"))};
+  }
+
+  &.nb-subtree-ancestor-no-next-sibling::before {
+    content: "";
+  }
+
+  &.nb-subtree-next-sibling::before {
+    @include subtree-icon-color-filter;
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-next-sibling-icon-svg}"))};
+  }
+
+  &.nb-subtree-no-next-sibling::before {
+    @include subtree-icon-color-filter;
+    background: no-repeat center/$subtree-icon-width $subtree-icon-height #{escape-svg(url("data:image/svg+xml,#{$subtree-no-next-sibling-icon-svg}"))};
+  }
+}
+
 /* Buttons */
 .btn {
   --#{$prefix}btn-box-shadow: #{$btn-box-shadow};
@@ -1071,6 +1169,14 @@ textarea {
 .form-control {
   &:hover:not(:disabled):not([readonly]) {
     border-color: var(--#{$prefix}primary-text-emphasis);
+  }
+
+  &::file-selector-button {
+    /*
+     * Border transition on `::file-selector-button` in `input[type="file"]` seems to be adding up to the default
+     * already defined `form-control` transition, effectively lagging behind and looking bad.
+     */
+    @include transition($btn-transition, border-color 0s ease-in-out);
   }
 
   /* Webkit browsers add "X" icon in `[type="search"]` input fields. It looks off and offers little configurability. */
@@ -1254,6 +1360,7 @@ textarea {
       > :is(tbody, thead, tfoot):last-child { /* Bottommost table section group. */
         > :last-child { /* Bottommost row. */
           @include remove-row-border-bottom;
+          overflow-y: clip;
         }
       }
 
@@ -1434,6 +1541,11 @@ textarea {
   td & {
     min-width: 100px;
   }
+}
+
+/* List groups */
+.list-group-item-action {
+  @include transition($btn-transition);
 }
 
 /* Breadcrumbs */
@@ -2074,6 +2186,24 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
 /* Draggable */
 .nb-draggable-container {
+  /*
+   * This is just initial `0` size of the drop indicator pseudo-element, otherwise this custom property is managed
+   * exclusively by `draggable.js` script. Inset shorthand corresponds to `${top} ${right} ${bottom} ${left}`.
+   */
+  --drop-indicator-inset: 0 0 100% 100%;
+
+  /* Drop indicator */
+  &::before {
+    background-color:  var(--#{$prefix}primary-text-emphasis);
+    border-radius: $border-radius;
+    content: "";
+    display: inline-block;
+    inset: var(--drop-indicator-inset, 0);
+    pointer-events: none;
+    position: absolute;
+    z-index: $zindex-fixed;
+  }
+
   .nb-draggable {
     &.nb-dragging {
       opacity: 0.5;
@@ -2081,6 +2211,25 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
 
     .nb-draggable-handle {
       cursor: move;
+    }
+  }
+}
+
+/* Select multiple orderable */
+.nb-select-multiple-orderable-list {
+  .list-group-item-action {
+    outline: none;
+
+    .nb-draggable-handle {
+      @include transition($transition-fade);
+      opacity: 0;
+    }
+
+    &:focus-visible,
+    &:hover {
+      .nb-draggable-handle {
+        opacity: 1;
+      }
     }
   }
 }
@@ -2515,6 +2664,41 @@ pre.version, pre.version-stamp {
   max-width: 960px;
 }
 
+.nb-embedded-search-results {
+  flex-grow: 2;
+  overflow: auto;
+  padding: map.get($spacers, 16);
+  width: 100%;
+
+  .table {
+    tbody > tr {
+      cursor: pointer;
+    }
+
+    /*
+     * Disable all interactions in object embedded search results table cells. This solution is not perfect because it
+     * still allows the elements to be interacted with via keyboard, but at the same time it is non-intrusive for the
+     * rest of the code and should be _good enough_ for this specific use case.
+     */
+    td > *,
+    th > * {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* Restore "orderable" text color in header cells, because due to disabled table sorting they look grayed out. */
+    th {
+      color: var(--bs-secondary-color);
+    }
+
+    /* De-style links inside table cells. */
+    td a {
+      color: var(--#{$prefix}body-color);
+      text-decoration: none;
+    }
+  }
+}
+
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
 .d-none {
   display: none !important;
@@ -2528,10 +2712,10 @@ pre.version, pre.version-stamp {
 }
 
 /*
- * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ * 4.0 TODO(norbert-mieczkowski-codilime): bootstrap-filestyle library, which was used by `ClearableFileInput` widget,
  *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
- *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
- *   time to get rid of bootstrap-filestyle.
+ *   is updated or removed/replaced completely. Core has already migrated to Bootstrap 5 file input, but leave this
+ *   code until 4.0 release, which is when bootstrap-filestyle will be removed from the project.
  */
 .hidden {
   @extend .d-none;

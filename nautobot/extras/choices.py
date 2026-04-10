@@ -120,12 +120,14 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_MULTISELECT = "multi-select"
     TYPE_JSON = "json"
     TYPE_MARKDOWN = "markdown"
+    TYPE_DATETIME = "datetime"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
         (TYPE_INTEGER, "Integer"),
         (TYPE_BOOLEAN, "Boolean (true/false)"),
         (TYPE_DATE, "Date"),
+        (TYPE_DATETIME, "Date/time"),
         (TYPE_URL, "URL"),
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
@@ -356,6 +358,46 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
+# JobConsoleEntry
+#
+
+
+class JobConsoleEntryOutputTypeChoices(ChoiceSet):
+    TYPE_OUTPUT = "output"
+    TYPE_STDOUT = "stdout"
+    TYPE_STDERR = "stderr"
+
+    CHOICES = (
+        (TYPE_OUTPUT, "Output"),
+        (TYPE_STDOUT, "Standard output"),
+        (TYPE_STDERR, "Standard error"),
+    )
+
+
+#
+# ScheduledJob
+#
+
+
+class ScheduledJobStateChoices(ChoiceSet):
+    ACTIVE = "active"
+    PENDING = "pending"
+    DENIED = "denied"
+    CANCELED = "canceled"
+    COMPLETED = "completed"
+    ERRORED = "errored"
+
+    CHOICES = (
+        (ACTIVE, "Active"),
+        (PENDING, "Pending Approval"),
+        (DENIED, "Approval Denied"),
+        (CANCELED, "Approval Canceled"),
+        (COMPLETED, "Completed"),
+        (ERRORED, "Errored"),
+    )
+
+
+#
 # Metadata
 #
 
@@ -369,14 +411,12 @@ class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
 
     TYPE_CONTACT_TEAM = "contact-or-team"
     # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-    TYPE_DATETIME = "datetime"
     TYPE_FLOAT = "float"
 
     CHOICES = (
         *CustomFieldTypeChoices.CHOICES,
         (TYPE_CONTACT_TEAM, "Contact or Team"),
         # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-        (TYPE_DATETIME, "Date/time"),
         (TYPE_FLOAT, "Floating point number"),
     )
 

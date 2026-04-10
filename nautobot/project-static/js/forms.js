@@ -173,8 +173,10 @@ function initializeVLANModeSelection(context) {
 
         const $untagged = $root.find("#id_untagged_vlan");
         const $tagged = $root.find("#id_tagged_vlans");
+        const $add_tagged = $root.find("#id_add_tagged_vlans");
+        const $remove_tagged = $root.find("#id_remove_tagged_vlans");
 
-        if (!$untagged.length || !$tagged.length) return;
+        if (!$untagged.length || (!$tagged.length && (!$add_tagged.length || !$remove_tagged.length))) return;
 
         // Find the container div for the field row
         // In filter drawer: .nb-form-group contains the field directly
@@ -193,9 +195,11 @@ function initializeVLANModeSelection(context) {
             // Fallback: return empty jQuery object (setRowVisible will handle it)
             return $();
         }
-        
+
         const $rowUntagged = findFieldRow($untagged);
         const $rowTagged = findFieldRow($tagged);
+        const $rowAddTagged = findFieldRow($add_tagged);
+        const $rowRemoveTagged = findFieldRow($remove_tagged);
 
         function setRowVisible($row, visible) {
             const el = $row && $row.length ? $row[0] : null;
@@ -211,19 +215,33 @@ function initializeVLANModeSelection(context) {
                 // Clear values
                 $untagged.val("").trigger("change");
                 $tagged.val(null).trigger("change"); // better than [] for select2, works for multi
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, false);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             } else if (mode === "access") {
                 $tagged.val(null).trigger("change");
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             } else if (mode === "tagged") {
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, true);
+                setRowVisible($rowAddTagged, true);
+                setRowVisible($rowRemoveTagged, true);
             } else if (mode === "tagged-all") {
                 $tagged.val(null).trigger("change");
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             }
         }
 
@@ -358,5 +376,8 @@ $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
-})
+});
 
+htmx.onLoad((content) => {
+    window.nb.checkbox.initializeCheckboxes();
+});

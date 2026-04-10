@@ -18,26 +18,17 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_text_present(page_loaded_confirmation, wait_time=10))
 
         # Find the first file input button and scroll to it
-        front_image_button = self.browser.find_by_css("span.group-span-filestyle.input-group-btn").first
-        front_image_button.scroll_to()
-
-        # cancel button is NOT visible initially
-        self.assertTrue(self.browser.find_by_css("button.clear-button").first.is_not_visible(wait_time=5))
+        front_image_file_input = self.browser.find_by_id(file_input_selector_id).first
+        self.scroll_element_into_view(element=front_image_file_input)
 
         # Test file text changes after selecting a file
-        file_selection_indicator_css = "div.bootstrap-filestyle input[type='text'].form-control"
-        self.assertEqual(self.browser.find_by_css(file_selection_indicator_css).first.value, "")
-        front_image_file_input = self.browser.find_by_id(file_input_selector_id).first
-        front_image_file_input.value = "/dev/null"
-        self.assertEqual(self.browser.find_by_css(file_selection_indicator_css).first.value, "null")
+        self.assertEqual(front_image_file_input.value, "")
+        front_image_file_input.fill("/dev/null")
+        self.assertEqual(front_image_file_input.value, "C:\\fakepath\\null")
 
-        # clear button is now visible
-        clear_button = self.browser.find_by_css("button.clear-button").first
-        self.assertTrue(clear_button.is_visible(wait_time=5))
-
-        # clicking clearbutton should hide the button, and wipe the file input value
+        # clicking clearbutton should wipe the file input value
+        clear_button = self.browser.find_by_css(f"#{file_input_selector_id} + button").first
         clear_button.click()
-        self.assertTrue(clear_button.is_not_visible(wait_time=5))
         self.assertEqual(front_image_file_input.value, "")
 
     def test_add_device_page(self):

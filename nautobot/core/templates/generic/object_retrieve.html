@@ -136,7 +136,7 @@
                         {% job_buttons object %}
                         {% block buttons %}
                             {% plugin_buttons object %}
-                            {% render_detail_view_extra_buttons %}
+                            {% render_detail_view_extra_buttons tab_id="main" %}
                             {% block extra_buttons %}{% endblock extra_buttons %}
                             {% consolidate_detail_view_action_buttons %}
                         {% endblock buttons %}
@@ -273,6 +273,7 @@
         {% plugin_object_detail_tab_content object %}
         {% block extra_tab_content %}{% endblock extra_tab_content %}
     </div>
+    {% include 'inc/generic_modal.html' %}
 {% endblock content %}
 
 
@@ -285,8 +286,16 @@
         const DEFAULT_TAB_ID = 'main';
 
         function show_tab(tab_id) {
-            const tabs = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
-            [...tabs].forEach(tab => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
+            /*
+             * "Distinct view tabs" do not use URL hashes to represent tab IDs. In their case, fall back to tab link
+             * `aria-controls` attribute.
+             */
+            const tabsByHref = document.querySelectorAll(`.nav.nav-tabs a[href="${location.pathname}#${tab_id}"]`);
+            const tabs =
+                tabsByHref.length > 0
+                ? tabsByHref
+                : document.querySelectorAll(`.nav.nav-tabs a[aria-controls="${tab_id}"]`);
+            [...tabs].forEach((tab) => (bootstrap.Tab.getInstance(tab) || new bootstrap.Tab(tab)).show());
         }
 
         function switch_tab(tab_href, reload = false) {
@@ -306,17 +315,91 @@
         }
 
         // Set initial history state
-        if (window.location.pathname === '{{ object.get_absolute_url }}') {
+        const tab_id = (() => {
+            /*
+             * Standard case for SPA-style tabs such as "main", "advanced", "contacts", etc. In their case, active tab
+             * can be identified by the `?tab=...` query param from the object detail view URL.
+             */
+            if (window.location.pathname === '{{ object.get_absolute_url }}') {
+                const search_params = new URLSearchParams(window.location.search);
+                return search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
+            }
+
+            /*
+             * In case tab defines its own URL, it's most likely a "distinct tab view", in which case active tab ID
+             * identification has to be done with `aria-controls` attribute.
+             */
+            return [...document.querySelectorAll(`.nav.nav-tabs a`)]
+                .find((tab) => tab.href === window.location.href)
+            ?.getAttribute('aria-controls');
+        })();
+
+        if (tab_id) {
             const tab_url = window.location.origin + window.location.pathname + window.location.search;
-            const search_params = new URLSearchParams(window.location.search);
-
-            const tab_id = search_params.has('tab') ? search_params.get('tab') : DEFAULT_TAB_ID;
-
             window.history.replaceState({ id: tab_id }, document.title, tab_url);
             show_tab(tab_id);
         }
 
+        /*
+         * `pageshow` event listener is required to properly set the active tab when browser `bfcache` is used, i.e.
+         * when users press "Back" or "Forward" button in their browsers.
+         */
+        window.addEventListener('pageshow', () => {
+            /*
+             * Check for tab `id` that should already be recorded in `history.state`, because `pageshow` should be
+             * dispatched no sooner than the initial logic or `switch_tab` function execution.
+             */
+            if (window.history.state?.id) {
+                show_tab(window.history.state.id);
+            }
+        });
+
         window.addEventListener('popstate', (event) => show_tab(event.state.id));
     </script>
-    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
+    <script>
+        document.body.addEventListener('htmx:afterSwap', (event) => {
+            // Check if the swap happened inside our shared modal
+            if (event.detail?.target?.id === "modal-content-container") {
+                // Re-initialize Select2 for any new fields
+                if (window.nb && window.nb.select2) {
+                    window.nb.select2.initializeSelect2Fields(event.detail.target);
+                }
+            }
+        });
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail?.target?.id === "modal-content-container") {
+                const modalBody = document.querySelector('#nautobot-generic-modal .modal-body');
+                const modalTitle = document.querySelector('#nautobot-generic-modal .modal-title');
+
+                modalTitle.innerText = "Error Occurred";
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <p><strong>Failed to load content.</strong></p>
+                        <p>The server responded with status: ${event.detail.xhr.status}</p>
+                    </div>
+                `;
+            }
+        });
+        document.addEventListener('hidden.bs.modal', function (event) {
+            // Only reset if it's the nautobot generic modal
+            if (event.target.id === 'nautobot-generic-modal') {
+                const container = document.getElementById('modal-content-container');
+
+                // Restore the fallback HTML, this will reset the modal, ensuring that any HTMX state is cleared
+                // and the loading spinner is shown for the next use.
+                container.innerHTML = `
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="modal-fallback-title">Loading...</h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Please wait while we fetch the content...</p>
+                    </div>
+                `;
+            }
+        });
+    </script>
 {% endblock javascript %}

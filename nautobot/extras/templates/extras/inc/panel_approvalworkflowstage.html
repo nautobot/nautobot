@@ -13,7 +13,7 @@
                 <br />
                 <small>
                     <span class="text-secondary">{{ approval_workflow.user }} -</span>
-                    <span class="text-secondary">{{ approval_workflow.created|date:settings.SHORT_DATETIME_FORMAT }}</a>
+                    <span class="text-secondary">{{ approval_workflow.created|date:"SHORT_DATETIME_FORMAT" }}</a>
                 </small>
             </div>
         {% endwith %}

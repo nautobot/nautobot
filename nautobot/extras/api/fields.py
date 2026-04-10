@@ -1,4 +1,4 @@
-from django.forms.fields import CallableChoiceIterator
+from django.utils.choices import CallableChoiceIterator
 from rest_framework import serializers
 
 

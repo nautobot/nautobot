@@ -16,7 +16,7 @@ jobs:
         with:
           poetry-install-options: "--no-root"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Build Documentation"
         run: "poetry run invoke build-and-check-docs"
       - name: "Run Poetry Build"
@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         arch: [ "amd64", "arm64" ]
         os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
         exclude:
@@ -139,9 +139,9 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
     env:
-      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.13"
+      BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
       BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.
     steps:
       - name: "Check out repository code"
