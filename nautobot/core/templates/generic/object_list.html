@@ -137,13 +137,7 @@
 
     {% block header_extra %}{% endblock %}
 
-    <div hx-select="#object_table"
-         {% if permissions.change or permissions.delete %}
-             hx-select-oob="#header_messages,#paginator,#select_all_box"
-         {% else %}
-             hx-select-oob="#header_messages,#paginator"
-         {% endif %}
-    >
+    <div>
         {% block table %}
             {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
                 {% if permissions.change or permissions.delete %}
@@ -153,7 +147,17 @@
                         <span id="select_all_box" class="visually-hidden card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div id="object_table_wrapper" hx-get="" hx-params="*" hx-trigger="load">
+                        <div id="object_table_wrapper"
+                             hx-get=""
+                             hx-params="*"
+                             hx-select="#object_table"
+                             {% if permissions.change or permissions.delete %}
+                                 hx-select-oob="#header_messages,#paginator,#select_all_box"
+                             {% else %}
+                                 hx-select-oob="#header_messages,#paginator"
+                             {% endif %}
+                             hx-trigger="load"
+                        >
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -163,7 +167,17 @@
                         </div>
                     </form>
                 {% else %}
-                    <div id="object_table_wrapper" hx-get="" hx-params="*" hx-trigger="load">
+                    <div id="object_table_wrapper"
+                         hx-get=""
+                         hx-params="*"
+                         hx-select="#object_table"
+                         {% if permissions.change or permissions.delete %}
+                             hx-select-oob="#header_messages,#paginator,#select_all_box"
+                         {% else %}
+                             hx-select-oob="#header_messages,#paginator"
+                         {% endif %}
+                         hx-trigger="load"
+                    >
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}

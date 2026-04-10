@@ -14,7 +14,7 @@
         {% include 'inc/media.html' %}
         {% block extra_styles %}{% endblock %}
     </head>
-    <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+    <body hx-headers='{"x-csrftoken": "{{ csrf_token }}"}' hx-inherit="hx-headers">
         {% include 'inc/nav_menu.html' %}
         <div id="drawer">
             {% block drawer %}{% endblock drawer %}
