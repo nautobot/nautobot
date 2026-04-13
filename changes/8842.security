@@ -1,0 +1,1 @@
+Updated dependency `Pillow` to `^12.2.0` to mitigate a number of security vulnerabilities.
