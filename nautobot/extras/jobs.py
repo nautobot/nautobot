@@ -1229,12 +1229,39 @@ def get_job(class_path, reload=False):
     return jobs.get(class_path, None)
 
 
+def _extract_required_sentinel_kwargs(job_class: Job, job_kwargs: dict) -> dict:
+    """Extract only the kwargs that match the job's run() signature."""
+    import inspect
+
+    run_param_names = {
+        name
+        for name, param in inspect.signature(job_class.run).parameters.items()
+        if name != "self"
+        and param.kind
+        not in (
+            inspect.Parameter.VAR_POSITIONAL, # not *args
+            inspect.Parameter.VAR_KEYWORD, # not **kwargs
+        )
+    }
+
+    return {k: v for k, v in job_kwargs.items() if k in run_param_names}
+
+
 def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
     """Helper method to run_job task, handling initial data setup and initialization before running a Job."""
     logger.debug("Preparing to run job %s for task %s", job_class_path, request.id)
 
     # Get the job code
     job_class = get_job(job_class_path, reload=True)
+
+    required_sentinel_kwargs = _extract_required_sentinel_kwargs(job_class, kwargs)
+    if not required_sentinel_kwargs:
+        raise RunJobTaskFailed(f"Job '{job_class.name}' should have defined at least one required kwargs")
+
+    missing_kwargs = set(required_sentinel_kwargs) - kwargs.keys()
+    if missing_kwargs:
+        raise RunJobTaskFailed(f"Missing required job parameters: {missing_kwargs}")
+
     if job_class is None:
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
