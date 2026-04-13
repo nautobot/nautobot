@@ -36,6 +36,7 @@ from nautobot.core.ui.object_detail import (
     ObjectsTablePanel,
     ObjectTextPanel,
     Panel,
+    PostButton,
     SectionChoices,
 )
 from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
@@ -287,6 +288,8 @@ class ObjectTextPanelTest(TestCase):
     def test_render_body_content_hyperlinked_object(self):
         device = Device.objects.first()
         location = device.location
+        location.description = "An important location"
+        location.save()
         panel = ObjectTextPanel(
             weight=100, render_as=ObjectTextPanel.RenderOptions.HYPERLINKED_OBJECT, object_field="location"
         )
@@ -917,3 +920,14 @@ class _JobModalButtonTest(TestCase):
         ctx_fail_again = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail_again["attributes"])
         self.assertNotIn("disabled", btn_success.attributes)
+
+
+class PostButtonTest(TestCase):
+    def test_render_uses_request_for_csrf_token_tag(self):
+        request = RequestFactory().get("/")
+        request.user = self.user
+
+        button = PostButton(weight=100, label="Submit")
+        html = button.render(Context({"request": request}))
+
+        self.assertIn('name="csrfmiddlewaretoken"', html)

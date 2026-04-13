@@ -1774,6 +1774,60 @@ class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase
             "description": "New description",
         }
 
+    def _get_validation_url(self, instance):
+        return reverse("extras:configcontextschema_validation", kwargs={"pk": instance.pk})
+
+    def test_validation_action_without_permission(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_validation_action_with_permission(self):
+        instance = self._get_queryset().first()
+        self.add_permissions("extras.view_configcontextschema")
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Devices", response_body)
+        self.assertIn("Virtual Machines", response_body)
+        self.assertIn("Validation state", response_body)
+
+    def test_validation_action_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+        obj_perm = ObjectPermission(
+            name="View ConfigContextSchema",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_validation_url(instance1))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Validation state", response_body)
+        response = self.client.get(self._get_validation_url(instance2))
+        self.assertHttpStatus(response, 404)
+
+    def test_validation_action_with_invalid_schema_renders_no_schema_available(self):
+        instance = ConfigContextSchema.objects.create(
+            name="Invalid Schema",
+            data_schema={"type": 123},
+        )
+        self.add_permissions("extras.view_configcontextschema")
+
+        response = self.client.get(self._get_validation_url(instance))
+
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Validation state", response_body)
+        self.assertIn("No schema available", response_body)
+
 
 class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Contact
@@ -2804,9 +2858,10 @@ class DynamicGroupTestCase(
 
     def test_edit_object_with_content_type_dcim_interface(self):
         """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
-        # Create some global VLANs
-        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
-        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Use unique VIDs so the filter round-trip doesn't collide with seeded VLANs in the full test suite.
+        max_vid = max(VLAN.objects.values_list("vid", flat=True), default=0)
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=max_vid + 1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=max_vid + 2, status=Status.objects.first())
         # Create an interface with the specified filter values
         interface = Interface.objects.create(
             name="Test Interface",
@@ -3143,7 +3198,32 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions(self, _):
+        """GitRepository custom actions redirect instead of returning 403/404."""
+        instance = self._get_queryset().first()
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                # Without permissions, should get 403
+                response = self.client.post(url)
+                self.assertHttpStatus(response, 403)
+
+                # With permissions, should redirect to job result
+                self.add_permissions("extras.change_gitrepository")
+                self.add_permissions("extras.view_gitrepository")
+                with mock.patch(
+                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
+                    if action_name == "dryrun"
+                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
+                ) as mock_enqueue:
+                    job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
+                    mock_enqueue.return_value = job_result
+                    response = self.client.post(url)
+                    self.assertRedirects(response, job_result.get_absolute_url(), fetch_redirect_response=False)
+                    mock_enqueue.assert_called_once_with(instance, self.user)
+                self.remove_permissions("extras.change_gitrepository")
+                self.remove_permissions("extras.view_gitrepository")
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4109,13 +4189,31 @@ class JobResultTestCase(
         cls.console_entry_1 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Starting job execution..."
         )
+        cls.log_entry_1 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Starting job execution...",
+        )
         cls.console_entry_2 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Processing data..."
+        )
+        cls.log_entry_2 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Processing data...",
         )
         cls.console_entry_3 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending,
             timestamp=timezone.now(),
             text="Restricted entry - requires special permission",
+        )
+        cls.log_entry_3 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Restricted entry - requires special permission",
         )
         cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         JobConsoleEntry.objects.create(
@@ -4143,7 +4241,107 @@ class JobResultTestCase(
         response = self.client.get(url)
         self.assertBodyContains(response, "This is a test")
 
-    # TODO test with constrained permissions on both JobResult and JobLogEntry records
+    def test_get_joblogentrytable_with_filter_q(self):
+        """Test that the q parameter filters log entries by message."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Matching filter
+        response = self.client.get(url, {"q": "This is a test"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "This is a test")
+
+        # Non-matching filter
+        response = self.client.get(url, {"q": "nonexistent-message-xyz"})
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("This is a test", response_content)
+
+    def test_htmx_joblogentrytable_pending_job(self):
+        """Test HTMX request for a pending job renders partial template."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        # Pending job should include the poller
+        self.assertBodyContains(response, "log-table-poller")
+
+    def test_htmx_joblogentrytable_completed_job(self):
+        """Test HTMX request for a completed job does not include the poller."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("log-table-poller", response_content)
+
+    def test_htmx_joblogentrytable_trigger_reload_on_completed_job(self):
+        """Test that poller trigger on a completed job sets trigger_reload=True."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(
+            url,
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TRIGGER="log-table-poller",
+        )
+        self.assertHttpStatus(response, 200)
+        # When trigger_reload is True the view should signal a full page reload
+        self.assertBodyContains(response, "window.location.reload();")
+
+    def test_htmx_joblogentrytable_no_trigger_reload_on_pending_job(self):
+        """Test that poller trigger on a pending job does NOT set trigger_reload."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(
+            url,
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TRIGGER="log-table-poller",
+        )
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("HX-Refresh", response_content)
+
+    def test_joblogentrytable_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+    def test_get_joblogentrytable_with_constrained_permission(self):
+        """Test that constrained permissions filter log entries correctly."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited log entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobLogEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.log_entry_1.id, self.log_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+
+    # TODO test with constrained permissions on JobResult records
 
     def test_get_console_entries_anonymous(self):
         """Test that anonymous users are redirected to login."""
@@ -4574,6 +4772,11 @@ class JobTestCase(
                 for field in overridable_fields:
                     old_data[instance.pk][field] = getattr(job_class, field)
         self.validate_job_data_after_bulk_edit(pk_list, old_data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_create_not_supported(self):
+        self.add_permissions("extras.add_job")
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 404)
 
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow

@@ -30,7 +30,7 @@ dependencies = [
     "cryptography (>=46.0.7,<46.1)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.13,<5.3)",
-    # Adds AJAX capabilities to django-tables2
+    # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
     # Pinned to an exact version because we override a number of non-public APIs that could change in a patch release.
@@ -101,7 +101,7 @@ dependencies = [
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library
-    "Pillow (>=12.1.1,<13)",
+    "pillow (>=12.2.0,<13)",
     # Custom prometheus metrics
     "prometheus-client (>=0.24.1,<0.25)",
     # PostgreSQL database adapter
