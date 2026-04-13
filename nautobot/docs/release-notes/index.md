@@ -9,6 +9,7 @@
 - Async Loading on all List Views
 - Async Loading on Global Search
 - Enhanced Configurable Columns
+- Bulk Rename Across All UI ViewSets
 
 ## [3.0 - November 2025](version-3.0.md)
 
