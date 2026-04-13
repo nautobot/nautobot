@@ -3298,6 +3298,7 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
         """Render a placeholder for certain fields if the job hasn't yet completed."""
         if key in ["duration", "result"]:
             obj = get_obj_from_context(context, self.context_object_key)
+            obj.refresh_from_db()
             if obj.status not in JobResultStatusChoices.READY_STATES:
                 return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
         if key == "result" and value is None:
