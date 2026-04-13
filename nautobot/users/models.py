@@ -17,6 +17,7 @@ from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
 from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models.mixins import NotesMixin
 
 __all__ = (
     "AdminGroup",
@@ -233,7 +234,7 @@ class AdminGroup(Group):
 #
 
 
-class Token(BaseModel, ChangeLoggedModel):
+class Token(ChangeLoggedModel, NotesMixin, BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
