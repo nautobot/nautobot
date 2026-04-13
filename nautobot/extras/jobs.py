@@ -1231,7 +1231,6 @@ def get_job(class_path, reload=False):
 
 def _extract_required_sentinel_kwargs(job_class: Job, job_kwargs: dict) -> dict:
     """Extract only the kwargs that match the job's run() signature."""
-    import inspect
 
     run_param_names = {
         name
@@ -1239,8 +1238,8 @@ def _extract_required_sentinel_kwargs(job_class: Job, job_kwargs: dict) -> dict:
         if name != "self"
         and param.kind
         not in (
-            inspect.Parameter.VAR_POSITIONAL, # not *args
-            inspect.Parameter.VAR_KEYWORD, # not **kwargs
+            inspect.Parameter.VAR_POSITIONAL,  # not *args
+            inspect.Parameter.VAR_KEYWORD,  # not **kwargs
         )
     }
 
