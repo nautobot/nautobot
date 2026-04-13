@@ -1,0 +1,1 @@
+Improved performance when rendering the Device detail page by caching and reusing the set of associated Module PKs to reduce repeated expensive queries.

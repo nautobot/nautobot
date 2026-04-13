@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Model
@@ -11,6 +12,7 @@ from django.test.utils import override_settings
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider, ProviderNetwork
 from nautobot.core import settings
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import (
     CableStatusChoices,
     CableTypeChoices,
@@ -1880,6 +1882,8 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.device.validated_save()
 
     def test_all_x_properties(self):
+        cache_key = construct_cache_key(Device.objects, method_name='_all_module_pks')
+
         self.assertTrue(self.device.has_module_bays)
         self.assertEqual(self.device.all_modules.count(), 0)
         self.assertEqual(self.device.all_module_bays.count(), 1)
@@ -1948,6 +1952,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             parent_module_bay=parent_module_bay,
         )
 
+        cache.delete(cache_key)
         self.assertEqual(self.device.all_modules.count(), 1)
         self.assertEqual(self.device.all_module_bays.count(), 2)
         self.assertEqual(self.device.all_console_server_ports.count(), 2)
@@ -1965,6 +1970,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             parent_module_bay=child_module_bay,
         )
 
+        cache.delete(cache_key)
         self.assertEqual(self.device.all_modules.count(), 2)
         self.assertEqual(self.device.all_module_bays.count(), 3)
         self.assertEqual(self.device.all_console_server_ports.count(), 3)
