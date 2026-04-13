@@ -1116,6 +1116,9 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    front_image = serializers.ImageField(allow_null=True, required=False)
+    rear_image = serializers.ImageField(allow_null=True, required=False)
+
     class Meta:
         model = ModuleType
         fields = "__all__"
