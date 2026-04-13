@@ -2592,6 +2592,7 @@ class JobUIViewSet(NautobotUIViewSet):
         title = job_model.name
         run_button_label = "Run Job Now"
         job_result_key = None
+        refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
             if request.method == "POST":
