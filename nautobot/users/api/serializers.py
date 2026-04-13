@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 
 from nautobot.core.api import (
     ContentTypeField,
+    NotesSerializerMixin,
     ValidatedModelSerializer,
 )
 from nautobot.users.models import ObjectPermission, Token
@@ -68,7 +69,7 @@ class GroupSerializer(ValidatedModelSerializer):
         exclude = ["permissions"]
 
 
-class TokenSerializer(ValidatedModelSerializer):
+class TokenSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     key = serializers.CharField(min_length=40, max_length=40, allow_blank=True, required=False)
 
     class Meta:
