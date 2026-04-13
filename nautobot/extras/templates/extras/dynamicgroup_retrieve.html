@@ -19,9 +19,15 @@
                     </div>
                 {% else %}
                     <div class="alert alert-warning" role="alert">
-                        Dynamic group membership is cached for performance reasons, therefore this listing may not always
-                        be up-to-date.<br>You can refresh the membership of this group asynchronously by clicking the
-                        "Refresh Members" button above.
+                        Dynamic group membership is cached for performance reasons,
+                        therefore this listing may not always be up-to-date.
+                        {% if request.user|has_perm:'extras.run_job' %}
+                            <br>You can refresh the membership of this group asynchronously by clicking the
+                            "Refresh Members" button on the main tab of this page, or by running the
+                            <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}?single_group={{ object.pk }}">
+                                Refresh Dynamic Group Caches
+                            </a> Job as needed.
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
