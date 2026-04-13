@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0081_alter_device_device_redundancy_group_priority_and_more"),
+        ("dcim", "0083_alter_controllermanageddevicegroup_radio_profiles_and_more"),
     ]
 
     operations = [
