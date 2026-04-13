@@ -111,3 +111,14 @@ provide a way to completely override the deletion message.
 
 The base template for renaming objects in bulk is `generic/object_bulk_rename.html`.
 It does not provide any blocks for customizing the user experience.
+
+Bulk rename functionality is automatically enabled for any `NautobotUIViewSet`
+whose model includes an editable `CharField` named `name`. The `ObjectBulkRenameViewMixin`
+is already mixed into `NautobotUIViewSet` and will dynamically register the
+bulk rename view when applicable.
+
+To ensure server responsiveness, regular-expression patterns submitted for
+bulk rename are validated before execution and may be rejected with a clear
+error message if too complex. Additionally, only objects visible to the user
+can be renamed in bulk, unlike other bulk operations that allow the full
+queryset. This ensures users can preview changes before applying them.

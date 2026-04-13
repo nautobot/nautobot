@@ -126,6 +126,12 @@ In addition to the generalized list-view performance enhancements described abov
 - An administrator can configure [`LOCATION_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#location_list_default_max_depth) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../user-guide/administration/configuration/settings.md#prefix_list_default_max_depth) to limit the depth of data that's initially retrieved and rendered when first accessing these list views, improving their responsiveness substantially at high data scale.
 - Users can interactively "drill down" into deeper nested data as needed with a few quick clicks, incrementally loading additional "child" records on the fly.
 
+#### Bulk Rename
+
+For models that expose an editable `name` on views importing from `NautobotUIViewSet` and field now include a **Rename** bulk action alongside Bulk Edit and Bulk Delete. Users can supply a find/replace pattern (literal string or regular expression) against the selected objects' names and preview the resulting names before applying the change. Previously, bulk rename was only available on a small number of legacy views. Models without a `name` field are automatically opted out, so Apps pick this up with no code changes required.
+
+To ensure server responsiveness, regular-expression patterns submitted for bulk rename are validated before execution and may be rejected with a clear error message if too complex. Additionally, only objects visible to the user can be renamed in bulk, unlike other bulk operations that allow the full queryset. This ensures users can preview changes before applying them.
+
 ### Deprecated
 
 #### `assertQuerysetEqualAndNotEmpty()` Test Method
