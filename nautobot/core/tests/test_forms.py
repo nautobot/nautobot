@@ -220,6 +220,44 @@ class ExpandAlphanumeric(testing.TestCase):
 
         self.assertEqual(sorted(forms.expand_alphanumeric_pattern(input_)), output)
 
+    def test_range_numeric_leading_zeros(self):
+        input_ = "r[01-03]a"
+        output = sorted(
+            [
+                "r01a",
+                "r02a",
+                "r03a",
+            ]
+        )
+
+        self.assertEqual(sorted(forms.expand_alphanumeric_pattern(input_)), output)
+
+    def test_range_numeric_leading_zeros_wider_end(self):
+        """Test that leading zeros are preserved when the end value is wider than the start."""
+        input_ = "r[01-100]a"
+        output = [f"r{str(i).zfill(3)}a" for i in range(1, 101)]
+
+        self.assertEqual(sorted(forms.expand_alphanumeric_pattern(input_)), sorted(output))
+
+    def test_range_numeric_leading_zeros_multiple_ranges(self):
+        """Test that leading zeros work with multiple alphanumeric ranges."""
+        input_ = "[A-C][01-03]"
+        output = sorted(
+            [
+                "A01",
+                "A02",
+                "A03",
+                "B01",
+                "B02",
+                "B03",
+                "C01",
+                "C02",
+                "C03",
+            ]
+        )
+
+        self.assertEqual(sorted(forms.expand_alphanumeric_pattern(input_)), output)
+
     def test_range_alpha(self):
         input_ = "[r-t]1a"
         output = sorted(
