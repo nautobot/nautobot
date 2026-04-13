@@ -52,7 +52,13 @@
     <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
         -->View job results
     </a>
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+    <button type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+            {% if refresh_on_close_if_done == "true" and not job_is_pending %}
+                onClick="window.location.reload();"
+            {% endif %}
+    >
         <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
         -->Close
     </button>
