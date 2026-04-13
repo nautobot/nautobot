@@ -172,7 +172,7 @@ If you do not provide your own templates in the `yourapp/templates/yourapp` fold
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
 
-+++ 3.0.0 "ObjectBulkRenameViewMixin now included in NautobotUIViewSet"
++++ 3.1.0 "ObjectBulkRenameViewMixin now included in NautobotUIViewSet"
     Bulk rename functionality is automatically enabled for any `NautobotUIViewSet`
     whose model includes an editable `CharField` named `name`. The `ObjectBulkRenameViewMixin`
     is already mixed into `NautobotUIViewSet` and will dynamically register the
