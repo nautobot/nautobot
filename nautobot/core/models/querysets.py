@@ -140,7 +140,16 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
             }
 
             attrs = permissions.qs_filter_from_constraints(user._object_perm_cache[permission_required], tokens)
-            qs = self.filter(attrs)
+            if attrs:
+                # Use a subquery to avoid duplicate results when constraints span many-to-many joins
+                # (e.g. tags__name__regex matching multiple tags on the same object).
+                # See: https://github.com/nautobot/nautobot/issues/8690
+                inner_qs = self.model._default_manager.filter(attrs)
+                if hasattr(inner_qs, "without_tree_fields"):
+                    inner_qs.without_tree_fields()
+                qs = self.filter(pk__in=inner_qs.values("pk"))
+            else:
+                qs = self.all()
 
         return qs
 

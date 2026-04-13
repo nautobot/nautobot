@@ -2858,9 +2858,10 @@ class DynamicGroupTestCase(
 
     def test_edit_object_with_content_type_dcim_interface(self):
         """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
-        # Create some global VLANs
-        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
-        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Use unique VIDs so the filter round-trip doesn't collide with seeded VLANs in the full test suite.
+        max_vid = max(VLAN.objects.values_list("vid", flat=True), default=0)
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=max_vid + 1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=max_vid + 2, status=Status.objects.first())
         # Create an interface with the specified filter values
         interface = Interface.objects.create(
             name="Test Interface",
