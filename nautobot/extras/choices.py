@@ -291,16 +291,21 @@ class JobResultStatusChoices(ChoiceSet):
     #: Set of all possible states.
     ALL_STATES = states.ALL_STATES
     #: Set of states meaning the task returned an exception.
+    # {RETRY, FAILURE, REVOKED}
     EXCEPTION_STATES = states.EXCEPTION_STATES
     #: State precedence.
     #: None represents the precedence of an unknown state.
     #: Lower index means higher precedence.
+    # [SUCCESS, FAILURE, None, REVOKED, STARTED, RECEIVED, REJECTED, RETRY, PENDING]
     PRECEDENCE = states.PRECEDENCE
     #: Set of exception states that should propagate exceptions to the user.
+    # {FAILURE, REVOKED}
     PROPAGATE_STATES = states.PROPAGATE_STATES
     #: Set of states meaning the task result is ready (has been executed).
+    # {SUCCESS, FAILURE, REVOKED}
     READY_STATES = states.READY_STATES
     #: Set of states meaning the task result is not ready (hasn't been executed).
+    # {PENDING, RECEIVED, STARTED, REJECTED, RETRY}
     UNREADY_STATES = states.UNREADY_STATES
 
     @staticmethod
