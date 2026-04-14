@@ -1,13 +1,14 @@
 from django.db import migrations, models
-from nautobot.extras.utils import fixup_null_statuses
-import nautobot.extras.models.statuses
 
+import nautobot.extras.models.statuses
+from nautobot.extras.utils import fixup_null_statuses
 
 # From 0050_fix_interface_redundancy_group_association_created
 
 # From 0051_interface_redundancy_group_nullable_status
 
 # From 0052_fix_interface_redundancy_group_created
+
 
 # From 0051_interface_redundancy_group_nullable_status
 def migrate_null_statuses(apps, schema):
@@ -31,7 +32,6 @@ def revert_copy_created_to_created_datetimefield(apps, schema):
 
 
 class Migration(migrations.Migration):
-
     replaces = [
         ("dcim", "0050_fix_interface_redundancy_group_association_created"),
         ("dcim", "0051_interface_redundancy_group_nullable_status"),
@@ -44,7 +44,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-
         # Migration 0022 diverged between 1.6 and 2.0 so we must copy the created field to a new field
         # in order to change it without losing data.
         migrations.AddField(
@@ -52,12 +51,8 @@ class Migration(migrations.Migration):
             name="created_datetimefield",
             field=models.DateTimeField(auto_now_add=True, null=True),
         ),
-
-
         migrations.RunPython(migrate_null_statuses, migrations.RunPython.noop),
         migrations.RunPython(copy_created_to_created_datetimefield, revert_copy_created_to_created_datetimefield),
-
-
         migrations.RemoveField(
             model_name="interfaceredundancygroupassociation",
             name="created",
