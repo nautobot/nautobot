@@ -108,6 +108,12 @@ Custom Fields can now be scoped to display or edit only when specific, user-defi
 
 Added official support for Python 3.14.
 
+#### Bulk Rename for More Models
+
+UI viewsets inheriting from `NautobotUIViewSet` now include a **Rename** bulk action alongside Bulk Edit and Bulk Delete when their model exposes an editable `name` field. Users can supply a find/replace pattern (literal string or regular expression) against the selected objects' names and preview the resulting names before applying the change. Previously, bulk rename was only available on a small number of legacy views. Models without a `name` field are automatically opted out, so Apps pick this up with no code changes required.
+
+To ensure server responsiveness, regular-expression patterns submitted for bulk rename are validated before execution and may be rejected with a clear error message if too complex. Additionally, only objects visible to the user can be renamed in bulk, unlike other bulk operations that allow the full queryset. This ensures users can preview changes before applying them.
+
 ### Changed
 
 #### HTMX List View Rendering
