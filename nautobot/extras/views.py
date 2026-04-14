@@ -2137,7 +2137,7 @@ class ScheduledJobView(generic.ObjectView):
     queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
-        job_class = get_job(instance.task)
+        job_class = get_job(instance.task, reload=True)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
