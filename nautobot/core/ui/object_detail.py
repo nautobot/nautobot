@@ -2658,6 +2658,7 @@ class _JobModalButton(Button):
     initial_field_mapping = {}
     run_button_label = "Run Job Now"
     job_result_key = None
+    refresh_on_close_if_done = False
 
     def __init__(self, **kwargs):
         """
@@ -2677,6 +2678,8 @@ class _JobModalButton(Button):
                 If JobResult.result is a dictionary, this key determines which value is shown in the Job Result modal.
                 If the result is a primitive type (string, integer, or float), this key is ignored and the full value
                 is displayed directly.
+            refresh_on_close_if_done (bool, optional): If True, if the modal is dismissed after the Job is run to
+                completion (whether successful or not), a refresh of the page will be automatically triggered.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str, optional): Template to render for this button (not the modal). Defaults to "components/button/default.html".
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
@@ -2720,6 +2723,7 @@ class _JobModalButton(Button):
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
+        hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
 
         raw_attrs = base_context.get("attributes")
         attributes = {} if raw_attrs is None else raw_attrs.copy()

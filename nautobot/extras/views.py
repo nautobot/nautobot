@@ -2541,8 +2541,11 @@ class JobUIViewSet(NautobotUIViewSet):
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
             url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
             job_result_key = request.POST.get("job_result_key", None)
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             if job_result_key:
-                url = f"{url}?job_result_key={job_result_key}"
+                url = f"{url}?job_result_key={job_result_key}&refresh_on_close_if_done={refresh_on_close_if_done}"
+            else:
+                url = f"{url}?refresh_on_close_if_done={refresh_on_close_if_done}"
             response = redirect(url)
             patch_vary_headers(response, ["HX-Request"])
             return response
@@ -2589,17 +2592,20 @@ class JobUIViewSet(NautobotUIViewSet):
         title = job_model.name
         run_button_label = "Run Job Now"
         job_result_key = None
+        refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
             if request.method == "POST":
                 htmx_modal = request.POST.get("job_form_modal", False)
                 run_button_label = request.POST.get("run_button_label", "Run Job Now")
                 job_result_key = request.POST.get("job_result_key", None)
+                refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
                 advanced_field_names = request.POST.getlist("advanced_fields")
             else:
                 htmx_modal = request.GET.get("job_form_modal", False)
                 run_button_label = request.GET.get("run_button_label", "Run Job Now")
                 job_result_key = request.GET.get("job_result_key", None)
+                refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
                 advanced_field_names = request.GET.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
 
@@ -2624,6 +2630,7 @@ class JobUIViewSet(NautobotUIViewSet):
                             "job_form_modal": True,
                             "job_result_key": job_result_key,
                             "run_button_label": run_button_label,
+                            "refresh_on_close_if_done": refresh_on_close_if_done,
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
@@ -3698,6 +3705,7 @@ class JobResultUIViewSet(
         if instance.job_model is not None:
             title = instance.job_model.name
         job_result_key = request.GET.get("job_result_key", None)
+        refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
         detail_value = f"Job finished with status: {instance.get_status_display()}"
         if instance.result and isinstance(instance.result, dict) and job_result_key:
             detail_value = instance.result.get(job_result_key, instance.result)
@@ -3710,6 +3718,7 @@ class JobResultUIViewSet(
                 "title": title,
                 "detail_value": detail_value,
                 "job_result_key": job_result_key,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
         )

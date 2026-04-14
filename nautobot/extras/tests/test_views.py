@@ -4863,7 +4863,10 @@ class JobTestCase(
             )
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:jobresult_modal", kwargs={"pk": result.pk}))
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult_modal", kwargs={"pk": result.pk}) + "?refresh_on_close_if_done=false",
+            )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
