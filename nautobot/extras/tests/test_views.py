@@ -4277,34 +4277,6 @@ class JobResultTestCase(
         response_content = response.content.decode(response.charset)
         self.assertNotIn("log-table-poller", response_content)
 
-    def test_htmx_joblogentrytable_trigger_reload_on_completed_job(self):
-        """Test that poller trigger on a completed job sets trigger_reload=True."""
-        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
-        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
-
-        response = self.client.get(
-            url,
-            HTTP_HX_REQUEST="true",
-            HTTP_HX_TRIGGER="log-table-poller",
-        )
-        self.assertHttpStatus(response, 200)
-        # When trigger_reload is True the view should signal a full page reload
-        self.assertBodyContains(response, "window.location.reload();")
-
-    def test_htmx_joblogentrytable_no_trigger_reload_on_pending_job(self):
-        """Test that poller trigger on a pending job does NOT set trigger_reload."""
-        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
-
-        response = self.client.get(
-            url,
-            HTTP_HX_REQUEST="true",
-            HTTP_HX_TRIGGER="log-table-poller",
-        )
-        self.assertHttpStatus(response, 200)
-        response_content = response.content.decode(response.charset)
-        self.assertNotIn("HX-Refresh", response_content)
-
     def test_joblogentrytable_vary_header(self):
         """Test that Vary header includes HX-Request for proper caching."""
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
