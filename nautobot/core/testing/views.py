@@ -1976,8 +1976,8 @@ class ViewTestCases:
             response = self.client.post(self._get_url("bulk_rename"), data)
             self.assertHttpStatus(response, 200)
             preview_objects = list(response.context["selected_objects"])
-            for preview_object, original_object in zip(preview_objects, objects):
-                self.assertEqual(preview_object.new_name, original_object.name)
+            for preview_object in preview_objects:
+                self.assertEqual(preview_object.new_name, preview_object.name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):
