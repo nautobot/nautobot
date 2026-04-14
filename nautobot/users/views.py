@@ -165,8 +165,9 @@ class UserConfigView(GenericView):
     view_titles = Titles(titles={"*": "User Preferences"})
 
     def get(self, request):
-        tzname = request.user.get_config("timezone", get_default_timezone_name())
-        form = PreferenceProfileSettingsForm(initial={"timezone": tzname})
+        initial = {}
+        initial["timezone"] = request.user.get_config("timezone", get_default_timezone_name())
+        form = PreferenceProfileSettingsForm(initial=initial)
         preferences = request.user.all_config()
 
         return render(
@@ -187,9 +188,10 @@ class UserConfigView(GenericView):
         if is_preference_update_post:
             form = PreferenceProfileSettingsForm(request.POST)
             if form.is_valid():
+                response = redirect("user:preferences")
                 if timezone := form.cleaned_data["timezone"]:
                     request.user.set_config("timezone", str(timezone), commit=True)
-                return redirect("user:preferences")
+                return response
 
             return render(
                 request,

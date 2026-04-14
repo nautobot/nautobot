@@ -6,8 +6,7 @@ from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
-from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import VLAN, VRF
+from nautobot.ipam.models import VLAN, VLANGroup, VRF
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
@@ -40,8 +39,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTe
 
     @classmethod
     def setUpTestData(cls):
-        ClusterType.objects.all().delete()
-
         ClusterType.objects.create(name="Cluster Type 1")
         ClusterType.objects.create(name="Cluster Type 2")
         ClusterType.objects.create(name="Cluster Type 3")
@@ -244,7 +241,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assert https://github.com/nautobot/nautobot/issues/3503 is fixed.
         self.add_permissions("virtualization.view_virtualmachine")
         url = self._get_url("list") + "?sort=primary_ip"
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertBodyContains(response, "Virtual Machine 1")
         self.assertBodyContains(response, "Virtual Machine 2")
         self.assertBodyContains(response, "Virtual Machine 3")
@@ -258,10 +255,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
-        devicerole = Role.objects.get_for_model(Device).first()
+        devicerole = Role.objects.get_for_model(VirtualMachine).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        VirtualMachine.objects.all().delete()
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole, status=vm_status),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole, status=vm_status),
@@ -287,7 +285,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroupFactory.create(location=location)
+        vlan_group = VLANGroup.objects.create(name="Test VLAN Group", location=location)
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", location=location, status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=101, name="VLAN101", location=location, status=vlan_status, vlan_group=vlan_group),

@@ -26,6 +26,7 @@ from nautobot.dcim.choices import (
     InterfaceDuplexChoices,
     InterfaceSpeedChoices,
     InterfaceTypeChoices,
+    PortTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
     RackTypeChoices,
@@ -203,6 +204,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         queryset=LocationType.objects.all(),
         to_field_name="name",
     )
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Locations",
+    )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
@@ -210,6 +216,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Parent location (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location(s) and descendants thereof (name or ID)",
@@ -321,6 +328,19 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
             "shipping_address",
             "tags",
         ]
+
+    def generate_query_filter_max_depth(self, value):
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
+        return Q(**{param: False})
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None or value < 1:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
 
     def generate_query__child_location_type(self, value):
         """Helper method used by DynamicGroups and by _child_location_type() method."""
@@ -722,7 +742,7 @@ class PowerOutletTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetM
 class InterfaceTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
     class Meta:
         model = InterfaceTemplate
-        fields = ["type", "mgmt_only"]
+        fields = ["type", "port_type", "mgmt_only"]
 
 
 class FrontPortTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMixin, BaseFilterSet):
@@ -1143,6 +1163,7 @@ class InterfaceFilterSet(
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
     type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    port_type = django_filters.MultipleChoiceFilter(choices=PortTypeChoices, null_value=None)
     duplex = django_filters.MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
     speed = MultiValueNumberFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
@@ -1177,6 +1198,7 @@ class InterfaceFilterSet(
             "id",
             "name",
             "type",
+            "port_type",
             "duplex",
             "speed",
             "enabled",
@@ -2182,6 +2204,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+        exclude = ["front_image", "rear_image"]  # ImageField is not filterable by django-filter
 
     def filter_module_bay(self, queryset, name, value):
         """Filter module types based on a module bay's module family."""

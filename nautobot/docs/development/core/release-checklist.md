@@ -234,7 +234,7 @@ Once you have verified that all of the above is correct, publish the release and
     Build the images locally:
 
     ```no-highlight
-    for ver in 3.10 3.11 3.12 3.13; do
+    for ver in 3.10 3.11 3.12 3.13 3.14; do
       export INVOKE_NAUTOBOT_PYTHON_VER=$ver
       invoke buildx --target final --tag networktocode/nautobot-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
       invoke buildx --target final-dev --tag networktocode/nautobot-dev-py${INVOKE_NAUTOBOT_PYTHON_VER}:local
@@ -260,7 +260,7 @@ Once you have verified that all of the above is correct, publish the release and
     ```no-highlight
     docker login
     docker login ghcr.io
-    for ver in 3.10 3.11 3.12 3.13; do
+    for ver in 3.10 3.11 3.12 3.13 3.14; do
       export INVOKE_NAUTOBOT_PYTHON_VER=$ver
       invoke docker-push main
     done

@@ -321,6 +321,7 @@ plugins:
         "models/vpn/vpnprofile.md": "user-guide/core-data-model/vpn/vpnprofile.md"
         "models/vpn/vpntunnel.md": "user-guide/core-data-model/vpn/vpntunnel.md"
         "models/vpn/vpntunnelendpoint.md": "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
+        "models/vpn/vpntermination.md": "user-guide/core-data-model/vpn/vpntermination.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -404,7 +405,9 @@ nav:
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
-          - Custom Fields: "user-guide/feature-guides/custom-fields.md"
+          - Custom Fields:
+              - Custom Fields Overview: "user-guide/feature-guides/custom-fields.md"
+              - Custom Fields Cleanup: "user-guide/feature-guides/custom-fields-behavior.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
@@ -532,6 +535,7 @@ nav:
           - VPN:
               - "user-guide/core-data-model/vpn/index.md"
               - VPN: "user-guide/core-data-model/vpn/vpn.md"
+              - VPN Termination: "user-guide/core-data-model/vpn/vpntermination.md"
               - VPN Tunnel: "user-guide/core-data-model/vpn/vpntunnel.md"
               - VPN Tunnel Endpoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
               - VPN Profile: "user-guide/core-data-model/vpn/vpnprofile.md"
@@ -692,6 +696,7 @@ nav:
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
                   - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
+              - Embedded Actions: "development/apps/migration/embedded_actions.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:
@@ -707,6 +712,7 @@ nav:
           - Docs Media Standards: "development/core/docs-media-standards.md"
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
+          - HTMX: "development/core/htmx.md"
           - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
@@ -721,6 +727,7 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"
       - Version 2.4: "release-notes/version-2.4.md"
       - Version 2.3: "release-notes/version-2.3.md"

@@ -26,12 +26,14 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -49,6 +51,7 @@ from nautobot.extras.filters import (
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
+    DynamicGroupFilterSet,
     ExportTemplateFilterSet,
     ExternalIntegrationFilterSet,
     FileProxyFilterSet,
@@ -70,6 +73,7 @@ from nautobot.extras.filters import (
     RelationshipFilterSet,
     RoleFilterSet,
     SavedViewFilterSet,
+    ScheduledJobFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -93,6 +97,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -101,6 +106,7 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -427,7 +433,7 @@ class ApprovalWorkflowDefinitionFilterTestCase(ApprovalWorkflowTestMixin, Filter
 
     def test_model_content_type(self):
         params = {"model_content_type": ["extras.scheduledjob"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(model_content_type=self.scheduledjob_ct),
         )
@@ -468,13 +474,13 @@ class ApprovalWorkflowFilterTestCase(ApprovalWorkflowTestMixin, FilterTestCases.
 
     def test_object_under_review_content_type(self):
         params = {"object_under_review_content_type": ["extras.scheduledjob"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(object_under_review_content_type=self.scheduledjob_ct),
             ordered=False,
         )
         params = {"object_under_review_content_type": ["extras.job"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(object_under_review_content_type=self.scheduledjob_ct),
             ordered=False,
@@ -508,7 +514,7 @@ class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestC
 
         params = {"pending_my_approvals": "false"}
         pending_qs = get_pending_approval_workflow_stages(test_user, self.queryset)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.filter(approval_workflow_stage_responses__user=test_user).exclude(
                 id__in=pending_qs.values_list("id", flat=True)
@@ -523,7 +529,7 @@ class ApprovalWorkflowStageFilterTestCase(ApprovalWorkflowTestMixin, FilterTestC
                 approval_workflow_stage.state = ApprovalWorkflowStateChoices.PENDING
                 approval_workflow_stage.save()
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset, request=request).qs,
             get_pending_approval_workflow_stages(test_user, self.queryset),
             ordered=False,
@@ -707,11 +713,11 @@ class ConfigContextTestCase(FilterTestCases.FilterTestCase):
 
     def test_location(self):
         params = {"location_id": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["location_id"])
         )
         params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(locations__name__in=params["location"])
         )
 
@@ -749,19 +755,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_can_add(self):
         # With no request user, can't add anything
         params = {"can_add": True}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
         params = {"can_add": False}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset)
         # With user, filter by permissions
         request = self.factory.get("/api/extras/content-types/")
         request.user = self.user
         params = {"can_add": True}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.filter(app_label="dcim", model="location"),
         )
         params = {"can_add": False}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.exclude(app_label="dcim", model="location"),
         )
@@ -769,19 +775,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_can_change(self):
         # With no request user, can't change anything
         params = {"can_change": True}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
         params = {"can_change": False}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset)
         # With user, filter by permissions
         request = self.factory.get("/api/extras/content-types/")
         request.user = self.user
         params = {"can_change": True}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.filter(app_label="extras", model="status"),
         )
         params = {"can_change": False}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.exclude(app_label="extras", model="status"),
         )
@@ -789,19 +795,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_can_delete(self):
         # With no request user, can't delete anything
         params = {"can_delete": True}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
         params = {"can_delete": False}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset)
         # With user, filter by permissions
         request = self.factory.get("/api/extras/content-types/")
         request.user = self.user
         params = {"can_delete": True}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.filter(app_label="ipam", model="prefix"),
         )
         params = {"can_delete": False}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.exclude(app_label="ipam", model="prefix"),
         )
@@ -809,19 +815,19 @@ class ContentTypeFilterSetTestCase(FilterTestCases.FilterTestCase):
     def test_can_view(self):
         # With no request user, can't view anything
         params = {"can_view": True}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
         params = {"can_view": False}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset)
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset)
         # With user, filter by permissions
         request = self.factory.get("/api/extras/content-types/")
         request.user = self.user
         params = {"can_view": True}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.filter(app_label="tenancy", model="tenant"),
         )
         params = {"can_view": False}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset, request=request).qs,
             self.queryset.exclude(app_label="tenancy", model="tenant"),
         )
@@ -883,25 +889,25 @@ class ContactAndTeamFilterSetTestCaseMixin:
         # behavior while also testing the `similar_to_location_data` method filter behavior.
         with self.subTest("Test name match"):
             params = {"similar_to_location_data": [test_locations[0].pk]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(name__in=["match 0"]),
             )
         with self.subTest("Test email match"):
             params = {"similar_to_location_data": [test_locations[1].pk]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(name__in=["match 1 and 2"]),
             )
         with self.subTest("Test phone match"):
             params = {"similar_to_location_data": [test_locations[2].pk]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
             )
         with self.subTest("Test email and phone match"):
             params = {"similar_to_location_data": [test_locations[1].pk, test_locations[3].name]}
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(name__in=["match 1 and 2", "match 2 and 3"]),
             )
@@ -1149,11 +1155,11 @@ class ExternalIntegrationTestCase(FilterTestCases.FilterTestCase):
 
     def test_verify_ssl(self):
         params = {"verify_ssl": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=True)
         )
         params = {"verify_ssl": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(verify_ssl=False)
         )
 
@@ -1360,7 +1366,7 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
 
     def test_read_only(self):
         params = {"read_only": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(read_only=True)
         )
 
@@ -1400,11 +1406,11 @@ class JobQueueFilterSetTestCase(FilterTestCases.FilterTestCase, FilterTestCases.
         # we cannot add this test to self.generic_filter_tests because JobQueueTypeChoices only has two values.
         # self.generic_filter_tests needs at least three.
         params = {"queue_type": [JobQueueTypeChoices.TYPE_CELERY]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_CELERY)
         )
         params = {"queue_type": [JobQueueTypeChoices.TYPE_KUBERNETES]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(queue_type=JobQueueTypeChoices.TYPE_KUBERNETES),
         )
@@ -1448,7 +1454,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
             ScheduledJob.objects.create(
@@ -1457,7 +1462,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_DAILY,
                 user=user,
-                approval_required=True,
                 start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
                 time_zone=ZoneInfo("America/New_York"),
             ),
@@ -1469,7 +1473,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 crontab="34 12 * * *",
                 enabled=False,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
         ]
@@ -1483,6 +1486,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 status=JobResultStatusChoices.STATUS_STARTED,
                 scheduled_job=scheduled_jobs[idx],
             )
+        # at least one job result must to have at least one job console entry to pass test `test_boolean_filters_generic`
+        JobConsoleEntry.objects.create(job_result=JobResult.objects.first(), timestamp=now(), text="Processing data...")
 
     def test_scheduled_job(self):
         scheduled_jobs = list(self.scheduled_jobs[:2])
@@ -1490,7 +1495,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             {"scheduled_job": [scheduled_jobs[0].pk, scheduled_jobs[1].name]},
         ]
         for params in filter_params:
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
@@ -1601,12 +1606,12 @@ class JobButtonFilterTestCase(FilterTestCases.FilterTestCase):
     def test_job(self):
         job = Job.objects.get(job_class_name="TestJobButtonReceiverSimple")
         params = {"job": [job.pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(job__pk=job.pk)
         )
 
         params = {"job": [job.name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(job__name=job.name)
         )
 
@@ -1631,6 +1636,91 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
                 job_result=cls.job_result,
                 message=f"I am a {log_level} log.",
             )
+
+
+class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ScheduledJob.objects.all()
+    filterset = ScheduledJobFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("job_model", "job_model__id"),
+        ("job_model", "job_model__name"),
+        ("job_model_id", "job_model__id"),
+        ("start_time",),
+        ("last_run_at",),
+        ("total_run_count",),
+        ("time_zone",),
+        ("state",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="scheduledjobfilteruser", is_active=True)
+        jobs = Job.objects.all()[:3]
+
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 1",
+                task=jobs[0].class_path,
+                job_model=jobs[0],
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                start_time=datetime(2021, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC")),
+                description="First scheduled job for filter tests",
+                total_run_count=1,
+                state=ScheduledJobStateChoices.PENDING,
+                enabled=False,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 2",
+                task=jobs[1].class_path,
+                job_model=jobs[1],
+                interval=JobExecutionType.TYPE_DAILY,
+                user=user,
+                start_time=datetime(2022, 6, 15, 12, 0, 0, tzinfo=ZoneInfo("America/New_York")),
+                time_zone=ZoneInfo("America/New_York"),
+                description="Second scheduled job for filter tests",
+                total_run_count=2,
+                state=ScheduledJobStateChoices.ACTIVE,
+                enabled=True,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 3",
+                task=jobs[2].class_path,
+                job_model=jobs[2],
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 9 * * 1",
+                enabled=False,
+                user=user,
+                start_time=datetime(2023, 12, 31, 23, 59, 59, tzinfo=ZoneInfo("Europe/London")),
+                time_zone=ZoneInfo("Europe/London"),
+                description="Third scheduled job for filter tests",
+                total_run_count=3,
+                state=ScheduledJobStateChoices.COMPLETED,
+            ),
+        ]
+        # set last_run_at to distinct values so it can be used in generic filter tests
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[0].pk).update(
+            last_run_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[1].pk).update(
+            last_run_at=datetime(2024, 6, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[2].pk).update(
+            last_run_at=datetime(2024, 12, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+
+    def test_enabled(self):
+        params = {"enabled": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=True),
+        )
+        params = {"enabled": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=False),
+        )
 
 
 class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
@@ -1658,7 +1748,7 @@ class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
         rack_ct = ContentType.objects.get_for_model(Rack)
         mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
         params = {"content_types": ["dcim.device", "dcim.rack"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
@@ -1743,28 +1833,28 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_type(self):
         params = {"changed_object_type": "dcim.location"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
         )
 
     def test_changed_object_type_id(self):
         params = {"changed_object_type_id": [ContentType.objects.get(app_label="dcim", model="location").pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(changed_object_type=ContentType.objects.get_for_model(Location)),
         )
 
     def test_changed_object_change_context(self):
         params = {"change_context": ["job", "web"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(change_context__in=["job", "web"]),
         )
 
     def test_changed_object_change_context_detail(self):
         params = {"change_context_detail__nic": ["Lorem ipsum dolor sit amet"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(change_context_detail__icontains="Lorem ipsum dolor sit amet"),
         )
@@ -1844,7 +1934,7 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
             .order_by("metadata_type", "assigned_object_id")
         )
         params = {"assigned_object_type": [f"{ct_1.app_label}.{ct_1.model}"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
         )
         oms = (
@@ -1853,7 +1943,7 @@ class ObjectMetadataTestCase(FilterTestCases.FilterTestCase):
             .order_by("metadata_type", "assigned_object_id")
         )
         params = {"assigned_object_type": [f"{ct_2.app_label}.{ct_2.model}"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs.order_by("metadata_type", "assigned_object_id"), oms
         )
 
@@ -2160,13 +2250,13 @@ class SavedViewTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_shared(self):
         params = {"is_shared": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(is_shared=True)
         )
 
     def test_is_global_default(self):
         params = {"is_global_default": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(is_global_default=True)
         )
 
@@ -2327,11 +2417,100 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             .content_type
         )
         params = {"associated_object_type": [ct.model_class()._meta.label_lower]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             StaticGroupAssociation.objects.filter(associated_object_type=ct),
             ordered=False,
         )
+
+
+class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DynamicGroup.objects.all()
+    filterset = DynamicGroupFilterSet
+
+    generic_filter_tests = [("name",), ("description",), ("group_type",)]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.parent_group = DynamicGroup.objects.create(
+            name="Filter Root Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.child_group = DynamicGroup.objects.create(
+            name="Filter Child Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.sibling_group = DynamicGroup.objects.create(
+            name="Filter Sibling Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.grandchild_group = DynamicGroup.objects.create(
+            name="Filter Grandchild Group",
+            content_type=cls.device_ct,
+        )
+        cls.unrelated_group = DynamicGroup.objects.create(
+            name="Filter Unrelated Group",
+            content_type=cls.device_ct,
+        )
+
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.child_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.sibling_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.child_group,
+            group=cls.grandchild_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=30,
+        )
+
+    def test_filter_descendants_returns_expected_groups(self):
+        params = {"descendants": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_accepts_name(self):
+        params = {"descendants": [self.parent_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_returns_none(self):
+        params = {"descendants": [self.unrelated_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
+
+    def test_filter_ancestors_returns_expected_groups(self):
+        params = {"ancestors": [self.grandchild_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_accepts_name(self):
+        params = {"ancestors": [self.grandchild_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_returns_none(self):
+        params = {"ancestors": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
 
 
 class StatusTestCase(FilterTestCases.FilterTestCase):
@@ -2364,7 +2543,7 @@ class TagTestCase(FilterTestCases.FilterTestCase):
     def test_content_types(self):
         params = {"content_types": ["dcim.location"]}
         filtered_data = self.filterset(params, self.queryset).qs
-        self.assertQuerysetEqual(filtered_data, Tag.objects.get_for_model(Location))
+        self.assertQuerySetEqual(filtered_data, Tag.objects.get_for_model(Location))
         self.assertEqual(filtered_data[0], Tag.objects.get_for_model(Location)[0])
 
 
@@ -2450,8 +2629,8 @@ class RoleTestCase(FilterTestCases.FilterTestCase):
         rack_ct = ContentType.objects.get_for_model(Rack)
         device_roles = self.queryset.filter(content_types__in=[device_ct, rack_ct]).distinct()
         params = {"content_types": ["dcim.device", "dcim.rack"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, device_roles)
 
         rack_roles = self.queryset.filter(content_types=rack_ct)
         params = {"content_types": ["dcim.rack"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)

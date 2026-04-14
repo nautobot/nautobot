@@ -44,6 +44,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -386,6 +387,9 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = CustomField
         fields = "__all__"
+        extra_kwargs = {
+            "scope_filter": {"read_only": False, "required": False},
+        }
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
@@ -692,10 +696,21 @@ class ScheduledJobSerializer(BaseModelSerializer):
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
     associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
+    state = ChoiceField(choices=ScheduledJobStateChoices, read_only=True)
 
     class Meta:
         model = ScheduledJob
-        fields = "__all__"
+        # Exclude database fields that are provided for parity with django-celery-beat but are otherwise unused
+        exclude = [
+            "clocked",
+            "exchange",
+            "expires",
+            "expire_seconds",
+            "headers",
+            "priority",
+            "routing_key",
+            "solar",
+        ]
 
 
 #

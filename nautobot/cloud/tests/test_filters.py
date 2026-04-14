@@ -45,7 +45,7 @@ class CloudResourceTypeTestCase(FilterTestCases.FilterTestCase):
     def test_content_types(self):
         cn_ct = ContentType.objects.get_for_model(models.CloudNetwork)
         params = {"content_types": ["cloud.cloudnetwork"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             models.CloudResourceType.objects.filter(content_types=cn_ct),
         )
@@ -84,7 +84,7 @@ class CloudNetworkTestCase(FilterTestCases.FilterTestCase):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
         params = {"prefixes": [prefix.prefix]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
             ordered=False,
@@ -104,7 +104,7 @@ class CloudNetworkPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.first().prefix
         params = {"prefix": [prefix.prefix]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
             ordered=False,

@@ -10,7 +10,6 @@ import os
 import sys
 
 import django
-from django.core.exceptions import ImproperlyConfigured
 from django.core.management import CommandError, CommandParser, execute_from_command_line
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
@@ -48,7 +47,6 @@ def _preprocess_settings(settings_module, config_path):
     - Create Nautobot storage directories if they don't already exist
     - Change database backends to django-prometheus if appropriate
     - Set up 'job_logs' database mirror
-    - Handle our custom `STORAGE_BACKEND` setting.
     - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
     - Load event brokers based on settings_module.EVENT_BROKERS
     """
@@ -98,70 +96,6 @@ def _preprocess_settings(settings_module, config_path):
     settings_module.DATABASES["job_logs"] = deepcopy(settings_module.DATABASES["default"])
     # When running unit tests, treat it as a mirror of the default test DB, not a separate test DB of its own
     settings_module.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
-
-    #
-    # Media storage
-    #
-
-    # Avoid modifying nautobot.core.settings.STORAGES by accident!
-    settings_module.STORAGES = deepcopy(settings_module.STORAGES)
-
-    if hasattr(settings_module, "JOB_FILE_IO_STORAGE"):
-        settings_module.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings_module.JOB_FILE_IO_STORAGE
-
-    if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND is not None:
-        settings_module.STORAGES["default"]["BACKEND"] = settings_module.STORAGE_BACKEND
-
-        # django-storages
-        if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND.startswith("storages."):
-            try:
-                import storages.utils
-            except ModuleNotFoundError as e:
-                if getattr(e, "name") == "storages":
-                    raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {settings_module.STORAGE_BACKEND} but django-storages is not present. "
-                        "It can be installed by running 'pip install django-storages'."
-                    )
-                raise e
-
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
-            def _setting(name, default=None):
-                if name in settings_module.STORAGE_CONFIG:
-                    return settings_module.STORAGE_CONFIG[name]
-                return getattr(settings_module, name, default)
-
-            storages.utils.setting = _setting
-
-    # Django 4.2 will throw an exception if both:
-    # - DEFAULT_FILE_STORAGE/STATICFILES_STORAGE is set in nautobot_config.py (recommended until Nautobot v2.4.24)
-    # - STORAGES is configured in nautobot.core.settings (which it is nowadays).
-    # Unfortunately, it's not implemented as a standard system check (which we could opt out of) but is instead
-    # hard-coded, so we hack around it instead by explicitly copying any non-default *_STORAGE to STORAGES
-    # and then unsetting *_STORAGE.
-    for setting_name, storages_key, default_value in [
-        ("DEFAULT_FILE_STORAGE", "default", "django.core.files.storage.FileSystemStorage"),
-        ("STATICFILES_STORAGE", "staticfiles", "django.contrib.staticfiles.storage.StaticFilesStorage"),
-    ]:
-        if hasattr(settings_module, setting_name):
-            # Make sure we don't clobber any existing explicit configuration in STORAGES:
-            if settings_module.STORAGES[storages_key]["BACKEND"] not in (
-                default_value,  # Nautobot/Django default
-                getattr(settings_module, setting_name),  # same as explicitly set value for setting_name
-            ):
-                raise ImproperlyConfigured(
-                    f"It looks like you've configured both {setting_name} and STORAGES['{storages_key}']['BACKEND'],"
-                    "but their values do not match."
-                )
-
-            # No clobbering, but undesired, so warn the user and handle it:
-            logger.warning(
-                f"It looks like you've configured {setting_name} in {settings_module.SETTINGS_PATH}. "
-                "This setting is deprecated since Nautobot v2.4.24, and support will be removed in Nautobot v3.1. "
-                f"You should migrate to configuring STORAGES['{storages_key}']['BACKEND'] instead. Refer to "
-                "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance."
-            )
-            settings_module.STORAGES[storages_key]["BACKEND"] = getattr(settings_module, setting_name)
-            delattr(settings_module, setting_name)
 
     #
     # Plugins

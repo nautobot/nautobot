@@ -457,6 +457,7 @@ class PowerOutletTemplateSerializer(ModularDeviceComponentTemplateSerializerMixi
 
 class InterfaceTemplateSerializer(ModularDeviceComponentTemplateSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=InterfaceTypeChoices)
+    port_type = ChoiceField(choices=PortTypeChoices, allow_blank=True, required=False)
 
     class Meta:
         model = InterfaceTemplate
@@ -569,17 +570,20 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 parent_bay.full_clean()
 
         # Enforce model validation
-        super().validate(attrs)
+        super().validate(self.base_data(attrs))
 
         return attrs
 
+    def base_data(self, data):
+        return {key: value for key, value in data.items() if key != "parent_bay"}
+
     def create(self, validated_data):
-        instance = super().create(validated_data)
+        instance = super().create(self.base_data(validated_data))
         self.update_parent_bay(validated_data, instance)
         return instance
 
     def update(self, instance, validated_data):
-        instance = super().update(instance, validated_data)
+        instance = super().update(instance, self.base_data(validated_data))
         self.update_parent_bay(validated_data, instance)
         return instance
 
@@ -691,6 +695,7 @@ class InterfaceSerializer(
     InterfaceCommonSerializer,
 ):
     type = ChoiceField(choices=InterfaceTypeChoices)
+    port_type = ChoiceField(choices=PortTypeChoices, allow_blank=True, required=False)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     ip_address_count = serializers.IntegerField(read_only=True, source="_ip_address_count")
@@ -1111,6 +1116,9 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    front_image = serializers.ImageField(allow_null=True, required=False)
+    rear_image = serializers.ImageField(allow_null=True, required=False)
+
     class Meta:
         model = ModuleType
         fields = "__all__"

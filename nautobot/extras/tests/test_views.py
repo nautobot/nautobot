@@ -1,8 +1,11 @@
 from datetime import timedelta
+from http import HTTPStatus
+import re
 from unittest import mock
 import urllib.parse
 import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -41,9 +44,11 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
+    JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
@@ -67,6 +72,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -74,6 +80,7 @@ from nautobot.extras.models import (
     GraphQLQuery,
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -131,6 +138,7 @@ class ApprovalWorkflowDefinitionViewTestCase(
         """Set up test data."""
         super().setUpTestData()
         cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        cls.approver_group = Group.objects.create(name="Test Approver Group")
         for i in range(5):
             ApprovalWorkflowDefinition.objects.create(
                 name=f"Test Approval Workflow {i}",
@@ -145,11 +153,237 @@ class ApprovalWorkflowDefinitionViewTestCase(
             "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
             "weight": 5,
             # These are the "management_form" fields required by the dynamic CustomFieldChoice formsets.
-            "approval_workflow_stage_definitions-TOTAL_FORMS": "0",  # Set to 0 so validation succeeds until we need it
-            "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
-            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "0",
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",  # Set to 1 because at least one approval workflow stage is required
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "0",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
             "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # At least one valid stage
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Test Stage 1",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(cls.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "",
         }
+
+    def test_create_object_without_stages_fails(self):
+        """Creating an ApprovalWorkflowDefinition without stages should fail validation."""
+        self.add_permissions("extras.add_approvalworkflowdefinition")
+
+        form_data_no_stages = {
+            "name": "Test Approval Workflow No Stages",
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": '{"job_model__name": "Bulk Delete Objects"}',
+            "weight": 10,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "0",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # All stage fields empty - no stage submitted
+            "approval_workflow_stage_definitions-0-sequence": "",
+            "approval_workflow_stage_definitions-0-name": "",
+            "approval_workflow_stage_definitions-0-min_approvers": "",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": "",
+            "approval_workflow_stage_definitions-0-DELETE": "",
+        }
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data_no_stages))
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # no new approval workflow definition was created
+        self.assertFalse(self._get_queryset().filter(name="Test Approval Workflow No Stages").exists())
+        self.assertContains(response, "At least one Approval Workflow Stage Definition is required.")
+
+    def test_edit_object_deleting_all_stages_fails(self):
+        """Editing an ApprovalWorkflowDefinition by deleting all stages should fail validation."""
+        self.add_permissions("extras.change_approvalworkflowdefinition")
+
+        # Create an instance with one stage to edit
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Edit",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        stage = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=1,
+            name="Only Stage",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+
+        form_data_delete_stage = {
+            "name": instance.name,
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": "{}",
+            "weight": 99,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "1",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "1",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # Existing stage marked for deletion
+            "approval_workflow_stage_definitions-0-id": str(stage.pk),
+            "approval_workflow_stage_definitions-0-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Only Stage",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "on",  # marked for deletion
+        }
+
+        response = self.client.post(
+            self._get_url("edit", instance),
+            data=post_data(form_data_delete_stage),
+        )
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # Stage should still exist in the DB
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage.pk).exists())
+        self.assertContains(response, "At least one Approval Workflow Stage Definition is required.")
+
+    def test_edit_object_deleting_pending_stages_fails(self):
+        """Editing an ApprovalWorkflowDefinition by deleting pending stages should fail validation."""
+        self.add_permissions("extras.change_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Edit",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        stage1_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=1,
+            name="Stage 1",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+        stage2_definition = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=instance,
+            sequence=2,
+            name="Stage 2",
+            min_approvers=1,
+            approver_group=self.approver_group,
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )  # creating this schedule job automatically created pending workflow
+
+        form_data_delete_stage = {
+            "name": instance.name,
+            "model_content_type": self.scheduledjob_ct.pk,
+            "model_constraints": "{}",
+            "weight": 99,
+            "approval_workflow_stage_definitions-TOTAL_FORMS": "2",
+            "approval_workflow_stage_definitions-INITIAL_FORMS": "2",
+            "approval_workflow_stage_definitions-MIN_NUM_FORMS": "1",
+            "approval_workflow_stage_definitions-MAX_NUM_FORMS": "1000",
+            # Existing stage marked for deletion
+            "approval_workflow_stage_definitions-0-id": str(stage1_definition.pk),
+            "approval_workflow_stage_definitions-0-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-0-sequence": "1",
+            "approval_workflow_stage_definitions-0-name": "Stage 1",
+            "approval_workflow_stage_definitions-0-min_approvers": "1",
+            "approval_workflow_stage_definitions-0-denial_message": "",
+            "approval_workflow_stage_definitions-0-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-0-DELETE": "",
+            "approval_workflow_stage_definitions-1-id": str(stage2_definition.pk),
+            "approval_workflow_stage_definitions-1-approval_workflow_definition": str(instance.pk),
+            "approval_workflow_stage_definitions-1-sequence": "2",
+            "approval_workflow_stage_definitions-1-name": "Stage 2",
+            "approval_workflow_stage_definitions-1-min_approvers": "1",
+            "approval_workflow_stage_definitions-1-denial_message": "",
+            "approval_workflow_stage_definitions-1-approver_group": str(self.approver_group.pk),
+            "approval_workflow_stage_definitions-1-DELETE": "on",  # marked for deletion
+        }
+
+        response = self.client.post(
+            self._get_url("edit", instance),
+            data=post_data(form_data_delete_stage),
+        )
+
+        # Should re-render the form (200)
+        self.assertHttpStatus(response, 200)
+        # Stage should still exist in the DB
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage2_definition.pk).exists())
+        self.assertContains(response, "Cannot delete Approval Workflow Stage Definition(s)")
+        self.assertContains(
+            response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> including this definition. "
+        )
+
+    def test_delete_object_blocked_when_pending_workflow_exists(self):
+        """Deleting ApprovalWorkflowDefinition should fail if pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Delete",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        request = {
+            "path": self._get_url("delete", instance),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request, follow=True)
+
+        # Delete should be blocked
+        self.assertHttpStatus(response, 200)
+
+        # Object should still exist
+        self.assertTrue(ApprovalWorkflowDefinition.objects.filter(pk=instance.pk).exists())
+
+        self.assertContains(response, "Cannot delete Approval Workflow Definition")
+        self.assertContains(response, instance.name)
+        self.assertContains(response, f"<a href='{instance.get_absolute_url()}'>Workflows</a> using this definition. ")
+
+    def test_bulk_delete_blocked_when_pending_workflow_exists(self):
+        """Bulk delete should fail when pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowdefinition")
+
+        instance = ApprovalWorkflowDefinition.objects.create(
+            name="Workflow To Delete",
+            model_content_type=self.scheduledjob_ct,
+            weight=99,
+            model_constraints={},
+        )
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        response = self.client.post(
+            self._get_url("bulk_delete"),
+            data={"pk": [instance.pk]},
+        )
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowDefinition.objects.filter(pk=instance.pk).exists())
 
 
 class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -235,6 +469,63 @@ class ApprovalWorkflowStageDefinitionViewTestCase(ViewTestCases.PrimaryObjectVie
             "min_approvers": 5,
             "denial_message": "updated denial message",
         }
+
+    def test_delete_stage_definition_blocked_when_pending_workflow_exists(self):
+        """Deleting stage definition should fail if pending workflows exist."""
+        self.add_permissions("extras.delete_approvalworkflowstagedefinition")
+
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.name = "NoSuchJob"  # to match to existing definition and create approval workflow
+        job_model.save()
+        scheduled_job = ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        self.assertEqual(scheduled_job.associated_approval_workflows.count(), 1)
+        stage_definition = ApprovalWorkflowStageDefinition.objects.first()
+        request = {
+            "path": self._get_url("delete", stage_definition),
+            "data": post_data({"confirm": True}),
+        }
+        response = self.client.post(**request)
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage_definition.pk).exists())
+
+        self.assertContains(response, "Cannot delete Approval Workflow Stage Definition")
+        self.assertContains(response, stage_definition.name)
+
+    def test_bulk_delete_stage_definition_blocked_when_pending_workflow_stages_exists(self):
+        """Bulk delete should fail when pending workflow stages exist."""
+        self.add_permissions("extras.delete_approvalworkflowstagedefinition")
+
+        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model.name = "NoSuchJob"  # to match to existing definition and create approval workflow
+        job_model.save()
+        scheduled_job = ScheduledJob.objects.create(
+            name="TessPassJob Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=timezone.now(),
+        )
+        self.assertEqual(scheduled_job.associated_approval_workflows.count(), 1)
+        stage_definition = ApprovalWorkflowStageDefinition.objects.first()
+
+        response = self.client.post(
+            self._get_url("bulk_delete"),
+            data={"pk": [stage_definition.pk]},
+        )
+
+        self.assertHttpStatus(response, 200)
+
+        self.assertTrue(ApprovalWorkflowStageDefinition.objects.filter(pk=stage_definition.pk).exists())
 
 
 class ApprovalWorkflowViewTestCase(
@@ -456,7 +747,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
         with self.subTest("with existing comments"):
@@ -489,7 +780,7 @@ class ApprovalWorkflowViewTestCase(
             self.assertBodyContains(response, "Are you sure you want to cancel")
             self.assertBodyContains(response, "Comments")
             # text area is not empty
-            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments">new comment</textarea>'
+            expected_comment_area = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments">new comment</textarea>'
             self.assertContains(response, expected_comment_area, html=True)
 
     def test_cancel_workflow_post(self):
@@ -722,7 +1013,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -833,7 +1124,7 @@ class ApprovalWorkflowStageViewTestCase(
 
         # Try POST with belonging to the approver group
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.add(self.user)
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -887,7 +1178,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "Denied!"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         approval_workflow_stage.approval_workflow_stage_definition.approver_group.user_set.remove(self.user)
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
@@ -935,7 +1226,7 @@ class ApprovalWorkflowStageViewTestCase(
             "path": url,
             "data": post_data({"comments": "It is just a comment"}),
         }
-        response = self.client.post(**request, follow=True)
+        response = self.client.post(**request, follow=True, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         approval_workflow_stage.refresh_from_db()
         # New response should be created
@@ -1024,7 +1315,7 @@ class ApprovalWorkflowStageViewTestCase(
         url = reverse("extras:approvalworkflowstage_comment", args=[approval_workflow_stage.pk])
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" id="id_comments"></textarea>'
+        expected_object_comment = '<textarea name="comments" cols="40" rows="10" class="form-control" placeholder="Comments" aria-describedby="id_comments_helptext" id="id_comments"></textarea>'
         self.assertContains(response, expected_object_comment, html=True)  # Assert empty textarea
 
         request = {
@@ -1482,6 +1773,60 @@ class ConfigContextSchemaTestCase(ViewTestCases.OrganizationalObjectViewTestCase
         cls.bulk_edit_data = {
             "description": "New description",
         }
+
+    def _get_validation_url(self, instance):
+        return reverse("extras:configcontextschema_validation", kwargs={"pk": instance.pk})
+
+    def test_validation_action_without_permission(self):
+        instance = self._get_queryset().first()
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_validation_action_with_permission(self):
+        instance = self._get_queryset().first()
+        self.add_permissions("extras.view_configcontextschema")
+        response = self.client.get(self._get_validation_url(instance))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Devices", response_body)
+        self.assertIn("Virtual Machines", response_body)
+        self.assertIn("Validation state", response_body)
+
+    def test_validation_action_with_constrained_permission(self):
+        instance1, instance2 = self._get_queryset().all()[:2]
+        obj_perm = ObjectPermission(
+            name="View ConfigContextSchema",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(self._get_validation_url(instance1))
+        self.assertHttpStatus(response, 200)
+        self.assertIn("text/html", response["Content-Type"])
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Config Contexts", response_body)
+        self.assertIn("Validation state", response_body)
+        response = self.client.get(self._get_validation_url(instance2))
+        self.assertHttpStatus(response, 404)
+
+    def test_validation_action_with_invalid_schema_renders_no_schema_available(self):
+        instance = ConfigContextSchema.objects.create(
+            name="Invalid Schema",
+            data_schema={"type": 123},
+        )
+        self.add_permissions("extras.view_configcontextschema")
+
+        response = self.client.get(self._get_validation_url(instance))
+
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Validation state", response_body)
+        self.assertIn("No schema available", response_body)
 
 
 class ContactTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1971,12 +2316,103 @@ class CustomFieldTestCase(
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(CustomField.objects.filter(key="invalid_choice_field").exists())
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="value", errors=["This field is required."]
         )
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["choices"], form_index=0, field="weight", errors=["This field is required."]
         )
+
+    def test_custom_field_update_form_render_scope_filter_section_properly(self):
+        self.add_permissions("extras.change_customfield", "extras.view_customfield")
+
+        content_type = ContentType.objects.get_for_model(Location)
+        cf = CustomField.objects.create(
+            label="Test CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+        )
+        cf.content_types.set([content_type])
+
+        url = reverse("extras:customfield_edit", args=[cf.pk])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
+
+        cf.required = True
+        cf.save()
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_without_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+
+    def test_scope_filter_fields_with_invalid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Please select content types first to load scope filter available fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_with_valid_content_type(self):
+        self.add_permissions("extras.change_customfield")
+        content_type = ContentType.objects.get_for_model(Location)
+
+        url = reverse("extras:customfield_scope_filter_fields") + f"?content_types={content_type.pk}"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        # Check if tabs are present
+        self.assertIn("Basic", response_content)
+        self.assertIn("Advanced", response_content)
+        # Check example select are present
+        self.assertInHTML('<select name="scope-location_type"', response_content)
+        self.assertInHTML('<select name="scope-parent"', response_content)
+
+    def test_scope_filter_fields_when_field_is_required(self):
+        self.add_permissions("extras.change_customfield")
+        url = reverse("extras:customfield_scope_filter_fields")
+
+        response = self.client.get(url, {"content_type": 999, "required": "on"})
+
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+
+        response_content = response.content.decode(response.charset)
+        self.assertIn("nb-scope-filter-form-container", response_content)
+        self.assertInHTML("Scope filter can be set only for non-required custom fields.", response_content)
+        self.assertNotIn('<select name="scope-location_type"', response_content)
+        self.assertNotIn('<select name="scope-parent"', response_content)
 
 
 class CustomLinkRenderingTestCase(TestCase):
@@ -2116,6 +2552,178 @@ class DynamicGroupTestCase(
     def _get_queryset(self):
         return super()._get_queryset().filter(group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER)  # TODO
 
+    def _add_group_permissions(self, instance):
+        self.add_permissions(
+            "extras.view_dynamicgroup",
+            get_permission_for_model(instance.content_type.model_class(), "view"),
+        )
+
+    def _assert_members_tab_indicator(self, response_body, expected_count):
+        self.assertIn('aria-controls="members"', response_body)
+        self.assertIn("Members", response_body)
+        if expected_count > 0:
+            self.assertRegex(
+                response_body,
+                re.compile(
+                    rf'aria-controls="members".*?Members\s*<span[^>]*badge[^>]*>\s*{expected_count}\s*</span>',
+                    re.DOTALL,
+                ),
+            )
+
+    def create_dynamic_group(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+
+        dynamic_set_root = DynamicGroup.objects.create(
+            name="DG Root Set",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        dynamic_filter = DynamicGroup.objects.create(
+            name="DG Dynamic Filter",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 1"]},
+        )
+        dynamic_set = DynamicGroup.objects.create(
+            name="DG Dynamic Set",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        dynamic_set_child_a = DynamicGroup.objects.create(
+            name="DG Dynamic Set Child A",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 1"]},
+        )
+        dynamic_set_child_b = DynamicGroup.objects.create(
+            name="DG Dynamic Set Child B",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": ["Location 3"]},
+        )
+        static_group = DynamicGroup.objects.create(
+            name="DG Static",
+            content_type=location_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        static_group.add_members(Location.objects.filter(name__in=["Location 1", "Location 3"]))
+
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set_root,
+            group=dynamic_filter,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set_root,
+            group=dynamic_set,
+            weight=20,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set,
+            group=dynamic_set_child_a,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=dynamic_set,
+            group=dynamic_set_child_b,
+            weight=20,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+
+        for group in [dynamic_filter, dynamic_set_child_a, dynamic_set_child_b, dynamic_set]:
+            group.update_cached_members()
+
+        return dynamic_filter, dynamic_set, static_group
+
+    def test_dynamic_filter(self):
+        dynamic_filter, _, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_filter)
+
+        response = self.client.get(dynamic_filter.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn("Ancestors", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?ancestors={dynamic_filter.pk}[^>]*>\s*1\s*<", re.DOTALL),
+        )
+        self.assertIn("Descendants", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?descendants={dynamic_filter.pk}[^>]*>\s*0\s*<", re.DOTALL),
+        )
+        self._assert_members_tab_indicator(response_body, dynamic_filter.count)
+        self.assertIn("Filter", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(
+                r'<pre><code class="language-json">\{\s*&quot;name&quot;:\s*\[\s*&quot;Location 1&quot;\s*\]\s*\}</code></pre>',
+                re.DOTALL,
+            ),
+        )
+
+    def test_dynamic_set(self):
+        _, dynamic_set, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_set)
+
+        response = self.client.get(dynamic_set.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn("Ancestors", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?ancestors={dynamic_set.pk}[^>]*>\s*1\s*<", re.DOTALL),
+        )
+        self.assertIn("Descendants", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(rf"\?descendants={dynamic_set.pk}[^>]*>\s*2\s*<", re.DOTALL),
+        )
+        self._assert_members_tab_indicator(response_body, dynamic_set.count)
+        self.assertIn("FILTER QUERY LOGIC", response_body)
+        self.assertIn("This is a raw representation of the underlying filter", response_body)
+        self.assertRegex(
+            response_body,
+            re.compile(
+                r"<pre>\(\s*name=&#x27;Location 1&#x27; OR name=&#x27;Location 3&#x27;\s*\)</pre>",
+                re.DOTALL,
+            ),
+        )
+
+    def test_static(self):
+        _, _, static_group = self.create_dynamic_group()
+        self._add_group_permissions(static_group)
+
+        response = self.client.get(static_group.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        self._assert_members_tab_indicator(response_body, static_group.count)
+        self.assertIn("You can bulk-add and bulk-remove members of this group from the", response_body)
+        self.assertNotIn("Dynamic group membership is cached for performance reasons", response_body)
+        self.assertNotIn("Ancestors", response_body)
+        self.assertNotIn("Descendants", response_body)
+
+    @override_settings(PAGINATE_COUNT=1)
+    def test_get_object_dynamic_set_descendants_view_more(self):
+        _, dynamic_set, _ = self.create_dynamic_group()
+        self._add_group_permissions(dynamic_set)
+
+        response = self.client.get(dynamic_set.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        response_data = extract_page_body(response.content.decode(response.charset))
+        view_more_url = reverse("extras:dynamicgroup_list") + f"?descendants={dynamic_set.pk}"
+        view_more_link = (
+            f'<a href="{view_more_url}"><span class="mdi mdi-dots-horizontal" aria-hidden="true"></span>'
+            "View 1 more Descendants</a>"
+        )
+        self.assertInHTML(view_more_link, response_data)
+
     def test_get_object_with_permission(self):
         location_ct = ContentType.objects.get_for_model(Location)
         instance = self._get_queryset().exclude(content_type=location_ct).first()
@@ -2250,9 +2858,10 @@ class DynamicGroupTestCase(
 
     def test_edit_object_with_content_type_dcim_interface(self):
         """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
-        # Create some global VLANs
-        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
-        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Use unique VIDs so the filter round-trip doesn't collide with seeded VLANs in the full test suite.
+        max_vid = max(VLAN.objects.values_list("vid", flat=True), default=0)
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=max_vid + 1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=max_vid + 2, status=Status.objects.first())
         # Create an interface with the specified filter values
         interface = Interface.objects.create(
             name="Test Interface",
@@ -2379,9 +2988,9 @@ class DynamicGroupTestCase(
         new_group = DynamicGroup.objects.get(name="Root Locations")
         self.assertEqual(new_group.content_type, location_ct)
         self.assertEqual(new_group.group_type, DynamicGroupTypeChoices.TYPE_STATIC)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
-        self.assertQuerysetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), new_group.members)
+        self.assertQuerySetEqualAndNotEmpty(Location.objects.filter(parent__isnull=True), group_1.members)
+        self.assertQuerySetEqualAndNotEmpty(
             Location.objects.filter(name__startswith="Root").exclude(parent__isnull=True), group_2.members
         )
 
@@ -2589,7 +3198,32 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    # TODO: mock/stub out `enqueue_git_repository_diff_origin_and_local` and test successful POST with permissions
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions(self, _):
+        """GitRepository custom actions redirect instead of returning 403/404."""
+        instance = self._get_queryset().first()
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                # Without permissions, should get 403
+                response = self.client.post(url)
+                self.assertHttpStatus(response, 403)
+
+                # With permissions, should redirect to job result
+                self.add_permissions("extras.change_gitrepository")
+                self.add_permissions("extras.view_gitrepository")
+                with mock.patch(
+                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
+                    if action_name == "dryrun"
+                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
+                ) as mock_enqueue:
+                    job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
+                    mock_enqueue.return_value = job_result
+                    response = self.client.post(url)
+                    self.assertRedirects(response, job_result.get_absolute_url(), fetch_redirect_response=False)
+                    mock_enqueue.assert_called_once_with(instance, self.user)
+                self.remove_permissions("extras.change_gitrepository")
+                self.remove_permissions("extras.view_gitrepository")
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -2675,7 +3309,7 @@ class NoteTestCase(
             "assigned_object_type": content_type.pk,
             "assigned_object_id": cls.location.pk,
         }
-        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" id="id_object_note"></textarea>'
+        cls.expected_object_note = '<textarea name="object_note" cols="40" rows="10" class="form-control" placeholder="Note" aria-describedby="id_object_note_helptext" id="id_object_note"></textarea>'
 
     def test_note_on_bulk_update_perms(self):
         self.add_permissions("dcim.add_location", "extras.add_note")
@@ -2801,7 +3435,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 1", is_active=True)
         # Try update the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.get(update_url, follow=True)
+        response = self.client.get(update_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
@@ -2846,7 +3480,7 @@ class SavedViewTest(ModelViewTestCase):
         different_user = User.objects.create(username="User 2", is_active=True)
         # Try delete the saved view with a different user from the owner of the saved view
         self.client.force_login(different_user)
-        response = self.client.post(delete_url, follow=True)
+        response = self.client.post(delete_url, follow=True, headers={"HX-Request": "true"})
         self.assertBodyContains(
             response,
             f"You do not have the required permission to delete this Saved View owned by {instance.owner}",
@@ -3068,16 +3702,21 @@ class SavedViewTest(ModelViewTestCase):
             hidden_job.description = "I should not show in the UI!"
             hidden_job.save()
             self.assertEqual(instance.config["filter_params"]["hidden"], "True")
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             # Assert that Job List View rendered with the boolean filter parameter without error
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
+            # This is the description
+            self.assertBodyContains(response, "I should not show in the UI!", html=True)
+
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(
                 response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
             )
-            # This is the description
-            self.assertBodyContains(response, "I should not show in the UI!", html=True)
 
         with self.subTest("Create device Saved View with boolean filter parameters"):
             view_name = "dcim:device_list"
@@ -3100,11 +3739,15 @@ class SavedViewTest(ModelViewTestCase):
             self.assertEqual(instance.config["pagination_count"], 12)
             self.assertEqual(instance.config["filter_params"]["has_primary_ip"], "True")
             self.assertEqual(instance.config["sort_order"], ["name"])
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertIn(str(instance.pk), response_body, msg=response_body)
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(
                 response, f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}', html=True
             )
@@ -3129,11 +3772,14 @@ class SavedViewTest(ModelViewTestCase):
             self.assertHttpStatus(response, 302)
             instance.refresh_from_db()
             self.assertEqual(instance.config["filter_params"]["hidden"], "False")
-            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
+            response = self.client.get(
+                reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True, headers={"HX-Request": "true"}
+            )
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertNotIn("Example hidden job", response_body, msg=response_body)
+            response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             self.assertBodyContains(
                 response,
                 f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
@@ -3333,7 +3979,7 @@ class SecretsGroupTestCase(
         self.assertFalse(SecretsGroup.objects.filter(name="Invalid Secrets Group").exists())
 
         # Checks that formset errors are raised in the context
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"], form_index=0, field="secret", errors=["This field is required."]
         )
 
@@ -3362,7 +4008,7 @@ class SecretsGroupTestCase(
         response = self.client.post(reverse("extras:secretsgroup_add"), data=form_data)
         self.assertEqual(response.status_code, 200)
 
-        self.assertFormsetError(
+        self.assertFormSetError(
             response.context["secrets"],
             form_index=0,
             field="secret",
@@ -3496,7 +4142,7 @@ class ScheduledJobTestCase(
             crontab="*/15 9,17 3 * 1-5",
         )
 
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
@@ -3539,6 +4185,41 @@ class JobResultTestCase(
             grouping="run",
             message="This is a test",
         )
+        cls.job_result_pending = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        cls.console_entry_1 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending, timestamp=timezone.now(), text="Starting job execution..."
+        )
+        cls.log_entry_1 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Starting job execution...",
+        )
+        cls.console_entry_2 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending, timestamp=timezone.now(), text="Processing data..."
+        )
+        cls.log_entry_2 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Processing data...",
+        )
+        cls.console_entry_3 = JobConsoleEntry.objects.create(
+            job_result=cls.job_result_pending,
+            timestamp=timezone.now(),
+            text="Restricted entry - requires special permission",
+        )
+        cls.log_entry_3 = JobLogEntry.objects.create(
+            log_level=LogLevelChoices.LOG_INFO,
+            job_result=cls.job_result_pending,
+            grouping="run",
+            message="Restricted entry - requires special permission",
+        )
+        cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        JobConsoleEntry.objects.create(
+            job_result=cls.job_result_completed, timestamp=timezone.now(), text="Job completed successfully"
+        )
+
         file = SimpleUploadedFile(name="output.txt", content="Content\n".encode("utf-8"))
         FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
 
@@ -3560,7 +4241,291 @@ class JobResultTestCase(
         response = self.client.get(url)
         self.assertBodyContains(response, "This is a test")
 
-    # TODO test with constrained permissions on both JobResult and JobLogEntry records
+    def test_get_joblogentrytable_with_filter_q(self):
+        """Test that the q parameter filters log entries by message."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Matching filter
+        response = self.client.get(url, {"q": "This is a test"})
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "This is a test")
+
+        # Non-matching filter
+        response = self.client.get(url, {"q": "nonexistent-message-xyz"})
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("This is a test", response_content)
+
+    def test_htmx_joblogentrytable_pending_job(self):
+        """Test HTMX request for a pending job renders partial template."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        # Pending job should include the poller
+        self.assertBodyContains(response, "log-table-poller")
+
+    def test_htmx_joblogentrytable_completed_job(self):
+        """Test HTMX request for a completed job does not include the poller."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 200)
+        response_content = response.content.decode(response.charset)
+        self.assertNotIn("log-table-poller", response_content)
+
+    def test_joblogentrytable_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+
+        # Regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+    def test_get_joblogentrytable_with_constrained_permission(self):
+        """Test that constrained permissions filter log entries correctly."""
+        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited log entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobLogEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.log_entry_1.id, self.log_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+
+    # TODO test with constrained permissions on JobResult records
+
+    def test_get_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_get_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_get_console_entries_with_permission(self):
+        """Test full page load with permission shows console log page."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Console Log")
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should show polling message for pending jobs
+        self.assertBodyContains(response, "updating every 2 seconds...")
+        self.assertBodyContains(response, "htmx-poller")
+
+    def test_get_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobConsoleEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.console_entry_1.id, self.console_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should see allowed entries
+        self.assertBodyContains(response, "Starting job execution...")
+        self.assertBodyContains(response, "Processing data...")
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+
+    def test_get_console_entries_completed_job(self):
+        """Test full page load for completed job (no polling)."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Console Log")
+        self.assertBodyContains(response, "Job completed successfully")
+        # Should NOT show polling message for completed jobs
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("updating every 2 seconds...", response_raw_content)
+        self.assertNotIn("htmx-poller", response_raw_content)
+
+    def test_htmx_poll_without_permission(self):
+        """Test HTMX polling without permission."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertHttpStatus(response, 403)
+
+    def test_htmx_poll_no_new_entries_pending_job(self):
+        """Test HTMX polling with no new entries for pending job returns 204."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Use timestamp of last entry
+        last_timestamp = self.console_entry_3.timestamp.isoformat()
+        response = self.client.get(url, {"last_timestamp": last_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 204)
+
+    def test_htmx_poll_with_new_entries(self):
+        """Test HTMX polling returns new console entries as HTML."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Use timestamp before last entry
+        old_timestamp = self.console_entry_1.timestamp.isoformat()
+
+        response = self.client.get(url, {"last_timestamp": old_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Processing data...")
+        self.assertBodyContains(response, "console-lines-wrapper")
+        # Should include job status update
+        self.assertBodyContains(response, 'id="job-status"')
+
+    def test_htmx_poll_completed_job_with_new_entries(self):
+        """Test HTMX polling for completed job includes completion elements."""
+        # Update job to completed status
+        self.job_result_pending.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result_pending.save()
+
+        # Create a new entry after the existing ones
+        JobConsoleEntry.objects.create(
+            job_result=self.job_result_pending, timestamp=timezone.now(), text="Final cleanup complete"
+        )
+
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        old_timestamp = self.console_entry_2.timestamp.isoformat()
+
+        response = self.client.get(url, {"last_timestamp": old_timestamp}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Final cleanup complete")
+        # Should include elements for deletion (job-status-message, htmx-poller)
+        self.assertBodyContains(response, 'id="job-status-message"')
+        self.assertBodyContains(response, 'id="htmx-poller"')
+
+    def test_htmx_poll_invalid_timestamp(self):
+        """Test HTMX polling with invalid timestamp format."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        response = self.client.get(url, {"last_timestamp": "invalid-timestamp"}, HTTP_HX_REQUEST="true")
+
+        self.assertHttpStatus(response, 400)
+
+    def test_htmx_poll_no_timestamp_parameter(self):
+        """Test HTMX polling without timestamp parameter."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+
+        # Should return 204 for pending job with no new entries
+        self.assertHttpStatus(response, 204)
+
+    def test_response_vary_header(self):
+        """Test that Vary header includes HX-Request for proper caching."""
+        url = reverse("extras:jobresult_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+
+        # Test regular request
+        response = self.client.get(url)
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+        # Test HTMX request
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        self.assertIn("HX-Request", response.get("Vary", ""))
+
+    def test_export_job_console_entries_anonymous(self):
+        """Test that anonymous users are redirected to login."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={url}")
+
+    def test_export_job_console_entries_without_permission(self):
+        """Test that users without permission get 403."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_export_job_console_entries_with_permission(self):
+        """Test full page load with permission shows console log page."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.view_jobconsoleentry")
+        response = self.client.get(url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response["Content-Type"], "text/plain; charset=utf-8")
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{self.job_result_pending.pk}.txt"
+        self.assertEqual(response["Content-Disposition"], f'attachment; filename="{filename}"')
+        lines = response.content.decode().splitlines()
+        self.assertEqual(len(lines), 3)
+        ts1 = self.console_entry_1.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[0], f"[{ts1}] {self.console_entry_1.text.strip()}")
+        ts2 = self.console_entry_2.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[1], f"[{ts2}] {self.console_entry_2.text.strip()}")
+        ts3 = self.console_entry_3.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+        self.assertEqual(lines[2], f"[{ts3}] {self.console_entry_3.text.strip()}")
+
+    def test_export_job_console_entries_with_constrained_permission(self):
+        """Test that constrained permissions filter console entries correctly."""
+        url = reverse("extras:jobresult_export_job_console_entries", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        # Create constrained permission that only allows viewing first 2 entries
+        obj_perm = ObjectPermission(name="View limited console entries", actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(JobConsoleEntry))
+        # Add constraint to only show first 2 entries
+        obj_perm.constraints = {"id__in": [self.console_entry_1.id, self.console_entry_2.id]}
+        obj_perm.save()
+
+        response = self.client.get(url)
+
+        # Should NOT see restricted entry
+        response_raw_content = response.content.decode(response.charset)
+        self.assertNotIn("Restricted entry - requires special permission", response_raw_content)
+        # Should see allowed entries
+        self.assertIn("Starting job execution...", response_raw_content)
+        self.assertIn("Processing data...", response_raw_content)
 
 
 class JobTestCase(
@@ -3780,6 +4745,11 @@ class JobTestCase(
                     old_data[instance.pk][field] = getattr(job_class, field)
         self.validate_job_data_after_bulk_edit(pk_list, old_data)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_create_not_supported(self):
+        self.add_permissions("extras.add_job")
+        self.assertHttpStatus(self.client.get(self._get_url("add")), 404)
+
     #
     # Additional test cases for the "job" (legacy run) and "job_run" (updated run) views follow
     #
@@ -3788,6 +4758,12 @@ class JobTestCase(
     def test_get_run_without_permission(self):
         for run_url in self.run_urls:
             self.assertHttpStatus(self.client.get(run_url), 403, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_run_without_permission_modal(self):
+        for run_url in self.run_urls:
+            response = self.client.get(run_url, HTTP_HX_REQUEST="true")
+            self.assertHttpStatus(response, 403, msg=run_url)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_permission(self):
@@ -3801,6 +4777,22 @@ class JobTestCase(
         for run_url in self.run_urls:
             response = self.client.get(run_url)
             self.assertBodyContains(response, "TestPassJob")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_run_with_permission_modal(self):
+        """
+        Get view with appropriate global permissions.
+
+        Note that this view is conditional on run_job permission, not view_job permission,
+        so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
+        """
+        self.add_permissions("extras.run_job")
+        for run_url in self.run_urls:
+            response = self.client.get(run_url, {"job_form_modal": True}, HTTP_HX_REQUEST="true")
+            self.assertBodyContains(response, "TestPassJob")
+            self.assertBodyContains(response, "Show Advanced Settings")
+            self.assertBodyContains(response, "Run Job Now")
+            self.assertIn("HX-Request", response.get("Vary", ""))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_run_with_constrained_permission(self):
@@ -3859,6 +4851,22 @@ class JobTestCase(
 
             result = JobResult.objects.latest()
             self.assertRedirects(response, reverse("extras:jobresult", kwargs={"pk": result.pk}))
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_modal(self, _):
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url, self.data_run_immediately, headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"}
+            )
+
+            result = JobResult.objects.latest()
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult_modal", kwargs={"pk": result.pk}) + "?refresh_on_close_if_done=false",
+            )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
@@ -3972,7 +4980,7 @@ class JobTestCase(
         )
         self.assertInHTML('<input type="hidden" name="_profile" value="True" id="id__profile">', content)
         self.assertInHTML(
-            '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" class="form-check-input" checked>',
+            '<input type="checkbox" name="_ignore_singleton_lock" class="form-check-input" aria-describedby="id__ignore_singleton_lock_helptext" id="id__ignore_singleton_lock" checked>',
             content,
         )
 
@@ -4707,7 +5715,7 @@ class ObjectMetadataTestCase(
         instance2 = self._get_queryset().filter(team__isnull=False).first()
 
         # Try GET to permitted objects
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         # Check if the contact or team absolute url is rendered in the ObjectListView table
@@ -4732,7 +5740,7 @@ class ObjectMetadataTestCase(
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
         # Try GET with object-level permission
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
@@ -4905,7 +5913,7 @@ class RelationshipAssociationTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(instance1.source.name, content, msg=content)
@@ -4972,7 +5980,7 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga2)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(self._get_url("list"))
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
@@ -4987,7 +5995,9 @@ class StaticGroupAssociationTestCase(
         self.assertIsNotNone(sga1)
 
         self.add_permissions("extras.view_staticgroupassociation")
-        response = self.client.get(f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}")
+        response = self.client.get(
+            f"{self._get_url('list')}?dynamic_group={sga1.dynamic_group.pk}", headers={"HX-Request": "true"}
+        )
         self.assertBodyContains(response, sga1.get_absolute_url())
 
 

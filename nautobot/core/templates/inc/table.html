@@ -1,7 +1,7 @@
 {% load querystring from django_tables2 %}
 {% load get_item table_config_button from helpers %}
 
-{% with last_column_name=table.columns.names|last %}
+{% with last_column_name=table.visible_columns|last visible_column_count=table.visible_columns|length %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
         {% if table.show_header %}
             <thead>
@@ -9,7 +9,27 @@
                     {% for column in table.columns %}
                         {% if not table.configurable or not forloop.last or last_column_name != 'actions' %}
                             {% if column.orderable %}
-                                <th {{ column.attrs.th.as_html }}><a href="{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}" data-column-name="{{ column.name }}">{{ column.header }}</a></th>
+                                {% spaceless %}
+                                    <th {{ column.attrs.th.as_html }}>
+                                        {% comment %}
+                                            Tri-state sorting toggle: unsorted → ascending → descending → unsorted
+                                        {% endcomment %}
+                                        {% if column.order_by_alias.is_ascending or not column.is_ordered %}
+                                            <a href="{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}">
+                                        {% else %}
+                                            <a href="{% querystring without table.prefixed_order_by_field %}">
+                                        {% endif %}
+                                        {{ column.header }}
+                                        {% if column.is_ordered %}
+                                            {% if column.order_by_alias.is_ascending %}
+                                                <span class="mdi mdi-arrow-up-thin"></span>
+                                            {% else %}
+                                                <span class="mdi mdi-arrow-down-thin"></span>
+                                            {% endif %}
+                                        {% endif %}
+                                    </a>
+                                    </th>
+                                {% endspaceless %}
                             {% else %}
                                 <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
                             {% endif %}
@@ -41,7 +61,7 @@
                 {% if table.empty_text %}
                     <tr>
                         <td
-                            colspan="{% if last_column_name == 'actions' %}{{ table.columns|length }}{% else %}{{ table.columns|length|add:1 }}{% endif %}"
+                            colspan="{% if last_column_name == 'actions' %}{{ visible_column_count }}{% else %}{{ visible_column_count|add:1 }}{% endif %}"
                             class="text-center text-secondary"
                         >
                             &mdash; {{ table.empty_text }} &mdash;

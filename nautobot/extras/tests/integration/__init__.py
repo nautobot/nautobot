@@ -7,6 +7,9 @@ from nautobot.extras.models import Role, Status
 
 
 def create_test_device(name=None, location_name=None, test_uuid=None):
+    """
+    Create a Device instance (and if needed, also LocationType, Location, Status, Role, Manufacturer, and DeviceType).
+    """
     if not test_uuid:
         test_uuid = str(uuid.uuid4())
     if not name:

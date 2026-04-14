@@ -1,5 +1,16 @@
 # Release Notes
 
+## [3.1 - April 2026](version-3.1.md)
+
+- Job Console Logging
+- Custom Field Scoping
+- Dependent Object Creation and Search
+- Tree List Views on Location and Prefix
+- Async Loading on all List Views
+- Async Loading on Global Search
+- Enhanced Configurable Columns
+- Bulk Rename Across All UI ViewSets
+
 ## [3.0 - November 2025](version-3.0.md)
 
 - Major UI refresh: Bootstrap 5 migration, new navigation, and global search

@@ -4,7 +4,6 @@ from django.views.generic.base import RedirectView
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras import views
 from nautobot.extras.models import (
-    Job,
     ScheduledJob,
 )
 
@@ -32,6 +31,7 @@ router.register("job-buttons", views.JobButtonUIViewSet)
 router.register("job-hooks", views.JobHookUIViewSet)
 router.register("job-queues", views.JobQueueUIViewSet)
 router.register("job-results", views.JobResultUIViewSet)
+router.register("jobs", views.JobUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-changes", views.ObjectChangeUIViewSet)
 router.register("notes", views.NoteUIViewSet)
@@ -40,6 +40,7 @@ router.register("relationship-associations", views.RelationshipAssociationUIView
 router.register("relationships", views.RelationshipUIViewSet)
 router.register("roles", views.RoleUIViewSet)
 router.register("saved-views", views.SavedViewUIViewSet)
+router.register("scheduled-jobs", views.ScheduledJobUIViewSet)
 router.register("secrets", views.SecretUIViewSet)
 router.register("secrets-groups", views.SecretsGroupUIViewSet)
 router.register("static-group-associations", views.StaticGroupAssociationUIViewSet)
@@ -53,12 +54,6 @@ urlpatterns = [
     path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
     # Approvee Dashboard
     path("approvee-dashboard/", views.ApproveeDashboardView.as_view({"get": "list"}), name="approvee_dashboard"),
-    # Config context schema
-    path(
-        "config-context-schemas/<uuid:pk>/validation/",
-        views.ConfigContextSchemaObjectValidationView.as_view(),
-        name="configcontextschema_object_validation",
-    ),
     # contacts
     path("contact-associations/add-new-contact/", views.ObjectNewContactView.as_view(), name="object_contact_add"),
     path("contact-associations/add-new-team/", views.ObjectNewTeamView.as_view(), name="object_team_add"),
@@ -79,7 +74,6 @@ urlpatterns = [
         name="imageattachment_delete",
     ),
     # Jobs
-    path("jobs/", views.JobListView.as_view(), name="job_list"),
     path("jobs/scheduled-jobs/", RedirectView.as_view(url="/extras/scheduled-jobs/"), name="scheduledjob_list_legacy"),
     path(
         "jobs/scheduled-jobs/<uuid:pk>/",
@@ -95,38 +89,6 @@ urlpatterns = [
         "jobs/scheduled-jobs/delete/",
         RedirectView.as_view(url="/extras/scheduled-jobs/delete/"),
         name="scheduledjob_bulk_delete_legacy",
-    ),
-    path(
-        "jobs/<uuid:pk>/",
-        views.JobView.as_view(),
-        name="job",
-    ),
-    path("jobs/<uuid:pk>/edit/", views.JobEditView.as_view(), name="job_edit"),
-    path("jobs/<uuid:pk>/delete/", views.JobDeleteView.as_view(), name="job_delete"),
-    path(
-        "jobs/<uuid:pk>/changelog/",
-        views.JobObjectChangeLogView.as_view(),
-        name="job_changelog",
-        kwargs={"model": Job},
-    ),
-    path(
-        "jobs/<uuid:pk>/notes/",
-        views.JobObjectNotesView.as_view(),
-        name="job_notes",
-        kwargs={"model": Job},
-    ),
-    path("jobs/<uuid:pk>/run/", views.JobRunView.as_view(), name="job_run"),
-    path("jobs/<str:class_path>/run/", views.JobRunView.as_view(), name="job_run_by_class_path"),
-    path("jobs/edit/", views.JobBulkEditView.as_view(), name="job_bulk_edit"),
-    path("jobs/delete/", views.JobBulkDeleteView.as_view(), name="job_bulk_delete"),
-    # ScheduledJobs
-    path("scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
-    path("scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
-    path("scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
-    path(
-        "scheduled-jobs/delete/",
-        views.ScheduledJobBulkDeleteView.as_view(),
-        name="scheduledjob_bulk_delete",
     ),
     path(
         "scheduled-jobs/<uuid:pk>/approval-workflow/",

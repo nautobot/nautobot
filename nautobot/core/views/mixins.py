@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
@@ -12,13 +13,14 @@ from django.core.exceptions import (
     ValidationError,
 )
 from django.db import transaction
-from django.db.models import ManyToManyField, Model, ProtectedError, Q
+from django.db.models import CharField, ManyToManyField, Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import resolve, reverse
 from django.urls.exceptions import NoReverseMatch
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -34,6 +36,7 @@ from rest_framework.viewsets import GenericViewSet
 from nautobot.core.api.views import BulkDestroyModelMixin, BulkUpdateModelMixin
 from nautobot.core.forms import (
     BootstrapMixin,
+    BulkRenameForm,
     ConfirmationForm,
     CSVDataField,
     CSVFileField,
@@ -60,6 +63,16 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
+
+# Matches a group containing a quantifier, followed by another quantifier
+# e.g. (a+)+, (a*)+, (a+)*, ([a-z]+){2,}, etc.
+_NESTED_QUANTIFIER_RE = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
+
+
+def is_safe_regex(pattern_str):
+    """Check that a regex pattern does not contain nested quantifiers that could cause catastrophic backtracking."""
+    return not _NESTED_QUANTIFIER_RE.search(pattern_str)
+
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -704,6 +717,12 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         app_label = model_opts.app_label
         action = self.action
 
+        if self.request.headers.get("HX-Request", False):
+            if action == "list":
+                return "components/htmx/list_view_table.html"
+            if self.detail and "component_id" in self.request.GET:
+                return "components/htmx/component.html"
+
         try:
             template_name = f"{app_label}/{model_opts.model_name}_{action}.html"
             select_template([template_name])
@@ -965,7 +984,11 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
             if global_saved_view:
                 return redirect(reverse("extras:savedview", kwargs={"pk": global_saved_view.pk}))
 
-        return Response({"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view})
+        response = Response(
+            {"user_default_saved_view": user_default_saved_view, "global_saved_view": global_saved_view}
+        )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
 
 class ObjectDestroyViewMixin(NautobotViewSetMixin, mixins.DestroyModelMixin):
@@ -1061,7 +1084,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             except AttributeError:
                 msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
             messages.success(request, msg)
-            if "_addanother" in request.POST:
+            if self.request.headers.get("HX-Request", False):
+                self.success_url = reverse(lookup.get_route_for_model(obj, "detail", api=True), args=[obj.pk])
+            elif "_addanother" in request.POST:
                 # If the object has clone_fields, pre-populate a new instance of the form
                 if hasattr(obj, "clone_fields"):
                     url = f"{request.path}?{prepare_cloned_fields(obj)}"
@@ -1084,7 +1109,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         context = {}
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
-        return Response(context)
+        response = Response(context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     # TODO: this conflicts with DRF's CreateModelMixin.perform_create(self, serializer) API
     def perform_create(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
@@ -1114,7 +1141,9 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         context = {}
         if request.method == "POST":
             return self.perform_update(request, *args, **kwargs)
-        return Response(context)
+        response = Response(context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     # TODO: this conflicts with DRF's UpdateModelMixin.perform_update(self, serializer) API
     def perform_update(self, request, *args, **kwargs):  # pylint: disable=arguments-differ
@@ -1578,3 +1607,153 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
+
+
+class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin to bulk rename model instances that have a `name` field.
+
+    The bulk_rename route is only registered for models that have a `name` field;
+    models without one simply won't have the route.
+    """
+
+    logger = logging.getLogger(__name__)
+    queryset: QuerySet
+    bulk_rename_template_name = "generic/object_bulk_rename.html"
+
+    @classmethod
+    def get_extra_actions(cls):
+        actions = super().get_extra_actions()
+        if hasattr(cls, "queryset") and cls.queryset is not None:
+            try:
+                field = cls.queryset.model._meta.get_field("name")
+                if not isinstance(field, CharField) or not field.editable:
+                    raise FieldDoesNotExist
+            except FieldDoesNotExist:
+                actions = [a for a in actions if a.__name__ != "bulk_rename"]
+        return actions
+
+    @drf_action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+    )
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request)
+
+    def _bulk_rename(self, request):
+        """Process the bulk rename form.
+
+        Note: Unlike bulk_edit/bulk_delete, this intentionally does not support the "_all" (select all matching query)
+        flow. Rename requires a preview step where users see old→new names before applying, which is impractical for
+        unbounded querysets. Only explicitly selected PKs are supported.
+        """
+        self.form_class = self._create_bulk_rename_form_class()
+        query_pks = request.POST.getlist("pk")
+        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
+
+        # selected_objects would return False; if no query_pks or invalid query_pks
+        if not selected_objects:
+            messages.warning(request, f"No valid {self.get_queryset().model._meta.verbose_name_plural} were selected.")
+            return redirect(self.get_return_url(request))
+
+        action = "_preview" if "_preview" in request.POST else "_apply" if "_apply" in request.POST else None
+
+        form = self.form_class(request.POST if action else None, initial={"pk": query_pks})
+
+        if not form.is_valid():
+            return self._render_form_response(request, form, selected_objects)
+
+        try:
+            with transaction.atomic():
+                find = form.cleaned_data["find"]
+                replace = form.cleaned_data["replace"]
+                use_regex = form.cleaned_data["use_regex"]
+
+                if use_regex:
+                    if not self._is_safe_regex(find):
+                        form.add_error(
+                            "find",
+                            "Regex pattern contains nested quantifiers which could cause performance issues. "
+                            "Please simplify the expression.",
+                        )
+                        return self._render_form_response(request, form, selected_objects)
+                    try:
+                        pattern = re.compile(find)
+                    except re.error as e:
+                        form.add_error("find", f"Invalid regex: {e}")
+                        return self._render_form_response(request, form, selected_objects)
+
+                renamed_pks = []
+                for obj in selected_objects:
+                    if use_regex:
+                        obj.new_name = pattern.sub(replace, obj.name)
+                    else:
+                        obj.new_name = obj.name.replace(find, replace)
+                    renamed_pks.append(obj.pk)
+
+                if action == "_apply":
+                    for obj in selected_objects:
+                        obj.name = obj.new_name
+                        try:
+                            obj.validated_save()
+                        except ValidationError as e:
+                            form.add_error(None, f"{obj.name}: {e}")
+                            raise
+
+                    # Enforce constrained permissions
+                    if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
+                        raise ObjectDoesNotExist
+
+                    messages.success(
+                        request,
+                        f"Renamed {len(selected_objects)} {self.get_queryset().model._meta.verbose_name_plural}",
+                    )
+                    return redirect(self.get_return_url(request))
+
+        except ValidationError:
+            pass  # Error already added to form above
+        except ObjectDoesNotExist:
+            msg = "Object update failed due to object-level permissions violation"
+            form.add_error(None, msg)
+
+        return self._render_form_response(request, form, selected_objects)
+
+    @staticmethod
+    def _is_safe_regex(pattern_str):
+        return is_safe_regex(pattern_str)
+
+    def _create_bulk_rename_form_class(self):
+        class _Form(BulkRenameForm):
+            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
+
+        return _Form
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """
+        Return selected_objects parent name.
+
+        This method is intended to be overridden by child classes to return the parent name of the selected objects.
+
+        Args:
+            selected_objects (list[BaseModel]): The objects being renamed
+
+        Returns:
+            (str): The parent name of the selected objects
+        """
+
+        return ""
+
+    def _render_form_response(self, request, form, selected_objects):
+        return Response(
+            {
+                "template": self.bulk_rename_template_name,
+                "form": form,
+                "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "parent_name": self.get_selected_objects_parents_name(selected_objects),
+            }
+        )

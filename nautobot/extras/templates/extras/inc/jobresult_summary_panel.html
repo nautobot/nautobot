@@ -1,0 +1,12 @@
+{% if object.status != "FAILURE" and object.status != "SUCCESS" and object.status != "REVOKED" %}
+    <div hx-get=""
+         hx-select="#component-{{ component.component_id }}"
+         hx-target="#component-{{ component.component_id }}"
+         hx-trigger="every 3s"
+         hx-vals='{"component_id": "{{ component.component_id }}"}'
+    >
+{% else %}
+    <div>
+{% endif %}
+{% include 'components/panel/body_wrapper_key_value_table.html' %}
+</div>

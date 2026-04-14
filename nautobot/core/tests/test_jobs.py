@@ -1,9 +1,11 @@
 import codecs
 import csv
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from io import StringIO
 import json
+import logging
 from pathlib import Path
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -14,13 +16,14 @@ import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
-from nautobot.core.jobs import ExportObjectList
+from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.dcim.models import Device, DeviceType, FrontPortTemplate, Location, LocationType, Manufacturer
 from nautobot.extras.choices import DynamicGroupTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.factory import JobResultFactory, ObjectChangeFactory
+from nautobot.extras.jobs import RunJobTaskFailed
 from nautobot.extras.models import (
     Contact,
     ContactAssociation,
@@ -567,6 +570,20 @@ class LogsCleanupTestCase(TransactionTestCase):
             ObjectChangeFactory.create_batch(40)
         if JobResult.objects.count() < 2:
             JobResultFactory.create_batch(20)
+        # To avoid spurious test failures due to factory randomness,
+        # ensure that we have some records well outside the test data cutoff windows.
+        ObjectChangeFactory.create(time=datetime(2023, 1, 1, tzinfo=dt_timezone.utc))
+        ObjectChangeFactory.create(time=datetime(2026, 1, 1, tzinfo=dt_timezone.utc))
+        latest_jr = JobResult.objects.latest()
+        latest_jr.date_created += timedelta(days=365)
+        latest_jr.date_started += timedelta(days=365)
+        latest_jr.date_done += timedelta(days=365)
+        latest_jr.save()
+        earliest_jr = JobResult.objects.earliest()
+        earliest_jr.date_created -= timedelta(days=365)
+        earliest_jr.date_started -= timedelta(days=365)
+        earliest_jr.date_done -= timedelta(days=365)
+        earliest_jr.save()
 
     @load_event_broker_override_settings(
         EVENT_BROKERS={
@@ -848,6 +865,25 @@ class BulkEditTestCase(TransactionTestCase):
             username=self.user.username,
         )
         self._common_no_error_test_assertion(Role, job_result, Role.objects.all().count(), color="aa1409")
+
+    def test_bulk_edit_objects_select_all_prefetch_related(self):
+        """
+        Bulk edit all DeviceType instances (https://github.com/nautobot/nautobot/issues/8570).
+        """
+        self.add_permissions("dcim.change_devicetype", "dcim.view_devicetype")
+        mfr = Manufacturer.objects.create(name="Cisco")
+        for x in range(3):
+            DeviceType.objects.create(manufacturer=mfr, model=f"Cisco CSR{x}000v")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkEditObjects",
+            content_type=ContentType.objects.get_for_model(DeviceType).id,
+            edit_all=True,
+            filter_query_params={},
+            form_data={"u_height": 0},
+            username=self.user.username,
+        )
+        self._common_no_error_test_assertion(DeviceType, job_result, DeviceType.objects.all().count(), u_height=0)
 
     def test_bulk_edit_objects_nullify(self):
         """
@@ -1307,6 +1343,26 @@ class BulkDeleteTestCase(TransactionTestCase):
         )
         self._common_no_error_test_assertion(Circuit, job_result)
 
+    def test_bulk_delete_objects_select_all_prefetch_related(self):
+        """
+        Delete all DeviceType objects (https://github.com/nautobot/nautobot/issues/8570).
+        """
+        self.add_permissions("dcim.delete_devicetype", "dcim.view_devicetype")
+        mfr = Manufacturer.objects.create(name="Cisco")
+        for x in range(3):
+            DeviceType.objects.create(manufacturer=mfr, model=f"Cisco CSR{x}000v")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs.bulk_actions",
+            "BulkDeleteObjects",
+            username=self.user.username,
+            content_type=ContentType.objects.get_for_model(DeviceType).id,
+            delete_all=True,
+            filter_query_params={"per_page": [10]},
+            pk_list=[],
+            saved_view_id=None,
+        )
+        self._common_no_error_test_assertion(DeviceType, job_result)
+
     def test_bulk_delete_objects_select_some(self):
         """
         Delete some of the Role objects with no filter queries applied.
@@ -1565,3 +1621,111 @@ class ValidateModelDataTestCase(TransactionTestCase):
         self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
         log_fail = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_FAILURE)
         self.assertIn("Unable to apply access permissions to users.user", log_fail.message)
+
+
+class DeleteCustomFieldDataTest(TransactionTestCase):
+    """Test input normalization/validation in DeleteCustomFieldData.run()."""
+
+    def setUp(self):
+        super().setUp()
+        self.job = DeleteCustomFieldData()
+        self.job.logger = logging.getLogger("test")
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_field_specs_valid_json(self, mock_fn):
+        self.job.run(field_specs='[{"field_key": "k", "content_types": ["ct1"]}]')
+        mock_fn.assert_called_once_with(
+            field_key="k", content_type_pk_set=["ct1"], verbose=False, job_logger=self.job.logger
+        )
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_field_specs_multiple_items(self, mock_fn):
+        specs = json.dumps(
+            [
+                {"field_key": "k1", "content_types": ["ct1"]},
+                {"field_key": "k2", "content_types": ["ct2", "ct3"]},
+            ]
+        )
+        self.job.run(field_specs=specs)
+        self.assertEqual(mock_fn.call_count, 2)
+        mock_fn.assert_any_call(field_key="k1", content_type_pk_set=["ct1"], verbose=False, job_logger=self.job.logger)
+        mock_fn.assert_any_call(
+            field_key="k2", content_type_pk_set=["ct2", "ct3"], verbose=False, job_logger=self.job.logger
+        )
+
+    def test_field_specs_invalid_json(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs="not json")
+
+    def test_field_specs_not_a_list(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='{"field_key": "k"}')
+
+    def test_field_specs_bad_item_schema(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='[{"wrong_key": 1}]')
+
+    @mock.patch("nautobot.extras.customfields.delete_custom_field_data")
+    def test_fallback_to_single_spec(self, mock_fn):
+        ct = mock.Mock()
+        ct.pk = "fake-pk"
+        self.job.run(field_key="my_key", content_types=[ct])
+        mock_fn.assert_called_once_with(
+            field_key="my_key", content_type_pk_set=["fake-pk"], verbose=False, job_logger=self.job.logger
+        )
+
+    def test_no_input_raises(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run()
+
+
+class UpdateCustomFieldChoiceDataTest(TransactionTestCase):
+    """Test input normalization/validation in UpdateCustomFieldChoiceData.run()."""
+
+    def setUp(self):
+        super().setUp()
+        self.job = UpdateCustomFieldChoiceData()
+        self.job.logger = logging.getLogger("test")
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_field_specs_valid_json(self, mock_fn):
+        self.job.run(field_specs='[{"field_id": "f1", "old_value": "old", "new_value": "new"}]')
+        mock_fn.assert_called_once_with(field_id="f1", old_value="old", new_value="new", job_logger=self.job.logger)
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_field_specs_multiple_items(self, mock_fn):
+        specs = json.dumps(
+            [
+                {"field_id": "f1", "old_value": "a", "new_value": "b"},
+                {"field_id": "f2", "old_value": "c", "new_value": "d"},
+            ]
+        )
+        self.job.run(field_specs=specs)
+        self.assertEqual(mock_fn.call_count, 2)
+        mock_fn.assert_any_call(field_id="f1", old_value="a", new_value="b", job_logger=self.job.logger)
+        mock_fn.assert_any_call(field_id="f2", old_value="c", new_value="d", job_logger=self.job.logger)
+
+    def test_field_specs_invalid_json(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs="not json")
+
+    def test_field_specs_not_a_list(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='{"field_id": "f1"}')
+
+    def test_field_specs_bad_item_schema(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run(field_specs='[{"wrong_key": 1}]')
+
+    @mock.patch("nautobot.extras.customfields.update_custom_field_choice_data")
+    def test_fallback_to_single_spec(self, mock_fn):
+        field = mock.Mock()
+        field.pk = "fake-field-pk"
+        self.job.run(field=field, old_value="old", new_value="new")
+        mock_fn.assert_called_once_with(
+            field_id="fake-field-pk", old_value="old", new_value="new", job_logger=self.job.logger
+        )
+
+    def test_no_input_raises(self):
+        with self.assertRaises(RunJobTaskFailed):
+            self.job.run()

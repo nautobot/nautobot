@@ -35,23 +35,33 @@ window.$ = window.jQuery;
 
 import 'jquery-ui';
 import 'jquery-ui/ui/widgets/sortable.js';
+
+import get from 'lodash.get';
+window._ = { get }; // eslint-disable-line id-length
+
 import 'select2';
 
 import { initializeCheckboxes } from './checkbox.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
-import { observeFormStickyFooters } from './form.js';
+import { getEchartsOptionsThemeOverrides } from './echarts.js';
+import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
+import { refreshMessages } from './messages.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
 import { observeCollapseTabs } from './tabs.js';
 import { initializeTheme } from './theme.js';
+import { initializeSubtrees } from './tree.js';
+
+window.nb ??= {};
+
+// Export `getFieldAutoId` before `'DOMContentLoaded'` for convenience, because existing apps forms may need to use it.
+window.nb.form = { getFieldAutoId };
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.nb ??= {};
-
   // History
   loadState();
   window.nb.history = { saveState };
@@ -75,9 +85,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Drawer
   initializeDrawers();
 
+  // ECharts
+  window.nb.echarts = { getEchartsOptionsThemeOverrides };
+
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+
+  // Messages
+  window.nb.messages = { refreshMessages };
 
   // Search
   initializeSearch();
@@ -98,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
    *   ```
    */
   observeCollapseTabs();
+
+  // Trees
+  initializeSubtrees();
 
   // Theme
   initializeTheme();
@@ -131,3 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+/*
+ * Nautobot form events UI API is a special case which has its own `'DOMContentLoaded'` listener, and needs to be
+ * **registered after**, but **initialized before** the main `'DOMContentLoaded'` listener above is fired, hence this
+ * seemingly strange specific place of the actual function call.
+ */
+initializeFormEvents();
