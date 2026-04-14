@@ -1,0 +1,1 @@
+Add an iterator to the queryset in migration 0130_jobresult_generate_log_entry_counts to prevent resource exhaustion.
