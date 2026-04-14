@@ -1,0 +1,1 @@
+Fixed an exception when editing a Job whose definition has explicitly defined `task_queues`.
