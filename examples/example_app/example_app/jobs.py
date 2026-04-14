@@ -354,7 +354,7 @@ class ExampleCustomFormJob(Job):
 
 
 class ExampleLoggingJob(Job):
-    interval = IntegerVar(default=4, description="The time in seconds to sleep.")
+    runtime = IntegerVar(default=4, description="The time in seconds to sleep.")
 
     class Meta:
         name = "Example logging job."
@@ -366,9 +366,9 @@ class ExampleLoggingJob(Job):
             "bulk",
         ]
 
-    def run(self, interval):  # pylint:disable=arguments-differ
-        self.logger.debug("Running for %s seconds.", interval)
-        for step in range(1, interval + 1):
+    def run(self, runtime):  # pylint:disable=arguments-differ
+        self.logger.debug("Running for %s seconds.", runtime)
+        for step in range(1, runtime + 1):
             time.sleep(1)
             self.logger.info("Step %s", step)
             print(f"stdout logging for step {step}, task: {self.request.id}")
@@ -378,7 +378,7 @@ class ExampleLoggingJob(Job):
             extra={"skip_db_logging": True},
         )
         self.logger.info("Success", extra={"object": self.job_model, "grouping": "job_run_success"})
-        return f"Ran for {interval} seconds"
+        return f"Ran for {runtime} seconds"
 
 
 class ExampleFileInputOutputJob(Job):

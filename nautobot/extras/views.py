@@ -3399,6 +3399,7 @@ class JobResultUIViewSet(
                     "status": [render_jobresult_status],
                     "files": [render_jobresult_files],
                 },
+                body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
             ),
             object_detail.Panel(
                 weight=200,
@@ -3568,17 +3569,12 @@ class JobResultUIViewSet(
         if request.headers.get("HX-Request"):
             job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
 
-            # trigger for final reload when job is finished
-            hx_trigger = request.headers.get("HX-Trigger", "")
-            trigger_reload = not job_is_pending and hx_trigger == "log-table-poller"
-
             context = {
                 "job_result": instance,
                 "job_is_pending": job_is_pending,
                 "has_logs": queryset.exists(),
                 "table_html": log_table.as_html(request),
                 "log_table_url": request.get_full_path(),
-                "trigger_reload": trigger_reload,
             }
             response = render(request, "extras/inc/jobresult_log_table_partial.html", context)
             patch_vary_headers(response, ["HX-Request"])
