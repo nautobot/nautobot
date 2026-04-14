@@ -1688,7 +1688,10 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                 renamed_pks = []
                 for obj in selected_objects:
                     if use_regex:
-                        obj.new_name = pattern.sub(replace, obj.name)
+                        try:
+                            obj.new_name = pattern.sub(replace, obj.name)
+                        except re.error:
+                            obj.new_name = obj.name
                     else:
                         obj.new_name = obj.name.replace(find, replace)
                     renamed_pks.append(obj.pk)
