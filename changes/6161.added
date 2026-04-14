@@ -1,1 +1,0 @@
-Added `front_image` and `rear_image` fields to `ModuleType`, matching the existing image support on `DeviceType`.

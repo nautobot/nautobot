@@ -1,1 +1,0 @@
-Added an `extra_columns` argument to `object_detail.ObjectsTablePanel` to allow dynamically adding custom columns to related object tables in object detail views.
