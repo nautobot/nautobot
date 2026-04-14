@@ -221,7 +221,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 - [#8812](https://github.com/nautobot/nautobot/issues/8812) - Refactored Job model related UI views to use `NautobotUIViewSet`.
 - [#8816](https://github.com/nautobot/nautobot/issues/8816) - Refactored DynamicGroup model related UI views to use `UI component framework`.
 - [#8854](https://github.com/nautobot/nautobot/issues/8854) - Fixed an intermittent test failure in `nautobot.core.tests.test_jobs.LogsCleanupTestCase`.
-- [#8864](ttps://github.com/nautobot/nautobot/pull/8864) - Updated the App marketplace entries and template logic for licensing.
+- [#8864](https://github.com/nautobot/nautobot/pull/8864) - Updated the App marketplace entries and template logic for licensing.
 
 ## v3.1.0a5 (2026-04-07)
 
