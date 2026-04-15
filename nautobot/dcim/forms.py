@@ -1062,9 +1062,16 @@ class ModuleTypeForm(NautobotModelForm):
             "model",
             "module_family",
             "part_number",
+            "front_image",
+            "rear_image",
             "comments",
             "tags",
         ]
+        widgets = {
+            # Exclude SVG images (unsupported by PIL)
+            "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+        }
 
 
 class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):

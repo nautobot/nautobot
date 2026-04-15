@@ -4,6 +4,7 @@ from rest_framework import status
 from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Location, LocationType, SoftwareVersion
+from nautobot.dcim.tests.test_api import Mixins
 from nautobot.extras.models import ConfigContextSchema, Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
 from nautobot.virtualization.models import (
@@ -118,7 +119,7 @@ class ClusterTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
-class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
+class VirtualMachineTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases.APIViewTestCase):
     model = VirtualMachine
     choices_fields = []
 
@@ -145,7 +146,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         cls.software_versions = SoftwareVersion.objects.filter(software_image_files__isnull=False)[:3]
         cls.statuses = Status.objects.get_for_model(VirtualMachine)
 
-        VirtualMachine.objects.create(
+        cls.virtualmachine = VirtualMachine.objects.create(
             name="Virtual Machine 1",
             cluster=clusters[0],
             local_config_context_data={"A": 1},
@@ -208,7 +209,7 @@ class VirtualMachineTest(APIViewTestCases.APIViewTestCase):
         """
         Check that config context data can be included by passing ?include=config_context.
         """
-        url = reverse("virtualization-api:virtualmachine-list") + "?include=config_context"
+        url = reverse("virtualization-api:virtualmachine-list") + f"?id={self.virtualmachine.pk}&include=config_context"
         self.add_permissions("virtualization.view_virtualmachine")
 
         response = self.client.get(url, **self.header)

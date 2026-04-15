@@ -1,2 +1,0 @@
-Decoupled rendering tab buttons in object detail view from initial page load context.
-Fixed bug when navigating "Back" and "Forward" in browser caused active tab mismatch in object detail view.

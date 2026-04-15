@@ -3,6 +3,9 @@ from unittest import skip
 from unittest.mock import patch
 import uuid
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import override_settings
@@ -12,7 +15,9 @@ from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
-from nautobot.extras.models import Status
+from nautobot.extras.models import Status, Tag
+
+User = get_user_model()
 
 
 @isolate_apps("nautobot.core.tests")
@@ -199,3 +204,168 @@ class TreeModelTestCase(TestCase):
         loc.delete()
         self.assertEqual(max_tree_depth, Location.objects.all().max_tree_depth())
         self.assertEqual(max_tree_depth, Location.objects.max_depth)
+
+
+class RestrictedQuerySetTestCase(TestCase):
+    """Tests for RestrictedQuerySet.restrict() and check_perms()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+        cls.locations = [
+            Location.objects.create(
+                name=f"restrict-test-{i}",
+                location_type=cls.location_type,
+                status=cls.status,
+            )
+            for i in range(3)
+        ]
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_superuser_returns_all(self):
+        """Superusers should bypass all permission restrictions."""
+        self.user.is_superuser = True
+        self.user.save()
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertTrue(qs.filter(pk=self.locations[0].pk).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_unauthenticated_returns_none(self):
+        """An unauthenticated/anonymous user should get an empty queryset."""
+
+        anon = AnonymousUser()
+        qs = Location.objects.restrict(anon, "view")
+        self.assertEqual(qs.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_no_permission_returns_none(self):
+        """A user with no relevant permissions should get an empty queryset."""
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(qs.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_unconstrained_permission(self):
+        """An ObjectPermission with null constraints should return all objects of the model."""
+        self.add_permissions("dcim.view_location")
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(qs.count(), Location.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_with_simple_constraint(self):
+        """An ObjectPermission with a name constraint should filter correctly."""
+        self.add_permissions("dcim.view_location", constraints={"name": self.locations[0].name})
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(list(qs), [self.locations[0]])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_with_multiple_constraint_sets(self):
+        """An ObjectPermission with a list of constraints (OR'd together) should return the union."""
+        self.add_permissions(
+            "dcim.view_location",
+            constraints=[
+                {"name": self.locations[0].name},
+                {"name": self.locations[1].name},
+            ],
+        )
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(set(qs), {self.locations[0], self.locations[1]})
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_with_tag_constraint_single_matching_tag(self):
+        """A tag-based constraint should work when an object has a single matching tag."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        tag = Tag.objects.create(name="PAN_site1")
+        tag.content_types.add(location_ct)
+
+        self.locations[0].tags.add(tag)
+
+        self.add_permissions("dcim.view_location", constraints={"tags__name__regex": "^PAN_.+$"})
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(list(qs), [self.locations[0]])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_with_tag_constraint_multiple_matching_tags_no_duplicates(self):
+        """
+        A tag-based constraint should not return duplicate objects when an object has multiple
+        tags that all match the constraint regex.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/8690
+        """
+        location_ct = ContentType.objects.get_for_model(Location)
+        tag1 = Tag.objects.create(name="PAN_XXX")
+        tag1.content_types.add(location_ct)
+        tag2 = Tag.objects.create(name="OT_PAN_XXX")
+        tag2.content_types.add(location_ct)
+
+        # Tag one location with BOTH matching tags
+        self.locations[0].tags.add(tag1, tag2)
+
+        self.add_permissions("dcim.view_location", constraints={"tags__name__regex": "^(PAN_|OT_PAN_).+$"})
+        qs = Location.objects.restrict(self.user, "view")
+
+        # The queryset should contain the location exactly once, not once per matching tag
+        self.assertEqual(qs.count(), 1)
+        self.assertEqual(list(qs), [self.locations[0]])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_check_perms_with_tag_constraint_multiple_matching_tags(self):
+        """
+        check_perms() should return True (not raise MultipleObjectsReturned) when an object
+        has multiple tags matching the permission constraint.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/8690
+        """
+        location_ct = ContentType.objects.get_for_model(Location)
+        tag1 = Tag.objects.create(name="PAN_YYY")
+        tag1.content_types.add(location_ct)
+        tag2 = Tag.objects.create(name="OT_PAN_YYY")
+        tag2.content_types.add(location_ct)
+
+        self.locations[0].tags.add(tag1, tag2)
+
+        self.add_permissions(
+            "dcim.view_location",
+            "dcim.change_location",
+            constraints={"tags__name__regex": "^(PAN_|OT_PAN_).+$"},
+        )
+
+        # check_perms should work without error for both actions
+        self.assertTrue(Location.objects.check_perms(self.user, instance=self.locations[0], action="view"))
+        self.assertTrue(Location.objects.check_perms(self.user, instance=self.locations[0], action="change"))
+        # An untagged location should not be permitted
+        self.assertFalse(Location.objects.check_perms(self.user, instance=self.locations[1], action="view"))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_with_tag_constraint_mixed_matching_and_nonmatching(self):
+        """Only objects whose tags match the constraint should be returned, regardless of other tags."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        matching_tag = Tag.objects.create(name="PAN_match")
+        matching_tag.content_types.add(location_ct)
+        nonmatching_tag = Tag.objects.create(name="unrelated_tag")
+        nonmatching_tag.content_types.add(location_ct)
+
+        # Location 0: has a matching tag
+        self.locations[0].tags.add(matching_tag)
+        # Location 1: has only a non-matching tag
+        self.locations[1].tags.add(nonmatching_tag)
+        # Location 2: no tags
+
+        self.add_permissions("dcim.view_location", constraints={"tags__name__regex": "^PAN_.+$"})
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(list(qs), [self.locations[0]])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["dcim.location"])
+    def test_restrict_exempt_permission(self):
+        """Exempt view permissions should bypass restriction."""
+        qs = Location.objects.restrict(self.user, "view")
+        self.assertEqual(qs.count(), Location.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_restrict_action_scoping(self):
+        """A permission for 'view' should not grant 'change' access."""
+        self.add_permissions("dcim.view_location")
+        view_qs = Location.objects.restrict(self.user, "view")
+        change_qs = Location.objects.restrict(self.user, "change")
+        self.assertGreater(view_qs.count(), 0)
+        self.assertEqual(change_qs.count(), 0)

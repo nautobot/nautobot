@@ -113,6 +113,7 @@ from nautobot.dcim.views import (
     ConsoleConnectionsListView,
     DeviceUIViewSet,
     InterfaceConnectionsListView,
+    ModuleTypeComponentAddButton,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -136,7 +137,7 @@ from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -1690,6 +1691,26 @@ module-bays:
         self.assertEqual(data[0]["manufacturer"], module_type.manufacturer.name)
         self.assertEqual(data[0]["model"], module_type.model)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_renders_front_image(self):
+        """Assert that the detail view renders front_image as an <img> tag when set."""
+        module_type = ModuleType.objects.first()
+        ModuleType.objects.filter(pk=module_type.pk).update(front_image="moduletype-images/test-front.jpg")
+        module_type.refresh_from_db()
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertIn("img-responsive mw-100", response.content.decode(response.charset))
+
+    def test_component_add_button_get_link_no_obj(self):
+        """Assert that ModuleTypeComponentAddButton.get_link() returns None when no object is in context."""
+        btn = ModuleTypeComponentAddButton(
+            tab="main",
+            label="Test",
+            link_name="dcim:consoleporttemplate_add",
+            weight=100,
+        )
+        self.assertIsNone(btn.get_link({}))
+
 
 #
 # DeviceType components
@@ -2271,6 +2292,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestC
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         cls.form_data = {
             "name": "Platform X",
@@ -5094,6 +5117,8 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         cls.form_data = {
             "platform": platforms[0].pk,

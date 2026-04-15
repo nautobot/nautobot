@@ -1,1 +1,0 @@
-Added `state` field to ScheduledJob model to explicitly track the scheduled job's lifecycle state.

@@ -191,6 +191,14 @@ class FilterTestCases:
                     Team.objects.create(name="Generic Filter Test Team 3")
 
                 # Make sure we have some valid contact-associations:
+                if not Role.objects.get_for_model(ContactAssociation).exists():
+                    contact_role, _ = Role.objects.get_or_create(name="Administration")
+                    contact_role.content_types.add(ContentType.objects.get_for_model(ContactAssociation))
+
+                if not Status.objects.get_for_model(ContactAssociation).exists():
+                    contact_status, _ = Status.objects.get_or_create(name="Active")
+                    contact_status.content_types.add(ContentType.objects.get_for_model(ContactAssociation))
+
                 for contact, team, instance in zip(Contact.objects.all()[:3], Team.objects.all()[:3], self.queryset):
                     ContactAssociation.objects.create(
                         contact=contact,

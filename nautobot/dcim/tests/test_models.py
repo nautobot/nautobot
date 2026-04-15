@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import MagicMock, patch, PropertyMock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -4802,6 +4803,50 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+    def test_image_replaced_on_save_deletes_old_file(self):
+        """Replacing a front/rear image on a DB-loaded ModuleType should delete the old file."""
+        manufacturer = Manufacturer.objects.first()
+        ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Replacement Test",
+        )
+        # Load from DB so from_db() populates _original_front_image/_original_rear_image.
+        module_type = ModuleType.objects.get(model="Image Replacement Test")
+
+        # Simulate previously-stored images by patching the tracked originals directly,
+        # avoiding real filesystem I/O while still exercising the save() cleanup path.
+        old_front = MagicMock()
+        old_rear = MagicMock()
+        module_type._original_front_image = old_front
+        module_type._original_rear_image = old_rear
+
+        # Save without changing images; the empty FieldFiles differ from the mocked originals,
+        # so the cleanup logic should call delete() on both.
+        module_type.save()
+
+        old_front.delete.assert_called_once_with(save=False)
+        old_rear.delete.assert_called_once_with(save=False)
+
+        module_type.delete()
+
+    def test_images_deleted_on_model_delete(self):
+        """Deleting a ModuleType should delete any associated image files."""
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Deletion Test",
+        )
+        mock_front = MagicMock()
+        mock_rear = MagicMock()
+
+        with (
+            patch.object(type(module_type), "front_image", new_callable=PropertyMock, return_value=mock_front),
+            patch.object(type(module_type), "rear_image", new_callable=PropertyMock, return_value=mock_rear),
+        ):
+            module_type.delete()
+            mock_front.delete.assert_called_once_with(save=False)
+            mock_rear.delete.assert_called_once_with(save=False)
 
 
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):

@@ -190,7 +190,7 @@
                                                 </p>
                                             {% endif %}
 
-                                            {% if app.availability == "NTC License" %}
+                                            {% if app.availability == "NTC License" or app.availability == "Professional" or app.availability == "Enterprise" %}
                                                 <p>
                                                     <strong>
                                                         This Nautobot App requires a license to use.
