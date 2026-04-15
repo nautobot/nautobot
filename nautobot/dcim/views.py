@@ -3345,6 +3345,14 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 ),
             ),
             object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 150,
+                tab_id="module_tree",
+                label="Module Tree",
+                url_name="dcim:device_moduletree",
+                related_object_attribute="module_bays",
+                hide_if_empty=True,
+            ),
+            object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
                 tab_id="interfaces",
                 label="Interfaces",
@@ -3782,6 +3790,22 @@ class DeviceUIViewSet(NautobotUIViewSet):
     )
     def module_bays(self, request, *args, **kwargs):
         return Response({})
+
+    @action(
+        detail=True,
+        url_path="module-tree",
+        url_name="moduletree",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_modulebay", "dcim.view_module"],
+    )
+    def module_tree(self, request, *args, **kwargs):
+        instance = self.get_object()
+        return Response(
+            {
+                "template": "dcim/device/module_tree.html",
+                "module_tree": instance.get_module_tree(),
+            },
+        )
 
     @action(
         detail=True,
