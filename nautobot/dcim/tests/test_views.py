@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+import signal
 import unittest
 import zoneinfo
 
@@ -49,6 +50,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
     ControllerFilterSet,
@@ -109,7 +111,9 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
+    DeviceUIViewSet,
     InterfaceConnectionsListView,
+    ModuleTypeComponentAddButton,
     PowerConnectionsListView,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
@@ -133,7 +137,7 @@ from nautobot.ipam.choices import IPAddressTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -298,8 +302,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         with self.subTest("With LOCATION_LIST_DEFAULT_MAX_DEPTH, only locations to a maximum depth are listed"):
             with override_settings(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
                 # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url, headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=2")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -310,8 +314,8 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
             with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=3):
                 # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url, headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=3")
                 for loc in self._get_queryset().all():
                     if loc.parent is None or loc.parent.parent is None or loc.parent.parent.parent is None:
                         self.assertBodyContains(response, str(loc.pk))
@@ -334,19 +338,17 @@ class LocationTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 # Indentation should NOT be present in table rendering due to an applied filter that alters hierarchy
                 self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True, count=0)
 
-        with self.subTest("Settings do apply when explicit filters are present that preserve hierarchy"):
-            with override_config(LOCATION_LIST_DEFAULT_MAX_DEPTH=2):
-                root = Location.objects.first()
-                # Check for filtered location list and message in HTMX response
-                response = self.client.get(list_url + f"?subtree={root.pk}", headers={"HX-Request": True})
-                self.assertBodyContains(response, "LOCATION_LIST_DEFAULT_MAX_DEPTH")
-                for loc in self._get_queryset().all():
-                    if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
-                        self.assertBodyContains(response, str(loc.pk))
-                    else:
-                        self.assertBodyContains(response, str(loc.pk), count=0)
-                # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
-                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+        with self.subTest("Subtree is still rendered when explicit filters are present that preserve hierarchy"):
+            root = Location.objects.filter(parent__isnull=True).first()
+            # Check for filtered location list and message in HTMX response
+            response = self.client.get(list_url + f"?subtree={root.pk}&max_depth=2", headers={"HX-Request": True})
+            for loc in self._get_queryset().all():
+                if loc in root.descendants(include_self=True) and (loc.parent is None or loc.parent.parent is None):
+                    self.assertBodyContains(response, str(loc.pk))
+                else:
+                    self.assertBodyContains(response, str(loc.pk), count=0)
+            # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_child_location_under_a_non_globally_unique_named_parent_location(
@@ -703,7 +705,7 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 key="backup_locations",
                 type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
                 source_type=ContentType.objects.get_for_model(Rack),
-                source_label="Backup location(s)",
+                source_label="Backup Location(s)",
                 destination_type=ContentType.objects.get_for_model(Location),
                 destination_label="Racks using this location as a backup",
             ),
@@ -877,12 +879,12 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertContains(response, power_feed_12_html, html=True)
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
-        <td><div title="Used: 3789&#13;Count: 7680" class="progress text-center">
+        <div title="Used: 3789&#13;Count: 7680" class="progress text-center">
             <div class="progress-bar bg-success"
                 role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
                 49%
             </div>
-        </div></td>
+        </div>
         """
         self.assertContains(response, total_utilization_html, html=True)
 
@@ -1689,6 +1691,26 @@ module-bays:
         self.assertEqual(data[0]["manufacturer"], module_type.manufacturer.name)
         self.assertEqual(data[0]["model"], module_type.model)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_renders_front_image(self):
+        """Assert that the detail view renders front_image as an <img> tag when set."""
+        module_type = ModuleType.objects.first()
+        ModuleType.objects.filter(pk=module_type.pk).update(front_image="moduletype-images/test-front.jpg")
+        module_type.refresh_from_db()
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertIn("img-responsive mw-100", response.content.decode(response.charset))
+
+    def test_component_add_button_get_link_no_obj(self):
+        """Assert that ModuleTypeComponentAddButton.get_link() returns None when no object is in context."""
+        btn = ModuleTypeComponentAddButton(
+            tab="main",
+            label="Test",
+            link_name="dcim:consoleporttemplate_add",
+            weight=100,
+        )
+        self.assertIsNone(btn.get_link({}))
+
 
 #
 # DeviceType components
@@ -2270,6 +2292,8 @@ class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestC
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         cls.form_data = {
             "name": "Platform X",
@@ -2508,6 +2532,78 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
+    def _build_device_bay_chain(self, parent_count):
+        """Create a parent->child DeviceBay chain and return (devices, bays)."""
+        device_type = DeviceType.objects.create(
+            model=f"Breadcrumb Chain Type {parent_count}",
+            manufacturer=Manufacturer.objects.first(),
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
+        status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+
+        devices = [
+            Device.objects.create(
+                name=f"breadcrumb-chain-device-{parent_count}-{idx}",
+                device_type=device_type,
+                location=location,
+                status=status,
+                role=role,
+            )
+            for idx in range(parent_count + 1)
+        ]
+
+        bays = []
+        for idx in range(parent_count):
+            bays.append(
+                DeviceBay.objects.create(
+                    name=f"breadcrumb-chain-bay-{parent_count}-{idx}",
+                    device=devices[idx],
+                    installed_device=devices[idx + 1],
+                )
+            )
+
+        return devices, bays
+
+    def test_get_breadcrumb_objects_no_parent_returns_empty_list(self):
+        device = Device.objects.first()
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(device)
+
+        self.assertEqual(breadcrumb_objects, [])
+
+    def test_get_breadcrumb_objects_at_depth_limit_returns_full_breadcrumb(self):
+        parent_count = DEVICE_RECURSION_DEPTH_LIMIT
+        devices, bays = self._build_device_bay_chain(parent_count=parent_count)
+        leaf = devices[-1]
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(leaf)
+        expected_objects = []
+        for idx in range(parent_count):
+            expected_objects.extend([devices[idx], bays[idx]])
+
+        self.assertEqual(breadcrumb_objects, expected_objects)
+
+    def test_get_breadcrumb_objects_over_depth_limit_truncates(self):
+        parent_count = DEVICE_RECURSION_DEPTH_LIMIT + 1
+        devices, bays = self._build_device_bay_chain(parent_count=parent_count)
+        leaf = devices[-1]
+
+        breadcrumb_objects = DeviceUIViewSet.DeviceFieldsPanel._get_breadcrumb_objects(leaf)
+
+        # Multiply by 2 because both device and bay are included in the breadcrumb.
+        self.assertEqual(len(breadcrumb_objects), DEVICE_RECURSION_DEPTH_LIMIT * 2)
+
+        # Verify the top-most device is not in the truncated chain
+        self.assertNotIn(devices[0], breadcrumb_objects)
+        self.assertNotIn(bays[0], breadcrumb_objects)
+
+        # Verify immediate parent device and bay are the last two breadcrumb elements.
+        self.assertEqual(breadcrumb_objects[-2], devices[-2])
+        self.assertEqual(breadcrumb_objects[-1], bays[-1])
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_vdc_panel_includes_add_vdc_btn(self):
         """Assert Add Virtual device Contexts button is in Device detail view: Issue from #6348"""
@@ -2546,6 +2642,47 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML(parent_device.display, response_body)
         self.assertInHTML(str(device_bay), response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_detail_view_handles_parent_bay_loop(self):
+        """Ensure the device detail view does not hang on parent bay loops."""
+
+        def alarm_handler(_signum, _frame):
+            raise AssertionError("Timed out rendering device detail view")
+
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            model="Device Type Loop Guard",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
+        status = Status.objects.get_for_model(Device).first()
+        role = Role.objects.get_for_model(Device).first()
+        location = Location.objects.first()
+
+        device = Device.objects.create(
+            name="LoopDevice",
+            device_type=device_type,
+            location=location,
+            status=status,
+            role=role,
+        )
+        device_bay = DeviceBay.objects.create(device=device, name="Bay1")
+
+        # Bypass validation to create a loop in the database
+        DeviceBay.objects.filter(pk=device_bay.pk).update(installed_device=device)
+
+        previous_handler = signal.signal(signal.SIGALRM, alarm_handler)
+        try:
+            signal.alarm(10)
+            url = reverse("dcim:device", kwargs={"pk": device.pk})
+            response = self.client.get(url)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous_handler)
+
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_detail_with_rack(self):
@@ -3443,7 +3580,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "An Interface",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
-            "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "add_tagged_vlans": [v.pk for v in vlans[1:4]],
             "tags": [t.pk for t in Tag.objects.get_for_model(Interface)],
             "status": status_active.pk,
             "role": role.pk,
@@ -3479,7 +3616,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "description": "New description",
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
-            "tagged_vlans": [v.pk for v in vlans[1:4]],
+            "add_tagged_vlans": [v.pk for v in vlans[1:4]],
             "status": status_active.pk,
             "role": role.pk,
             "vrf": vrfs[2].pk,
@@ -4980,6 +5117,8 @@ class SoftwareVersionTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         cls.form_data = {
             "platform": platforms[0].pk,

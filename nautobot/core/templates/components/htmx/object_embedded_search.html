@@ -11,6 +11,7 @@
             class="border-end d-flex flex-column flex-grow-1 overflow-auto pt-16 px-16 w-50"
             hx-get="{% url model|viewname:'list' %}"
             hx-target="#embedded_action_modal .nb-embedded-search-results"
+            hx-trigger="load,submit"
             hx-vals="{ &quot;per_page&quot;: 20 }"
             id="object_embedded_search_form"
         >

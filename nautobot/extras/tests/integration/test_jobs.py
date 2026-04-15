@@ -9,12 +9,12 @@ from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models.jobs import Job, JobLogEntry, JobResult
 
 
-@skip("Test fails currently because of a bug with Selenium Mozila Browser not registering events on time")
 class JobResultTest(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login_as_superuser()
 
+    @skip("Test fails currently because of a bug with Selenium Mozila Browser not registering events on time")
     def test_log_table_filter(self):
         """
         Create fake job log entries for testing the log filtering.
@@ -101,3 +101,58 @@ class JobResultTest(SeleniumTestCase):
         active_web_element = self.browser.driver.switch_to.active_element
         active_web_element.send_keys(Keys.ENTER)
         self.assertTrue(self.browser.is_text_present("Job Result"))
+
+    def test_active_tabs_and_buttons(self):
+        def assert_tab_ready(active_tab, buttons=()):
+            self.assertTrue(
+                self.browser.find_by_css(f"ul.nav-tabs a.nav-link.active[aria-controls='{active_tab}']", wait_time=10)
+            )
+            tab_buttons = self.browser.find_by_css(f"#{active_tab} > div:first-of-type").find_by_css("a, button")
+            self.assertEqual(len(buttons), len(tab_buttons))
+            for tab_button in tab_buttons:
+                # Use button `innerText` instead of `text` property, because the latter only works for visible items.
+                self.assertIn(tab_button["innerText"].strip(), buttons)
+
+        # Enable the job
+        job = Job.objects.get(name="Example logging job.")
+        job.enabled = True
+        job.save()
+
+        # Create a fake job result
+        job_result = JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=self.user,
+            celery_kwargs={"nautobot_job_console_log": True},
+            task_kwargs={"interval": 4},
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            date_done=timezone.now(),
+        )
+
+        # Visit the job result page
+        self.browser.visit(f"{self.live_server_url}{job_result.get_absolute_url()}")
+        assert_tab_ready(active_tab="main", buttons=("Re-Run", "Export Logs", "Actions", "Delete Job Result"))
+
+        # Navigate to the "Advanced" tab
+        self.browser.find_by_css("ul.nav-tabs a.nav-link[aria-controls='advanced']").click()
+        assert_tab_ready(active_tab="advanced")
+
+        # Reload the page
+        self.browser.reload()
+        assert_tab_ready(active_tab="advanced")
+
+        # Navigate back to the "Job Result" tab
+        self.browser.find_by_css("ul.nav-tabs a.nav-link[aria-controls='main']").click()
+        assert_tab_ready(active_tab="main", buttons=("Re-Run", "Export Logs", "Actions", "Delete Job Result"))
+
+        # Navigate to the "Console Log" tab
+        self.browser.find_by_css("ul.nav-tabs a.nav-link[aria-controls='job_console_entries']").click()
+        assert_tab_ready(active_tab="job_console_entries", buttons=("Export Console Logs",))
+
+        # Navigate to the "Advanced" tab again
+        self.browser.find_by_css("ul.nav-tabs a.nav-link[aria-controls='advanced']").click()
+        assert_tab_ready(active_tab="advanced")
+
+        # Go back in the browser
+        self.browser.back()
+        assert_tab_ready(active_tab="job_console_entries", buttons=("Export Console Logs",))

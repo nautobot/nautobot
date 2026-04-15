@@ -1,0 +1,1 @@
+Disabled implicit inheritance of HTMX attributes from container HTML elements to contained elements (`htmx.config.disableInheritance = true`).

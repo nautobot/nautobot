@@ -1,0 +1,17 @@
+{% load helpers %}
+
+{% if scheduled_job.state == 'denied' %}
+    <span class="badge bg-danger">Approval Denied</span>
+{% elif scheduled_job.state == 'canceled' %}
+    <span class="badge bg-danger">Approval Canceled</span>
+{% elif scheduled_job.state == 'pending' %}
+    <span class="badge bg-warning border">Pending Approval</span>
+{% elif scheduled_job.state == 'active' %}
+    <span class="badge bg-info">Active</span>
+{% elif scheduled_job.state == 'completed' %}
+    <span class="badge bg-success">Completed</span>
+{% elif scheduled_job.state == 'errored' %}
+    <span class="badge bg-danger">Errored</span>
+{% else %}
+    <span class="badge bg-body-secondary border">{{ scheduled_job.state | bettertitle }}</span>
+{% endif %}

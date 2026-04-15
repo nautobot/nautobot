@@ -1,0 +1,1 @@
+Fixed an AttributeError in GraphQL when querying ContentType records.

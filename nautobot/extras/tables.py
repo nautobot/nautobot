@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
+from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.tables import (
@@ -127,14 +128,13 @@ class="badge bg-{% if entry.content_identifier in record.provided_contents %}suc
 
 GITREPOSITORY_BUTTONS = """
 <li>
-    <button
-        data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
-        type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
-    >
-        <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
-        Sync
-    </button>
+    <form action="{% url 'extras:gitrepository_sync' pk=record.pk %}" method="post">
+        {% csrf_token %}
+        <button class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %} type="submit">
+            <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+            Sync
+        </button>
+    </form>
 </li>
 """
 
@@ -175,6 +175,22 @@ JOB_RESULT_BUTTONS = """
             </a>
         </li>
     {% endif %}
+{% endif %}
+{% if perms.extras.view_joblogentry %}
+    <li>
+        <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_jobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:jobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
 {% endif %}
 """
 
@@ -588,6 +604,7 @@ class ConfigContextTable(BaseTable):
     name = tables.LinkColumn()
     owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     is_active = BooleanColumn(verbose_name="Active")
+    actions = ButtonsColumn(ConfigContext)
 
     class Meta(BaseTable.Meta):
         model = ConfigContext
@@ -606,6 +623,7 @@ class ConfigContextTable(BaseTable):
             "tenant_groups",
             "tenants",
             "dynamic_groups",
+            "actions",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -634,19 +652,29 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     """
 
     def __init__(self, validator, data_field, *args, **kwargs):
+        kwargs.setdefault("orderable", False)
+        kwargs.setdefault("accessor", None)
+        kwargs.setdefault("exclude_from_export", True)
+        kwargs.setdefault("empty_values", ())
+
         super().__init__(*args, **kwargs)
+
         self.validator = validator
         self.data_field = data_field
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        data = getattr(record, self.data_field)
-        try:
-            self.validator.validate(data)
-        except JSONSchemaValidationError as e:
-            # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
+        data = getattr(record, self.data_field, None)
 
-        # Return a green check (like a boolean column)
+        validator = self.validator
+        # only call validate if this is a real validator
+        if not isinstance(validator, Draft7Validator):
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
+
+        try:
+            validator.validate(data)
+
+        except JSONSchemaValidationError as e:
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)
 
 
@@ -1293,6 +1321,7 @@ class JobResultTable(BaseTable):
     )
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+    console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
 
     def render_summary(self, record):
         """
@@ -1337,6 +1366,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
             "actions",
+            "console_log",
         )
         default_columns = (
             "pk",
@@ -1503,6 +1533,9 @@ class ScheduledJobTable(BaseTable):
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     enabled = BooleanColumn()
+    state = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/scheduled_job_label.html' with scheduled_job=record %}",
+    )
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.DateTimeColumn(verbose_name="First Run", short=True)
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", short=True)
@@ -1531,6 +1564,7 @@ class ScheduledJobTable(BaseTable):
             "crontab",
             "time_zone",
             "actions",
+            "state",
         )
         default_columns = (
             "pk",
@@ -1541,6 +1575,7 @@ class ScheduledJobTable(BaseTable):
             "interval",
             "last_run_at",
             "actions",
+            "state",
         )
 
 

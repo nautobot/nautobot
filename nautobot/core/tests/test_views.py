@@ -8,6 +8,7 @@ import urllib.parse
 import uuid
 
 from django.apps import apps
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -18,6 +19,7 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
+from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
@@ -26,7 +28,7 @@ from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
@@ -408,6 +410,51 @@ class SearchContentTypeView(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class MessagesViewTestCase(TestCase):
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_empty(self):
+        """When there are no messages queued, response contains an empty header_messages container."""
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+
+    def test_messages(self):
+        """When there are messages queued, response contains them in the header_messages container."""
+        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
+        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
+        request._messages = messages.storage.cookie.CookieStorage(request)
+        request.user = self.user
+        messages.info(request, "Test info message")
+        messages.success(request, "Test success message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div id="header_messages">
+                    <div class="alert alert-info alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test info message
+                    </div>
+                    <div class="alert alert-success alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test success message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        """Request made from a client other than HTMX results in HTTP 400 response."""
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_search_bar_redirect_to_login(self):
@@ -505,6 +552,31 @@ class SearchViewTestCase(TestCase):
         # search.html renders the results container with an HTMX trigger for each model in parallel
         self.assertIn("searchable_models", response.context)
         self.assertContains(response, "nb-search-results-tables")
+        # Assert no duplicate entries in searchable_models context
+        self.assertEqual(len(response.context["searchable_models"]), len(set(response.context["searchable_models"])))
+        # Assert special-case ordering of searchable_models
+        self.assertEqual(
+            ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"],
+            response.context["searchable_models"][:4],
+        )
+        # Others are ordered alphabetically by app label then by model name - spot check a few
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.devicefamily"),
+            response.context["searchable_models"].index("dcim.devicetype"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.rack"),
+            response.context["searchable_models"].index("dcim.rackgroup"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.virtualdevicecontext"),
+            response.context["searchable_models"].index("extras.contact"),
+        )
+        # Apps come after core models - spot check
+        self.assertLess(
+            response.context["searchable_models"].index("virtualization.virtualmachine"),
+            response.context["searchable_models"].index("example_app.examplemodel"),
+        )
 
     def test_htmx_with_matching_results(self):
         """HTMX request for dcim.location with a matching query returns a populated table."""
@@ -1207,17 +1279,15 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @override_settings(PAGINATE_COUNT=5)
-    def test_object_table_panel(self):
-        provider = Provider.objects.create(name="A Test Provider 1")
-        circuit_type = CircuitType.objects.create(
-            name="A Test Circuit Type",
-        )
+    def setUp(self):
+        super().setUp()
+        self.provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(name="A Test Circuit Type")
         circuit_status = Status.objects.get_for_model(Circuit).first()
 
         circuits = [
             Circuit(
-                provider=provider,
+                provider=self.provider,
                 cid=f"00121{x}",
                 circuit_type=circuit_type,
                 status=circuit_status,
@@ -1227,11 +1297,14 @@ class TestObjectDetailView(TestCase):
         Circuit.objects.bulk_create(circuits)
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
-        url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(url)
+        self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        response = self.client.get(self.url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
-        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={self.provider.id}"
 
         # Assert Badge Count in table panel header
         panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
@@ -1244,7 +1317,7 @@ class TestObjectDetailView(TestCase):
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
         <span>
-            <span id="_value_name">{provider.name}</span>
+            <span id="_value_name">{self.provider.name}</span>
             <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
@@ -1253,6 +1326,22 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(name_copy, response_data)
         # ASN do not have a value, therefore no copy btn
         self.assertNotIn("#asn_copy", response_data)
+
+    def test_get_component_via_htmx(self):
+        panels = ProviderUIViewSet.object_detail_content.tabs[0].panels
+        for panel in panels:
+            if panel.__class__.__name__.startswith("_"):
+                # automagical panel like `_CustomFieldsPanel`, which may not always render unconditionally, skip it.
+                continue
+            with self.subTest(panel=panel):
+                response = self.client.get(
+                    self.url + f"?component_id={panel.component_id}", headers={"HX-Request": "true"}
+                )
+                self.assertHttpStatus(response, 200)
+                response_data = response.content.decode(response.charset)
+                self.assertIn(panel.component_id, response_data)
+                for other_panel in [other_panel for other_panel in panels if other_panel != panel]:
+                    self.assertNotIn(other_panel.component_id, response_data)
 
 
 class SearchRobotsTestCase(TestCase):
