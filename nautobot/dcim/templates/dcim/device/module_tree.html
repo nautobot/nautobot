@@ -1,0 +1,23 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block title %}{{ object }} - Module Tree{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Module Hierarchy</strong>
+        </div>
+        <div class="card-body">
+            {% if module_tree %}
+                <div class="module-tree">
+                    {% for node in module_tree %}
+                        {% include "dcim/device/inc/module_tree_node.html" with node=node depth=0 %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <span class="text-muted">No module bays found for this device.</span>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
