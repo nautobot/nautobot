@@ -1,1 +1,0 @@
-Replaced `django-ajax-tables` by htmx for JobResult log entry loading and display.
