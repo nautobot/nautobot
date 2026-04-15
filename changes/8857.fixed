@@ -1,2 +1,0 @@
-Fixed an exception when editing a Job whose definition has explicitly defined `task_queues`.
-Fixed a case where the Job Result detail view wouldn't correctly refresh when the Job reached a terminal state.

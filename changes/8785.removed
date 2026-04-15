@@ -1,1 +1,0 @@
-Removed `approval_required` field from ScheduledJob model.
