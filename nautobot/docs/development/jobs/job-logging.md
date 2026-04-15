@@ -29,30 +29,37 @@ Nautobot supports standard logging levels, with additional custom levels for suc
 
 ## Configuring Log Levels
 
-You can configure the minimum log level for a specific Job by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired logging level for the Job (e.g., "DEBUG", "INFO", "WARNING", etc.).
+You can configure the minimum log level by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired value (e.g., "DEBUG", "INFO", "WARNING", etc.). Unfortunately, since loggers in Nautobot share the same configuration, changing the log level for one Job will affect all other Jobs that use the same logger instance.
 
-The pattern in the following example allows you to control the verbosity of logs for that Job, taking into account the (optional) `debug` parameter passed to the Job. After setting the log level, only messages at that level or higher will be logged for the Job. Finally, once the Job completes, the log level should be reset to the default configured in `settings.LOG_LEVEL` for any subsequent Jobs that use the same logger instance.
+Instead, the pattern in the following example allows you to control the verbosity of logs only for that specific Job, taking into account the (optional) `debug` parameter passed to it. After setting the log level, only messages at that level or higher will be logged for the Job. Finally, once the Job completes, the log level should be reset to the original level for any subsequent Jobs that use the same logger instance.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
-    from django.conf import settings
     from nautobot.apps.jobs import BooleanVar, Job
 
     class MyJob(Job):
+        """Example Job demonstrating log level configuration."""
 
         debug = BooleanVar(default=False, description="Whether to print debug messages")
 
         def before_start(self, task_id, args, kwargs):
-            # Set the logging level before Job starts, based on the debug parameter
-            self.logger.setLevel("DEBUG" if kwargs.get("debug") else settings.LOG_LEVEL)
+            """Set the logging level before Job starts, based on the debug parameter."""
+            super().before_start(task_id, args, kwargs)
+            if kwargs.get("debug"):
+                self._original_log_level = self.logger.level
+                self.logger.setLevel("DEBUG")
 
-        def run(self, arg, another_arg, debug):
-            ...
+        def run(self, **args, **kwargs):
+            """Only messages at the configured log level or higher will be logged."""
+                self.logger.info("This is an info message.")
+                self.logger.debug("This is a debug message.")
+                ...
 
         def after_return(self, status, retval, task_id, args, kwargs, einfo):
-            # Return the logger to the default log level after the Job finishes
-            self.logger.setLevel(settings.LOG_LEVEL)
+            """Return the logger to the default log level after the Job finishes."""
+            if kwargs.get("debug"):
+                self.logger.setLevel(self._original_log_level)
             return super().after_return(status, retval, task_id, args, kwargs, einfo)
     ```
 
