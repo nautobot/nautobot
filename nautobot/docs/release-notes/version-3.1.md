@@ -108,6 +108,12 @@ Custom Fields can now be scoped to display or edit only when specific, user-defi
 
 Added official support for Python 3.14.
 
+#### Bulk Rename for More Models
+
+UI viewsets inheriting from `NautobotUIViewSet` now include a **Rename** bulk action alongside Bulk Edit and Bulk Delete when their model exposes an editable `name` field. Users can supply a find/replace pattern (literal string or regular expression) against the selected objects' names and preview the resulting names before applying the change. Previously, bulk rename was only available on a small number of legacy views. Models without a `name` field are automatically opted out, so Apps pick this up with no code changes required.
+
+To ensure server responsiveness, regular-expression patterns submitted for bulk rename are validated before execution and may be rejected with a clear error message if too complex. Additionally, only objects visible to the user can be renamed in bulk, unlike other bulk operations that allow the full queryset. This ensures users can preview changes before applying them.
+
 ### Changed
 
 #### HTMX List View Rendering
@@ -141,6 +147,81 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v3.1.0 (2026-04-14)
+
+### Breaking Changes in v3.1.0
+
+- [#8825](https://github.com/nautobot/nautobot/issues/8825) - App developers who previously used the unsupported `UI_COLORS` constant should switch to the supported `EChartsThemeColors` to keep from breaking.
+
+### Security in v3.1.0
+
+- [#8842](https://github.com/nautobot/nautobot/issues/8842) - Updated dependency `Pillow` to `>=12.2.0,<13` to mitigate a number of security vulnerabilities.
+
+### Added in v3.1.0
+
+- [#915](https://github.com/nautobot/nautobot/issues/915) - Added overlay VPN service modeling to the `vpn` app: extended `VPN` with `service_type`, `status`, and `extra_attributes`; added `VPNTermination` to bind a VPN service to a VLAN, Interface, or VMInterface, with support for VXLAN VNI validation and point-to-point service type enforcement.
+- [#1702](https://github.com/nautobot/nautobot/issues/1702) - Added `datetime` Custom Field type.
+- [#6161](https://github.com/nautobot/nautobot/issues/6161) - Added `front_image` and `rear_image` fields to `ModuleType`, matching the existing image support on `DeviceType`.
+- [#8785](https://github.com/nautobot/nautobot/issues/8785) - Added `state` field to ScheduledJob model to explicitly track the scheduled job's lifecycle state.
+- [#8794](https://github.com/nautobot/nautobot/issues/8794) - Added an `extra_columns` argument to `object_detail.ObjectsTablePanel` to allow dynamically adding custom columns to related object tables in object detail views.
+- [#8823](https://github.com/nautobot/nautobot/issues/8823) - Added bulk rename to all NautobotUIViewSets that have a name.
+- [#8855](https://github.com/nautobot/nautobot/issues/8855) - Added optional `refresh_on_close_if_done` flag to `_JobModalButton`.
+
+### Changed in v3.1.0
+
+- [#8785](https://github.com/nautobot/nautobot/issues/8785) - Changed `approval_required` field to property based on `state`.
+- [#8788](https://github.com/nautobot/nautobot/issues/8788) - Replaced `django-ajax-tables` by htmx for JobResult log entry loading and display.
+- [#8825](https://github.com/nautobot/nautobot/issues/8825) - Updated the `UI_COLORS` constant for improved color contrast.
+- [#8825](https://github.com/nautobot/nautobot/issues/8825) - Updated the `EChartsThemeColors` ChoiceSet to match the new colors.
+- [#8832](https://github.com/nautobot/nautobot/issues/8832) - Improved ECharts text contrast.
+- [#8838](https://github.com/nautobot/nautobot/issues/8838) - Increased width of object-bulk-edit form column to provide more room for field labels.
+- [#8839](https://github.com/nautobot/nautobot/issues/8839) - Disabled implicit inheritance of HTMX attributes from container HTML elements to contained elements (`htmx.config.disableInheritance = true`).
+
+### Deprecated in v3.1.0
+
+- [#8788](https://github.com/nautobot/nautobot/issues/8788) - Deprecated `django_ajax_tables` dependency. It is recommended to use HTMX instead.
+
+### Removed in v3.1.0
+
+- [#8785](https://github.com/nautobot/nautobot/issues/8785) - Removed `approval_required` field from ScheduledJob model.
+
+### Fixed in v3.1.0
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Fixed an issue where filtering a nested relation (e.g. interfaces with role filter on devices) via GraphQL would produce N+1 queries.
+- [#8690](https://github.com/nautobot/nautobot/issues/8690) - Fixed a 500 error when using tag-based permission constraints on objects with multiple matching tags.
+- [#8788](https://github.com/nautobot/nautobot/issues/8788) - Fixed `log_table` action ignoring constrained permissions on `JobLogEntry` records.
+- [#8804](https://github.com/nautobot/nautobot/issues/8804) - Decoupled rendering tab buttons in object detail view from initial page load context.
+- [#8804](https://github.com/nautobot/nautobot/issues/8804) - Fixed bug when navigating "Back" and "Forward" in browser caused active tab mismatch in object detail view.
+- [#8811](https://github.com/nautobot/nautobot/issues/8811) - Fixed missing last column table headers.
+- [#8814](https://github.com/nautobot/nautobot/issues/8814) - Fixed console log mode when job has set `has_sensitive_variables`.
+- [#8814](https://github.com/nautobot/nautobot/issues/8814) - Fixed setting of `result` data when running a job with console logging enabled.
+- [#8831](https://github.com/nautobot/nautobot/issues/8831) - Fixed inclusion of VPN and VPNTunnel models in global search.
+- [#8838](https://github.com/nautobot/nautobot/issues/8838) - Corrected labels for "Untagged VLAN", "Add Tagged VLANs", and "Remove Tagged VLANs" on Interface bulk-edit form.
+- [#8838](https://github.com/nautobot/nautobot/issues/8838) - Fixed handling of "Untagged VLAN" and "Tagged VLANs" fields on Interface create/edit form.
+- [#8846](https://github.com/nautobot/nautobot/issues/8846) - Fixed an AttributeError in GraphQL when querying ContentType records.
+- [#8847](https://github.com/nautobot/nautobot/issues/8847) - Fixed an exception in `test_filters_generic` when an App didn't explicitly provide default Role and Status records for ContactAssociations.
+- [#8851](https://github.com/nautobot/nautobot/issues/8851) - Corrected the message on the Dynamic Group detail view "Members" tab.
+- [#8857](https://github.com/nautobot/nautobot/issues/8857) - Fixed an exception when editing a Job whose definition has explicitly defined `task_queues`.
+- [#8857](https://github.com/nautobot/nautobot/issues/8857) - Fixed a case where the Job Result detail view wouldn't correctly refresh when the Job reached a terminal state.
+
+### Documentation in v3.1.0
+
+- [#8848](https://github.com/nautobot/nautobot/issues/8848) - Added documentation for the bulk rename feature.
+
+### Housekeeping in v3.1.0
+
+- [#6793](https://github.com/nautobot/nautobot/issues/6793) - Removed unused `prefetch_related` class attribute from `CircuitUIViewSet`.
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Added the AssertNoRepeatedQueries context manager test helper to detect N+1 patterns in SQL queries.
+- [#7744](https://github.com/nautobot/nautobot/issues/7744) - Refactored ScheduledJob model related UI views to use `NautobotUIViewSet`.
+- [#8793](https://github.com/nautobot/nautobot/issues/8793) - Refactored ObjectChange model related UI views to use `UI component framework`.
+- [#8794](https://github.com/nautobot/nautobot/issues/8794) - Refactored ConfigContextSchema model related UI views to use `UI component framework`.
+- [#8810](https://github.com/nautobot/nautobot/issues/8810) - Refactored GitRepository model related UI views to use `UI component framework`.
+- [#8811](https://github.com/nautobot/nautobot/issues/8811) - Refactored Rack model related UI views to use `UI component framework`.
+- [#8812](https://github.com/nautobot/nautobot/issues/8812) - Refactored Job model related UI views to use `NautobotUIViewSet`.
+- [#8816](https://github.com/nautobot/nautobot/issues/8816) - Refactored DynamicGroup model related UI views to use `UI component framework`.
+- [#8854](https://github.com/nautobot/nautobot/issues/8854) - Fixed an intermittent test failure in `nautobot.core.tests.test_jobs.LogsCleanupTestCase`.
+- [#8864](https://github.com/nautobot/nautobot/pull/8864) - Updated the App marketplace entries and template logic for licensing.
 
 ## v3.1.0a5 (2026-04-07)
 
