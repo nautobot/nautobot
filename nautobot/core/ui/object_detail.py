@@ -2590,6 +2590,18 @@ class _ObjectDetailGroupsTab(Tab):
         )
 
 
+class _ObjectMetadataTablePanel(ObjectsTablePanel):
+    """Custom table panel for ObjectMetadata that includes assigned_object_type in the add URL."""
+
+    def _get_table_add_url(self, context: Context):
+        url = super()._get_table_add_url(context)
+        if url:
+            obj = get_obj_from_context(context)
+            content_type = ContentType.objects.get_for_model(obj)
+            url += f"&assigned_object_type={content_type.pk}"
+        return url
+
+
 @dataclass
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
@@ -2603,13 +2615,12 @@ class _ObjectDetailMetadataTab(Tab):
         super().__init__(**kwargs)
         if not self.panels:
             self.panels = (
-                ObjectsTablePanel(
+                _ObjectMetadataTablePanel(
                     weight=100,
                     table_class=ObjectMetadataTable,
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
                     exclude_columns=["assigned_object"],
-                    add_button_route=None,
                     related_field_name="assigned_object_id",
                     table_title="Object Metadata",
                 ),
@@ -2619,7 +2630,7 @@ class _ObjectDetailMetadataTab(Tab):
         if not super().should_render(context):
             return False
         obj = get_obj_from_context(context)
-        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
+        return getattr(obj, "is_metadata_associable_model", False)
 
     def render_label(self, context: Context):
         return format_html(

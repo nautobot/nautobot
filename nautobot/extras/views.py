@@ -4003,9 +4003,7 @@ class ObjectMetadataUIViewSet(
     ObjectEditViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
-    ObjectBulkUpdateViewMixin,
 ):
-    bulk_update_form_class = forms.ObjectMetadataBulkEditForm
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
@@ -4013,7 +4011,7 @@ class ObjectMetadataUIViewSet(
     table_class = tables.ObjectMetadataTable
     create_form_class = forms.ObjectMetadataCreateForm
     update_form_class = forms.ObjectMetadataForm
-    action_buttons = ("add", "export")
+    action_buttons = ("export",)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(

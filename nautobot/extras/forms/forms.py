@@ -2132,7 +2132,7 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
 
     class Meta:
         model = ObjectMetadata
-        fields = ["contact", "team", "assigned_object_id", "scoped_fields", "_value"]
+        fields = ["contact", "team", "scoped_fields", "_value"]
 
 
 class ObjectMetadataCreateForm(ObjectMetadataForm):
@@ -2151,6 +2151,16 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
             "scoped_fields",
             "_value",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        initial = kwargs.get("initial", {})
+        if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
+            self.fields["assigned_object_type"].widget = forms.HiddenInput()
+            self.fields["assigned_object_id"].widget = forms.HiddenInput()
+            self.fields["metadata_type"].queryset = MetadataType.objects.filter(
+                content_types=initial["assigned_object_type"]
+            )
 
 
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
