@@ -1188,6 +1188,56 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
 
+    def get_module_tree(self):
+        """
+        Build a nested tree structure of ModuleBays and their installed Modules for this Device.
+
+        Returns a list of dicts, each representing a top-level ModuleBay with structure:
+            {"bay": ModuleBay, "module": Module|None, "children": [...]}
+        where "children" recursively contains the same structure for nested ModuleBays.
+        """
+        if not self.has_module_bays:
+            return []
+
+        all_bays = list(
+            self.all_module_bays.select_related(
+                "module_family",
+                "parent_module",
+            ).order_by("parent_device", "parent_module_id", "_name")
+        )
+
+        # Fetch all installed modules in a single query, indexed by their parent module bay PK
+        bay_pks = [bay.pk for bay in all_bays]
+        modules_by_bay = {}
+        for module in Module.objects.filter(parent_module_bay_id__in=bay_pks).select_related(
+            "module_type",
+            "module_type__manufacturer",
+            "status",
+            "role",
+        ):
+            modules_by_bay[module.parent_module_bay_id] = module
+
+        # Index bays by their parent module PK (None for device-level bays)
+        bays_by_parent_module = {}
+        for bay in all_bays:
+            bays_by_parent_module.setdefault(bay.parent_module_id, []).append(bay)
+
+        def _build_subtree(parent_module_pk):
+            nodes = []
+            for bay in bays_by_parent_module.get(parent_module_pk, []):
+                module = modules_by_bay.get(bay.pk)
+                nodes.append(
+                    {
+                        "bay": bay,
+                        "module": module,
+                        "children": _build_subtree(module.pk) if module else [],
+                    }
+                )
+            return nodes
+
+        # Start from device-level bays (parent_module_id is None)
+        return _build_subtree(None)
+
     @property
     def radio_profile_assignments(self):
         """
