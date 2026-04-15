@@ -414,7 +414,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         for action in actions:
             # Append additional object permissions if specified.
             if self.custom_view_additional_permissions:
-                model_permissions.append(*self.custom_view_additional_permissions)
+                model_permissions.extend(self.custom_view_additional_permissions)
             # Append the model-level permissions for the action.
             model_permissions.append(f"{model._meta.app_label}.{action}_{model._meta.model_name}")
         return model_permissions
