@@ -29,17 +29,31 @@ Nautobot supports standard logging levels, with additional custom levels for suc
 
 ## Configuring Log Levels
 
-You can configure the minimum log level for a specific Job by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired logging level for the Job(e.g., "DEBUG", "INFO", "WARNING", etc.).
-The pattern in the following example allows you to control the verbosity of logs for that Job, taking into account the (optional) `debug` parameter passed to the Job.
+You can configure the minimum log level for a specific Job by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired logging level for the Job (e.g., "DEBUG", "INFO", "WARNING", etc.).
+
+The pattern in the following example allows you to control the verbosity of logs for that Job, taking into account the (optional) `debug` parameter passed to the Job. After setting the log level, only messages at that level or higher will be logged for the Job. Finally, once the Job completes, the log level should be reset to the default configured in `settings.LOG_LEVEL` for any subsequent Jobs that use the same logger instance.
 
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example
     ```py
     from django.conf import settings
+    from nautobot.apps.jobs import BooleanVar, Job
 
     class MyJob(Job):
+
+        debug = BooleanVar(default=False, description="Whether to print debug messages")
+
+        def before_start(self, task_id, args, kwargs):
+            # Set the logging level before Job starts, based on the debug parameter
+            self.logger.setLevel("DEBUG" if kwargs.get("debug") else settings.LOG_LEVEL)
+
         def run(self, arg, another_arg, debug):
-            self.logger.setLevel("DEBUG" if debug else settings.LOG_LEVEL)
+            ...
+
+        def after_return(self, status, retval, task_id, args, kwargs, einfo):
+            # Return the logger to the default log level after the Job finishes
+            self.logger.setLevel(settings.LOG_LEVEL)
+            return super().after_return(status, retval, task_id, args, kwargs, einfo)
     ```
 
 ## Writing Log Messages
