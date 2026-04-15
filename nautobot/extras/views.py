@@ -104,7 +104,6 @@ from nautobot.extras.utils import (
 )
 from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
-from nautobot.users.utils import user_is_staffed
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
@@ -3165,8 +3164,8 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         if not self.request.user.is_authenticated:
             return queryset.none()
 
-        if not user_is_staffed(self.request.user):
-            queryset = queryset.filter(user=self.request.user)
+        if not self.request.user.is_staff:
+            queryset = queryset.exclude(user__is_staff=True).exclude(user__is_superuser=True)
 
         return queryset
 

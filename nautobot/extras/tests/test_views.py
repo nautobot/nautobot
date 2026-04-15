@@ -4949,7 +4949,7 @@ class ObjectChangeTestCase(TestCase):
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
 
-    def test_objectchange_queryset_restricts_non_staff_users_to_their_own_logs(self):
+    def test_objectchange_queryset_restricts_non_staff_users_from_staff_logs(self):
         other_user = User.objects.create_user(username="objectchange-other-user")
         staff_user = User.objects.create_user(username="objectchange-staff-user", is_staff=True)
         superuser = User.objects.create_superuser(
@@ -4969,7 +4969,10 @@ class ObjectChangeTestCase(TestCase):
         view.request = request
         view.action = "list"
         regular_user_queryset = view.get_queryset()
-        self.assertQuerySetEqual(regular_user_queryset.order_by("pk"), [own_change], transform=lambda obj: obj)
+        self.assertIn(own_change, regular_user_queryset)
+        self.assertIn(other_change, regular_user_queryset)
+        self.assertNotIn(staff_change, regular_user_queryset)
+        self.assertNotIn(superuser_change, regular_user_queryset)
 
         self.user.is_staff = True
         self.user.save()
