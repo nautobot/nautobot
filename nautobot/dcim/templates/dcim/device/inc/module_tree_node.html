@@ -1,0 +1,52 @@
+{% load helpers %}
+
+<div class="module-tree-node border-bottom py-2">
+    <div class="d-flex align-items-center">
+        {% if node.children %}
+            <a class="text-decoration-none me-1"
+               data-bs-toggle="collapse"
+               href="#tree-children-{{ node.bay.pk }}"
+               role="button"
+               aria-expanded="true"
+               aria-controls="tree-children-{{ node.bay.pk }}">
+                <span class="mdi mdi-chevron-down"></span>
+            </a>
+        {% else %}
+            <span class="me-3"></span>
+        {% endif %}
+
+        <span class="mdi mdi-expansion-card me-1 text-muted" title="Module Bay"></span>
+        <a href="{{ node.bay.get_absolute_url }}">{{ node.bay.name }}</a>
+        {% if node.bay.position and node.bay.position != node.bay.name %}
+            <span class="text-muted ms-1">(pos: {{ node.bay.position }})</span>
+        {% endif %}
+
+        {% if node.module %}
+            <span class="mdi mdi-arrow-right ms-2 me-2 text-muted"></span>
+            <span class="mdi mdi-memory me-1" title="Module"></span>
+            <a href="{{ node.module.get_absolute_url }}">{{ node.module.module_type }}</a>
+            {% if node.module.status %}
+                {{ node.module.status | hyperlinked_object_with_color }}
+            {% endif %}
+            {% if node.module.role %}
+                <span class="ms-1">{{ node.module.role | hyperlinked_object }}</span>
+            {% endif %}
+            {% if node.module.serial %}
+                <span class="text-muted ms-2">S/N: {{ node.module.serial }}</span>
+            {% endif %}
+            {% if node.module.asset_tag %}
+                <span class="text-muted ms-2">Asset: {{ node.module.asset_tag }}</span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted ms-2 fst-italic">Empty</span>
+        {% endif %}
+    </div>
+
+    {% if node.children %}
+        <div class="collapse show ms-4" id="tree-children-{{ node.bay.pk }}">
+            {% for child in node.children %}
+                {% include "dcim/device/inc/module_tree_node.html" with node=child %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
