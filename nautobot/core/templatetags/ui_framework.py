@@ -183,5 +183,5 @@ def render_default_panels_for_object(context, obj):
     if object_detail_content is None:
         logger.warning("No object_detail_content defined on %s", base_detail_view.__name__)
         return ""
-    with context.update({"obj": obj, "object_detail_content": object_detail_content}):
+    with context.update({"obj": obj, "object": obj, "object_detail_content": object_detail_content}):
         return render_components(context, object_detail_content.tabs[0].panels)
