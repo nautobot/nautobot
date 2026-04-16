@@ -5768,7 +5768,7 @@ class ObjectMetadataTestCase(
             "team": None,
             "assigned_object_type": location_ct.pk,
             "assigned_object_id": target_location.pk,
-            "scoped_fields": ["time_zone"],
+            "scoped_fields": "time_zone",
             "_value": None,
         }
         # `update_data` only includes fields editable via `ObjectMetadataForm`
@@ -5776,7 +5776,7 @@ class ObjectMetadataTestCase(
         cls.update_data = {
             "contact": None,
             "team": Team.objects.first().pk,
-            "scoped_fields": ["status"],
+            "scoped_fields": "status",
             "_value": None,
         }
 
