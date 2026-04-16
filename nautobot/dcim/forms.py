@@ -5755,6 +5755,26 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         to_field_name="name",
         required=False,
     )
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Devices",
+    )
+    has_devices = forms.NullBooleanField(
+        required=False,
+        label="Has devices",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+        label="Virtual Device Contexts",
+    )
+    has_virtual_device_contexts = forms.NullBooleanField(
+        required=False,
+        label="Has virtual device contexts",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
     field_order = (
         "q",
@@ -5764,6 +5784,10 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         "parent",
         "weight",
         "subtree",
+        "devices",
+        "has_devices",
+        "virtual_device_contexts",
+        "has_virtual_device_contexts",
         "tags",
         "tenant",
         "tenant_group",

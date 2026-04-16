@@ -4260,13 +4260,30 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
         ("weight",),
         ("controller", "controller__id"),
         ("controller", "controller__name"),
+        ("devices", "devices__id"),
+        ("devices", "devices__name"),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
+        ("virtual_device_contexts", "virtual_device_contexts__id"),
+        ("virtual_device_contexts", "virtual_device_contexts__name"),
     )
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+        # Assign devices and VDCs to CMDGs for filtering
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        for idx in range(3):
+            Device.objects.filter(pk=cls.devices[idx].pk).update(
+                controller_managed_device_group=cls.controller_managed_device_groups[idx],
+            )
+            VirtualDeviceContext.objects.create(
+                name=f"CMDG Filter VDC {idx + 1}",
+                device=cls.devices[idx],
+                status=vdc_status,
+                controller_managed_device_group=cls.controller_managed_device_groups[idx],
+            )
 
 
 class ModuleTestCase(

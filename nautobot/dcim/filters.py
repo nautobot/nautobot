@@ -2023,6 +2023,24 @@ class ControllerManagedDeviceGroupFilterSet(
         field_name="wireless_networks",
         label="Has wireless networks",
     )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual device contexts (name or ID)",
+    )
+    has_virtual_device_contexts = RelatedMembershipBooleanFilter(
+        field_name="virtual_device_contexts",
+        label="Has virtual device contexts",
+    )
 
     class Meta:
         model = ControllerManagedDeviceGroup
