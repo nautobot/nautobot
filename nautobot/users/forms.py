@@ -18,6 +18,7 @@ from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.utils import serialize_user_without_config_and_views
 
+from .choices import ObjectPermissionActionChoices
 from .models import ObjectPermission, Token
 
 
@@ -104,8 +105,20 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
 class ObjectPermissionForm(BootstrapMixin, forms.ModelForm):
     object_types = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
+        required=True,
+    )
+    users = DynamicModelMultipleChoiceField(
+        queryset=get_user_model().objects.all(),
         required=False,
-        label="Models",
+    )
+    groups = DynamicModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+    )
+    actions = JSONArrayFormField(
+        choices=ObjectPermissionActionChoices,
+        base_field=forms.CharField(),
+        required=True,
     )
 
     class Meta:
@@ -115,8 +128,8 @@ class ObjectPermissionForm(BootstrapMixin, forms.ModelForm):
             "description",
             "enabled",
             "object_types",
-            "groups",
             "users",
+            "groups",
             "actions",
             "constraints",
         ]
@@ -126,7 +139,7 @@ class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=ObjectPermission.objects.all(), widget=forms.MultipleHiddenInput)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     enabled = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
-    Models = DynamicModelMultipleChoiceField(
+    object_types = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
     )
@@ -139,7 +152,8 @@ class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
         required=False,
     )
     actions = JSONArrayFormField(
-        base_field=forms.CharField(max_length=30),
+        choices=ObjectPermissionActionChoices,
+        base_field=forms.CharField(),
         required=False,
     )
     constraints = JSONField(required=False)
@@ -148,7 +162,7 @@ class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
         fields = [
             "description",
             "enabled",
-            "Models",
+            "object_types",
             "users",
             "groups",
             "actions",
@@ -159,22 +173,17 @@ class ObjectPermissionBulkEditForm(BootstrapMixin, BulkEditForm):
 class ObjectPermissionFilterForm(BootstrapMixin, forms.Form):
     model = ObjectPermission
 
-    id = forms.IntegerField(required=False)
+    q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
-    description = forms.CharField(required=False)
     enabled = forms.NullBooleanField(required=False)
-
     object_types = DynamicModelMultipleChoiceField(
         queryset=ContentType.objects.all(),
         required=False,
-        label="Models",
     )
-
     users = DynamicModelMultipleChoiceField(
         queryset=get_user_model().objects.all(),
         required=False,
     )
-
     groups = DynamicModelMultipleChoiceField(
         queryset=Group.objects.all(),
         required=False,

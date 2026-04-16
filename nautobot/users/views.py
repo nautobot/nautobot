@@ -524,8 +524,6 @@ class ObjectPermissionUIViewSet(
 
     action_buttons = (
         "add",
-        "bulk_delete",
-        "bulk_edit",
         "export",
     )
 
