@@ -1,1 +1,1 @@
-Fixed `run_job()`. Now it validates that all required parameters declared in a Job's `run()` signature are present before the task is executed.
+Fixed `create_schedule`, `enqueue_job` and `runjob` command. They now validate that all required parameters declared in a Job’s run() signature are provided before the task is executed.

@@ -65,6 +65,7 @@ from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     extras_features,
     get_job_queue_worker_count,
+    get_required_run_param_names,
     run_kubernetes_job_and_return_job_result,
 )
 
@@ -1022,6 +1023,12 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
+        required_run_params = get_required_run_param_names(job_model.class_path)
+        if required_run_params is not None:
+            missing_kwargs = required_run_params - job_kwargs.keys()
+            if missing_kwargs:
+                raise ValueError(f"Missing required job parameters: {missing_kwargs}")
+
         job_celery_kwargs = cls._build_celery_kwargs(
             job_model=job_model,
             user=user,
@@ -1742,6 +1749,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
         if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
             raise ValueError("task_queue and job_queue are mutually exclusive")
+
+        required_run_params = get_required_run_param_names(job_model.class_path)
+        if required_run_params is not None:
+            missing_kwargs = required_run_params - job_kwargs.keys()
+            if missing_kwargs:
+                raise ValueError(f"Missing required job parameters: {missing_kwargs}")
         if job_queue is not None and task_queue is None:
             task_queue = job_queue.name
         elif task_queue is not None and job_queue is None:

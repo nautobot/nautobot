@@ -3,6 +3,7 @@ import contextlib
 import copy
 import hashlib
 import hmac
+import inspect
 import json
 import logging
 import os
@@ -1027,3 +1028,29 @@ def get_pending_approval_workflow_stages(user, queryset):
         .exclude(pk__in=approved_approval_workflow_stages)
         .order_by("created")
     )
+
+
+def get_required_run_param_names(job_class_path: str) -> set[str] | None:
+    """
+    Return the names of required parameters in the job's run() signature.
+
+    A parameter is considered required if it has no default value.
+    Parameters such as `self`, `*args`, and `**kwargs` are excluded.
+
+    Returns None if the job's run() method accepts no named parameters
+    (e.g. `run(self)` or `run(self, **kwargs)`), indicating that no
+    validation is needed.
+    """
+    from nautobot.extras.jobs import get_job  # avoid circular import
+
+    job_class = get_job(job_class_path)
+    required = {
+        name
+        for name, param in inspect.signature(job_class.run).parameters.items()
+        if name != "self"
+        and param.kind
+        not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)  # not *args and **kwargs
+        and param.default is inspect.Parameter.empty
+    }
+
+    return required or None

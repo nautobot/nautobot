@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.management.utils import report_job_status, validate_job_and_job_data
 from nautobot.extras.models import Job, JobResult
+from nautobot.extras.utils import get_required_run_param_names
 
 
 class Command(BaseCommand):
@@ -65,6 +66,11 @@ class Command(BaseCommand):
 
         data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
         if options["local"]:
+            required_run_params = get_required_run_param_names(job_model.class_path)
+            if required_run_params is not None:
+                missing_kwargs = required_run_params - data.keys()
+                if missing_kwargs:
+                    raise CommandError(f"Missing required job parameters: {missing_kwargs}")
             job_result = JobResult.objects.create(
                 name=job_model.name,
                 job_model=job_model,
