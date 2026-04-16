@@ -4,20 +4,87 @@
 {% block title %}{{ object }} - Module Tree{% endblock %}
 
 {% block content %}
-    <div class="card">
-        <div class="card-header">
+    <div class="panel panel-default">
+        <div class="panel-heading">
             <strong>Module Hierarchy</strong>
-        </div>
-        <div class="card-body">
             {% if module_tree %}
-                <div class="module-tree">
+                <div class="pull-right">
+                    <button type="button" class="btn btn-default btn-xs" id="module-tree-expand-all">
+                        <i class="mdi mdi-arrow-expand-all"></i> Expand All
+                    </button>
+                    <button type="button" class="btn btn-default btn-xs" id="module-tree-collapse-all">
+                        <i class="mdi mdi-arrow-collapse-all"></i> Collapse All
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+        {% if module_tree %}
+            <table class="table table-hover panel-body">
+                <thead>
+                    <tr>
+                        <th>Module Bay</th>
+                        <th>Module</th>
+                        <th>Status</th>
+                        <th>Role</th>
+                        <th>Serial / Asset Tag</th>
+                    </tr>
+                </thead>
+                <tbody>
                     {% for node in module_tree %}
                         {% include "dcim/device/inc/module_tree_node.html" with node=node depth=0 %}
                     {% endfor %}
-                </div>
-            {% else %}
-                <span class="text-muted">No module bays found for this device.</span>
-            {% endif %}
-        </div>
+                </tbody>
+            </table>
+        {% else %}
+            <div class="panel-body">
+                <span class="text-muted">&mdash; No module bays found for this device. &mdash;</span>
+            </div>
+        {% endif %}
     </div>
-{% endblock %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            function toggleChildren(bayPk, show) {
+                var children = $('[data-parent-bay="' + bayPk + '"]');
+                children.each(function () {
+                    if (show) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                    // Recursively toggle grandchildren
+                    var childBay = $(this).data('bay-pk');
+                    if (childBay) {
+                        toggleChildren(childBay, show);
+                    }
+                });
+            }
+
+            $('.module-tree-toggle').click(function (e) {
+                e.preventDefault();
+                var bayPk = $(this).data('bay-pk');
+                var icon = $(this).find('.mdi');
+                if (icon.hasClass('mdi-chevron-down')) {
+                    icon.removeClass('mdi-chevron-down').addClass('mdi-chevron-right');
+                    toggleChildren(bayPk, false);
+                } else {
+                    icon.removeClass('mdi-chevron-right').addClass('mdi-chevron-down');
+                    toggleChildren(bayPk, true);
+                }
+            });
+
+            $('#module-tree-expand-all').click(function () {
+                $('tr[data-parent-bay]').show();
+                $('.module-tree-toggle .mdi').removeClass('mdi-chevron-right').addClass('mdi-chevron-down');
+            });
+
+            $('#module-tree-collapse-all').click(function () {
+                $('tr[data-parent-bay]').hide();
+                $('.module-tree-toggle .mdi').removeClass('mdi-chevron-down').addClass('mdi-chevron-right');
+            });
+        });
+    </script>
+{% endblock javascript %}
