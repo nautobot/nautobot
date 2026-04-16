@@ -12,12 +12,13 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
-from nautobot.extras.models import JobQueue, JobResult
+from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
     get_kubernetes_job_manifest,
+    get_required_run_param_names,
     get_worker_count,
     populate_model_features_registry,
     run_kubernetes_job_and_return_job_result,
@@ -393,3 +394,88 @@ class UtilsTestCase(TestCase):
                     run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
                 self.assertIn("Unable to retrieve a kubernetes job manifest.", str(cm.exception))
                 self.assertTrue(issubclass(KubernetesJobManifestError, ValidationError))
+
+
+class GetRequiredRunParamNamesTest(TestCase):
+    def _make_job_class(self, run_method):
+        """Helper to create a Job subclass with a custom run() method."""
+
+        class TestJob(Job):
+            pass
+
+        TestJob.run = run_method
+        return TestJob
+
+    def test_no_params_returns_none(self):
+        """run(self) — no validation needed."""
+
+        def run(self):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            self.assertIsNone(get_required_run_param_names("some.TestJob"))
+
+    def test_var_positional_ignored(self):
+        """run(self, *args) — treated same as run(self)."""
+
+        def run(self, *args):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            self.assertIsNone(get_required_run_param_names("some.TestJob"))
+
+    def test_var_keyword_only_returns_none(self):
+        """run(self, **kwargs) — no validation needed."""
+
+        def run(self, **kwargs):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            self.assertIsNone(get_required_run_param_names("some.TestJob"))
+
+    def test_all_params_have_defaults_returns_empty_set(self):
+        """run(self, *, foo='a', bar='b') — no required params but named params exist."""
+
+        def run(self, *, foo="a", bar="b"):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            result = get_required_run_param_names("some.TestJob")
+            self.assertIsNone(result)
+
+    def test_required_params_returned(self):
+        """run(self, *, content_type) — content_type is required."""
+
+        def run(self, *, content_type):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            result = get_required_run_param_names("some.TestJob")
+            self.assertEqual(result, {"content_type"})
+
+    def test_mixed_params_returns_only_required(self):
+        """run(self, *, content_type, query_string="", export_format="csv") — only content_type required."""
+
+        def run(self, *, content_type, query_string="", export_format="csv"):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            result = get_required_run_param_names("some.TestJob")
+            self.assertEqual(result, {"content_type"})
+
+    def test_multiple_required_params(self):
+        """run(self, *, foo, bar, baz="default") — foo and bar are required."""
+
+        def run(self, *, foo, bar, baz="default"):
+            pass
+
+        job_class = self._make_job_class(run)
+        with mock.patch("nautobot.extras.jobs.get_job", return_value=job_class):
+            result = get_required_run_param_names("some.TestJob")
+            self.assertEqual(result, {"foo", "bar"})
