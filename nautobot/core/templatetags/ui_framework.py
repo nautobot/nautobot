@@ -166,7 +166,7 @@ def render_default_panels_for_object(context, obj):
     """
     Render the object_detail_content main-tab panels for the given object.
 
-    Used for example in `extras/inc/jobresult.html` to render the details of a JobResult in a tab under the detail 
+    Used for example in `extras/inc/jobresult.html` to render the details of a JobResult in a tab under the detail
     view of a different object (such as a GitRepository).
     """
     if obj is None:

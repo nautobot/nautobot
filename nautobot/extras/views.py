@@ -2091,7 +2091,7 @@ def check_and_call_git_repository_function(request, pk, func):
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(repository.get_absolute_url(), permanent=False)
     else:
-        job_result = func(repository, request.user)
+        func(repository, request.user)
         return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
 
 
