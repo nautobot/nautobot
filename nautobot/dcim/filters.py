@@ -2362,6 +2362,11 @@ class VirtualDeviceContextFilterSet(
         field_name="tenant",
         label="Has tenant",
     )
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group",
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2380,6 +2385,7 @@ class VirtualDeviceContextFilterSet(
             "status",
             "tags",
             "description",
+            "controller_managed_device_group",
         ]
 
     # TODO(timizuo): Make a mixin for ip filterset fields to reduce code duplication

@@ -999,7 +999,7 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
 class VirtualDeviceContextFactory(PrimaryModelFactory):
     class Meta:
         model = VirtualDeviceContext
-        exclude = ("has_role", "has_tenant", "has_description")
+        exclude = ("has_role", "has_tenant", "has_description", "has_controller_managed_device_group")
 
     status = random_instance(
         lambda: Status.objects.get_for_model(VirtualDeviceContext),
@@ -1027,6 +1027,9 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
     )
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    controller_managed_device_group = factory.Maybe(
+        "has_controller_managed_device_group", random_instance(ControllerManagedDeviceGroup, allow_null=False), None
+    )
 
     @factory.post_generation
     def interfaces(self, create, extracted, **kwargs):
