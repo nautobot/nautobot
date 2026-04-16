@@ -1235,7 +1235,6 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
 
     # Get the job code
     job_class = get_job(job_class_path, reload=True)
-
     if job_class is None:
         raise KeyError(f"Job class not found for class path {job_class_path}")
     job = job_class()
