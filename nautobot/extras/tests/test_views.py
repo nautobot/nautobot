@@ -5702,9 +5702,83 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = ObjectMetadata
+
+    @classmethod
+    def setUpTestData(cls):
+        # Delete existing ObjectMetadata objects to have deterministic test data
+        ObjectMetadata.objects.all().delete()
+
+        # Create a MetadataType of Contact/Team data type so all test records have `_value=None`,
+        # which keeps form_data/update_data comparisons straightforward with Django's JSONField form handling.
+        contact_team_mdt = MetadataType.objects.create(
+            name="Test Contact Or Team Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+        )
+        contact_team_mdt.content_types.set(ContentType.objects.all())
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ip_ct = ContentType.objects.get_for_model(IPAddress)
+
+        # Create at least 4 ObjectMetadata instances, with a mix of contact and team variants to satisfy
+        # test_value_column_in_list_view_rendered_correctly and provide enough records for bulk delete tests.
+        ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            contact=Contact.objects.first(),
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            team=Team.objects.first(),
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            contact=Contact.objects.last(),
+            scoped_fields=["name"],
+            assigned_object_type=device_ct,
+            assigned_object_id=Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            team=Team.objects.last(),
+            scoped_fields=["type"],
+            assigned_object_type=ip_ct,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        target_location = Location.objects.filter(associated_object_metadata__isnull=True).last()
+        cls.form_data = {
+            "metadata_type": contact_team_mdt.pk,
+            "contact": Contact.objects.first().pk,
+            "team": None,
+            "assigned_object_type": location_ct.pk,
+            "assigned_object_id": target_location.pk,
+            "scoped_fields": ["time_zone"],
+            "_value": None,
+        }
+        # `update_data` only includes fields editable via `ObjectMetadataForm`
+        # (metadata_type / assigned_object_* are immutable after creation).
+        cls.update_data = {
+            "contact": None,
+            "team": Team.objects.first().pk,
+            "scoped_fields": ["status"],
+            "_value": None,
+        }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_column_in_list_view_rendered_correctly(self):
