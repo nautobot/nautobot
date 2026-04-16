@@ -1,1 +1,2 @@
 Fixed `create_schedule`, `enqueue_job` and `runjob` command. They now validate that all required parameters declared in a Job’s run() signature are provided before the task is executed.
+Improved error handling from `create_schedule` and `equeue_job` in `run` view.
