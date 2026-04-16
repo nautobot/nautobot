@@ -288,6 +288,8 @@ class ObjectTextPanelTest(TestCase):
     def test_render_body_content_hyperlinked_object(self):
         device = Device.objects.first()
         location = device.location
+        location.description = "An important location"
+        location.save()
         panel = ObjectTextPanel(
             weight=100, render_as=ObjectTextPanel.RenderOptions.HYPERLINKED_OBJECT, object_field="location"
         )

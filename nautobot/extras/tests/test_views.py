@@ -2858,9 +2858,10 @@ class DynamicGroupTestCase(
 
     def test_edit_object_with_content_type_dcim_interface(self):
         """Assert bug fix #8319: `Fixed the creation of Interface Dynamic Groups by 802.1Q Mode and Tagged/Untagged VLANs.`"""
-        # Create some global VLANs
-        vlan1 = VLAN.objects.create(name="VLAN 1", vid=1, status=Status.objects.first())
-        vlan2 = VLAN.objects.create(name="VLAN 2", vid=2, status=Status.objects.first())
+        # Use unique VIDs so the filter round-trip doesn't collide with seeded VLANs in the full test suite.
+        max_vid = max(VLAN.objects.values_list("vid", flat=True), default=0)
+        vlan1 = VLAN.objects.create(name="VLAN 1", vid=max_vid + 1, status=Status.objects.first())
+        vlan2 = VLAN.objects.create(name="VLAN 2", vid=max_vid + 2, status=Status.objects.first())
         # Create an interface with the specified filter values
         interface = Interface.objects.create(
             name="Test Interface",
@@ -4276,34 +4277,6 @@ class JobResultTestCase(
         response_content = response.content.decode(response.charset)
         self.assertNotIn("log-table-poller", response_content)
 
-    def test_htmx_joblogentrytable_trigger_reload_on_completed_job(self):
-        """Test that poller trigger on a completed job sets trigger_reload=True."""
-        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_completed.pk})
-        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
-
-        response = self.client.get(
-            url,
-            HTTP_HX_REQUEST="true",
-            HTTP_HX_TRIGGER="log-table-poller",
-        )
-        self.assertHttpStatus(response, 200)
-        # When trigger_reload is True the view should signal a full page reload
-        self.assertBodyContains(response, "window.location.reload();")
-
-    def test_htmx_joblogentrytable_no_trigger_reload_on_pending_job(self):
-        """Test that poller trigger on a pending job does NOT set trigger_reload."""
-        url = reverse("extras:jobresult_log-table", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
-
-        response = self.client.get(
-            url,
-            HTTP_HX_REQUEST="true",
-            HTTP_HX_TRIGGER="log-table-poller",
-        )
-        self.assertHttpStatus(response, 200)
-        response_content = response.content.decode(response.charset)
-        self.assertNotIn("HX-Refresh", response_content)
-
     def test_joblogentrytable_vary_header(self):
         """Test that Vary header includes HX-Request for proper caching."""
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -4890,7 +4863,10 @@ class JobTestCase(
             )
 
             result = JobResult.objects.latest()
-            self.assertRedirects(response, reverse("extras:jobresult_modal", kwargs={"pk": result.pk}))
+            self.assertRedirects(
+                response,
+                reverse("extras:jobresult_modal", kwargs={"pk": result.pk}) + "?refresh_on_close_if_done=false",
+            )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):

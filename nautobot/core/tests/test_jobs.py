@@ -1,6 +1,6 @@
 import codecs
 import csv
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from io import StringIO
 import json
 import logging
@@ -570,6 +570,20 @@ class LogsCleanupTestCase(TransactionTestCase):
             ObjectChangeFactory.create_batch(40)
         if JobResult.objects.count() < 2:
             JobResultFactory.create_batch(20)
+        # To avoid spurious test failures due to factory randomness,
+        # ensure that we have some records well outside the test data cutoff windows.
+        ObjectChangeFactory.create(time=datetime(2023, 1, 1, tzinfo=dt_timezone.utc))
+        ObjectChangeFactory.create(time=datetime(2026, 1, 1, tzinfo=dt_timezone.utc))
+        latest_jr = JobResult.objects.latest()
+        latest_jr.date_created += timedelta(days=365)
+        latest_jr.date_started += timedelta(days=365)
+        latest_jr.date_done += timedelta(days=365)
+        latest_jr.save()
+        earliest_jr = JobResult.objects.earliest()
+        earliest_jr.date_created -= timedelta(days=365)
+        earliest_jr.date_started -= timedelta(days=365)
+        earliest_jr.date_done -= timedelta(days=365)
+        earliest_jr.save()
 
     @load_event_broker_override_settings(
         EVENT_BROKERS={

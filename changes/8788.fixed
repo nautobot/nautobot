@@ -1,1 +1,0 @@
-Fixed `log_table` action ignoring constrained permissions on `JobLogEntry` records.

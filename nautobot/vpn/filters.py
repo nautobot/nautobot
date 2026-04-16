@@ -11,7 +11,8 @@ from nautobot.apps.filters import (
     TenancyModelFilterSetMixin,
 )
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.virtualization.models import VMInterface
 
 from . import models
 
@@ -139,7 +140,7 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
         fields = "__all__"
 
 
-class VPNFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNFilterSet(RoleModelFilterSetMixin, StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPN."""
 
     q = SearchFilter(
@@ -244,4 +245,44 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         """Meta attributes for filter."""
 
         model = models.VPNTunnelEndpoint
+        fields = "__all__"
+
+
+class VPNTerminationFilterSet(NautobotFilterSet):
+    """Filter for VPNTermination."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "vpn__name": "icontains",
+            "vlan__name": "icontains",
+            "interface__name": "icontains",
+            "vm_interface__name": "icontains",
+        }
+    )
+    vpn = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPN.objects.all(),
+        to_field_name="name",
+        label="VPN (name or ID)",
+    )
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="VLAN (VID or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
+        queryset=Interface.objects.all(),
+        label="Interface (name or ID)",
+    )
+    vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
+        queryset=VMInterface.objects.all(),
+        label="VM Interface (name or ID)",
+    )
+
+    class Meta:
+        model = models.VPNTermination
         fields = "__all__"
