@@ -1,87 +1,10 @@
 {% load helpers %}
-{% load custom_links %}
-{% load form_helpers %}
-{% load render_table from django_tables2 %}
-{% load log_levels %}
-{% load plugins %}
-{% load static %}
+{% load ui_framework %}
 
-<div class="card">
-    <div class="card-header">
-        <strong>Summary of Results</strong>
+{% if result %}
+    {% render_default_panels_for_object result %}
+{% else %}
+    <div class="alert alert-warning">
+        No synchronization JobResult found.
     </div>
-    <table class="table table-hover card-body">
-        <tr>
-            <td>Job Description</td>
-            <td>{{ result.job_model.description | render_markdown | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>Status</td>
-            <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
-        </tr>
-        <tr>
-            <td>Created at</td>
-            <td>{{ result.date_created | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>Started execution at</td>
-            <td>{{ result.date_started | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>User</td>
-            <td>{{ result.user | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>Duration</td>
-            <td>
-                {% if not result.date_done %}
-                    <img src="{% static 'img/ajax-loader.gif' %}">
-                {% else %}
-                    {{ result.duration | placeholder}}
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td>Return Value</td>
-            <td>
-                {% if not result.date_done %}
-                    <img src="{% static 'img/ajax-loader.gif' %}">
-                {% else %}
-                    {% if result.result %}
-                    <pre>{{ result.result | render_json }}</pre>
-                    {% else %}
-                        {{ result.result | placeholder }}
-                    {% endif %}
-                {% endif %}
-            </td>
-        </tr>
-        {% if result.files.exists %}
-            <tr>
-                <td>File Output(s)</td>
-                <td>
-                    <ul>
-                        {% for file_proxy in result.files.all %}
-                            {% if file_proxy.file %}
-                                <li>
-                                    <a
-                                        {% if settings.STORAGES.nautobotjobfiles.BACKEND == "db_file_storage.storage.DatabaseFileStorage" %}
-                                            href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
-                                        {% else %}
-                                            href="{{ file_proxy.file.url }}"
-                                        {% endif %}
-                                        download="{{ file_proxy.name }}">
-                                        {{ file_proxy.name }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                </td>
-            </tr>
-        {% endif %}
-    </table>
-</div>
-
-<div class="card">
-    {% include 'extras/inc/log_table_filter.html' with result=result %}
-</div>
+{% endif %}
