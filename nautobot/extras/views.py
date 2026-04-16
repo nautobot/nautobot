@@ -1686,7 +1686,16 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 related_list_url_name="extras:dynamicgroup_list",
             ),
-        ]
+        ],
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_DATACOMPLIANCE_TAB + 50,
+                tab_id="members",
+                label="Members",
+                url_name="extras:dynamicgroup_members",
+                related_object_attribute="members",
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
@@ -1707,60 +1716,78 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
 
         elif self.action == "retrieve":
-            model = instance.model
-            table_class = get_table_for_model(model)
-            members = instance.members
-            if table_class is not None:
-                if hasattr(members, "without_tree_fields"):
-                    members = members.without_tree_fields()
+            # Descendants table
+            descendants_memberships = instance.membership_tree()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                descendants_memberships,
+                orderable=False,
+            )
+            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
 
-                members_table = table_class(
-                    members.restrict(request.user, "view"),
-                    orderable=False,
-                    exclude=["dynamic_group_count"],
-                    hide_hierarchy_ui=True,
-                )
-                paginate = {
-                    "paginator_class": EnhancedPaginator,
-                    "per_page": get_paginate_count(request),
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                ancestors,
+                orderable=False,
+            )
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+
+            context.update(
+                {
+                    "ancestors_table": ancestors_table,
+                    "ancestors_tree": ancestors_tree,
+                    "descendants_table": descendants_table,
+                    "descendants_tree": descendants_tree,
                 }
-                RequestConfig(request, paginate).configure(members_table)
-
-                # Descendants table
-                descendants_memberships = instance.membership_tree()
-                descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                    descendants_memberships,
-                    orderable=False,
-                )
-                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
-
-                # Ancestors table
-                ancestors = instance.get_ancestors()
-                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
-                    ancestors,
-                    orderable=False,
-                )
-                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
-                if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                    context["members_list_url"] = None
-                else:
-                    try:
-                        context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
-                    except NoReverseMatch:
-                        context["members_list_url"] = None
-
-                context.update(
-                    {
-                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
-                        "members_table": members_table,
-                        "ancestors_table": ancestors_table,
-                        "ancestors_tree": ancestors_tree,
-                        "descendants_table": descendants_table,
-                        "descendants_tree": descendants_tree,
-                    }
-                )
+            )
 
         return context
+
+    @action(detail=True, url_path="members", url_name="members", custom_view_base_action="view")
+    def members(self, request, pk=None):
+        instance = self.get_object()
+        model = instance.model
+        table_class = get_table_for_model(model)
+
+        context = super().get_extra_context(request, instance)
+        context["base_template"] = "extras/dynamicgroup_retrieve.html"
+        context["object"] = instance
+        context["active_tab"] = "members"
+
+        if table_class is not None:
+            members = instance.members
+            if hasattr(members, "without_tree_fields"):
+                members = members.without_tree_fields()
+
+            members_table = table_class(
+                members.restrict(request.user, "view"),
+                orderable=False,
+                exclude=["dynamic_group_count"],
+                hide_hierarchy_ui=True,
+            )
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(members_table)
+
+            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                members_list_url = None
+            else:
+                try:
+                    members_list_url = reverse(get_route_for_model(instance.model, "list"))
+                except NoReverseMatch:
+                    members_list_url = None
+
+            context.update(
+                {
+                    "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                    "members_table": members_table,
+                    "members_list_url": members_list_url,
+                }
+            )
+
+        return Response(context, template_name="extras/dynamicgroup_members.html")
 
     def form_save(self, form, commit=True, **kwargs):
         obj = form.save(commit=False)
