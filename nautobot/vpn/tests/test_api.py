@@ -5,10 +5,12 @@ from rest_framework import status
 
 from nautobot.apps.testing import APIViewTestCases
 from nautobot.dcim.models import Interface
-from nautobot.extras.models import Status
+from nautobot.extras.models import Role, Status
 from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VMInterface
 from nautobot.vpn import choices, models
+from nautobot.vpn.factory import get_status_for_model
 
 
 class VPNProfileAPITest(APIViewTestCases.APIViewTestCase):
@@ -206,7 +208,7 @@ class VPNPhase2PolicyAPITest(APIViewTestCases.APIViewTestCase):
         cls.update_data = {
             "name": "test 1",
             "description": "updated value",
-            "lifetime_seconds": 5,
+            "lifetime": 5,
         }
 
 
@@ -217,21 +219,11 @@ class VPNAPITest(APIViewTestCases.APIViewTestCase):
     choices_fields = ("service_type",)
 
     @classmethod
-    def _get_vpn_status(cls):
-        """Get or create an Active status for VPN."""
-        ct = ContentType.objects.get_for_model(models.VPN)
-        vpn_status = Status.objects.filter(content_types=ct).first()
-        if not vpn_status:
-            vpn_status = Status.objects.get(name="Active")
-            vpn_status.content_types.add(ct)
-        return vpn_status
-
-    @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
 
         profiles = models.VPNProfile.objects.all()
-        vpn_status = cls._get_vpn_status()
+        vpn_status = get_status_for_model(models.VPN)
 
         models.VPN.objects.create(
             name="Existing VXLAN VPN API Test",
@@ -418,15 +410,6 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
     choices_fields = ()
 
     @classmethod
-    def _get_vpn_status(cls):
-        ct = ContentType.objects.get_for_model(models.VPN)
-        vpn_status = Status.objects.filter(content_types=ct).first()
-        if not vpn_status:
-            vpn_status = Status.objects.get(name="Active")
-            vpn_status.content_types.add(ct)
-        return vpn_status
-
-    @classmethod
     def _get_available_interfaces(cls):
         used_interface_ids = models.VPNTermination.objects.exclude(interface__isnull=True).values_list(
             "interface_id", flat=True
@@ -449,7 +432,7 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        vpn_status = cls._get_vpn_status()
+        vpn_status = get_status_for_model(models.VPN)
         cls.vpn = models.VPN.objects.create(
             name="VPN For Termination API Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
@@ -481,16 +464,24 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
                     )
                 )
 
+        termination_ct = ContentType.objects.get_for_model(models.VPNTermination)
+        termination_status = Status.objects.get(name="Active")
+        termination_status.content_types.add(termination_ct)
+
+        termination_role, _ = Role.objects.get_or_create(name="VPN Termination API Test Role")
+        termination_role.content_types.add(termination_ct)
+
+        tenant, _ = Tenant.objects.get_or_create(name="VPN Termination API Test Tenant")
+
         for vlan in vlans[:3]:
             models.VPNTermination.objects.create(vpn=cls.vpn, vlan=vlan)
 
         cls.create_data = [
-            {"vpn": cls.vpn.pk, "vlan": vlans[3].pk},
-            {"vpn": cls.vpn.pk, "vlan": vlans[4].pk},
-            {"vpn": cls.vpn.pk, "vlan": vlans[5].pk},
+            {"vpn": cls.vpn.pk, "vlan": vlans[3].pk, "status": termination_status.pk},
+            {"vpn": cls.vpn.pk, "vlan": vlans[4].pk, "role": termination_role.pk},
+            {"vpn": cls.vpn.pk, "vlan": vlans[5].pk, "tenant": tenant.pk},
         ]
-        cls.update_data = {"vpn": cls.vpn2.pk}
-        cls.bulk_update_data = {"vpn": cls.vpn2.pk}
+        cls.update_data = {"vpn": cls.vpn2.pk, "status": termination_status.pk}
 
     def test_filter_by_vpn(self):
         """Test filtering terminations by VPN via API."""
@@ -535,7 +526,7 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
 
     def test_p2p_termination_limit_via_api(self):
         """Test that P2P VPNs cannot have more than 2 terminations via API."""
-        vpn_status = self._get_vpn_status()
+        vpn_status = get_status_for_model(models.VPN)
         p2p_vpn = models.VPN.objects.create(
             name="P2P VPN API Limit Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VPWS,
@@ -569,7 +560,7 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
         other_vpn = models.VPN.objects.create(
             name="VPN Duplicate Termination Test",
             service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
-            status=self._get_vpn_status(),
+            status=get_status_for_model(models.VPN),
             vpn_id="21000",
         )
         models.VPNTermination.objects.create(vpn=self.vpn, interface=interface)

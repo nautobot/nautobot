@@ -27,7 +27,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNProfileFilterForm
     form_class = forms.VPNProfileForm
     lookup_field = "pk"
-    queryset = models.VPNProfile.objects.all()
+    queryset = models.VPNProfile.objects.select_related("role", "secrets_group", "tenant")
     serializer_class = serializers.VPNProfileSerializer
     table_class = tables.VPNProfileTable
 
@@ -86,7 +86,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                         table_class=tables.VPNTable,
                         table_attribute="vpns",
                         related_field_name="vpn_profile",
-                        select_related_fields=["role"],
+                        select_related_fields=["vpn_profile", "role", "status", "tenant"],
                         exclude_columns=["vpn_profile"],
                         tab_id="vpns",
                         enable_bulk_actions=True,
@@ -109,7 +109,16 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                         table_class=tables.VPNTunnelTable,
                         table_attribute="vpn_tunnels",
                         related_field_name="vpn_profile",
-                        select_related_fields=["endpoint_a", "endpoint_z", "role"],
+                        select_related_fields=[
+                            "vpn",
+                            "vpn_profile",
+                            "endpoint_a",
+                            "endpoint_z",
+                            "secrets_group",
+                            "role",
+                            "status",
+                            "tenant",
+                        ],
                         exclude_columns=["vpn_profile"],
                         tab_id="vpn_tunnels",
                         enable_bulk_actions=True,
@@ -132,7 +141,16 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
                         table_class=tables.VPNTunnelEndpointTable,
                         table_attribute="vpn_tunnel_endpoints",
                         related_field_name="vpn_profile",
-                        select_related_fields=["source_interface", "role"],
+                        select_related_fields=[
+                            "device",
+                            "source_interface",
+                            "source_interface__device",
+                            "source_ipaddress",
+                            "tunnel_interface",
+                            "vpn_profile",
+                            "role",
+                            "tenant",
+                        ],
                         exclude_columns=["vpn_profile"],
                         tab_id="vpn_endpoints",
                         enable_bulk_actions=True,
@@ -144,6 +162,7 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
     )
 
     def get_extra_context(self, request, instance=None):
+        """Add Phase 1 and Phase 2 policy inline formsets to the context."""
         ctx = super().get_extra_context(request, instance)
 
         if self.action in ["create", "update"]:
@@ -195,16 +214,16 @@ class VPNProfileUIViewSet(NautobotUIViewSet):
         if vpn_phase1_policies.is_valid():
             vpn_phase1_policies.save()
         else:
-            logger.debug("PH1 Policies")
-            logger.error(vpn_phase1_policies.errors)
+            logger.debug("Phase 1 policy formset validation failed for VPNProfile %s", obj.pk)
+            logger.error("Phase 1 policy formset errors: %s", vpn_phase1_policies.errors)
             raise ValidationError(vpn_phase1_policies.errors)
 
         vpn_phase2_policies = ctx.get("vpn_phase2_policies")
         if vpn_phase2_policies.is_valid():
             vpn_phase2_policies.save()
         else:
-            logger.debug("PH2 Policies")
-            logger.error(vpn_phase1_policies.errors)
+            logger.debug("Phase 2 policy formset validation failed for VPNProfile %s", obj.pk)
+            logger.error("Phase 2 policy formset errors: %s", vpn_phase2_policies.errors)
             raise ValidationError(vpn_phase2_policies.errors)
 
         return obj
@@ -218,7 +237,7 @@ class VPNPhase1PolicyUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNPhase1PolicyFilterForm
     form_class = forms.VPNPhase1PolicyForm
     lookup_field = "pk"
-    queryset = models.VPNPhase1Policy.objects.all()
+    queryset = models.VPNPhase1Policy.objects.select_related("tenant")
     serializer_class = serializers.VPNPhase1PolicySerializer
     table_class = tables.VPNPhase1PolicyTable
 
@@ -258,7 +277,7 @@ class VPNPhase2PolicyUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNPhase2PolicyFilterForm
     form_class = forms.VPNPhase2PolicyForm
     lookup_field = "pk"
-    queryset = models.VPNPhase2Policy.objects.all()
+    queryset = models.VPNPhase2Policy.objects.select_related("tenant")
     serializer_class = serializers.VPNPhase2PolicySerializer
     table_class = tables.VPNPhase2PolicyTable
 
@@ -294,7 +313,7 @@ class VPNUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNFilterForm
     form_class = forms.VPNForm
     lookup_field = "pk"
-    queryset = models.VPN.objects.all()
+    queryset = models.VPN.objects.select_related("vpn_profile", "role", "status", "tenant")
     serializer_class = serializers.VPNSerializer
     table_class = tables.VPNTable
 
@@ -316,13 +335,33 @@ class VPNUIViewSet(NautobotUIViewSet):
                 table_filter="vpn",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
+                select_related_fields=[
+                    "vpn",
+                    "vpn_profile",
+                    "endpoint_a",
+                    "endpoint_z",
+                    "secrets_group",
+                    "role",
+                    "status",
+                    "tenant",
+                ],
             ),
             ObjectsTablePanel(
                 weight=300,
                 table_class=tables.VPNTerminationTable,
                 table_filter="vpn",
                 section=SectionChoices.FULL_WIDTH,
-                table_title="Terminations",
+                select_related_fields=[
+                    "vlan",
+                    "vlan__vlan_group",
+                    "interface",
+                    "interface__device",
+                    "vm_interface",
+                    "vm_interface__virtual_machine",
+                    "role",
+                    "status",
+                    "tenant",
+                ],
             ),
         ],
     )
@@ -336,7 +375,16 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNTunnelFilterForm
     form_class = forms.VPNTunnelForm
     lookup_field = "pk"
-    queryset = models.VPNTunnel.objects.all()
+    queryset = models.VPNTunnel.objects.select_related(
+        "vpn",
+        "vpn_profile",
+        "endpoint_a",
+        "endpoint_z",
+        "secrets_group",
+        "role",
+        "status",
+        "tenant",
+    )
     serializer_class = serializers.VPNTunnelSerializer
     table_class = tables.VPNTunnelTable
 
@@ -369,6 +417,16 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                     "protected_prefixes_count",
                     "tenant",
                 ],
+                select_related_fields=[
+                    "device",
+                    "source_interface",
+                    "source_interface__device",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "vpn_profile",
+                    "role",
+                    "tenant",
+                ],
                 add_button_route=None,
             ),
             ObjectsTablePanel(
@@ -380,6 +438,16 @@ class VPNTunnelUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.RIGHT_HALF,
                 exclude_columns=[
                     "protected_prefixes_count",
+                    "tenant",
+                ],
+                select_related_fields=[
+                    "device",
+                    "source_interface",
+                    "source_interface__device",
+                    "source_ipaddress",
+                    "tunnel_interface",
+                    "vpn_profile",
+                    "role",
                     "tenant",
                 ],
                 add_button_route=None,
@@ -396,7 +464,16 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
     filterset_form_class = forms.VPNTunnelEndpointFilterForm
     form_class = forms.VPNTunnelEndpointForm
     lookup_field = "pk"
-    queryset = models.VPNTunnelEndpoint.objects.all()
+    queryset = models.VPNTunnelEndpoint.objects.select_related(
+        "device",
+        "source_interface",
+        "source_interface__device",
+        "source_ipaddress",
+        "tunnel_interface",
+        "vpn_profile",
+        "role",
+        "tenant",
+    )
     serializer_class = serializers.VPNTunnelEndpointSerializer
     table_class = tables.VPNTunnelEndpointTable
 
@@ -429,6 +506,16 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                     "tenant",
                     "actions",
                 ],
+                select_related_fields=[
+                    "vpn",
+                    "vpn_profile",
+                    "endpoint_a",
+                    "endpoint_z",
+                    "secrets_group",
+                    "role",
+                    "status",
+                    "tenant",
+                ],
                 add_button_route=None,
             ),
             ObjectsTablePanel(
@@ -442,6 +529,16 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
                     "endpoint_z",
                     "tenant",
                     "actions",
+                ],
+                select_related_fields=[
+                    "vpn",
+                    "vpn_profile",
+                    "endpoint_a",
+                    "endpoint_z",
+                    "secrets_group",
+                    "role",
+                    "status",
+                    "tenant",
                 ],
                 add_button_route=None,
             ),
@@ -519,10 +616,13 @@ class VPNTerminationUIViewSet(NautobotUIViewSet):
     queryset = models.VPNTermination.objects.select_related(
         "vpn",
         "vlan",
+        "vlan__vlan_group",
         "interface",
         "interface__device",
         "vm_interface",
         "vm_interface__virtual_machine",
+        "status",
+        "tenant",
     )
     serializer_class = serializers.VPNTerminationSerializer
     table_class = tables.VPNTerminationTable
@@ -533,10 +633,20 @@ class VPNTerminationUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
+                    "name",
                     "vpn",
                     "vlan",
                     "interface",
                     "vm_interface",
+                ],
+            ),
+            ObjectFieldsPanel(
+                weight=150,
+                section=SectionChoices.RIGHT_HALF,
+                fields=[
+                    "role",
+                    "status",
+                    "tenant",
                 ],
             ),
         ],

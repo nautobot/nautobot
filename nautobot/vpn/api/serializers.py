@@ -73,6 +73,8 @@ class VPNProfilePhase1PolicyAssignmentSerializer(NautobotModelSerializer):
     """Serializer for `VPNProfilePhase1PolicyAssignment` objects."""
 
     class Meta:
+        """Meta attributes."""
+
         model = models.VPNProfilePhase1PolicyAssignment
         fields = "__all__"
 
@@ -81,6 +83,8 @@ class VPNProfilePhase2PolicyAssignmentSerializer(NautobotModelSerializer):
     """Serializer for `VPNProfilePhase2PolicyAssignment` objects."""
 
     class Meta:
+        """Meta attributes."""
+
         model = models.VPNProfilePhase2PolicyAssignment
         fields = "__all__"
 
@@ -116,11 +120,13 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
 
 class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
-    """Serializer for VPNTermination."""
+    """VPNTermination Serializer."""
 
     assigned_object_type = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
+        """Meta attributes."""
+
         model = models.VPNTermination
         fields = "__all__"
 

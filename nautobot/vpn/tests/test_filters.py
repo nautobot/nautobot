@@ -164,7 +164,7 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
 
 
 class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
-    """VPNTermination filter tests."""
+    """VPNTerminationFilterSet Test Case."""
 
     queryset = models.VPNTermination.objects.all()
     filterset = filters.VPNTerminationFilterSet
@@ -174,6 +174,12 @@ class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
         ("vlan", "vlan__id"),
         ("interface", "interface__id"),
         ("vm_interface", "vm_interface__id"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+        ("tenant", "tenant__id"),
+        ("tenant", "tenant__name"),
     )
 
     @classmethod

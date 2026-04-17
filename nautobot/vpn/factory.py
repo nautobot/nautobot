@@ -31,7 +31,7 @@ def _generate_vpn_identifier(service_type):
     return fake.word()
 
 
-def _get_status_for_model(model):
+def get_status_for_model(model):
     """Get or create an Active status associated with the given model."""
     status = Status.objects.get_for_model(model).first()
     if status is None:
@@ -41,15 +41,17 @@ def _get_status_for_model(model):
 
 
 def _get_available_termination_vpns():
-    """Get VPNs that can safely accept additional terminations."""
-    available_vpns = models.VPN.objects.exclude(service_type__in=choices.VPNServiceTypeChoices.P2P)
+    """Get VPNs that can safely accept additional terminations (no tunnels, not P2P)."""
+    available_vpns = models.VPN.objects.exclude(service_type__in=choices.VPNServiceTypeChoices.P2P).filter(
+        vpn_tunnels__isnull=True
+    )
     if available_vpns.exists():
         return available_vpns
 
     models.VPN(
         name=f"vpn-termination-factory-{faker.Faker().uuid4()}",
         service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
-        status=_get_status_for_model(models.VPN),
+        status=get_status_for_model(models.VPN),
         vpn_id=_generate_vpn_identifier(choices.VPNServiceTypeChoices.TYPE_VPLS),
     ).validated_save()
     return models.VPN.objects.exclude(service_type__in=choices.VPNServiceTypeChoices.P2P)
@@ -83,7 +85,7 @@ def _get_available_interfaces():
     Interface.objects.create(
         device=device,
         name=f"vpn-termination-{faker.Faker().uuid4()[:8]}",
-        status=_get_status_for_model(Interface),
+        status=get_status_for_model(Interface),
         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
     )
     return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
@@ -109,7 +111,7 @@ def _get_available_vm_interfaces():
     VMInterface.objects.create(
         virtual_machine=virtual_machine,
         name=f"vpn-termination-{faker.Faker().uuid4()[:8]}",
-        status=_get_status_for_model(VMInterface),
+        status=get_status_for_model(VMInterface),
     )
     return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
 
@@ -269,7 +271,9 @@ class VPNTunnelFactory(PrimaryModelFactory):
     has_profile = NautobotBoolIterator()
     vpn_profile = factory.Maybe("has_profile", random_instance(models.VPNProfile), None)
     has_vpn = NautobotBoolIterator()
-    vpn = factory.Maybe("has_vpn", random_instance(models.VPN), None)
+    vpn = factory.Maybe(
+        "has_vpn", random_instance(lambda: models.VPN.objects.filter(vpn_terminations__isnull=True)), None
+    )
     status = random_instance(
         lambda: Status.objects.get_for_model(models.VPNTunnel),
         allow_null=False,
@@ -296,9 +300,24 @@ class VPNTerminationFactory(PrimaryModelFactory):
 
     class Meta:
         model = models.VPNTermination
-        exclude = ("target_type",)
+        exclude = ("target_type", "has_role", "has_status", "has_tenant")
 
     target_type = factory.Iterator(("vlan", "interface", "vm_interface"))
+
+    has_role = NautobotBoolIterator()
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(models.VPNTermination), allow_null=True),
+        None,
+    )
+    has_status = NautobotBoolIterator()
+    status = factory.Maybe(
+        "has_status",
+        random_instance(lambda: Status.objects.get_for_model(models.VPNTermination), allow_null=True),
+        None,
+    )
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant), None)
 
     @factory.lazy_attribute
     def vpn(self):
