@@ -140,8 +140,7 @@ erDiagram
         VPNProfile vpn_profile
         IPAddress source_ipaddress
         Interface source_interface
-        IPAddress destination_ipaddress
-        string destination_fqdn
+        string source_fqdn
         Interface tunnel_interface
         DynamicGroup protected_prefixes_dg
         Prefix protected_prefixes
@@ -158,14 +157,14 @@ erDiagram
     "nautobot_vpn_models.VPN" ||--o{ "nautobot_vpn_models.VPNTunnel" : "has"
     "nautobot_vpn_models.VPN" }o--o| "tenancy.Tenant" : "may have"
 
-    "nautobot_vpn_models.VPNTunnel" ||--o{ "nautobot_vpn_models.VPNTunnelEndpoint" : "has"
+    "nautobot_vpn_models.VPNTunnel" }o--o| "nautobot_vpn_models.VPNTunnelEndpoint" : "endpoint_a"
+    "nautobot_vpn_models.VPNTunnel" }o--o| "nautobot_vpn_models.VPNTunnelEndpoint" : "endpoint_z"
     "nautobot_vpn_models.VPNTunnel" }o--o| "extras.SecretsGroup" : "may have"
     "nautobot_vpn_models.VPNTunnel" }o--o| "tenancy.Tenant" : "may have"
 
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o| "dcim.Interface" : "source_interface"
     "nautobot_vpn_models.VPNTunnelEndpoint" |o--o| "dcim.Interface" : "tunnel_interface"
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o| "ipam.IPAddress" : "source_ipaddress"
-    "nautobot_vpn_models.VPNTunnelEndpoint" }o--o| "ipam.IPAddress" : "destination_ipaddress"
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o{ "ipam.Prefix" : "protected_prefixes"
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o{ "extras.DynamicGroup" : "protected_prefixes_dg"
 ```
