@@ -3220,7 +3220,11 @@ class GitRepositoryTestCase(
                     job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
                     mock_enqueue.return_value = job_result
                     response = self.client.post(url)
-                    self.assertRedirects(response, job_result.get_absolute_url(), fetch_redirect_response=False)
+                    self.assertRedirects(
+                        response,
+                        reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}),
+                        fetch_redirect_response=False,
+                    )
                     mock_enqueue.assert_called_once_with(instance, self.user)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
