@@ -117,8 +117,8 @@ from .constants import (
     REARPORT_POSITIONS_MIN,
 )
 from .models import (
-    BreakoutTemplate,
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -5947,19 +5947,18 @@ class VirtualDeviceContextFilterForm(
 
 
 #
-# Breakout Templates
+# Cable Breakout Types
 #
 
 
-class BreakoutTemplateForm(NautobotModelForm):
+class CableBreakoutTypeForm(NautobotModelForm):
     mapping = forms.JSONField(
-        widget=forms.HiddenInput(),
         required=False,
         help_text="Lane mapping JSON. Auto-generated from connector/position counts, or edit via table/JSON editor.",
     )
 
     class Meta:
-        model = BreakoutTemplate
+        model = CableBreakoutType
         fields = [
             "name",
             "description",
@@ -5978,16 +5977,11 @@ class BreakoutTemplateForm(NautobotModelForm):
         }
 
     def clean(self):
-        cleaned_data = super().clean()
-        if not cleaned_data:
-            return cleaned_data
-
-        mapping = cleaned_data.get("mapping")
-
-        # Try to read mapping from server-rendered table select fields (table mode).
+        mapping = self.data.get("mapping")
         if not mapping:
-            lane_count = int(self.data.get("lane_count", 0) or 0)
-            if lane_count > 0:
+            # Try to read mapping from server-rendered table select fields (table mode).
+            lane_count = self.data.get("a_connectors", 1) * self.data.get("a_positions", 1)
+            if lane_count == self.data.get("b_connectors", 1) * self.data.get("b_positions", 1):
                 mapping = []
                 for lane_index in range(lane_count):
                     prefix = f"mapping_{lane_index}"
@@ -6002,44 +5996,20 @@ class BreakoutTemplateForm(NautobotModelForm):
                         )
                     except (ValueError, TypeError):
                         continue
+                self.data["mapping"] = mapping
 
-        # Fall back to auto-generate if still no mapping
-        if not mapping:
-            a_connector_count = cleaned_data.get("a_connectors") or 0
-            a_position_count = cleaned_data.get("a_positions") or 0
-            b_connector_count = cleaned_data.get("b_connectors") or 0
-            b_position_count = cleaned_data.get("b_positions") or 0
-            if a_connector_count and a_position_count and b_connector_count and b_position_count:
-                mapping = []
-                lane_index = 0
-                for a_connector in range(1, a_connector_count + 1):
-                    for a_position in range(1, a_position_count + 1):
-                        b_connector = lane_index // b_position_count + 1
-                        b_position = lane_index % b_position_count + 1
-                        mapping.append(
-                            {
-                                "a_connector": a_connector,
-                                "a_position": a_position,
-                                "b_connector": b_connector,
-                                "b_position": b_position,
-                            }
-                        )
-                        lane_index += 1
-
-        if mapping:
-            cleaned_data["mapping"] = mapping
-        return cleaned_data
+        return super().clean()
 
 
-class BreakoutTemplateFilterForm(NautobotFilterForm):
-    model = BreakoutTemplate
+class CableBreakoutTypeFilterForm(NautobotFilterForm):
+    model = CableBreakoutType
     q = forms.CharField(required=False, label="Search")
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
-class BreakoutTemplateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=BreakoutTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+class CableBreakoutTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CableBreakoutType.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
 

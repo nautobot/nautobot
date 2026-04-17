@@ -411,20 +411,20 @@ menu_items = (
                 weight=500,
                 items=(
                     NavMenuItem(
+                        link="dcim:cablebreakouttype_list",
+                        name="Cable Breakout Types",
+                        weight=50,
+                        permissions=[
+                            "dcim.view_cablebreakouttype",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
                         link="dcim:cable_list",
                         name="Cables",
                         weight=100,
                         permissions=[
                             "dcim.view_cable",
-                        ],
-                        buttons=(),
-                    ),
-                    NavMenuItem(
-                        link="dcim:breakouttemplate_list",
-                        name="Breakout Templates",
-                        weight=150,
-                        permissions=[
-                            "dcim.view_breakouttemplate",
                         ],
                         buttons=(),
                     ),

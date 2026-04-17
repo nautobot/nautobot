@@ -25,8 +25,8 @@ from .models import (
 app_name = "dcim"
 
 router = NautobotUIViewSetRouter()
-router.register("breakout-templates", views.BreakoutTemplateUIViewSet)
 router.register("cables", views.CableUIViewSet)
+router.register("cable-breakout-types", views.CableBreakoutTypeUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)

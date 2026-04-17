@@ -1,4 +1,4 @@
-from .cables import BreakoutTemplate, Cable, CablePath
+from .cables import Cable, CableBreakoutType, CablePath
 from .device_component_templates import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -54,6 +54,7 @@ from .racks import Rack, RackGroup, RackReservation
 __all__ = (
     "BaseInterface",
     "Cable",
+    "CableBreakoutType",
     "CablePath",
     "CableTermination",
     "ConsolePort",

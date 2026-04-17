@@ -1,13 +1,12 @@
-"""Populate default BreakoutTemplate records for common cable configurations."""
+"""Populate default CableBreakoutType records for common cable configurations."""
 
 from django.db import migrations
 
 # AOC Ethernet Breakouts (strands_per_lane=1)
 # Fiber MPO Fanouts (strands_per_lane=2, duplex)
-TEMPLATES = [
+TEMPLATES = {
     # ── AOC Ethernet Breakouts ──
-    {
-        "name": "1x2 AOC Fanout",
+    "1x2 AOC Fanout": {
         "description": "1 trunk connector broken out to 2 individual legs",
         "a_connectors": 1,
         "a_positions": 2,
@@ -21,8 +20,7 @@ TEMPLATES = [
         "polarity_method": "",
         "is_shuffle": False,
     },
-    {
-        "name": "1x4 AOC Fanout",
+    "1x4 AOC Fanout": {
         "description": "1 trunk connector broken out to 4 individual legs",
         "a_connectors": 1,
         "a_positions": 4,
@@ -33,8 +31,7 @@ TEMPLATES = [
         "polarity_method": "",
         "is_shuffle": False,
     },
-    {
-        "name": "1x8 AOC Fanout",
+    "1x8 AOC Fanout": {
         "description": "1 trunk connector broken out to 8 individual legs",
         "a_connectors": 1,
         "a_positions": 8,
@@ -45,8 +42,7 @@ TEMPLATES = [
         "polarity_method": "",
         "is_shuffle": False,
     },
-    {
-        "name": "2x4 AOC Fanout",
+    "2x4 AOC Fanout": {
         "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
         "a_connectors": 2,
         "a_positions": 4,
@@ -67,8 +63,7 @@ TEMPLATES = [
         "is_shuffle": False,
     },
     # ── Fiber MPO Fanouts ──
-    {
-        "name": "MPO-8 → 4xLC Duplex",
+    "MPO-8 → 4xLC Duplex": {
         "description": "MPO-8 trunk fanning out to 4 LC duplex connections",
         "a_connectors": 1,
         "a_positions": 4,
@@ -79,8 +74,7 @@ TEMPLATES = [
         "polarity_method": "straight-through",
         "is_shuffle": False,
     },
-    {
-        "name": "MPO-12 → 6xLC Duplex",
+    "MPO-12 → 6xLC Duplex": {
         "description": "MPO-12 trunk fanning out to 6 LC duplex connections",
         "a_connectors": 1,
         "a_positions": 6,
@@ -91,8 +85,7 @@ TEMPLATES = [
         "polarity_method": "straight-through",
         "is_shuffle": False,
     },
-    {
-        "name": "MPO-24 → 12xLC Duplex",
+    "MPO-24 → 12xLC Duplex": {
         "description": "MPO-24 trunk fanning out to 12 LC duplex connections",
         "a_connectors": 1,
         "a_positions": 12,
@@ -103,8 +96,7 @@ TEMPLATES = [
         "polarity_method": "straight-through",
         "is_shuffle": False,
     },
-    {
-        "name": "MPO-24 → 2xMPO-12",
+    "MPO-24 → 2xMPO-12": {
         "description": "MPO-24 trunk split into 2 MPO-12 trunks (6 lanes each)",
         "a_connectors": 1,
         "a_positions": 12,
@@ -120,8 +112,7 @@ TEMPLATES = [
         "polarity_method": "straight-through",
         "is_shuffle": False,
     },
-    {
-        "name": "2xMPO-12 → 12xLC Duplex",
+    "2xMPO-12 → 12xLC Duplex": {
         "description": "2 MPO-12 trunks (6 lanes each) fanning out to 12 LC duplex connections",
         "a_connectors": 2,
         "a_positions": 6,
@@ -137,22 +128,19 @@ TEMPLATES = [
         "polarity_method": "straight-through",
         "is_shuffle": False,
     },
-]
+}
 
 
 def populate_breakout_templates(apps, schema_editor):
     """Create default breakout template configurations."""
-    BreakoutTemplate = apps.get_model("dcim", "BreakoutTemplate")
-    for tmpl in TEMPLATES:
-        BreakoutTemplate.objects.get_or_create(
-            name=tmpl["name"],
-            defaults={k: v for k, v in tmpl.items() if k != "name"},
-        )
+    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
+    for name, defaults in TEMPLATES.items():
+        CableBreakoutType.objects.get_or_create(name=name, defaults=defaults)
 
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0084_breakouttemplate"),
+        ("dcim", "0085_cablebreakouttype"),
     ]
 
     operations = [

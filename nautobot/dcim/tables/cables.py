@@ -7,7 +7,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.dcim.models import Cable
+from nautobot.dcim.models import Cable, CableBreakoutType
 from nautobot.extras.tables import StatusTableMixin
 
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
@@ -78,15 +78,12 @@ class CableTable(StatusTableMixin, BaseTable):
         )
 
 
-# PLACEHOLDER: BreakoutTemplateTable — full implementation in commit 5
-from nautobot.dcim.models import BreakoutTemplate
-
-
-class BreakoutTemplateTable(BaseTable):
+# PLACEHOLDER: CableBreakoutTypeTable — full implementation in commit 5
+class CableBreakoutTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
-        model = BreakoutTemplate
+        model = CableBreakoutType
         fields = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions", "is_shuffle")
         default_columns = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions")

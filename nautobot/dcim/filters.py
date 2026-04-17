@@ -51,6 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -114,6 +115,7 @@ from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
+    "CableBreakoutTypeFilterSet",
     "CableTerminationModelFilterSetMixin",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
@@ -1452,6 +1454,13 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
+# PLACEHOLDER: CableBreakoutTypeFilterSet — full implementation in commit 5
+class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
+    class Meta:
+        model = CableBreakoutType
+        fields = ["id", "name"]
+
+
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
@@ -2531,14 +2540,3 @@ class DeviceClusterAssignmentFilterSet(NautobotFilterSet):
     class Meta:
         model = DeviceClusterAssignment
         fields = ["device", "cluster"]
-
-
-# PLACEHOLDER: BreakoutTemplateFilterSet — full implementation in commit 5
-from nautobot.core.filters import BaseFilterSet, NameSearchFilterSet
-from nautobot.dcim.models import BreakoutTemplate
-
-
-class BreakoutTemplateFilterSet(BaseFilterSet, NameSearchFilterSet):
-    class Meta:
-        model = BreakoutTemplate
-        fields = ["id", "name"]

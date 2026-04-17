@@ -1,9 +1,9 @@
-# Create BreakoutTemplate model.
-# CableTerminationEndpoint, Cable.breakout_template FK, and Cable ordering changes are in commit 3.
+# Create CableBreakoutType model.
 
 import uuid
 
 import django.core.serializers.json
+import django.core.validators
 from django.db import migrations, models
 
 import nautobot.core.models.fields
@@ -12,13 +12,13 @@ import nautobot.extras.models.mixins
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0083_alter_controllermanageddevicegroup_radio_profiles_and_more"),
+        ("dcim", "0084_add_module_type_image_support"),
         ("extras", "0138_job_console_log_default_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name="BreakoutTemplate",
+            name="CableBreakoutType",
             fields=[
                 (
                     "id",
@@ -34,14 +34,14 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
                 ("description", models.CharField(blank=True, max_length=255)),
-                ("a_connectors", models.PositiveSmallIntegerField()),
-                ("a_positions", models.PositiveSmallIntegerField()),
-                ("b_connectors", models.PositiveSmallIntegerField()),
-                ("b_positions", models.PositiveSmallIntegerField()),
+                ("a_connectors", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
+                ("a_positions", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
+                ("b_connectors", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
+                ("b_positions", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
                 ("mapping", models.JSONField()),
                 ("is_shuffle", models.BooleanField(default=False)),
-                ("strands_per_lane", models.PositiveSmallIntegerField(default=1)),
-                ("polarity_method", models.CharField(blank=True, max_length=50)),
+                ("strands_per_lane", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1)])),
+                ("polarity_method", models.CharField(blank=True, default="", max_length=50)),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],
             options={

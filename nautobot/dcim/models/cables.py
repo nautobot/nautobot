@@ -4,6 +4,7 @@ import logging
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
@@ -12,7 +13,13 @@ from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, PolarityMethodChoices
-from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_POSITIONS,
+    CABLE_TERMINATION_MODELS,
+    COMPATIBLE_TERMINATION_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
+)
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.utils import (
     decompile_path_node,
@@ -32,8 +39,8 @@ from .device_components import FrontPort, RearPort
 from .devices import Device
 
 __all__ = (
-    "BreakoutTemplate",
     "Cable",
+    "CableBreakoutType",
     "CablePath",
 )
 
@@ -41,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 #
-# Breakout Templates
+# Cable Breakout Types
 #
 
 
@@ -52,21 +59,40 @@ logger = logging.getLogger(__name__)
     "graphql",
     "webhooks",
 )
-class BreakoutTemplate(PrimaryModel):
+class CableBreakoutType(PrimaryModel):
     """
     A reusable definition of a cable's internal lane structure, describing connectors,
     positions per connector, and the A-to-B lane mapping for breakout cables.
+
+    By convention and by model enforcement, any breakout is A-to-B, not B-to-A; that is, `a_connectors` may never be
+    greater than `b_connectors`, though they may be equal.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    a_connectors = models.PositiveSmallIntegerField(help_text="Number of physical connectors on the A side.")
-    a_positions = models.PositiveSmallIntegerField(help_text="Number of positions (lanes) per A-side connector.")
-    b_connectors = models.PositiveSmallIntegerField(help_text="Number of physical connectors on the B side.")
-    b_positions = models.PositiveSmallIntegerField(help_text="Number of positions (lanes) per B-side connector.")
+    a_connectors = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical connectors on the A side.",
+        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+    )
+    a_positions = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of positions (lanes) per A-side connector.",
+        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_POSITIONS)],
+    )
+    b_connectors = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical connectors on the B side.",
+        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+    )
+    b_positions = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of positions (lanes) per B-side connector.",
+        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_POSITIONS)],
+    )
     mapping = models.JSONField(
         help_text="A→B lane mapping as a JSON array of objects with keys: "
-        "a_connector, a_position, b_connector, b_position."
+        "label, a_connector, a_position, b_connector, b_position."
     )
     is_shuffle = models.BooleanField(
         default=False,
@@ -75,12 +101,14 @@ class BreakoutTemplate(PrimaryModel):
     strands_per_lane = models.PositiveSmallIntegerField(
         default=1,
         help_text="Number of physical strands per logical lane (e.g. 1 for copper, 2 for duplex fiber).",
+        validators=[MinValueValidator(1)],
     )
     polarity_method = models.CharField(
-        max_length=50,
-        choices=PolarityMethodChoices,
         blank=True,
+        choices=PolarityMethodChoices,
+        default="",
         help_text="Fiber polarity method. Informational only.",
+        max_length=50,
     )
 
     natural_key_field_names = ["name"]
@@ -94,19 +122,17 @@ class BreakoutTemplate(PrimaryModel):
     @property
     def total_lanes(self):
         """Total number of discrete lanes defined in the mapping."""
-        if isinstance(self.mapping, list):
-            return len(self.mapping)
-        return 0
+        return self.a_connectors * self.a_positions  # == self.b_connectors * self.b_positions
 
     @property
     def total_strands(self):
         """Total physical strand count: total_lanes x strands_per_lane."""
-        return self.total_lanes * (self.strands_per_lane or 1)
+        return self.total_lanes * self.strands_per_lane
 
     @property
     def is_breakout(self):
-        """True if A-side and B-side connector/position counts differ."""
-        return self.a_connectors != self.b_connectors or self.a_positions != self.b_positions
+        """True if A-side and B-side connector counts differ."""
+        return self.a_connectors != self.b_connectors
 
     def get_diagram_svg(self):
         """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
@@ -133,14 +159,14 @@ class BreakoutTemplate(PrimaryModel):
 
         pairs = set()
         for entry in self.mapping:
-            pairs.add((entry["a_connector"], entry["b_connector"]))
+            pairs.add((entry["label"], entry["a_connector"], entry["b_connector"]))
         pairs = sorted(pairs)
 
         rows = []
         a_seen = set()
         b_seen = set()
 
-        for a_conn, b_conn in pairs:
+        for label, a_conn, b_conn in pairs:
             show_a = a_conn not in a_seen
             show_b = b_conn not in b_seen
             a_rowspan = len(a_to_b.get(a_conn, [])) if show_a else 0
@@ -151,6 +177,7 @@ class BreakoutTemplate(PrimaryModel):
 
             rows.append(
                 {
+                    "label": label,
                     "a_connector": a_conn,
                     "b_connector": b_conn,
                     "show_a": show_a,
@@ -168,38 +195,62 @@ class BreakoutTemplate(PrimaryModel):
 
     @property
     def cable_count(self):
-        """Number of Cable instances currently assigned this template."""
+        """Number of Cable instances using this breakout type."""
         return self.cables.count()
 
     def clean(self):
         super().clean()
+
+        if self.a_connectors > self.b_connectors:
+            raise ValidationError(
+                {"b_connectors": "Wrong breakout direction, a_connectors must not exceed b_connectors"}
+            )
+
+        if self.a_connectors * self.a_positions != self.b_connectors * self.b_positions:
+            raise ValidationError({"__all__": "Number of lanes (connectors × positions) must match on A and B sides"})
+
+        if not self.mapping:
+            self.mapping = self.autogenerate_mapping()
         self._validate_mapping()
+
+    def autogenerate_mapping(self):
+        """Generate a default mapping from the provided connectors and positions."""
+        mapping = []
+        lane_index = 0
+        for a_connector in range(self.a_connectors):
+            for a_position in range(self.a_positions):
+                b_connector = lane_index // self.b_positions
+                b_position = lane_index % self.b_positions
+                mapping.append(
+                    {
+                        # Change 0-indexed iterations to 1-indexed mapping entries!
+                        "label": lane_index + 1,
+                        "a_connector": a_connector + 1,
+                        "a_position": a_position + 1,
+                        "b_connector": b_connector + 1,
+                        "b_position": b_position + 1,
+                    }
+                )
+                lane_index += 1
+        return mapping
 
     def _validate_mapping(self):
         """Validate the mapping JSON structure and consistency with connector/position counts."""
         if not isinstance(self.mapping, list):
             raise ValidationError({"mapping": "Mapping must be a JSON array."})
 
-        expected_a_lane_count = (self.a_connectors or 0) * (self.a_positions or 0)
-        expected_b_lane_count = (self.b_connectors or 0) * (self.b_positions or 0)
-        actual_lane_count = len(self.mapping)
-
-        if expected_a_lane_count != actual_lane_count:
+        if len(self.mapping) != self.total_lanes:
             raise ValidationError(
                 {
-                    "mapping": f"Expected {expected_a_lane_count} lanes (a_connectors x a_positions), got {actual_lane_count}."
-                }
-            )
-        if expected_b_lane_count != actual_lane_count:
-            raise ValidationError(
-                {
-                    "mapping": f"Expected {expected_b_lane_count} lanes (b_connectors x b_positions), got {actual_lane_count}."
+                    "mapping": f"Expected {self.total_lanes} (connectors × positions) lane definitions, but got {len(self.mapping)}."
                 }
             )
 
         required_keys = {"a_connector", "a_position", "b_connector", "b_position"}
+        optional_keys = {"label"}
         seen_a_pairs = set()
         seen_b_pairs = set()
+        seen_labels = set()
 
         for entry_index, entry in enumerate(self.mapping):
             if not isinstance(entry, dict):
@@ -208,12 +259,18 @@ class BreakoutTemplate(PrimaryModel):
             missing_keys = required_keys - set(entry.keys())
             if missing_keys:
                 raise ValidationError(
-                    {"mapping": f"Entry {entry_index} is missing keys: {', '.join(sorted(missing_keys))}."}
+                    {"mapping": f"Entry {entry_index} is missing required keys: {', '.join(sorted(missing_keys))}."}
+                )
+
+            unknown_keys = set(entry.keys()) - required_keys - optional_keys
+            if unknown_keys:
+                raise ValidationError(
+                    {"mapping": f"Entry {entry_index} has unknown keys: {', '.join(sorted(unknown_keys))}"}
                 )
 
             for key in required_keys:
-                if not isinstance(entry[key], int) or entry[key] < 1:
-                    raise ValidationError({"mapping": f"Entry {entry_index} key '{key}' must be a positive integer."})
+                if not isinstance(entry[key], int):
+                    raise ValidationError({"mapping": f"Entry {entry_index} key '{key}' must be an integer."})
 
             a_connector = entry["a_connector"]
             a_position = entry["a_position"]
@@ -244,16 +301,25 @@ class BreakoutTemplate(PrimaryModel):
             a_pair = (a_connector, a_position)
             if a_pair in seen_a_pairs:
                 raise ValidationError(
-                    {"mapping": f"Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
+                    {"mapping": f"Entry {entry_index}: Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
                 )
             seen_a_pairs.add(a_pair)
 
             b_pair = (b_connector, b_position)
             if b_pair in seen_b_pairs:
                 raise ValidationError(
-                    {"mapping": f"Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
+                    {"mapping": f"Entry {entry_index}: Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
                 )
             seen_b_pairs.add(b_pair)
+
+            if "label" not in entry:
+                entry["label"] = str(entry_index)
+            label = entry["label"]
+            if not isinstance(label, str):
+                raise ValidationError({"mapping": f"Entry {entry_index}: Label {label} must be a string"})
+            if label in seen_labels:
+                raise ValidationError({"mapping": f"Entry {entry_index}: Duplicate label: {label}"})
+            seen_labels.add(label)
 
 
 #

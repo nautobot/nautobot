@@ -1445,7 +1445,7 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
-# Polarity Methods (Breakout Templates)
+# Polarity Methods (Cable Breakout Types)
 #
 
 
@@ -1453,13 +1453,13 @@ class PolarityMethodChoices(ChoiceSet):
     METHOD_STRAIGHT = "straight-through"
     METHOD_REVERSED = "reversed"
     METHOD_PAIR_REVERSED = "pair-reversed"
-    METHOD_CUSTOM = "custom"
+    METHOD_OTHER = "other"
 
     CHOICES = (
         (METHOD_STRAIGHT, "Straight-through"),
         (METHOD_REVERSED, "Reversed"),
         (METHOD_PAIR_REVERSED, "Pair-reversed"),
-        (METHOD_CUSTOM, "Custom"),
+        (METHOD_OTHER, "Other"),
     )
 
 

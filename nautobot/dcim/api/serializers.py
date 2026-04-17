@@ -808,6 +808,11 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
 #
 
 
+# PLACEHOLDER: CableBreakoutTypeSerializer — full implementation in commit 5
+class CableBreakoutTypeSerializer:
+    pass
+
+
 class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     # TODO: termination_a_type/termination_b_type are a bit redundant with the full termination_a/termination_b dicts
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
@@ -1160,8 +1165,3 @@ class DeviceClusterAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = DeviceClusterAssignment
         fields = "__all__"
-
-
-# PLACEHOLDER: BreakoutTemplateSerializer — full implementation in commit 5
-class BreakoutTemplateSerializer:
-    pass

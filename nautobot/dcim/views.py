@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
+import json
 import logging
 import re
 import uuid
@@ -105,8 +106,8 @@ from .api import serializers
 from .choices import DeviceFaceChoices
 from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
-    BreakoutTemplate,
     Cable,
+    CableBreakoutType,
     CablePath,
     ConsolePort,
     ConsolePortTemplate,
@@ -5359,18 +5360,16 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 
 
 #
-# Breakout Templates
+# Cable Breakout Types
 #
-
-
-class BreakoutTemplateUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.BreakoutTemplateFilterSet
-    filterset_form_class = forms.BreakoutTemplateFilterForm
-    form_class = forms.BreakoutTemplateForm
-    bulk_update_form_class = forms.BreakoutTemplateBulkEditForm
-    queryset = BreakoutTemplate.objects.all()
-    serializer_class = serializers.BreakoutTemplateSerializer
-    table_class = tables.BreakoutTemplateTable
+class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.CableBreakoutTypeFilterSet
+    filterset_form_class = forms.CableBreakoutTypeFilterForm
+    form_class = forms.CableBreakoutTypeForm
+    bulk_update_form_class = forms.CableBreakoutTypeBulkEditForm
+    queryset = CableBreakoutType.objects.all()
+    serializer_class = serializers.CableBreakoutTypeSerializer
+    table_class = tables.CableBreakoutTypeTable
     lookup_field = "pk"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -5385,7 +5384,7 @@ class BreakoutTemplateUIViewSet(NautobotUIViewSet):
                 label="Lane Mapping Diagram",
                 object_field="get_diagram_svg",
                 render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
-                body_content_template_path="dcim/inc/breakout_template_diagram_panel.html",
+                body_content_template_path="dcim/inc/cablebreakouttype_diagram_panel.html",
             ),
         )
     )
@@ -5393,7 +5392,6 @@ class BreakoutTemplateUIViewSet(NautobotUIViewSet):
     @action(detail=False, methods=["get"], url_path="mapping-editor")
     def mapping_editor(self, request):
         """HTMX endpoint: return a server-rendered mapping table for given connector/position counts."""
-        import json
 
         a_connectors = int(request.GET.get("a_connectors", 0) or 0)
         a_positions = int(request.GET.get("a_positions", 0) or 0)
@@ -5410,24 +5408,10 @@ class BreakoutTemplateUIViewSet(NautobotUIViewSet):
             except (json.JSONDecodeError, TypeError):
                 mapping = None
 
-        if not mapping or not a_connectors or not a_positions or not b_connectors or not b_positions:
-            mapping = []
-            lane_index = 0
-            for a_connector in range(1, a_connectors + 1):
-                for a_position in range(1, a_positions + 1):
-                    if b_positions > 0:
-                        b_connector = lane_index // b_positions + 1
-                        b_position = lane_index % b_positions + 1
-                    else:
-                        b_connector = lane_index + 1
-                        b_position = 1
-                    mapping.append({
-                        "a_connector": a_connector,
-                        "a_position": a_position,
-                        "b_connector": b_connector,
-                        "b_position": b_position,
-                    })
-                    lane_index += 1
+        if not mapping and all([a_connectors, a_positions, b_connectors, b_positions]):
+            mapping = CableBreakoutType(
+                a_connectors=a_connectors, a_positions=a_positions, b_connectors=b_connectors, b_positions=b_positions
+            ).autogenerate_mapping()
 
         return render(request, "dcim/inc/breakout_mapping_table.html", {
             "mapping": mapping,
