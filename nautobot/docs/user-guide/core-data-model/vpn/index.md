@@ -62,8 +62,6 @@ erDiagram
     "nautobot_vpn_models.VPNTunnelEndpoint"[VPNTunnelEndpoint] {}
 
     "nautobot_vpn_models.VPNProfile"[VPNProfile] {
-        VPNPhase1Policy vpn_phase1_policy
-        VPNPhase2Policy vpn_phase2_policy
         string name
         string description
         boolean keepalive_enabled
@@ -71,8 +69,6 @@ erDiagram
         integer keepalive_retries
         boolean nat_traversal
         json extra_options
-        SecretsGroup secrets_group
-        Role role
     }
 
     "nautobot_vpn_models.VPNPhase1Policy"[VPNPhase1Policy] {
@@ -119,7 +115,6 @@ erDiagram
         choices service_type
         Status status
         json extra_attributes
-        Tenant tenant
         Role role
     }
 
@@ -130,20 +125,13 @@ erDiagram
         string description
         string tunnel_id
         choices encapsulation
-        Tenant tenant
-        SecretsGroup secrets_group
         Status status
         Role role
     }
 
     "nautobot_vpn_models.VPNTunnelEndpoint"[VPNTunnelEndpoint] {
         VPNProfile vpn_profile
-        IPAddress source_ipaddress
-        Interface source_interface
         string source_fqdn
-        Interface tunnel_interface
-        DynamicGroup protected_prefixes_dg
-        Prefix protected_prefixes
         Role role
     }
 
@@ -185,12 +173,7 @@ erDiagram
         Role role
     }
 
-    "nautobot_vpn_models.VPNTermination"[VPNTermination] {
-        VPN vpn
-        VLAN vlan
-        Interface interface
-        VMInterface vm_interface
-    }
+    "nautobot_vpn_models.VPNTermination"[VPNTermination] {}
 
     "ipam.VLAN"[VLAN] {}
     "dcim.Interface"[Interface] {}
@@ -348,8 +331,7 @@ flowchart TB
 
 ### Hub-and-spoke VPN using terminations
 
-+++ 3.1.0
-    VPN Terminations and VPN service types were added.
++++ 3.1.0 "VPN Terminations and VPN service types were added."
 
 The [single hub-and-spoke](#single-hub-and-spoke-vpn) use case above models each spoke-to-hub connection as a distinct VPN Tunnel with its own pair of VPN Tunnel Endpoints. This captures per-tunnel detail but requires more objects to manage.
 
