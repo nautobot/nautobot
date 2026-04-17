@@ -240,7 +240,7 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
             "name": "test 1",
             "description": "test value",
             "vpn_profile": models.VPNProfile.objects.first(),
-            "vpn": models.VPN.objects.first(),
+            "vpn": models.VPN.objects.filter(vpn_terminations__isnull=True).first(),
             "tunnel_id": "test value",
             "status": Status.objects.get(name="Active"),
             "role": tunnel_role,

@@ -322,13 +322,14 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
         super().setUpTestData()
 
         endpoints = models.VPNTunnelEndpoint.objects.all()
+        vpn = models.VPN.objects.filter(vpn_terminations__isnull=True).first()
 
         cls.create_data = [
             {
                 "name": "test 1",
                 "description": "test value",
                 "vpn_profile": models.VPNProfile.objects.first().pk,
-                "vpn": models.VPN.objects.first().pk,
+                "vpn": vpn.pk,
                 "tunnel_id": "test value",
                 "status": Status.objects.get(name="Active").pk,
                 "encapsulation": choices.EncapsulationChoices.ipsec_tunnel,
@@ -339,7 +340,7 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
                 "name": "test 2",
                 "description": "test value",
                 "vpn_profile": models.VPNProfile.objects.first().pk,
-                "vpn": models.VPN.objects.first().pk,
+                "vpn": vpn.pk,
                 "tunnel_id": "test value",
                 "status": Status.objects.get(name="Active").pk,
                 "encapsulation": choices.EncapsulationChoices.l2tp,
@@ -350,7 +351,7 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
                 "name": "test 3",
                 "description": "test value",
                 "vpn_profile": models.VPNProfile.objects.first().pk,
-                "vpn": models.VPN.objects.first().pk,
+                "vpn": vpn.pk,
                 "tunnel_id": "test value",
                 "status": Status.objects.get(name="Active").pk,
                 "encapsulation": choices.EncapsulationChoices.ipsec_transport,
