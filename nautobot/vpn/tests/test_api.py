@@ -574,3 +574,35 @@ class VPNTerminationAPITest(APIViewTestCases.APIViewTestCase):
         url = self._get_list_url()
         response = self.client.post(url, {"vpn": other_vpn.pk, "interface": interface.pk}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_assigned_object_computed_field(self):
+        """Test that the API response includes correct assigned_object and assigned_object_type."""
+        self.add_permissions("vpn.view_vpntermination")
+
+        test_cases = [
+            ("vlan", "ipam.vlan"),
+            ("interface", "dcim.interface"),
+            ("vm_interface", "virtualization.vminterface"),
+        ]
+        for field_name, expected_type in test_cases:
+            with self.subTest(assigned_object_type=expected_type):
+                termination = models.VPNTermination.objects.filter(**{f"{field_name}__isnull": False}).first()
+                if termination is None:
+                    # Create one if factory didn't produce it
+                    if field_name == "interface":
+                        obj = self._get_available_interfaces().first()
+                    elif field_name == "vm_interface":
+                        obj = self._get_available_vm_interfaces().first()
+                    else:
+                        obj = self._get_available_vlans().first()
+                    if obj is None:
+                        self.skipTest(f"No available {field_name} for testing.")
+                    termination = models.VPNTermination.objects.create(vpn=self.vpn, **{field_name: obj})
+
+                url = self._get_detail_url(termination)
+                response = self.client.get(url, **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                data = response.json()
+                self.assertEqual(data["assigned_object_type"], expected_type)
+                self.assertIsNotNone(data["assigned_object"])
+                self.assertEqual(data["assigned_object"]["id"], str(getattr(termination, field_name).pk))

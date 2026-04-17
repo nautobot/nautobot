@@ -3,6 +3,16 @@ from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.serializers import PolymorphicProxySerializer
+from nautobot.core.api.utils import (
+    get_nested_serializer_depth,
+    nested_serializers_for_models,
+    return_nested_serializer_data_based_on_depth,
+)
+from nautobot.dcim.models import Interface
+from nautobot.ipam.models import VLAN
+from nautobot.virtualization.models import VMInterface
 
 from .. import choices, models
 
@@ -123,6 +133,7 @@ class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
     """VPNTermination Serializer."""
 
     assigned_object_type = serializers.SerializerMethodField(read_only=True)
+    assigned_object = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         """Meta attributes."""
@@ -133,3 +144,22 @@ class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializ
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_assigned_object_type(self, obj: models.VPNTermination) -> str | None:
         return obj.assigned_object_type
+
+    @extend_schema_field(
+        PolymorphicProxySerializer(
+            component_name="VPNTerminationAssignedObject",
+            resource_type_field_name="object_type",
+            serializers=lambda: nested_serializers_for_models([VLAN, Interface, VMInterface]),
+            allow_null=True,
+        )
+    )
+    def get_assigned_object(self, obj):
+        if obj.assigned_object is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(
+                self, depth, obj, obj.assigned_object, "assigned_object"
+            )
+        except SerializerNotFound:
+            return None
