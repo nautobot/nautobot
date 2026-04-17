@@ -1,5 +1,5 @@
 {% if object.status != "FAILURE" and object.status != "SUCCESS" and object.status != "REVOKED" %}
-    <div hx-get=""
+    <div hx-get="{{ object.get_absolute_url }}"
          hx-select="#component-{{ component.component_id }}"
          hx-target="#component-{{ component.component_id }}"
          hx-trigger="every 3s"
