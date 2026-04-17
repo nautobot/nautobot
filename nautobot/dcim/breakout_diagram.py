@@ -1,14 +1,16 @@
 """Server-side SVG generation for breakout cable lane mapping diagrams."""
 
+from django.utils.html import mark_safe
+
 import svgwrite
 
 
 class BreakoutDiagramSVG:
     """
-    Generate an SVG diagram showing the lane mapping of a breakout template.
+    Generate an SVG diagram showing the lane mapping of a cable breakout type.
 
     Usage:
-        diagram = BreakoutDiagramSVG(template, connected_a={1}, connected_b={1,2,3})
+        diagram = BreakoutDiagramSVG(cable_breakout_type, connected_a={1}, connected_b={1,2,3})
         svg_string = diagram.render()
     """
 
@@ -28,7 +30,7 @@ class BreakoutDiagramSVG:
 
     def __init__(
         self,
-        template,
+        cable_breakout_type,
         connected_a=None,
         connected_b=None,
         show_status=True,
@@ -37,14 +39,14 @@ class BreakoutDiagramSVG:
     ):
         """
         Args:
-            template: BreakoutTemplate instance
+            cable_breakout_type: CableBreakoutType instance
             connected_a: set of A connector numbers with terminations
             connected_b: set of B connector numbers with terminations
             show_status: if True, color connected nodes green
             a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips
             b_termination_labels: dict {connector_num: "Device / Interface"} for B-side tooltips
         """
-        self.template = template
+        self.cable_breakout_type = cable_breakout_type
         self.connected_a = connected_a or set()
         self.connected_b = connected_b or set()
         self.show_status = show_status
@@ -54,7 +56,7 @@ class BreakoutDiagramSVG:
         # Build connector mapping
         self.a_to_b = {}
         self.b_to_a = {}
-        for entry in template.mapping:
+        for entry in cable_breakout_type.mapping:
             self.a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
             self.b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
 
@@ -64,8 +66,8 @@ class BreakoutDiagramSVG:
         # Total rows = number of unique (a, b) pairs
         self.pairs = []
         seen = set()
-        for entry in template.mapping:
-            pair = (entry["a_connector"], entry["b_connector"])
+        for entry in cable_breakout_type.mapping:
+            pair = (entry["label"], entry["a_connector"], entry["b_connector"])
             if pair not in seen:
                 self.pairs.append(pair)
                 seen.add(pair)
@@ -134,7 +136,7 @@ class BreakoutDiagramSVG:
         b_left = b_x
 
         # Draw lines first (behind nodes)
-        for lane_num, (ac, bc) in enumerate(self.pairs, start=1):
+        for label, ac, bc in self.pairs:
             ay = a_pos[ac]
             by = b_pos[bc]
 
@@ -156,7 +158,7 @@ class BreakoutDiagramSVG:
                 line["stroke-dasharray"] = dasharray
             dwg.add(line)
 
-            # Lane number label at the midpoint of the line with white background pill
+            # Lane label at the midpoint of the line with white background pill
             mid_x = (a_right + 2 + b_left - 2) / 2
             mid_y = (ay + by) / 2
             label_size = self.FONT_SIZE - 1
@@ -175,7 +177,7 @@ class BreakoutDiagramSVG:
             )
             dwg.add(
                 dwg.text(
-                    str(lane_num),
+                    label, 
                     insert=(mid_x, mid_y + label_size / 3),
                     text_anchor="middle",
                     fill=color,
@@ -209,8 +211,8 @@ class BreakoutDiagramSVG:
             )
 
             label = f"A{ac}"
-            if self.template.a_positions > 1:
-                label += f" ({self.template.a_positions})"
+            if self.cable_breakout_type.a_positions > 1:
+                label += f" ({self.cable_breakout_type.a_positions})"
 
             group.add(
                 dwg.text(
@@ -250,8 +252,8 @@ class BreakoutDiagramSVG:
             )
 
             label = f"B{bc}"
-            if self.template.b_positions > 1:
-                label += f" ({self.template.b_positions})"
+            if self.cable_breakout_type.b_positions > 1:
+                label += f" ({self.cable_breakout_type.b_positions})"
 
             group.add(
                 dwg.text(
@@ -278,4 +280,4 @@ class BreakoutDiagramSVG:
             svg_str,
         )
 
-        return svg_str
+        return mark_safe(svg_str)

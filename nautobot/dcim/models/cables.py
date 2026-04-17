@@ -224,7 +224,7 @@ class CableBreakoutType(PrimaryModel):
                 mapping.append(
                     {
                         # Change 0-indexed iterations to 1-indexed mapping entries!
-                        "label": lane_index + 1,
+                        "label": str(lane_index + 1),
                         "a_connector": a_connector + 1,
                         "a_position": a_position + 1,
                         "b_connector": b_connector + 1,

@@ -29,6 +29,7 @@ from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewna
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     CablePath,
     ConsolePort,
     ConsolePortTemplate,
@@ -681,6 +682,12 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 #
 # Cables
 #
+
+
+class CableBreakoutTypeViewSet(NautobotModelViewSet):
+    queryset = CableBreakoutType.objects.all()
+    serializer_class = serializers.CableBreakoutTypeSerializer
+    filterset_class = filters.CableBreakoutTypeFilterSet
 
 
 class CableViewSet(NautobotModelViewSet):

@@ -5980,8 +5980,8 @@ class CableBreakoutTypeForm(NautobotModelForm):
         mapping = self.data.get("mapping")
         if not mapping:
             # Try to read mapping from server-rendered table select fields (table mode).
-            lane_count = self.data.get("a_connectors", 1) * self.data.get("a_positions", 1)
-            if lane_count == self.data.get("b_connectors", 1) * self.data.get("b_positions", 1):
+            lane_count = int(self.data.get("a_connectors", 1)) * int(self.data.get("a_positions", 1))
+            if lane_count == int(self.data.get("b_connectors", 1)) * int(self.data.get("b_positions", 1)):
                 mapping = []
                 for lane_index in range(lane_count):
                     prefix = f"mapping_{lane_index}"
@@ -5996,6 +5996,7 @@ class CableBreakoutTypeForm(NautobotModelForm):
                         )
                     except (ValueError, TypeError):
                         continue
+                self.data = self.data.copy()
                 self.data["mapping"] = mapping
 
         return super().clean()

@@ -1,7 +1,7 @@
 <table class="table table-sm table-hover">
     <thead>
         <tr>
-            <th>Lane</th>
+            <th>Label</th>
             <th>A Connector</th>
             <th>A Position</th>
             <th></th>
@@ -12,7 +12,9 @@
     <tbody>
         {% for entry in mapping %}
             <tr>
-                <td class="align-middle"><strong>{{ forloop.counter }}</strong></td>
+                <td>
+                    <input class="form-control" type="text" name="mapping_{{ forloop.counter0 }}_label" value="{{ entry.label|default:forloop.counter }}">
+                </td>
                 <td>
                     <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_a_connector">
                         {% for i in a_connector_range %}

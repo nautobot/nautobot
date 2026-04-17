@@ -15,9 +15,6 @@
             {% render_field form.strands_per_lane %}
             {% render_field form.polarity_method %}
             {% render_field form.tags %}
-
-            {# Hidden field for JSON mode #}
-            {{ form.mapping }}
         </div>
     </div>
 
@@ -48,16 +45,16 @@
 
             {# Table editor — loaded via HTMX from the server #}
             <div id="mapping-table-editor"
-                 hx-get="{% url 'dcim:breakouttemplate_mapping-editor' %}"
+                 hx-get="{% url 'dcim:cablebreakouttype_mapping_editor' %}"
                  hx-trigger="load, change from:#id_a_connectors, change from:#id_a_positions, change from:#id_b_connectors, change from:#id_b_positions"
-                 hx-include="#id_a_connectors, #id_a_positions, #id_b_connectors, #id_b_positions"
+                 hx-include="#id_a_connectors, #id_a_positions, #id_b_connectors, #id_b_positions, #id_mapping"
                  hx-target="#mapping-table-editor"
                  hx-swap="innerHTML">
             </div>
 
             {# JSON editor #}
             <div id="mapping-json-editor" style="display: none;">
-                <textarea id="mapping-json-textarea" class="form-control" rows="12" style="font-family: monospace;"></textarea>
+                {% render_field form.mapping %}
             </div>
         </div>
     </div>
@@ -69,10 +66,9 @@
     {{ block.super }}
     <script>
     $(document).ready(function() {
-        var $hiddenField = $("input[name='mapping']");
+        var $hiddenField = $("textarea[name='mapping']");
         var $tableDiv = $("#mapping-table-editor");
         var $jsonDiv = $("#mapping-json-editor");
-        var $jsonTextarea = $("#mapping-json-textarea");
         var currentMode = "table";
 
         // Mode toggle: show/hide table vs JSON
@@ -82,7 +78,7 @@
             $(this).addClass("active");
 
             if (mode === "json") {
-                $jsonTextarea.val(JSON.stringify(readTableMapping(), null, 2));
+                $hiddenField.val(JSON.stringify(readTableMapping(), null, 2));
                 $tableDiv.hide();
                 $jsonDiv.show();
             } else {
@@ -96,19 +92,24 @@
             var mapping = [];
             $tableDiv.find("tbody tr").each(function() {
                 var row = {};
+                $(this).find("input").each(function() {
+                    var name = $(this).attr("name");
+                    var field = name.split("_").slice(-1).join("_");
+                    row[field] = $(this).val();
+                });
                 $(this).find("select").each(function() {
                     var name = $(this).attr("name");
                     var field = name.split("_").slice(-2).join("_");
                     row[field] = parseInt($(this).val());
                 });
-                if (Object.keys(row).length === 4) mapping.push(row);
+                if (Object.keys(row).length === 5) mapping.push(row);
             });
             return mapping;
         }
 
         $("form").on("submit", function() {
-            if (currentMode === "json") {
-                $hiddenField.val($jsonTextarea.val());
+            if (currentMode !== "json") {
+                $hiddenField.val(JSON.stringify(readTableMapping(), null, 2));
             }
         });
     });

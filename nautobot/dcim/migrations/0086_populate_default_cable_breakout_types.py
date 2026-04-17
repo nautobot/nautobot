@@ -13,8 +13,8 @@ TEMPLATES = {
         "b_connectors": 2,
         "b_positions": 1,
         "mapping": [
-            {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
-            {"a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+            {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+            {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
         ],
         "strands_per_lane": 1,
         "polarity_method": "",
@@ -26,7 +26,7 @@ TEMPLATES = {
         "a_positions": 4,
         "b_connectors": 4,
         "b_positions": 1,
-        "mapping": [{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)],
+        "mapping": [{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)],
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
@@ -37,7 +37,7 @@ TEMPLATES = {
         "a_positions": 8,
         "b_connectors": 8,
         "b_positions": 1,
-        "mapping": [{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 9)],
+        "mapping": [{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 9)],
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
@@ -49,14 +49,14 @@ TEMPLATES = {
         "b_connectors": 8,
         "b_positions": 1,
         "mapping": [
-            {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
-            {"a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
-            {"a_connector": 1, "a_position": 3, "b_connector": 3, "b_position": 1},
-            {"a_connector": 1, "a_position": 4, "b_connector": 4, "b_position": 1},
-            {"a_connector": 2, "a_position": 1, "b_connector": 5, "b_position": 1},
-            {"a_connector": 2, "a_position": 2, "b_connector": 6, "b_position": 1},
-            {"a_connector": 2, "a_position": 3, "b_connector": 7, "b_position": 1},
-            {"a_connector": 2, "a_position": 4, "b_connector": 8, "b_position": 1},
+            {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+            {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+            {"label": "3", "a_connector": 1, "a_position": 3, "b_connector": 3, "b_position": 1},
+            {"label": "4", "a_connector": 1, "a_position": 4, "b_connector": 4, "b_position": 1},
+            {"label": "5", "a_connector": 2, "a_position": 1, "b_connector": 5, "b_position": 1},
+            {"label": "6", "a_connector": 2, "a_position": 2, "b_connector": 6, "b_position": 1},
+            {"label": "7", "a_connector": 2, "a_position": 3, "b_connector": 7, "b_position": 1},
+            {"label": "8", "a_connector": 2, "a_position": 4, "b_connector": 8, "b_position": 1},
         ],
         "strands_per_lane": 1,
         "polarity_method": "",
@@ -69,7 +69,7 @@ TEMPLATES = {
         "a_positions": 4,
         "b_connectors": 4,
         "b_positions": 1,
-        "mapping": [{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)],
+        "mapping": [{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)],
         "strands_per_lane": 2,
         "polarity_method": "straight-through",
         "is_shuffle": False,
@@ -80,7 +80,7 @@ TEMPLATES = {
         "a_positions": 6,
         "b_connectors": 6,
         "b_positions": 1,
-        "mapping": [{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)],
+        "mapping": [{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)],
         "strands_per_lane": 2,
         "polarity_method": "straight-through",
         "is_shuffle": False,
@@ -91,7 +91,7 @@ TEMPLATES = {
         "a_positions": 12,
         "b_connectors": 12,
         "b_positions": 1,
-        "mapping": [{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 13)],
+        "mapping": [{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 13)],
         "strands_per_lane": 2,
         "polarity_method": "straight-through",
         "is_shuffle": False,
@@ -104,9 +104,9 @@ TEMPLATES = {
         "b_positions": 6,
         "mapping": [
             # A1 positions 1-6 → B1 positions 1-6
-            *[{"a_connector": 1, "a_position": i, "b_connector": 1, "b_position": i} for i in range(1, 7)],
+            *[{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": 1, "b_position": i} for i in range(1, 7)],
             # A1 positions 7-12 → B2 positions 1-6
-            *[{"a_connector": 1, "a_position": i + 6, "b_connector": 2, "b_position": i} for i in range(1, 7)],
+            *[{"label": str(i + 6), "a_connector": 1, "a_position": i + 6, "b_connector": 2, "b_position": i} for i in range(1, 7)],
         ],
         "strands_per_lane": 2,
         "polarity_method": "straight-through",
@@ -120,9 +120,9 @@ TEMPLATES = {
         "b_positions": 1,
         "mapping": [
             # A1 positions 1-6 → B connectors 1-6
-            *[{"a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)],
+            *[{"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)],
             # A2 positions 1-6 → B connectors 7-12
-            *[{"a_connector": 2, "a_position": i, "b_connector": i + 6, "b_position": 1} for i in range(1, 7)],
+            *[{"label": str(i + 6), "a_connector": 2, "a_position": i, "b_connector": i + 6, "b_position": 1} for i in range(1, 7)],
         ],
         "strands_per_lane": 2,
         "polarity_method": "straight-through",
@@ -131,11 +131,18 @@ TEMPLATES = {
 }
 
 
-def populate_breakout_templates(apps, schema_editor):
-    """Create default breakout template configurations."""
+def populate_default_cable_breakout_types(apps, schema_editor):
+    """Create default cable breakout type records."""
     CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
     for name, defaults in TEMPLATES.items():
         CableBreakoutType.objects.get_or_create(name=name, defaults=defaults)
+
+
+def clear_default_cable_breakout_types(apps, schema_editor):
+    """Delete default cable breakout type records."""
+    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
+    for name in TEMPLATES.keys():
+        CableBreakoutType.objects.filter(name=name).delete()
 
 
 class Migration(migrations.Migration):
@@ -144,5 +151,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_breakout_templates, migrations.RunPython.noop),
+        migrations.RunPython(populate_default_cable_breakout_types, clear_default_cable_breakout_types),
     ]
