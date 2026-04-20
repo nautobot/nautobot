@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.test import override_settings
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
@@ -360,7 +361,7 @@ class UtilsTestCase(TestCase):
                 str(job_result.pk),
                 f"--config={settings.SETTINGS_PATH}",
                 "--data",
-                json.dumps(job_kwargs),
+                NautobotKombuJSONEncoder().encode(job_kwargs),
             ],
         )
         self.assertEqual(create_call[1]["namespace"], "test-namespace")
@@ -393,3 +394,9 @@ class UtilsTestCase(TestCase):
                     run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
                 self.assertIn("Unable to retrieve a kubernetes job manifest.", str(cm.exception))
                 self.assertTrue(issubclass(KubernetesJobManifestError, ValidationError))
+
+    def test_kubernetes_job_kwargs_encoder_handles_uuid(self):
+        """Test that NautobotKombuJSONEncoder encodes UUID values correctly."""
+        test_uuid = uuid.uuid4()
+        encoded = NautobotKombuJSONEncoder().encode({"object_id": test_uuid})
+        self.assertIn(str(test_uuid), encoded)
