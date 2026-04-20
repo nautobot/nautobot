@@ -8,12 +8,13 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
 from nautobot.core.forms.fields import CommentField, DynamicModelChoiceField, DynamicModelMultipleChoiceField
 from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.ipam import formfields
 
 __all__ = (
@@ -121,6 +122,11 @@ class EmbeddedActionsFormMixin(forms.Form):
             if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
                 for action in ["create", "search"]:
                     has_field_embedded_action = self.has_field_embedded_action(action, field, name)
+                    if has_field_embedded_action and action == "create":
+                        try:
+                            reverse(get_route_for_model(field.queryset.model, "add"))
+                        except NoReverseMatch:
+                            has_field_embedded_action = False
                     setattr(field, f"embedded_{action}", has_field_embedded_action)
 
     def has_field_embedded_action(self, action, field, name):

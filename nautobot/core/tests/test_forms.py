@@ -903,3 +903,24 @@ class DynamicFilterFormTest(testing.TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
+
+
+class EmbeddedActionsFormMixinTestCase(testing.TestCase):
+    """Tests for EmbeddedActionsFormMixin auto-enable guard behavior."""
+
+    def test_embedded_create_disabled_when_model_has_no_ui_add_route(self):
+        """
+        Regression: EmbeddedActionsFormMixin must not enable `embedded_create` on a
+        DynamicModelChoiceField whose target model has no reversible UI "add" URL
+        (e.g. ContentType — remapped to the `extras` app_label but no UI view
+        registered). Without this guard the render_field template raises
+        NoReverseMatch when it tries to resolve the "+" button's href.
+        """
+
+        class _TestForm(forms.EmbeddedActionsFormMixin):
+            content_type = forms.DynamicModelChoiceField(queryset=ContentType.objects.all())
+            device = forms.DynamicModelChoiceField(queryset=dcim_models.Device.objects.all())
+
+        form = _TestForm()
+        self.assertFalse(form.fields["content_type"].embedded_create)
+        self.assertTrue(form.fields["device"].embedded_create)
