@@ -41,6 +41,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_POSITIONS,
@@ -6031,6 +6032,10 @@ class CableBreakoutTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm)
     pk = forms.ModelMultipleChoiceField(queryset=CableBreakoutType.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    polarity_method = forms.ChoiceField(
+        choices=add_blank_choice(CableBreakoutTypePolarityMethodChoices), required=False, widget=StaticSelect2()
+    )
+    strands_per_lane = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
         nullable_fields = ["description"]
