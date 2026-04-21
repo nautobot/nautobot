@@ -3,6 +3,8 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
     BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
     ColorColumn,
     TagColumn,
     ToggleColumn,
@@ -18,6 +20,22 @@ __all__ = ("CableTable",)
 #
 # Cables
 #
+
+
+class CableBreakoutTypeTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    is_shuffle = BooleanColumn()
+    total_lanes = tables.Column(orderable=False)
+    total_strands = tables.Column(orderable=False)
+    is_breakout = BooleanColumn()
+    tags = TagColumn(url_name="dcim:cablebreakouttype_list")
+    actions = ButtonsColumn(CableBreakoutType)
+
+    class Meta(BaseTable.Meta):
+        model = CableBreakoutType
+        fields = ("pk", "name", "description", "a_connectors", "a_positions", "b_connectors", "b_positions", "is_shuffle", "strands_per_lane", "polarity_method", "total_lanes", "total_strands", "is_breakout", "tags", "actions",)
+        default_columns = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions", "total_lanes", "is_shuffle", "actions",)
 
 
 class CableTable(StatusTableMixin, BaseTable):
@@ -76,14 +94,3 @@ class CableTable(StatusTableMixin, BaseTable):
             "status",
             "type",
         )
-
-
-# PLACEHOLDER: CableBreakoutTypeTable — full implementation in commit 5
-class CableBreakoutTypeTable(BaseTable):
-    pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-
-    class Meta(BaseTable.Meta):
-        model = CableBreakoutType
-        fields = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions", "is_shuffle")
-        default_columns = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions")
