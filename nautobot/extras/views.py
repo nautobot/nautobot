@@ -3703,6 +3703,8 @@ class JobResultUIViewSet(
         title = "Run Job"
         if instance.job_model is not None:
             title = instance.job_model.name
+            job_modal_button_config = getattr(instance.job_model.job_class.Meta, "job_modal_button_config", {})
+            redirect_button_config = job_modal_button_config.get("redirect_button", None)
         job_result_key = request.GET.get("job_result_key", None)
         refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
         detail_value = f"Job finished with status: {instance.get_status_display()}"
@@ -3712,6 +3714,10 @@ class JobResultUIViewSet(
             detail_value = instance.result
         job_is_pending = self._is_job_pending(instance)
         context = self.get_extra_context(request, instance)
+        job_log_entry = instance.job_log_entries.filter(grouping="redirect").last()
+        redirect_url = None
+        if job_log_entry:
+            redirect_url = job_log_entry.absolute_url
         context.update(
             {
                 "title": title,
@@ -3719,6 +3725,8 @@ class JobResultUIViewSet(
                 "job_result_key": job_result_key,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
+                "redirect_url": redirect_url,
+                "redirect_button_config": redirect_button_config,
             }
         )
 
