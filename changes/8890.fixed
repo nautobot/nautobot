@@ -1,0 +1,1 @@
+Fixed multiple N+1 query patterns on the VRF detail view.
