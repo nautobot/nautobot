@@ -23,8 +23,8 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>Lane Mapping</strong>
             <div class="btn-group btn-group-sm" id="mapping-mode-toggle">
-                <button type="button" class="btn btn-outline-secondary active" data-mode="table">Table</button>
-                <button type="button" class="btn btn-outline-secondary" data-mode="json">JSON</button>
+                <button type="button" class="btn btn-primary bg-primary nb-text-body-bg" data-mode="table">Table</button>
+                <button type="button" class="btn btn-primary" data-mode="json">JSON</button>
             </div>
         </div>
         <div class="card-body">
@@ -53,7 +53,7 @@
             </div>
 
             {# JSON editor #}
-            <div id="mapping-json-editor" style="display: none;">
+            <div id="mapping-json-editor" class="d-none">
                 {% render_field form.mapping %}
             </div>
         </div>
@@ -65,53 +65,77 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-    $(document).ready(function() {
-        var $hiddenField = $("textarea[name='mapping']");
-        var $tableDiv = $("#mapping-table-editor");
-        var $jsonDiv = $("#mapping-json-editor");
-        var currentMode = "table";
+        document.addEventListener("DOMContentLoaded", () => {
+            const jsonEditorTextarea = document.querySelector("textarea[name='mapping']");
+            const jsonEditorContainer = document.getElementById("mapping-json-editor");
+            const tableEditorContainer = document.getElementById("mapping-table-editor");
 
-        // Mode toggle: show/hide table vs JSON
-        $("#mapping-mode-toggle button").on("click", function() {
-            var mode = $(this).data("mode");
-            $("#mapping-mode-toggle button").removeClass("active");
-            $(this).addClass("active");
+            var currentEditorMode = "table";
 
-            if (mode === "json") {
-                $hiddenField.val(JSON.stringify(readTableMapping(), null, 2));
-                $tableDiv.hide();
-                $jsonDiv.show();
-            } else {
-                $jsonDiv.hide();
-                $tableDiv.show();
-            }
-            currentMode = mode;
-        });
+            const editorModeToggles = document.querySelectorAll("#mapping-mode-toggle button");
+            editorModeToggles.forEach(toggle => {
+                toggle.addEventListener("click", (event) => {
+                    const newEditorMode = event.target.getAttribute("data-mode");
+                    if (newEditorMode === currentEditorMode) {
+                        return;
+                    }
+                    editorModeToggles.forEach(t => {
+                        t.classList.remove("bg-primary");
+                        t.classList.remove("nb-text-body-bg");
+                    });
+                    event.target.classList.add("bg-primary");
+                    event.target.classList.add("nb-text-body-bg");
 
-        function readTableMapping() {
-            var mapping = [];
-            $tableDiv.find("tbody tr").each(function() {
-                var row = {};
-                $(this).find("input").each(function() {
-                    var name = $(this).attr("name");
-                    var field = name.split("_").slice(-1).join("_");
-                    row[field] = $(this).val();
+                    if (newEditorMode === "json") {
+                        populateJsonFromTable();
+                        jsonEditorContainer.classList.toggle("d-none", false);
+                        tableEditorContainer.classList.toggle("d-none", true);
+                    } else {
+                        populateTableFromJson();
+                        jsonEditorContainer.classList.toggle("d-none", true);
+                        tableEditorContainer.classList.toggle("d-none", false);
+                    }
+                    currentEditorMode = newEditorMode;
                 });
-                $(this).find("select").each(function() {
-                    var name = $(this).attr("name");
-                    var field = name.split("_").slice(-2).join("_");
-                    row[field] = parseInt($(this).val());
-                });
-                if (Object.keys(row).length === 5) mapping.push(row);
             });
-            return mapping;
-        }
 
-        $("form").on("submit", function() {
-            if (currentMode !== "json") {
-                $hiddenField.val(JSON.stringify(readTableMapping(), null, 2));
+            const populateJsonFromTable = () => {
+                let mapping = [];
+                tableEditorContainer.querySelectorAll("tr").forEach(tr => {
+                    let rowData = {};
+                    tr.querySelectorAll("input").forEach(input => {
+                        const inputName = input.getAttribute("name");
+                        const fieldName = inputName.replace(/^mapping_\d+_/, "");
+                        rowData[fieldName] = input.value;
+                    });
+                    tr.querySelectorAll("select").forEach(select => {
+                        const selectName = select.getAttribute("name");
+                        const fieldName = selectName.replace(/^mapping_\d+_/, "");
+                        rowData[fieldName] = parseInt(select.value);
+                    });
+                    if (Object.keys(rowData).length > 0) {
+                        mapping.push(rowData);
+                    }
+                });
+                jsonEditorTextarea.value = JSON.stringify(mapping, null, 2);
+            };
+
+            const populateTableFromJson = () => {
+                const mapping = JSON.parse(jsonEditorTextarea.value);
+                for (const [index, entry] of mapping.entries()) {
+                    for (const key of Object.keys(entry)) {
+                        if (["a_connector", "a_position", "b_connector", "b_position", "label"].includes(key)) {
+                            tableEditorContainer.querySelector(`[name="mapping_${index}_${key}"]`).value = entry[key];
+                        }
+                    }
+                }
             }
+
+            document.querySelector("form").addEventListener("submit", () => {
+                if (currentEditorMode !== "json") {
+                    populateJsonFromTable();
+                }
+            });
         });
-    });
     </script>
 {% endblock javascript %}

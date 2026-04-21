@@ -16,29 +16,29 @@
                     <input class="form-control" type="text" name="mapping_{{ forloop.counter0 }}_label" value="{{ entry.label|default:forloop.counter }}">
                 </td>
                 <td>
-                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_a_connector">
+                    <select class="form-select" name="mapping_{{ forloop.counter0 }}_a_connector">
                         {% for i in a_connector_range %}
                             <option value="{{ i }}" {% if i == entry.a_connector %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
                     </select>
                 </td>
                 <td>
-                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_a_position">
+                    <select class="form-select" name="mapping_{{ forloop.counter0 }}_a_position">
                         {% for i in a_position_range %}
                             <option value="{{ i }}" {% if i == entry.a_position %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
                     </select>
                 </td>
-                <td class="align-middle text-center"><span class="mdi mdi-arrow-right"></span></td>
+                <td class="align-middle text-center"><span class="mdi mdi-arrow-left-right"></span></td>
                 <td>
-                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_b_connector">
+                    <select class="form-select" name="mapping_{{ forloop.counter0 }}_b_connector">
                         {% for i in b_connector_range %}
                             <option value="{{ i }}" {% if i == entry.b_connector %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
                     </select>
                 </td>
                 <td>
-                    <select class="form-select form-select-sm" name="mapping_{{ forloop.counter0 }}_b_position">
+                    <select class="form-select" name="mapping_{{ forloop.counter0 }}_b_position">
                         {% for i in b_position_range %}
                             <option value="{{ i }}" {% if i == entry.b_position %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
