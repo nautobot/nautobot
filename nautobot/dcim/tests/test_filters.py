@@ -3,7 +3,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import F, Q
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.core.testing import FilterTestCases
@@ -29,6 +29,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES
 from nautobot.dcim.filters import (
+    CableBreakoutTypeFilterSet,
     CableFilterSet,
     ConsolePortFilterSet,
     ConsolePortTemplateFilterSet,
@@ -79,6 +80,7 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -3313,6 +3315,44 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[1].pk).update(virtual_chassis=virtual_chassis[0])
         Device.objects.filter(pk=devices[3].pk).update(virtual_chassis=virtual_chassis[1])
         Device.objects.filter(pk=devices[5].pk).update(virtual_chassis=virtual_chassis[2])
+
+
+class CableBreakoutTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = CableBreakoutType.objects.all()
+    filterset = CableBreakoutTypeFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("a_connectors",),
+        ("a_positions",),
+        ("b_connectors",),
+        ("b_positions",),
+        ("strands_per_lane",),
+        ("polarity_method",),
+    ]
+
+    def test_is_breakout(self):
+        with self.subTest("is_breakout: True"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_breakout": True}, self.queryset).qs,
+                CableBreakoutType.objects.exclude(a_connectors=F("b_connectors"), a_positions=F("b_positions")),
+            )
+        with self.subTest("is_breakout: False"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_breakout": False}, self.queryset).qs,
+                CableBreakoutType.objects.filter(a_connectors=F("b_connectors"), a_positions=F("b_positions")),
+            )
+
+    def test_is_shuffle(self):
+        with self.subTest("is_shuffle: True"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_shuffle": True}, self.queryset).qs,
+                CableBreakoutType.objects.filter(is_shuffle=True),
+            )
+        with self.subTest("is_shuffle: False"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"is_shuffle": False}, self.queryset).qs,
+                CableBreakoutType.objects.filter(is_shuffle=False),
+            )
 
 
 class CableTestCase(FilterTestCases.FilterTestCase):

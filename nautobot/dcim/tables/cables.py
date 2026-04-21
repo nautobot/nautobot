@@ -55,11 +55,10 @@ class CableBreakoutTypeTable(BaseTable):
             "pk",
             "name",
             "a_connectors",
-            "a_positions",
             "b_connectors",
-            "b_positions",
             "total_lanes",
             "is_shuffle",
+            "tags",
             "actions",
         )
 

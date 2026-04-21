@@ -18,6 +18,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    CableBreakoutTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -31,8 +32,14 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_POSITIONS,
+    NONCONNECTABLE_IFACE_TYPES,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.models import (
+    CableBreakoutType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -135,6 +142,40 @@ def get_random_platform_for_manufacturer(manufacturer):
 def get_random_software_version_for_device_type(device_type):
     qs = SoftwareVersion.objects.filter(software_image_files__device_types=device_type)
     return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
+class CableBreakoutTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = CableBreakoutType
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
+    # a_positions must be greater than or equal to a_positions in order to permit b_connectors greater than a_connectors
+    a_positions = factory.LazyAttribute(
+        lambda o: factory.random.randgen.choice(range(o.a_connectors, CABLE_BREAKOUT_MAX_POSITIONS + 1))
+    )
+    b_connectors = factory.LazyAttribute(lambda o: o.a_positions)
+    b_positions = factory.LazyAttribute(lambda o: o.a_connectors)
+    is_shuffle = NautobotBoolIterator()
+    strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
+    polarity_method = factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
+    mapping = factory.LazyAttribute(
+        lambda o: [
+            {
+                "label": str((i - 1) * o.a_positions + j),
+                "a_connector": i,
+                "a_position": j,
+                "b_connector": j,
+                "b_position": i,
+            }
+            for i in range(1, o.a_connectors + 1)
+            for j in range(1, o.a_positions + 1)
+        ]
+    )
 
 
 class DeviceFactory(PrimaryModelFactory):

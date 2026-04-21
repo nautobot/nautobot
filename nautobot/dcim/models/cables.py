@@ -12,7 +12,7 @@ from django.utils.functional import classproperty
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
-from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, PolarityMethodChoices
+from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices, CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_POSITIONS,
@@ -105,7 +105,7 @@ class CableBreakoutType(PrimaryModel):
     )
     polarity_method = models.CharField(
         blank=True,
-        choices=PolarityMethodChoices,
+        choices=CableBreakoutTypePolarityMethodChoices,
         default="",
         help_text="Fiber polarity method. Informational only.",
         max_length=50,

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import F, Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -1454,11 +1454,28 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
-# PLACEHOLDER: CableBreakoutTypeFilterSet — full implementation in commit 5
 class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
+    is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+
     class Meta:
         model = CableBreakoutType
-        fields = ["id", "name"]
+        fields = [
+            "id",
+            "name",
+            "a_connectors",
+            "a_positions",
+            "b_connectors",
+            "b_positions",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+
+    def filter_is_breakout(self, queryset, name, value):
+        if value:
+            return queryset.exclude(a_connectors=F("b_connectors"), a_positions=F("b_positions"))
+        return queryset.filter(a_connectors=F("b_connectors"), a_positions=F("b_positions"))
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):

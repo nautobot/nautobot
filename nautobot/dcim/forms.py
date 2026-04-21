@@ -41,7 +41,12 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_POSITIONS,
+    RACK_U_HEIGHT_DEFAULT,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -5956,6 +5961,18 @@ class CableBreakoutTypeForm(NautobotModelForm):
         required=False,
         help_text="Lane mapping JSON. Auto-generated from connector/position counts, or edit via table/JSON editor.",
     )
+    a_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="A connectors"
+    )
+    a_positions = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_POSITIONS, required=True, label="A positions"
+    )
+    b_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="B connectors"
+    )
+    b_positions = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_POSITIONS, required=True, label="B positions"
+    )
 
     class Meta:
         model = CableBreakoutType
@@ -6006,6 +6023,7 @@ class CableBreakoutTypeFilterForm(NautobotFilterForm):
     model = CableBreakoutType
     q = forms.CharField(required=False, label="Search")
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    is_breakout = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
