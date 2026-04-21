@@ -29,14 +29,14 @@
         </div>
         <div class="card-body">
             {% if form.mapping.errors %}
-            <div class="alert alert-danger mb-3">
-                <strong>Mapping errors:</strong>
-                <ul class="mb-0">
-                    {% for error in form.mapping.errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
+                <div class="alert alert-danger mb-3">
+                    <strong>Mapping errors:</strong>
+                    <ul class="mb-0">
+                        {% for error in form.mapping.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
             {% endif %}
             <div class="alert alert-info mb-3">
                 <span class="mdi mdi-information-outline"></span>
