@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+import json
 import signal
 import unittest
 import zoneinfo
@@ -63,6 +64,7 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     CablePath,
     ConsolePort,
     ConsolePortTemplate,
@@ -4079,6 +4081,38 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     def test_table_with_indentation_is_removed_on_filter_or_sort(self):
         self.skipTest("InventoryItem table has no implementation of indentation.")
+
+
+class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CableBreakoutType
+
+    form_data = {
+        "name": "New Breakout Type",
+        "description": "A brand new type",
+        "a_connectors": 2,
+        "a_positions": 3,
+        "b_connectors": 3,
+        "b_positions": 2,
+        "mapping": json.dumps(
+            [
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},
+                {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2, "label": "A2"},
+                {"a_connector": 1, "a_position": 3, "b_connector": 2, "b_position": 1, "label": "A3"},
+                {"a_connector": 2, "a_position": 1, "b_connector": 2, "b_position": 2, "label": "B1"},
+                {"a_connector": 2, "a_position": 2, "b_connector": 3, "b_position": 1, "label": "B2"},
+                {"a_connector": 2, "a_position": 3, "b_connector": 3, "b_position": 2, "label": "B3"},
+            ]
+        ),
+        "is_shuffle": False,
+        "strands_per_lane": 1,
+        "polarity_method": "",
+    }
+    bulk_edit_data = {
+        "description": "Something generic",
+        "is_shuffle": True,
+        "strands_per_lane": 2,
+        "polarity_method": "other",
+    }
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
