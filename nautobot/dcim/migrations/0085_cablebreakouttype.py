@@ -34,13 +34,38 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
                 ("description", models.CharField(blank=True, max_length=255)),
-                ("a_connectors", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
-                ("a_positions", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
-                ("b_connectors", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
-                ("b_positions", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MaxValueValidator(16)])),
+                (
+                    "a_connectors",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                    ),
+                ),
+                (
+                    "a_positions",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                    ),
+                ),
+                (
+                    "b_connectors",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                    ),
+                ),
+                (
+                    "b_positions",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                    ),
+                ),
                 ("mapping", models.JSONField()),
                 ("is_shuffle", models.BooleanField(default=False)),
-                ("strands_per_lane", models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1)])),
+                (
+                    "strands_per_lane",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MinValueValidator(1)]
+                    ),
+                ),
                 ("polarity_method", models.CharField(blank=True, default="", max_length=50)),
                 ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
             ],

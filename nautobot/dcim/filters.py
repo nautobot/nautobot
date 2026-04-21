@@ -114,8 +114,8 @@ from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
-    "CableFilterSet",
     "CableBreakoutTypeFilterSet",
+    "CableFilterSet",
     "CableTerminationModelFilterSetMixin",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",

@@ -5413,13 +5413,17 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 a_connectors=a_connectors, a_positions=a_positions, b_connectors=b_connectors, b_positions=b_positions
             ).autogenerate_mapping()
 
-        return render(request, "dcim/inc/breakout_mapping_table.html", {
-            "mapping": mapping,
-            "a_connector_range": range(1, a_connectors + 1),
-            "a_position_range": range(1, a_positions + 1),
-            "b_connector_range": range(1, b_connectors + 1),
-            "b_position_range": range(1, b_positions + 1),
-        })
+        return render(
+            request,
+            "dcim/inc/breakout_mapping_table.html",
+            {
+                "mapping": mapping,
+                "a_connector_range": range(1, a_connectors + 1),
+                "a_position_range": range(1, a_positions + 1),
+                "b_connector_range": range(1, b_connectors + 1),
+                "b_position_range": range(1, b_positions + 1),
+            },
+        )
 
 
 #

@@ -34,8 +34,34 @@ class CableBreakoutTypeTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = CableBreakoutType
-        fields = ("pk", "name", "description", "a_connectors", "a_positions", "b_connectors", "b_positions", "is_shuffle", "strands_per_lane", "polarity_method", "total_lanes", "total_strands", "is_breakout", "tags", "actions",)
-        default_columns = ("pk", "name", "a_connectors", "a_positions", "b_connectors", "b_positions", "total_lanes", "is_shuffle", "actions",)
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "a_connectors",
+            "a_positions",
+            "b_connectors",
+            "b_positions",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "total_lanes",
+            "total_strands",
+            "is_breakout",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "a_connectors",
+            "a_positions",
+            "b_connectors",
+            "b_positions",
+            "total_lanes",
+            "is_shuffle",
+            "actions",
+        )
 
 
 class CableTable(StatusTableMixin, BaseTable):

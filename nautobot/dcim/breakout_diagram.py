@@ -1,7 +1,6 @@
 """Server-side SVG generation for breakout cable lane mapping diagrams."""
 
 from django.utils.html import mark_safe
-
 import svgwrite
 
 
@@ -177,7 +176,7 @@ class BreakoutDiagramSVG:
             )
             dwg.add(
                 dwg.text(
-                    label, 
+                    label,
                     insert=(mid_x, mid_y + label_size / 3),
                     text_anchor="middle",
                     fill=color,
@@ -280,4 +279,4 @@ class BreakoutDiagramSVG:
             svg_str,
         )
 
-        return mark_safe(svg_str)
+        return mark_safe(svg_str)  # noqa: S308

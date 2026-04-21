@@ -207,7 +207,7 @@ class CableBreakoutType(PrimaryModel):
             )
 
         if self.a_connectors * self.a_positions != self.b_connectors * self.b_positions:
-            raise ValidationError({"__all__": "Number of lanes (connectors × positions) must match on A and B sides"})
+            raise ValidationError({"__all__": "Number of lanes (connectors × positions) must match on A and B sides"})  # noqa: RUF001
 
         if not self.mapping:
             self.mapping = self.autogenerate_mapping()
@@ -242,7 +242,7 @@ class CableBreakoutType(PrimaryModel):
         if len(self.mapping) != self.total_lanes:
             raise ValidationError(
                 {
-                    "mapping": f"Expected {self.total_lanes} (connectors × positions) lane definitions, but got {len(self.mapping)}."
+                    "mapping": f"Expected {self.total_lanes} (connectors × positions) lane definitions, but got {len(self.mapping)}."  # noqa: RUF001
                 }
             )
 
@@ -301,14 +301,18 @@ class CableBreakoutType(PrimaryModel):
             a_pair = (a_connector, a_position)
             if a_pair in seen_a_pairs:
                 raise ValidationError(
-                    {"mapping": f"Entry {entry_index}: Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
+                    {
+                        "mapping": f"Entry {entry_index}: Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."
+                    }
                 )
             seen_a_pairs.add(a_pair)
 
             b_pair = (b_connector, b_position)
             if b_pair in seen_b_pairs:
                 raise ValidationError(
-                    {"mapping": f"Entry {entry_index}: Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
+                    {
+                        "mapping": f"Entry {entry_index}: Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."
+                    }
                 )
             seen_b_pairs.add(b_pair)
 
