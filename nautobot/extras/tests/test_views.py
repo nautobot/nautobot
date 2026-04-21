@@ -4927,9 +4927,8 @@ class ObjectChangeTestCase(TestCase):
             oc.request_id = uuid.uuid4()
             oc.save()
 
-    @classmethod
-    def _create_objectchange_for_user(cls, user):
-        objectchange = cls.location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+    def _create_objectchange_for_user(self, user):
+        objectchange = self.location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
         objectchange.user = user
         objectchange.request_id = uuid.uuid4()
         objectchange.save()
@@ -4963,11 +4962,13 @@ class ObjectChangeTestCase(TestCase):
         staff_change = self._create_objectchange_for_user(staff_user)
         superuser_change = self._create_objectchange_for_user(superuser)
 
+        # Testing get_queryset directly to verify the filtering logic within ObjectChangeUIViewSet.
         request = self.factory.get(reverse("extras:objectchange_list"))
         request.user = self.user
         view = ObjectChangeUIViewSet()
         view.request = request
         view.action = "list"
+        view.kwargs = {}
         regular_user_queryset = view.get_queryset()
         self.assertIn(own_change, regular_user_queryset)
         self.assertIn(other_change, regular_user_queryset)
@@ -4976,27 +4977,52 @@ class ObjectChangeTestCase(TestCase):
 
         self.user.is_staff = True
         self.user.save()
-        request = self.factory.get(reverse("extras:objectchange_list"))
-        request.user = self.user
-        view = ObjectChangeUIViewSet()
-        view.request = request
-        view.action = "list"
-        staff_queryset = view.get_queryset()
-        self.assertIn(own_change, staff_queryset)
-        self.assertIn(other_change, staff_queryset)
-        self.assertIn(staff_change, staff_queryset)
-        self.assertIn(superuser_change, staff_queryset)
+        try:
+            request = self.factory.get(reverse("extras:objectchange_list"))
+            request.user = self.user
+            view = ObjectChangeUIViewSet()
+            view.request = request
+            view.action = "list"
+            view.kwargs = {}
+            staff_queryset = view.get_queryset()
+            self.assertIn(own_change, staff_queryset)
+            self.assertIn(other_change, staff_queryset)
+            self.assertIn(staff_change, staff_queryset)
+            self.assertIn(superuser_change, staff_queryset)
+        finally:
+            self.user.is_staff = False
+            self.user.save()
 
         request = self.factory.get(reverse("extras:objectchange_list"))
         request.user = superuser
         view = ObjectChangeUIViewSet()
         view.request = request
         view.action = "list"
+        view.kwargs = {}
         superuser_queryset = view.get_queryset()
         self.assertIn(own_change, superuser_queryset)
         self.assertIn(other_change, superuser_queryset)
         self.assertIn(staff_change, superuser_queryset)
         self.assertIn(superuser_change, superuser_queryset)
+
+    def test_objectchange_list_view_excludes_staff_logs_for_non_staff_user(self):
+        staff_user = User.objects.create_user(username="objectchange-staff-user2", is_staff=True)
+        staff_change = self._create_objectchange_for_user(staff_user)
+        own_change = self._create_objectchange_for_user(self.user)
+
+        url = reverse("extras:objectchange_list")
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = response.content.decode(response.charset)
+        self.assertIn(str(own_change.pk), response_body)
+        self.assertNotIn(str(staff_change.pk), response_body)
+
+    def test_objectchange_detail_view_restricts_non_staff_users_from_staff_log_entries(self):
+        staff_user = User.objects.create_user(username="objectchange-staff-user3", is_staff=True)
+        staff_change = self._create_objectchange_for_user(staff_user)
+
+        response = self.client.get(staff_change.get_absolute_url())
+        self.assertHttpStatus(response, 404)
 
 
 class ObjectMetadataTestCase(
