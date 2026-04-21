@@ -1,2 +1,0 @@
-- [Sirisha Bode - Developer Profile](user_profile.md) — Nautobot core contributor at NTC, extras/views.py and permissions work
-- [ObjectChange permissions feature - issue 8694](project_objectchange_permissions.md) — get_queryset override on ObjectChangeUIViewSet to hide staff entries from non-staff users
