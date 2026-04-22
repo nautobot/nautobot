@@ -2466,14 +2466,21 @@ ul.nb-tree-hierarchy {
   }
 
   .nb-cable {
-    border-left-style: solid;
-    border-left-width: map.get($border-widths, 4);
-    margin-block: map.get($spacers, 12);
-    margin-inline-end: map.get($spacers, 0);
-    margin-inline-start: 50%;
-    padding: map.get($spacers, 24);
-    text-align: left;
-    width: 50%;
+    margin: map.get($spacers, 12) 0;
+    display: flex;
+
+    .nb-cable-color {
+      border-color: var(--#{$prefix}border-color);
+      border-style: none solid;
+      border-width: $border-width;
+      width: map.get($spacers, 12);
+    }
+
+    .nb-cable-info {
+      padding: map.get($spacers, 24);
+      text-align: left;
+      width: calc(50% - map.get($spacers, 6));
+    }
   }
 
   .nb-node {

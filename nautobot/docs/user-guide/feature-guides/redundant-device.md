@@ -40,7 +40,7 @@ While vendors offer a variety of technologies, the data model remains largely ag
 
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS / SRX | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -73,7 +73,22 @@ The primary piece of information to consider from this list is the Management Co
 ### Nautobot Model Overview
 
 TODO: Insert UML here
-TODO: Insert Model table summarizing attributes and their meanings
+
+**VirtualChassis Attributes**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | Yes | Unique name identifying the virtual chassis |
+| `master` | FK → Device | No | The device that acts as the control plane master for the chassis; all member devices are managed through this device |
+| `domain` | String | No | Optional domain name shared across chassis members (used in some vendor implementations for identification) |
+
+**Device Attributes (virtual chassis-related)**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `virtual_chassis` | FK → VirtualChassis | No | The virtual chassis this device belongs to |
+| `vc_position` | Integer (0–255) | Yes (if in VC) | Slot/position of this device within the virtual chassis; must be unique per chassis |
+| `vc_priority` | Integer (0–255) | No | Election priority for master role; higher values win (vendor behavior varies) |
 
 ### Sample API
 ### Sample Design Builder
@@ -190,22 +205,155 @@ interface TenGigabitEthernet2/0/1
 > Note: this config is on a single management IP
 
 
+### Multi-Chassis Stack
 
-
-
-
-### Multi-Chassis Stack TODO: Jeff
 #### Key Questions
+
+These questions and answers are based on **Cisco StackWise**:
+
+Q. Can you port channel across multiple devices? Yes (this is called a Multi-Chassis EtherChannel or MEC).
+Q. Can you see all interfaces on the Primary? Yes.
+Q. Can you see all interfaces on the Backup? Yes (the standby maintains a synced control plane).
+Q. On Primary, can you tell which interfaces are assigned to which device? Yes (via the interface naming convention).
+Q. When do you see all the interfaces on the master device? Always (once the stack is formed and members are "Ready").
+Q. Can you connect interfaces from master to non-master? Yes.
+Q. Any configurations don't map back to model? No (configurations are applied to the logical stack, not specific physical hardware models).
+Q. How are interfaces named? Interface Type Stack-Unit/Slot/Port (e.g., GigabitEthernet 1/0/1).
+Q. What should the naming standard be for the chassis device? Member numbers (usually 1 through 8 or 9).
+Q. Should I use interface named templates? Yes (highly recommended for consistency across the stack).
+
 #### Configuration Generation
 
+_Standard Global Config_
 
+1. Master Switch (Primary)
+Set a high priority (default is 1, max is 15) to ensure this switch wins the election.
 
+```
+switch 1 priority 15
+switch 1 renumber 1
+```
 
+2. Member Switches (Non-Master)
+Keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
 
+```
+switch 2 priority 1
+switch 1 renumber 2
+```
 
-### Firewall Cluster TODO: Allen
+_Management Plane_
+
+You only configure this once on the Master; it automatically propagates to all members.
+
+- Option A: Using an SVI (VLAN interface)
+
+```
+interface Vlan1
+ ip address 192.168.1.10 255.255.255.0
+ no shut
+```
+
+- Option B: Using the Dedicated Management Port
+
+```
+interface Management0/0
+ ip address 10.1.1.10 255.255.255.0
+ no shut
+```
+
+_Data Plane_
+
+Because the stack behaves as one logical switch, the configuration is identical to a standard Port-Channel, except the interface identifiers reflect the different stack members (e.g., 1/0/1 and 2/0/1).
+
+```
+interface Port-channel 1
+ description Uplink-to-Core
+ switchport mode trunk
+
+interface GigabitEthernet 1/0/1 # <== 1 is member 1 of stack.
+ channel-group 1 mode active
+
+interface GigabitEthernet 2/0/1 # <== 2 is member 2 of stack.
+ channel-group 1 mode active
+```
+
+### Firewall Cluster
+
 #### Key Questions
+
+- Can you port channel across multiple devices? Yes — spanned EtherChannel is supported in FTD clustering
+- Can you see all interfaces on the Primary (control node)? No — Each node can only see its interfaces, but all cluster interfaces are visible via FMC
+- Can you see all interfaces on the Backup (data node)? No — only interfaces physically on that chassis module are visible locally
+- On Primary, can you tell which interfaces are assigned to which device? No — Only the FMC can see all interfaces
+- When do you see all the interfaces on the master device? You cannot - Only the FMC can see all interface
+- Can you connect interfaces from master to non-master? Yes
+- Do all configurations map to the model correctly? Mostly Yes - Anything not represented in the model can be stored in the config context
+- How are interfaces named? FXOS notation (e.g., `Ethernet1/1`, `Ethernet1/2`) at chassis level; logical names assigned in FMC
+- What should the naming standard be for the chassis device? Use the shared cluster name / FMC display name (logical single name)
+- Should I use interface named templates? Yes
+
 #### Configuration Generation
+
+_FXOS Chassis — Physical Interface Config_
+
+```
+scope eth-uplink
+  scope fabric a
+    scope interface Ethernet1/1
+      set port-type data
+      enable
+      exit
+    scope interface Ethernet1/2
+      set port-type data
+      enable
+      exit
+    scope interface Ethernet1/3
+      set port-type cluster
+      enable
+      exit
+    scope interface Ethernet1/4
+      set port-type cluster
+      enable
+      exit
+    exit
+  exit
+```
+
+> Note: Interfaces designated `cluster` type are reserved for CCL; `data` interfaces are assigned to logical devices
+
+_FXOS Chassis — CCL Port Channel_
+
+```
+scope eth-uplink
+  scope fabric a
+    create port-channel 48
+      set port-channel-mode active
+      create member-port Ethernet1/3
+      create member-port Ethernet1/4
+      exit
+    exit
+  exit
+```
+
+> Note: The CCL port channel ID (48 in this example) must match on both chassis; use dedicated high-bandwidth interfaces
+
+_FXOS Chassis — Logical Device (Cluster Bootstrap)_
+
+```
+scope ssa
+  scope slot 1
+    scope app-instance ftd FTD-CLUSTER
+      set cluster-role control
+      set cluster-group-id 1
+      set ccl-network 192.0.2.0
+      set ccl-mask 255.255.255.0
+      exit
+    exit
+  exit
+```
+
+> Note: `cluster-role` is set to `control` on the primary chassis slot and `data` on all others; `cluster-group-id` must match across all members
 
 
 
@@ -218,7 +366,23 @@ interface TenGigabitEthernet2/0/1
 
 TODO: Insert UML here
 
-TODO: Insert Model table summarizing attributes and their meanings
+**DeviceRedundancyGroup Attributes**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | Yes | Unique name identifying the redundancy group |
+| `status` | Status | Yes | Lifecycle status of the group (e.g., Planned, Active, Decommissioning) |
+| `description` | String | No | Brief human-readable description of the group's purpose |
+| `failover_strategy` | Choice | No | How traffic is handled across members: `Active/Active` (both units process traffic simultaneously) or `Active/Passive` (one unit is standby until failover occurs) |
+| `comments` | Text | No | Free-form notes about the group |
+| `secrets_group` | FK → SecretsGroup | No | Credentials used to access devices in this group (e.g., shared enable password) |
+
+**Device Attributes (redundancy-related)**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `device_redundancy_group` | FK → DeviceRedundancyGroup | No | The redundancy group this device belongs to |
+| `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group |
 
 ### Sample API
 ### Sample Design Builder
@@ -234,21 +398,150 @@ TODO: Insert Model table summarizing attributes and their meanings
 
 
 
-### Firewall HA pair TODO: Allen
+### Firewall HA pair
+
 #### Key Questions
+
+- Can you port channel across multiple devices? No — EtherChannel is per-device only
+- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces
+- Can you see all interfaces on the Backup? No — the standby unit has its own separate interface list
+- On Primary, can you tell which interfaces are assigned to which device? N/A — each device is modeled separately in Nautobot
+- When do you see all the interfaces on the master device? Each device always shows only its own interfaces
+- Can you connect interfaces from master to non-master? The failover and stateful link interfaces connect the two units either directly or via a switch
+- Do all configurations map to the model correctly? Mostly yes; standby IPs and failover link require HA-specific handling
+- How are interfaces named? Standard ASA format (e.g., `GigabitEthernet0/0`, `Management0/0`)
+- What should the naming standard be for the HA pair? A combination of the two devices names (e.g., `ASA01/ASA02` for `ASA01` and `ASA02`)
+- Should I use interface named templates? Yes
+
 #### Configuration Generation
 
+_Primary (Active) Unit — Failover Config_
+
+```
+failover
+failover lan unit primary
+failover lan interface FAILOVER GigabitEthernet0/3
+failover replication http
+failover link STATEFUL GigabitEthernet0/4
+failover interface ip FAILOVER 10.1.1.1 255.255.255.252 standby 10.1.1.2
+failover interface ip STATEFUL 10.1.2.1 255.255.255.252 standby 10.1.2.2
+```
+
+_Interface Standby IPs (on Primary)_
+
+```
+interface GigabitEthernet0/0
+ nameif outside
+ security-level 0
+ ip address 203.0.113.1 255.255.255.0 standby 203.0.113.2
+!
+interface GigabitEthernet0/1
+ nameif inside
+ security-level 100
+ ip address 10.0.0.1 255.255.255.0 standby 10.0.0.2
+```
+
+> Note: Standby IP is assigned to the secondary unit's corresponding interface automatically
+
+_Secondary (Standby) Unit — Failover Config_
+
+```
+failover
+failover lan unit secondary
+failover lan interface FAILOVER GigabitEthernet0/3
+failover link STATEFUL GigabitEthernet0/4
+failover interface ip FAILOVER 10.1.1.1 255.255.255.252 standby 10.1.1.2
+failover interface ip STATEFUL 10.1.2.1 255.255.255.252 standby 10.1.2.2
+```
+
+> Note: The secondary unit receives the full running config from the primary after the failover link is established; interface IPs need not be set manually
 
 
 
 
 
-### HA pairs TODO: Jeff
+
+### HA pairs
+
+
 #### Key Questions
+
+These questions and answers are based on **F5 BIG-IP (DSC)**:
+
+Q. Can you port channel across multiple devices? No. (Each device must have its own independent trunks/links to the switches)
+Q. Can you see all interfaces on the Primary? No. (You only see the local physical interfaces of the Primary unit)
+Q. Can you see all interfaces on the Backup? No. (You only see the local physical interfaces of the Backup unit).
+Q. On Primary, can you tell which interfaces are assigned to which device? No. (The Primary is unaware of the Backup's specific physical port numbering).
+Q. When do you see all the interfaces on the master device? Never. (They remain two separate hardware entities).
+Q. Can you connect interfaces from master to non-master? No. (There is no "backplane" traffic switching; you only connect them via HA/Sync cables)
+Q. Any configurations don't map back to model? Yes. (Specific items like Management IP, Hostname, and Interface speeds are "Device-Specific" and do not sync).
+Q. How are interfaces named? Slot.Port (e.g., 1.1, 1.2).
+Q. What should the naming standard be for the chassis device? FQDN (e.g., f5-01.network.local).
+Q. Should I use interface named templates? No. (F5 uses VLAN names to abstract the configuration; you sync the VLAN, not the interface).
+
 #### Configuration Generation
 
+_Standard Global Config_
+
+1. Device A (Primary)
+
+```
+# Set the sync address (usually the internal or HA self-IP)
+modify cm device f5-01.local { configsync-ip 10.1.1.1 }
+# Add Device B to the trust (performed on Device A)
+run cm add-to-trust wire-address 10.1.1.2 user admin
+
+# Create the Group (On Primary):
+create cm device-group my_ha_group { devices { f5-01.local f5-02.local } type sync-failover }
+```
+
+2. Device B (Standby)
+
+```
+# Set the sync address
+modify cm device f5-02.local { configsync-ip 10.1.1.2 }
+Create the Group (On Primary):
+```
+
+_Management Plane_
+
+Each retains its own unique Management IP for individual access, but they share a Floating Self-IP for management traffic that needs to reach the "Active" unit (like SNMP or API calls).
+
+1. Device A (Primary)
+
+```
+modify sys global-settings mgmt-dhcp disabled
+create sys management-ip 192.168.1.10/24
+
+create net self floating_mgmt_ip { address 192.168.1.12/24 vlan internal floating enabled traffic-group traffic-group-1 }
+```
+
+# Device B (Standby)
+
+```
+create sys management-ip 192.168.1.11/24
+Floating Self-IP (Shared/Active):
+```
+
+_Data Plane_
+
+Does not support Cross-Chassis EtherChannel. Instead, you build a "Trunk" on each device separately. Redundancy is handled by the Floating IP moving from Device A's Trunk to Device B's Trunk during a failover.
+
+1. Create the Trunk (Do this on both units locally)
+
+```
+create net trunk my_trunk { interfaces { 1.1 1.2 } lacp enabled }
+```
+
+2. Assign VLAN to the Trunk
+
+```
+create net vlan internal_vlan { interfaces add { my_trunk { tagged } } }
+```
+
+3. Create the Floating IP (The "Gateway" for your servers)
 
 
-
-
-
+```
+create net self internal_floating { address 10.10.1.1/24 vlan internal_vlan floating enabled traffic-group traffic-group-1 }
+```

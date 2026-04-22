@@ -766,6 +766,16 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
 
+    @property
+    def queue(self):
+        if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
+            return self.celery_kwargs.get("queue")
+        return None
+
+    @property
+    def job_description(self):
+        return self.job_model.description if self.job_model else None
+
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
@@ -842,9 +852,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     ) -> dict:
         """Build the celery kwargs dict common to all job execution paths."""
         job_celery_kwargs = {
-            "nautobot_job_job_model_id": job_model.id,
+            "nautobot_job_job_model_id": str(job_model.id),
             "nautobot_job_profile": profile,
-            "nautobot_job_user_id": user.id,
+            "nautobot_job_user_id": str(user.id),
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
             "queue": task_queue,
@@ -862,6 +872,39 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_celery_kwargs.update(celery_kwargs)
 
         return job_celery_kwargs
+
+    @classmethod
+    def _sync_eager_result_to_job_result(cls, job_result: "JobResult", eager_result: "JobResult"):
+        """
+        Copy status, result, and traceback from an eager Celery result to a JobResult,
+        but only if the eager result has higher precedence than the current JobResult status.
+
+        Args:
+            job_result (JobResult): The JobResult instance to update.
+            eager_result (JobResult): The Celery eager result from apply().
+        """
+        if JobResultStatusChoices.precedence(job_result.status) > JobResultStatusChoices.precedence(
+            eager_result.status
+        ):
+            if eager_result.status in JobResultStatusChoices.EXCEPTION_STATES and isinstance(
+                eager_result.result, Exception
+            ):
+                job_result.result = {
+                    "exc_type": type(eager_result.result).__name__,
+                    "exc_message": sanitize(str(eager_result.result)),
+                }
+            elif eager_result.result is not None:
+                job_result.result = sanitize(eager_result.result)
+
+            job_result.status = eager_result.status
+
+            if eager_result.status in JobResultStatusChoices.EXCEPTION_STATES and eager_result.traceback is not None:
+                job_result.traceback = sanitize(eager_result.traceback)
+
+        if not job_result.date_done:
+            job_result.date_done = timezone.now()
+
+        job_result.save()
 
     @classmethod
     def enqueue_job(
@@ -885,9 +928,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         This method is the primary entry point for job execution and supports
         asynchronous (Celery), synchronous, and queue-based execution modes.
 
-        Relationship to `console_log_run()` from management commands `runjob_with_job_result`:
+        Relationship to management commands `execute_job_result`:
         - When jobs are executed synchronously with console logging enabled,
-        an alternate execution path exists in `console_log_run()`.
+        an alternate execution path exists in `execute_job_result`.
         - Both implementations perform similar responsibilities:
             * executing the job
             * capturing results and exceptions
@@ -899,7 +942,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         IMPORTANT:
             If changes are made to job execution behavior (status transitions,
             result handling, logging, profiling, or error propagation), the
-            corresponding logic in ``console_log_run()`` must be reviewed and
+            corresponding logic in ``execute_job_result`` must be reviewed and
             updated as needed to keep behavior consistent across execution modes.
 
         This duplication is intentional but requires ongoing coordination.
@@ -961,15 +1004,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                     f"There is a mismatch between the job specified {job_model} and the job associated with the job result {job_result.job_model}"
                 )
 
-        # Kubernetes Job Queue logic
-        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
-        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
-        # And from the kubernetes pod, we specify "--local"/synchronous=True
-        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
-        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
-            # TODO: make this branch aware!
-            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
-
         job_celery_kwargs = cls._build_celery_kwargs(
             job_model=job_model,
             user=user,
@@ -980,12 +1014,23 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             schedule=schedule,
             celery_kwargs=celery_kwargs,
         )
+        job_result.celery_kwargs = job_celery_kwargs
+        job_result.save()
+
+        # Kubernetes Job Queue logic
+        # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
+        # the first time the kubernetes job is enqueued to spin up the kubernetes pod.
+        # And from the kubernetes pod, we specify "--local"/synchronous=True
+        # so that `run_kubernetes_job_and_return_job_result` is not executed again and the job will be run locally.
+        if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not synchronous:
+            # TODO: make this branch aware!
+            return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
         if synchronous:
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
-            job_result.celery_kwargs = job_celery_kwargs
             job_result.date_started = timezone.now()
+            job_result.status = JobResultStatusChoices.STATUS_STARTED
             job_result.save()
 
             # setup synchronous task logging
@@ -1013,34 +1058,13 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
                 signal.alarm(0)
 
             job_result.refresh_from_db()
-            # copy from eager result to job result if and only if the job result isn't already in a proper state.
-            if JobResultStatusChoices.precedence(job_result.status) > JobResultStatusChoices.precedence(
-                eager_result.status
-            ):
-                if eager_result.status in JobResultStatusChoices.EXCEPTION_STATES and isinstance(
-                    eager_result.result, Exception
-                ):
-                    job_result.result = {
-                        "exc_type": type(eager_result.result).__name__,
-                        "exc_message": sanitize(str(eager_result.result)),
-                    }
-                elif eager_result.result is not None:
-                    job_result.result = sanitize(eager_result.result)
-                job_result.status = eager_result.status
-                if (
-                    eager_result.status in JobResultStatusChoices.EXCEPTION_STATES
-                    and eager_result.traceback is not None
-                ):
-                    job_result.traceback = sanitize(eager_result.traceback)
-            if not job_result.date_done:
-                job_result.date_done = timezone.now()
-            job_result.save()
+            cls._sync_eager_result_to_job_result(job_result, eager_result)
 
         else:
             if console_log:
                 transaction.on_commit(
                     lambda: run_console_log_job_and_return_job_result.apply_async(
-                        args=[*job_args],
+                        args=[job_model.class_path, *job_args],
                         kwargs=job_kwargs,
                         task_id=str(job_result.id),
                         **job_celery_kwargs,
@@ -1111,6 +1135,13 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             log.save()
         else:
             log.save(using=JOB_LOGS)
+
+        if self.celery_kwargs.get("nautobot_job_console_log", False):
+            job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
+            if not self.use_job_logs_db or not JOB_LOGS:
+                job_console_entry.save()
+            else:
+                job_console_entry.save(using=JOB_LOGS)
 
     log.alters_data = True
 
@@ -1558,6 +1589,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.enabled = False
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
