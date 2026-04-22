@@ -198,11 +198,6 @@ class CableBreakoutType(PrimaryModel):
 
         return rows
 
-    @property
-    def cable_count(self):
-        """Number of Cable instances using this breakout type."""
-        return self.cables.count()
-
     def clean(self):
         super().clean()
 

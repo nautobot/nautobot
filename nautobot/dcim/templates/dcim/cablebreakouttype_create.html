@@ -13,7 +13,6 @@
             {% render_field form.is_shuffle %}
             {% render_field form.strands_per_lane %}
             {% render_field form.polarity_method %}
-            {% render_field form.tags %}
         </div>
     </div>
 
@@ -130,6 +129,9 @@
             };
 
             const populateTableFromJson = () => {
+                if (!jsonEditorTextarea.value || jsonEditorTextarea.value.trim() == "") {
+                    return true;
+                }
                 try {
                     const mapping = JSON.parse(jsonEditorTextarea.value.trim());
                     for (const [index, entry] of mapping.entries()) {
