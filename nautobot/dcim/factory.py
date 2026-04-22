@@ -161,8 +161,10 @@ class CableBreakoutTypeFactory(PrimaryModelFactory):
     )
     # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
     total_lanes = factory.LazyAttribute(
-        lambda o: math.lcm(o.a_connectors, o.b_connectors)
-        * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+        lambda o: (
+            math.lcm(o.a_connectors, o.b_connectors)
+            * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+        )
     )
     is_shuffle = NautobotBoolIterator()
     strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
