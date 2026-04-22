@@ -173,9 +173,10 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 # We would only need to run one additional query, making this a more efficient method of
                 # obtaining all the natural key values for this instance;
                 queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
-            self.natural_keys_values = queryset.annotate(**case_query).values(
-                *all_related_fields_natural_key_lookups, "pk"
-            )
+            self.natural_keys_values = {
+                item["pk"]: item
+                for item in queryset.annotate(**case_query).values(*all_related_fields_natural_key_lookups, "pk")
+            }
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
@@ -465,8 +466,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         altered_data = {}
 
         if self._is_csv_request() and self.natural_keys_values is not None:
-            if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
-                cleaned_natural_key_field_instance = natural_key_field_instance[0]
+            if cleaned_natural_key_field_instance := self.natural_keys_values.get(instance.pk):
                 for key, value in data.items():
                     # FK field with natural_field_lookups
                     if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(

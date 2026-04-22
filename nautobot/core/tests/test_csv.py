@@ -108,9 +108,9 @@ class CSVParsingRelatedTestCase(TestCase):
                 sorted(expected_related_natural_key_fields),
             )
 
-        with self.subTest("Assert Lookup Querysets is valid"):
-            lookup_querysets = serializer.natural_keys_values
-            self.assertEqual(lookup_querysets.count(), 1)
+        with self.subTest("Assert natural_keys_values dict is valid"):
+            natural_keys_values = serializer.natural_keys_values
+            self.assertEqual(len(natural_keys_values), 1)
 
             # Assert FK Field lookups without an object is swapped for None
             field_without_values = [
@@ -131,23 +131,28 @@ class CSVParsingRelatedTestCase(TestCase):
                 field_lookups = Device._meta.get_field(field_name).related_model.natural_key_field_lookups
                 for lookup in field_lookups:
                     self.assertIn(
-                        lookup_querysets[0][f"{field_name}__{lookup}"],
+                        natural_keys_values[self.device.pk][f"{field_name}__{lookup}"],
                         [CSV_NO_OBJECT, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT],
                     )
 
             # Assert FK Field lookups with an object
-            self.assertEqual(device.device_type.model, lookup_querysets[0]["device_type__model"])
+            self.assertEqual(device.device_type.model, natural_keys_values[self.device.pk]["device_type__model"])
             self.assertEqual(
-                device.device_type.manufacturer.name, lookup_querysets[0]["device_type__manufacturer__name"]
+                device.device_type.manufacturer.name,
+                natural_keys_values[self.device.pk]["device_type__manufacturer__name"],
             )
-            self.assertEqual(device.status.name, lookup_querysets[0]["status__name"])
-            self.assertEqual(device.role.name, lookup_querysets[0]["role__name"])
+            self.assertEqual(device.status.name, natural_keys_values[self.device.pk]["status__name"])
+            self.assertEqual(device.role.name, natural_keys_values[self.device.pk]["role__name"])
 
-            self.assertEqual(device.location.name, lookup_querysets[0]["location__name"])
-            self.assertEqual(device.location.parent.name, lookup_querysets[0]["location__parent__name"])
-            self.assertEqual(lookup_querysets[0]["location__parent__parent__name"], CSV_NO_OBJECT)
-            self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__name"], CSV_NO_OBJECT)
-            self.assertEqual(lookup_querysets[0]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT)
+            self.assertEqual(device.location.name, natural_keys_values[self.device.pk]["location__name"])
+            self.assertEqual(device.location.parent.name, natural_keys_values[self.device.pk]["location__parent__name"])
+            self.assertEqual(natural_keys_values[self.device.pk]["location__parent__parent__name"], CSV_NO_OBJECT)
+            self.assertEqual(
+                natural_keys_values[self.device.pk]["location__parent__parent__parent__name"], CSV_NO_OBJECT
+            )
+            self.assertEqual(
+                natural_keys_values[self.device.pk]["location__parent__parent__parent__parent__name"], CSV_NO_OBJECT
+            )
 
         expected_location_nested_lookup_values = {
             f"location__{'parent__' * depth}name": CSV_NO_OBJECT
@@ -155,7 +160,9 @@ class CSVParsingRelatedTestCase(TestCase):
         }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
         with self.subTest("Get the natural lookup field and its value"):
             # For Location
-            location_lookup_value = serializer._get_natural_key_lookups_value_for_field("location", lookup_querysets[0])
+            location_lookup_value = serializer._get_natural_key_lookups_value_for_field(
+                "location", natural_keys_values[self.device.pk]
+            )
             self.assertEqual(
                 location_lookup_value,
                 {
@@ -166,11 +173,15 @@ class CSVParsingRelatedTestCase(TestCase):
             )
 
             # For Status
-            status_lookup_value = serializer._get_natural_key_lookups_value_for_field("status", lookup_querysets[0])
+            status_lookup_value = serializer._get_natural_key_lookups_value_for_field(
+                "status", natural_keys_values[self.device.pk]
+            )
             self.assertEqual(status_lookup_value, {"status__name": device.status.name})
 
             # For Rack, since `device.rack` does not exists, all rack natural_key_lookups should be `NoObject`
-            rack_lookup_value = serializer._get_natural_key_lookups_value_for_field("rack", lookup_querysets[0])
+            rack_lookup_value = serializer._get_natural_key_lookups_value_for_field(
+                "rack", natural_keys_values[self.device.pk]
+            )
             expected_rack_group_nested_lookup_values = {
                 f"rack__rack_group__location__{'parent__' * depth}name": CSV_NO_OBJECT
                 for depth in range(1, Location.objects.max_tree_depth() + 1)
