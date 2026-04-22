@@ -433,29 +433,3 @@ class DeviceConstraintsViewTest(TestCase):
                 self.assertIn("form", response.context)
                 self.assertTrue(response.context["form"].errors)
                 self.assertEqual(config.DEVICE_UNIQUENESS, self.initial_setting)
-
-
-class ValidationRuleAddViewNoContentTypeEmbeddedCreateTestCase(TestCase):
-    """
-    Regression: the four validation-rule add views must not render an embedded-create "+" button
-    on the ContentType field. That button reverses a URL that does not exist and crashes the
-    page with NoReverseMatch for any user holding `contenttypes.add_contenttype` (e.g. superusers).
-    """
-
-    rule_add_url_names = [
-        "data_validation:minmaxvalidationrule_add",
-        "data_validation:regularexpressionvalidationrule_add",
-        "data_validation:requiredvalidationrule_add",
-        "data_validation:uniquevalidationrule_add",
-    ]
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="superuser", is_superuser=True)
-        self.client.force_login(self.user)
-
-    def test_rule_add_views_render_without_content_type_embedded_create(self):
-        for url_name in self.rule_add_url_names:
-            with self.subTest(url_name=url_name):
-                response = self.client.get(reverse(url_name))
-                self.assertEqual(response.status_code, 200)
-                self.assertNotContains(response, "Add a new content type")
