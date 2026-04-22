@@ -3323,9 +3323,8 @@ class CableBreakoutTypeTestCase(FilterTestCases.FilterTestCase):
     generic_filter_tests = [
         ("name",),
         ("a_connectors",),
-        ("a_positions",),
         ("b_connectors",),
-        ("b_positions",),
+        ("total_lanes",),
         ("strands_per_lane",),
         ("polarity_method",),
     ]
@@ -3334,12 +3333,12 @@ class CableBreakoutTypeTestCase(FilterTestCases.FilterTestCase):
         with self.subTest("is_breakout: True"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_breakout": True}, self.queryset).qs,
-                CableBreakoutType.objects.exclude(a_connectors=F("b_connectors"), a_positions=F("b_positions")),
+                CableBreakoutType.objects.exclude(a_connectors=F("b_connectors")),
             )
         with self.subTest("is_breakout: False"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_breakout": False}, self.queryset).qs,
-                CableBreakoutType.objects.filter(a_connectors=F("b_connectors"), a_positions=F("b_positions")),
+                CableBreakoutType.objects.filter(a_connectors=F("b_connectors")),
             )
 
     def test_is_shuffle(self):

@@ -4090,9 +4090,8 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         "name": "New Breakout Type",
         "description": "A brand new type",
         "a_connectors": 2,
-        "a_positions": 3,
         "b_connectors": 3,
-        "b_positions": 2,
+        "total_lanes": 6,
         "mapping": json.dumps(
             [
                 {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},

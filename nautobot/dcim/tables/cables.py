@@ -26,7 +26,6 @@ class CableBreakoutTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     is_shuffle = BooleanColumn()
-    total_lanes = tables.Column(orderable=False)
     total_strands = tables.Column(orderable=False)
     is_breakout = BooleanColumn(orderable=False)
     tags = TagColumn(url_name="dcim:cablebreakouttype_list")
@@ -39,13 +38,11 @@ class CableBreakoutTypeTable(BaseTable):
             "name",
             "description",
             "a_connectors",
-            "a_positions",
             "b_connectors",
-            "b_positions",
+            "total_lanes",
             "is_shuffle",
             "strands_per_lane",
             "polarity_method",
-            "total_lanes",
             "total_strands",
             "is_breakout",
             "tags",

@@ -8,9 +8,8 @@
             {% render_field form.name %}
             {% render_field form.description %}
             {% render_field form.a_connectors %}
-            {% render_field form.a_positions %}
             {% render_field form.b_connectors %}
-            {% render_field form.b_positions %}
+            {% render_field form.total_lanes %}
             {% render_field form.is_shuffle %}
             {% render_field form.strands_per_lane %}
             {% render_field form.polarity_method %}
@@ -46,8 +45,8 @@
             {# Table editor — loaded via HTMX from the server #}
             <div id="mapping-table-editor"
                  hx-get="{% url 'dcim:cablebreakouttype_mapping_editor' %}"
-                 hx-trigger="load, change from:#id_a_connectors, change from:#id_a_positions, change from:#id_b_connectors, change from:#id_b_positions"
-                 hx-include="#id_a_connectors, #id_a_positions, #id_b_connectors, #id_b_positions, #id_mapping"
+                 hx-trigger="load, change from:#id_a_connectors, change from:#id_b_connectors, change from:#id_total_lanes"
+                 hx-include="#id_a_connectors, #id_b_connectors, #id_total_lanes, #id_mapping"
                  hx-target="#mapping-table-editor"
                  hx-swap="innerHTML">
             </div>

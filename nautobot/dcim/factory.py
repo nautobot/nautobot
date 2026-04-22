@@ -1,4 +1,5 @@
 import logging
+import math
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -34,7 +35,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
-    CABLE_BREAKOUT_MAX_POSITIONS,
+    CABLE_BREAKOUT_MAX_LANES,
     NONCONNECTABLE_IFACE_TYPES,
     RACK_U_HEIGHT_MAXIMUM,
 )
@@ -154,27 +155,26 @@ class CableBreakoutTypeFactory(PrimaryModelFactory):
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
 
     a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
-    # a_positions must be greater than or equal to a_positions in order to permit b_connectors greater than a_connectors
-    a_positions = factory.LazyAttribute(
-        lambda o: factory.random.randgen.choice(range(o.a_connectors, CABLE_BREAKOUT_MAX_POSITIONS + 1))
+    # Model requires a_connectors <= b_connectors
+    b_connectors = factory.LazyAttribute(
+        lambda o: factory.random.randgen.randint(o.a_connectors, CABLE_BREAKOUT_MAX_CONNECTORS)
     )
-    b_connectors = factory.LazyAttribute(lambda o: o.a_positions)
-    b_positions = factory.LazyAttribute(lambda o: o.a_connectors)
+    # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
+    total_lanes = factory.LazyAttribute(
+        lambda o: math.lcm(o.a_connectors, o.b_connectors)
+        * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+    )
     is_shuffle = NautobotBoolIterator()
     strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
-    polarity_method = factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
+    polarity_method = factory.LazyFunction(
+        lambda: factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
+    )
     mapping = factory.LazyAttribute(
-        lambda o: [
-            {
-                "label": str((i - 1) * o.a_positions + j),
-                "a_connector": i,
-                "a_position": j,
-                "b_connector": j,
-                "b_position": i,
-            }
-            for i in range(1, o.a_connectors + 1)
-            for j in range(1, o.a_positions + 1)
-        ]
+        lambda o: CableBreakoutType(
+            a_connectors=o.a_connectors,
+            b_connectors=o.b_connectors,
+            total_lanes=o.total_lanes,
+        ).autogenerate_mapping()
     )
 
 

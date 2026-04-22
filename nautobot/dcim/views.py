@@ -5398,12 +5398,15 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
 
     @action(detail=False, methods=["get"], url_name="mapping_editor", url_path="mapping-editor")
     def mapping_editor(self, request):
-        """HTMX endpoint: return a server-rendered mapping table for given connector/position counts."""
+        """HTMX endpoint: return a server-rendered mapping table for given connector/lane counts."""
 
         a_connectors = int(request.GET.get("a_connectors", 0) or 0)
-        a_positions = int(request.GET.get("a_positions", 0) or 0)
         b_connectors = int(request.GET.get("b_connectors", 0) or 0)
-        b_positions = int(request.GET.get("b_positions", 0) or 0)
+        total_lanes = int(request.GET.get("total_lanes", 0) or 0)
+
+        # Derive per-side positions if the inputs are consistent; otherwise, we can't render a valid table.
+        a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
+        b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
 
         mapping = None
         mapping_json = request.GET.get("mapping", "")
@@ -5415,9 +5418,9 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
             except (json.JSONDecodeError, TypeError):
                 mapping = None
 
-        if not mapping and all([a_connectors, a_positions, b_connectors, b_positions]):
+        if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
             mapping = CableBreakoutType(
-                a_connectors=a_connectors, a_positions=a_positions, b_connectors=b_connectors, b_positions=b_positions
+                a_connectors=a_connectors, b_connectors=b_connectors, total_lanes=total_lanes
             ).autogenerate_mapping()
 
         return render(

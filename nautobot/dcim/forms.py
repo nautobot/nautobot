@@ -44,7 +44,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
-    CABLE_BREAKOUT_MAX_POSITIONS,
+    CABLE_BREAKOUT_MAX_LANES,
     RACK_U_HEIGHT_DEFAULT,
     RACK_U_HEIGHT_MAXIMUM,
 )
@@ -5960,19 +5960,16 @@ class VirtualDeviceContextFilterForm(
 class CableBreakoutTypeForm(NautobotModelForm):
     mapping = forms.JSONField(
         required=False,
-        help_text="Lane mapping JSON. Auto-generated from connector/position counts, or edit via table/JSON editor.",
+        help_text="Lane mapping JSON. Auto-generated from connector/lane counts, or edit via table/JSON editor.",
     )
     a_connectors = forms.IntegerField(
         min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="A connectors"
     )
-    a_positions = forms.IntegerField(
-        min_value=1, max_value=CABLE_BREAKOUT_MAX_POSITIONS, required=True, label="A positions"
-    )
     b_connectors = forms.IntegerField(
         min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="B connectors"
     )
-    b_positions = forms.IntegerField(
-        min_value=1, max_value=CABLE_BREAKOUT_MAX_POSITIONS, required=True, label="B positions"
+    total_lanes = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_LANES, required=True, label="Total lanes"
     )
 
     class Meta:
@@ -5981,9 +5978,8 @@ class CableBreakoutTypeForm(NautobotModelForm):
             "name",
             "description",
             "a_connectors",
-            "a_positions",
             "b_connectors",
-            "b_positions",
+            "total_lanes",
             "mapping",
             "is_shuffle",
             "strands_per_lane",
@@ -5998,8 +5994,11 @@ class CableBreakoutTypeForm(NautobotModelForm):
         mapping = self.data.get("mapping")
         if not mapping:
             # Try to read mapping from server-rendered table select fields (table mode).
-            lane_count = int(self.data.get("a_connectors", 1)) * int(self.data.get("a_positions", 1))
-            if lane_count == int(self.data.get("b_connectors", 1)) * int(self.data.get("b_positions", 1)):
+            try:
+                lane_count = int(self.data.get("total_lanes", 0))
+            except (ValueError, TypeError):
+                lane_count = 0
+            if lane_count > 0:
                 mapping = []
                 for lane_index in range(lane_count):
                     prefix = f"mapping_{lane_index}"

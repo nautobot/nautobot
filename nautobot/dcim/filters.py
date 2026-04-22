@@ -1463,9 +1463,8 @@ class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
             "id",
             "name",
             "a_connectors",
-            "a_positions",
             "b_connectors",
-            "b_positions",
+            "total_lanes",
             "is_shuffle",
             "strands_per_lane",
             "polarity_method",
@@ -1474,8 +1473,8 @@ class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
     def filter_is_breakout(self, queryset, name, value):
         if value:
-            return queryset.exclude(a_connectors=F("b_connectors"), a_positions=F("b_positions"))
-        return queryset.filter(a_connectors=F("b_connectors"), a_positions=F("b_positions"))
+            return queryset.exclude(a_connectors=F("b_connectors"))
+        return queryset.filter(a_connectors=F("b_connectors"))
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):

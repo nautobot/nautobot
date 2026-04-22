@@ -104,10 +104,9 @@ COMPATIBLE_TERMINATION_TYPES = {
     ],
 }
 
-# Maximum number of distinct connectors/positions in a breakout cable
+# Maximum number of distinct connectors/lanes in a breakout cable
 CABLE_BREAKOUT_MAX_CONNECTORS = 16
-CABLE_BREAKOUT_MAX_POSITIONS = 16
-CABLE_BREAKOUT_MAX_LANES = CABLE_BREAKOUT_MAX_CONNECTORS * CABLE_BREAKOUT_MAX_POSITIONS
+CABLE_BREAKOUT_MAX_LANES = 256
 
 BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
     {
@@ -127,9 +126,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "1x2 AOC Fanout": {
         "description": "1 trunk connector broken out to 2 individual legs",
         "a_connectors": 1,
-        "a_positions": 2,
         "b_connectors": 2,
-        "b_positions": 1,
+        "total_lanes": 2,
         "mapping": [
             {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
             {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
@@ -141,9 +139,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "1x4 AOC Fanout": {
         "description": "1 trunk connector broken out to 4 individual legs",
         "a_connectors": 1,
-        "a_positions": 4,
         "b_connectors": 4,
-        "b_positions": 1,
+        "total_lanes": 4,
         "mapping": [
             {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)
         ],
@@ -154,9 +151,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "1x8 AOC Fanout": {
         "description": "1 trunk connector broken out to 8 individual legs",
         "a_connectors": 1,
-        "a_positions": 8,
         "b_connectors": 8,
-        "b_positions": 1,
+        "total_lanes": 8,
         "mapping": [
             {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 9)
         ],
@@ -167,9 +163,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "2x4 AOC Fanout": {
         "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
         "a_connectors": 2,
-        "a_positions": 4,
         "b_connectors": 8,
-        "b_positions": 1,
+        "total_lanes": 8,
         "mapping": [
             {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
             {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
@@ -188,9 +183,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "MPO-8 → 4xLC Duplex": {
         "description": "MPO-8 trunk fanning out to 4 LC duplex connections",
         "a_connectors": 1,
-        "a_positions": 4,
         "b_connectors": 4,
-        "b_positions": 1,
+        "total_lanes": 4,
         "mapping": [
             {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)
         ],
@@ -201,9 +195,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "MPO-12 → 6xLC Duplex": {
         "description": "MPO-12 trunk fanning out to 6 LC duplex connections",
         "a_connectors": 1,
-        "a_positions": 6,
         "b_connectors": 6,
-        "b_positions": 1,
+        "total_lanes": 6,
         "mapping": [
             {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)
         ],
@@ -214,9 +207,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "MPO-24 → 12xLC Duplex": {
         "description": "MPO-24 trunk fanning out to 12 LC duplex connections",
         "a_connectors": 1,
-        "a_positions": 12,
         "b_connectors": 12,
-        "b_positions": 1,
+        "total_lanes": 12,
         "mapping": [
             {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1}
             for i in range(1, 13)
@@ -228,9 +220,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "MPO-24 → 2xMPO-12": {
         "description": "MPO-24 trunk split into 2 MPO-12 trunks (6 lanes each)",
         "a_connectors": 1,
-        "a_positions": 12,
         "b_connectors": 2,
-        "b_positions": 6,
+        "total_lanes": 12,
         "mapping": [
             # A1 positions 1-6 → B1 positions 1-6
             *[
@@ -250,9 +241,8 @@ DEFAULT_CABLE_BREAKOUT_TYPES = {
     "2xMPO-12 → 12xLC Duplex": {
         "description": "2 MPO-12 trunks (6 lanes each) fanning out to 12 LC duplex connections",
         "a_connectors": 2,
-        "a_positions": 6,
         "b_connectors": 12,
-        "b_positions": 1,
+        "total_lanes": 12,
         "mapping": [
             # A1 positions 1-6 → B connectors 1-6
             *[

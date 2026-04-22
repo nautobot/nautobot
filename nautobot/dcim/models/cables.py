@@ -15,7 +15,7 @@ from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices, CableLengthUnitChoices, CableTypeChoices
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
-    CABLE_BREAKOUT_MAX_POSITIONS,
+    CABLE_BREAKOUT_MAX_LANES,
     CABLE_TERMINATION_MODELS,
     COMPATIBLE_TERMINATION_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
@@ -61,11 +61,12 @@ logger = logging.getLogger(__name__)
 )
 class CableBreakoutType(PrimaryModel):
     """
-    A reusable definition of a cable's internal lane structure, describing connectors,
-    positions per connector, and the A-to-B lane mapping for breakout cables.
+    A reusable definition of a cable's internal lane structure, describing connectors on each side,
+    the total number of logical lanes, and the A-to-B lane mapping for breakout cables.
 
     By convention and by model enforcement, any breakout is A-to-B, not B-to-A; that is, `a_connectors` may never be
-    greater than `b_connectors`, though they may be equal.
+    greater than `b_connectors`, though they may be equal. `total_lanes` must be evenly divisible by both
+    `a_connectors` and `b_connectors`; the implied per-side positions per connector are derived from that division.
     """
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
@@ -73,22 +74,17 @@ class CableBreakoutType(PrimaryModel):
     a_connectors = models.PositiveSmallIntegerField(
         default=1,
         help_text="Number of physical connectors on the A side.",
-        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
-    )
-    a_positions = models.PositiveSmallIntegerField(
-        default=1,
-        help_text="Number of positions (lanes) per A-side connector.",
-        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_POSITIONS)],
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
     )
     b_connectors = models.PositiveSmallIntegerField(
         default=1,
         help_text="Number of physical connectors on the B side.",
-        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
     )
-    b_positions = models.PositiveSmallIntegerField(
+    total_lanes = models.PositiveSmallIntegerField(
         default=1,
-        help_text="Number of positions (lanes) per B-side connector.",
-        validators=[MaxValueValidator(CABLE_BREAKOUT_MAX_POSITIONS)],
+        help_text="Total number of logical lanes in the breakout, distributed evenly across connectors on each side.",
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_LANES)],
     )
     mapping = models.JSONField(
         help_text="A→B lane mapping as a JSON array of objects with keys: "
@@ -120,9 +116,18 @@ class CableBreakoutType(PrimaryModel):
         return self.name
 
     @property
-    def total_lanes(self):
-        """Total number of discrete lanes defined in the mapping."""
-        return self.a_connectors * self.a_positions  # == self.b_connectors * self.b_positions
+    def a_positions(self):
+        """Number of positions per A-side connector, derived as total_lanes // a_connectors."""
+        if not self.a_connectors:
+            return 0
+        return self.total_lanes // self.a_connectors
+
+    @property
+    def b_positions(self):
+        """Number of positions per B-side connector, derived as total_lanes // b_connectors."""
+        if not self.b_connectors:
+            return 0
+        return self.total_lanes // self.b_connectors
 
     @property
     def total_strands(self):
@@ -206,8 +211,14 @@ class CableBreakoutType(PrimaryModel):
                 {"b_connectors": "Wrong breakout direction, a_connectors must not exceed b_connectors"}
             )
 
-        if self.a_connectors * self.a_positions != self.b_connectors * self.b_positions:
-            raise ValidationError({"__all__": "Number of lanes (connectors × positions) must match on A and B sides"})  # noqa: RUF001
+        if self.total_lanes % self.a_connectors != 0:
+            raise ValidationError(
+                {"total_lanes": f"total_lanes must be evenly divisible by a_connectors ({self.a_connectors})."}
+            )
+        if self.total_lanes % self.b_connectors != 0:
+            raise ValidationError(
+                {"total_lanes": f"total_lanes must be evenly divisible by b_connectors ({self.b_connectors})."}
+            )
 
         if not self.mapping:
             self.mapping = self.autogenerate_mapping()
@@ -241,9 +252,7 @@ class CableBreakoutType(PrimaryModel):
 
         if len(self.mapping) != self.total_lanes:
             raise ValidationError(
-                {
-                    "mapping": f"Expected {self.total_lanes} (connectors × positions) lane definitions, but got {len(self.mapping)}."  # noqa: RUF001
-                }
+                {"mapping": f"Expected {self.total_lanes} lane definitions, but got {len(self.mapping)}."}
             )
 
         required_keys = {"a_connector", "a_position", "b_connector", "b_position"}

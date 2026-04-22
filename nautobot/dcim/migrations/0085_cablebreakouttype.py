@@ -37,25 +37,31 @@ class Migration(migrations.Migration):
                 (
                     "a_connectors",
                     models.PositiveSmallIntegerField(
-                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
-                    ),
-                ),
-                (
-                    "a_positions",
-                    models.PositiveSmallIntegerField(
-                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(16),
+                        ],
                     ),
                 ),
                 (
                     "b_connectors",
                     models.PositiveSmallIntegerField(
-                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(16),
+                        ],
                     ),
                 ),
                 (
-                    "b_positions",
+                    "total_lanes",
                     models.PositiveSmallIntegerField(
-                        default=1, validators=[django.core.validators.MaxValueValidator(16)]
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(256),
+                        ],
                     ),
                 ),
                 ("mapping", models.JSONField()),

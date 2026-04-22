@@ -210,8 +210,9 @@ class BreakoutDiagramSVG:
             )
 
             label = f"A{ac}"
-            if self.cable_breakout_type.a_positions > 1:
-                label += f" ({self.cable_breakout_type.a_positions})"
+            a_positions = self.cable_breakout_type.a_positions
+            if a_positions > 1:
+                label += f" ({a_positions})"
 
             group.add(
                 dwg.text(
@@ -251,8 +252,9 @@ class BreakoutDiagramSVG:
             )
 
             label = f"B{bc}"
-            if self.cable_breakout_type.b_positions > 1:
-                label += f" ({self.cable_breakout_type.b_positions})"
+            b_positions = self.cable_breakout_type.b_positions
+            if b_positions > 1:
+                label += f" ({b_positions})"
 
             group.add(
                 dwg.text(
