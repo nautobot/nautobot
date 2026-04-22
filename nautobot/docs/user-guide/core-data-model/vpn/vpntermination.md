@@ -1,5 +1,8 @@
 # VPN Termination
 
++++ 3.1.0
+    The VPN Termination model was added to support overlay and service-style VPN use cases.
+
 VPN Terminations associate a [VPN](vpn.md) service with exactly one local attachment point:
 
 - a VLAN
@@ -10,6 +13,17 @@ This model is primarily intended for overlay and service-style VPN use cases whe
 
 For example, a VXLAN-based service can store its service-wide attributes on the `VPN` record, while individual `VPNTermination` records map that service to the relevant VLANs, switch interfaces, or VM interfaces that participate in it.
 
+![VPN Termination List View](../../../media/models/vpn_models_vpntermination_list_light.png#only-light){ .on-glb }
+![VPN Termination List View](../../../media/models/vpn_models_vpntermination_list_dark.png#only-dark){ .on-glb }
+[//]: # ("`/vpn/vpn-terminations/`")
+
+![VPN Termination Detail View](../../../media/models/vpn_models_vpntermination_detail_light.png#only-light){ .on-glb }
+![VPN Termination Detail View](../../../media/models/vpn_models_vpntermination_detail_dark.png#only-dark){ .on-glb }
+[//]: # ("`/vpn/vpn-terminations/<id>/`")
+
+!!! note
+    VPN Terminations model overlay and service-style VPN attachment points (e.g. VXLAN, VPLS, E-Line). For tunnel-based VPN endpoints (e.g. IPSec, GRE, WireGuard), see [VPN Tunnel Endpoint](vpntunnelendpoint.md) instead.
+
 ## Validation Rules
 
 Each VPN Termination must satisfy the following rules:
@@ -18,25 +32,24 @@ Each VPN Termination must satisfy the following rules:
 - A given VLAN can belong to only one VPN Termination.
 - A given device interface can belong to only one VPN Termination.
 - A given VM interface can belong to only one VPN Termination.
-- VPNs whose service type is point-to-point are limited to two terminations.
+- VPNs whose [service type](vpn.md#service-type) is point-to-point (VPWS, EVPN VPWS, EPL, EVPL) are limited to two terminations.
 
 These rules help keep the attachment model unambiguous and make it clear which local object is bound to which VPN service.
 
-## Relationship to VPN
+## Contextual UI Information
 
-The [VPN](vpn.md) object stores service-wide data such as:
+VPN Termination data is accessible from the following locations in the Nautobot UI:
 
-- the service identifier
-- the service type
-- status
-- optional free-form service metadata
+- Under a VPN's detail view, in the **Terminations** table panel
+- As a standalone list view under **VPN > VPN Terminations**
 
-`VPNTermination` stores the local binding of that service to a single object in Nautobot. This separation keeps shared service attributes in one place while still allowing the service to be attached at multiple points in the infrastructure.
-
-## Indicative Usage
+## Use Cases
 
 Common examples include:
 
 - mapping a VXLAN or VXLAN-EVPN service to a VLAN
 - associating a service directly with a routed or switched device interface
 - associating a service with a VM interface in a virtualized environment
+- modeling a point-to-point E-Line (EPL/EVPL) service between exactly two device interfaces
+
+For detailed examples with diagrams, see [Use Cases](index.md#use-cases).
