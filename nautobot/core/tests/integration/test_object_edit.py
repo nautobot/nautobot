@@ -43,6 +43,14 @@ class ObjectEditTestCase(SeleniumTestCase):
             self.browser.find_by_xpath(tenant_field_xpath).value, self.browser.find_by_xpath(tenant_option_xpath).value
         )
 
+        # Assert that successful object creation Django message has been displayed
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(
+                f"//div[@id='header_messages']//div[contains(@class, 'alert alert-success') and normalize-space()='Created tenant {tenant_name}']",
+                wait_time=10,
+            )
+        )
+
     def test_embedded_create_with_prefilled_content_type(self):
         self.browser.visit(self.live_server_url)
         self.click_navbar_entry("Organization", "Locations")
@@ -109,7 +117,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         # Assert that newly created tenant record has been assigned to the related input from which it originated
         tenant_field_xpath = f"{form_xpath}//select[@name='tenant']"
         tenant_option_xpath = f"{tenant_field_xpath}/option[normalize-space()='{tenant_name}']"
-        self.assertTrue(self.browser.is_element_present_by_xpath(tenant_option_xpath, wait_time=10))
+        self.assertTrue(self.browser.is_element_present_by_xpath(tenant_option_xpath, wait_time=20))
         self.assertEqual(
             self.browser.find_by_xpath(tenant_field_xpath).value, self.browser.find_by_xpath(tenant_option_xpath).value
         )

@@ -120,12 +120,14 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_MULTISELECT = "multi-select"
     TYPE_JSON = "json"
     TYPE_MARKDOWN = "markdown"
+    TYPE_DATETIME = "datetime"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
         (TYPE_INTEGER, "Integer"),
         (TYPE_BOOLEAN, "Boolean (true/false)"),
         (TYPE_DATE, "Date"),
+        (TYPE_DATETIME, "Date/time"),
         (TYPE_URL, "URL"),
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
@@ -289,16 +291,21 @@ class JobResultStatusChoices(ChoiceSet):
     #: Set of all possible states.
     ALL_STATES = states.ALL_STATES
     #: Set of states meaning the task returned an exception.
+    # {RETRY, FAILURE, REVOKED}
     EXCEPTION_STATES = states.EXCEPTION_STATES
     #: State precedence.
     #: None represents the precedence of an unknown state.
     #: Lower index means higher precedence.
+    # [SUCCESS, FAILURE, None, REVOKED, STARTED, RECEIVED, REJECTED, RETRY, PENDING]
     PRECEDENCE = states.PRECEDENCE
     #: Set of exception states that should propagate exceptions to the user.
+    # {FAILURE, REVOKED}
     PROPAGATE_STATES = states.PROPAGATE_STATES
     #: Set of states meaning the task result is ready (has been executed).
+    # {SUCCESS, FAILURE, REVOKED}
     READY_STATES = states.READY_STATES
     #: Set of states meaning the task result is not ready (hasn't been executed).
+    # {PENDING, RECEIVED, STARTED, REJECTED, RETRY}
     UNREADY_STATES = states.UNREADY_STATES
 
     @staticmethod
@@ -373,6 +380,29 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 
 
 #
+# ScheduledJob
+#
+
+
+class ScheduledJobStateChoices(ChoiceSet):
+    ACTIVE = "active"
+    PENDING = "pending"
+    DENIED = "denied"
+    CANCELED = "canceled"
+    COMPLETED = "completed"
+    ERRORED = "errored"
+
+    CHOICES = (
+        (ACTIVE, "Active"),
+        (PENDING, "Pending Approval"),
+        (DENIED, "Approval Denied"),
+        (CANCELED, "Approval Canceled"),
+        (COMPLETED, "Completed"),
+        (ERRORED, "Errored"),
+    )
+
+
+#
 # Metadata
 #
 
@@ -386,14 +416,12 @@ class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
 
     TYPE_CONTACT_TEAM = "contact-or-team"
     # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-    TYPE_DATETIME = "datetime"
     TYPE_FLOAT = "float"
 
     CHOICES = (
         *CustomFieldTypeChoices.CHOICES,
         (TYPE_CONTACT_TEAM, "Contact or Team"),
         # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-        (TYPE_DATETIME, "Date/time"),
         (TYPE_FLOAT, "Floating point number"),
     )
 

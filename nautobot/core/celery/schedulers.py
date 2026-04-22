@@ -11,7 +11,7 @@ from django.conf import settings
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
-from nautobot.extras.choices import JobQueueTypeChoices
+from nautobot.extras.choices import JobQueueTypeChoices, ScheduledJobStateChoices
 from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
 from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
@@ -23,6 +23,18 @@ class NautobotScheduleEntry(ModelEntry):
     Nautobot variant of the django-celery-beat ModelEntry which uses the
     nautobot.extras.models.ScheduledJob model
     """
+
+    def _disable(self, model):
+        """
+        Override of the parent ModelEntry._disable() method.
+
+        In addition to disabling the scheduled job (via the parent implementation),
+        sets the job's state to ERRORED to reflect that the schedule was disabled
+        due to an error condition.
+        """
+        super()._disable(model)
+        model.state = ScheduledJobStateChoices.ERRORED
+        model.save(update_fields=["state"])
 
     def __init__(self, model, app=None):  # pylint:disable=super-init-not-called  # we must copy-and-paste from super
         """Initialize the model entry."""
@@ -87,12 +99,18 @@ class NautobotScheduleEntry(ModelEntry):
 
         if not model.last_run_at:
             model.last_run_at = self._default_now()
-            # if last_run_at is not set and
-            # model.start_time last_run_at should be in way past.
-            # This will trigger the job to run at start_time
-            # and avoid the heap block.
             if model.start_time:
-                model.last_run_at = model.last_run_at - timedelta(days=365 * 30)
+                # Set last_run_at to one minute before start_time so that celery's crontab
+                # remaining_delta (which uses strict less-than: last_run_at.minute < max(self.minute))
+                # correctly identifies the first crontab match at/after start_time as due.
+                model.last_run_at = model.start_time - timedelta(minutes=1)
+                # This replaces the upstream 30-year-ago hack from django-celery-beat PR #636,
+                # which was intended to avoid a "heap block" issue with interval-based schedules.
+                # That fix doesn't apply to Nautobot since we use DatabaseScheduler (max_interval=5s)
+                # and convert all schedules to crontab (ScheduledJob.to_cron()).
+                # The 30-year trick caused crontab-scheduled jobs to run once immediately (ASAP)
+                # before following their crontab schedule.
+                # See: https://github.com/nautobot/nautobot/issues/8316
 
         self.last_run_at = model.last_run_at
 
@@ -134,13 +152,15 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
 
                 # Distinguish between Celery and Kubernetes job queues
                 if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                    celery_kwargs = dict(entry.options)
+                    celery_kwargs.setdefault("queue", job_queue.name)
                     job_result = JobResult.objects.create(
                         name=scheduled_job.job_model.name,
                         job_model=scheduled_job.job_model,
                         scheduled_job=scheduled_job,
                         user=scheduled_job.user,
                         task_name=scheduled_job.job_model.class_path,
-                        celery_kwargs=entry.options,
+                        celery_kwargs=celery_kwargs,
                     )
                     job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
                     # Return an AsyncResult object to mimic the behavior of Celery tasks after the job is finished by Kubernetes Job Pod.

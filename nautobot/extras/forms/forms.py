@@ -1,7 +1,7 @@
 import inspect
+import json
 import logging
 
-from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -30,6 +30,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
@@ -54,6 +55,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
@@ -103,8 +105,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.signals import change_context_state
-from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -205,7 +205,10 @@ __all__ = (
     "NoteFilterForm",
     "NoteForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataBulkEditForm",
+    "ObjectMetadataCreateForm",
     "ObjectMetadataFilterForm",
+    "ObjectMetadataForm",
     "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
@@ -331,6 +334,8 @@ ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
     model=ApprovalWorkflowStageDefinition,
     exclude=("_custom_field_data",),
     extra=5,
+    min_num=1,
+    validate_min=True,
     widgets={
         "name": forms.TextInput(attrs={"class": "form-control"}),
         "sequence": forms.NumberInput(attrs={"class": "form-control"}),
@@ -869,36 +874,27 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
         )
 
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(queryset)
-            context["context_detail"] = "bulk delete custom field data"
-        tasks = []
-        for obj in queryset:
-            pk_set = set(obj.content_types.values_list("pk", flat=True))
-            if pk_set:
-                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
-        return tasks
-
     def perform_pre_delete(self, queryset):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
+        from nautobot.core.jobs import DeleteCustomFieldData
+        from nautobot.extras.customfields import enqueue_custom_field_job
+
         if not get_worker_count():
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
-        tasks = self.construct_custom_field_delete_tasks(queryset)
-        if tasks:
-            # Executing the tasks in the background sequentially using chain() aligns with how a single
-            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-            # to be active and comes with extra performance penalty.
-            chain(*tasks).apply_async()
+
+        field_specs = [
+            {
+                "field_key": obj.key,
+                "content_types": [str(pk) for pk in obj.content_types.values_list("pk", flat=True)],
+            }
+            for obj in queryset
+            if obj.content_types.exists()
+        ]
+        if field_specs:
+            enqueue_custom_field_job(DeleteCustomFieldData, field_specs=json.dumps(field_specs))
 
 
 #
@@ -1042,6 +1038,9 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     content_type = MultipleContentTypeField(
         feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
+    )
+    group_type = forms.MultipleChoiceField(
+        choices=DynamicGroupTypeChoices, required=False, widget=StaticSelect2Multiple()
     )
     tags = TagFilterField(model)
 
@@ -1420,6 +1419,8 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
+    # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
+
 
 class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(
@@ -1485,10 +1486,10 @@ class JobEditForm(NautobotModelForm):
             default_job_queue = cleaned_data["default_job_queue"]
             # Include the default Job Queue in the Job Queues selection
             if not cleaned_data.get("job_queues_override", False):
-                names = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                names = list(getattr(job_class, "task_queues", [])) or [settings.CELERY_TASK_DEFAULT_QUEUE]
             else:
                 names = list(cleaned_data["job_queues"].values_list("name", flat=True))
-            names += [default_job_queue]
+            names += [default_job_queue.name]
             cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
 
         return cleaned_data
@@ -1956,6 +1957,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="name",
     )
+    has_job_console_entries = forms.NullBooleanField(
+        required=False,
+        label="Has Job Console Entries",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
 
 
 class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
@@ -1970,6 +1976,11 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+    state = forms.MultipleChoiceField(
+        choices=ScheduledJobStateChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
 
 
 #
@@ -2101,6 +2112,61 @@ class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         nullable_fields = [
             "description",
         ]
+
+
+class ObjectMetadataBulkEditForm(BootstrapMixin, BulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=ObjectMetadata.objects.all(), widget=forms.MultipleHiddenInput)
+    contact = DynamicModelChoiceField(queryset=Contact.objects.all(), required=False)
+    team = DynamicModelChoiceField(queryset=Team.objects.all(), required=False)
+
+    class Meta:
+        nullable_fields = ["contact", "team"]
+
+
+class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
+    scoped_fields = JSONArrayFormField(
+        required=False,
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        help_text="List of scoped fields, only direct fields on the model",
+    )
+    _value = forms.JSONField(
+        required=False,
+        help_text=(
+            'Format depends on the selected metadata type (JSON-encoded value; e.g. "text", 42, true, ["a", "b"]).'
+        ),
+    )
+
+    class Meta:
+        model = ObjectMetadata
+        fields = ["contact", "team", "scoped_fields", "_value"]
+
+
+class ObjectMetadataCreateForm(ObjectMetadataForm):
+    assigned_object_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        required=True,
+    )
+
+    class Meta(ObjectMetadataForm.Meta):
+        fields = [
+            "contact",
+            "team",
+            "metadata_type",
+            "assigned_object_type",
+            "assigned_object_id",
+            "scoped_fields",
+            "_value",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        initial = kwargs.get("initial", {})
+        if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
+            self.fields["assigned_object_type"].disabled = True
+            self.fields["assigned_object_id"].disabled = True
+            self.fields["metadata_type"].queryset = MetadataType.objects.filter(
+                content_types=initial["assigned_object_type"]
+            )
 
 
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):

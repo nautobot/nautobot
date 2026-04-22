@@ -130,13 +130,14 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         # Navigate to ConfigContextSchema Validation tab
         self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
         self.switch_tab("Validation")
+        xpath_query = "//div[@id[contains(., 'validation')]]//tbody/tr"
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
-            self.assertEqual(
+        for row in self.browser.find_by_xpath(xpath_query):
+            self.assertHTMLEqual(
                 row.find_by_tag("td")[-2].html,
                 '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
             )
@@ -145,53 +146,60 @@ class ConfigContextSchemaTestCase(SeleniumTestCase, ObjectDetailsMixin, ObjectsL
         self.switch_tab("Config Context")
         self.click_button("#edit-button")
         # Change property "a" to be type string
-        self.fill_input(
+        self.browser.fill(
             "data_schema",
             '{"type": "object", "properties": {"a": {"type": "string"}, "b": {"type": "integer"}, "c": {"type": "integer"}}, "additionalProperties": false}',
         )
-        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
+        self.browser.find_by_css("button[type='submit']").click()
 
         # Navigate to ConfigContextSchema Validation tab
         self.switch_tab("Validation")
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
-        for row in self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr"):
-            self.assertEqual(
+        for row in self.browser.find_by_xpath(xpath_query):
+            self.assertHTMLEqual(
                 row.find_by_tag("td")[-2].html,
-                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+                '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
             )
 
         # Edit the device local context data and redirect back to the validation tab
-        self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-1].find_by_tag(
-            "button"
-        ).click()
-        menu = self.browser.find_by_xpath("//ul[contains(@class, 'dropdown-menu') and contains(@class, 'show')]")
-        menu.is_visible(wait_time=5)
-        menu.find_by_tag("a").click()
+        device_row = self.browser.find_by_xpath(xpath_query)[1]
+        actions_td = device_row.find_by_tag("td")[-1]
+        actions_td.find_by_css("button.dropdown-toggle").click()
 
+        # Search globally after dropdown opens (Bootstrap may render menu outside actions_td)
+        edit_link = self.browser.find_by_xpath(
+            "//ul[contains(@class,'dropdown-menu') and contains(@class,'show')]//a[contains(@href, '/edit/')]",
+            wait_time=2,
+        )
+        edit_link.click()
         # Update the property "a" to be a string
-        self.fill_input("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
-        self.browser.find_by_xpath("//button[normalize-space()='Update']").click()
+        self.browser.fill("local_config_context_data", '{"a": "foo", "b": 456, "c": 777}')
+        self.browser.find_by_css("button[type='submit']").click()
+
+        # Navigate back to the schema validation tab after editing the device
+        self.browser.visit(f"{self.live_server_url}/extras/config-context-schemas/{schema.pk}/")
+        self.switch_tab("Validation")
 
         # Assert Validation states
         self.assertEqual(
-            len(self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")), 3
+            len(self.browser.find_by_xpath(xpath_query)), 3
         )  # 3 rows (config context, device, virtual machine)
         # Config context still fails
-        self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[0].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+        self.assertHTMLEqual(
+            self.browser.find_by_xpath(xpath_query)[0].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )
         # Device now passes
-        self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[1].find_by_tag("td")[-2].html,
+        self.assertHTMLEqual(
+            self.browser.find_by_xpath(xpath_query)[1].find_by_tag("td")[-2].html,
             '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>',
         )
         # Virtual machine still fails
-        self.assertEqual(
-            self.browser.find_by_xpath("//div[@class[contains(., 'card')]]//tbody/tr")[2].find_by_tag("td")[-2].html,
-            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger">123 is not of type \'string\'</span>',
+        self.assertHTMLEqual(
+            self.browser.find_by_xpath(xpath_query)[2].find_by_tag("td")[-2].html,
+            '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span><span class="text-danger"> 123 is not of type \'string\'</span>',
         )

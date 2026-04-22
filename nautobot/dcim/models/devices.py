@@ -29,7 +29,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, MODULE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
@@ -359,15 +359,15 @@ class DeviceType(PrimaryModel):
                     }
                 )
 
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
+        if not self.is_parent_device and self.device_bay_templates.count():
             raise ValidationError(
                 {
-                    "subdevice_role": "Must delete all device bay templates associated with this device before "
+                    "subdevice_role": "Must delete all device bay templates associated with this device type before "
                     "declassifying it as a parent device."
                 }
             )
 
-        if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
+        if self.u_height and self.is_child_device:
             raise ValidationError({"u_height": "Child device types must be 0U."})
 
     def save(self, *args, **kwargs):
@@ -398,11 +398,17 @@ class DeviceType(PrimaryModel):
 
     @property
     def is_parent_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
+        return self.subdevice_role in (
+            SubdeviceRoleChoices.ROLE_PARENT,
+            SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
 
     @property
     def is_child_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
+        return self.subdevice_role in (
+            SubdeviceRoleChoices.ROLE_CHILD,
+            SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
 
 
 #
@@ -926,9 +932,13 @@ class Device(PrimaryModel, ConfigContextModel):
         if is_new:
             self.create_components()
 
-        # Update Location and Rack assignment for any child Devices
-        devices = Device.objects.filter(parent_bay__device=self)
-        for device in devices:
+        # Update Location and Rack assignment for all nested descendant Devices.
+        # We recurse from direct children only using get_children(), and not all_nested_devices,
+        # so each nested device is saved once. Iterating all_nested_devices and saving each would save
+        # grandchildren twice: once from parent's save(), once when the root loop reaches them.
+        # We keep full save() per device (signals, changelog) rather than bulk_update so that
+        # propagation remains visible in history and webhooks.
+        for device in self.get_children():
             save_child_device = False
             if device.location != self.location:
                 device.location = self.location
@@ -959,6 +969,8 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
+        cache_key = construct_cache_key(self, method_name="has_device_bays", branch_aware=True)
+        cache.delete(cache_key)
         cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
         cache.delete(cache_key)
         return instantiated_components
@@ -1058,6 +1070,18 @@ class Device(PrimaryModel, ConfigContextModel):
         return Device.objects.filter(parent_bay__device=self.pk)
 
     @property
+    def has_device_bays(self) -> bool:
+        """
+        Cacheable property for determining whether this Device has any DeviceBays, and therefore may contain child Devices.
+        """
+        cache_key = construct_cache_key(self, method_name="has_device_bays", branch_aware=True)
+        device_bays_exists = cache.get(cache_key)
+        if device_bays_exists is None:
+            device_bays_exists = self.device_bays.exists()
+            cache.set(cache_key, device_bays_exists, timeout=5)
+        return device_bays_exists
+
+    @property
     def has_module_bays(self) -> bool:
         """
         Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
@@ -1086,6 +1110,25 @@ class Device(PrimaryModel, ConfigContextModel):
         for level in range(recursion_depth):
             recursive_query = "parent_module_bay__parent_module__" * level
             query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+        return qs.filter(query)
+
+    @property
+    def all_nested_devices(self):
+        """
+        Return all nested child Devices installed in DeviceBays within this Device.
+        """
+        # Supports Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device
+        # This query looks for devices that are installed in a device_bay and attached to this device
+        # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
+        recursion_depth = DEVICE_RECURSION_DEPTH_LIMIT
+        qs = Device.objects.all()
+        if not self.has_device_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
+        query = Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_bay__device__" * level
+            query = query | Q(**{f"{recursive_query}parent_bay__device": self})
         return qs.filter(query)
 
     @property
@@ -1757,6 +1800,8 @@ class ModuleType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    front_image = models.ImageField(upload_to="moduletype-images", blank=True)
+    rear_image = models.ImageField(upload_to="moduletype-images", blank=True)
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -1772,6 +1817,64 @@ class ModuleType(PrimaryModel):
 
     def __str__(self):
         return self.model
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Save references to the original front/rear images for newly-created instances.
+        # For instances loaded from the database, from_db() overrides these after __init__
+        # completes (Django sets _state.adding=False after __init__, so present_in_database
+        # is always False here for DB-loaded objects).
+        self._original_front_image = None
+        self._original_rear_image = None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Capture original image values for instances loaded from the database.
+
+        __init__ cannot do this reliably because Django sets _state.adding=False
+        only after __init__ completes, making present_in_database always False
+        during __init__ for DB-loaded instances.
+        """
+        instance: "ModuleType" = super().from_db(db, field_names, values)
+        # Access __dict__ directly instead of the field descriptor to avoid triggering
+        # refresh_from_db() for deferred fields, which would call from_db() again and
+        # cause infinite recursion. Construct ImageFieldFile manually so that save()
+        # can call .delete() on the original if the image is replaced.
+        for attr in ("front_image", "rear_image"):
+            raw_name = instance.__dict__.get(attr) or None
+            field = cls._meta.get_field(attr)
+            setattr(
+                instance,
+                f"_original_{attr}",
+                field.attr_class(instance, field, raw_name) if raw_name else None,
+            )
+        return instance
+
+    def save(self, *args, **kwargs):
+        original_front_image = self._original_front_image
+        original_rear_image = self._original_rear_image
+
+        super().save(*args, **kwargs)
+
+        # Delete any previously uploaded image files that are no longer in use
+        if original_front_image and self.front_image != original_front_image:
+            original_front_image.delete(save=False)
+        if original_rear_image and self.rear_image != original_rear_image:
+            original_rear_image.delete(save=False)
+
+        # Update tracked originals to current values for subsequent saves
+        self._original_front_image = self.front_image
+        self._original_rear_image = self.rear_image
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+
+        # Delete any uploaded image files
+        if self.front_image:
+            self.front_image.delete(save=False)
+        if self.rear_image:
+            self.rear_image.delete(save=False)
 
     def to_yaml(self):
         data = OrderedDict(

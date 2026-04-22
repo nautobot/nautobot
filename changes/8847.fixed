@@ -1,0 +1,1 @@
+Fixed an exception in `test_filters_generic` when an App didn't explicitly provide default Role and Status records for ContactAssociations.

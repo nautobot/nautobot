@@ -1,0 +1,1 @@
+Added optional `refresh_on_close_if_done` flag to `_JobModalButton`.

@@ -10,6 +10,7 @@ from nautobot.core.views import (
     get_file_with_authorization,
     HomeView,
     MediaView,
+    MessagesView,
     NautobotMetricsView,
     NautobotMetricsViewAuth,
     RenderJinjaView,
@@ -32,6 +33,7 @@ urlpatterns = [
     # Base views
     path("", HomeView.as_view(), name="home"),
     path("about/", AboutView.as_view(), name="about"),
+    path("messages/", MessagesView.as_view(), name="messages"),
     path("search/", SearchView.as_view(), name="search"),
     path("search/<str:content_type>/", SearchContentTypeView.as_view(), name="search_content_type"),
     # Login/logout
@@ -97,9 +99,11 @@ urlpatterns = [
     # The response is conditional as opposed to wrapping the path() call in an if statement to be able to test the setting with current test setup
     path(
         "robots.txt",
-        lambda x: HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain")
-        if settings.PUBLISH_ROBOTS_TXT
-        else HttpResponseNotFound(),
+        lambda x: (
+            HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain")
+            if settings.PUBLISH_ROBOTS_TXT
+            else HttpResponseNotFound()
+        ),
         name="robots_txt",
     ),
 ]

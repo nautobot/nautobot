@@ -1,6 +1,7 @@
 from functools import partial
+import json
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from urllib.parse import parse_qs
 
 from django.conf import settings
@@ -22,8 +23,8 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
-from django.views.generic import View
 from django_tables2 import RequestConfig
+from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -36,8 +37,8 @@ from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
-from nautobot.core.tables import ButtonsColumn
 from nautobot.core.templatetags import helpers
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
@@ -75,7 +76,6 @@ from nautobot.core.views.mixins import (
     ObjectEditViewMixin,
     ObjectListViewMixin,
     ObjectNotesViewMixin,
-    ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
@@ -94,11 +94,13 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
     get_base_template,
+    get_kubernetes_job_manifest,
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
@@ -235,9 +237,44 @@ class ApprovalWorkflowDefinitionUIViewSet(NautobotUIViewSet):
         if stages.is_valid():
             stages.save()
         else:
+            non_form_errors = stages.non_form_errors()
+            # this error comming from https://docs.djangoproject.com/en/6.0/topics/forms/formsets/#validate-min
+            if "Please submit at least 1 form." in non_form_errors:
+                raise ValidationError("At least one Approval Workflow Stage Definition is required.")
             raise ValidationError(stages.errors)
 
         return obj
+
+    def _handle_validation_error(self, e):
+        """
+        Override to handle ValidationError raised during delete operations
+        from pre_delete signals (e.g. pending workflows).
+
+        Catches ValidationError with specific error code (PENDING_WORKFLOWS_ERROR_CODE)
+        raised by signals.
+        Displays formatted HTML error message with link to the object's workflow.
+        For other errors, delegates to parent implementation.
+        """
+        if isinstance(e, ValidationError) and e.code == PENDING_WORKFLOWS_ERROR_CODE:
+            if self.action == "update":
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Stage Definition(s). "
+                    "There are still pending Approval <a href='{}'>Workflows</a> including this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.get_absolute_url(),
+                )
+            else:
+                cannot_delete_msg = format_html(
+                    "Cannot delete Approval Workflow Definition '{}'. "
+                    "There are still pending Approval <a href='{}'>Workflows</a> using this definition. "
+                    "You must approve or cancel those workflows before deleting this definition.",
+                    self.obj.name,
+                    self.obj.get_absolute_url(),
+                )
+            messages.error(self.request, cannot_delete_msg)
+            self.has_error = True
+        else:
+            super()._handle_validation_error(e)
 
 
 class ApprovalWorkflowStageDefinitionUIViewSet(NautobotUIViewSet):
@@ -978,6 +1015,17 @@ class ObjectConfigContextView(generic.ObjectView):
 # have an associated owner, such as a Git repository
 
 
+class ConfigContextSchemaDataPanel(object_detail.Panel):
+    def get_extra_context(self, context: Dict[str, Any]):
+        extra = super().get_extra_context(context)
+        obj = get_obj_from_context(context)
+
+        extra["data"] = obj.data_schema
+        extra["format"] = context.get("data_format", "json")
+
+        return extra
+
+
 class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.ConfigContextSchemaBulkEditForm
     filterset_class = filters.ConfigContextSchemaFilterSet
@@ -986,6 +1034,125 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
     queryset = ConfigContextSchema.objects.all()
     serializer_class = serializers.ConfigContextSchemaSerializer
     table_class = tables.ConfigContextSchemaTable
+
+    def get_object_detail_content(self, instance: ConfigContextSchema):
+        """Dynamically construct panels with validation logic using the instance's data_schema."""
+
+        # Shared panels used in both cases
+        panels_common = (
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=[
+                    "data_schema",
+                    "owner_content_type",
+                    "owner_object_id",
+                ],
+                hide_if_unset=["owner"],
+            ),
+            ConfigContextSchemaDataPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Data Schema",
+                header_extra_content_template_path="extras/inc/configcontext_format.html",
+                body_content_template_path="extras/inc/json_data.html",
+            ),
+        )
+
+        # Bail out early if no usable schema
+        if not isinstance(instance.data_schema, dict):
+            return object_detail.ObjectDetailContent(panels=panels_common)
+
+        try:
+            Draft7Validator.check_schema(instance.data_schema)
+            validator = Draft7Validator(instance.data_schema)
+        except SchemaError:
+            validator = None
+
+        validation_panels = []
+        if validator is None:
+            validation_panels.append(
+                object_detail.TextPanel(
+                    label="",
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=50,
+                    context_field="invalid_schema_message",
+                    render_as=object_detail.TextPanel.RenderOptions.PLAINTEXT,
+                )
+            )
+        validation_panels.extend(
+            [
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=100,
+                    table_title="Config Contexts",
+                    table_class=tables.ConfigContextTable,
+                    table_filter="config_context_schema",
+                    related_field_name="schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
+                        ),
+                    ],
+                    include_columns=["validation_state", "actions"],
+                ),
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=200,
+                    table_title="Devices",
+                    table_class=DeviceTable,
+                    table_filter="local_config_context_schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(
+                                validator, "local_config_context_data", empty_values=()
+                            ),
+                        ),
+                    ],
+                    include_columns=["validation_state"],
+                ),
+                object_detail.ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=300,
+                    table_title="Virtual Machines",
+                    table_class=VirtualMachineTable,
+                    table_filter="local_config_context_schema",
+                    tab_id="validation",
+                    add_button_route=None,
+                    extra_columns=[
+                        (
+                            "validation_state",
+                            tables.ConfigContextSchemaValidationStateColumn(
+                                validator, "local_config_context_data", empty_values=()
+                            ),
+                        ),
+                    ],
+                    include_columns=["validation_state"],
+                ),
+            ]
+        )
+
+        extra_tabs = (
+            object_detail.DistinctViewTab(
+                weight=300,
+                tab_id="validation",
+                label="Validation",
+                url_name="extras:configcontextschema_validation",
+                panels=tuple(validation_panels),
+            ),
+        )
+
+        return object_detail.ObjectDetailContent(
+            panels=panels_common,
+            extra_tabs=extra_tabs,
+        )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -999,90 +1166,19 @@ class ConfigContextSchemaUIViewSet(NautobotUIViewSet):
         else:
             context["data_format"] = "json"
 
+        if instance:
+            context["object_detail_content"] = self.get_object_detail_content(instance)
+            if isinstance(instance.data_schema, dict):
+                try:
+                    Draft7Validator.check_schema(instance.data_schema)
+                except SchemaError:
+                    context["invalid_schema_message"] = "No schema available"
+
         return context
 
-
-class ConfigContextSchemaObjectValidationView(generic.ObjectView):
-    """
-    This view renders a detail tab that shows tables of objects that utilize the given schema object
-    and their validation state.
-    """
-
-    queryset = ConfigContextSchema.objects.all()
-    template_name = "extras/configcontextschema_validation.html"
-
-    def get_extra_context(self, request, instance):
-        """
-        Reuse the model tables for config context, device, and virtual machine but inject
-        the `ConfigContextSchemaValidationStateColumn` and an object edit action button.
-        """
-        # Prep the validator with the schema so it can be reused for all records
-        validator = Draft7Validator(instance.data_schema)
-
-        # Config context table
-        config_context_table = tables.ConfigContextTable(
-            data=instance.config_contexts.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(validator, "data", empty_values=()),
-                ),
-                ("actions", ButtonsColumn(model=ConfigContext, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(config_context_table)
-
-        # Device table
-        device_table = DeviceTable(
-            data=instance.devices.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=Device, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(device_table)
-
-        # Virtual machine table
-        virtual_machine_table = VirtualMachineTable(
-            data=instance.virtual_machines.all(),
-            orderable=False,
-            extra_columns=[
-                (
-                    "validation_state",
-                    tables.ConfigContextSchemaValidationStateColumn(
-                        validator, "local_config_context_data", empty_values=()
-                    ),
-                ),
-                ("actions", ButtonsColumn(model=VirtualMachine, buttons=["edit"])),
-            ],
-        )
-        paginate = {
-            "paginator_class": EnhancedPaginator,
-            "per_page": get_paginate_count(request),
-        }
-        RequestConfig(request, paginate).configure(virtual_machine_table)
-
-        return {
-            "config_context_table": config_context_table,
-            "device_table": device_table,
-            "virtual_machine_table": virtual_machine_table,
-            "active_tab": "validation",
-        }
+    @action(detail=True, url_path="validation", custom_view_base_action="view")
+    def validation(self, request, *args, **kwargs):
+        return Response({})
 
 
 #
@@ -1510,6 +1606,89 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.DynamicGroupSerializer
     table_class = tables.DynamicGroupTable
 
+    class FilterBaseTextPanel(object_detail.BaseTextPanel):
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                return obj.filter
+            return helpers.HTML_NONE
+
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+
+    class FilterQueryLogicBaseTextPanel(object_detail.BaseTextPanel):
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.group_type in [
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+                DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            ]
+
+        def get_value(self, context):
+            obj = get_obj_from_context(context)
+            if obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                return pretty_print_query(obj.generate_query())
+            return helpers.HTML_NONE
+
+        def render_body(self, context):
+            obj = get_obj_from_context(context)
+            body_wrapper_template_path = (
+                "extras/inc/filter_query_body_wrapper.html"
+                if obj.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
+                else "components/panel/body_wrapper_generic.html"
+            )
+            return object_detail.render_component_template(
+                body_wrapper_template_path,
+                context,
+                body_id=self.body_id,
+                body_content=self.render_body_content(context),
+            )
+
+    class AncestorDescendantObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def should_render(self, context):
+            obj = get_obj_from_context(context)
+            return obj.group_type != DynamicGroupTypeChoices.TYPE_STATIC
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=["name", "description", "content_type", "group_type", "tenant"],
+            ),
+            FilterBaseTextPanel(
+                label="Filter",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            FilterQueryLogicBaseTextPanel(
+                label="Filter Query Logic",
+                section=SectionChoices.FULL_WIDTH,
+                weight=100,
+                render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            ),
+            AncestorDescendantObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="ancestors_table",
+                related_field_name="ancestors",
+                table_title="Ancestors",
+                add_button_route=None,
+            ),
+            AncestorDescendantObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="descendants_table",
+                related_field_name="descendants",
+                table_title="Descendants",
+                add_button_route=None,
+                related_list_url_name="extras:dynamicgroup_list",
+            ),
+        ]
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action in ("create", "update"):
@@ -1563,10 +1742,8 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 )
                 ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                    context["raw_query"] = pretty_print_query(instance.generate_query())
                     context["members_list_url"] = None
                 else:
-                    context["raw_query"] = None
                     try:
                         context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
                     except NoReverseMatch:
@@ -1919,6 +2096,62 @@ def check_and_call_git_repository_function(request, pk, func):
     return redirect(job_result.get_absolute_url())
 
 
+class DatasourceContentsPanel(object_detail.Panel):
+    """Panel that displays the 'Provided Data Types' table for Git repositories."""
+
+    context_object_key = None
+
+    def __init__(self, *, context_data_key="datasource_contents", **kwargs):
+        self.context_data_key = context_data_key
+        kwargs.setdefault("body_wrapper_template_path", "components/panel/body_wrapper_key_value_table.html")
+        super().__init__(**kwargs)
+
+    def render_body_content(self, context):
+        datasource_contents = context.get(self.context_data_key, [])
+        obj = get_obj_from_context(context, self.context_object_key)
+
+        if not datasource_contents:
+            return format_html('<tr><td colspan="2">{}</td></tr>', helpers.placeholder(None))
+
+        rows = []
+        for entry in datasource_contents:
+            name_cell = format_html(
+                """
+                <span style="display: inline-block" class="badge bg-info">
+                    <span class="mdi {}"></span>
+                </span>
+                {}
+                """,
+                entry.icon,
+                bettertitle(entry.name),
+            )
+            provided = entry.content_identifier in obj.provided_contents
+            provided_cell = helpers.render_boolean(provided)
+            rows.append(
+                format_html(
+                    "<tr><td>{}</td><td>{}</td></tr>",
+                    name_cell,
+                    provided_cell,
+                )
+            )
+        return format_html("".join(rows))
+
+
+class GitRepositoryObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if key == "branch":
+            branch_display = format_html("<code>{}</code>", value)
+            if obj.current_head:
+                branch_display = format_html(
+                    "{} (checked out locally at commit <code>{}</code>)", branch_display, obj.current_head
+                )
+            else:
+                branch_display = format_html("{} (not locally checked out yet)", branch_display)
+            return branch_display
+        return super().render_value(key, value, context)
+
+
 class GitRepositoryUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.GitRepositoryBulkEditForm
     filterset_form_class = forms.GitRepositoryFilterForm
@@ -1928,6 +2161,49 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.GitRepositorySerializer
     table_class = tables.GitRepositoryTable
     view_titles = Titles(titles={"result": "{{ object.display|default:object }} - Synchronization Status"})
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            GitRepositoryObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Repository Details",
+                fields=["remote_url", "branch", "secrets_group"],
+            ),
+            DatasourceContentsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Provided Data Types",
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=900,
+                tab_id="result",
+                label="Synchronization Status",
+                url_name="extras:gitrepository_result",
+                related_object_attribute="result",
+            ),
+        ),
+        extra_buttons=(
+            object_detail.PostButton(
+                weight=100,
+                color=ButtonActionColorChoices.INFO,
+                link_name="extras:gitrepository_dryrun",
+                label="Dry-Run",
+                icon="mdi-book-refresh",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+            object_detail.PostButton(
+                weight=200,
+                color=ButtonActionColorChoices.RUN,
+                link_name="extras:gitrepository_sync",
+                label="Sync",
+                icon="mdi-source-branch-sync",
+                required_permissions=["extras.change_gitrepository"],
+            ),
+        ),
+    )
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
@@ -2090,21 +2366,92 @@ class ImageAttachmentDeleteView(generic.ObjectDeleteView):
 #
 # Jobs
 #
-class JobListView(generic.ObjectListView):
-    """
-    Retrieve all of the available jobs from disk and the recorded JobResult (if any) for each.
-    """
 
+
+class JobUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.JobBulkEditForm
     queryset = JobModel.objects.all()
-    table = tables.JobTable
-    filterset = filters.JobFilterSet
-    filterset_form = forms.JobFilterForm
+    serializer_class = serializers.JobSerializer
+    table_class = tables.JobTable
+    # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
+    form_class = forms.JobEditForm
+    filterset_class = filters.JobFilterSet
+    filterset_form_class = forms.JobFilterForm
     action_buttons = ()
-    non_filter_params = (
-        *generic.ObjectListView.non_filter_params,
-        "display",
+    non_filter_params = (*ObjectListViewMixin.non_filter_params, "display")
+    base_template = "generic/object_retrieve.html"
+    # Use "object_retrieve.html" explicitly; get_base_template() resolves to
+    # "job.html" for Job models, which uses the wrong layout for changelog.
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Source Code",
+                fields=[
+                    "module_name",
+                    "job_class_name",
+                    "class_path",
+                    "installed",
+                    "is_job_hook_receiver",
+                    "is_job_button_receiver",
+                ],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                label="Job",
+                fields=["grouping", "name", "description", "enabled"],
+                value_transforms={
+                    "description": [helpers.render_markdown],
+                },
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=100,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.JobResultTable,
+                table_title="Job Results",
+                table_filter="job_model",
+                exclude_columns=["name", "job_model"],
+            ),
+            jobs_ui.JobObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Properties",
+                fields=[
+                    "console_log_default",
+                    "supports_dryrun",
+                    "dryrun_default",
+                    "read_only",
+                    "hidden",
+                    "has_sensitive_variables",
+                    "is_singleton",
+                    "soft_time_limit",
+                    "time_limit",
+                    "job_queues",
+                    "default_job_queue",
+                ],
+            ),
+        ],
+        extra_buttons=[
+            jobs_ui.JobRunScheduleButton(
+                weight=100,
+                link_name="extras:job_run",
+                label="Run/Schedule",
+                icon="mdi-play",
+                color=ButtonActionColorChoices.RUN,
+                required_permissions=["extras.job_run"],
+            ),
+        ],
     )
-    template_name = "extras/job_list.html"
+
+    def get_object(self):
+        # Reload the job class to ensure we have the latest version
+        obj = super().get_object()
+        if self.action == "update":
+            get_job(obj.class_path, reload=True)
+        return obj
 
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
@@ -2116,42 +2463,44 @@ class JobListView(generic.ObjectListView):
             queryset = queryset.filter(installed=True)
         return queryset
 
-    def extra_context(self):
-        # Determine user's preferred display
-        if self.request.GET.get("display") in ["list", "tiles"]:
-            display = self.request.GET.get("display")
-            if self.request.user.is_authenticated:
-                self.request.user.set_config("extras.job.display", display, commit=True)
-        elif self.request.user.is_authenticated:
-            display = self.request.user.get_config("extras.job.display", "list")
-        else:
-            display = "list"
+    def create(self, request, *args, **kwargs):
+        """Job records are system-managed and can't be created from the UI."""
+        raise Http404
 
-        return {
-            "table_inc_template": "extras/inc/job_tiles.html" if display == "tiles" else "extras/inc/job_table.html",
-            "display": display,
-        }
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
 
+        if self.action == "list":
+            # Determine user's preferred display
+            if self.request.GET.get("display") in ["list", "tiles"]:
+                display = self.request.GET.get("display")
+                if self.request.user.is_authenticated:
+                    self.request.user.set_config("extras.job.display", display, commit=True)
+            elif self.request.user.is_authenticated:
+                display = self.request.user.get_config("extras.job.display", "list")
+            else:
+                display = "list"
+            context.update(
+                {
+                    "table_inc_template": "extras/inc/job_tiles.html"
+                    if display == "tiles"
+                    else "extras/inc/job_table.html",
+                    "display": display,
+                }
+            )
 
-class JobRunView(ObjectPermissionRequiredMixin, View):
-    """
-    View the parameters of a Job and enqueue it if desired.
-    """
-
-    queryset = JobModel.objects.all()
-
-    def get_required_permission(self):
-        return "extras.run_job"
+        return context
 
     def _get_job_model_or_404(self, class_path=None, pk=None):
-        """Helper function for get() and post()."""
+        """Helper function for job run actions."""
+        queryset = self.get_queryset()
         if class_path:
             try:
-                job_model = self.queryset.get_for_class_path(class_path)
+                job_model = queryset.get_for_class_path(class_path)
             except JobModel.DoesNotExist:
                 raise Http404
         else:
-            job_model = get_object_or_404(self.queryset, pk=pk)
+            job_model = get_object_or_404(queryset, pk=pk)
 
         return job_model
 
@@ -2188,6 +2537,18 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             console_log=console_log,
             **job_class.serialize_data(job_kwargs),
         )
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
+            job_result_key = request.POST.get("job_result_key", None)
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+            if job_result_key:
+                url = f"{url}?job_result_key={job_result_key}&refresh_on_close_if_done={refresh_on_close_if_done}"
+            else:
+                url = f"{url}?refresh_on_close_if_done={refresh_on_close_if_done}"
+            response = redirect(url)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
 
         if return_url:
             messages.info(
@@ -2200,8 +2561,100 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             return redirect(return_url)
         return redirect("extras:jobresult", pk=job_result.pk)
 
-    def get(self, request, class_path=None, pk=None):
-        job_model = self._get_job_model_or_404(class_path, pk)
+    def _get_template_name(self, job_class, htmx_modal):
+        """Determine the appropriate template to use for the job form."""
+        template_name = "extras/job.html"
+        if htmx_modal:
+            template_name = "extras/htmx/job_form_modal.html"
+            if hasattr(job_class, "htmx_template_name"):
+                try:
+                    get_template(job_class.htmx_template_name)
+                    template_name = job_class.htmx_template_name
+                except TemplateDoesNotExist as err:
+                    messages.error(
+                        self.request,
+                        f'Unable to render requested custom HTMX job template "{job_class.htmx_template_name}": {err}',
+                    )
+        elif hasattr(job_class, "template_name"):
+            try:
+                get_template(job_class.template_name)
+                template_name = job_class.template_name
+            except TemplateDoesNotExist as err:
+                messages.error(
+                    self.request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
+                )
+        return template_name
+
+    def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
+        """Helper function to render the appropriate response, including handling HTMX modals."""
+        htmx_request = self.request.headers.get("HX-Request", False)
+        htmx_modal = False
+        title = job_model.name
+        run_button_label = "Run Job Now"
+        job_result_key = None
+        refresh_on_close_if_done = "false"
+        advanced_fields = ()
+        if htmx_request:
+            if request.method == "POST":
+                htmx_modal = request.POST.get("job_form_modal", False)
+                run_button_label = request.POST.get("run_button_label", "Run Job Now")
+                job_result_key = request.POST.get("job_result_key", None)
+                refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+                advanced_field_names = request.POST.getlist("advanced_fields")
+            else:
+                htmx_modal = request.GET.get("job_form_modal", False)
+                run_button_label = request.GET.get("run_button_label", "Run Job Now")
+                job_result_key = request.GET.get("job_result_key", None)
+                refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
+                advanced_field_names = request.GET.getlist("advanced_fields")
+            advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+
+        template_name = self._get_template_name(job_class, htmx_modal)
+        if htmx_request and htmx_modal:
+            response = render(
+                request,
+                template_name,
+                {
+                    "class_path": job_model.class_path,
+                    "title": title,
+                    "run_button_label": run_button_label,
+                    "job_model": job_model,
+                    "job_form": job_form,
+                    "advanced_fields": advanced_fields,
+                    "advanced_field_names": advanced_field_names,
+                    "job_execution_form": job_execution_form,
+                    "schedule_form": schedule_form,
+                    "job_result_key": job_result_key,
+                    "hx_vals": json.dumps(
+                        {
+                            "job_form_modal": True,
+                            "job_result_key": job_result_key,
+                            "run_button_label": run_button_label,
+                            "refresh_on_close_if_done": refresh_on_close_if_done,
+                            "advanced_fields": advanced_field_names,
+                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
+                        }
+                    ),
+                },
+            )
+        else:
+            response = render(
+                request,
+                template_name,
+                {
+                    "job_model": job_model,
+                    "job_form": job_form,
+                    "job_execution_form": job_execution_form,
+                    "schedule_form": schedule_form,
+                },
+            )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
+
+    def _job_run_get(self, request, class_path=None, pk=None):
+        htmx_request = self.request.headers.get("HX-Request", False)
+        htmx_modal = request.GET.get("job_form_modal", False)
+        job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         try:
             job_class = get_job(job_model.class_path, reload=True)
@@ -2230,6 +2683,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                     initial["_ignore_singleton_lock"] = job_result.celery_kwargs.get(
                         "nautobot_job_ignore_singleton_lock", False
                     )
+                    initial["_console_log"] = job_result.celery_kwargs.get("nautobot_job_console_log", False)
                     initial.update(explicit_initial)
                 except JobResult.DoesNotExist:
                     messages.warning(
@@ -2237,42 +2691,43 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
                         f"JobResult {job_result_pk} not found, cannot use it to pre-populate inputs.",
                     )
 
-            template_name = "extras/job.html"
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
-            if hasattr(job_class, "template_name"):
-                try:
-                    get_template(job_class.template_name)
-                    template_name = job_class.template_name
-                except TemplateDoesNotExist as err:
-                    messages.error(
-                        request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
-                    )
         except RuntimeError as err:
+            if htmx_request and htmx_modal:
+                return render(request, "extras/htmx/job_missing_modal.html", {"class_path": class_path})
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
 
-        return render(
-            request,
-            template_name,  # 2.0 TODO: extras/job_submission.html
-            {
-                "job_model": job_model,
-                "job_form": job_form,
-                "job_execution_form": job_execution_form,
-                "schedule_form": schedule_form,
-            },
-        )
+        return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
-    def post(self, request, class_path=None, pk=None):
-        job_model = self._get_job_model_or_404(class_path, pk)
+    def _job_run_post(self, request, class_path=None, pk=None):
+        job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         job_class = get_job(job_model.class_path, reload=True)
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
+        job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+        if job_execution_form is not None:
+            job_execution_form_is_valid = job_execution_form.is_valid()
+            job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
+            if job_queue is None:
+                job_queue = job_model.default_job_queue
+            if job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES and not get_kubernetes_job_manifest(
+                job_queue.name
+            ):
+                job_execution_form.add_error(
+                    "_job_queue", "Unable to retrieve a Kubernetes job manifest for this job queue."
+                )
+                job_execution_form_is_valid = False
+        else:
+            job_execution_form_is_valid = False
+
         schedule_form = forms.JobScheduleForm(request.POST)
+        schedule_form_is_valid = schedule_form.is_valid()
 
         return_url = request.POST.get("_return_url")
         if return_url is not None and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
@@ -2290,17 +2745,7 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
-        elif (
-            job_form is not None
-            and job_form.is_valid()
-            and job_execution_form is not None
-            and job_execution_form.is_valid()
-            and schedule_form.is_valid()
-        ):
-            job_queue = job_execution_form.cleaned_data.get("_job_queue", None)
-            if job_queue is None:
-                job_queue = job_model.default_job_queue
-
+        elif job_form_is_valid and job_execution_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(
                     request,
@@ -2384,122 +2829,33 @@ class JobRunView(ObjectPermissionRequiredMixin, View):
         if return_url:
             return redirect(return_url)
 
-        template_name = "extras/job.html"
-        if job_class is not None and hasattr(job_class, "template_name"):
-            try:
-                get_template(job_class.template_name)
-                template_name = job_class.template_name
-            except TemplateDoesNotExist as err:
-                messages.error(
-                    request, f'Unable to render requested custom job template "{job_class.template_name}": {err}'
-                )
+        return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
-        return render(
-            request,
-            template_name,
-            {
-                "job_model": job_model,
-                "job_form": job_form,
-                "job_execution_form": job_execution_form,
-                "schedule_form": schedule_form,
-            },
-        )
-
-
-class JobView(generic.ObjectView):
-    queryset = JobModel.objects.all()
-    template_name = "generic/object_retrieve.html"
-    object_detail_content = object_detail.ObjectDetailContent(
-        panels=[
-            object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                label="Source Code",
-                fields=[
-                    "module_name",
-                    "job_class_name",
-                    "class_path",
-                    "installed",
-                    "is_job_hook_receiver",
-                    "is_job_button_receiver",
-                ],
-            ),
-            jobs_ui.JobObjectFieldsPanel(
-                weight=200,
-                section=SectionChoices.LEFT_HALF,
-                label="Job",
-                fields=["grouping", "name", "description", "enabled"],
-                value_transforms={
-                    "description": [helpers.render_markdown],
-                },
-            ),
-            object_detail.ObjectsTablePanel(
-                weight=100,
-                section=SectionChoices.FULL_WIDTH,
-                table_class=tables.JobResultTable,
-                table_title="Job Results",
-                table_filter="job_model",
-                exclude_columns=["name", "job_model"],
-            ),
-            jobs_ui.JobObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.RIGHT_HALF,
-                label="Properties",
-                fields=[
-                    "console_log_default",
-                    "supports_dryrun",
-                    "dryrun_default",
-                    "read_only",
-                    "hidden",
-                    "has_sensitive_variables",
-                    "is_singleton",
-                    "soft_time_limit",
-                    "time_limit",
-                    "job_queues",
-                    "default_job_queue",
-                ],
-            ),
-        ],
-        extra_buttons=[
-            jobs_ui.JobRunScheduleButton(
-                weight=100,
-                link_name="extras:job_run",
-                label="Run/Schedule",
-                icon="mdi-play",
-                color=ButtonActionColorChoices.SUBMIT,
-                required_permissions=["extras.job_run"],
-            ),
-        ],
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="run",
+        url_name="run",
+        custom_view_base_action="run",
     )
+    def run(self, request, pk=None):
+        """Run/schedule a Job by Job model PK."""
+        if request.method == "POST":
+            return self._job_run_post(request, pk=pk)
+        return self._job_run_get(request, pk=pk)
 
-
-class JobEditView(generic.ObjectEditView):
-    queryset = JobModel.objects.all()
-    model_form = forms.JobEditForm
-    template_name = "extras/job_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        # Reload the job class to ensure we have the latest version
-        get_job(obj.class_path, reload=True)
-        return obj
-
-
-class JobBulkEditView(generic.BulkEditView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
-    form = forms.JobBulkEditForm
-    template_name = "extras/job_bulk_edit.html"
-
-
-class JobDeleteView(generic.ObjectDeleteView):
-    queryset = JobModel.objects.all()
-
-
-class JobBulkDeleteView(generic.BulkDeleteView):
-    queryset = JobModel.objects.all()
-    filterset = filters.JobFilterSet
-    table = tables.JobTable
+    @action(
+        detail=False,
+        methods=["get", "post"],
+        url_path=r"(?P<class_path>[^/]*\.[^/]+|[^/]+/[^/]+/[^/]+)/run",
+        url_name="run_by_class_path",
+        custom_view_base_action="run",
+    )
+    def run_by_class_path(self, request, class_path=None):
+        """Run/schedule a Job by class_path (legacy route compatibility)."""
+        if request.method == "POST":
+            return self._job_run_post(request, class_path=class_path)
+        return self._job_run_get(request, class_path=class_path)
 
 
 class JobQueueUIViewSet(NautobotUIViewSet):
@@ -2795,34 +3151,32 @@ class SavedViewUIViewSet(
         return super().destroy(request, *args, **kwargs)
 
 
-class ScheduledJobListView(generic.ObjectListView):
+class ScheduledJobUIViewSet(
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+):
     queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-    filterset_form = forms.ScheduledJobFilterForm
+    filterset_class = filters.ScheduledJobFilterSet
+    filterset_form_class = forms.ScheduledJobFilterForm
+    serializer_class = serializers.ScheduledJobSerializer
+    table_class = tables.ScheduledJobTable
     action_buttons = ()
-
-
-class ScheduledJobBulkDeleteView(generic.BulkDeleteView):
-    queryset = ScheduledJob.objects.all()
-    table = tables.ScheduledJobTable
-    filterset = filters.ScheduledJobFilterSet
-
-
-class ScheduledJobView(generic.ObjectView):
-    queryset = ScheduledJob.objects.all()
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
+        if self.action != "retrieve" and not instance:
+            return context
+
         # Add job class labels
-        job_class = get_job(instance.task)
+        job_class = get_job(instance.task, reload=True)
         labels = {}
         if job_class is not None:
             for name, var in job_class._get_vars().items():
                 field = var.as_field()
                 labels[name] = field.label or pretty_name(name)
-
         context.update(
             {
                 "labels": labels,
@@ -2854,10 +3208,6 @@ class ScheduledJobView(generic.ObjectView):
         return context
 
 
-class ScheduledJobDeleteView(generic.ObjectDeleteView):
-    queryset = ScheduledJob.objects.all()
-
-
 #
 # Job hooks
 #
@@ -2886,6 +3236,111 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 # JobResult
 #
+
+
+def render_jobresult_files(files_manager):
+    """
+    Render job result files as an HTML <ul> list with download links.
+
+    Args:
+        files_manager (RelatedManager): JobResult.files manager.
+
+    Returns:
+        str: Safe HTML string containing <ul> with file links,
+             or an empty string if no files exist.
+    """
+    if not files_manager or not files_manager.exists():
+        return ""
+
+    links = []
+    for file_proxy in files_manager.all():
+        if not file_proxy.file:
+            continue
+
+        # Pick URL depending on storage backend
+        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
+            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+        else:
+            href = file_proxy.file.url
+
+        links.append(
+            format_html(
+                '<li><a href="{}" download="{}">{}</a></li>',
+                href,
+                file_proxy.name,
+                file_proxy.name,
+            )
+        )
+
+    return format_html("<ul>{}</ul>", format_html_join("", "{}", ((link,) for link in links)))
+
+
+def render_jobresult_status(status):
+    """
+    Render a Bootstrap-style label for a JobResult status.
+
+    Args:
+        status (str): The job result status (e.g., "FAILURE", "PENDING", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "FAILURE": ("bg-danger", "Failed"),
+        "PENDING": ("bg-body-secondary border", "Pending"),
+        "STARTED": ("bg-warning", "Running"),
+        "SUCCESS": ("bg-success", "Completed"),
+    }
+
+    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
+    return format_html(
+        '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
+class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        """Render a placeholder for certain fields if the job hasn't yet completed."""
+        if key in ["duration", "result"]:
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj.status not in JobResultStatusChoices.READY_STATES:
+                return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
+        if key == "result" and value is None:
+            return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        return super().render_value(key, value, context)
+
+
+class JobResultButton(object_detail.Button):
+    """Custom Button that supports callable link_name and hides invalid buttons."""
+
+    def get_link(self, context):
+        """Resolve the link for this button."""
+        if callable(self.link_name):
+            return self.link_name(context)  # pylint: disable=not-callable
+        return None
+
+    def render(self, context):
+        """Render only if a valid link exists."""
+        if not self.get_link(context):
+            return ""  # Hide button if no link is resolvable
+        return super().render(context)
+
+
+class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
+    def should_render(self, context):
+        if not super().should_render(context):
+            return False
+
+        if context.get("console_log_from_run", False):
+            return True
+
+        obj = get_obj_from_context(context)
+        if obj.job_console_entries.exists():
+            return True
+
+        return False
 
 
 class JobResultUIViewSet(
@@ -2932,9 +3387,145 @@ class JobResultUIViewSet(
         detail_item_label=context_object_attr("date_created"),
     )
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            JobResultSummaryPanel(
+                label="Summary of Results",
+                weight=100,
+                fields=[
+                    "job_description",
+                    "status",
+                    "date_created",
+                    "date_started",
+                    "user",
+                    "duration",
+                    "result",
+                    "files",
+                ],
+                value_transforms={
+                    "status": [render_jobresult_status],
+                    "files": [render_jobresult_files],
+                },
+                body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
+            ),
+            object_detail.Panel(
+                weight=200,
+                section=object_detail.SectionChoices.FULL_WIDTH,
+                body_content_template_path="extras/inc/log_table_filter.html",
+                body_wrapper_template_path="components/panel/body_wrapper_table.html",
+            ),
+        ],
+        extra_buttons=(
+            JobResultButton(
+                weight=100,
+                label="Re-Run",
+                color=ButtonActionColorChoices.RERUN,
+                icon="mdi-repeat",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    (
+                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                        + f"?kwargs_from_job_result={ctx['object'].pk}"
+                    )
+                    if ctx["object"].job_model and ctx["object"].task_kwargs
+                    else None
+                ),
+            ),
+            JobResultButton(
+                weight=110,
+                label="Run",
+                color=ButtonActionColorChoices.RUN,
+                icon="mdi-play",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
+                    if ctx["object"].job_model and not ctx["object"].task_kwargs
+                    else None
+                ),
+            ),
+            JobResultButton(
+                weight=120,
+                label="Export Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_joblogentry"],
+                link_name=lambda ctx: (
+                    reverse("extras-api:joblogentry-list") + f"?job_result={ctx['object'].pk}&format=csv"
+                ),
+            ),
+            JobResultButton(
+                weight=130,
+                label="Export Console Logs",
+                color=ButtonActionColorChoices.EXPORT,
+                icon="mdi-database-export",
+                required_permissions=["extras.view_jobconsoleentry"],
+                render_on_tab_id=["job_console_entries"],
+                link_name=lambda ctx: reverse(
+                    "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
+                ),
+            ),
+        ),
+        extra_tabs=[
+            JobResultJobConsoleEntriesTab(
+                weight=object_detail.Tab.WEIGHT_ADVANCED_TAB + 50,
+                url_name="extras:jobresult_job_console_entries",
+                tab_id="job_console_entries",
+                label="Console Log",
+                layout=object_detail.LayoutChoices.ONE_OVER_TWO,
+                panels=[],  # rendered directly in job_console_entries view for now
+                required_permissions=["extras.view_jobconsoleentry"],
+            ),
+        ],
+    )
+
+    # Attach new panel directly to the Advanced tab
+    advanced_tab = next(tab for tab in object_detail_content.tabs if tab.label == "Advanced")
+    advanced_tab.panels = (
+        *advanced_tab.panels,
+        object_detail.ObjectTextPanel(
+            label="Job Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=300,
+            object_field="task_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Positional Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=400,
+            object_field="task_args",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectTextPanel(
+            label="Job Celery Keyword Arguments",
+            section=SectionChoices.LEFT_HALF,
+            weight=500,
+            object_field="celery_kwargs",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+        ),
+        object_detail.ObjectFieldsPanel(
+            label="Worker",
+            section=SectionChoices.RIGHT_HALF,
+            weight=110,
+            fields=[
+                "worker",
+                "queue",
+                "task_name",
+                "meta",
+            ],
+        ),
+        object_detail.ObjectTextPanel(
+            label="Traceback",
+            section=SectionChoices.RIGHT_HALF,
+            weight=200,
+            object_field="traceback",
+            render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        if self.action in ["retrieve", "job_console_entries"]:
+        if self.action in ["retrieve", "job_console_entries", "modal"]:
             job_class = None
             if instance and instance.job_model:
                 job_class = instance.job_model.job_class
@@ -2964,19 +3555,16 @@ class JobResultUIViewSet(
         custom_view_base_action="view",
     )
     def log_table(self, request, pk=None):
-        """
-        Custom action to return a rendered JobLogEntry table for a JobResult.
-        """
-
+        """Custom action to return a rendered JobLogEntry table for a JobResult."""
         instance = get_object_or_404(self.queryset.restrict(request.user, "view"), pk=pk)
 
         filter_q = request.GET.get("q")
         if filter_q:
-            queryset = instance.job_log_entries.filter(
+            queryset = instance.job_log_entries.restrict(request.user, "view").filter(
                 Q(message__icontains=filter_q) | Q(log_level__icontains=filter_q)
             )
         else:
-            queryset = instance.job_log_entries.all()
+            queryset = instance.job_log_entries.restrict(request.user, "view")
 
         log_table = tables.JobLogEntryTable(data=queryset, user=request.user)
         paginate = {
@@ -2985,7 +3573,23 @@ class JobResultUIViewSet(
         }
         RequestConfig(request, paginate).configure(log_table)
 
-        return HttpResponse(log_table.as_html(request))
+        if request.headers.get("HX-Request"):
+            job_is_pending = instance.status in JobResultStatusChoices.UNREADY_STATES
+
+            context = {
+                "job_result": instance,
+                "job_is_pending": job_is_pending,
+                "has_logs": queryset.exists(),
+                "table_html": log_table.as_html(request),
+                "log_table_url": request.get_full_path(),
+            }
+            response = render(request, "extras/inc/jobresult_log_table_partial.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
+
+        response = HttpResponse(log_table.as_html(request))
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     @action(
         detail=True,
@@ -3065,6 +3669,67 @@ class JobResultUIViewSet(
 
         return HttpResponse(html_content, content_type="text/html; charset=utf-8")
 
+    @action(
+        detail=True,
+        url_path="export-job-console-entries",
+        url_name="export_job_console_entries",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["extras.view_jobconsoleentry"],
+    )
+    def export_job_console_entries(self, request, pk=None):
+        """Export all console entries for a JobResult as a plain-text file."""
+        job_result = self.get_object()
+
+        entries = JobConsoleEntry.objects.restrict(user=request.user).filter(job_result=job_result)
+
+        lines = []
+        for entry in entries:
+            # Format: [14:30:45.123] text
+            ts = entry.timestamp.strftime("%H:%M:%S.%f")[:12]  # trim to ms
+            lines.append(f"[{ts}] {entry.text.strip()}")
+
+        content = "\n".join(lines)
+
+        filename = f"{settings.BRANDING_PREPENDED_FILENAME}job_console_entries_{job_result.pk}.txt"
+        response = HttpResponse(content, content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def modal(self, request, *args, **kwargs):
+        instance = self.get_object()
+        title = "Run Job"
+        if instance.job_model is not None:
+            title = instance.job_model.name
+        job_result_key = request.GET.get("job_result_key", None)
+        refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
+        detail_value = f"Job finished with status: {instance.get_status_display()}"
+        if instance.result and isinstance(instance.result, dict) and job_result_key:
+            detail_value = instance.result.get(job_result_key, instance.result)
+        elif instance.result:
+            detail_value = instance.result
+        job_is_pending = self._is_job_pending(instance)
+        context = self.get_extra_context(request, instance)
+        context.update(
+            {
+                "title": title,
+                "detail_value": detail_value,
+                "job_result_key": job_result_key,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
+                "job_is_pending": job_is_pending,
+            }
+        )
+
+        return Response(
+            {
+                "request": request,
+                **context,
+            }
+        )
+
 
 #
 # Job Button
@@ -3106,11 +3771,58 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
     table_class = tables.ObjectChangeTable
     action_buttons = ("export",)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.object_detail_content = object_detail.ObjectDetailContent()
-        # Remove "Advanced" tab while keeping the main.
-        self.object_detail_content.tabs = self.object_detail_content.tabs[:1]
+    class ChangeObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "changed_object":
+                if value and getattr(value, "get_absolute_url", None):
+                    return helpers.hyperlinked_object(value)
+                else:
+                    obj = get_obj_from_context(context, self.context_object_key)
+                    return helpers.placeholder(obj.object_repr)
+            return super().render_value(key, value, context)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ChangeObjectFieldsPanel(
+                label="Change",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=(
+                    "time",
+                    "user_name",
+                    "action",
+                    "changed_object_type",
+                    "changed_object",
+                    "request_id",
+                    "change_context",
+                    "change_context_detail",
+                ),
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data",
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                object_field="object_data",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+            object_detail.TextPanel(
+                label="Difference",
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                render_placeholder=False,
+                body_content_template_path="extras/inc/objectchange_diff_panel.html",
+                header_extra_content_template_path="extras/inc/objectchange_diff_header.html",
+            ),
+            object_detail.ObjectsTablePanel(
+                table_title="Related Changes",
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="related_changes_table",
+                header_extra_content_template_path="extras/inc/related_changes_header.html",
+                footer_content_template_path=None,
+            ),
+        )
+    )
 
     # 2.0 TODO: Remove this remapping and solve it at the `BaseFilterSet` as it is addressing a breaking change.
     def get(self, request, *args, **kwargs):
@@ -3140,9 +3852,14 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         if self.action == "retrieve":
             related_changes = instance.get_related_changes(user=request.user).filter(request_id=instance.request_id)
             related_changes_table = tables.ObjectChangeTable(
-                data=related_changes[:50],  # Limit for performance
+                data=related_changes,
                 orderable=False,
             )
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(related_changes_table)
             snapshots = instance.get_snapshots()
 
             context.update(
@@ -3281,13 +3998,38 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 class ObjectMetadataUIViewSet(
     ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
+    create_form_class = forms.ObjectMetadataCreateForm
+    update_form_class = forms.ObjectMetadataForm
     action_buttons = ("export",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "metadata_type",
+                    "contact",
+                    "team",
+                    "scoped_fields",
+                    "assigned_object_type",
+                    "assigned_object",
+                    "_value",
+                ],
+            ),
+        ),
+    )
 
 
 #
@@ -3924,18 +4666,3 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
-
-
-#
-# Job Extra Views
-#
-# NOTE: Due to inheritance, JobObjectChangeLogView and JobObjectNotesView can only be
-# constructed below # ObjectChangeLogView and ObjectNotesView.
-
-
-class JobObjectChangeLogView(ObjectChangeLogView):
-    base_template = "generic/object_retrieve.html"
-
-
-class JobObjectNotesView(ObjectNotesView):
-    base_template = "generic/object_retrieve.html"

@@ -23,6 +23,7 @@ from nautobot.core.forms import (
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    EmbeddedActionsFormMixin,
     ExpandableNameField,
     form_from_model,
     JSONArrayFormField,
@@ -253,7 +254,7 @@ class InterfaceCommonForm(forms.Form):
                 )
 
 
-class ComponentForm(BootstrapMixin, forms.Form):
+class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     """
     Subclass this form when facilitating the creation of one or more device component or component templates based on
     a name pattern.
@@ -1061,9 +1062,16 @@ class ModuleTypeForm(NautobotModelForm):
             "model",
             "module_family",
             "part_number",
+            "front_image",
+            "rear_image",
             "comments",
             "tags",
         ]
+        widgets = {
+            # Exclude SVG images (unsupported by PIL)
+            "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+        }
 
 
 class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
@@ -1767,7 +1775,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
 
 
-class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+class ModuleBayBaseCreateForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
@@ -3313,6 +3321,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3463,6 +3473,10 @@ class InterfaceCreateForm(
         "tags",
     )
 
+    class Meta:
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
+
 
 class InterfaceBulkCreateForm(
     form_from_model(Interface, ["enabled", "mtu", "vrf", "mgmt_only", "mode", "port_type", "tags"]),
@@ -3589,13 +3603,23 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
+        label="Untagged VLAN",
     )
-    tagged_vlans = DynamicModelMultipleChoiceField(
+    add_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
             "locations": "null",
         },
+        label="Add Tagged VLANs",
+    )
+    remove_tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+        label="Remove Tagged VLANs",
     )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -3622,7 +3646,6 @@ class InterfaceBulkEditForm(
             "speed",
             "duplex",
             "untagged_vlan",
-            "tagged_vlans",
             "vrf",
             "port_type",
         ]
@@ -3650,9 +3673,11 @@ class InterfaceBulkEditForm(
                 # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
                 # to those available on the devices in that location and in the ancestors of the location.
                 self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", location.pk)
             else:
-                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
@@ -3670,9 +3695,26 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
+        tagged_vlans = bool(self.cleaned_data["add_tagged_vlans"] or self.cleaned_data["remove_tagged_vlans"])
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["tagged_vlans"]:
+        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
+
+        # In theory UI blocks this from happening, but to ensure on backend we enforce.
+        # An interface must be in tagged mode to have an untagged VLAN assigned
+        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+            non_tagged = (
+                Interface.objects.filter(pk__in=self.cleaned_data["pk"])
+                .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
+                .values_list("name", flat=True)
+            )
+            if non_tagged.exists():
+                raise forms.ValidationError(
+                    {
+                        "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
+                        + ", ".join(list(non_tagged))
+                    }
+                )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
         elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
@@ -3944,7 +3986,10 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,
-            device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            device_type__subdevice_role__in=[
+                SubdeviceRoleChoices.ROLE_CHILD,
+                SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            ],
         ).exclude(pk=device_bay.device.pk)
 
 
@@ -4318,6 +4363,8 @@ class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
         help_texts = {
             "status": "Connection status",
         }
+        embedded_create = []
+        embedded_search = []
 
     def clean_termination_b_id(self):
         # Return the PK rather than the object

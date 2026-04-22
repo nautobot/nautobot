@@ -141,6 +141,7 @@ User = get_user_model()
 def common_test_data(cls):
     Controller.objects.filter(controller_device__isnull=False).delete()
     Device.objects.all().delete()
+    VirtualMachine.objects.all().delete()
     tenants = Tenant.objects.filter(tenant_group__isnull=False)
     cls.tenants = tenants
     cls.software_versions = SoftwareVersion.objects.all()
@@ -4117,6 +4118,8 @@ class SoftwareImageFileFilterSetTestCase(FilterTestCases.FilterTestCase):
         ["image_file_size"],
         ["software_version", "software_version__id"],
         ["software_version", "software_version__version"],
+        ["software_version__platform", "software_version__platform__id"],
+        ["software_version__platform", "software_version__platform__name"],
         ["status", "status__id"],
         ["status", "status__name"],
         ["external_integration", "external_integration__id"],
