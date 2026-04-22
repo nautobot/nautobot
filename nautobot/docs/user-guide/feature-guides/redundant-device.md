@@ -72,7 +72,43 @@ The primary piece of information to consider from this list is the Management Co
 
 ### Nautobot Model Overview
 
-TODO: Insert UML here
+```mermaid
+classDiagram
+      class PrimaryModel {
+          <<abstract>>
+      }
+
+      class VirtualChassis {
+          +OneToOneField master
+          +CharField name
+          +CharField domain
+          +list natural_key_field_names
+          +Meta meta
+          +__str__() str
+          +member_interfaces() QuerySet~Interface~
+          +clean() None
+          +delete(*args, **kwargs) None
+      }
+
+      class Device {
+          +ForeignKey virtual_chassis
+          +PositiveSmallIntegerField vc_position
+          +PositiveSmallIntegerField vc_priority
+      }
+
+      class Interface {
+          +ForeignKey device
+          +ForeignKey lag
+      }
+
+      PrimaryModel <|-- VirtualChassis
+      VirtualChassis "1" o-- "0..1" Device : master (OneToOne, PROTECT)
+      VirtualChassis "1" *-- "0..*" Device : members (reverse FK)
+      Device "1" *-- "0..*" Interface : interfaces
+      Interface "0..*" --> "0..1" Interface : lag
+```
+
+
 TODO: Insert Model table summarizing attributes and their meanings
 
 ### Sample API
