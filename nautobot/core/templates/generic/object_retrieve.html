@@ -385,6 +385,13 @@
             if (event.target.id === 'nautobot-generic-modal') {
                 const container = document.getElementById('modal-content-container');
 
+                // If the modal content opted in to refreshing the page when the
+                // associated Job has completed, reload before resetting content.
+                if (container.querySelector('[data-refresh-on-close="true"]')) {
+                    window.location.reload();
+                    return;
+                }
+
                 // Restore the fallback HTML, this will reset the modal, ensuring that any HTMX state is cleared
                 // and the loading spinner is shown for the next use.
                 container.innerHTML = `
