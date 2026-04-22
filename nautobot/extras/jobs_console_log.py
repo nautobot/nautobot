@@ -1,5 +1,4 @@
 import functools
-import json
 import logging
 from queue import Empty, Queue
 import subprocess
@@ -9,6 +8,7 @@ from typing import Any, Dict
 from django.conf import settings
 from django.utils import timezone
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices
 from nautobot.extras.models import JobConsoleEntry, JobResult
@@ -147,7 +147,7 @@ class JobConsoleLogExecutor:
             f"{self.job_result_pk}",
             f"--config={settings.SETTINGS_PATH}",
             "--data",
-            json.dumps(self.job_kwargs),
+            NautobotKombuJSONEncoder(ensure_ascii=False).encode(self.job_kwargs),
         ]
 
     def _print_output(self):

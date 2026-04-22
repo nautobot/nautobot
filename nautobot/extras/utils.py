@@ -22,6 +22,7 @@ from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
@@ -745,7 +746,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         f"{job_result.pk}",
         f"--config={settings.SETTINGS_PATH}",
         "--data",
-        json.dumps(job_kwargs),
+        NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
     ]
 
     def create_kubernetes_job():
