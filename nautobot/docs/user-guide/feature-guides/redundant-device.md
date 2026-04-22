@@ -73,7 +73,22 @@ The primary piece of information to consider from this list is the Management Co
 ### Nautobot Model Overview
 
 TODO: Insert UML here
-TODO: Insert Model table summarizing attributes and their meanings
+
+**VirtualChassis Attributes**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | Yes | Unique name identifying the virtual chassis |
+| `master` | FK → Device | No | The device that acts as the control plane master for the chassis; all member devices are managed through this device |
+| `domain` | String | No | Optional domain name shared across chassis members (used in some vendor implementations for identification) |
+
+**Device Attributes (virtual chassis-related)**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `virtual_chassis` | FK → VirtualChassis | No | The virtual chassis this device belongs to |
+| `vc_position` | Integer (0–255) | Yes (if in VC) | Slot/position of this device within the virtual chassis; must be unique per chassis |
+| `vc_priority` | Integer (0–255) | No | Election priority for master role; higher values win (vendor behavior varies) |
 
 ### Sample API
 ### Sample Design Builder
@@ -351,7 +366,23 @@ scope ssa
 
 TODO: Insert UML here
 
-TODO: Insert Model table summarizing attributes and their meanings
+**DeviceRedundancyGroup Attributes**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `name` | String | Yes | Unique name identifying the redundancy group |
+| `status` | Status | Yes | Lifecycle status of the group (e.g., Planned, Active, Decommissioning) |
+| `description` | String | No | Brief human-readable description of the group's purpose |
+| `failover_strategy` | Choice | No | How traffic is handled across members: `Active/Active` (both units process traffic simultaneously) or `Active/Passive` (one unit is standby until failover occurs) |
+| `comments` | Text | No | Free-form notes about the group |
+| `secrets_group` | FK → SecretsGroup | No | Credentials used to access devices in this group (e.g., shared enable password) |
+
+**Device Attributes (redundancy-related)**
+
+| Attribute | Type | Required | Description |
+|---|---|---|---|
+| `device_redundancy_group` | FK → DeviceRedundancyGroup | No | The redundancy group this device belongs to |
+| `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group |
 
 ### Sample API
 ### Sample Design Builder
@@ -372,7 +403,7 @@ TODO: Insert Model table summarizing attributes and their meanings
 #### Key Questions
 
 - Can you port channel across multiple devices? No — EtherChannel is per-device only
-- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces #TODO: Is this really asking "Can all phyical and logical interfaces on both devices be configured on the primary?
+- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces
 - Can you see all interfaces on the Backup? No — the standby unit has its own separate interface list
 - On Primary, can you tell which interfaces are assigned to which device? N/A — each device is modeled separately in Nautobot
 - When do you see all the interfaces on the master device? Each device always shows only its own interfaces
