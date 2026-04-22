@@ -72,7 +72,47 @@ The primary piece of information to consider from this list is the Management Co
 
 ### Nautobot Model Overview
 
-TODO: Insert UML here
+```mermaid
+classDiagram
+
+class PrimaryModel {
+    <<abstract>>
+    +UUID id
+    +DateTime created
+    +DateTime last_updated
+    +JSON _custom_field_data
+    +TaggableManager tags
+}
+
+class VirtualChassis {
+    +OneToOneField master
+    +CharField name
+    +CharField domain
+    +list natural_key_field_names
+    +Meta meta
+    +__str__() str
+    +member_interfaces() QuerySet~Interface~
+    +clean() None
+    +delete(*args, **kwargs) None
+}
+
+class Device {
+    +ForeignKey virtual_chassis
+    +PositiveSmallIntegerField vc_position
+    +PositiveSmallIntegerField vc_priority
+}
+
+class Interface {
+    +ForeignKey device
+    +ForeignKey lag
+}
+
+PrimaryModel <|-- VirtualChassis
+VirtualChassis "1" o-- "0..1" Device : master (OneToOne, PROTECT)
+VirtualChassis "1" *-- "0..*" Device : members (reverse FK)
+Device "1" *-- "0..*" Interface : interfaces
+Interface "0..*" --> "0..1" Interface : lag
+```
 
 **VirtualChassis Attributes**
 
@@ -91,7 +131,47 @@ TODO: Insert UML here
 | `vc_priority` | Integer (0–255) | No | Election priority for master role; higher values win (vendor behavior varies) |
 
 ### Sample API
+
+```python
+"""Fetch VirtualChassis records from Nautobot via pynautobot."""
+
+import os
+import pynautobot
+
+nb = pynautobot.api(
+    url=os.environ["NAUTOBOT_URL"],  # e.g. "https://nautobot.example.com"
+    token=os.environ["NAUTOBOT_TOKEN"],
+)
+
+# GET /api/dcim/virtual-chassis/  → VirtualChassisSerializer (many=True)
+virtual_chassis = nb.dcim.virtual_chassis.all()
+
+for vc in virtual_chassis:
+    # Fields produced by VirtualChassisSerializer:
+    #   id, object_type, display, url, natural_slug,
+    #   name, domain, master (nested Device), member_count (read-only),
+    #   tags, custom_fields, created, last_updated, notes_url
+    print(f"{vc.name} (domain={vc.domain or '-'})")
+    print(f"  id:           {vc.id}")
+    print(f"  master:       {vc.master.display if vc.master else None}")
+    print(f"  member_count: {vc.member_count}")
+    print(f"  tags:         {[t.name for t in vc.tags]}")
+    print(f"  created:      {vc.created}")
+    print(f"  last_updated: {vc.last_updated}")
+
+# Single record lookup (natural key = name)
+single = nb.dcim.virtual_chassis.get(name="stack-01")
+if single is not None:
+    print(single.serialize())  # dict matching the serializer payload
+
+# Run with:
+# export NAUTOBOT_URL="https://nautobot.example.com"
+# export NAUTOBOT_TOKEN="0123456789abcdef0123456789abcdef01234567"
+# python fetch_virtual_chassis.py
+```
+
 ### Sample Design Builder
+
 ### GraphQL
 
 ===================
@@ -356,15 +436,61 @@ scope ssa
 > Note: `cluster-role` is set to `control` on the primary chassis slot and `data` on all others; `cluster-group-id` must match across all members
 
 
-
-
-
-
 ## Device Redundancy Groups
 
 ### Nautobot Model Overview
 
-TODO: Insert UML here
+```mermaid
+classDiagram
+    class PrimaryModel {
+        <<abstract>>
+        +UUID id
+        +DateTime created
+        +DateTime last_updated
+        +JSON _custom_field_data
+        +TaggableManager tags
+    }
+
+    class DeviceRedundancyGroup {
+        +CharField name (unique, max=CHARFIELD_MAX_LENGTH)
+        +StatusField status
+        +CharField description (blank)
+        +CharField failover_strategy (choices)
+        +TextField comments (blank)
+        +ForeignKey secrets_group → SecretsGroup (SET_NULL, null)
+        +list clone_fields
+        +Meta.ordering = ("name",)
+        +devices_sorted : QuerySet~Device~
+        +controllers_sorted : QuerySet~Controller~
+        +__str__() str
+    }
+
+    class Device {
+        +ForeignKey device_redundancy_group (SET_NULL, null)
+        +PositiveIntegerField device_redundancy_group_priority
+    }
+
+    class Controller {
+        +ForeignKey controller_device_redundancy_group (PROTECT, null)
+    }
+
+    class SecretsGroup {
+        +CharField name
+    }
+
+    class DeviceRedundancyGroupFailoverStrategyChoices {
+        <<enumeration>>
+        ACTIVE_ACTIVE
+        ACTIVE_PASSIVE
+    }
+
+    PrimaryModel <|-- DeviceRedundancyGroup
+
+    DeviceRedundancyGroup "1" o-- "0..*" Device : devices (related_name)
+    DeviceRedundancyGroup "1" o-- "0..*" Controller : controllers (related_name)
+    DeviceRedundancyGroup "0..*" --> "0..1" SecretsGroup : secrets_group
+    DeviceRedundancyGroup ..> DeviceRedundancyGroupFailoverStrategyChoices : failover_strategy
+```
 
 **DeviceRedundancyGroup Attributes**
 
@@ -455,10 +581,6 @@ failover interface ip STATEFUL 10.1.2.1 255.255.255.252 standby 10.1.2.2
 ```
 
 > Note: The secondary unit receives the full running config from the primary after the failover link is established; interface IPs need not be set manually
-
-
-
-
 
 
 ### HA pairs
