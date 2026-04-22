@@ -1,20 +1,17 @@
 <table class="table table-sm table-hover">
     <thead>
         <tr>
-            <th>Label</th>
             <th>A Connector</th>
             <th>A Position</th>
             <th></th>
             <th>B Connector</th>
             <th>B Position</th>
+            <th>Label</th>
         </tr>
     </thead>
     <tbody>
         {% for entry in mapping %}
             <tr>
-                <td>
-                    <input class="form-control" type="text" name="mapping_{{ forloop.counter0 }}_label" value="{{ entry.label|default:forloop.counter }}">
-                </td>
                 <td>
                     <select class="form-select" name="mapping_{{ forloop.counter0 }}_a_connector">
                         {% for i in a_connector_range %}
@@ -43,6 +40,13 @@
                             <option value="{{ i }}" {% if i == entry.b_position %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
                     </select>
+                </td>
+                <td>
+                    <input class="form-control"
+                           type="text"
+                           name="mapping_{{ forloop.counter0 }}_label"
+                           value="{{ entry.label|default:forloop.counter }}"
+                    >
                 </td>
             </tr>
         {% empty %}

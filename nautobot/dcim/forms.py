@@ -5960,7 +5960,9 @@ class VirtualDeviceContextFilterForm(
 class CableBreakoutTypeForm(NautobotModelForm):
     mapping = forms.JSONField(
         required=False,
-        help_text="Lane mapping JSON. Auto-generated from connector/lane counts, or edit via table/JSON editor.",
+        help_text="Lane mapping JSON. A list of <code>total_lanes</code> objects, each with keys "
+        "<code>a_connector</code>, <code>a_position</code>, <code>b_connector</code>, <code>b_position</code>, "
+        "and optionally <code>label</code>.",
     )
     a_connectors = forms.IntegerField(
         min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="A connectors"
@@ -5989,34 +5991,6 @@ class CableBreakoutTypeForm(NautobotModelForm):
         widgets = {
             "polarity_method": StaticSelect2,
         }
-
-    def clean(self):
-        mapping = self.data.get("mapping")
-        if not mapping:
-            # Try to read mapping from server-rendered table select fields (table mode).
-            try:
-                lane_count = int(self.data.get("total_lanes", 0))
-            except (ValueError, TypeError):
-                lane_count = 0
-            if lane_count > 0:
-                mapping = []
-                for lane_index in range(lane_count):
-                    prefix = f"mapping_{lane_index}"
-                    try:
-                        mapping.append(
-                            {
-                                "a_connector": int(self.data.get(f"{prefix}_a_connector", 0)),
-                                "a_position": int(self.data.get(f"{prefix}_a_position", 0)),
-                                "b_connector": int(self.data.get(f"{prefix}_b_connector", 0)),
-                                "b_position": int(self.data.get(f"{prefix}_b_position", 0)),
-                            }
-                        )
-                    except (ValueError, TypeError):
-                        continue
-                self.data = self.data.copy()
-                self.data["mapping"] = mapping
-
-        return super().clean()
 
 
 class CableBreakoutTypeFilterForm(NautobotFilterForm):
