@@ -70,14 +70,14 @@ dependencies = [
     # Run production webservers such as uWSGI/gunicorn as a Django management command.
     "django-webserver (>=1.2.0,<1.3)",
     # REST API framework
-    "djangorestframework (>=3.17.0,<3.18)",
+    "djangorestframework (>=3.17.1,<3.18)",
     # OpenAPI 3.0 schema generation for the REST API
     # Avoiding 0.29.0 for now due to https://github.com/tfranzel/drf-spectacular/issues/1475
     "drf-spectacular[sidecar] (>=0.28.0,<0.29)",
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "GitPython (>=3.1.46,<3.2)",
+    "GitPython (>=3.1.47,<3.2)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -95,7 +95,7 @@ dependencies = [
     # Library of network related utilities including network driver mappings and Jinja Filters
     # Note: netutils is limited in scope, dependencies, and observes semver, as such
     #       we permit a looser (^) version constraint here.
-    "netutils (>=1.14.0,<2)",
+    "netutils (>=1.17.2,<2)",
     # HTML sanitization
     "nh3 (>=0.3.4,<0.4)",
     # Handling of version numbers
@@ -106,11 +106,11 @@ dependencies = [
     "prometheus-client (>=0.24.1,<0.25)",
     # PostgreSQL database adapter
     # NOTE: psycopg3 is available now and nominally replaces psycopg2
-    "psycopg2-binary (>=2.9.11,<2.10)",
+    "psycopg2-binary (>=2.9.12,<2.10)",
     # A Python slugify application that handles unicode.
     "python-slugify (>=8.0.4,<8.1)",
     # The uWSGI WSGI HTTP server as a Python module
-    "pyuwsgi (>=2.0.30,<2.1)",
+    "pyuwsgi (>=2.0.30.post1,<2.1)",
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
     # Social authentication/registration with support for many auth providers
@@ -124,21 +124,21 @@ all = [
     "django-auth-ldap (>=5.3.0,<5.4)",
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
-    "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.8.5,<4.9)",
+    "napalm (>=5.1.0,<6.0.0)",
+    "social-auth-core[saml] (>=4.8.6,<4.9)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
 # MySQL database adapter
 mysql = [ "mysqlclient (>=2.2.8,<2.3)" ]
 # NAPALM automation library
-napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
+napalm = [ "napalm (>=5.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
 remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.8.5,<4.9)" ]
+sso = [ "social-auth-core[saml] (>=4.8.6,<4.9)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -177,7 +177,7 @@ faker = "^40.11.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~14.3.3"
+rich = "~14.3.4"
 # Change log management and generation
 towncrier = "~25.8.0"
 # Watch files for celery and mkdocs reload
@@ -201,9 +201,9 @@ mkdocs-material = "~9.7.6"
 # Handle docs redirections
 mkdocs-redirects = "~1.2.3"
 # Automatically handle index pages for docs sections
-mkdocs-section-index = "~0.3.11"
+mkdocs-section-index = "~0.3.12"
 # Automatic documentation from sources, for MkDocs
-mkdocstrings = "~1.0.3"
+mkdocstrings = "~1.0.4"
 # Python-specific extension to mkdocstrings
 mkdocstrings-python = "~2.0.3"
 
@@ -219,7 +219,7 @@ pylint-django = "~2.7.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.36"
 # Combination linter and code formatter
-ruff = "~0.15.7"
+ruff = "~0.15.11"
 # YAML linting
 yamllint = "~1.38.0"
 
