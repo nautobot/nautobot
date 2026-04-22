@@ -7,4 +7,5 @@ The location of where image attachments are stored can be customized using the [
 Currently, the following types of image attachments can be stored in Nautobot:
 
 - Device type images are stored at `$MEDIA_ROOT/devicetype-images`
+- Module type images are stored at `$MEDIA_ROOT/moduletype-images`
 - Generic image attachments are stored at `$MEDIA_ROOT/image-attachments`

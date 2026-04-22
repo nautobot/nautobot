@@ -1,2 +1,0 @@
-Corrected labels for "Untagged VLAN", "Add Tagged VLANs", and "Remove Tagged VLANs" on Interface bulk-edit form.
-Fixed handling of "Untagged VLAN" and "Tagged VLANs" fields on Interface create/edit form.

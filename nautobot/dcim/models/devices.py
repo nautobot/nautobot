@@ -1800,6 +1800,8 @@ class ModuleType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    front_image = models.ImageField(upload_to="moduletype-images", blank=True)
+    rear_image = models.ImageField(upload_to="moduletype-images", blank=True)
     comments = models.TextField(blank=True)
 
     clone_fields = [
@@ -1815,6 +1817,64 @@ class ModuleType(PrimaryModel):
 
     def __str__(self):
         return self.model
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Save references to the original front/rear images for newly-created instances.
+        # For instances loaded from the database, from_db() overrides these after __init__
+        # completes (Django sets _state.adding=False after __init__, so present_in_database
+        # is always False here for DB-loaded objects).
+        self._original_front_image = None
+        self._original_rear_image = None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Capture original image values for instances loaded from the database.
+
+        __init__ cannot do this reliably because Django sets _state.adding=False
+        only after __init__ completes, making present_in_database always False
+        during __init__ for DB-loaded instances.
+        """
+        instance: "ModuleType" = super().from_db(db, field_names, values)
+        # Access __dict__ directly instead of the field descriptor to avoid triggering
+        # refresh_from_db() for deferred fields, which would call from_db() again and
+        # cause infinite recursion. Construct ImageFieldFile manually so that save()
+        # can call .delete() on the original if the image is replaced.
+        for attr in ("front_image", "rear_image"):
+            raw_name = instance.__dict__.get(attr) or None
+            field = cls._meta.get_field(attr)
+            setattr(
+                instance,
+                f"_original_{attr}",
+                field.attr_class(instance, field, raw_name) if raw_name else None,
+            )
+        return instance
+
+    def save(self, *args, **kwargs):
+        original_front_image = self._original_front_image
+        original_rear_image = self._original_rear_image
+
+        super().save(*args, **kwargs)
+
+        # Delete any previously uploaded image files that are no longer in use
+        if original_front_image and self.front_image != original_front_image:
+            original_front_image.delete(save=False)
+        if original_rear_image and self.rear_image != original_rear_image:
+            original_rear_image.delete(save=False)
+
+        # Update tracked originals to current values for subsequent saves
+        self._original_front_image = self.front_image
+        self._original_rear_image = self.rear_image
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+
+        # Delete any uploaded image files
+        if self.front_image:
+            self.front_image.delete(save=False)
+        if self.rear_image:
+            self.rear_image.delete(save=False)
 
     def to_yaml(self):
         data = OrderedDict(

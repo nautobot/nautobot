@@ -2204,6 +2204,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+        exclude = ["front_image", "rear_image"]  # ImageField is not filterable by django-filter
 
     def filter_module_bay(self, queryset, name, value):
         """Filter module types based on a module bay's module family."""

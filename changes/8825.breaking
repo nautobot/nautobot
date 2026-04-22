@@ -1,1 +1,0 @@
-App developers who previously used the unsupported `UI_COLORS` constant should switch to the supported `EChartsThemeColors` to keep from breaking.

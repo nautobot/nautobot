@@ -1806,6 +1806,45 @@ class DeviceTypeImportView(generic.ObjectImportView):
 #
 
 
+class ModuleTypeFieldsPanel(object_detail.ObjectFieldsPanel):
+    """Custom panel for ModuleType that renders front_image and rear_image as image previews."""
+
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if key in ["front_image", "rear_image"]:
+            image = getattr(obj, key, None)
+            if image:
+                return format_html(
+                    '<a href="{}" target="_blank" rel="noopener noreferrer">'
+                    '<img src="{}" alt="{}" class="img-responsive mw-100"></a>',
+                    image.url,
+                    image.url,
+                    image.name,
+                )
+            return helpers.HTML_NONE
+        return super().render_value(key, value, context)
+
+
+class ModuleTypeComponentAddButton(object_detail.Button):
+    """
+    Button for adding components to a ModuleType via query-param-based add URLs.
+
+    This subclass exists because ModuleType lacks dedicated per-object add routes
+    (e.g. dcim:moduletype_consoleporttemplate_add) that DeviceType has.
+    """
+
+    def __init__(self, *, tab, **kwargs):
+        self.tab = tab
+        super().__init__(link_includes_pk=False, **kwargs)
+
+    def get_link(self, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if not obj:
+            return None
+        return_url = iri_to_uri(f"{obj.get_absolute_url()}?tab={self.tab}")
+        return reverse(self.link_name) + "?" + urlencode({"module_type": obj.pk, "return_url": return_url})
+
+
 class ModuleTypeUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -1844,6 +1883,108 @@ class ModuleTypeUIViewSet(
         }
     )
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ModuleTypeFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["front_image", "rear_image"],
+            ),
+            ModuleTypeFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["front_image", "rear_image"],
+                label="Images",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.ModuleTable,
+                table_filter="module_type",
+                related_field_name="module_type",
+                table_title="Module Instances",
+                exclude_columns=["actions", "tags"],
+            ),
+        ),
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonActionColorChoices.ADD,
+                label="Add Components",
+                attributes={"id": "module-type-add-components-button"},
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_moduletype"],
+                children=(
+                    ModuleTypeComponentAddButton(
+                        weight=100,
+                        link_name="dcim:consoleporttemplate_add",
+                        tab="consoleports",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=200,
+                        link_name="dcim:consoleserverporttemplate_add",
+                        tab="consoleserverports",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=300,
+                        link_name="dcim:powerporttemplate_add",
+                        tab="powerports",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=400,
+                        link_name="dcim:poweroutlettemplate_add",
+                        tab="poweroutlets",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlettemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=500,
+                        link_name="dcim:interfacetemplate_add",
+                        tab="interfaces",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interfacetemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=600,
+                        link_name="dcim:frontporttemplate_add",
+                        tab="frontports",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=700,
+                        link_name="dcim:rearporttemplate_add",
+                        tab="rearports",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=800,
+                        link_name="dcim:modulebaytemplate_add",
+                        tab="modulebays",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebaytemplate"],
+                    ),
+                ),
+            ),
+        ),
+    )
+
     def get_required_permission(self):
         view_action = self.get_action()
         if view_action == "import_view":
@@ -1864,8 +2005,6 @@ class ModuleTypeUIViewSet(
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
-
             # Component tables
             consoleport_table = tables.ConsolePortTemplateTable(
                 ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
@@ -1911,7 +2050,6 @@ class ModuleTypeUIViewSet(
 
             context.update(
                 {
-                    "instance_count": instance_count,
                     "consoleport_table": consoleport_table,
                     "consoleserverport_table": consoleserverport_table,
                     "powerport_table": powerport_table,

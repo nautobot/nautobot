@@ -127,6 +127,23 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.assertIsNone(resp.errors)
         self.assertEqual(len(resp.data["query"]), Location.objects.all().count())
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_types_list(self):
+        """Test that querying for a list of content_types works even though ContentType has no restrict() method."""
+        query = "{ content_types { model } }"
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(len(resp.data["content_types"]), ContentType.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_type_single(self):
+        """Test that querying for a single content_type works even though ContentType has no restrict() method."""
+        ct = ContentType.objects.first()
+        query = f'{{ content_type(id: "{ct.pk}") {{ model }} }}'
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(resp.data["content_type"]["model"], ct.model)
+
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_custom_field_type_date(self):
