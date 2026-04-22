@@ -5378,12 +5378,10 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 exclude_fields=["mapping"],
             ),
-            object_detail.ObjectTextPanel(  # TODO
+            object_detail.Panel(
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 label="Lane Mapping Diagram",
-                object_field="get_diagram_svg",
-                render_as=object_detail.BaseTextPanel.RenderOptions.MARKDOWN,
                 body_content_template_path="dcim/inc/cablebreakouttype_diagram_panel.html",
             ),
             object_detail.ObjectTextPanel(

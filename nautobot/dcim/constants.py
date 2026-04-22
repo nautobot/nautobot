@@ -110,8 +110,6 @@ CABLE_BREAKOUT_MAX_LANES = 256
 
 BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
     {
-        "consoleport",
-        "consoleserverport",
         "circuittermination",
         "frontport",
         "interface",
