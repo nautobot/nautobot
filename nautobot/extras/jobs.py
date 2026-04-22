@@ -9,6 +9,7 @@ import os
 import sys
 from textwrap import dedent
 from typing import final
+from urllib.parse import urlencode
 import warnings
 
 from billiard.einfo import ExceptionInfo
@@ -55,6 +56,7 @@ from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
     JobHook,
+    JobLogEntry,
     JobQueue,
     JobResult,
     ObjectChange,
@@ -841,6 +843,25 @@ class BaseJob:
         )
         self.logger.info("Created file [%s](%s)", filename, fp.file.url)
         return fp
+
+    def create_and_log_result_redirect(self, message, redirect_url, query_params=None):
+        """Create a JobLogEntry with a redirect URL that can be surfaced in the job result modal.
+
+        Args:
+            message (str): Log message describing the created record(s).
+            redirect_url (str): URL to redirect the user to (e.g. a created object's absolute URL).
+            query_params (dict): Optional query parameters to append to the redirect URL.
+        """
+        if query_params:
+            query_string = urlencode(query=query_params)
+            redirect_url = f"{redirect_url}?{query_string}"
+
+        JobLogEntry.objects.create(
+            job_result=self.job_result,
+            message=message,
+            grouping="redirect",
+            absolute_url=redirect_url,
+        )
 
 
 class Job(BaseJob):
