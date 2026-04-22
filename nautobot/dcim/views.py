@@ -5396,7 +5396,13 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
         )
     )
 
-    @action(detail=False, methods=["get"], url_name="mapping_editor", url_path="mapping-editor")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="mapping_editor",
+        url_path="mapping-editor",
+        custom_view_base_action="view",
+    )
     def mapping_editor(self, request):
         """HTMX endpoint: return a server-rendered mapping table for given connector/lane counts."""
 
