@@ -2129,6 +2129,12 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
         base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
         help_text="List of scoped fields, only direct fields on the model",
     )
+    _value = forms.JSONField(
+        required=False,
+        help_text=(
+            'Format depends on the selected metadata type (JSON-encoded value; e.g. "text", 42, true, ["a", "b"]).'
+        ),
+    )
 
     class Meta:
         model = ObjectMetadata
@@ -2156,8 +2162,8 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
         super().__init__(*args, **kwargs)
         initial = kwargs.get("initial", {})
         if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
-            self.fields["assigned_object_type"].widget = forms.HiddenInput()
-            self.fields["assigned_object_id"].widget = forms.HiddenInput()
+            self.fields["assigned_object_type"].disabled = True
+            self.fields["assigned_object_id"].disabled = True
             self.fields["metadata_type"].queryset = MetadataType.objects.filter(
                 content_types=initial["assigned_object_type"]
             )
