@@ -147,7 +147,7 @@ class JobConsoleLogExecutor:
             f"{self.job_result_pk}",
             f"--config={settings.SETTINGS_PATH}",
             "--data",
-            NautobotKombuJSONEncoder().encode(self.job_kwargs),
+            NautobotKombuJSONEncoder(ensure_ascii=False).encode(self.job_kwargs),
         ]
 
     def _print_output(self):

@@ -197,7 +197,7 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
                 f"{self.job_result.pk}",
                 f"--config={settings.SETTINGS_PATH}",
                 "--data",
-                NautobotKombuJSONEncoder().encode(job_kwargs),
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
             ],
             stdout=mock.ANY,
             stderr=mock.ANY,

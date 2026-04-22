@@ -746,7 +746,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
         f"{job_result.pk}",
         f"--config={settings.SETTINGS_PATH}",
         "--data",
-        NautobotKombuJSONEncoder().encode(job_kwargs),
+        NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
     ]
 
     def create_kubernetes_job():

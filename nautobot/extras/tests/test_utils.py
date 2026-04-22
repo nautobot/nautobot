@@ -361,7 +361,7 @@ class UtilsTestCase(TestCase):
                 str(job_result.pk),
                 f"--config={settings.SETTINGS_PATH}",
                 "--data",
-                NautobotKombuJSONEncoder().encode(job_kwargs),
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
             ],
         )
         self.assertEqual(create_call[1]["namespace"], "test-namespace")
