@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.test import override_settings, tag
+from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape, format_html
@@ -81,7 +81,6 @@ from nautobot.extras.models import (
     JobResult,
     MetadataType,
     Note,
-    ObjectChange,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -102,6 +101,7 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.views import ObjectChangeUIViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -4913,18 +4913,27 @@ class ObjectChangeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        cls.factory = RequestFactory()
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Location 1", location_type=location_type, status=location_status)
-        location.save()
+        cls.location = Location(name="Location 1", location_type=location_type, status=location_status)
+        cls.location.save()
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
         for _ in range(1, 4):
-            oc = location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+            oc = cls.location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
             oc.save()
+
+    @classmethod
+    def _create_objectchange_for_user(cls, user):
+        objectchange = cls.location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+        objectchange.user = user
+        objectchange.request_id = uuid.uuid4()
+        objectchange.save()
+        return objectchange
 
     def test_objectchange_list(self):
         url = reverse("extras:objectchange_list")
@@ -4936,9 +4945,58 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-        objectchange = ObjectChange.objects.first()
+        objectchange = self._create_objectchange_for_user(self.user)
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
+
+    def test_objectchange_queryset_restricts_non_staff_users_from_staff_logs(self):
+        other_user = User.objects.create_user(username="objectchange-other-user")
+        staff_user = User.objects.create_user(username="objectchange-staff-user", is_staff=True)
+        superuser = User.objects.create_superuser(
+            username="objectchange-superuser",
+            email="objectchange-superuser@example.com",
+            password="password",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
+        )
+
+        own_change = self._create_objectchange_for_user(self.user)
+        other_change = self._create_objectchange_for_user(other_user)
+        staff_change = self._create_objectchange_for_user(staff_user)
+        superuser_change = self._create_objectchange_for_user(superuser)
+
+        request = self.factory.get(reverse("extras:objectchange_list"))
+        request.user = self.user
+        view = ObjectChangeUIViewSet()
+        view.request = request
+        view.action = "list"
+        regular_user_queryset = view.get_queryset()
+        self.assertIn(own_change, regular_user_queryset)
+        self.assertIn(other_change, regular_user_queryset)
+        self.assertNotIn(staff_change, regular_user_queryset)
+        self.assertNotIn(superuser_change, regular_user_queryset)
+
+        self.user.is_staff = True
+        self.user.save()
+        request = self.factory.get(reverse("extras:objectchange_list"))
+        request.user = self.user
+        view = ObjectChangeUIViewSet()
+        view.request = request
+        view.action = "list"
+        staff_queryset = view.get_queryset()
+        self.assertIn(own_change, staff_queryset)
+        self.assertIn(other_change, staff_queryset)
+        self.assertIn(staff_change, staff_queryset)
+        self.assertIn(superuser_change, staff_queryset)
+
+        request = self.factory.get(reverse("extras:objectchange_list"))
+        request.user = superuser
+        view = ObjectChangeUIViewSet()
+        view.request = request
+        view.action = "list"
+        superuser_queryset = view.get_queryset()
+        self.assertIn(own_change, superuser_queryset)
+        self.assertIn(other_change, superuser_queryset)
+        self.assertIn(staff_change, superuser_queryset)
+        self.assertIn(superuser_change, superuser_queryset)
 
 
 class ObjectMetadataTestCase(

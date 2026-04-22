@@ -3158,6 +3158,15 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
 
         return context
 
+    def get_queryset(self):
+        # Note: restrict() in super().get_queryset() already returns queryset.none() for anonymous users.
+        queryset = super().get_queryset()
+
+        if not self.request.user.is_staff:
+            queryset = queryset.exclude(user__is_staff=True).exclude(user__is_superuser=True)
+
+        return queryset
+
 
 class ObjectChangeLogView(generic.GenericView):
     """

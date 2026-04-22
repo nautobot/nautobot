@@ -1,0 +1,1 @@
+Restricted `ObjectChange` list visibility so non-staff users can no longer see change log entries authored by staff or superusers.
