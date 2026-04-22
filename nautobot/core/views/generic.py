@@ -138,12 +138,24 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             **self.get_extra_context(request, instance),
         }
 
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            component = (
+                self.object_detail_content.get_component_by_id(request.GET["component_id"])
+                if self.object_detail_content is not None
+                else None
+            )
+            context["component"] = component
+
         # Some of the legacy views overriding title in `get_extra_context` method.
         # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model, view_type="").render(context)
 
-        return render(request, self.get_template_name(), context)
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            template_name = "components/htmx/component.html"
+        else:
+            template_name = self.get_template_name()
+        return render(request, template_name, context)
 
 
 class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):

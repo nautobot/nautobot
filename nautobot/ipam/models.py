@@ -445,7 +445,7 @@ class VRFPrefixAssignment(BaseModel):
             raise ValidationError(
                 {
                     "prefix": f"Prefix (namespace {self.prefix.namespace}) must be in same namespace as "
-                    "VRF (namespace {self.vrf.namespace})"
+                    f"VRF (namespace {self.vrf.namespace})"
                 }
             )
 
@@ -1520,7 +1520,7 @@ class IPAddress(PrimaryModel):
             self._namespace = None
 
         # Force dns_name to lowercase
-        if not self.dns_name.islower:
+        if not self.dns_name.islower():
             self.dns_name = self.dns_name.lower()
 
         super().clean()

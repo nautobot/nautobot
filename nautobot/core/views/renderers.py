@@ -310,9 +310,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
                 context["object_detail_content"] = view.object_detail_content
+                if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+                    component = view.object_detail_content.get_component_by_id(request.GET["component_id"])
+                    context["component"] = component
             except AttributeError:
                 # If the view does not have a object_detail_content attribute, set it to None.
                 context["object_detail_content"] = None
+
             context.update(common_detail_view_context(request, instance))
         if view.action == "list":
             # Construct valid actions for list view.

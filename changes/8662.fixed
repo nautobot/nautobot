@@ -1,0 +1,1 @@
+Fixed component ID generation crash caused by non-string dictionary keys.

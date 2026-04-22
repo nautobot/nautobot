@@ -97,6 +97,7 @@ from nautobot.core.templatetags.perms import (
 )
 from nautobot.core.templatetags.ui_framework import (
     render_breadcrumbs,
+    render_component,
     render_components,
     render_detail_view_extra_buttons,
     render_tabs_labels,
@@ -196,6 +197,7 @@ __all__ = (
     "render_boolean",
     "render_breadcrumbs",
     "render_button_class",
+    "render_component",
     "render_components",
     "render_content_types",
     "render_custom_fields",

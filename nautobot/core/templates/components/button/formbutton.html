@@ -1,5 +1,8 @@
-<button type="button" class="btn btn-{{ color }} {% if size %} btn-{{ size }}{% endif %}"
-        action-url="{{link}}" data-form-id="{{form_id}}"
+<button id="component-{{ component.component_id }}"
+        action-url="{{link}}"
+        class="btn btn-{{ color }} {% if size %} btn-{{ size }}{% endif %}"
+        data-form-id="{{form_id}}"
+        type="button"
         {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
 >
     {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}

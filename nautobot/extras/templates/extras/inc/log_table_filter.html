@@ -1,0 +1,10 @@
+{% load ajax_table %}
+<div class="card-header">
+    <strong>Logs</strong>
+    <div class="float-end d-print-none">
+        <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
+    </div>
+</div>
+{% if result and result.pk %}
+    {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
+{% endif %}

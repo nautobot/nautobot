@@ -1000,6 +1000,7 @@ CACHES = {
         "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CUSTOM_HEALTH_CHECK_CLASS": "",
             "PASSWORD": "",
         },
     }

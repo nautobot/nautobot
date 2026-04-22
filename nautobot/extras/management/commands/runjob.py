@@ -1,6 +1,7 @@
 import time
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.extras.choices import JobResultStatusChoices
@@ -9,7 +10,11 @@ from nautobot.extras.models import Job, JobResult
 
 
 class Command(BaseCommand):
-    help = "Run a job (script, report) to validate or update data in Nautobot"
+    help = (
+        "Enqueue or locally execute a Nautobot job by its class path. "
+        "Can run the job on a Celery worker (default) or directly on the local system (--local). "
+        "Blocks until the job reaches a terminal state and reports the final status."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument("job", help="Job in the Python module form: `<module_name>.<JobClassName>`")
@@ -33,6 +38,20 @@ class Command(BaseCommand):
         parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
 
     def handle(self, *args, **options):
+        """Look up the job and user, then either run locally or enqueue on a worker.
+
+        Expects the job argument in '<module_name>.<JobClassName>' form. Resolves the
+        user by username and the job model by class path, then branches:
+
+        - If --local: creates a JobResult directly and delegates execution to the
+                      'execute_job_result' management command in the current process,
+                      optionally with cProfile (--profile) and input data (--data).
+        - Otherwise:  validates the job and input data, then enqueues the job via
+                      JobResult.enqueue_job, dispatching it to a Celery worker.
+
+        In both cases, polls until the job reaches a terminal state and reports
+        the final status via report_job_status.
+        """
         if "." not in options["job"]:
             raise CommandError('Job must be specified in the Python module form: "<module_name>.<JobClassName>"')
         User = get_user_model()
@@ -42,18 +61,46 @@ class Command(BaseCommand):
             raise CommandError("No such user") from exc
 
         job_class_path = options["job"]
-        data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
         job_model = Job.objects.get_for_class_path(job_class_path)
 
+        data = validate_job_and_job_data(self, user, job_class_path, options.get("data"))
         if options["local"]:
-            job_result = JobResult.execute_job(job_model, user, profile=options["profile"], **data)
+            job_result = JobResult.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                user=user,
+            )
+            schedule = data.get("schedule", None)
+            celery_kwargs = data.get("celery_kwargs", None)
+            task_queue = data.get("task_queue", None)
+            ignore_singleton_lock = data.get("ignore_singleton_lock", None)
+            job_celery_kwargs = JobResult._build_celery_kwargs(
+                job_model=job_model,
+                user=user,
+                task_queue=task_queue,
+                console_log=False,
+                profile=options["profile"],
+                ignore_singleton_lock=ignore_singleton_lock,
+                schedule=schedule,
+                celery_kwargs=celery_kwargs,
+            )
+
+            job_result.celery_kwargs = job_celery_kwargs
+            job_result.save()
+            call_command(
+                "execute_job_result",
+                f"{job_result.pk!s}",
+                profile=options["profile"],
+                data=options.get("data"),
+                stdout=self.stdout,
+            )
         else:
             job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
 
-            # Wait on the job to finish
-            while job_result.status not in JobResultStatusChoices.READY_STATES:
-                time.sleep(1)
-                job_result.refresh_from_db()
+        # Wait on the job to finish
+        while job_result.status not in JobResultStatusChoices.READY_STATES:
+            time.sleep(1)
+            job_result.refresh_from_db()
 
         # Report on success/failure
         report_job_status(self, job_result)

@@ -636,6 +636,7 @@ class ApprovalWorkflowTriggerAPITest(APITestCase):
         self.assertEqual(approval_workflow.current_state, choices.ApprovalWorkflowStateChoices.DENIED)
         scheduled_job.refresh_from_db()
         self.assertEqual(scheduled_job.decision_date, approval_workflow.decision_date)
+        self.assertFalse(scheduled_job.enabled)
 
 
 class ApprovalWorkflowStageAPITest(ApprovalWorkflowTestMixin, APIViewTestCases.APIViewTestCase):

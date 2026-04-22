@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
-from django.utils.html import strip_tags
+from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
@@ -487,8 +487,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             + "?"
             + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
         )
-        add_ip_button = f'<a href="{add_ip_link}" class="btn btn-primary"><span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add an IP Address</a>'
-        self.assertInHTML(add_ip_button, content)
+        self.assertIn(f'href="{escape(add_ip_link)}"', content)
+        self.assertIn("Add an IP Address", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_descendant_prefixes_table_list(self):
