@@ -4113,26 +4113,22 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         "polarity_method": "other",
     }
 
-    @classmethod
-    def _mapping_editor_url(cls):
-        return reverse("dcim:cablebreakouttype_mapping_editor")
-
-    @staticmethod
-    def _mapping_editor_context(response):
-        return response.context or response.context_data
-
     def test_mapping_editor_requires_view_permission(self):
         """Unauthorized users should be denied the mapping_editor action."""
         self.client.logout()
         self.client.force_login(self.user)  # user starts with no perms
-        response = self.client.get(self._mapping_editor_url(), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2})
+        response = self.client.get(
+            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
+        )
         self.assertEqual(response.status_code, 403)
 
     def test_mapping_editor_autogenerates_mapping_from_valid_params(self):
         self.add_permissions("dcim.view_cablebreakouttype")
-        response = self.client.get(self._mapping_editor_url(), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2})
+        response = self.client.get(
+            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
+        )
         self.assertEqual(response.status_code, 200)
-        ctx = self._mapping_editor_context(response)
+        ctx = response.context
         mapping = ctx["mapping"]
         self.assertEqual(len(mapping), 2)
         self.assertEqual(mapping[0]["a_connector"], 1)
@@ -4154,7 +4150,7 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             {"label": "Y", "a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 1},
         ]
         response = self.client.get(
-            self._mapping_editor_url(),
+            reverse("dcim:cablebreakouttype_mapping_editor"),
             {
                 "a_connectors": 1,
                 "b_connectors": 2,
@@ -4163,21 +4159,21 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self._mapping_editor_context(response)["mapping"], explicit_mapping)
+        self.assertEqual(response.context["mapping"], explicit_mapping)
 
     def test_mapping_editor_falls_back_to_autogen_on_invalid_mapping_json(self):
         self.add_permissions("dcim.view_cablebreakouttype")
         response = self.client.get(
-            self._mapping_editor_url(),
+            reverse("dcim:cablebreakouttype_mapping_editor"),
             {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2, "mapping": "not-valid-json"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(self._mapping_editor_context(response)["mapping"]), 2)
+        self.assertEqual(len(response.context["mapping"]), 2)
 
     def test_mapping_editor_falls_back_to_autogen_when_mapping_is_not_a_list(self):
         self.add_permissions("dcim.view_cablebreakouttype")
         response = self.client.get(
-            self._mapping_editor_url(),
+            reverse("dcim:cablebreakouttype_mapping_editor"),
             {
                 "a_connectors": 1,
                 "b_connectors": 2,
@@ -4186,30 +4182,32 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(self._mapping_editor_context(response)["mapping"]), 2)
+        self.assertEqual(len(response.context["mapping"]), 2)
 
     def test_mapping_editor_missing_params_returns_no_mapping(self):
         self.add_permissions("dcim.view_cablebreakouttype")
-        response = self.client.get(self._mapping_editor_url())
+        response = self.client.get(reverse("dcim:cablebreakouttype_mapping_editor"))
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self._mapping_editor_context(response)["mapping"])
+        self.assertIsNone(response.context["mapping"])
 
     def test_mapping_editor_non_divisible_total_lanes_returns_no_mapping(self):
         """If total_lanes is not evenly divisible by a_connectors (or b_connectors), autogen is skipped."""
         self.add_permissions("dcim.view_cablebreakouttype")
-        response = self.client.get(self._mapping_editor_url(), {"a_connectors": 2, "b_connectors": 3, "total_lanes": 7})
+        response = self.client.get(
+            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 2, "b_connectors": 3, "total_lanes": 7}
+        )
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self._mapping_editor_context(response)["mapping"])
+        self.assertIsNone(response.context["mapping"])
 
     def test_mapping_editor_blank_param_values_do_not_crash(self):
         """Empty-string params from HTMX on initial load should be treated as zero, not trigger ValueError."""
         self.add_permissions("dcim.view_cablebreakouttype")
         response = self.client.get(
-            self._mapping_editor_url(),
+            reverse("dcim:cablebreakouttype_mapping_editor"),
             {"a_connectors": "", "b_connectors": "", "total_lanes": "", "mapping": ""},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(self._mapping_editor_context(response)["mapping"])
+        self.assertIsNone(response.context["mapping"])
 
 
 # TODO: Change base class to PrimaryObjectViewTestCase
