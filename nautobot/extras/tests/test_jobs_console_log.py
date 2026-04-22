@@ -1,13 +1,14 @@
 from io import StringIO
-import json
 import re
 import subprocess
 from unittest import mock
+import uuid
 
 from django.conf import settings
 from django.test import override_settings
 from django.utils import timezone
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.testing import CelerySubprocessTestCase, TestCase
 from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices, JobResultStatusChoices
 from nautobot.extras.jobs_console_log import (
@@ -196,7 +197,7 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
                 f"{self.job_result.pk}",
                 f"--config={settings.SETTINGS_PATH}",
                 "--data",
-                json.dumps(job_kwargs),
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
             ],
             stdout=mock.ANY,
             stderr=mock.ANY,
@@ -302,3 +303,13 @@ class JobConsoleLogExecutorTestCase(CelerySubprocessTestCase):
             executor.execute()
 
         self.assertEqual(exc.exception.args[0], "Job console log subprocess failed")
+
+    def test_build_command_serializes_uuid_kwargs(self):
+        # Regression: _build_command must serialize UUID values in job_kwargs without raising.
+        test_uuid = uuid.uuid4()
+        executor = JobConsoleLogExecutor(
+            job_result_pk=self.job_result.pk,
+            job_kwargs={"object_id": test_uuid},
+        )
+        command = executor._build_command()
+        self.assertIn(str(test_uuid), command[-1])
