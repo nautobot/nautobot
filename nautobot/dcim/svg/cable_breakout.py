@@ -1,7 +1,20 @@
 """Server-side SVG generation for breakout cable lane mapping diagrams."""
 
+from dataclasses import dataclass
+
 from django.utils.html import mark_safe
 import svgwrite
+
+
+@dataclass(frozen=True)
+class MappingEntry:
+    """A single row in a CableBreakoutType mapping."""
+
+    label: str
+    a_connector: int
+    a_position: int
+    b_connector: int
+    b_position: int
 
 
 class BreakoutDiagramSVG:
@@ -9,7 +22,7 @@ class BreakoutDiagramSVG:
     Generate an SVG diagram showing the lane mapping of a cable breakout type.
 
     Usage:
-        diagram = BreakoutDiagramSVG(cable_breakout_type, connected_a={1}, connected_b={1,2,3})
+        diagram = BreakoutDiagramSVG(cable_breakout_type, a_termination_labels={1: "Device1 / Eth1"}, connected_b={})
         svg_string = diagram.render()
     """
 
@@ -21,17 +34,15 @@ class BreakoutDiagramSVG:
     FONT_SIZE = 12
     FONT_FAMILY = "system-ui, -apple-system, sans-serif"
 
-    COLOR_CONNECTED = "#198754"
-    COLOR_DISCONNECTED = "#adb5bd"
-    COLOR_NODE_BG_CONNECTED = "#198754"
-    COLOR_NODE_BG_DEFAULT = "#6c757d"
-    COLOR_NODE_TEXT = "#ffffff"
+    COLOR_CONNECTED = "var(--bs-success)"
+    COLOR_DISCONNECTED = "var(--bs-tertiary-color)"
+    COLOR_NODE_BG_CONNECTED = "var(--bs-success)"
+    COLOR_NODE_BG_DEFAULT = "var(--bs-tertiary-color)"
+    COLOR_NODE_TEXT = "var(--bs-body-color)"
 
     def __init__(
         self,
         cable_breakout_type,
-        connected_a=None,
-        connected_b=None,
         show_status=True,
         a_termination_labels=None,
         b_termination_labels=None,
@@ -39,38 +50,29 @@ class BreakoutDiagramSVG:
         """
         Args:
             cable_breakout_type: CableBreakoutType instance
-            connected_a: set of A connector numbers with terminations
-            connected_b: set of B connector numbers with terminations
             show_status: if True, color connected nodes green
             a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips
             b_termination_labels: dict {connector_num: "Device / Interface"} for B-side tooltips
         """
         self.cable_breakout_type = cable_breakout_type
-        self.connected_a = connected_a or set()
-        self.connected_b = connected_b or set()
         self.show_status = show_status
         self.a_labels = a_termination_labels or {}
         self.b_labels = b_termination_labels or {}
 
-        # Build connector mapping
+        # Build connector mapping, e.g. self.a_to_b = {1: {1, 2}} and self.b_to_a = {1: {1}, 2: {1}}
         self.a_to_b = {}
         self.b_to_a = {}
+        # Set of tuples of (label, a_connector, b_connector)
+        self.pairs = set()
         for entry in cable_breakout_type.mapping:
             self.a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
             self.b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
+            self.pairs.add(MappingEntry(**entry))
 
         self.a_connectors = sorted(self.a_to_b.keys())
         self.b_connectors = sorted(self.b_to_a.keys())
 
         # Total rows = number of unique (a, b) pairs
-        self.pairs = []
-        seen = set()
-        for entry in cable_breakout_type.mapping:
-            pair = (entry["label"], entry["a_connector"], entry["b_connector"])
-            if pair not in seen:
-                self.pairs.append(pair)
-                seen.add(pair)
-
         self.total_rows = len(self.pairs)
 
     def _total_height(self):
@@ -89,8 +91,7 @@ class BreakoutDiagramSVG:
         """
         n_a = len(self.a_connectors)
         n_b = len(self.b_connectors)
-        max_n = max(n_a, n_b)
-        total_h = max_n * (self.NODE_H + self.GAP) + self.GAP
+        total_h = self._total_height()
 
         # Position the side with more connectors evenly
         def _even_positions(connectors):
@@ -118,13 +119,13 @@ class BreakoutDiagramSVG:
             b_pos = _even_positions(self.b_connectors)
             a_pos = _centered_positions(self.a_connectors, self.a_to_b, b_pos)
 
-        return a_pos, b_pos, total_h
+        return a_pos, b_pos
 
     def render(self):
-        a_pos, b_pos, total_h = self._node_positions()
+        a_pos, b_pos = self._node_positions()
 
         w = self._total_width()
-        h = total_h
+        h = self._total_height()
 
         dwg = svgwrite.Drawing(size=(f"{w}px", f"{h}px"), debug=False)
         dwg.viewbox(0, 0, w, h)
@@ -135,16 +136,16 @@ class BreakoutDiagramSVG:
         b_left = b_x
 
         # Draw lines first (behind nodes)
-        for label, ac, bc in self.pairs:
-            ay = a_pos[ac]
-            by = b_pos[bc]
+        for entry in self.pairs:
+            ay = a_pos[entry.a_connector]
+            by = b_pos[entry.b_connector]
 
-            a_conn = self.show_status and ac in self.connected_a
-            b_conn = self.show_status and bc in self.connected_b
+            a_conn = self.show_status and entry.a_connector in self.a_labels
+            b_conn = self.show_status and entry.b_connector in self.b_labels
             both = a_conn and b_conn
 
             color = self.COLOR_CONNECTED if both else self.COLOR_DISCONNECTED
-            width = 2 if both else 1.5
+            width = 2 if both or not self.show_status else 1.5
             dasharray = None if both or not self.show_status else "6,4"
 
             line = dwg.line(
@@ -157,7 +158,7 @@ class BreakoutDiagramSVG:
                 line["stroke-dasharray"] = dasharray
             dwg.add(line)
 
-            # Lane label at the midpoint of the line with white background pill
+            # Lane label at the midpoint of the line with background pill
             mid_x = (a_right + 2 + b_left - 2) / 2
             mid_y = (ay + by) / 2
             label_size = self.FONT_SIZE - 1
@@ -169,14 +170,14 @@ class BreakoutDiagramSVG:
                     size=(pill_w, pill_h),
                     rx=pill_h / 2,
                     ry=pill_h / 2,
-                    fill="white",
+                    fill="var(--bs-body-bg)",
                     stroke=color,
                     stroke_width=1,
                 )
             )
             dwg.add(
                 dwg.text(
-                    label,
+                    entry.label,
                     insert=(mid_x, mid_y + label_size / 3),
                     text_anchor="middle",
                     fill=color,
@@ -189,7 +190,7 @@ class BreakoutDiagramSVG:
         # Draw A-side nodes (all same height, with tooltips)
         for ac in self.a_connectors:
             y_center = a_pos[ac]
-            connected = self.show_status and ac in self.connected_a
+            connected = self.show_status and ac in self.a_labels
             bg = self.COLOR_NODE_BG_CONNECTED if connected else self.COLOR_NODE_BG_DEFAULT
 
             group = dwg.g()
@@ -231,7 +232,7 @@ class BreakoutDiagramSVG:
         # Draw B-side nodes (all same height, with tooltips)
         for bc in self.b_connectors:
             y_center = b_pos[bc]
-            connected = self.show_status and bc in self.connected_b
+            connected = self.show_status and bc in self.b_labels
             bg = self.COLOR_NODE_BG_CONNECTED if connected else self.COLOR_NODE_BG_DEFAULT
 
             group = dwg.g()

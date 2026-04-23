@@ -145,58 +145,6 @@ class CableBreakoutType(PrimaryModel):
         diagram = BreakoutDiagramSVG(self, show_status=False)
         return diagram.render()
 
-    def get_diagram_rows(self, connected_a=None, connected_b=None):
-        """
-        Build flat rows for the lane mapping diagram.
-
-        One row per unique (a_connector, b_connector) pair. Uses rowspan so each
-        connector node appears once, spanning its mapped partners.
-        """
-        if not self.mapping:
-            return []
-
-        a_to_b = {}
-        b_to_a = {}
-        for entry in self.mapping:
-            a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-            b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-
-        pairs = set()
-        for entry in self.mapping:
-            pairs.add((entry["label"], entry["a_connector"], entry["b_connector"]))
-        pairs = sorted(pairs)
-
-        rows = []
-        a_seen = set()
-        b_seen = set()
-
-        for label, a_conn, b_conn in pairs:
-            show_a = a_conn not in a_seen
-            show_b = b_conn not in b_seen
-            a_rowspan = len(a_to_b.get(a_conn, [])) if show_a else 0
-            b_rowspan = len(b_to_a.get(b_conn, [])) if show_b else 0
-
-            a_seen.add(a_conn)
-            b_seen.add(b_conn)
-
-            rows.append(
-                {
-                    "label": label,
-                    "a_connector": a_conn,
-                    "b_connector": b_conn,
-                    "show_a": show_a,
-                    "show_b": show_b,
-                    "a_rowspan": a_rowspan,
-                    "b_rowspan": b_rowspan,
-                    "a_lanes": self.a_positions,
-                    "b_lanes": self.b_positions,
-                    "a_connected": a_conn in connected_a if connected_a is not None else False,
-                    "b_connected": b_conn in connected_b if connected_b is not None else False,
-                }
-            )
-
-        return rows
-
     def clean(self):
         super().clean()
 
