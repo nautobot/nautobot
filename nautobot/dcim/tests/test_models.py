@@ -78,6 +78,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, SecretsGroup, Status
@@ -2834,26 +2835,6 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(breakout.a_positions, 0)
         self.assertEqual(breakout.b_positions, 0)
 
-    def test_autogenerate_mapping_straight(self):
-        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=1, total_lanes=4)
-        self.assertEqual(len(mapping), 4)
-        for lane_index, entry in enumerate(mapping, start=1):
-            self.assertEqual(entry["label"], str(lane_index))
-            self.assertEqual(entry["a_connector"], 1)
-            self.assertEqual(entry["a_position"], lane_index)
-            self.assertEqual(entry["b_connector"], 1)
-            self.assertEqual(entry["b_position"], lane_index)
-
-    def test_autogenerate_mapping_breakout(self):
-        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=4, total_lanes=8)
-        self.assertEqual(len(mapping), 8)
-        # All entries are on a_connector 1, positions 1..8
-        self.assertEqual([e["a_connector"] for e in mapping], [1] * 8)
-        self.assertEqual([e["a_position"] for e in mapping], list(range(1, 9)))
-        # B side fills 4 connectors, 2 positions each, in order
-        self.assertEqual([e["b_connector"] for e in mapping], [1, 1, 2, 2, 3, 3, 4, 4])
-        self.assertEqual([e["b_position"] for e in mapping], [1, 2, 1, 2, 1, 2, 1, 2])
-
     def test_clean_wrong_direction(self):
         """a_connectors must not exceed b_connectors."""
         breakout = CableBreakoutType(
@@ -2895,6 +2876,9 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         )
         breakout.clean()
         self.assertEqual(len(breakout.mapping), 4)
+        self.assertEqual(
+            breakout.mapping, generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=4)
+        )
 
     def test_validate_mapping_not_a_list(self):
         breakout = CableBreakoutType(
@@ -2967,7 +2951,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             total_lanes=1,
             mapping=[{"a_connector": "1", "a_position": 1, "b_connector": 1, "b_position": 1}],
         )
-        with self.assertRaisesRegex(ValidationError, "key 'a_connector' must be an integer"):
+        with self.assertRaisesRegex(ValidationError, "key 'a_connector' must be a positive integer"):
             breakout.clean()
 
     def test_validate_mapping_out_of_range(self):
@@ -2979,7 +2963,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         ]
         for entry, expected_message in cases:
             with self.subTest(expected_message=expected_message):
-                # Pad mapping to the expected size so _validate_mapping reaches the range checks.
+                # Pad mapping to the expected size so validate_mapping reaches the range checks.
                 mapping = [
                     entry,
                     {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
@@ -3060,7 +3044,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             mapping=mapping,
         )
         breakout.clean()
-        # _validate_mapping fills in missing labels (using the entry index as string).
+        # validate_mapping fills in missing labels (using the entry index as string).
         self.assertEqual(breakout.mapping[0]["label"], "0")
         self.assertEqual(breakout.mapping[1]["label"], "1")
 

@@ -4,8 +4,8 @@ import re
 
 from django.test import SimpleTestCase
 
-from nautobot.dcim.models import CableBreakoutType
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 
 
 def _line_endpoints(svg):
@@ -42,18 +42,18 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
     """Tests for nautobot.dcim.svg.cable_breakout.BreakoutDiagramSVG."""
 
     def _render(self, **kwargs):
-        mapping = CableBreakoutType.autogenerate_mapping(**kwargs)
+        mapping = generate_cable_breakout_mapping(**kwargs)
         return mapping, BreakoutDiagramSVG(mapping, show_status=False).render()
 
     def test_endpoint_offset_single_position(self):
         """A connector with a single position should not offset its lane endpoints."""
-        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=1, total_lanes=1)
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=1)
         diagram = BreakoutDiagramSVG(mapping, show_status=False)
         self.assertEqual(diagram._endpoint_offset(1, 1, diagram.a_node_h), 0)
 
     def test_endpoint_offset_multiple_positions_symmetric(self):
         """With >1 positions, offsets should straddle zero within +/- node_h * fraction / 2."""
-        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=1, total_lanes=4)
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=4)
         diagram = BreakoutDiagramSVG(mapping, show_status=False)
 
         offsets = [diagram._endpoint_offset(p, 4, diagram.a_node_h) for p in range(1, 5)]
@@ -68,10 +68,10 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
     def test_node_height_scales_with_positions(self):
         """A connector's node height grows with positions-per-connector."""
         small_diagram = BreakoutDiagramSVG(
-            CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=1, total_lanes=1), show_status=False
+            generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=1), show_status=False
         )
         large_diagram = BreakoutDiagramSVG(
-            CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=2, total_lanes=12), show_status=False
+            generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=12), show_status=False
         )
 
         # Small: 1 position → minimum height.
@@ -120,7 +120,7 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
         # b_connectors=4, b_positions=2 → each B node receives exactly 2 lanes
         # at 2 distinct y values. Group endpoints by their nearest b center.
         diagram = BreakoutDiagramSVG(
-            CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=4, total_lanes=8), show_status=False
+            generate_cable_breakout_mapping(a_connectors=1, b_connectors=4, total_lanes=8), show_status=False
         )
         _, b_pos = diagram._node_positions()
         lanes_per_b = {bc: set() for bc in b_pos}

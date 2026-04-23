@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from django.utils.html import mark_safe
 import svgwrite
 
+from nautobot.dcim.utils import validate_cable_breakout_mapping
+
 
 @dataclass(frozen=True)
 class MappingEntry:
@@ -59,35 +61,30 @@ class BreakoutDiagramSVG:
             a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips
             b_termination_labels: dict {connector_num: "Device / Interface"} for B-side tooltips
         """
+        validate_cable_breakout_mapping(mapping)
+
         self.show_status = show_status
         self.a_labels = a_termination_labels or {}
         self.b_labels = b_termination_labels or {}
 
-        # Build connector mapping, e.g. self.a_to_b = {1: {1, 2}} and self.b_to_a = {1: {1}, 2: {1}}
+        # Build connector mapping, e.g. for a 1x2 breakout, self.a_to_b = {1: {1, 2}} and self.b_to_a = {1: {1}, 2: {1}}
+        self.entries = {MappingEntry(**entry) for entry in mapping}
         self.a_to_b = {}
         self.b_to_a = {}
-        # Set of tuples of (label, a_connector, a_position, b_connector, b_position)
-        self.pairs = set()
-        for entry in mapping:
-            self.a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-            self.b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-            self.pairs.add(MappingEntry(**entry))
+        for entry in self.entries:
+            self.a_to_b.setdefault(entry.a_connector, set()).add(entry.b_connector)
+            self.b_to_a.setdefault(entry.b_connector, set()).add(entry.a_connector)
 
-        self.a_connectors = sorted(self.a_to_b.keys())
-        self.b_connectors = sorted(self.b_to_a.keys())
+        self.a_connectors = len(self.a_to_b)
+        self.b_connectors = len(self.b_to_a)
 
-        # Total rows = number of unique (a, b) pairs
-        self.total_rows = len(self.pairs)
-
-        # Positions-per-connector derived from the mapping: the largest position index
-        # seen on each side (equivalent to total_lanes // connectors when mapping is complete).
-        self.a_positions = max((entry.a_position for entry in self.pairs), default=0)
-        self.b_positions = max((entry.b_position for entry in self.pairs), default=0)
+        self.a_positions = len(self.entries) // self.a_connectors
+        self.b_positions = len(self.entries) // self.b_connectors
 
         # Group lanes by (a_connector, b_connector) so parallel lanes between the
         # same pair can be staggered horizontally to keep their labels legible.
         self.pair_groups = {}
-        for entry in self.pairs:
+        for entry in self.entries:
             key = (entry.a_connector, entry.b_connector)
             self.pair_groups.setdefault(key, []).append(entry)
         for group in self.pair_groups.values():
@@ -112,10 +109,8 @@ class BreakoutDiagramSVG:
         return -span / 2 + (position - 1) * span / (total_positions - 1)
 
     def _total_height(self):
-        n_a = len(self.a_connectors)
-        n_b = len(self.b_connectors)
-        h_a = n_a * self.a_node_h + (n_a + 1) * self.GAP
-        h_b = n_b * self.b_node_h + (n_b + 1) * self.GAP
+        h_a = self.a_connectors * self.a_node_h + (self.a_connectors + 1) * self.GAP
+        h_b = self.b_connectors * self.b_node_h + (self.b_connectors + 1) * self.GAP
         return max(h_a, h_b)
 
     def _total_width(self):
@@ -129,33 +124,27 @@ class BreakoutDiagramSVG:
         connectors has its nodes vertically centered within the span of their
         mapped partners.
         """
-        n_a = len(self.a_connectors)
-        n_b = len(self.b_connectors)
         total_h = self._total_height()
 
         # Position the side with more connectors evenly, tiled node_h + GAP apart
         def _even_positions(connectors, node_h):
-            return {c: self.GAP + i * (node_h + self.GAP) + node_h / 2 for i, c in enumerate(connectors)}
+            return {i: node_h / 2 + self.GAP + (i - 1) * (node_h + self.GAP) for i in range(1, connectors + 1)}
 
         # Position the side with fewer connectors centered on their mapped partners
         def _centered_positions(connectors, mapping, other_positions):
             positions = {}
-            for c in connectors:
-                mapped = sorted(mapping.get(c, []))
+            for i in range(1, connectors + 1):
+                mapped = sorted(mapping.get(i, []))
                 if mapped:
                     y_min = other_positions[mapped[0]]
                     y_max = other_positions[mapped[-1]]
-                    positions[c] = (y_min + y_max) / 2
+                    positions[i] = (y_min + y_max) / 2
                 else:
-                    positions[c] = total_h / 2
+                    positions[i] = total_h / 2
             return positions
 
-        if n_a >= n_b:
-            a_pos = _even_positions(self.a_connectors, self.a_node_h)
-            b_pos = _centered_positions(self.b_connectors, self.b_to_a, a_pos)
-        else:
-            b_pos = _even_positions(self.b_connectors, self.b_node_h)
-            a_pos = _centered_positions(self.a_connectors, self.a_to_b, b_pos)
+        b_pos = _even_positions(self.b_connectors, self.b_node_h)
+        a_pos = _centered_positions(self.a_connectors, self.a_to_b, b_pos)
 
         return a_pos, b_pos
 
@@ -177,7 +166,7 @@ class BreakoutDiagramSVG:
         end_x = b_left - 2
 
         # Draw lines first (behind nodes)
-        for entry in self.pairs:
+        for entry in self.entries:
             ay = a_pos[entry.a_connector] + self._endpoint_offset(entry.a_position, self.a_positions, self.a_node_h)
             by = b_pos[entry.b_connector] + self._endpoint_offset(entry.b_position, self.b_positions, self.b_node_h)
 
@@ -231,7 +220,7 @@ class BreakoutDiagramSVG:
             )
 
         # Draw A-side nodes (all same height, with tooltips)
-        for ac in self.a_connectors:
+        for ac in range(1, self.a_connectors + 1):
             y_center = a_pos[ac]
             connected = self.show_status and ac in self.a_labels
             bg = self.COLOR_NODE_BG_CONNECTED if connected else self.COLOR_NODE_BG_DEFAULT
@@ -272,7 +261,7 @@ class BreakoutDiagramSVG:
             dwg.add(group)
 
         # Draw B-side nodes (all same height, with tooltips)
-        for bc in self.b_connectors:
+        for bc in range(1, self.b_connectors + 1):
             y_center = b_pos[bc]
             connected = self.show_status and bc in self.b_labels
             bg = self.COLOR_NODE_BG_CONNECTED if connected else self.COLOR_NODE_BG_DEFAULT

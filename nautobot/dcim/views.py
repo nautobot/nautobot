@@ -78,7 +78,11 @@ from nautobot.core.views.utils import common_detail_view_context, get_obj_from_c
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
+from nautobot.dcim.utils import (
+    generate_cable_breakout_mapping,
+    get_all_network_driver_mappings,
+    render_software_version_and_image_files,
+)
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.ipam.models import IPAddress
@@ -5423,7 +5427,7 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 mapping = None
 
         if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
-            mapping = CableBreakoutType.autogenerate_mapping(a_connectors, b_connectors, total_lanes)
+            mapping = generate_cable_breakout_mapping(a_connectors, b_connectors, total_lanes)
 
         return render(
             request,

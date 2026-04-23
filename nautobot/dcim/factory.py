@@ -72,6 +72,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
@@ -172,7 +173,7 @@ class CableBreakoutTypeFactory(PrimaryModelFactory):
         lambda: factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
     )
     mapping = factory.LazyAttribute(
-        lambda o: CableBreakoutType.autogenerate_mapping(o.a_connectors, o.b_connectors, o.total_lanes)
+        lambda o: generate_cable_breakout_mapping(o.a_connectors, o.b_connectors, o.total_lanes)
     )
 
 
