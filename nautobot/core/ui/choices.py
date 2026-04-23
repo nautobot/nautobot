@@ -133,6 +133,7 @@ class NavigationIconChoices(ChoiceSet):
     CLOUD = "cloud"
     DESIGN = "hammer"
     APPROVAL_WORKFLOWS = "checkbox-circle"
+    ADMINISTRATION = "transform"
     EXTENSIBILITY = "extensibility"
     GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
@@ -188,6 +189,7 @@ class NavigationWeightChoices(ChoiceSet):
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
     APPROVAL_WORKFLOWS = 1200
+    ADMINISTRATION = 1250
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
@@ -211,6 +213,7 @@ class NavigationWeightChoices(ChoiceSet):
         (CLOUD, "Cloud"),
         (DESIGN, "Design"),
         (APPROVAL_WORKFLOWS, "Approval Workflows"),
+        (ADMINISTRATION, "Administration"),
         (EXTENSIBILITY, "Extensibility"),
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),

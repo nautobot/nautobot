@@ -8,6 +8,7 @@ from . import views
 app_name = "user"
 
 router = NautobotUIViewSetRouter()
+router.register("object-permissions", views.ObjectPermissionUIViewSet)
 
 urlpatterns = [
     path("profile/", views.ProfileView.as_view(), name="profile"),

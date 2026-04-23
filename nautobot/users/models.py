@@ -324,6 +324,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
     is_metadata_associable_model = False
+    is_saved_view_model = True
 
     class Meta:
         ordering = ["name"]
