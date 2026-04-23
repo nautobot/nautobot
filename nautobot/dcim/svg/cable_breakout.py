@@ -26,13 +26,17 @@ class BreakoutDiagramSVG:
         svg_string = diagram.render()
     """
 
-    NODE_H = 28
+    NODE_H_MIN = 28
     NODE_W = 60
     NODE_R = 4  # border radius
     GAP = 4
-    LINE_AREA_W = 80
+    LINE_AREA_W_MIN = 80
+    LANE_PITCH = 14  # minimum vertical spacing between lane endpoints within a node
+    PILL_PITCH = 22  # minimum horizontal spacing between staggered labels for parallel lanes
+    PILL_W = 18
+    PILL_H = 14
     FONT_SIZE = 12
-    FONT_FAMILY = "system-ui, -apple-system, sans-serif"
+    FONT_FAMILY = "var(--bs-font-sans-serif)"
 
     COLOR_CONNECTED = "var(--bs-success)"
     COLOR_DISCONNECTED = "var(--bs-tertiary-color)"
@@ -75,11 +79,42 @@ class BreakoutDiagramSVG:
         # Total rows = number of unique (a, b) pairs
         self.total_rows = len(self.pairs)
 
+        # Group lanes by (a_connector, b_connector) so parallel lanes between the
+        # same pair can be staggered horizontally to keep their labels legible.
+        self.pair_groups = {}
+        for entry in self.pairs:
+            key = (entry.a_connector, entry.b_connector)
+            self.pair_groups.setdefault(key, []).append(entry)
+        for group in self.pair_groups.values():
+            group.sort(key=lambda e: (e.a_position, e.b_position))
+
+        # Node heights scale with positions-per-connector so many parallel lanes
+        # can spread out vertically without overlapping.
+        self.a_node_h = max(self.NODE_H_MIN, cable_breakout_type.a_positions * self.LANE_PITCH)
+        self.b_node_h = max(self.NODE_H_MIN, cable_breakout_type.b_positions * self.LANE_PITCH)
+
+        # Line area width scales with the largest group of parallel lanes so that
+        # staggered label pills within a single (a, b) pair don't overlap horizontally.
+        max_parallel = max((len(g) for g in self.pair_groups.values()), default=1)
+        self.line_area_w = max(self.LINE_AREA_W_MIN, (max_parallel + 1) * self.PILL_PITCH)
+
+    def _endpoint_offset(self, position, total_positions, node_h):
+        """Vertical offset within a connector node for the given 1-indexed lane position."""
+        if total_positions <= 1:
+            return 0
+        fraction = 0.7
+        span = node_h * fraction
+        return -span / 2 + (position - 1) * span / (total_positions - 1)
+
     def _total_height(self):
-        return self.total_rows * (self.NODE_H + self.GAP) + self.GAP
+        n_a = len(self.a_connectors)
+        n_b = len(self.b_connectors)
+        h_a = n_a * self.a_node_h + (n_a + 1) * self.GAP
+        h_b = n_b * self.b_node_h + (n_b + 1) * self.GAP
+        return max(h_a, h_b)
 
     def _total_width(self):
-        return self.NODE_W + self.LINE_AREA_W + self.NODE_W + 20  # padding
+        return self.NODE_W + self.line_area_w + self.NODE_W + 20  # padding
 
     def _node_positions(self):
         """
@@ -93,11 +128,9 @@ class BreakoutDiagramSVG:
         n_b = len(self.b_connectors)
         total_h = self._total_height()
 
-        # Position the side with more connectors evenly
-        def _even_positions(connectors):
-            n = len(connectors)
-            spacing = total_h / n
-            return {c: self.GAP + i * spacing + spacing / 2 for i, c in enumerate(connectors)}
+        # Position the side with more connectors evenly, tiled node_h + GAP apart
+        def _even_positions(connectors, node_h):
+            return {c: self.GAP + i * (node_h + self.GAP) + node_h / 2 for i, c in enumerate(connectors)}
 
         # Position the side with fewer connectors centered on their mapped partners
         def _centered_positions(connectors, mapping, other_positions):
@@ -113,10 +146,10 @@ class BreakoutDiagramSVG:
             return positions
 
         if n_a >= n_b:
-            a_pos = _even_positions(self.a_connectors)
+            a_pos = _even_positions(self.a_connectors, self.a_node_h)
             b_pos = _centered_positions(self.b_connectors, self.b_to_a, a_pos)
         else:
-            b_pos = _even_positions(self.b_connectors)
+            b_pos = _even_positions(self.b_connectors, self.b_node_h)
             a_pos = _centered_positions(self.a_connectors, self.a_to_b, b_pos)
 
         return a_pos, b_pos
@@ -135,10 +168,15 @@ class BreakoutDiagramSVG:
         a_right = a_x + self.NODE_W
         b_left = b_x
 
+        a_positions = self.cable_breakout_type.a_positions
+        b_positions = self.cable_breakout_type.b_positions
+        start_x = a_right + 2
+        end_x = b_left - 2
+
         # Draw lines first (behind nodes)
         for entry in self.pairs:
-            ay = a_pos[entry.a_connector]
-            by = b_pos[entry.b_connector]
+            ay = a_pos[entry.a_connector] + self._endpoint_offset(entry.a_position, a_positions, self.a_node_h)
+            by = b_pos[entry.b_connector] + self._endpoint_offset(entry.b_position, b_positions, self.b_node_h)
 
             a_conn = self.show_status and entry.a_connector in self.a_labels
             b_conn = self.show_status and entry.b_connector in self.b_labels
@@ -149,8 +187,8 @@ class BreakoutDiagramSVG:
             dasharray = None if both or not self.show_status else "6,4"
 
             line = dwg.line(
-                start=(a_right + 2, ay),
-                end=(b_left - 2, by),
+                start=(start_x, ay),
+                end=(end_x, by),
                 stroke=color,
                 stroke_width=width,
             )
@@ -158,18 +196,20 @@ class BreakoutDiagramSVG:
                 line["stroke-dasharray"] = dasharray
             dwg.add(line)
 
-            # Lane label at the midpoint of the line with background pill
-            mid_x = (a_right + 2 + b_left - 2) / 2
-            mid_y = (ay + by) / 2
+            # Stagger the label along the line when multiple lanes share the same
+            # (a_connector, b_connector) pair, so the pills don't sit on top of each other.
+            group = self.pair_groups[(entry.a_connector, entry.b_connector)]
+            idx = group.index(entry)
+            t = (idx + 1) / (len(group) + 1)
+            mid_x = start_x + t * (end_x - start_x)
+            mid_y = ay + t * (by - ay)
             label_size = self.FONT_SIZE - 1
-            pill_w = 18
-            pill_h = 14
             dwg.add(
                 dwg.rect(
-                    insert=(mid_x - pill_w / 2, mid_y - pill_h / 2),
-                    size=(pill_w, pill_h),
-                    rx=pill_h / 2,
-                    ry=pill_h / 2,
+                    insert=(mid_x - self.PILL_W / 2, mid_y - self.PILL_H / 2),
+                    size=(self.PILL_W, self.PILL_H),
+                    rx=self.PILL_H / 2,
+                    ry=self.PILL_H / 2,
                     fill="var(--bs-body-bg)",
                     stroke=color,
                     stroke_width=1,
@@ -201,8 +241,8 @@ class BreakoutDiagramSVG:
 
             group.add(
                 dwg.rect(
-                    insert=(a_x, y_center - self.NODE_H / 2),
-                    size=(self.NODE_W, self.NODE_H),
+                    insert=(a_x, y_center - self.a_node_h / 2),
+                    size=(self.NODE_W, self.a_node_h),
                     rx=self.NODE_R,
                     ry=self.NODE_R,
                     fill=bg,
@@ -243,8 +283,8 @@ class BreakoutDiagramSVG:
 
             group.add(
                 dwg.rect(
-                    insert=(b_x, y_center - self.NODE_H / 2),
-                    size=(self.NODE_W, self.NODE_H),
+                    insert=(b_x, y_center - self.b_node_h / 2),
+                    size=(self.NODE_W, self.b_node_h),
                     rx=self.NODE_R,
                     ry=self.NODE_R,
                     fill=bg,
