@@ -21,6 +21,7 @@ from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
 )
 from nautobot.dcim.fields import JSONPathField
+from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 from nautobot.dcim.utils import (
     decompile_path_node,
     object_to_path_node,
@@ -141,8 +142,6 @@ class CableBreakoutType(PrimaryModel):
 
     def get_diagram_svg(self):
         """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
-        from nautobot.dcim.breakout_diagram import BreakoutDiagramSVG
-
         diagram = BreakoutDiagramSVG(self, show_status=False)
         return diagram.render()
 
