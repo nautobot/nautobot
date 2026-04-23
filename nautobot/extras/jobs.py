@@ -417,7 +417,7 @@ class BaseJob:
 
     @final
     @classproperty
-    def template_name(cls) -> bool:  # pylint: disable=no-self-argument
+    def template_name(cls) -> str:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("template_name", "", expected_type=str)
 
     @final
