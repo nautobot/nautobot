@@ -51,7 +51,6 @@ class RegularExpressionValidationRuleForm(NautobotModelForm):
 
         model = RegularExpressionValidationRule
         fields = "__all__"
-        exclude_embedded_create = ["content_type"]
 
 
 class RegularExpressionValidationRuleBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -115,7 +114,6 @@ class MinMaxValidationRuleForm(NautobotModelForm):
 
         model = MinMaxValidationRule
         fields = "__all__"
-        exclude_embedded_create = ["content_type"]
 
 
 class MinMaxValidationRuleBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -167,7 +165,6 @@ class RequiredValidationRuleForm(NautobotModelForm):
 
         model = RequiredValidationRule
         fields = "__all__"
-        exclude_embedded_create = ["content_type"]
 
 
 class RequiredValidationRuleBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
@@ -224,7 +221,6 @@ class UniqueValidationRuleForm(NautobotModelForm):
 
         model = UniqueValidationRule
         fields = "__all__"
-        exclude_embedded_create = ["content_type"]
 
 
 class UniqueValidationRuleBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):

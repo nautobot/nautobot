@@ -126,27 +126,8 @@ class EmbeddedActionsFormMixin(forms.Form):
 
         for name, field in self.fields.items():
             if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
-                model = field.queryset.model
                 for action in ["create", "search"]:
                     has_field_embedded_action = self.has_field_embedded_action(action, field, name)
-                    if has_field_embedded_action:
-                        # ContentType is a Django built-in model that is not user-creatable
-                        # and has no UI list view, so neither embedded create nor search apply.
-                        if model is ContentType:
-                            has_field_embedded_action = False
-                        elif action == "create":
-                            try:  # Disable embedded create if this model has no UI route for creation.
-                                reverse(get_route_for_model(model, "add"))
-                            except NoReverseMatch:
-                                has_field_embedded_action = False
-                        elif action == "search":
-                            # Disable embedded search if the FilterSet or FilterForm for this model is missing.
-                            if (
-                                get_filterset_for_model(model) is None
-                                or get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
-                                is None
-                            ):
-                                has_field_embedded_action = False
                     setattr(field, f"embedded_{action}", has_field_embedded_action)
 
     def has_field_embedded_action(self, action, field, name):
@@ -159,11 +140,34 @@ class EmbeddedActionsFormMixin(forms.Form):
         form_meta_exclude_embedded_action = getattr(meta, f"exclude_embedded_{action}", None)
 
         if field_embedded_action is not None:
-            return field_embedded_action
-        if form_meta_embedded_action is not None:
-            return name in form_meta_embedded_action
-        if form_meta_exclude_embedded_action is not None:
-            return name not in form_meta_exclude_embedded_action
+            enabled = field_embedded_action
+        elif form_meta_embedded_action is not None:
+            enabled = name in form_meta_embedded_action
+        elif form_meta_exclude_embedded_action is not None:
+            enabled = name not in form_meta_exclude_embedded_action
+        else:
+            enabled = True
+
+        if not enabled:
+            return False
+
+        model = field.queryset.model
+        # ContentType is a Django built-in model that is not user-creatable and has no UI list view,
+        # so neither embedded create nor search apply.
+        if model is ContentType:
+            return False
+        # Disable when the target model lacks the required UI infrastructure.
+        if action == "create":
+            try:
+                reverse(get_route_for_model(model, "add"))
+            except NoReverseMatch:
+                return False
+        elif action == "search":
+            if (
+                get_filterset_for_model(model) is None
+                or get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm") is None
+            ):
+                return False
         return True
 
     def validate_mutually_exclusive_attributes(self, obj, *attributes):
