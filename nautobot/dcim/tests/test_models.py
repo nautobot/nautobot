@@ -2835,8 +2835,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(breakout.b_positions, 0)
 
     def test_autogenerate_mapping_straight(self):
-        breakout = CableBreakoutType(a_connectors=1, b_connectors=1, total_lanes=4)
-        mapping = breakout.autogenerate_mapping()
+        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=1, total_lanes=4)
         self.assertEqual(len(mapping), 4)
         for lane_index, entry in enumerate(mapping, start=1):
             self.assertEqual(entry["label"], str(lane_index))
@@ -2846,8 +2845,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             self.assertEqual(entry["b_position"], lane_index)
 
     def test_autogenerate_mapping_breakout(self):
-        breakout = CableBreakoutType(a_connectors=1, b_connectors=4, total_lanes=8)
-        mapping = breakout.autogenerate_mapping()
+        mapping = CableBreakoutType.autogenerate_mapping(a_connectors=1, b_connectors=4, total_lanes=8)
         self.assertEqual(len(mapping), 8)
         # All entries are on a_connector 1, positions 1..8
         self.assertEqual([e["a_connector"] for e in mapping], [1] * 8)

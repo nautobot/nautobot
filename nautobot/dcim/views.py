@@ -5423,9 +5423,7 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 mapping = None
 
         if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
-            mapping = CableBreakoutType(
-                a_connectors=a_connectors, b_connectors=b_connectors, total_lanes=total_lanes
-            ).autogenerate_mapping()
+            mapping = CableBreakoutType.autogenerate_mapping(a_connectors, b_connectors, total_lanes)
 
         return render(
             request,

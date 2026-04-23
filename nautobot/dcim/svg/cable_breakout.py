@@ -22,7 +22,7 @@ class BreakoutDiagramSVG:
     Generate an SVG diagram showing the lane mapping of a cable breakout type.
 
     Usage:
-        diagram = BreakoutDiagramSVG(cable_breakout_type, a_termination_labels={1: "Device1 / Eth1"}, connected_b={})
+        diagram = BreakoutDiagramSVG(mapping, a_termination_labels={1: "Device1 / Eth1"})
         svg_string = diagram.render()
     """
 
@@ -46,19 +46,19 @@ class BreakoutDiagramSVG:
 
     def __init__(
         self,
-        cable_breakout_type,
+        mapping,
         show_status=True,
         a_termination_labels=None,
         b_termination_labels=None,
     ):
         """
         Args:
-            cable_breakout_type: CableBreakoutType instance
+            mapping: list of dicts describing each lane, e.g. from `CableBreakoutType.mapping`.
+                Each entry must contain keys: `label`, `a_connector`, `a_position`, `b_connector`, `b_position`.
             show_status: if True, color connected nodes green
             a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips
             b_termination_labels: dict {connector_num: "Device / Interface"} for B-side tooltips
         """
-        self.cable_breakout_type = cable_breakout_type
         self.show_status = show_status
         self.a_labels = a_termination_labels or {}
         self.b_labels = b_termination_labels or {}
@@ -66,9 +66,9 @@ class BreakoutDiagramSVG:
         # Build connector mapping, e.g. self.a_to_b = {1: {1, 2}} and self.b_to_a = {1: {1}, 2: {1}}
         self.a_to_b = {}
         self.b_to_a = {}
-        # Set of tuples of (label, a_connector, b_connector)
+        # Set of tuples of (label, a_connector, a_position, b_connector, b_position)
         self.pairs = set()
-        for entry in cable_breakout_type.mapping:
+        for entry in mapping:
             self.a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
             self.b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
             self.pairs.add(MappingEntry(**entry))
@@ -78,6 +78,11 @@ class BreakoutDiagramSVG:
 
         # Total rows = number of unique (a, b) pairs
         self.total_rows = len(self.pairs)
+
+        # Positions-per-connector derived from the mapping: the largest position index
+        # seen on each side (equivalent to total_lanes // connectors when mapping is complete).
+        self.a_positions = max((entry.a_position for entry in self.pairs), default=0)
+        self.b_positions = max((entry.b_position for entry in self.pairs), default=0)
 
         # Group lanes by (a_connector, b_connector) so parallel lanes between the
         # same pair can be staggered horizontally to keep their labels legible.
@@ -90,8 +95,8 @@ class BreakoutDiagramSVG:
 
         # Node heights scale with positions-per-connector so many parallel lanes
         # can spread out vertically without overlapping.
-        self.a_node_h = max(self.NODE_H_MIN, cable_breakout_type.a_positions * self.LANE_PITCH)
-        self.b_node_h = max(self.NODE_H_MIN, cable_breakout_type.b_positions * self.LANE_PITCH)
+        self.a_node_h = max(self.NODE_H_MIN, self.a_positions * self.LANE_PITCH)
+        self.b_node_h = max(self.NODE_H_MIN, self.b_positions * self.LANE_PITCH)
 
         # Line area width scales with the largest group of parallel lanes so that
         # staggered label pills within a single (a, b) pair don't overlap horizontally.
@@ -168,15 +173,13 @@ class BreakoutDiagramSVG:
         a_right = a_x + self.NODE_W
         b_left = b_x
 
-        a_positions = self.cable_breakout_type.a_positions
-        b_positions = self.cable_breakout_type.b_positions
         start_x = a_right + 2
         end_x = b_left - 2
 
         # Draw lines first (behind nodes)
         for entry in self.pairs:
-            ay = a_pos[entry.a_connector] + self._endpoint_offset(entry.a_position, a_positions, self.a_node_h)
-            by = b_pos[entry.b_connector] + self._endpoint_offset(entry.b_position, b_positions, self.b_node_h)
+            ay = a_pos[entry.a_connector] + self._endpoint_offset(entry.a_position, self.a_positions, self.a_node_h)
+            by = b_pos[entry.b_connector] + self._endpoint_offset(entry.b_position, self.b_positions, self.b_node_h)
 
             a_conn = self.show_status and entry.a_connector in self.a_labels
             b_conn = self.show_status and entry.b_connector in self.b_labels
@@ -251,9 +254,8 @@ class BreakoutDiagramSVG:
             )
 
             label = f"A{ac}"
-            a_positions = self.cable_breakout_type.a_positions
-            if a_positions > 1:
-                label += f" ({a_positions})"
+            if self.a_positions > 1:
+                label += f" ({self.a_positions})"
 
             group.add(
                 dwg.text(
@@ -293,9 +295,8 @@ class BreakoutDiagramSVG:
             )
 
             label = f"B{bc}"
-            b_positions = self.cable_breakout_type.b_positions
-            if b_positions > 1:
-                label += f" ({b_positions})"
+            if self.b_positions > 1:
+                label += f" ({self.b_positions})"
 
             group.add(
                 dwg.text(

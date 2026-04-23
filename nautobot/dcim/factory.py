@@ -172,11 +172,7 @@ class CableBreakoutTypeFactory(PrimaryModelFactory):
         lambda: factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
     )
     mapping = factory.LazyAttribute(
-        lambda o: CableBreakoutType(
-            a_connectors=o.a_connectors,
-            b_connectors=o.b_connectors,
-            total_lanes=o.total_lanes,
-        ).autogenerate_mapping()
+        lambda o: CableBreakoutType.autogenerate_mapping(o.a_connectors, o.b_connectors, o.total_lanes)
     )
 
 

@@ -142,7 +142,7 @@ class CableBreakoutType(PrimaryModel):
 
     def get_diagram_svg(self):
         """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
-        diagram = BreakoutDiagramSVG(self, show_status=False)
+        diagram = BreakoutDiagramSVG(self.mapping, show_status=False)
         return diagram.render()
 
     def clean(self):
@@ -163,17 +163,20 @@ class CableBreakoutType(PrimaryModel):
             )
 
         if not self.mapping:
-            self.mapping = self.autogenerate_mapping()
+            self.mapping = self.autogenerate_mapping(self.a_connectors, self.b_connectors, self.total_lanes)
         self._validate_mapping()
 
-    def autogenerate_mapping(self):
-        """Generate a default mapping from the provided connectors and positions."""
+    @classmethod
+    def autogenerate_mapping(cls, a_connectors, b_connectors, total_lanes):
+        """Generate a default mapping from the given connector and lane counts."""
+        a_positions = total_lanes // a_connectors
+        b_positions = total_lanes // b_connectors
         mapping = []
         lane_index = 0
-        for a_connector in range(self.a_connectors):
-            for a_position in range(self.a_positions):
-                b_connector = lane_index // self.b_positions
-                b_position = lane_index % self.b_positions
+        for a_connector in range(a_connectors):
+            for a_position in range(a_positions):
+                b_connector = lane_index // b_positions
+                b_position = lane_index % b_positions
                 mapping.append(
                     {
                         # Change 0-indexed iterations to 1-indexed mapping entries!
