@@ -40,10 +40,6 @@ class UserQuerySet(RestrictedQuerySet):
     def restrict(self, user, action="view"):
         return super().restrict(user, action)
 
-        # Regular users can only see themselves
-        # Needed for FK validation in serializers (e.g. RackReservation.user)
-        return super().restrict(user, action).filter(pk=user.pk)
-
 
 class UserManager(BaseManager, UserManager_):
     """
