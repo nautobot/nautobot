@@ -495,14 +495,17 @@ class NaturalKeyOrPKMultipleChoiceFilter(ModelMultipleChoiceFilter):
 
     field_class = forms.MultiMatchModelMultipleChoiceField
 
-    def __init__(self, *args, prefers_id=False, **kwargs):
+    def __init__(self, *args, prefers_id=False, field_names=None, **kwargs):
         """Initialize the NaturalKeyOrPKMultipleChoiceFilter.
 
         Args:
             prefers_id (bool, optional): Prefer PK (ID) over the 'to_field_name'. Defaults to False.
+            field_names (list, optional): List of field names to filter on. If provided, the filter
+                will generate an OR query across all specified fields. Defaults to None.
         """
         self.natural_key = kwargs.setdefault("to_field_name", "name")
         self.prefers_id = prefers_id
+        self.field_names = field_names or [kwargs.get("field_name")]
         super().__init__(*args, **kwargs)
 
     @property
@@ -524,6 +527,9 @@ class NaturalKeyOrPKMultipleChoiceFilter(ModelMultipleChoiceFilter):
 
         # Null value filtering
         if v is None:
+            # For multiple field names, create an OR query with null checks on all fields
+            if len(self.field_names) > 1:
+                return models.Q(**{f"{field_name}__isnull": True for field_name in self.field_names})
             return {f"{self.field_name}__isnull": True}
 
         # If value is a model instance, stringify it to a pk.
@@ -541,18 +547,28 @@ class NaturalKeyOrPKMultipleChoiceFilter(ModelMultipleChoiceFilter):
             v = str(v)  # Cast possible UUID instance to a string
             is_pk = True
 
-        # If it's not a pk, then it's a name and the filter predicate needs to be nested (e.g.
-        # `{"location__name": "ams01"}`) so that it can be usable in `Q` objects.
-        if not is_pk:
-            name = f"{self.field_name}__{self.field.to_field_name}"
+        # Build predicates for all field names
+        predicates = {}
+        for field_name in self.field_names:
+            # If it's not a pk, then it's a name and the filter predicate needs to be nested (e.g.
+            # `{"location__name": "ams01"}`) so that it can be usable in `Q` objects.
+            if not is_pk:
+                name = f"{field_name}__{self.field.to_field_name}"
+            else:
+                logger.debug("UUID detected: Filtering using field name")
+                name = field_name
+
+            if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
+                name = "__".join([name, self.lookup_expr])
+
+            predicates[name] = v
+
+        # For multiple field names, return a Q object with OR logic
+        if len(self.field_names) > 1:
+            return models.Q(**predicates)
         else:
-            logger.debug("UUID detected: Filtering using field name")
-            name = self.field_name
-
-        if name and self.lookup_expr != django_filters.conf.settings.DEFAULT_LOOKUP_EXPR:
-            name = "__".join([name, self.lookup_expr])
-
-        return {name: v}
+            # Single field name - return the traditional dict format
+            return predicates
 
 
 class SearchFilter(MappedPredicatesFilterMixin, django_filters.CharFilter):
