@@ -28,6 +28,7 @@ from nautobot.core.views.mixins import (
     AdminRequiredMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
     ObjectEditViewMixin,
@@ -513,8 +514,9 @@ class ObjectPermissionUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
 ):
-    queryset = ObjectPermission.objects.all()
+    queryset = ObjectPermission.objects.prefetch_related("object_types", "users", "groups")
     filterset_class = ObjectPermissionFilterSet
     filterset_form_class = ObjectPermissionFilterForm
     form_class = ObjectPermissionForm
