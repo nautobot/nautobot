@@ -1,0 +1,1 @@
+Fixed a bug with Nautobot's network lookups where, when used in subquery, the where clause don't use the subquery's alias.
