@@ -213,6 +213,12 @@ class UserUIViewSet(
     bulk_update_form_class = UserBulkEditForm
     action_buttons = ("add", "export")
 
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        user = request.user
+        if not (user and user.is_active and (user.is_staff or user.is_superuser)):
+            raise exceptions.PermissionDenied("Only staff or superuser accounts can access user administration.")
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
