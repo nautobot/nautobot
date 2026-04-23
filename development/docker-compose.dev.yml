@@ -26,4 +26,14 @@ services:
       disable: true
     tty: true
     volumes:
-      - ../:/source
+      - ../.editorconfig:/source/.editorconfig
+      - ../nautobot/ui/src:/source/nautobot/ui/src
+      - ../nautobot/ui/.gitignore:/source/nautobot/ui/.gitignore
+      - ../nautobot/ui/.node-version:/source/nautobot/ui/.node-version
+      - ../nautobot/ui/.prettierignore:/source/nautobot/ui/.prettierignore
+      - ../nautobot/ui/eslint.config.js:/source/nautobot/ui/eslint.config.js
+      - ../nautobot/ui/package-lock.json:/source/nautobot/ui/package-lock.json
+      - ../nautobot/ui/package.json:/source/nautobot/ui/package.json
+      - ../nautobot/ui/prettier.config.js:/source/nautobot/ui/prettier.config.js
+      - ../nautobot/ui/webpack.config.js:/source/nautobot/ui/webpack.config.js
+      - ../nautobot/project-static/dist:/source/nautobot/project-static/dist

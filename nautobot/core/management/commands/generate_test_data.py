@@ -138,6 +138,7 @@ class Command(BaseCommand):
                 VPNPhase1PolicyFactory,
                 VPNPhase2PolicyFactory,
                 VPNProfileFactory,
+                VPNTerminationFactory,
                 VPNTunnelEndpointFactory,
                 VPNTunnelFactory,
             )
@@ -342,6 +343,7 @@ class Command(BaseCommand):
         _create_batch(VPNPhase2PolicyFactory, 20)
         _create_batch(VPNProfileFactory, 30)
         _create_batch(VPNFactory, 10)
+        _create_batch(VPNTerminationFactory, 9)
         _create_batch(VPNTunnelEndpointFactory, 20)
         _create_batch(VPNTunnelFactory, 10)
         _create_batch(JobQueueFactory, 10)

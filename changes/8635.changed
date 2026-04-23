@@ -1,2 +1,0 @@
-Updated CustomField clean method to block setting both required and scope filter values
-Updated UI to hide scope filter section when required is marked. 

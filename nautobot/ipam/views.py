@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models, transaction
 from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
+from django.http.response import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
@@ -536,7 +537,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="prefixes",
+                render_on_tab_id=["prefixes"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddChildPrefixButton(
@@ -546,12 +547,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_prefix"],
-                render_on_tab_id="prefixes",
+                render_on_tab_id=["prefixes"],
             ),
             object_detail.Button(
                 weight=100,
                 label="Available",
-                render_on_tab_id="ip-addresses",
+                render_on_tab_id=["ip-addresses"],
                 template_path="ipam/inc/toggle_available.html",
             ),
             ui.AddIPAddressButton(
@@ -561,13 +562,12 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
-                render_on_tab_id="ip-addresses",
+                render_on_tab_id=["ip-addresses"],
             ),
         ],
     )
 
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
+    def _filter_params_imply_hide_hierarchy_ui(self, filter_params):
         # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered prefixes:
         if all(
@@ -581,54 +581,37 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "type",  # *only* for type=container, see below
                 "within_include",
             ]
-            for key in self.filter_params
-        ) and ("type" not in self.filter_params or self.filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
+            for key in filter_params
+        ) and ("type" not in filter_params or filter_params["type"] == [PrefixTypeChoices.TYPE_CONTAINER]):
+            return False
+        return True
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self._filter_params_imply_hide_hierarchy_ui(self.filter_params):
             self.hide_hierarchy_ui = False
-
-        if not self.hide_hierarchy_ui:
-            default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
-            default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
-            if default_max_depth > 0:
-                if first_root := queryset.first():
-                    default_max_depth += first_root.ancestors().count()
-            if (
-                "max_depth" not in self.filter_params
-                and "type" not in self.filter_params
-                and default_container_only
-                and default_max_depth > 0
-            ):
-                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                param = f"{'parent__' * default_max_depth}isnull"
-                queryset = queryset.exclude(**{param: False})
-                messages.info(
-                    self.request,
-                    format_html(
-                        "This table has been filtered by default due to the configured "
-                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting "
-                        "as well as by the enabled <code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting.",
-                    ),
-                )
-            elif "max_depth" not in self.filter_params and default_max_depth > 0:
-                param = f"{'parent__' * default_max_depth}isnull"
-                queryset = queryset.exclude(**{param: False})
-                messages.info(
-                    self.request,
-                    format_html(
-                        "This table has been filtered by default due to the configured "
-                        "<code>PREFIX_LIST_DEFAULT_MAX_DEPTH</code> setting."
-                    ),
-                )
-            elif "type" not in self.filter_params and default_container_only:
-                queryset = queryset.filter(type=PrefixTypeChoices.TYPE_CONTAINER)
-                messages.info(
-                    self.request,
-                    format_html(
-                        "This table has been filtered by default due to the enabled "
-                        "<code>PREFIX_LIST_DEFAULT_CONTAINER_ONLY</code> setting."
-                    ),
-                )
-
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """If `PREFIX_LIST_DEFAULT_*` are set, redirect any query-param-free request to `?max_depth=...&type=...`."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response, HttpResponseRedirect):
+            # already a redirect
+            return response
+        if request.GET:
+            # query params explicitly provided by user, defaults don't apply
+            return response
+        default_max_depth = get_settings_or_config("PREFIX_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+        default_container_only = get_settings_or_config("PREFIX_LIST_DEFAULT_CONTAINER_ONLY", fallback=False)
+        if not default_max_depth and not default_container_only:
+            # no relevant defaults to apply
+            return response
+        query_dict = request.GET.copy()
+        if default_max_depth:
+            query_dict["max_depth"] = default_max_depth
+        if default_container_only:
+            query_dict["type"] = PrefixTypeChoices.TYPE_CONTAINER
+        return redirect(request.path + "?" + query_dict.urlencode())
 
     def get_extra_context(self, request, instance):
         if self.action == "retrieve" and instance is not None:

@@ -1,0 +1,19 @@
+{% load form_helpers %}
+{% load helpers %}
+
+{% include 'inc/modal_header.html' with title="Job Missing" %}
+
+<div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+    <div class="row justify-content-center flex-fill">
+        <div class="alert alert-warning">
+            <span aria-hidden="true" class="mdi mdi-alert"></span> The provided Job class_path is not valid. Please ensure the class path is correct and that the Job is properly installed.
+
+            Job class_path provided: <code>{{ class_path }}</code>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+            <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+        </button>
+    </div>

@@ -93,6 +93,18 @@ menu_items = (
                     ),
                 ),
             ),
+            NavMenuGroup(
+                name="Terminations",
+                weight=200,
+                items=(
+                    NavMenuItem(
+                        link="vpn:vpntermination_list",
+                        name="VPN Terminations",
+                        weight=100,
+                        permissions=["vpn.view_vpntermination"],
+                    ),
+                ),
+            ),
         ),
     ),
 )

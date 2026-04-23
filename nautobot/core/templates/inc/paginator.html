@@ -5,17 +5,18 @@
      {% if htmx_enabled|default:False %}
          hx-history="false"
          hx-indicator="#{{ table_id }}-htmx-indicator"
+         hx-inherit="*"
          hx-push-url="true"
          hx-swap="show:#{{ paginator_id|default:'paginator' }}:bottom"
          hx-select-oob="#{{ table_id }},#header_messages,#paginator,#select_all_box"
      {% endif %}
 >
     {% if page %}
-        <div>
+        <div class="nb-paginator-info">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         {% if not exclude_controls %}
-            <div class="vr border-start my-8"></div>
+            <div class="vr border-start my-8 nb-paginator-divider"></div>
         {% endif %}
     {% endif %}
     {% if not exclude_controls %}
@@ -52,7 +53,7 @@
         </form>
     {% endif %}
     {% if paginator.num_pages > 1 and not exclude_controls %}
-        <div class="vr border-start my-8"></div>
+        <div class="vr border-start my-8 nb-paginator-divider"></div>
         <nav>
             <ul class="pagination mb-0">
                 {% if page.has_previous %}

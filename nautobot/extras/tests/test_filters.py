@@ -26,12 +26,14 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -49,6 +51,7 @@ from nautobot.extras.filters import (
     ContentTypeFilterSet,
     CustomFieldChoiceFilterSet,
     CustomLinkFilterSet,
+    DynamicGroupFilterSet,
     ExportTemplateFilterSet,
     ExternalIntegrationFilterSet,
     FileProxyFilterSet,
@@ -70,6 +73,7 @@ from nautobot.extras.filters import (
     RelationshipFilterSet,
     RoleFilterSet,
     SavedViewFilterSet,
+    ScheduledJobFilterSet,
     SecretFilterSet,
     SecretsGroupAssociationFilterSet,
     SecretsGroupFilterSet,
@@ -93,6 +97,7 @@ from nautobot.extras.models import (
     CustomFieldChoice,
     CustomLink,
     DynamicGroup,
+    DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
     FileProxy,
@@ -101,6 +106,7 @@ from nautobot.extras.models import (
     ImageAttachment,
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -1448,7 +1454,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_IMMEDIATELY,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
             ScheduledJob.objects.create(
@@ -1457,7 +1462,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 job_model=job_model,
                 interval=JobExecutionType.TYPE_DAILY,
                 user=user,
-                approval_required=True,
                 start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
                 time_zone=ZoneInfo("America/New_York"),
             ),
@@ -1469,7 +1473,6 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 crontab="34 12 * * *",
                 enabled=False,
                 user=user,
-                approval_required=True,
                 start_time=now(),
             ),
         ]
@@ -1483,6 +1486,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 status=JobResultStatusChoices.STATUS_STARTED,
                 scheduled_job=scheduled_jobs[idx],
             )
+        # at least one job result must to have at least one job console entry to pass test `test_boolean_filters_generic`
+        JobConsoleEntry.objects.create(job_result=JobResult.objects.first(), timestamp=now(), text="Processing data...")
 
     def test_scheduled_job(self):
         scheduled_jobs = list(self.scheduled_jobs[:2])
@@ -1633,6 +1638,91 @@ class JobLogEntryTestCase(FilterTestCases.FilterTestCase):
             )
 
 
+class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = ScheduledJob.objects.all()
+    filterset = ScheduledJobFilterSet
+    generic_filter_tests = [
+        ("name",),
+        ("job_model", "job_model__id"),
+        ("job_model", "job_model__name"),
+        ("job_model_id", "job_model__id"),
+        ("start_time",),
+        ("last_run_at",),
+        ("total_run_count",),
+        ("time_zone",),
+        ("state",),
+    ]
+
+    @classmethod
+    def setUpTestData(cls):
+        user = User.objects.create(username="scheduledjobfilteruser", is_active=True)
+        jobs = Job.objects.all()[:3]
+
+        cls.scheduled_jobs = [
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 1",
+                task=jobs[0].class_path,
+                job_model=jobs[0],
+                interval=JobExecutionType.TYPE_IMMEDIATELY,
+                user=user,
+                start_time=datetime(2021, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC")),
+                description="First scheduled job for filter tests",
+                total_run_count=1,
+                state=ScheduledJobStateChoices.PENDING,
+                enabled=False,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 2",
+                task=jobs[1].class_path,
+                job_model=jobs[1],
+                interval=JobExecutionType.TYPE_DAILY,
+                user=user,
+                start_time=datetime(2022, 6, 15, 12, 0, 0, tzinfo=ZoneInfo("America/New_York")),
+                time_zone=ZoneInfo("America/New_York"),
+                description="Second scheduled job for filter tests",
+                total_run_count=2,
+                state=ScheduledJobStateChoices.ACTIVE,
+                enabled=True,
+            ),
+            ScheduledJob.objects.create(
+                name="Scheduled Job Filter 3",
+                task=jobs[2].class_path,
+                job_model=jobs[2],
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 9 * * 1",
+                enabled=False,
+                user=user,
+                start_time=datetime(2023, 12, 31, 23, 59, 59, tzinfo=ZoneInfo("Europe/London")),
+                time_zone=ZoneInfo("Europe/London"),
+                description="Third scheduled job for filter tests",
+                total_run_count=3,
+                state=ScheduledJobStateChoices.COMPLETED,
+            ),
+        ]
+        # set last_run_at to distinct values so it can be used in generic filter tests
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[0].pk).update(
+            last_run_at=datetime(2024, 1, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[1].pk).update(
+            last_run_at=datetime(2024, 6, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+        ScheduledJob.objects.filter(pk=cls.scheduled_jobs[2].pk).update(
+            last_run_at=datetime(2024, 12, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
+        )
+
+    def test_enabled(self):
+        params = {"enabled": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=True),
+        )
+        params = {"enabled": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(enabled=False),
+        )
+
+
 class MetadataChoiceTestCase(FilterTestCases.FilterTestCase):
     queryset = MetadataChoice.objects.all()
     filterset = MetadataChoiceFilterSet
@@ -1757,14 +1847,14 @@ class ObjectChangeTestCase(FilterTestCases.FilterTestCase):
 
     def test_changed_object_change_context(self):
         params = {"change_context": ["job", "web"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(change_context__in=["job", "web"]),
         )
 
     def test_changed_object_change_context_detail(self):
         params = {"change_context_detail__nic": ["Lorem ipsum dolor sit amet"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(change_context_detail__icontains="Lorem ipsum dolor sit amet"),
         )
@@ -2332,6 +2422,95 @@ class StaticGroupAssociationTestCase(FilterTestCases.FilterTestCase):
             StaticGroupAssociation.objects.filter(associated_object_type=ct),
             ordered=False,
         )
+
+
+class DynamicGroupFilterSetTestCase(FilterTestCases.FilterTestCase):
+    queryset = DynamicGroup.objects.all()
+    filterset = DynamicGroupFilterSet
+
+    generic_filter_tests = [("name",), ("description",), ("group_type",)]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_ct = ContentType.objects.get_for_model(Device)
+        cls.parent_group = DynamicGroup.objects.create(
+            name="Filter Root Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.child_group = DynamicGroup.objects.create(
+            name="Filter Child Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.sibling_group = DynamicGroup.objects.create(
+            name="Filter Sibling Group",
+            content_type=cls.device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        cls.grandchild_group = DynamicGroup.objects.create(
+            name="Filter Grandchild Group",
+            content_type=cls.device_ct,
+        )
+        cls.unrelated_group = DynamicGroup.objects.create(
+            name="Filter Unrelated Group",
+            content_type=cls.device_ct,
+        )
+
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.child_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=10,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.parent_group,
+            group=cls.sibling_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_INTERSECTION,
+            weight=20,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=cls.child_group,
+            group=cls.grandchild_group,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            weight=30,
+        )
+
+    def test_filter_descendants_returns_expected_groups(self):
+        params = {"descendants": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_accepts_name(self):
+        params = {"descendants": [self.parent_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual(
+            {group.pk for group in filtered},
+            {self.child_group.pk, self.sibling_group.pk, self.grandchild_group.pk},
+        )
+
+    def test_filter_descendants_returns_none(self):
+        params = {"descendants": [self.unrelated_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
+
+    def test_filter_ancestors_returns_expected_groups(self):
+        params = {"ancestors": [self.grandchild_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_accepts_name(self):
+        params = {"ancestors": [self.grandchild_group.name]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertSetEqual({group.pk for group in filtered}, {self.child_group.pk, self.parent_group.pk})
+
+    def test_filter_ancestors_returns_none(self):
+        params = {"ancestors": [self.parent_group.pk]}
+        filtered = self.filterset(params, self.queryset).qs
+        self.assertQuerySetEqual(filtered, self.queryset.none())
 
 
 class StatusTestCase(FilterTestCases.FilterTestCase):

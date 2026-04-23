@@ -10,7 +10,17 @@ import netaddr
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Module,
+    ModuleBay,
+    ModuleType,
+    VirtualDeviceContext,
+)
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
@@ -25,6 +35,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -2275,6 +2286,127 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
                     VLAN.objects.exclude(**{f"location__{field_name}": value}),
                     VLAN.objects.exclude(**{f"locations__{field_name}": value}),
                 )
+
+
+class VRFDeviceAssignmentSignalTest(TestCase):
+    """Tests for the vrf_device_associated signal handler."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.namespace = Namespace.objects.first()
+        cls.vrf1 = VRF.objects.create(name="VRF Signal Test 1", rd="65000:100", namespace=cls.namespace)
+        cls.vrf2 = VRF.objects.create(name="VRF Signal Test 2", rd="65000:200", namespace=cls.namespace)
+        cls.device1 = Device.objects.create(
+            name="signal-test-device1",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        cls.device2 = Device.objects.create(
+            name="signal-test-device2",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        cluster_type = ClusterType.objects.create(name="VRF Signal Test Cluster Type")
+        cluster = Cluster.objects.create(name="VRF Signal Test Cluster", cluster_type=cluster_type)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        cls.vm1 = VirtualMachine.objects.create(name="signal-test-vm1", cluster=cluster, status=vm_status, role=vm_role)
+        cls.vm2 = VirtualMachine.objects.create(name="signal-test-vm2", cluster=cluster, status=vm_status, role=vm_role)
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        cls.vdc1 = VirtualDeviceContext.objects.create(
+            device=cls.device1, name="signal-test-vdc1", status=vdc_status, identifier=100
+        )
+        cls.vdc2 = VirtualDeviceContext.objects.create(
+            device=cls.device2, name="signal-test-vdc2", status=vdc_status, identifier=200
+        )
+
+    def test_vrf_device_associated_signal_only_validates_new_assignments(self):
+        """Adding a device to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.devices.add(self.device1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.devices.add(self.device2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_device_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a device should only validate the new assignment, not all existing ones."""
+        self.device1.vrfs.add(self.vrf1)
+        self.assertEqual(self.device1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.device1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_vm_associated_signal_only_validates_new_assignments(self):
+        """Adding a VM to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.virtual_machines.add(self.vm1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.virtual_machines.add(self.vm2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vm_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a VM should only validate the new assignment, not all existing ones."""
+        self.vm1.vrfs.add(self.vrf1)
+        self.assertEqual(self.vm1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vm1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_vdc_associated_signal_only_validates_new_assignments(self):
+        """Adding a VDC to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.virtual_device_contexts.add(self.vdc1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.virtual_device_contexts.add(self.vdc2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vdc_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a VDC should only validate the new assignment, not all existing ones."""
+        self.vdc1.vrfs.add(self.vrf1)
+        self.assertEqual(self.vdc1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vdc1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_device_associated_signal_ignores_unknown_model(self):
+        """Signal should return early when model is not Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=self.vrf1,
+                action="post_add",
+                reverse=False,
+                model=VRF,  # unexpected model type
+                pk_set={self.device1.pk},
+            )
+            mock_validated_save.assert_not_called()
+
+    def test_vrf_device_associated_signal_ignores_unknown_instance(self):
+        """Signal should return early when instance is not VRF, Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=Namespace.objects.first(),  # unexpected instance type
+                action="post_add",
+                reverse=False,
+                model=VRF,
+                pk_set={self.vrf1.pk},
+            )
+            mock_validated_save.assert_not_called()
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

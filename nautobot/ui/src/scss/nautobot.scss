@@ -1171,6 +1171,14 @@ textarea {
     border-color: var(--#{$prefix}primary-text-emphasis);
   }
 
+  &::file-selector-button {
+    /*
+     * Border transition on `::file-selector-button` in `input[type="file"]` seems to be adding up to the default
+     * already defined `form-control` transition, effectively lagging behind and looking bad.
+     */
+    @include transition($btn-transition, border-color 0s ease-in-out);
+  }
+
   /* Webkit browsers add "X" icon in `[type="search"]` input fields. It looks off and offers little configurability. */
   &[type="search"]::-webkit-search-cancel-button {
     display: none;
@@ -2466,14 +2474,21 @@ ul.nb-tree-hierarchy {
   }
 
   .nb-cable {
-    border-left-style: solid;
-    border-left-width: map.get($border-widths, 4);
-    margin-block: map.get($spacers, 12);
-    margin-inline-end: map.get($spacers, 0);
-    margin-inline-start: 50%;
-    padding: map.get($spacers, 24);
-    text-align: left;
-    width: 50%;
+    margin: map.get($spacers, 12) 0;
+    display: flex;
+
+    .nb-cable-color {
+      border-color: var(--#{$prefix}border-color);
+      border-style: none solid;
+      border-width: $border-width;
+      width: map.get($spacers, 12);
+    }
+
+    .nb-cable-info {
+      padding: map.get($spacers, 24);
+      text-align: left;
+      width: calc(50% - map.get($spacers, 6));
+    }
   }
 
   .nb-node {
@@ -2697,10 +2712,10 @@ pre.version, pre.version-stamp {
 }
 
 /*
- * FIXME(norbert-mieczkowski-codilime): bootstrap-filestyle library, which is used by `ClearableFileInput` widget,
+ * 4.0 TODO(norbert-mieczkowski-codilime): bootstrap-filestyle library, which was used by `ClearableFileInput` widget,
  *   currently in version 1.2.3, still uses Bootstrap 3. This `.hidden` class "polyfill" is required until the library
- *   is updated or removed/replaced completely. Bootstrap 5 supports file inputs out of the box, so it may be a good
- *   time to get rid of bootstrap-filestyle.
+ *   is updated or removed/replaced completely. Core has already migrated to Bootstrap 5 file input, but leave this
+ *   code until 4.0 release, which is when bootstrap-filestyle will be removed from the project.
  */
 .hidden {
   @extend .d-none;

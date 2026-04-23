@@ -555,6 +555,13 @@ def get_docs_url(model):
 
 @library.filter()
 @register.filter()
+def has_perm(user, permission: str):
+    """Simple wrapper for `user.has_perm()` - True if the user has the specific permission, else False."""
+    return user.has_perm(permission)
+
+
+@library.filter()
+@register.filter()
 def has_perms(user, permissions_list):
     """
     Return True if the user has *all* permissions in the list.

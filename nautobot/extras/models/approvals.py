@@ -174,8 +174,10 @@ class ApprovalWorkflow(OrganizationalModel):
         to="extras.ApprovalWorkflowDefinition",
         related_name="approval_workflows",
         verbose_name="Approval Workflow Definition",
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         help_text="Approval workflow definition to which this approval workflow belongs.",
+        blank=True,
+        null=True,
     )
     object_under_review = GenericForeignKey(
         ct_field="object_under_review_content_type", fk_field="object_under_review_object_id"
@@ -224,8 +226,8 @@ class ApprovalWorkflow(OrganizationalModel):
         ordering = ["approval_workflow_definition"]
 
     def __str__(self):
-        """Stringify instance."""
-        return f"{self.approval_workflow_definition.name}: {self.object_under_review} ({self.current_state})"
+        name = getattr(self.approval_workflow_definition, "name", "Deleted workflow")
+        return f"{name}: {self.object_under_review} ({self.current_state})"
 
     def get_current_state_class(self):
         return ApprovalWorkflowStateChoices.CSS_CLASSES.get(self.current_state)
@@ -319,6 +321,8 @@ class ApprovalWorkflow(OrganizationalModel):
             approved_stages = self.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.APPROVED)
             approval_workflow_stage_count = (
                 self.approval_workflow_definition.approval_workflow_stage_definitions.count()
+                if self.approval_workflow_definition
+                else 0
             )
             if approval_workflow_stage_count and approved_stages.count() == approval_workflow_stage_count:
                 self.current_state = ApprovalWorkflowStateChoices.APPROVED
@@ -356,8 +360,10 @@ class ApprovalWorkflowStage(OrganizationalModel):
         to="extras.ApprovalWorkflowStageDefinition",
         related_name="approval_workflow_stages",
         verbose_name="Approval Workflow Stage Definition",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         help_text="Approval workflow stage definition to which this stage belongs.",
+        blank=True,
+        null=True,
     )
     state = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -518,7 +524,7 @@ class ApprovalWorkflowStage(OrganizationalModel):
             approved_stages = approval_workflow.approval_workflow_stages.filter(
                 state=ApprovalWorkflowStateChoices.APPROVED
             )
-            if (
+            if approval_workflow.approval_workflow_definition and (
                 approved_stages.count()
                 == approval_workflow.approval_workflow_definition.approval_workflow_stage_definitions.count()
                 and approval_workflow.current_state == ApprovalWorkflowStateChoices.PENDING
@@ -598,7 +604,7 @@ class ApprovalWorkflowStageResponse(BaseModel):
             )
             approved_response_count = approved_responses.count()
             # Check if the number of approvers is met and the stage instance needs to be updated.
-            if (
+            if self.approval_workflow_stage.approval_workflow_stage_definition and (
                 approved_response_count == self.approval_workflow_stage.approval_workflow_stage_definition.min_approvers
                 and self.approval_workflow_stage.state == ApprovalWorkflowStateChoices.PENDING
             ):

@@ -19,16 +19,21 @@ class NautobotTask(Task):
         super().before_start(task_id, args, kwargs)
         User = get_user_model()
         user_id = self.request.properties.get("nautobot_job_user_id", None)
-        self._nautobot_branch_context = BranchContext(
+        ctx = BranchContext(
             branch_name=self.request.properties.get("nautobot_job_branch_name", None),
             user=User.objects.get(id=user_id) if user_id else None,
             using=["default", JOB_LOGS],
         )
-        self._nautobot_branch_context.__enter__()
+        ctx.__enter__()
+        # Celery reuses a single NautobotTask instance so when using CELERY_TASK_ALWAYS_EAGER we need to namespace
+        if not hasattr(self, "_nautobot_branch_contexts"):
+            self._nautobot_branch_contexts = {}
+        self._nautobot_branch_contexts[task_id] = ctx
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
-        self._nautobot_branch_context.__exit__(None, None, None)  # TODO: good enough?
-        delattr(self, "_nautobot_branch_context")
+        ctx = getattr(self, "_nautobot_branch_contexts", {}).pop(task_id, None)
+        if ctx is not None:
+            ctx.__exit__(None, None, None)  # TODO: good enough?
         super().after_return(status, retval, task_id, args, kwargs, einfo)
 
     def apply_async(

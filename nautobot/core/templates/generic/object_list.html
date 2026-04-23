@@ -137,15 +137,9 @@
 
     {% block header_extra %}{% endblock %}
 
-    <div hx-select="#object_table"
-         {% if permissions.change or permissions.delete %}
-             hx-select-oob="#header_messages,#paginator,#select_all_box"
-         {% else %}
-             hx-select-oob="#header_messages,#paginator"
-         {% endif %}
-    >
+    <div>
         {% block table %}
-            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
+            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" bulk_rename_url=content_type.model_class|validated_viewname:"bulk_rename" %}
                 {% if permissions.change or permissions.delete %}
                     <form id="object_list_form" method="post" class="form form-horizontal">
                         {% csrf_token %}
@@ -153,7 +147,17 @@
                         <span id="select_all_box" class="visually-hidden card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div hx-get="" hx-params="*" hx-trigger="load">
+                        <div id="object_table_wrapper"
+                             hx-get=""
+                             hx-params="*"
+                             hx-select="#object_table"
+                             {% if permissions.change or permissions.delete %}
+                                 hx-select-oob="#header_messages,#paginator,#select_all_box"
+                             {% else %}
+                                 hx-select-oob="#header_messages,#paginator"
+                             {% endif %}
+                             hx-trigger="load"
+                        >
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -163,7 +167,17 @@
                         </div>
                     </form>
                 {% else %}
-                    <div hx-get="" hx-params="*" hx-trigger="load">
+                    <div id="object_table_wrapper"
+                         hx-get=""
+                         hx-params="*"
+                         hx-select="#object_table"
+                         {% if permissions.change or permissions.delete %}
+                             hx-select-oob="#header_messages,#paginator,#select_all_box"
+                         {% else %}
+                             hx-select-oob="#header_messages,#paginator"
+                         {% endif %}
+                         hx-trigger="load"
+                    >
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}
@@ -356,5 +370,19 @@
                 });
             });
         })();
+
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail?.target?.id === 'object_table_wrapper' ||
+                event.detail?.elt?.classList.contains("page-link") ||
+                event.detail?.elt?.id === 'per_page'
+            ) {
+                document.querySelector("#object_table table").innerHTML = `
+                    <div class="bg-danger-subtle text-center">
+                        <strong>Failed to load table content.</strong>
+                        The server responded with status: ${event.detail.xhr.status}
+                    </div>
+                `;
+            }
+        });
     </script>
 {% endblock %}

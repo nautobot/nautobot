@@ -12,6 +12,7 @@ from nautobot.dcim.models import PowerFeed, PowerPanel
 from nautobot.extras.tables import StatusTableMixin
 
 from .devices import CableTerminationTable
+from .template_code import UTILIZATION_GRAPH
 
 __all__ = (
     "PowerFeedTable",
@@ -83,6 +84,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
     max_utilization = tables.TemplateColumn(template_code="{{ value }}%")
     connection = tables.Column(orderable=False)
     available_power = tables.Column(verbose_name="Available power (VA)")
+    utilization = tables.TemplateColumn(template_code=UTILIZATION_GRAPH, orderable=False, verbose_name="Utilization")
     tags = TagColumn(url_name="dcim:powerfeed_list")
     actions = ButtonsColumn(PowerFeed)
 
@@ -106,6 +108,7 @@ class PowerFeedTable(StatusTableMixin, CableTerminationTable):
             "cable_peer",
             "connection",
             "available_power",
+            "utilization",
             "tags",
         )
         default_columns = (

@@ -25,6 +25,12 @@ def render_tabs_labels(context, tabs):
 
 
 @register.simple_tag(takes_context=True)
+def render_component(context, component):
+    """Render a single component to HTML."""
+    return component.render(context)
+
+
+@register.simple_tag(takes_context=True)
 def render_components(context, components):
     """Render each component in the given `components` with the given `context`."""
     if components is not None:
@@ -119,7 +125,7 @@ def render_breadcrumbs(context, legacy_default_breadcrumbs=None, legacy_block_br
 
 
 @register.simple_tag(takes_context=True)
-def render_detail_view_extra_buttons(context):
+def render_detail_view_extra_buttons(context, tab_id=None):
     """
     Render the "extra_buttons" from the context's object_detail_content, or as fallback, from the base detail view.
 
@@ -143,5 +149,39 @@ def render_detail_view_extra_buttons(context):
             return ""
         object_detail_content = getattr(base_detail_view, "object_detail_content", None)
     if object_detail_content is not None and object_detail_content.extra_buttons:
-        return render_components(context, object_detail_content.extra_buttons)
+        extra_buttons_on_current_tab = [
+            extra_button
+            for extra_button in object_detail_content.extra_buttons
+            if tab_id is None  # `tab_id` *should* be given, but keep `is None` condition for backward compatibility
+            or extra_button.render_on_tab_id == "__all__"
+            or (isinstance(extra_button.render_on_tab_id, str) and tab_id == extra_button.render_on_tab_id)
+            or (isinstance(extra_button.render_on_tab_id, (list, tuple)) and tab_id in extra_button.render_on_tab_id)
+        ]
+        return render_components(context, extra_buttons_on_current_tab)
     return ""
+
+
+@register.simple_tag(takes_context=True)
+def render_default_panels_for_object(context, obj):
+    """
+    Render the object_detail_content main-tab panels for the given object.
+
+    Used for example in `extras/inc/jobresult.html` to render the details of a JobResult in a tab under the detail
+    view of a different object (such as a GitRepository).
+    """
+    if obj is None:
+        return ""
+    base_detail_view = get_view_for_model(obj)
+    if base_detail_view is None:
+        logger.warning(
+            "Unable to identify the base detail view - check that it has a valid name, i.e. %sUIViewSet or %sView",
+            type(obj).__name__,
+            type(obj).__name__,
+        )
+        return ""
+    object_detail_content = getattr(base_detail_view, "object_detail_content", None)
+    if object_detail_content is None:
+        logger.warning("No object_detail_content defined on %s", base_detail_view.__name__)
+        return ""
+    with context.update({"obj": obj, "object": obj, "object_detail_content": object_detail_content}):
+        return render_components(context, object_detail_content.tabs[0].panels)

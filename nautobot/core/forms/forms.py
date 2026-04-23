@@ -109,11 +109,13 @@ class EmbeddedActionsFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        meta = getattr(self, "Meta", None)
+
         for mutually_exclusive_attributes in [
             ("embedded_create", "exclude_embedded_create"),
             ("embedded_search", "exclude_embedded_search"),
         ]:
-            self.validate_mutually_exclusive_attributes(self.Meta, *mutually_exclusive_attributes)
+            self.validate_mutually_exclusive_attributes(meta, *mutually_exclusive_attributes)
 
         for name, field in self.fields.items():
             if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
@@ -125,9 +127,10 @@ class EmbeddedActionsFormMixin(forms.Form):
         """
         Check whether an embedded `action` should be enabled on given `field`.
         """
+        meta = getattr(self, "Meta", None)
         field_embedded_action = getattr(field, f"embedded_{action}", None)
-        form_meta_embedded_action = getattr(self.Meta, f"embedded_{action}", None)
-        form_meta_exclude_embedded_action = getattr(self.Meta, f"exclude_embedded_{action}", None)
+        form_meta_embedded_action = getattr(meta, f"embedded_{action}", None)
+        form_meta_exclude_embedded_action = getattr(meta, f"exclude_embedded_{action}", None)
 
         if field_embedded_action is not None:
             return field_embedded_action

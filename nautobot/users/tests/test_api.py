@@ -4,6 +4,7 @@ from unittest import skip
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 from rest_framework import HTTP_HEADER_ENCODING, status
@@ -99,6 +100,20 @@ class UserTest(APIViewTestCases.APIViewTestCase):
             else:
                 self.assertFalse(user.has_usable_password())
 
+    @override_settings(
+        AUTH_PASSWORD_VALIDATORS=[
+            {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 9}},
+        ],
+    )
+    def test_create_object_password_validation(self):
+        """Check for https://github.com/nautobot/nautobot/security/advisories/GHSA-xmpv-j7p2-j873 on user creation."""
+        self.add_permissions("users.add_user")
+        response = self.client.post(
+            self._get_list_url(), {"username": "weakuser", "password": "weak"}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(User.objects.filter(username="weakuser").exists())
+
     def test_recreate_object_csv(self):
         """Add validation that the recreated user has no password."""
         super().test_recreate_object_csv()
@@ -117,6 +132,26 @@ class UserTest(APIViewTestCases.APIViewTestCase):
         self.assertNotIn("password", response.json())
         user.refresh_from_db()
         self.assertTrue(user.check_password(self.update_data["password"]))
+
+    @override_settings(
+        AUTH_PASSWORD_VALIDATORS=[
+            {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 9}},
+        ],
+    )
+    def test_update_object_password_validation(self):
+        """Check for https://github.com/nautobot/nautobot/security/advisories/GHSA-xmpv-j7p2-j873 on user update."""
+        self.add_permissions("users.change_user")
+        user = self.get_deletable_object()
+        user.set_password("sufficiently_strong_for_this_test")
+        user.save()
+        response = self.client.patch(
+            self._get_detail_url(user), {"username": "newusername", "password": "weak"}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        user.refresh_from_db()
+        self.assertNotEqual(user.username, "newusername")
+        self.assertTrue(user.check_password("sufficiently_strong_for_this_test"))
+        self.assertFalse(user.check_password("weak"))
 
     def test_get_put_round_trip(self):
         """Add validation that the password is cleared by a PUT with no specified password."""

@@ -110,6 +110,7 @@ erDiagram
         string tunnel_id
         choices encapsulation
         Tenant tenant
+        SecretsGroup secrets_group
         Status status
         Role role
         ContactAssociations contact_associations
@@ -135,6 +136,7 @@ erDiagram
     "nautobot_vpn_models.VPNTunnel" }o--o| "nautobot_vpn_models.VPN" : "may have"
     "nautobot_vpn_models.VPNTunnel" }o--o| "tenancy.Tenant" : "may have"
     "nautobot_vpn_models.VPNTunnel" }o--o{ "extras.ContactAssociations" : "may have"
+    "nautobot_vpn_models.VPNTunnel" }o--o| "extras.SecretsGroup" : "may have"
 
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o{ "nautobot_vpn_models.VPNTunnel" : "may have"
     "nautobot_vpn_models.VPNTunnelEndpoint" }o--o| "ipam.IPAddress" : "destination_ipaddress"

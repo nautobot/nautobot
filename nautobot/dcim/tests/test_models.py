@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import MagicMock, patch, PropertyMock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -1555,6 +1556,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
             u_height=0,
         )
+        self.parent_child_devicetype = DeviceType.objects.create(
+            model="Parent-Child Device Type 1",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
         self.intf_role = Role.objects.get_for_model(Interface).first()
@@ -1681,6 +1688,39 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
                 self.device, Device.objects.get_by_natural_key([self.device.name, None, self.device.location.name])
             )
             # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
+
+    def test_create_parent_child_and_child_devices(self):
+        """Ensure parent, parent-child, and child device roles are set correctly."""
+        parent_device = Device.objects.create(
+            name="Test Parent Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        parent_child_device = Device.objects.create(
+            name="Test Parent-Child Device",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        child_device = Device.objects.create(
+            name="Test Child Device",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+
+        self.assertTrue(parent_device.device_type.is_parent_device)
+        self.assertFalse(parent_device.device_type.is_child_device)
+
+        self.assertTrue(parent_child_device.device_type.is_parent_device)
+        self.assertTrue(parent_child_device.device_type.is_child_device)
+
+        self.assertFalse(child_device.device_type.is_parent_device)
+        self.assertTrue(child_device.device_type.is_child_device)
 
     def test_device_creation(self):
         """
@@ -2058,11 +2098,11 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
         )
         child_device.validated_save()
-        child_mtime_before_parent_saved = str(child_device.last_updated)
+        child_mtime_before_parent_saved = child_device.last_updated
 
-        devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
-        devicebay.installed_device = child_device
-        devicebay.validated_save()
+        parent_devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        parent_devicebay.installed_device = child_device
+        parent_devicebay.validated_save()
 
         #
         # Tests
@@ -2072,7 +2112,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         # On a NOOP save, the child device shouldn't be updated
         parent_device.save()
 
-        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
 
@@ -2081,7 +2121,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.serial = "12345"
         parent_device.save()
 
-        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
 
@@ -2118,7 +2158,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             str(cm.exception),
         )
 
-        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
 
@@ -2130,8 +2170,102 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.location = location
         parent_device.save()
 
-        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 1").last_updated
 
+        self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+    def test_multi_level_child_devices_are_only_saved_when_necessary(self):
+        parent_device = Device.objects.create(
+            name="Parent Device 2",
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        parent_device.validated_save()
+
+        DeviceBayTemplate(device_type=self.parent_child_devicetype, name="Device Bay 1").save()
+        parent_child_device = Device.objects.create(
+            name="Parent-Child Device 1",
+            location=parent_device.location,
+            device_type=self.parent_child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        parent_child_device.validated_save()
+
+        parent_devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        parent_devicebay.installed_device = parent_child_device
+        parent_devicebay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.get(device=parent_child_device, name="Device Bay 1")
+
+        child_device = Device.objects.create(
+            name="Child Device 2",
+            location=parent_device.location,
+            device_type=self.child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        child_device.validated_save()
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        parent_child_mtime_before_parent_saved = parent_child_device.last_updated
+        child_mtime_before_parent_saved = child_device.last_updated
+
+        #
+        # Tests
+        #
+
+        #
+        # On a NOOP save, the child devices shouldn't be updated
+        parent_device.save()
+
+        parent_child_mtime_after_parent_noop_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_noop_save)
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
+
+        #
+        # On a serial number update, the child devices shouldn't be updated
+        parent_device.serial = "12345"
+        parent_device.save()
+
+        parent_child_mtime_after_parent_serial_update_save = Device.objects.get(
+            name="Parent-Child Device 1"
+        ).last_updated
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_serial_update_save)
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
+
+        #
+        # If the parent rack updates, the child mtimes should update.
+        rack = Rack.objects.create(name="Rack 1", location=parent_device.location, status=self.device_status)
+        parent_device.rack = rack
+        parent_device.save()
+
+        parent_child_mtime_after_parent_rack_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertNotEqual(parent_child_mtime_after_parent_noop_save, parent_child_mtime_after_parent_rack_update_save)
+        self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
+
+        #
+        # If the parent site updates, the child mtimes should update
+        location = Location.objects.create(
+            name="New Site 2", status=self.device_status, location_type=self.location_type_3
+        )
+        parent_device.location = location
+        parent_device.save()
+
+        parent_child_mtime_after_parent_site_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertNotEqual(
+            parent_child_mtime_after_parent_rack_update_save, parent_child_mtime_after_parent_site_update_save
+        )
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
     def test_cluster_queries(self):
@@ -2170,36 +2304,488 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
                     Device.objects.exclude(**{f"clusters__{field_name}": value}),
                 )
 
+    def test_create_two_level_hierarchy(self):
+        """Test creating a two-level hierarchy: Parent → Child."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 1", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Hierarchy Parent 1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        child_device = Device.objects.create(
+            name="Hierarchy Child 1",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = child_device
+        parent_device_bay.validated_save()
+
+        parent_device.save()
+        child_device.refresh_from_db()
+
+        self.assertEqual(parent_device_bay, child_device.parent_bay)
+        self.assertIsNone(child_device.position)
+        self.assertEqual(parent_device.location, child_device.location)
+        self.assertEqual(parent_device.rack, child_device.rack)
+
+    def test_create_three_level_hierarchy(self):
+        """Test creating a three-level hierarchy: Parent → Parent-Child → Child."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 2", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Hierarchy Parent 2",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child_device = Device.objects.create(
+            name="Hierarchy Parent-Child 1",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child_device
+        parent_device_bay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.create(device=parent_child_device, name="BayA")
+
+        child_device = Device.objects.create(
+            name="Hierarchy Child 2",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        parent_device.save()
+        parent_child_device.refresh_from_db()
+        child_device.refresh_from_db()
+
+        self.assertEqual(parent_device_bay, parent_child_device.parent_bay)
+        self.assertEqual(parent_child_device_bay, child_device.parent_bay)
+        self.assertIsNone(parent_child_device.position)
+        self.assertIsNone(child_device.position)
+        self.assertEqual(parent_device.location, parent_child_device.location)
+        self.assertEqual(parent_device.location, child_device.location)
+        self.assertEqual(parent_device.rack, parent_child_device.rack)
+        self.assertEqual(parent_device.rack, child_device.rack)
+
+    def test_create_four_level_hierarchy(self):
+        """Test creating maximum nesting depth (4 levels)."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 3", location=self.location_3, status=rack_status, u_height=42)
+        level1_device = Device.objects.create(
+            name="Hierarchy Level1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        level1_device_bay = DeviceBay.objects.create(device=level1_device, name="Bay1")
+
+        level2_device = Device.objects.create(
+            name="Hierarchy Level2",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level1_device_bay.installed_device = level2_device
+        level1_device_bay.validated_save()
+        level2_device_bay = DeviceBay.objects.create(device=level2_device, name="Bay2")
+
+        level3_device = Device.objects.create(
+            name="Hierarchy Level3",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level2_device_bay.installed_device = level3_device
+        level2_device_bay.validated_save()
+        level3_device_bay = DeviceBay.objects.create(device=level3_device, name="Bay3")
+
+        level4_device = Device.objects.create(
+            name="Hierarchy Level4",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level3_device_bay.installed_device = level4_device
+        level3_device_bay.validated_save()
+
+        level1_device.save()
+        level2_device.refresh_from_db()
+        level3_device.refresh_from_db()
+        level4_device.refresh_from_db()
+
+        self.assertEqual(level3_device_bay, level4_device.parent_bay)
+        self.assertEqual(level2_device_bay, level3_device.parent_bay)
+        self.assertEqual(level1_device_bay, level2_device.parent_bay)
+
+    def test_multi_level_cascade_updates_descendants(self):
+        """Test multi-level cascade updates descendants by field."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Cascade Rack 5", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Cascade Parent 4",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child = Device.objects.create(
+            name="Cascade Parent-Child 3",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child
+        parent_device_bay.validated_save()
+        parent_child_bay = DeviceBay.objects.create(device=parent_child, name="Bay2")
+
+        child = Device.objects.create(
+            name="Cascade Child 4",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_bay.installed_device = child
+        parent_child_bay.validated_save()
+
+        new_location = Location.objects.create(
+            name="Cascade Location 4",
+            location_type=self.location_type_3,
+            status=self.device_status,
+        )
+        new_rack = Rack.objects.create(name="Cascade Rack 6", location=self.location_3, u_height=42, status=rack_status)
+
+        for field_name, new_value in (("location", new_location), ("rack", new_rack)):
+            with self.subTest(field_name=field_name):
+                setattr(parent_device, field_name, new_value)
+                if field_name == "rack":
+                    parent_device.position = 2
+                parent_device.save()
+
+                parent_child.refresh_from_db()
+                child.refresh_from_db()
+
+                self.assertEqual(getattr(parent_child, field_name), new_value)
+                self.assertEqual(getattr(child, field_name), new_value)
+
+    def test_all_nested_devices_single_level(self):
+        """Test all_nested_devices query with single-level children."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Nested Rack 1", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Nested Parent 1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay1 = DeviceBay.objects.create(device=parent_device, name="Bay1")
+        parent_device_bay2 = DeviceBay.objects.create(device=parent_device, name="Bay2")
+
+        child_device1 = Device.objects.create(
+            name="Nested Child 1",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay1.installed_device = child_device1
+        parent_device_bay1.validated_save()
+
+        child_device2 = Device.objects.create(
+            name="Nested Child 2",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay2.installed_device = child_device2
+        parent_device_bay2.validated_save()
+
+        nested = parent_device.all_nested_devices
+        self.assertEqual(nested.count(), 2)
+        self.assertIn(child_device1, nested)
+        self.assertIn(child_device2, nested)
+
+    def test_all_nested_devices_multi_level(self):
+        """Test all_nested_devices query with multi-level nesting."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Nested Rack 2", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Nested Parent 2",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child_device = Device.objects.create(
+            name="Nested Parent-Child 1",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child_device
+        parent_device_bay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.create(device=parent_child_device, name="Bay2")
+
+        child_device = Device.objects.create(
+            name="Nested Child 3",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        nested_devices = parent_device.all_nested_devices
+        self.assertEqual(nested_devices.count(), 2)
+        self.assertIn(parent_child_device, nested_devices)
+        self.assertIn(child_device, nested_devices)
+
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
 
     def setUp(self):
-        self.devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
+        self.parent_devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
         devicetype = DeviceType.objects.create(
-            manufacturer=self.devices[0].device_type.manufacturer,
+            manufacturer=self.parent_devices[0].device_type.manufacturer,
             model="TestDeviceType1",
             u_height=0,
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         )
+        self.parent_child_devicetype = DeviceType.objects.create(
+            manufacturer=self.parent_devices[0].device_type.manufacturer,
+            model="TestDeviceTypeParentChild",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
         child_device = Device.objects.create(
             device_type=devicetype,
-            role=self.devices[0].role,
+            role=self.parent_devices[0].role,
             name="TestDevice1",
-            status=self.devices[0].status,
-            location=self.devices[0].location,
+            status=self.parent_devices[0].status,
+            location=self.parent_devices[0].location,
         )
-        DeviceBay.objects.create(device=self.devices[0], name="Device Bay 1", installed_device=child_device)
+        DeviceBay.objects.create(device=self.parent_devices[0], name="Device Bay 1", installed_device=child_device)
 
-    def test_assigning_installed_device(self):
-        server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
-        bay = DeviceBay(device=self.devices[1], name="Device Bay Err", installed_device=server)
+    def test_assigning_installed_device_rejects_parent_role(self):
+        parent_server = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).last()
+        bay = DeviceBay(device=self.parent_devices[1], name="Device Bay Err", installed_device=parent_server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
         self.assertIn(
-            f'Cannot install device "{server}"; device-type "{server.device_type}" subdevice_role is not "child".',
+            f'Cannot install device "{parent_server}"; device-type "{parent_server.device_type}" subdevice_role is not "child" or "parent-child".',
             str(err.exception),
         )
+
+    def test_assigning_installed_device_allows_child_roles(self):
+        for role in (SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceType-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                child_device = Device.objects.create(
+                    device_type=device_type,
+                    role=self.parent_devices[0].role,
+                    name=f"TestDevice-{role}",
+                    status=self.parent_devices[0].status,
+                    location=self.parent_devices[0].location,
+                )
+                bay = DeviceBay(
+                    device=self.parent_devices[1], name=f"Device Bay OK {role}", installed_device=child_device
+                )
+                bay.validated_save()
+
+    def test_devicetype_requires_removing_device_bay_templates(self):
+        """Ensure device bay templates must be removed before declassifying a parent device type."""
+        for role in (SubdeviceRoleChoices.ROLE_PARENT, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                parent_device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceTypeTemplateCheck-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                DeviceBayTemplate.objects.create(device_type=parent_device_type, name="Device Bay Template 1")
+
+                parent_device_type.subdevice_role = SubdeviceRoleChoices.ROLE_CHILD
+                with self.assertRaises(ValidationError) as err:
+                    parent_device_type.full_clean()
+                self.assertIn(
+                    "Must delete all device bay templates associated with this device type before declassifying it as a parent device.",
+                    str(err.exception),
+                )
+
+    def test_devicetype_child_role_requires_zero_u_height(self):
+        """Ensure child device types must be 0U."""
+        for role in (SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                child_device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceTypeUHeightCheck-{role}",
+                    u_height=1,
+                    subdevice_role=role,
+                )
+                with self.assertRaises(ValidationError) as err:
+                    child_device_type.full_clean()
+                self.assertIn("Child device types must be 0U.", str(err.exception))
+
+    def test_cannot_create_self_referential_parent_bay(self):
+        """Test that a device bay cannot install its own device."""
+        device = Device.objects.create(
+            name="DeviceBay Loop 1",
+            device_type=self.parent_child_devicetype,
+            role=self.parent_devices[0].role,
+            status=self.parent_devices[0].status,
+            location=self.parent_devices[0].location,
+        )
+        device_bay = DeviceBay.objects.create(device=device, name="Bay1")
+        device_bay.installed_device = device
+        with self.assertRaises(ValidationError) as err:
+            device_bay.validated_save()
+        self.assertIn("Cannot install a device into itself.", str(err.exception))
+
+    def test_cannot_create_circular_reference(self):
+        """Test that circular references via device bays are prevented."""
+        role = self.parent_devices[0].role
+        status = self.parent_devices[0].status
+        location = self.parent_devices[0].location
+
+        devices = [
+            Device.objects.create(
+                name=f"DeviceBay Loop {index}",
+                device_type=self.parent_child_devicetype,
+                role=role,
+                status=status,
+                location=location,
+            )
+            for index in range(2, 5)
+        ]
+
+        bays = [DeviceBay.objects.create(device=device, name=f"Bay{index}") for index, device in enumerate(devices, 1)]
+        bays[0].installed_device = devices[1]
+        bays[0].validated_save()
+
+        # 2-node loop: device1 -> device2 -> device1
+        with self.subTest(node_count=2):
+            bays[1].installed_device = devices[0]
+            with self.assertRaises(ValidationError) as err:
+                bays[1].validated_save()
+            self.assertIn(
+                "Installing this device would create a loop; it is already an ancestor of this bay's device.",
+                str(err.exception),
+            )
+
+        bays[1].installed_device = devices[2]
+        bays[1].validated_save()
+
+        # 3-node loop: device1 -> device2 -> device3 -> device1
+        with self.subTest(node_count=3):
+            bays[2].installed_device = devices[0]
+            with self.assertRaises(ValidationError) as err:
+                bays[2].validated_save()
+            self.assertIn(
+                "Installing this device would create a loop; it is already an ancestor of this bay's device.",
+                str(err.exception),
+            )
+
+
+class DeviceBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceBayTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        parent_device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        DeviceBayTemplate.objects.create(device_type=parent_device_type, name="Device Bay Template Base")
+
+    def test_clean_rejects_non_parent_role(self):
+        """Ensure non-parent device types cannot have device bay templates."""
+        devicetype = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="TestDeviceBayTemplateChild",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template Err")
+        with self.assertRaises(ValidationError) as err:
+            template.full_clean()
+        self.assertIn(
+            f'Subdevice role of device type ({devicetype}) must be set to "parent" or "parent-child" to allow device bays.',
+            str(err.exception),
+        )
+
+    def test_clean_allows_parent_roles(self):
+        """Ensure parent and parent-child device types can have device bay templates."""
+        for role in (SubdeviceRoleChoices.ROLE_PARENT, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                devicetype = DeviceType.objects.create(
+                    manufacturer=Manufacturer.objects.first(),
+                    model=f"TestDeviceBayTemplateParent-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template OK")
+                template.full_clean()
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
@@ -4217,6 +4803,50 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+    def test_image_replaced_on_save_deletes_old_file(self):
+        """Replacing a front/rear image on a DB-loaded ModuleType should delete the old file."""
+        manufacturer = Manufacturer.objects.first()
+        ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Replacement Test",
+        )
+        # Load from DB so from_db() populates _original_front_image/_original_rear_image.
+        module_type = ModuleType.objects.get(model="Image Replacement Test")
+
+        # Simulate previously-stored images by patching the tracked originals directly,
+        # avoiding real filesystem I/O while still exercising the save() cleanup path.
+        old_front = MagicMock()
+        old_rear = MagicMock()
+        module_type._original_front_image = old_front
+        module_type._original_rear_image = old_rear
+
+        # Save without changing images; the empty FieldFiles differ from the mocked originals,
+        # so the cleanup logic should call delete() on both.
+        module_type.save()
+
+        old_front.delete.assert_called_once_with(save=False)
+        old_rear.delete.assert_called_once_with(save=False)
+
+        module_type.delete()
+
+    def test_images_deleted_on_model_delete(self):
+        """Deleting a ModuleType should delete any associated image files."""
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Deletion Test",
+        )
+        mock_front = MagicMock()
+        mock_rear = MagicMock()
+
+        with (
+            patch.object(type(module_type), "front_image", new_callable=PropertyMock, return_value=mock_front),
+            patch.object(type(module_type), "rear_image", new_callable=PropertyMock, return_value=mock_rear),
+        ):
+            module_type.delete()
+            mock_front.delete.assert_called_once_with(save=False)
+            mock_rear.delete.assert_called_once_with(save=False)
 
 
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):

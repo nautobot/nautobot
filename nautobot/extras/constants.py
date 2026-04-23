@@ -58,3 +58,5 @@ JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_user_id",
     "nautobot_job_ignore_singleton_lock",
 )
+
+PENDING_WORKFLOWS_ERROR_CODE = "definition_has_pending_workflows"
