@@ -2563,8 +2563,6 @@ class JobUIViewSet(NautobotUIViewSet):
     def _get_template_name(self, job_class, htmx_modal):
         """Determine the appropriate template to use for the job form."""
         template_name = "extras/job.html"
-        if job_class is None:
-            return template_name
         if htmx_modal:
             template_name = "extras/htmx/job_form_modal.html"
             if hasattr(job_class, "htmx_template_name"):
@@ -2576,7 +2574,7 @@ class JobUIViewSet(NautobotUIViewSet):
                         self.request,
                         f'Unable to render requested custom HTMX job template "{job_class.htmx_template_name}": {err}',
                     )
-        elif job_class.template_name:
+        elif job_class is not None and job_class.template_name:
             try:
                 get_template(job_class.template_name)
                 template_name = job_class.template_name
