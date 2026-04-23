@@ -417,6 +417,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def template_name(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("template_name", "", expected_type=str)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -434,6 +439,7 @@ class BaseJob:
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
             "is_singleton": cls.is_singleton,
+            "template_name": cls.template_name,
         }
 
     @final
