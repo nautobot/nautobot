@@ -220,6 +220,8 @@ class NautobotTestCaseMixin:
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
+                if "form" in response.data:
+                    err_message += f"\n{response.data['form'].errors}"
             # Attempt to extract form validation errors from the response HTML
             elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
                 err_message += f"\n{form_errors}"
@@ -260,7 +262,10 @@ class NautobotTestCaseMixin:
         for k, v in model_dict.items():
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
-                new_model_dict[k] = sorted(v)
+                if k == "mapping":  # CableBreakoutType, a list of dicts, not sortable
+                    new_model_dict[k] = json.dumps(v, sort_keys=True)
+                else:
+                    new_model_dict[k] = sorted(v)
             elif k == "data_schema" and isinstance(v, str):
                 # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                 new_model_dict[k] = self.standardize_json(v)
@@ -276,7 +281,10 @@ class NautobotTestCaseMixin:
             if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
-                    relevant_data[k] = sorted(v)
+                    if k == "mapping":  # CableBreakoutType, a list of dicts, not sortable
+                        new_model_dict[k] = json.dumps(v, sort_keys=True)
+                    else:
+                        relevant_data[k] = sorted(v)
                 elif k == "data_schema" and isinstance(v, str):
                     # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                     relevant_data[k] = self.standardize_json(v)
