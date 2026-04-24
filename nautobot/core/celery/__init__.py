@@ -45,6 +45,46 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 
+def get_celery_queue_items(queue_name):
+    import json
+
+    import redis
+
+    from nautobot.core.celery import app as celery_app
+
+    r = redis.Redis.from_url(celery_app.conf.broker_url, decode_responses=True)
+    raw_tasks = r.lrange(queue_name, 0, -1)
+
+    decoded = []
+    for raw in raw_tasks:
+        task = json.loads(raw)
+        decoded.append(task["headers"]["id"])
+    return decoded
+
+
+@signals.worker_ready.connect
+def load_revoked_on_start(sender=None, **kwargs):
+    from celery.worker.state import revoked as revoked_tasks
+
+    from nautobot.extras.jobs import JobResult
+
+    queue_names = [q.name for q in sender.task_consumer.queues]
+    print(f"Consuming queues: {queue_names}")
+    all_ids = []
+    for qname in queue_names:
+        all_ids.extend(get_celery_queue_items(qname))
+
+    ids = JobResult.objects.filter(
+        status="REVOKED",
+        id__in=all_ids,
+    ).values_list("id", flat=True)
+
+    for tid in ids:
+        revoked_tasks.add(str(tid))
+
+    print("REVOKED TASKS: ", revoked_tasks)
+
+
 @signals.import_modules.connect
 def import_jobs(sender=None, **kwargs):
     """
