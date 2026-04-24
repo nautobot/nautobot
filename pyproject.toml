@@ -95,7 +95,7 @@ dependencies = [
     # Library of network related utilities including network driver mappings and Jinja Filters
     # Note: netutils is limited in scope, dependencies, and observes semver, as such
     #       we permit a looser (^) version constraint here.
-    "netutils (>=1.14.0,<2)",
+    "netutils (>=1.17.2,<2)",
     # HTML sanitization
     "nh3 (>=0.3.4,<0.4)",
     # Handling of version numbers
@@ -110,7 +110,7 @@ dependencies = [
     # A Python slugify application that handles unicode.
     "python-slugify (>=8.0.4,<8.1)",
     # The uWSGI WSGI HTTP server as a Python module
-    "pyuwsgi (>=2.0.30,<2.1)",
+    "pyuwsgi (>=2.0.30.post1,<2.1)",
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
     # Social authentication/registration with support for many auth providers
@@ -124,21 +124,21 @@ all = [
     "django-auth-ldap (>=5.3.0,<5.4)",
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
-    "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.8.6,<4.9)",
+    "napalm (>=5.1.0,<6.0.0)",
+    "social-auth-core[saml] (>=4.8.7,<4.9)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
 # MySQL database adapter
 mysql = [ "mysqlclient (>=2.2.8,<2.3)" ]
 # NAPALM automation library
-napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
+napalm = [ "napalm (>=5.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
 remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.8.6,<4.9)" ]
+sso = [ "social-auth-core[saml] (>=4.8.7,<4.9)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -219,7 +219,7 @@ pylint-django = "~2.7.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.36"
 # Combination linter and code formatter
-ruff = "~0.15.11"
+ruff = "~0.15.12"
 # YAML linting
 yamllint = "~1.38.0"
 
@@ -229,7 +229,7 @@ coverage = "~7.13.5"
 # Testing of data migrations
 django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
-openapi-spec-validator = "~0.8.4"
+openapi-spec-validator = "~0.8.5"
 # Integration Tests
 requests = "~2.33.1"
 # Selenium web drivers for live integration testing
