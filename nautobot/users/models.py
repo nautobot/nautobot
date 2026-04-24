@@ -37,9 +37,6 @@ class UserQuerySet(RestrictedQuerySet):
 
     """
 
-    def restrict(self, user, action="view"):
-        return super().restrict(user, action)
-
 
 class UserManager(BaseManager, UserManager_):
     """
