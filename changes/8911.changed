@@ -1,0 +1,2 @@
+Moved `nautobot.dcim.elevations` module to `nautobot.dcim.svg.rack_elevation`.
+Moved `nautobot.dcim.breakout_diagram` module to `nautobot.dcim.svg.cable_breakout`.
