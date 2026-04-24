@@ -148,6 +148,56 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.1 (2026-04/27)
+
+### Security in v3.1.1
+
+- [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.1.1
+
+- [#8876](https://github.com/nautobot/nautobot/issues/8876) - Added `render_default_panels_for_object` template tag.
+- [#8883](https://github.com/nautobot/nautobot/issues/8883) - Added copyright notice to the About page.
+
+### Changed in v3.1.1
+
+- [#8894](https://github.com/nautobot/nautobot/issues/8894) - Changed the CSV export algorithm to speed up the export of a large number of objects.
+
+### Fixed in v3.1.1
+
+- [#6199](https://github.com/nautobot/nautobot/issues/6199) - Fixed job class template override not working when template_name is set as a Meta attribute.
+- [#8876](https://github.com/nautobot/nautobot/issues/8876) - Re-added placeholders for files `nautobot/extras/templates/extras/inc/jobresult_js.html`, `nautobot/project-static/js/job_result.js`, and `nautobot/project-static/js/log_level_filtering.js` that were removed in 3.1.0, in order to avoid breaking Apps still referencing these files.
+- [#8877](https://github.com/nautobot/nautobot/issues/8877) - Fixed incorrect refreshing of GitRepository "Synchronization Status" tab.
+- [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
+- [#8887](https://github.com/nautobot/nautobot/issues/8887) - Fixed `NoReverseMatch` crash when adding Data Validation Rules.
+
+### Dependencies in v3.1.1
+
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `djangorestframework` to `>=3.17.1,<3.18`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `GitPython` to `>=3.1.47,<3.2`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `psycopg2-binary` to `>=2.9.12,<2.10`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `social-auth-core` to `>=4.8.6,<4.9`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm dependency `htmx.org` to `^2.0.10`.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated dependency `social-auth-core` to `>=4.8.7,<4.9`.
+
+### Documentation in v3.1.1
+
+- [#8820](https://github.com/nautobot/nautobot/issues/8820) - Added documentation on how to set logging levels for Nautobot Jobs.
+- [#8873](https://github.com/nautobot/nautobot/issues/8873) - Improved documentation for VPN Terminations, VPN service types, and related VPN models added in v3.1.0.
+
+### Housekeeping in v3.1.1
+
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated development dependency `rich` to `~14.3.4`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated documentation dependency `mkdocs-section-index` to `~0.3.12`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated documentation dependency `mkdocstrings` to `~1.0.4`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated development dependency `ruff` to `~0.15.11`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm development dependency `postcss` to `^8.5.10`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm development dependency `prettier` to `^3.8.3`.
+- [#8906](https://github.com/nautobot/nautobot/issues/8906) - Fixed a unit test issue that was causing a number of view test cases to be incorrectly skipped.
+- [#8906](https://github.com/nautobot/nautobot/issues/8906) - Adjusted the RouteTargetFactory implementation to ensure data is suitable for use with the `bulk_rename` test cases.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated development dependency `ruff` to `~0.15.12`.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated development dependency `openapi-spec-validator` to `~0.8.5`.
+
 ## v3.1.0 (2026-04-14)
 
 ### Breaking Changes in v3.1.0

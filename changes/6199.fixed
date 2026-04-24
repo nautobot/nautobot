@@ -1,1 +1,0 @@
-Fixed job class template override not working when template_name is set as a Meta attribute.
