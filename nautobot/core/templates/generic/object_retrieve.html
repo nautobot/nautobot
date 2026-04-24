@@ -356,29 +356,4 @@
 
         window.addEventListener('popstate', (event) => show_tab(event.state.id));
     </script>
-    <script>
-        document.body.addEventListener('htmx:afterSwap', (event) => {
-            // Check if the swap happened inside our shared modal
-            if (event.detail?.target?.id === "modal-content-container") {
-                // Re-initialize Select2 for any new fields
-                if (window.nb && window.nb.select2) {
-                    window.nb.select2.initializeSelect2Fields(event.detail.target);
-                }
-            }
-        });
-        document.body.addEventListener('htmx:responseError', (event) => {
-            if (event.detail?.target?.id === "modal-content-container") {
-                const modalBody = document.querySelector('#nautobot-generic-modal .modal-body');
-                const modalTitle = document.querySelector('#nautobot-generic-modal .modal-title');
-
-                modalTitle.innerText = "Error Occurred";
-                modalBody.innerHTML = `
-                    <div class="alert alert-danger">
-                        <p><strong>Failed to load content.</strong></p>
-                        <p>The server responded with status: ${event.detail.xhr.status}</p>
-                    </div>
-                `;
-            }
-        });
-    </script>
 {% endblock javascript %}
