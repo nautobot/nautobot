@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
+import json
 import logging
 import re
 import uuid
@@ -110,6 +111,7 @@ from .choices import DeviceFaceChoices
 from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
+    CableBreakoutType,
     CablePath,
     ConsolePort,
     ConsolePortTemplate,
@@ -5451,6 +5453,87 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
     filterset = filters.DeviceFilterSet
     table = tables.DeviceTable
     default_return_url = "dcim:device_list"
+
+
+#
+# Cable Breakout Types
+#
+class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.CableBreakoutTypeFilterSet
+    filterset_form_class = forms.CableBreakoutTypeFilterForm
+    form_class = forms.CableBreakoutTypeForm
+    bulk_update_form_class = forms.CableBreakoutTypeBulkEditForm
+    queryset = CableBreakoutType.objects.all()
+    serializer_class = serializers.CableBreakoutTypeSerializer
+    table_class = tables.CableBreakoutTypeTable
+    lookup_field = "pk"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=["mapping"],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Lane Mapping Diagram",
+                body_content_template_path="dcim/inc/cablebreakouttype_diagram_panel.html",
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Mapping",
+                object_field="mapping",
+                render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
+            ),
+        )
+    )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_name="mapping_editor",
+        url_path="mapping-editor",
+        custom_view_base_action="view",
+    )
+    def mapping_editor(self, request):
+        """HTMX endpoint: return a server-rendered mapping table for given connector/lane counts."""
+
+        a_connectors = int(request.GET.get("a_connectors", 0) or 0)
+        b_connectors = int(request.GET.get("b_connectors", 0) or 0)
+        total_lanes = int(request.GET.get("total_lanes", 0) or 0)
+
+        # Derive per-side positions if the inputs are consistent; otherwise, we can't render a valid table.
+        a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
+        b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
+
+        mapping = None
+        mapping_json = request.GET.get("mapping", "")
+        if mapping_json:
+            try:
+                mapping = json.loads(mapping_json)
+                if not isinstance(mapping, list):
+                    mapping = None
+            except (json.JSONDecodeError, TypeError):
+                mapping = None
+
+        if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
+            mapping = CableBreakoutType(
+                a_connectors=a_connectors, b_connectors=b_connectors, total_lanes=total_lanes
+            ).autogenerate_mapping()
+
+        return render(
+            request,
+            "dcim/inc/breakout_mapping_table.html",
+            {
+                "mapping": mapping,
+                "a_connector_range": range(1, a_connectors + 1),
+                "a_position_range": range(1, a_positions + 1),
+                "b_connector_range": range(1, b_connectors + 1),
+                "b_position_range": range(1, b_positions + 1),
+            },
+        )
 
 
 #

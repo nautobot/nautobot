@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import F, Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -51,6 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -113,6 +114,7 @@ from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
+    "CableBreakoutTypeFilterSet",
     "CableFilterSet",
     "CableTerminationModelFilterSetMixin",
     "ConsoleConnectionFilterSet",
@@ -1450,6 +1452,29 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     class Meta:
         model = VirtualChassis
         fields = ["id", "domain", "name", "tags"]
+
+
+class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
+    is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+
+    class Meta:
+        model = CableBreakoutType
+        fields = [
+            "id",
+            "name",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+
+    def filter_is_breakout(self, queryset, name, value):
+        if value:
+            return queryset.exclude(a_connectors=F("b_connectors"))
+        return queryset.filter(a_connectors=F("b_connectors"))
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):

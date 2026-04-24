@@ -4,7 +4,7 @@ from django_tables2.utils import Accessor
 from nautobot.core.tables import BaseTable, BooleanColumn
 from nautobot.dcim.models import ConsolePort, Interface, PowerPort
 
-from .cables import CableTable
+from .cables import CableBreakoutTypeTable, CableTable
 from .devices import (
     ConsolePortTable,
     ConsoleServerPortTable,
@@ -68,6 +68,7 @@ from .racks import (
 )
 
 __all__ = (
+    "CableBreakoutTypeTable",
     "CableTable",
     "ConsoleConnectionTable",
     "ConsolePortTable",

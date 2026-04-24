@@ -35,6 +35,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -2793,6 +2794,279 @@ class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_get_docs_url(self):
         """No docs for this through table model."""
+
+
+class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = CableBreakoutType
+
+    def test_get_docs_url(self):
+        """Docs page for this model doesn't exist yet."""
+        # TODO: remove this override once a docs page is added for CableBreakoutType.
+
+    def test_derived_properties(self):
+        breakout = CableBreakoutType(
+            name="Test 1-to-4",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=8,
+            strands_per_lane=2,
+        )
+        self.assertEqual(breakout.a_positions, 8)
+        self.assertEqual(breakout.b_positions, 2)
+        self.assertEqual(breakout.total_strands, 16)
+        self.assertTrue(breakout.is_breakout)
+
+        straight = CableBreakoutType(
+            name="Test straight",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=4,
+            strands_per_lane=1,
+        )
+        self.assertEqual(straight.a_positions, 2)
+        self.assertEqual(straight.b_positions, 2)
+        self.assertEqual(straight.total_strands, 4)
+        self.assertFalse(straight.is_breakout)
+
+    def test_positions_with_zero_connectors(self):
+        """Guard against ZeroDivisionError when connector counts are zero (e.g. unsaved instance)."""
+        breakout = CableBreakoutType(a_connectors=0, b_connectors=0, total_lanes=4)
+        self.assertEqual(breakout.a_positions, 0)
+        self.assertEqual(breakout.b_positions, 0)
+
+    def test_autogenerate_mapping_straight(self):
+        breakout = CableBreakoutType(a_connectors=1, b_connectors=1, total_lanes=4)
+        mapping = breakout.autogenerate_mapping()
+        self.assertEqual(len(mapping), 4)
+        for lane_index, entry in enumerate(mapping, start=1):
+            self.assertEqual(entry["label"], str(lane_index))
+            self.assertEqual(entry["a_connector"], 1)
+            self.assertEqual(entry["a_position"], lane_index)
+            self.assertEqual(entry["b_connector"], 1)
+            self.assertEqual(entry["b_position"], lane_index)
+
+    def test_autogenerate_mapping_breakout(self):
+        breakout = CableBreakoutType(a_connectors=1, b_connectors=4, total_lanes=8)
+        mapping = breakout.autogenerate_mapping()
+        self.assertEqual(len(mapping), 8)
+        # All entries are on a_connector 1, positions 1..8
+        self.assertEqual([e["a_connector"] for e in mapping], [1] * 8)
+        self.assertEqual([e["a_position"] for e in mapping], list(range(1, 9)))
+        # B side fills 4 connectors, 2 positions each, in order
+        self.assertEqual([e["b_connector"] for e in mapping], [1, 1, 2, 2, 3, 3, 4, 4])
+        self.assertEqual([e["b_position"] for e in mapping], [1, 2, 1, 2, 1, 2, 1, 2])
+
+    def test_clean_wrong_direction(self):
+        """a_connectors must not exceed b_connectors."""
+        breakout = CableBreakoutType(
+            name="Wrong direction",
+            a_connectors=4,
+            b_connectors=1,
+            total_lanes=4,
+        )
+        with self.assertRaisesRegex(ValidationError, "Wrong breakout direction"):
+            breakout.clean()
+
+    def test_clean_total_lanes_not_divisible_by_a(self):
+        breakout = CableBreakoutType(
+            name="Bad a divisor",
+            a_connectors=3,
+            b_connectors=4,
+            total_lanes=8,
+        )
+        with self.assertRaisesRegex(ValidationError, "evenly divisible by a_connectors"):
+            breakout.clean()
+
+    def test_clean_total_lanes_not_divisible_by_b(self):
+        breakout = CableBreakoutType(
+            name="Bad b divisor",
+            a_connectors=2,
+            b_connectors=6,
+            total_lanes=8,
+        )
+        with self.assertRaisesRegex(ValidationError, "evenly divisible by b_connectors"):
+            breakout.clean()
+
+    def test_clean_autogenerates_mapping_when_missing(self):
+        breakout = CableBreakoutType(
+            name="Auto map",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=4,
+            mapping=None,
+        )
+        breakout.clean()
+        self.assertEqual(len(breakout.mapping), 4)
+
+    def test_validate_mapping_not_a_list(self):
+        breakout = CableBreakoutType(
+            name="Bad mapping type",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping={"not": "a list"},
+        )
+        with self.assertRaisesRegex(ValidationError, "Mapping must be a JSON array"):
+            breakout.clean()
+
+    def test_validate_mapping_wrong_length(self):
+        breakout = CableBreakoutType(
+            name="Bad mapping length",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[{"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "Expected 2 lane definitions, but got 1"):
+            breakout.clean()
+
+    def test_validate_mapping_entry_not_dict(self):
+        breakout = CableBreakoutType(
+            name="Bad entry type",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=["not a dict"],
+        )
+        with self.assertRaisesRegex(ValidationError, "Entry 0 must be a JSON object"):
+            breakout.clean()
+
+    def test_validate_mapping_missing_keys(self):
+        breakout = CableBreakoutType(
+            name="Missing keys",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"a_connector": 1, "a_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "missing required keys.*b_connector, b_position"):
+            breakout.clean()
+
+    def test_validate_mapping_unknown_keys(self):
+        breakout = CableBreakoutType(
+            name="Unknown keys",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[
+                {
+                    "a_connector": 1,
+                    "a_position": 1,
+                    "b_connector": 1,
+                    "b_position": 1,
+                    "bogus": "value",
+                }
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, "unknown keys: bogus"):
+            breakout.clean()
+
+    def test_validate_mapping_non_integer_value(self):
+        breakout = CableBreakoutType(
+            name="Non-int",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"a_connector": "1", "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "key 'a_connector' must be an integer"):
+            breakout.clean()
+
+    def test_validate_mapping_out_of_range(self):
+        cases = [
+            ({"a_connector": 2, "a_position": 1, "b_connector": 1, "b_position": 1}, "a_connector 2 out of range"),
+            ({"a_connector": 1, "a_position": 3, "b_connector": 1, "b_position": 1}, "a_position 3 out of range"),
+            ({"a_connector": 1, "a_position": 1, "b_connector": 2, "b_position": 1}, "b_connector 2 out of range"),
+            ({"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 3}, "b_position 3 out of range"),
+        ]
+        for entry, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                # Pad mapping to the expected size so _validate_mapping reaches the range checks.
+                mapping = [
+                    entry,
+                    {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+                ]
+                breakout = CableBreakoutType(
+                    name=f"OOR {expected_message}",
+                    a_connectors=1,
+                    b_connectors=1,
+                    total_lanes=2,
+                    mapping=mapping,
+                )
+                with self.assertRaisesRegex(ValidationError, expected_message):
+                    breakout.clean()
+
+    def test_validate_mapping_duplicate_a_pair(self):
+        breakout = CableBreakoutType(
+            name="Dup A",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 2},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, r"Duplicate A-side .*: \(1, 1\)"):
+            breakout.clean()
+
+    def test_validate_mapping_duplicate_b_pair(self):
+        breakout = CableBreakoutType(
+            name="Dup B",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 1},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, r"Duplicate B-side .*: \(1, 1\)"):
+            breakout.clean()
+
+    def test_validate_mapping_non_string_label(self):
+        breakout = CableBreakoutType(
+            name="Non-string label",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"label": 1, "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "Label 1 must be a string"):
+            breakout.clean()
+
+    def test_validate_mapping_duplicate_label(self):
+        breakout = CableBreakoutType(
+            name="Dup label",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"label": "same", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"label": "same", "a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, "Duplicate label: same"):
+            breakout.clean()
+
+    def test_validate_mapping_assigns_default_label(self):
+        mapping = [
+            {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+            {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+        ]
+        breakout = CableBreakoutType(
+            name="Default labels",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=mapping,
+        )
+        breakout.clean()
+        # _validate_mapping fills in missing labels (using the entry index as string).
+        self.assertEqual(breakout.mapping[0]["label"], "0")
+        self.assertEqual(breakout.mapping[1]["label"], "1")
+
+    # TODO: add a test for cable_count once Cable has a FK (related_name="cables") to CableBreakoutType.
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):

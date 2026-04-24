@@ -1,0 +1,170 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+        <div class="card-body">
+            {% render_field form.name %}
+            {% render_field form.description %}
+            {% render_field form.a_connectors %}
+            {% render_field form.b_connectors %}
+            {% render_field form.total_lanes %}
+            {% render_field form.is_shuffle %}
+            {% render_field form.strands_per_lane %}
+            {% render_field form.polarity_method %}
+        </div>
+    </div>
+
+    {# Lane Mapping — separate card at root level #}
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Lane Mapping</strong>
+            <div class="btn-group btn-group-sm" id="mapping-mode-toggle">
+                <button type="button" class="btn btn-primary bg-primary nb-text-body-bg" data-mode="table">Table</button>
+                <button type="button" class="btn btn-primary" data-mode="json">JSON</button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if form.mapping.errors %}
+                <div class="alert alert-danger mb-3">
+                    <strong>Mapping errors:</strong>
+                    <ul class="mb-0">
+                        {% for error in form.mapping.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+            <div class="alert alert-info mb-3">
+                <span class="mdi mdi-information-outline"></span>
+                The mapping is auto-generated from the connector counts and total lanes above.
+                Edit individual lane mappings below if needed, or switch to JSON mode for advanced editing.
+            </div>
+
+            {# Table editor — loaded via HTMX from the server #}
+            <div id="mapping-table-editor"
+                 hx-get="{% url 'dcim:cablebreakouttype_mapping_editor' %}"
+                 hx-trigger="load, change from:#id_a_connectors, change from:#id_b_connectors, change from:#id_total_lanes"
+                 hx-include="#id_a_connectors, #id_b_connectors, #id_total_lanes, #id_mapping"
+                 hx-target="#mapping-table-editor"
+                 hx-swap="innerHTML">
+            </div>
+
+            {# JSON editor #}
+            <div id="mapping-json-editor" class="d-none">
+                <div id="mapping-json-editor-invalid" class="alert alert-danger mb-3 d-none">
+                    <span class="mdi mdi-alert"></span>
+                    Invalid JSON - please correct it or remove it before switching to the table editor.
+                </div>
+                {% render_field form.mapping %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const jsonEditorTextarea = document.querySelector("textarea[name='mapping']");
+            const jsonEditorContainer = document.getElementById("mapping-json-editor");
+            const jsonEditorErrorAlert = document.getElementById("mapping-json-editor-invalid");
+            const tableEditorContainer = document.getElementById("mapping-table-editor");
+
+            var currentEditorMode = "table";
+
+            const editorModeToggles = document.querySelectorAll("#mapping-mode-toggle button");
+            editorModeToggles.forEach(toggle => {
+                toggle.addEventListener("click", (event) => {
+                    const newEditorMode = event.target.getAttribute("data-mode");
+                    if (newEditorMode === currentEditorMode) {
+                        return;
+                    }
+                    if (newEditorMode === "json") {
+                        populateJsonFromTable();
+                        jsonEditorContainer.classList.toggle("d-none", false);
+                        tableEditorContainer.classList.toggle("d-none", true);
+                    } else {
+                        if (populateTableFromJson()) {
+                            jsonEditorErrorAlert.classList.toggle("d-none", true);
+                            jsonEditorContainer.classList.toggle("d-none", true);
+                            tableEditorContainer.classList.toggle("d-none", false);
+                        } else {
+                            jsonEditorErrorAlert.classList.toggle("d-none", false);
+                            return;
+                        }
+                    }
+                    editorModeToggles.forEach(t => {
+                        t.classList.remove("bg-primary");
+                        t.classList.remove("nb-text-body-bg");
+                    });
+                    event.target.classList.add("bg-primary");
+                    event.target.classList.add("nb-text-body-bg");
+                    currentEditorMode = newEditorMode;
+                });
+            });
+
+            const populateJsonFromTable = () => {
+                let mapping = [];
+                tableEditorContainer.querySelectorAll("tr").forEach(tr => {
+                    let rowData = {};
+                    tr.querySelectorAll("select").forEach(select => {
+                        const selectName = select.getAttribute("name");
+                        const fieldName = selectName.replace(/^mapping_\d+_/, "");
+                        rowData[fieldName] = parseInt(select.value);
+                    });
+                    tr.querySelectorAll("input").forEach(input => {
+                        const inputName = input.getAttribute("name");
+                        const fieldName = inputName.replace(/^mapping_\d+_/, "");
+                        rowData[fieldName] = input.value;
+                    });
+                    if (Object.keys(rowData).length > 0) {
+                        mapping.push(rowData);
+                    }
+                });
+                jsonEditorTextarea.value = JSON.stringify(mapping, null, 2);
+            };
+
+            const populateTableFromJson = () => {
+                if (!jsonEditorTextarea.value || jsonEditorTextarea.value.trim() == "") {
+                    return true;
+                }
+                try {
+                    const mapping = JSON.parse(jsonEditorTextarea.value.trim());
+                    for (const [index, entry] of mapping.entries()) {
+                        for (const key of Object.keys(entry)) {
+                            if (["a_connector", "a_position", "b_connector", "b_position", "label"].includes(key)) {
+                                tableEditorContainer.querySelector(`[name="mapping_${index}_${key}"]`).value = entry[key];
+                            }
+                        }
+                    }
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            document.getElementById("nb-create-form").addEventListener("submit", () => {
+                if (currentEditorMode !== "json") {
+                    populateJsonFromTable();
+                }
+            });
+
+            const hidePolarityMethodOnSingleStrand = () => {
+                const polarityMethod = document.getElementById("id_polarity_method");
+                if (document.getElementById("id_strands_per_lane").value > 1) {
+                    polarityMethod.closest(".justify-content-center").classList.toggle("d-none", false);
+                } else {
+                    $(polarityMethod).val("").trigger("change");
+                    polarityMethod.closest(".justify-content-center").classList.toggle("d-none", true);
+                }
+            };
+
+            document.getElementById("id_strands_per_lane").addEventListener("change", hidePolarityMethodOnSingleStrand);
+            hidePolarityMethodOnSingleStrand();
+        });
+    </script>
+{% endblock javascript %}

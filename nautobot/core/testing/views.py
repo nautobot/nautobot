@@ -1889,20 +1889,16 @@ class ViewTestCases:
             "use_regex": True,
         }
 
-        def setUp(self):
-            super().setUp()
-            try:
-                self._get_url("bulk_rename")
-            except NoReverseMatch:
-                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
-
         def _has_redos_protection(self):
             """Check if this model's bulk_rename uses the _is_safe_regex check from ObjectBulkRenameViewMixin.
 
             Returns False for old-style BulkRenameView and for viewsets that override _bulk_rename
             (e.g. ModuleBayCommonViewSetMixin).
             """
-            url = self._get_url("bulk_rename")
+            try:
+                url = self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             resolved = resolve(url)
             view_cls = getattr(resolved.func, "cls", None)
             if view_cls is None or not issubclass(view_cls, ObjectBulkRenameViewMixin):
@@ -1911,6 +1907,10 @@ class ViewTestCases:
             return view_cls._bulk_rename is ObjectBulkRenameViewMixin._bulk_rename
 
         def test_bulk_rename_objects_without_permission(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
                 "pk": pk_list,
@@ -1981,6 +1981,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             objects = list(self._get_queryset().all()[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
@@ -2001,6 +2005,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             objects = list(self._get_queryset().all()[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
@@ -2042,6 +2050,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_regex_redos_protection(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             """A pattern with nested quantifiers should be rejected (new UIViewSet mixin only)."""
             if not self._has_redos_protection():
                 self.skipTest("ReDoS protection only applies to ObjectBulkRenameViewMixin (not overridden)")
@@ -2071,6 +2083,10 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_plain_string_replace(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             """POST with use_regex=False should do a plain string find/replace."""
             if not self._has_redos_protection():
                 self.skipTest("Only applies to ObjectBulkRenameViewMixin")

@@ -1,4 +1,5 @@
 import logging
+import math
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +19,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    CableBreakoutTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -31,8 +33,14 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    NONCONNECTABLE_IFACE_TYPES,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.models import (
+    CableBreakoutType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -135,6 +143,41 @@ def get_random_platform_for_manufacturer(manufacturer):
 def get_random_software_version_for_device_type(device_type):
     qs = SoftwareVersion.objects.filter(software_image_files__device_types=device_type)
     return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
+class CableBreakoutTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = CableBreakoutType
+        exclude = ("has_description",)
+
+    name = UniqueFaker("word")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+
+    a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
+    # Model requires a_connectors <= b_connectors
+    b_connectors = factory.LazyAttribute(
+        lambda o: factory.random.randgen.randint(o.a_connectors, CABLE_BREAKOUT_MAX_CONNECTORS)
+    )
+    # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
+    total_lanes = factory.LazyAttribute(
+        lambda o: (
+            math.lcm(o.a_connectors, o.b_connectors)
+            * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+        )
+    )
+    is_shuffle = NautobotBoolIterator()
+    strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
+    polarity_method = factory.LazyFunction(
+        lambda: factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
+    )
+    mapping = factory.LazyAttribute(
+        lambda o: CableBreakoutType(
+            a_connectors=o.a_connectors,
+            b_connectors=o.b_connectors,
+            total_lanes=o.total_lanes,
+        ).autogenerate_mapping()
+    )
 
 
 class DeviceFactory(PrimaryModelFactory):
