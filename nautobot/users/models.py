@@ -13,9 +13,11 @@ from django.utils import timezone
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
-from nautobot.extras.models.change_logging import ChangeLoggedModel
+from nautobot.extras.models.change_logging import ChangeLoggedModel, ObjectChange
+from nautobot.extras.models.mixins import NotesMixin
 
 __all__ = (
     "AdminGroup",
@@ -232,7 +234,7 @@ class AdminGroup(Group):
 #
 
 
-class Token(BaseModel):
+class Token(ChangeLoggedModel, NotesMixin, BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
@@ -248,6 +250,26 @@ class Token(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    is_saved_view_model = True
+
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+        """Remove token key from changelog to prevent secret exposure."""
+        fields_to_exclude = ["key"]
+        object_data_exclude = [] if object_data_exclude is None else list(object_data_exclude)
+        object_data_exclude += fields_to_exclude
+
+        data_v2 = serialize_object_v2(self)
+        for field in fields_to_exclude:
+            data_v2.pop(field, None)
+
+        return ObjectChange(
+            changed_object=self,
+            object_repr=str(self),
+            action=action,
+            object_data=serialize_object(self, extra=object_data_extra, exclude=object_data_exclude),
+            object_data_v2=data_v2,
+            related_object=related_object,
+        )
 
     class Meta:
         ordering = ["created"]

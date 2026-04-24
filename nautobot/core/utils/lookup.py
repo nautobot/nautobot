@@ -367,6 +367,11 @@ def get_model_for_view_name(view_name):
         app_label = app_label.replace("-api", "")
         delimiter = "-"
 
+    # Historical namespace for nautobot.users URLs is "user" (singular),
+    # but the Django app label is "users" (plural).
+    if app_label == "user":
+        app_label = "users"
+
     model_name = model_name.split(delimiter)[0]  # device
 
     try:

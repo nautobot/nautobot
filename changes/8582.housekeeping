@@ -1,0 +1,1 @@
+Added null guards to form initialization JavaScript so partial form layouts do not crash, mapped the "user" URL namespace to the "users" app label in `get_model_for_view_name`, and renamed `assertQuerysetEqualAndNotEmpty` call sites to `assertQuerySetEqualAndNotEmpty`.

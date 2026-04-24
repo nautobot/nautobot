@@ -35,6 +35,7 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
+from nautobot.users.models import Token
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -500,6 +501,7 @@ class GetFooForModelTest(TestCase):
         with self.subTest("Test unconventional model views."):
             self.assertEqual(lookup.get_model_for_view_name("extras-api:contenttype-detail"), ContentType)
             self.assertEqual(lookup.get_model_for_view_name("users-api:group-detail"), Group)
+            self.assertEqual(lookup.get_model_for_view_name("user:token_list"), Token)
         with self.subTest("Test unexpected view."):
             with self.assertRaises(ValueError) as err:
                 lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")

@@ -1,0 +1,1 @@
+Added a Token UI ViewSet backed by the UI Component Framework with list, create, edit, bulk-edit, filtering, navigation, and saved-view support, along with a `last_updated` field on the Token model.

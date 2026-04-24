@@ -11,6 +11,7 @@ from nautobot.core.api.serializers import BulkOperationIntegerIDSerializer
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import deepmerge
+from nautobot.extras.api.views import NotesViewSetMixin
 from nautobot.users import filters
 from nautobot.users.models import ObjectPermission, Token
 
@@ -42,7 +43,7 @@ class GroupViewSet(ModelViewSet):
 #
 
 
-class TokenViewSet(ModelViewSet):
+class TokenViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = RestrictedQuerySet(model=Token).select_related("user")  # pylint: disable=not-callable  # no idea why?
     serializer_class = serializers.TokenSerializer
     filterset_class = filters.TokenFilterSet
