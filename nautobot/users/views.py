@@ -331,7 +331,7 @@ class TokenUIViewSet(NautobotUIViewSet):
     form_class = TokenForm
     serializer_class = serializers.TokenSerializer
     table_class = tables.TokenTable
-    queryset = Token.objects.all()
+    queryset = Token.objects.select_related("user")
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
@@ -344,11 +344,11 @@ class TokenUIViewSet(NautobotUIViewSet):
     )
 
     def form_save(self, form, **kwargs):
-        """Save token form data while enforcing ownership rules."""
-        obj = form.save(commit=False)
+        """Enforce ownership rules on the form instance, then delegate to the base save."""
+        obj = form.instance
 
-        # Staff can assign ownership; non-staff are always restricted to themselves.
-        if self.request.user.is_staff:
+        # Staff/superusers can assign ownership; others are always restricted to themselves.
+        if self.request.user.is_staff or self.request.user.is_superuser:
             if form.cleaned_data.get("user"):
                 obj.user = form.cleaned_data["user"]
             elif not obj.user_id:
@@ -356,16 +356,14 @@ class TokenUIViewSet(NautobotUIViewSet):
         else:
             obj.user = self.request.user
 
-        obj.save()
-        form.save_m2m()
-        return obj
+        return super().form_save(form, **kwargs)
 
     def get_queryset(self):
-        """Allow staff users to manage all tokens; others are limited to their own."""
+        """Allow staff/superusers to manage all tokens; others are limited to their own."""
         queryset = super().get_queryset()
         if not self.request.user.is_authenticated:
             return queryset.none()
-        if self.request.user.is_staff:
+        if self.request.user.is_staff or self.request.user.is_superuser:
             return queryset
         return queryset.filter(user=self.request.user)
 

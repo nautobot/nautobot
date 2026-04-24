@@ -11,7 +11,7 @@ _actions_template = """
 
 class TokenTable(BaseTable):
     pk = ToggleColumn()
-    created = tables.DateTimeColumn(linkify=True)
+    created = tables.DateTimeColumn()
     user = tables.Column()
     expires = tables.DateTimeColumn()
     write_enabled = BooleanColumn(verbose_name="Write Enabled")

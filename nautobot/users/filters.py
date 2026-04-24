@@ -94,7 +94,7 @@ class TokenFilterSet(BaseFilterSet):
 
     class Meta:
         model = Token
-        fields = ["id", "key", "write_enabled", "created", "expires", "description"]
+        fields = ["id", "write_enabled", "created", "expires", "description"]
 
 
 class ObjectPermissionFilterSet(BaseFilterSet, NameSearchFilterSet):
