@@ -188,3 +188,52 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
         label_x_values = [x for (x, _) in _label_rects(svg)]
         self.assertEqual(len(label_x_values), 4)
         self.assertEqual(len(set(label_x_values)), 4, "Parallel-lane labels should not overlap in x")
+
+    def test_render_returns_safestring_with_matching_dimensions(self):
+        """render() returns a SafeString whose svg dimensions match _total_width/_total_height."""
+        from django.utils.safestring import SafeString
+
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=4)
+        diagram = BreakoutDiagramSVG(mapping, show_status=False)
+        svg = diagram.render()
+
+        self.assertIsInstance(svg, SafeString)
+
+        total_width = diagram._total_width()
+        total_height = diagram._total_height()
+        self.assertIn(f'width="{total_width}px"', svg)
+        self.assertIn(f'height="{total_height}px"', svg)
+        self.assertIn(f'viewBox="0,0,{total_width},{total_height}"', svg)
+
+    def test_connector_label_includes_positions_suffix_when_multiple(self):
+        """Connector labels should gain a ' (N)' suffix only when positions-per-connector > 1."""
+        # 1:1 with a single lane → 1 position per connector on each side, no suffix.
+        single = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=1)
+        svg = BreakoutDiagramSVG(single, show_status=False).render()
+        self.assertIn(">A1</text>", svg)
+        self.assertIn(">B1</text>", svg)
+        self.assertNotIn("A1 (", svg)
+        self.assertNotIn("B1 (", svg)
+
+        # 1:2 with 8 lanes → A1 has 8 positions, B1/B2 have 4 each.
+        multi = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=8)
+        svg = BreakoutDiagramSVG(multi, show_status=False).render()
+        self.assertIn(">A1 (8)</text>", svg)
+        self.assertIn(">B1 (4)</text>", svg)
+        self.assertIn(">B2 (4)</text>", svg)
+
+    def test_line_area_width_scales_with_label_length(self):
+        """line_area_width should hit the minimum for short labels and grow with long labels."""
+        # Short default labels + few parallel lanes → clamped to MINIMUM_LINE_AREA_WIDTH.
+        short = BreakoutDiagramSVG(
+            generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2),
+            show_status=False,
+        )
+        self.assertEqual(short.line_area_width, BreakoutDiagramSVG.MINIMUM_LINE_AREA_WIDTH)
+
+        # Long custom labels should push line_area_width above the minimum.
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=2)
+        for i, entry in enumerate(mapping):
+            entry["label"] = f"VERY_LONG_LANE_LABEL_{i}"
+        long_diagram = BreakoutDiagramSVG(mapping, show_status=False)
+        self.assertGreater(long_diagram.line_area_width, BreakoutDiagramSVG.MINIMUM_LINE_AREA_WIDTH)

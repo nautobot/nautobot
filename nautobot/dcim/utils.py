@@ -225,6 +225,7 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
     Returns:
         tuple: (mapping, a_connectors, b_connectors, total_lanes)
     """
+
     if not isinstance(mapping, list):
         raise ValidationError({"mapping": "Mapping must be a JSON array."})
 
@@ -276,6 +277,7 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         b_connector = entry["b_connector"]
         b_position = entry["b_position"]
 
+        # Range checks - note that we already checked for typing and for values less than 1 in the first pass above
         if a_connector > a_connectors:
             raise ValidationError(
                 {"mapping": f"Entry {i}: a_connector {a_connector} out of range [1, {a_connectors}]."}
@@ -289,6 +291,7 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         if b_position > b_positions:
             raise ValidationError({"mapping": f"Entry {i}: b_position {b_position} out of range [1, {b_positions}]."})
 
+        # Uniqueness checks
         a_pair = (a_connector, a_position)
         if a_pair in seen_a_pairs:
             raise ValidationError(
