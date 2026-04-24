@@ -147,7 +147,7 @@
                 }
             }
 
-            document.querySelector("form").addEventListener("submit", () => {
+            document.getElementById("nb-create-form").addEventListener("submit", () => {
                 if (currentEditorMode !== "json") {
                     populateJsonFromTable();
                 }
