@@ -7,8 +7,10 @@
             <label class="position-relative w-100">
                 <input
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
+                    autocomplete="off"
                     class="form-control nb-text-transparent"
                     name="q"
+                    role="searchbox"
                     type="search"
                     value="{{ request.GET.q }}"
                 />

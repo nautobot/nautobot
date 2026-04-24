@@ -20,6 +20,7 @@
     "clipboard": "2.0.11",
     "echarts": "^6.0.0",
     "flatpickr": "4.6.13",
+    "fuse.js": "^7.3.0",
     "graphiql": "2.4.7",
     "graphql": "16.10.0",
     "graphql-ws": "5.13.1",
