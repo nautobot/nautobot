@@ -212,7 +212,7 @@ def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_
     return mapping
 
 
-def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connectors=None, total_lanes=None) -> list:
+def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connectors=None, total_lanes=None):
     """Validate the mapping JSON structure and consistency with connector/position counts.
 
     If any of `a_connectors`, `b_connectors`, or `total_lanes` is not provided, it will be
@@ -221,6 +221,9 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
 
     Missing `label` entries are filled in with the entry index as a string.
     Raises ValidationError if the mapping is invalid.
+
+    Returns:
+        tuple: (mapping, a_connectors, b_connectors, total_lanes)
     """
     if not isinstance(mapping, list):
         raise ValidationError({"mapping": "Mapping must be a JSON array."})
@@ -309,4 +312,4 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
             raise ValidationError({"mapping": f"Entry {i}: Duplicate label: {label}"})
         seen_labels.add(label)
 
-    return mapping
+    return mapping, a_connectors, b_connectors, total_lanes

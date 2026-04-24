@@ -114,7 +114,11 @@ class ValidateCableBreakoutMappingTestCase(TestCase):
             {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
             {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
         ]
-        validate_cable_breakout_mapping(mapping)
+        new_mapping, a_connectors, b_connectors, total_lanes = validate_cable_breakout_mapping(mapping)
         # validate_cable_breakout_mapping fills in missing labels (using the entry index as string).
+        self.assertEqual(new_mapping, mapping)
         self.assertEqual(mapping[0]["label"], "0")
         self.assertEqual(mapping[1]["label"], "1")
+        self.assertEqual(a_connectors, 1)
+        self.assertEqual(b_connectors, 1)
+        self.assertEqual(total_lanes, 2)
