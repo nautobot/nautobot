@@ -2734,11 +2734,6 @@ class _JobModalButton(Button):
         }
         # TODO: This will probably change to a database PK if this gets integrated into JobButton
         hx_vals["job_modal_button"] = f"{self.__module__}.{self.__class__.__name__}"
-        hx_vals["job_form_modal"] = True
-        hx_vals["advanced_fields"] = self.advanced_fields
-        hx_vals["run_button_label"] = self.run_button_label
-        hx_vals["job_result_key"] = self.job_result_key
-        hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
         hx_vals["initial_job_modal_form_submit"] = True
 
         raw_attrs = base_context.get("attributes")
