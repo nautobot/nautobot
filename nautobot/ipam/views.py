@@ -221,7 +221,6 @@ class VRFUIViewSet(NautobotUIViewSet):
                 table_filter="importing_vrfs",
                 table_title="Import Route Targets",
                 add_button_route=None,
-                select_related_fields=["tenant"],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.RIGHT_HALF,
@@ -230,7 +229,6 @@ class VRFUIViewSet(NautobotUIViewSet):
                 table_filter="exporting_vrfs",
                 table_title="Export Route Targets",
                 add_button_route=None,
-                select_related_fields=["tenant"],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -241,15 +239,6 @@ class VRFUIViewSet(NautobotUIViewSet):
                 hide_hierarchy_ui=True,
                 exclude_columns=["namespace"],
                 add_button_route=None,
-                select_related_fields=[
-                    "parent",
-                    "role",
-                    "status",
-                    "tenant",
-                    "namespace",
-                    "vlan__vlan_group",
-                ],
-                prefetch_related_fields=["locations"],
             ),
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
@@ -262,8 +251,6 @@ class VRFUIViewSet(NautobotUIViewSet):
                 exclude_columns=["vrf", "namespace", "rd"],
                 add_button_route=None,
                 select_related_fields=[
-                    "vrf__tenant",
-                    "vrf__namespace",
                     "device",
                     "virtual_machine",
                     "virtual_device_context",
