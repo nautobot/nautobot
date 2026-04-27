@@ -2597,19 +2597,15 @@ class JobUIViewSet(NautobotUIViewSet):
         htmx_modal = False
         title = job_model.name
         run_button_label = "Run Job Now"
-        job_result_key = None
-        refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
-            job_modal_button = request.POST.get("job_modal_button")
-            htmx_modal = request.POST.get("job_form_modal", False)
-            run_button_label = request.POST.get("run_button_label", "Run Job Now")
-            job_result_key = request.POST.get("job_result_key", None)
-            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-            advanced_field_names = request.POST.getlist("advanced_fields")
-            advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
-            template_name = self._get_template_name(job_class, htmx_modal)
-            if htmx_modal:
+            job_modal_button_class_path = request.POST.get("job_modal_button", None)
+            if job_modal_button_class_path:
+                job_modal_button = import_string(request.POST.get("job_modal_button"))
+                run_button_label = job_modal_button.run_button_label
+                advanced_field_names = job_modal_button.advanced_fields
+                advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+                template_name = self._get_template_name(job_class, True)
                 response = render(
                     request,
                     template_name,
@@ -2623,15 +2619,11 @@ class JobUIViewSet(NautobotUIViewSet):
                         "advanced_field_names": advanced_field_names,
                         "job_execution_form": job_execution_form,
                         "schedule_form": schedule_form,
-                        "job_result_key": job_result_key,
                         "job_modal_button": job_modal_button,
                         "hx_vals": json.dumps(
                             {
-                                "job_form_modal": True,
-                                "job_result_key": job_result_key,
-                                "job_modal_button": job_modal_button,
+                                "job_modal_button": job_modal_button_class_path,
                                 "run_button_label": run_button_label,
-                                "refresh_on_close_if_done": refresh_on_close_if_done,
                                 "advanced_fields": advanced_field_names,
                                 "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                             }
@@ -3705,11 +3697,12 @@ class JobResultUIViewSet(
     @action(detail=True, custom_view_base_action="view", methods=["POST"])
     def modal(self, request, *args, **kwargs):
         instance = self.get_object()
+        job_modal_button = import_string(request.POST.get("job_modal_button"))
         title = "Run Job"
         if instance.job_model is not None:
             title = instance.job_model.name
-        job_result_key = request.POST.get("job_result_key", None)
-        refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+        job_result_key = job_modal_button.job_result_key
+        refresh_on_close_if_done = job_modal_button.refresh_on_close_if_done
         detail_value = f"Job finished with status: {instance.get_status_display()}"
         if instance.result and isinstance(instance.result, dict) and job_result_key:
             detail_value = instance.result.get(job_result_key, instance.result)
@@ -3717,7 +3710,6 @@ class JobResultUIViewSet(
             detail_value = instance.result
         job_is_pending = self._is_job_pending(instance)
         context = self.get_extra_context(request, instance)
-        job_modal_button = import_string(request.POST.get("job_modal_button"))
         context.update(
             {
                 "title": title,
