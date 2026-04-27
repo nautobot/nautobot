@@ -4541,7 +4541,7 @@ class JobResultTestCase(
         self.assertIn('hx-trigger="every 2s"', content)
         self.assertIn('"refresh_on_close_if_done": "true"', content)
         # Marker is only set once the job is done.
-        self.assertNotIn('data-refresh-on-close="true"', content)
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
     def test_jobresult_modal_refresh_on_close_sets_marker_when_done(self):
         """Completed job: `refresh_on_close_if_done=true` must render the DOM marker used to trigger reload."""
@@ -4550,7 +4550,7 @@ class JobResultTestCase(
         response = self.client.get(f"{url}?refresh_on_close_if_done=true", HTTP_HX_REQUEST="true")
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertIn('data-refresh-on-close="true"', content)
+        self.assertIn('data-nb-refresh-on-close="true"', content)
         # No polling once the job is done.
         self.assertNotIn('hx-trigger="every 2s"', content)
 
@@ -4562,13 +4562,13 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertIn('"refresh_on_close_if_done": "false"', content)
-        self.assertNotIn('data-refresh-on-close="true"', content)
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.get(completed_url, HTTP_HX_REQUEST="true")
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertNotIn('data-refresh-on-close="true"', content)
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
 
 class JobTestCase(
