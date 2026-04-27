@@ -2601,14 +2601,6 @@ class JobUIViewSet(NautobotUIViewSet):
         refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
-            # if request.POST.get("initial_job_modal_form_submit", False):
-            # htmx_modal = request.POST.get("job_form_modal", False)
-            # run_button_label = request.POST.get("run_button_label", "Run Job Now")
-            # job_result_key = request.POST.get("job_result_key", None)
-            # refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-            # advanced_field_names = request.POST.getlist("advanced_fields")
-            # job_modal_button = request.POST.get("job_modal_button")
-            # else:
             job_modal_button = request.POST.get("job_modal_button")
             htmx_modal = request.POST.get("job_form_modal", False)
             run_button_label = request.POST.get("run_button_label", "Run Job Now")
@@ -2616,38 +2608,38 @@ class JobUIViewSet(NautobotUIViewSet):
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
-
-        template_name = self._get_template_name(job_class, htmx_modal)
-        if htmx_request and htmx_modal:
-            response = render(
-                request,
-                template_name,
-                {
-                    "class_path": job_model.class_path,
-                    "title": title,
-                    "run_button_label": run_button_label,
-                    "job_model": job_model,
-                    "job_form": job_form,
-                    "advanced_fields": advanced_fields,
-                    "advanced_field_names": advanced_field_names,
-                    "job_execution_form": job_execution_form,
-                    "schedule_form": schedule_form,
-                    "job_result_key": job_result_key,
-                    "job_modal_button": job_modal_button,
-                    "hx_vals": json.dumps(
-                        {
-                            "job_form_modal": True,
-                            "job_result_key": job_result_key,
-                            "job_modal_button": job_modal_button,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
-                            "advanced_fields": advanced_field_names,
-                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
-                        }
-                    ),
-                },
-            )
+            template_name = self._get_template_name(job_class, htmx_modal)
+            if htmx_modal:
+                response = render(
+                    request,
+                    template_name,
+                    {
+                        "class_path": job_model.class_path,
+                        "title": title,
+                        "run_button_label": run_button_label,
+                        "job_model": job_model,
+                        "job_form": job_form,
+                        "advanced_fields": advanced_fields,
+                        "advanced_field_names": advanced_field_names,
+                        "job_execution_form": job_execution_form,
+                        "schedule_form": schedule_form,
+                        "job_result_key": job_result_key,
+                        "job_modal_button": job_modal_button,
+                        "hx_vals": json.dumps(
+                            {
+                                "job_form_modal": True,
+                                "job_result_key": job_result_key,
+                                "job_modal_button": job_modal_button,
+                                "run_button_label": run_button_label,
+                                "refresh_on_close_if_done": refresh_on_close_if_done,
+                                "advanced_fields": advanced_field_names,
+                                "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
+                            }
+                        ),
+                    },
+                )
         else:
+            template_name = self._get_template_name(job_class, htmx_modal)
             response = render(
                 request,
                 template_name,
@@ -2721,6 +2713,7 @@ class JobUIViewSet(NautobotUIViewSet):
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+
         if job_execution_form is not None:
             job_execution_form_is_valid = job_execution_form.is_valid()
             job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
@@ -2735,7 +2728,12 @@ class JobUIViewSet(NautobotUIViewSet):
                 job_execution_form_is_valid = False
         else:
             job_execution_form_is_valid = False
-
+        # Initial loading of job modal
+        if request.POST.get("initial_job_modal_form_submit"):
+            initial = normalize_querydict(request.POST, form_class=job_class.as_form_class())
+            job_form = job_class.as_form(initial=initial)
+            job_execution_form = job_class.as_execution_form(initial=initial)
+            return self._render_response(request, job_model, job_class, job_form, job_execution_form, None)
         schedule_form = forms.JobScheduleForm(request.POST)
         schedule_form_is_valid = schedule_form.is_valid()
 
@@ -2838,7 +2836,6 @@ class JobUIViewSet(NautobotUIViewSet):
 
         if return_url:
             return redirect(return_url)
-
         return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
     @action(
