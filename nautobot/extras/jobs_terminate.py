@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import logging
 
 from django.db import transaction
@@ -28,18 +28,19 @@ class JobTerminatorStrategy(ABC):
         """Return True if `job_result` is in a finished state."""
         return job_result.status not in self.NON_TERMINAL_STATUSES
 
+    @abstractmethod
     def is_alive(self, job_result: JobResult) -> bool | None:
         """Return True/False if the backend can confirm the job's liveness, None if unknown."""
-        raise NotImplementedError("Subclasses must implement `is_alive`.")
 
+    @abstractmethod
     def should_reap(self, job_result: JobResult) -> bool:
         """Return True if the job can be marked revoked without sending a kill signal."""
-        raise NotImplementedError("Subclasses must implement `should_reap`.")
 
+    @abstractmethod
     def _perform_termination(self, job_result: JobResult, user: User):
         """Send the backend-specific kill signal and mark the job revoked."""
-        raise NotImplementedError("Subclasses must implement `_perform_termination`.")
 
+    @abstractmethod
     def _record_revoked_on_backend(self, job_result: JobResult):
         """Persist the revoked state to the backend's own state store, post-commit.
 
@@ -48,7 +49,6 @@ class JobTerminatorStrategy(ABC):
         handle their own exceptions - failures here cannot roll back
         the DB write.
         """
-        raise NotImplementedError("Subclasses must implement `_record_revoked_on_backend`.")
 
     def _mark_revoked(self, job_result: JobResult, user: User) -> JobResult:
         """Mark a `JobResult` as revoked and schedule the backend update post-commit.
