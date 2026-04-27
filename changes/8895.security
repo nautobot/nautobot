@@ -1,0 +1,1 @@
+Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
