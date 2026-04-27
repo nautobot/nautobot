@@ -1,2 +1,0 @@
-Fixed a unit test issue that was causing a number of view test cases to be incorrectly skipped.
-Adjusted the RouteTargetFactory implementation to ensure data is suitable for use with the `bulk_rename` test cases.
