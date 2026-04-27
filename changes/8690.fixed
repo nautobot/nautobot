@@ -1,1 +1,0 @@
-Fixed a 500 error when using tag-based permission constraints on objects with multiple matching tags.

@@ -166,6 +166,25 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.32 (2026-04-27)
+
+### Security in v2.4.32
+
+- [#8842](https://github.com/nautobot/nautobot/issues/8842) - Updated dependency `Pillow` to `^12.2.0` to mitigate a number of security vulnerabilities.
+- [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8904](https://github.com/nautobot/nautobot/issues/8904) - Updated dependency `GitPython` to `~3.1.47` to mitigate CVE-2026-42215 and CVE-2026-42284.
+
+### Fixed in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Fixed an issue where filtering a nested relation (e.g. interfaces with role filter on devices) via GraphQL would produce N+1 queries.
+- [#8629](https://github.com/nautobot/nautobot/issues/8629) - Fixed a scenario where rendering a GitRepository-related Jobs "Scheduled Job View" would sometimes show the Job as not installed.
+- [#8690](https://github.com/nautobot/nautobot/issues/8690) - Fixed a 500 error when using tag-based permission constraints on objects with multiple matching tags.
+- [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
+
+### Housekeeping in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Added the AssertNoRepeatedQueries context manager test helper to detect N+1 patterns in SQL queries.
+
 ## v2.4.31 (2026-04-09)
 
 ### Security in v2.4.31
