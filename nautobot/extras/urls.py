@@ -49,7 +49,6 @@ router.register("tags", views.TagUIViewSet)
 router.register("teams", views.TeamUIViewSet)
 router.register("webhooks", views.WebhookUIViewSet)
 
-
 urlpatterns = [
     # Approver Dashboard
     path("approver-dashboard/", views.ApproverDashboardView.as_view({"get": "list"}), name="approver_dashboard"),
