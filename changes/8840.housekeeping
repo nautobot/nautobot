@@ -1,0 +1,4 @@
+Updated development dependency `rich` to `~14.3.4`.
+Updated documentation dependency `mkdocs-section-index` to `~0.3.12`.
+Updated documentation dependency `mkdocstrings` to `~1.0.4`.
+Updated development dependency `ruff` to `~0.15.11`.

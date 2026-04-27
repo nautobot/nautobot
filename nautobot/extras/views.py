@@ -2574,7 +2574,7 @@ class JobUIViewSet(NautobotUIViewSet):
                         self.request,
                         f'Unable to render requested custom HTMX job template "{job_class.htmx_template_name}": {err}',
                     )
-        elif hasattr(job_class, "template_name"):
+        elif job_class is not None and job_class.template_name:
             try:
                 get_template(job_class.template_name)
                 template_name = job_class.template_name
