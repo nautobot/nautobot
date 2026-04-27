@@ -15,6 +15,8 @@ class JobTerminatorStrategy(ABC):
     """Abstract base class for job termination strategies across different queues.
 
     Defines the interface for various backends (Celery, Kubernetes, etc.).
+    Subclasses implement the `is_alive`, `should_reap`, `_mark_revoked`, and
+    `_perform_termination` hooks; `terminate` orchestrates them.
     """
 
     NON_TERMINAL_STATUSES = (
@@ -22,32 +24,73 @@ class JobTerminatorStrategy(ABC):
         JobResultStatusChoices.STATUS_STARTED,
     )
 
-    def is_terminal(self, job_result: JobResult):
+    def is_terminal(self, job_result: JobResult) -> bool:
+        """Return True if `job_result` is in a finished state."""
         return job_result.status not in self.NON_TERMINAL_STATUSES
 
     def is_alive(self, job_result: JobResult) -> bool | None:
-        """Is the underlying strategy still aware of this job?"""
+        """Return True/False if the backend can confirm the job's liveness, None if unknown."""
         raise NotImplementedError("Subclasses must implement `is_alive`.")
 
     def should_reap(self, job_result: JobResult) -> bool:
-        """Backend-specific check: Can we safely mark dead w/o backend action?
-
-        Returns:
-            bool: True if no worker/Pod owns this job (safe to reap).
-        """
+        """Return True if the job can be marked revoked without sending a kill signal."""
         raise NotImplementedError("Subclasses must implement `should_reap`.")
 
-    def _mark_revoked(self, job_result: JobResult, user: User):
-        raise NotImplementedError("Subclasses must implement `_mark_revoked`.")
-
-    def _perform_termination(self, job_result: JobResult):
+    def _perform_termination(self, job_result: JobResult, user: User):
+        """Send the backend-specific kill signal and mark the job revoked."""
         raise NotImplementedError("Subclasses must implement `_perform_termination`.")
 
-    def terminate(self, job_result, user) -> dict:
-        """Core termination algorithm (override hooks only).
+    def _record_revoked_on_backend(self, job_result: JobResult):
+        """Persist the revoked state to the backend's own state store, post-commit.
+
+        Called via `transaction.on_commit` after the `JobResult` row is
+        durably updated. Implementations should be idempotent and must
+        handle their own exceptions - failures here cannot roll back
+        the DB write.
+        """
+        raise NotImplementedError("Subclasses must implement `_record_revoked_on_backend`.")
+
+    def _mark_revoked(self, job_result: JobResult, user: User) -> JobResult:
+        """Mark a `JobResult` as revoked and schedule the backend update post-commit.
+
+        Locks the row and re-checks `is_terminal` to avoid racing a worker
+        that just finished the job. After the DB write commits, calls
+        `_record_revoked_on_backend` for backend-specific bookkeeping.
+
+        Args:
+            job_result: The `JobResult` to mark revoked.
+            user: The user requesting termination, recorded on `terminated_by`.
 
         Returns:
-            dict: {"job_result": JobResult, "error": str | None}
+            The locked `JobResult`, unchanged if it was already terminal.
+        """
+        now = timezone.now()
+        with transaction.atomic():
+            job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
+            if self.is_terminal(job_result):
+                return job_result
+            job_result.terminated_by = user
+            job_result.terminated_at = now
+            job_result.save(update_fields=["terminated_by", "terminated_at"])
+
+            transaction.on_commit(lambda: self._record_revoked_on_backend(job_result))
+
+        return job_result
+
+    def terminate(self, job_result, user) -> dict:
+        """Reap or kill a job and return the outcome.
+
+        Reaps when `should_reap` is True (no signal sent). Otherwise sends
+        the backend kill signal via `_perform_termination`. Exceptions from
+        the kill path are caught and reported in the result.
+
+        Args:
+            job_result: The `JobResult` to terminate.
+            user: The user requesting termination.
+
+        Returns:
+            `{"job_result": JobResult, "error": str | None}`. `error` is
+            set only when `_perform_termination` raised.
         """
         # REAP
         if self.should_reap(job_result):
@@ -56,7 +99,7 @@ class JobTerminatorStrategy(ABC):
 
         # TERMINATE
         try:
-            self._perform_termination(job_result)
+            self._perform_termination(job_result, user)
         except Exception as e:
             logger.error("Termination failed for %s: %s", job_result.pk, e)
             return {"job_result": job_result, "error": f"Termination failed: {e}"}
@@ -66,7 +109,11 @@ class JobTerminatorStrategy(ABC):
 
 
 class CeleryStrategy(JobTerminatorStrategy):
+    "Termination strategy for jobs running on Celery workers."
+
     def get_celery_app(self):
+        """Return the Nautobot Celery app."""
+
         # TBD: move it to constructor?
         from nautobot.core.celery import app
 
@@ -78,12 +125,12 @@ class CeleryStrategy(JobTerminatorStrategy):
         a given task.
 
         This method queries active Celery workers using `inspect().query_task`
-        to determine if the task associated with the provided ``job_result``
+        to determine if the task associated with the provided `job_result`
         is still present in any worker's task list.
 
         Args:
             job_result: An object representing the task result. It is expected
-                to have a primary key attribute ``pk`` corresponding to the
+                to have a primary key attribute `pk` corresponding to the
                 Celery task ID.
 
         Returns:
@@ -105,66 +152,82 @@ class CeleryStrategy(JobTerminatorStrategy):
         # replies shape: {worker_hostname: {task_id: [state, info]}}
         return any(task_id in worker_tasks for worker_tasks in replies.values())
 
-    def _mark_revoked(self, job_result, user):
-        """mark revoked"""
-        now = timezone.now()
-        with transaction.atomic():
-            job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            if self.is_terminal(job_result):
-                return job_result
-            job_result.terminated_by = user
-            job_result.terminated_at = now
-            job_result.save(update_fields=["terminated_by", "terminated_at"])
+    def should_reap(self, job_result):
+        """Return True if the job should be reaped (marked revoked without a kill signal).
 
-            celery_app = self.get_celery_app()
+        Reap when no worker will handle the job *and* the job isn't already done.
+        `not self.is_alive(...)` covers both False (workers replied, none has the
+        task) and None (couldn't reach workers at all) — both are treated as
+        "no worker will handle this." The `not is_terminal` guard prevents
+        reaping a job that already finished normally.
 
-            def _revoke_on_backend():
-                try:
-                    celery_app.backend.mark_as_revoked(str(job_result.pk))
-                except Exception:
-                    # DB state is already committed; log loudly so this can
-                    # be reconciled, but don't crash the caller.
-                    logger.exception("Failed to mark job %s revoked on Celery backend", job_result.pk)
+        Args:
+            job_result: The `JobResult` to evaluate.
 
-            transaction.on_commit(_revoke_on_backend)
+        Returns:
+            True if the job should be reaped, False otherwise.
+        """
+        return not self.is_alive(job_result) and not self.is_terminal(job_result)
 
-        return job_result
+    def _perform_termination(self, job_result: JobResult, user: User):
+        """Send a SIGKILL revoke to the Celery worker and mark the job revoked.
 
-    def _perform_termination(self, job_result: str) -> bool:
+        Fires a `revoke(terminate=True, signal="SIGKILL")` control message to
+        whichever worker holds the task, then records the revocation on the
+        `JobResult` via `_mark_revoked`. Any exception from the revoke call
+        propagates — the orchestrator in `terminate` catches it and reports
+        the failure to the caller.
+
+        Args:
+            job_result: The `JobResult` to terminate. Its `pk` is used as the
+                Celery task ID.
+            user: The user requesting termination, recorded on `terminated_by`.
+        """
         task_id = str(job_result.pk)
         celery_app = self.get_celery_app()
         celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
+        self._mark_revoked(job_result, user)
 
-        # The revoke control message is fire-and-forget: the worker
-        # normally writes REVOKED to the backend as it tears the task
-        # down, but if the worker is already gone the message goes
-        # nowhere. Write the revoked state ourselves when the local
-        # view of the job_result still looks non-terminal.
+    def _record_revoked_on_backend(self, job_result):
+        """Update the Celery result backend.
 
-        # job_result.refresh_from_db() maybe will be needed
-        if not self.is_terminal(job_result):
-            celery_app.backend.mark_as_revoked(str(job_result.pk))
-
-    def should_reap(self, job_result):
-        # `not self.is_alive(...)` is True for both False (workers
-        # replied, none has the task) and None (couldn't reach workers at
-        # all). Both are treated as "no worker will handle this" here.
-        # The `not is_terminal` guard prevents reaping a job that already
-        # finished normally.
-        return not self.is_alive(job_result) and not self.is_terminal(job_result)
+        The revoke control message is fire-and-forget: the worker normally
+        writes REVOKED to the backend as it tears the task down, but if the
+        worker is already gone the message goes nowhere. Write the revoked
+        state ourselves when the job still looks non-terminal. Backend
+        failures are logged, not raised — the DB write is already durable.
+        """
+        if self.is_terminal(job_result):
+            return
+        try:
+            self.get_celery_app().backend.mark_as_revoked(str(job_result.pk))
+        except Exception:
+            logger.exception("Failed to mark job %s revoked on Celery backend", job_result.pk)
 
 
 class K8sStrategy(JobTerminatorStrategy):
     """Placeholder for now"""
 
 
-
 class TerminatorFactory:
+    """Resolve the right termination strategy for a given job queue type."""
+
     strategies = {JobQueueTypeChoices.TYPE_CELERY: CeleryStrategy, JobQueueTypeChoices.TYPE_KUBERNETES: K8sStrategy}
 
     @classmethod
-    def get_strategy(cls, queue_type: str, **kwargs):
+    def get_strategy(cls, queue_type: str):
+        """Return a strategy instance for `queue_type`.
+
+        Args:
+            queue_type: A `JobQueueTypeChoices` value identifying the backend.
+
+        Returns:
+            A `JobTerminatorStrategy` subclass instance for `queue_type`.
+
+        Raises:
+            ValueError: If `queue_type` is not registered in `strategies`.
+        """
         strategy_class = cls.strategies.get(queue_type)
         if not strategy_class:
             raise ValueError(f"Undefined queue type: {queue_type}")
-        return strategy_class(**kwargs)
+        return strategy_class()
