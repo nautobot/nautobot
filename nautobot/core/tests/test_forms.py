@@ -903,3 +903,20 @@ class DynamicFilterFormTest(testing.TestCase):
                 },
             )
             self.assertIsInstance(form.fields["lookup_value"], django_forms.IntegerField)
+
+
+class EmbeddedActionsFormMixinTestCase(testing.TestCase):
+    """Tests for EmbeddedActionsFormMixin auto-enable guard behavior."""
+
+    def test_embedded_actions_disabled_for_content_type_and_models_without_ui_add_route(self):
+        """Embedded create/search are disabled for ContentType and models without a UI add URL or FilterSet/Form."""
+
+        class _TestForm(forms.EmbeddedActionsFormMixin):
+            content_type = forms.DynamicModelChoiceField(queryset=ContentType.objects.all())
+            device = forms.DynamicModelChoiceField(queryset=dcim_models.Device.objects.all())
+
+        form = _TestForm()
+        self.assertFalse(form.fields["content_type"].embedded_create)
+        self.assertFalse(form.fields["content_type"].embedded_search)
+        self.assertTrue(form.fields["device"].embedded_create)
+        self.assertTrue(form.fields["device"].embedded_search)
