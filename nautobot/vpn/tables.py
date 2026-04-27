@@ -1,6 +1,6 @@
 """Tables for the vpn models."""
 
-from django.utils.html import format_html
+from django.utils.html import format_html_join
 import django_tables2 as tables
 
 from nautobot.apps.tables import (
@@ -78,7 +78,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
 
 def _render_multi_select(values):
     """Renders multiselect values as labels."""
-    return format_html("<br>".join([f'<span class="label label-default">{v}</span>' for v in values]))
+    return format_html_join("<br>", '<span class="label label-default">{}</span>', ((v,) for v in values))
 
 
 class VPNPhase1PolicyTable(BaseTable):
@@ -183,7 +183,7 @@ class VPNPhase2PolicyTable(BaseTable):
 
 class VPNProfilePhase1PolicyAssignmentTable(BaseTable):
     # pylint: disable=too-few-public-methods
-    """Table for VPNProfile list view."""
+    """Table for VPNProfilePhase1PolicyAssignment list view."""
 
     pk = ToggleColumn()
     vpn_phase1_policy = tables.Column(linkify=True)
@@ -207,7 +207,7 @@ class VPNProfilePhase1PolicyAssignmentTable(BaseTable):
 
 class VPNProfilePhase2PolicyAssignmentTable(BaseTable):
     # pylint: disable=too-few-public-methods
-    """Table for VPNProfile list view."""
+    """Table for VPNProfilePhase2PolicyAssignment list view."""
 
     pk = ToggleColumn()
     vpn_phase2_policy = tables.Column(linkify=True)
@@ -242,7 +242,7 @@ class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
     )
     termination_count = LinkedCountColumn(
         viewname="vpn:vpntermination_list",
-        verbose_name="Terminations",
+        verbose_name="VPN Terminations",
         url_params={"vpn": "pk"},
     )
     vpn_profile = tables.Column(linkify=True)
@@ -390,15 +390,17 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         )
 
 
-class VPNTerminationTable(BaseTable):
+class VPNTerminationTable(StatusTableMixin, RoleTableMixin, BaseTable):
     # pylint: disable=too-few-public-methods
     """Table for VPNTermination list view."""
 
     pk = ToggleColumn()
-    vpn = tables.Column(linkify=True)
-    assigned_object_type = tables.Column(verbose_name="Object Type", orderable=False)
-    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Object")
-    assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Parent")
+    name = tables.Column(linkify=True)
+    vpn = tables.Column(linkify=True, verbose_name="VPN")
+    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Assigned Object")
+    assigned_object_type = tables.Column(orderable=False, verbose_name="Assigned Object Type")
+    assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Assigned Object Parent")
+    tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNTermination)
     tags = TagColumn(url_name="vpn:vpntermination_list")
 
@@ -408,17 +410,23 @@ class VPNTerminationTable(BaseTable):
         model = models.VPNTermination
         fields = (
             "pk",
+            "name",
             "vpn",
+            "assigned_object",
             "assigned_object_type",
             "assigned_object_parent",
-            "assigned_object",
-            "tags",
+            "role",
+            "status",
+            "tenant",
         )
         default_columns = (
             "pk",
+            "name",
             "vpn",
-            "assigned_object_type",
-            "assigned_object_parent",
             "assigned_object",
+            "assigned_object_parent",
+            "role",
+            "status",
+            "tenant",
             "actions",
         )

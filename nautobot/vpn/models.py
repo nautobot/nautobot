@@ -216,6 +216,8 @@ class VPNPhase2Policy(PrimaryModel):  # pylint: disable=too-many-ancestors
 
 @extras_features("graphql")
 class VPNProfilePhase1PolicyAssignment(BaseModel):
+    """Through model for VPNProfile to VPNPhase1Policy assignments."""
+
     vpn_profile = models.ForeignKey(
         "vpn.VPNProfile", on_delete=models.CASCADE, related_name="vpn_profile_phase1_policy_assignments"
     )
@@ -227,15 +229,20 @@ class VPNProfilePhase1PolicyAssignment(BaseModel):
     documentation_static_path = "docs/user-guide/core-data-model/vpn/vpnprofile.html"
 
     class Meta:
+        """Meta class for VPNProfilePhase1PolicyAssignment."""
+
         unique_together = ["vpn_profile", "vpn_phase1_policy"]
         ordering = ["weight", "vpn_profile", "vpn_phase1_policy"]
 
     def __str__(self):
+        """Stringify instance."""
         return f"{self.vpn_profile}: {self.vpn_phase1_policy}"
 
 
 @extras_features("graphql")
 class VPNProfilePhase2PolicyAssignment(BaseModel):
+    """Through model for VPNProfile to VPNPhase2Policy assignments."""
+
     vpn_profile = models.ForeignKey(
         "vpn.VPNProfile", on_delete=models.CASCADE, related_name="vpn_profile_phase2_policy_assignments"
     )
@@ -247,10 +254,13 @@ class VPNProfilePhase2PolicyAssignment(BaseModel):
     documentation_static_path = "docs/user-guide/core-data-model/vpn/vpnprofile.html"
 
     class Meta:
+        """Meta class for VPNProfilePhase2PolicyAssignment."""
+
         unique_together = ["vpn_profile", "vpn_phase2_policy"]
         ordering = ["weight", "vpn_profile", "vpn_phase2_policy"]
 
     def __str__(self):
+        """Stringify instance."""
         return f"{self.vpn_profile}: {self.vpn_phase2_policy}"
 
 
@@ -267,7 +277,7 @@ class VPN(PrimaryModel):  # pylint: disable=too-many-ancestors
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
-    vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="Identifier")
+    vpn_id = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, verbose_name="VPN ID")
     vpn_profile = models.ForeignKey(
         to="vpn.VPNProfile",
         on_delete=models.PROTECT,
@@ -454,6 +464,10 @@ class VPNTunnel(PrimaryModel):  # pylint: disable=too-many-ancestors
         super().clean()
         if self.endpoint_a and self.endpoint_z and self.endpoint_a == self.endpoint_z:
             raise ValidationError("Endpoint A and Endpoint Z cannot be the same.")
+        if self.vpn_id and self.vpn.vpn_terminations.exists():
+            raise ValidationError(
+                "This VPN already uses terminations. A VPN cannot have both tunnels and terminations."
+            )
 
 
 @extras_features(
@@ -588,6 +602,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
             raise ValidationError("Tunnel Interface and Source Interface must be on the same device")
 
     def save(self, *args, **kwargs):
+        """Compute device and name, then save."""
         if self.source_interface:
             self.device = self.source_interface.parent
         self.name = self._name()
@@ -599,22 +614,28 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     "custom_validators",
     "export_templates",
     "graphql",
+    "statuses",
     "webhooks",
 )
-class VPNTermination(PrimaryModel):
+class VPNTermination(PrimaryModel):  # pylint: disable=too-many-ancestors
     """Bind a VPN service to exactly one VLAN, Interface, or VMInterface."""
 
     natural_key_field_names = ["pk"]
+
+    # default="" is required for the migration to backfill existing rows; save() always recomputes via _name().
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, default="", editable=False)
 
     vpn = models.ForeignKey(
         to="vpn.VPN",
         on_delete=models.CASCADE,
         related_name="vpn_terminations",
+        verbose_name="VPN",
     )
     vlan = models.ForeignKey(
         to="ipam.VLAN",
         on_delete=models.CASCADE,
         related_name="vpn_terminations",
+        verbose_name="VLAN",
         blank=True,
         null=True,
     )
@@ -629,14 +650,26 @@ class VPNTermination(PrimaryModel):
         to="virtualization.VMInterface",
         on_delete=models.CASCADE,
         related_name="vpn_terminations",
+        verbose_name="VM Interface",
+        blank=True,
+        null=True,
+    )
+    role = RoleField(blank=True, null=True)
+    status = StatusField(blank=True, null=True)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.SET_NULL,
+        related_name="vpn_terminations",
         blank=True,
         null=True,
     )
 
-    clone_fields = ["vpn"]
+    clone_fields = ["vpn", "role", "status", "tenant"]
 
     class Meta:
-        ordering = ("vpn__name",)
+        """Meta class for VPNTermination."""
+
+        ordering = ("name",)
         verbose_name = "VPN Termination"
         verbose_name_plural = "VPN Terminations"
         constraints = [
@@ -654,32 +687,51 @@ class VPNTermination(PrimaryModel):
             ),
         ]
 
+    def _name(self):
+        """Dynamic name field."""
+        if self.assigned_object_parent:
+            return f"{self.assigned_object_parent.name} {self.assigned_object.name}"
+        return str(self.assigned_object.name if self.assigned_object else "")
+
     def __str__(self):
-        if self.pk and self.assigned_object:
-            return f"{self.assigned_object} <> {self.vpn}"
-        return super().__str__()
+        """Stringify instance."""
+        return self.name
+
+    def save(self, *args, **kwargs):
+        """Compute name and save."""
+        self.name = self._name()
+        super().save(*args, **kwargs)
 
     @property
     def assigned_object(self):
-        return self.vlan or self.interface or self.vm_interface
+        """Return the assigned VLAN, Interface, or VMInterface."""
+        if self.vlan_id:
+            return self.vlan
+        if self.interface_id:
+            return self.interface
+        if self.vm_interface_id:
+            return self.vm_interface
+        return None
 
     @property
     def assigned_object_type(self):
-        if self.vlan:
+        """Return the content-type string of the assigned object."""
+        if self.vlan_id:
             return "ipam.vlan"
-        if self.interface:
+        if self.interface_id:
             return "dcim.interface"
-        if self.vm_interface:
+        if self.vm_interface_id:
             return "virtualization.vminterface"
         return None
 
     @property
     def assigned_object_parent(self):
-        if self.interface:
+        """Return the parent of the assigned object (Device, VirtualMachine, or VLANGroup)."""
+        if self.interface_id:
             return self.interface.device
-        if self.vm_interface:
+        if self.vm_interface_id:
             return self.vm_interface.virtual_machine
-        if self.vlan:
+        if self.vlan_id:
             return self.vlan.vlan_group
         return None
 
@@ -703,6 +755,9 @@ class VPNTermination(PrimaryModel):
 
         if self.vpn_id is None:
             return
+
+        if self.vpn.vpn_tunnels.exists():
+            raise ValidationError("This VPN already uses tunnels. A VPN cannot have both tunnels and terminations.")
 
         if self.vpn.service_type in choices.VPNServiceTypeChoices.P2P:
             count = self.vpn.vpn_terminations.exclude(pk=self.pk).count()

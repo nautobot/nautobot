@@ -5,13 +5,33 @@ from nautobot.apps.choices import ChoiceSet
 
 class VPNTunnelStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
-    STATUS_DOWN = "down"
+    STATUS_DECOMMISSIONED = "decommissioned"
     STATUS_DEPRECATED = "deprecated"
+    STATUS_DOWN = "down"
+    STATUS_PLANNED = "planned"
 
     CHOICES = (
         (STATUS_ACTIVE, "Active"),
-        (STATUS_DOWN, "Down"),
+        (STATUS_DECOMMISSIONED, "Decommissioned"),
         (STATUS_DEPRECATED, "Deprecated"),
+        (STATUS_DOWN, "Down"),
+        (STATUS_PLANNED, "Planned"),
+    )
+
+
+class VPNTerminationStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_DECOMMISSIONED = "decommissioned"
+    STATUS_DEPRECATED = "deprecated"
+    STATUS_DOWN = "down"
+    STATUS_PLANNED = "planned"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DECOMMISSIONED, "Decommissioned"),
+        (STATUS_DEPRECATED, "Deprecated"),
+        (STATUS_DOWN, "Down"),
+        (STATUS_PLANNED, "Planned"),
     )
 
 

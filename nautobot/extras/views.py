@@ -108,8 +108,8 @@ from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
-from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
-from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTunnelEndpointTable, VPNTunnelTable
+from nautobot.vpn.models import VPN, VPNProfile, VPNTermination, VPNTunnel, VPNTunnelEndpoint
+from nautobot.vpn.tables import VPNProfileTable, VPNTable, VPNTerminationTable, VPNTunnelEndpointTable, VPNTunnelTable
 
 from . import filters, forms, jobs_ui, tables
 from .api import serializers
@@ -4327,6 +4327,12 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 vpn_tunnel_endpoint_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(vpn_tunnel_endpoint_table)
                 context["vpn_tunnel_endpoint_table"] = vpn_tunnel_endpoint_table
+            if ContentType.objects.get_for_model(VPNTermination) in context["content_types"]:
+                vpn_terminations = instance.vpn_terminations.restrict(request.user, "view")
+                vpn_termination_table = VPNTerminationTable(vpn_terminations)
+                vpn_termination_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(vpn_termination_table)
+                context["vpn_termination_table"] = vpn_termination_table
         return context
 
 

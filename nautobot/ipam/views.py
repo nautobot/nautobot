@@ -48,7 +48,7 @@ from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.load_balancers.tables import LoadBalancerPoolMemberTable, VirtualServerTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import VirtualMachine, VMInterface
-from nautobot.vpn.tables import VPNTunnelEndpointTable
+from nautobot.vpn.tables import VPNTerminationTable, VPNTunnelEndpointTable
 
 from . import filters, forms, tables, ui
 from .models import (
@@ -1442,6 +1442,15 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
                 table_filter="vlan_id",
                 exclude_columns=["vlan"],
                 hide_hierarchy_ui=True,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=VPNTerminationTable,
+                table_filter="vlan",
+                table_title="VPN Terminations",
+                exclude_columns=["assigned_object", "assigned_object_type", "assigned_object_parent"],
+                select_related_fields=["vpn", "role", "status", "tenant"],
             ),
         ),
         extra_tabs=(

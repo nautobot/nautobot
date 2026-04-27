@@ -17,6 +17,7 @@ from nautobot.extras.models import ConfigContext
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.api import serializers
+from nautobot.vpn.tables import VPNTerminationTable
 
 from . import filters, forms, tables
 from .models import Cluster, ClusterGroup, ClusterType, VirtualMachine, VMInterface
@@ -337,10 +338,20 @@ class VMInterfaceView(generic.ObjectView):
             vlans.append(vlan)
         vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
+        # Get VPN Terminations
+        vpn_termination_table = VPNTerminationTable(
+            data=instance.vpn_terminations.restrict(request.user, "view").select_related(
+                "vpn", "role", "status", "tenant"
+            ),
+            orderable=False,
+            exclude=("vm_interface", "assigned_object", "assigned_object_type", "assigned_object_parent"),
+        )
+
         return {
             "ipaddress_table": ipaddress_table,
             "child_interfaces_table": child_interfaces_tables,
             "vlan_table": vlan_table,
+            "vpn_termination_table": vpn_termination_table,
             **super().get_extra_context(request, instance),
         }
 
