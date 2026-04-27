@@ -1,0 +1,3 @@
+Moved `nautobot.dcim.elevations` module to `nautobot.dcim.svg.rack_elevation`.
+Moved `nautobot.dcim.breakout_diagram` module to `nautobot.dcim.svg.cable_breakout`.
+Changed `/dcim/cable-breakout-types/mapping-editor/` HTMX endpoint from GET to POST to avoid problems with complex mappingst.
