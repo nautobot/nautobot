@@ -4191,6 +4191,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
         vdc_role = Role.objects.first()
         vdc_role.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
         tenants = Tenant.objects.all()
+        controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
 
         cls.create_data = [
             {
@@ -4214,6 +4215,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "status": vdc_status.pk,
                 "tenant": tenants[2].pk,
                 "role": vdc_role.pk,
+                "controller_managed_device_group": controller_managed_device_group.pk,
             },
         ]
         cls.update_data = {

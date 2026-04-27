@@ -4260,13 +4260,30 @@ class ControllerManagedDeviceGroupFilterSetTestCase(FilterTestCases.FilterTestCa
         ("weight",),
         ("controller", "controller__id"),
         ("controller", "controller__name"),
+        ("devices", "devices__id"),
+        ("devices", "devices__name"),
         ("parent", "parent__id"),
         ("parent", "parent__name"),
+        ("virtual_device_contexts", "virtual_device_contexts__id"),
+        ("virtual_device_contexts", "virtual_device_contexts__name"),
     )
 
     @classmethod
     def setUpTestData(cls):
         common_test_data(cls)
+
+        # Assign devices and VDCs to CMDGs for filtering
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        for idx in range(3):
+            Device.objects.filter(pk=cls.devices[idx].pk).update(
+                controller_managed_device_group=cls.controller_managed_device_groups[idx],
+            )
+            VirtualDeviceContext.objects.create(
+                name=f"CMDG Filter VDC {idx + 1}",
+                device=cls.devices[idx],
+                status=vdc_status,
+                controller_managed_device_group=cls.controller_managed_device_groups[idx],
+            )
 
 
 class ModuleTestCase(
@@ -4448,6 +4465,8 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         ("status", "status__name"),
         ("role", "role__id"),
         ("status", "status__id"),
+        ("controller_managed_device_group", "controller_managed_device_group__id"),
+        ("controller_managed_device_group", "controller_managed_device_group__name"),
     ]
 
     @classmethod
@@ -4459,6 +4478,7 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
         interface = Interface.objects.create(
             name="Int1", device=device, status=intf_status, role=intf_role, type=InterfaceTypeChoices.TYPE_100GE_CFP
         )
+        cmdgs = ControllerManagedDeviceGroup.objects.all()[:3]
         cls.ips_v4 = IPAddress.objects.filter(ip_version=4)[:3]
         cls.ips_v6 = IPAddress.objects.filter(ip_version=6)[:3]
         interface.add_ip_addresses([*cls.ips_v4, *cls.ips_v6])
@@ -4470,6 +4490,7 @@ class VirtualDeviceContextTestCase(FilterTestCases.FilterTestCase, FilterTestCas
                 name=f"Test VDC {idx}",
                 primary_ip4=cls.ips_v4[idx],
                 primary_ip6=cls.ips_v6[idx],
+                controller_managed_device_group=cmdgs[idx],
             )
             for idx in range(3)
         ]

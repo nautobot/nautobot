@@ -6515,6 +6515,13 @@ class ControllerManagedDeviceGroupUIViewSet(NautobotUIViewSet):
                 table_filter="controller_managed_device_group",
                 add_button_route=None,
             ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.VirtualDeviceContextTable,
+                table_filter="controller_managed_device_group",
+                add_button_route=None,
+            ),
         ),
         extra_tabs=(
             object_detail.DistinctViewTab(

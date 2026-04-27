@@ -5691,6 +5691,9 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
 
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(), required=False
+    )
     parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
     radio_profiles = DynamicModelMultipleChoiceField(
         queryset=RadioProfile.objects.all(),
@@ -5705,6 +5708,7 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
             "name",
             "description",
             "devices",
+            "virtual_device_contexts",
             "parent",
             "capabilities",
             "weight",
@@ -5719,10 +5723,12 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
 
         if self.instance.present_in_database:
             self.initial["devices"] = self.instance.devices.values_list("pk", flat=True)
+            self.initial["virtual_device_contexts"] = self.instance.virtual_device_contexts.values_list("pk", flat=True)
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.devices.set(self.cleaned_data["devices"])
+        instance.virtual_device_contexts.set(self.cleaned_data["virtual_device_contexts"])
         return instance
 
 
@@ -5749,6 +5755,26 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         to_field_name="name",
         required=False,
     )
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Devices",
+    )
+    has_devices = forms.NullBooleanField(
+        required=False,
+        label="Has devices",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+        label="Virtual Device Contexts",
+    )
+    has_virtual_device_contexts = forms.NullBooleanField(
+        required=False,
+        label="Has virtual device contexts",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
     field_order = (
         "q",
@@ -5758,6 +5784,10 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         "parent",
         "weight",
         "subtree",
+        "devices",
+        "has_devices",
+        "virtual_device_contexts",
+        "has_virtual_device_contexts",
         "tags",
         "tenant",
         "tenant_group",
@@ -5850,12 +5880,16 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=False,
         label="VRFs",
     )
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
 
     class Meta:
         model = VirtualDeviceContext
         fields = [
             "name",
             "device",
+            "controller_managed_device_group",
             "role",
             "status",
             "identifier",
@@ -5904,11 +5938,15 @@ class VirtualDeviceContextBulkEditForm(
     )
     add_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
     remove_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
 
     class Meta:
         model = VirtualDeviceContext
         nullable_fields = [
             "tenant",
+            "controller_managed_device_group",
         ]
 
 
@@ -5924,6 +5962,7 @@ class VirtualDeviceContextFilterForm(
         "tenant",
         "has_primary_ip",
         "tags",
+        "controller_managed_device_group",
     ]
 
     q = forms.CharField(required=False, label="Search")
@@ -5931,6 +5970,12 @@ class VirtualDeviceContextFilterForm(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
+    )
+    controller_managed_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
         queryset=Tenant.objects.all(),

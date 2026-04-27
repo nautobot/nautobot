@@ -2287,6 +2287,14 @@ class VirtualDeviceContext(PrimaryModel):
     )
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
+    controller_managed_device_group = models.ForeignKey(
+        to="dcim.ControllerManagedDeviceGroup",
+        on_delete=models.SET_NULL,
+        related_name="virtual_device_contexts",
+        blank=True,
+        null=True,
+    )
+
     class Meta:
         ordering = ("name",)
         unique_together = (("device", "identifier"), ("device", "name"))
