@@ -148,10 +148,11 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
-## v3.1.1 (2026-04/27)
+## v3.1.1 (2026-04-27)
 
 ### Security in v3.1.1
 
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `GitPython` to `>=3.1.47,<3.2` to mitigate CVE-2026-42215 and CVE-2026-42284.
 - [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
 
 ### Added in v3.1.1
@@ -165,7 +166,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 ### Fixed in v3.1.1
 
-- [#6199](https://github.com/nautobot/nautobot/issues/6199) - Fixed job class template override not working when template_name is set as a Meta attribute.
+- [#6199](https://github.com/nautobot/nautobot/issues/6199) - Fixed job class template override not working when `template_name` is set as a Meta attribute.
 - [#8876](https://github.com/nautobot/nautobot/issues/8876) - Re-added placeholders for files `nautobot/extras/templates/extras/inc/jobresult_js.html`, `nautobot/project-static/js/job_result.js`, and `nautobot/project-static/js/log_level_filtering.js` that were removed in 3.1.0, in order to avoid breaking Apps still referencing these files.
 - [#8877](https://github.com/nautobot/nautobot/issues/8877) - Fixed incorrect refreshing of GitRepository "Synchronization Status" tab.
 - [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
@@ -174,7 +175,6 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 ### Dependencies in v3.1.1
 
 - [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `djangorestframework` to `>=3.17.1,<3.18`.
-- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `GitPython` to `>=3.1.47,<3.2`.
 - [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `psycopg2-binary` to `>=2.9.12,<2.10`.
 - [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `social-auth-core` to `>=4.8.6,<4.9`.
 - [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm dependency `htmx.org` to `^2.0.10`.
