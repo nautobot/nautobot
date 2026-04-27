@@ -250,6 +250,11 @@ class VRFUIViewSet(NautobotUIViewSet):
                 related_field_name="vrfs",
                 exclude_columns=["vrf", "namespace", "rd"],
                 add_button_route=None,
+                select_related_fields=[
+                    "device",
+                    "virtual_machine",
+                    "virtual_device_context",
+                ],
             ),
         ),
     )
