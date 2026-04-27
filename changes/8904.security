@@ -1,1 +1,1 @@
-Updated dependency GitPython to ~3.1.47 to mitigate CVE-2026-42215 and CVE-2026-42284.
+Updated dependency `GitPython` to `~3.1.47` to mitigate CVE-2026-42215 and CVE-2026-42284.
