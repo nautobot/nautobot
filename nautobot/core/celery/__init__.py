@@ -60,9 +60,7 @@ def _get_celery_queue_items(queue_name):
     """
     import redis
 
-    from nautobot.core.celery import app as celery_app
-
-    r = redis.Redis.from_url(celery_app.conf.broker_url, decode_responses=True)
+    r = redis.Redis.from_url(app.conf.broker_url, decode_responses=True)
     raw_tasks = r.lrange(queue_name, 0, -1)
 
     decoded = []

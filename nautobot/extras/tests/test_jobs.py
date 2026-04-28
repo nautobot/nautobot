@@ -2320,32 +2320,6 @@ class JobTerminateTestCase(TransactionTestCase):
                 self.assertEqual(job_result.terminated_by, self.user)
                 self.assertIsNotNone(job_result.terminated_at)
 
-    @mock.patch("nautobot.core.celery.app.backend.mark_as_revoked", side_effect=RuntimeError("backend down"))
-    def test_terminate_logs_when_mark_as_revoked_fails_post_commit(self, mock_celery_mark_as_revoked):
-        """When the post-commit backend revoke fails, the exception is caught
-        and logged; the caller doesn't see a crash."""
-        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
-
-        # Reap path is taken naturally (no real workers in tests with
-        # ALWAYS_EAGER, so is_alive() returns None -> should_reap is True).
-        # Force the post-commit backend call to fail.
-        with self.assertLogs("nautobot.extras.jobs_terminate", level="ERROR") as log_cm:
-            result = self.strategy.terminate(job_result, self.user)
-
-        self.assertIsNone(result["error"])
-        # The DB write happened before the on_commit callback fired,
-        # so terminated_by/terminated_at are still set.
-        job_result.refresh_from_db()
-        self.assertEqual(job_result.terminated_by, self.user)
-        self.assertIsNotNone(job_result.terminated_at)
-        # job result should not set status to REVOKED
-        self.assertNotEqual(job_result.status, "REVOKED")
-        # And the failure was logged through the strategy's logger.
-        self.assertTrue(
-            any(f"Failed to mark job {job_result.pk} revoked on Celery backend" in msg for msg in log_cm.output),
-            f"Expected an error log about the backend failure, got: {log_cm.output}",
-        )
-
     # ------------------------------------------------------------------ #
     # Kill path: PENDING/STARTED + worker present -> SIGKILL sent.
     # ------------------------------------------------------------------ #
