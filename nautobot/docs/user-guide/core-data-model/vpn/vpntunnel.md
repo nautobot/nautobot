@@ -19,3 +19,4 @@ The following encapsulation types are currently supported:
 - OpenVPN
 - PPTP
 - WireGuard
+- EoIP
