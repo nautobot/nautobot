@@ -22,7 +22,6 @@ from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.module_loading import import_string
 from django.utils.timezone import get_current_timezone, now
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
@@ -2601,7 +2600,9 @@ class JobUIViewSet(NautobotUIViewSet):
         if htmx_request:
             job_modal_button_class_path = request.POST.get("job_modal_button", None)
             if job_modal_button_class_path:
-                job_modal_button = import_string(request.POST.get("job_modal_button"))
+                job_modal_button = registry["job_modal_buttons"].get(job_modal_button_class_path)
+                if job_modal_button is None:
+                    return HttpResponseBadRequest("Invalid job_modal_button")
                 run_button_label = job_modal_button.run_button_label
                 advanced_field_names = job_modal_button.advanced_fields
                 advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
@@ -3697,7 +3698,10 @@ class JobResultUIViewSet(
     @action(detail=True, custom_view_base_action="view", methods=["POST"])
     def modal(self, request, *args, **kwargs):
         instance = self.get_object()
-        job_modal_button = import_string(request.POST.get("job_modal_button"))
+        job_modal_button_class_path = request.POST.get("job_modal_button")
+        job_modal_button = registry["job_modal_buttons"].get(job_modal_button_class_path)
+        if job_modal_button is None:
+            return HttpResponseBadRequest("Invalid job_modal_button")
         title = "Run Job"
         if instance.job_model is not None:
             title = instance.job_model.name

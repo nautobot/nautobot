@@ -55,6 +55,7 @@ from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import Job
+from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -2660,6 +2661,11 @@ class _JobModalButton(Button):
     job_result_key = None
     refresh_on_close_if_done = False
 
+    def __init_subclass__(cls, **kwargs):
+        """Automatically register _JobModalButton subclasses in the global registry at class definition time."""
+        super().__init_subclass__(**kwargs)
+        registry["job_modal_buttons"][f"{cls.__module__}.{cls.__name__}"] = cls
+
     def __init__(self, **kwargs):
         """
         Initialize a _JobModalButton component.
@@ -2770,3 +2776,7 @@ class _JobModalButton(Button):
             attributes["tabindex"] = "-1"
         base_context["attributes"] = attributes
         return base_context
+
+
+# Register the base class itself (__init_subclass__ only fires for subclasses)
+registry["job_modal_buttons"][f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"] = _JobModalButton
