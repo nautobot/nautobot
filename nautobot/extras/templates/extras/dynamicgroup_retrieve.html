@@ -19,9 +19,15 @@
                     </div>
                 {% else %}
                     <div class="alert alert-warning" role="alert">
-                        Dynamic group membership is cached for performance reasons, therefore this listing may not always
-                        be up-to-date.<br>You can refresh the membership of this group asynchronously by clicking the
-                        "Refresh Members" button above.
+                        Dynamic group membership is cached for performance reasons,
+                        therefore this listing may not always be up-to-date.
+                        {% if request.user|has_perm:'extras.run_job' %}
+                            <br>You can refresh the membership of this group asynchronously by clicking the
+                            "Refresh Members" button on the main tab of this page, or by running the
+                            <a href="{% url 'extras:job_run_by_class_path' class_path='nautobot.core.jobs.groups.RefreshDynamicGroupCaches' %}?single_group={{ object.pk }}">
+                                Refresh Dynamic Group Caches
+                            </a> Job as needed.
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -34,72 +40,3 @@
     </div>
 {% endblock extra_tab_content %}
 
-{% block content_left_page %}
-    <div class="card">
-        <div class="card-header">
-            <strong>Dynamic Group</strong>
-        </div>
-        <table class="table table-hover card-body attr-table">
-            <tr>
-                <td>Name</td>
-                <td><span>{{ object.name }}</span></td>
-            </tr>
-            <tr>
-                <td>Description</td>
-                <td><span>{{ object.description }}</span></td>
-            </tr>
-            <tr>
-                <td>Content Type</td>
-                <td><span>{{ object.content_type }}</span></td>
-            </tr>
-            <tr>
-                <td>Group Type</td>
-                <td><span>{{ object.get_group_type_display }}</span></td>
-            </tr>
-            {% include 'inc/tenant_table_row.html' %}
-        </table>
-    </div>
-{% endblock content_left_page %}
-
-{% block content_right_page %}
-    {% if object.group_type == "dynamic-filter" %}
-        <div class="card">
-            <div class="card-header">
-                <strong>Filter</strong>
-            </div>
-            <div class="card-body">
-                <pre>{{ object.filter | render_json }}</pre>
-            </div>
-        </div>
-    {% endif %}
-{% endblock content_right_page %}
-
-{% block content_full_width_page %}
-    {% if object.group_type != "static" %}
-        <div class="card">
-            <div class="card-header">
-                <strong>Filter Query Logic</strong>
-            </div>
-            <div class="card-body">
-                {% if object.group_type == "dynamic-set" %}
-                    <span class="form-text">
-                        This is a raw representation of the underlying filter that is derived
-                        by aggregating the filters from all descendant groups.
-                    </span>
-                {% endif %}
-            <pre>{{ raw_query }}</pre>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <strong>Related Groups</strong>
-            </div>
-            <div class="card-body">
-                {% if object.group_type == "dynamic-set" %}
-                    {% include 'utilities/obj_table.html' with table=descendants_table table_template='panel_table.html' heading='Descendants' disable_pagination=True %}
-                {% endif %}
-                {% include 'utilities/obj_table.html' with table=ancestors_table table_template='panel_table.html' heading='Ancestors' disable_pagination=True %}
-            </div>
-        </div>
-    {% endif %}
-{% endblock content_full_width_page %}

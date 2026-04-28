@@ -523,7 +523,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    location = NaturalKeyOrPKMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="rack__location",
         to_field_name="name",
@@ -1429,7 +1429,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
-    tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+    tenant_group = TreeNodeMultipleChoiceFilter(
         field_name="master__tenant__tenant_group",
         queryset=TenantGroup.objects.all(),
         to_field_name="name",
@@ -1757,6 +1757,7 @@ class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetM
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interfaces (name or ID)",
+        prefers_id=True,
     )
 
     class Meta:
@@ -1813,6 +1814,12 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     software_version = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
+    )
+    software_version__platform = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_version__platform",
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Software version platform (name or ID)",
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -2197,6 +2204,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+        exclude = ["front_image", "rear_image"]  # ImageField is not filterable by django-filter
 
     def filter_module_bay(self, queryset, name, value):
         """Filter module types based on a module bay's module family."""

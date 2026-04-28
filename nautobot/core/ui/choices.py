@@ -76,31 +76,30 @@ class EChartsThemeColors(ChoiceSet):
     # Color lists - direct access
     NAUTOBOT_COLORS = (
         UI_COLORS["blue"],
-        UI_COLORS["purple"],
-        UI_COLORS["turquoise"],
         UI_COLORS["orange"],
-        UI_COLORS["green"],
+        UI_COLORS["purple"],
+        UI_COLORS["amber"],
+        UI_COLORS["berry"],
+        UI_COLORS["teal"],
+        UI_COLORS["moss-green"],
         UI_COLORS["red"],
-        UI_COLORS["gray"],
-        UI_COLORS["blue-lighter"],
-        UI_COLORS["purple-lighter"],
-        UI_COLORS["turquoise-lighter"],
-        UI_COLORS["orange-lighter"],
-        UI_COLORS["green-lighter"],
-        UI_COLORS["red-lighter"],
-        UI_COLORS["gray-lighter"],
-        UI_COLORS["blue-darker"],
-        UI_COLORS["purple-darker"],
-        UI_COLORS["turquoise-darker"],
-        UI_COLORS["orange-darker"],
-        UI_COLORS["green-darker"],
-        UI_COLORS["red-darker"],
-        UI_COLORS["gray-darker"],
+        UI_COLORS["sky-blue"],
+        UI_COLORS["navy"],
+        UI_COLORS["pink"],
+        UI_COLORS["green"],
+        UI_COLORS["wisteria"],
+        UI_COLORS["warm-brown"],
+        UI_COLORS["aqua"],
+        UI_COLORS["dusty-rose"],
+        UI_COLORS["slate"],
+        UI_COLORS["dark-gold"],
+        UI_COLORS["periwinkle"],
+        UI_COLORS["forest"],
     )
 
     LIGHTER_GREEN_RED_COLORS = (
-        UI_COLORS["green-lighter"],
-        UI_COLORS["red-lighter"],
+        UI_COLORS["moss-green"],
+        UI_COLORS["red"],
     )
 
     CHOICES = (
@@ -133,6 +132,7 @@ class NavigationIconChoices(ChoiceSet):
     CLOUD = "cloud"
     DESIGN = "hammer"
     APPROVAL_WORKFLOWS = "checkbox-circle"
+    ADMINISTRATION = "transform"
     EXTENSIBILITY = "extensibility"
     GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
@@ -188,6 +188,7 @@ class NavigationWeightChoices(ChoiceSet):
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
     APPROVAL_WORKFLOWS = 1200
+    ADMINISTRATION = 1250
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
@@ -211,6 +212,7 @@ class NavigationWeightChoices(ChoiceSet):
         (CLOUD, "Cloud"),
         (DESIGN, "Design"),
         (APPROVAL_WORKFLOWS, "Approval Workflows"),
+        (ADMINISTRATION, "Administration"),
         (EXTENSIBILITY, "Extensibility"),
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),

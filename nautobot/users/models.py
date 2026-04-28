@@ -8,10 +8,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
+from nautobot.core.models import BaseManager, BaseModel, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -30,11 +31,10 @@ __all__ = (
 #
 
 
-class UserQuerySet(CompositeKeyQuerySetMixin, models.QuerySet):
+class UserQuerySet(RestrictedQuerySet):
     """
     Add support for composite-keys to the User queryset.
 
-    Note that this is *NOT* based around RestrictedQuerySet.
     """
 
 
@@ -46,8 +46,11 @@ class UserManager(BaseManager, UserManager_):
     def get_queryset(self):
         return UserQuerySet(self.model, using=self._db)
 
+    def restrict(self, user, action="view"):
+        return self.get_queryset().restrict(user, action)
 
-class User(BaseModel, AbstractUser):
+
+class User(ChangeLoggedModel, BaseModel, AbstractUser):
     """
     Nautobot implements its own User model to suport several specific use cases.
 
@@ -105,6 +108,23 @@ class User(BaseModel, AbstractUser):
                     return False
 
         return super().has_perm(perm, obj)
+
+    def to_objectchange(self, action, *, related_object=None, object_data_extra=None, object_data_exclude=None):
+        excluded_fields = list(object_data_exclude or [])
+        if "password" not in excluded_fields:
+            excluded_fields.append("password")
+
+        objectchange = ChangeLoggedModel.to_objectchange(
+            self,
+            action,
+            related_object=related_object,
+            object_data_extra=object_data_extra,
+            object_data_exclude=excluded_fields,
+        )
+        if isinstance(objectchange.object_data_v2, dict):
+            objectchange.object_data_v2.pop("password", None)
+
+        return objectchange
 
     def get_config(self, path, default=None):
         """
@@ -217,14 +237,47 @@ class User(BaseModel, AbstractUser):
 #
 
 
+class AdminGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    """
+    Custom manager for AdminGroup proxy model.
+    Supports Nautobot's restrict().
+    """
+
+
 class AdminGroup(Group):
     """
     Proxy contrib.auth.models.Group for the admin UI
     """
 
+    objects = AdminGroupManager()
+
+    is_saved_view_model = True
+
     class Meta:
         verbose_name = "Group"
         proxy = True
+
+    @property
+    def present_in_database(self):
+        return self.pk is not None
+
+    def get_absolute_url(self, api=False):
+        view_name = "users-api:group-detail" if api else "users:group"
+        return reverse(view_name, kwargs={"pk": self.pk})
+
+
+Group.documentation_static_path = ""
+Group.is_metadata_associable_model = False
+Group.is_saved_view_model = True
+Group.present_in_database = property(lambda self: self.pk is not None)
+
+
+def _group_get_absolute_url(self, api=False):
+    view_name = "users-api:group-detail" if api else "users:group"
+    return reverse(view_name, kwargs={"pk": self.pk})
+
+
+Group.get_absolute_url = _group_get_absolute_url
 
 
 #

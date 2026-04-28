@@ -1,6 +1,9 @@
 # NautobotUIViewSet
 
-New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app development tool that can save app developer hundreds of lines of code compared to using legacy `generic.views`. Using it to gain access to default functionalities previous provided by `generic.views` such as `create()`, `update()`, `partial_update()`, `bulk_update()`, `bulk_rename()`, `destroy()`, `bulk_destroy()`, `retrieve()` and `list()` actions.
+
++++ 3.1.0 "Added bulk-rename to NautobotUIViewSet"
+    In Nautobot v3.1.0 and later, NautobotUIViewSet automatically includes a `bulk_rename()` action if the associated model has an editable `name` field.
 
 Note that this ViewSet is catered specifically to the UI, not the API.
 
@@ -150,23 +153,36 @@ router.register("yourappmodel", views.YourAppModelUIViewSet)
 
 Template naming is very intuitive in NautobotUIViewSet. In `templates/yourapp` folder, name your templates following the convention `{model_name}_{action}.html`.
 
-| ViewMixins                 | action       |
-| -------------------------- |:------------:|
-| ObjectListViewMixin        | list         |
-| ObjectDetailViewMixin      | retrieve     |
-| ObjectEditViewMixin        | create/update|
-| ObjectDestroyViewMixin     | destroy      |
-| ObjectBulkDestroyViewMixin | bulk_destroy |
-| ObjectBulkUpdateViewMixin  | bulk_update  |
+| ViewMixins                   | action          |
+| ---------------------------- |:---------------:|
+| `ObjectListViewMixin`        | `list`          |
+| `ObjectDetailViewMixin`      | `retrieve`      |
+| `ObjectEditViewMixin`        | `create/update` |
+| `ObjectDestroyViewMixin`     | `destroy`       |
+| `ObjectBulkDestroyViewMixin` | `bulk_destroy`  |
+| `ObjectBulkUpdateViewMixin`  | `bulk_update`   |
+| `ObjectBulkRenameViewMixin`  | `bulk_rename`   |
 
 --- 2.2.0
-    ObjectBulkCreateViewMixin is deprecated as its functionality has been replaced by a system Job. It will be removed from the code base entirely in Nautobot 3.0.
+    ObjectBulkCreateViewMixin is deprecated as its functionality has been replaced by a system Job. It will be removed from the code base entirely in a future Nautobot release.
 
 For example, for a DetailView template for `YourAppModel`, the template name will be `yourapp/yourappmodel_retrieve.html`, for a BulkUpdateView template for `yourappmodel`, the template name will be `yourapp/yourappmodel_bulk_update.html` and etc.
 
 If you do not provide your own templates in the `yourapp/templates/yourapp` folder, `NautobotUIViewSet` will fall back to `generic/object_{self.action}.html`.
 
 Since in many cases the `create` and `update` templates for a model will be identical, you are not required to create both. If you provide a `{app_label}/{model_opts.model_name}_create.html` file but not a `{app_label}/{model_opts.model_name}_update.html` file, then when you update an object, it will fall back to `{app_label}/{model_opts.model_name}_create.html` and vice versa.
+
++++ 3.1.0 "ObjectBulkRenameViewMixin now included in NautobotUIViewSet"
+    Bulk rename functionality is automatically enabled for any `NautobotUIViewSet`
+    whose model includes an editable `CharField` named `name`. The `ObjectBulkRenameViewMixin`
+    is already mixed into `NautobotUIViewSet` and will dynamically register the
+    bulk rename view when applicable.
+
+    To ensure server responsiveness, regular-expression patterns submitted for
+    bulk rename are validated before execution and may be rejected with a clear
+    error message if too complex. Additionally, only objects visible to the user
+    can be renamed in bulk, unlike other bulk operations that allow the full
+    queryset. This ensures users can preview changes before applying them.
 
 ## Adding Custom Views To NautobotUIViewSet & NautobotUIViewSetRouter
 

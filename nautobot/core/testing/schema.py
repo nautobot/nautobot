@@ -64,7 +64,6 @@ class OpenAPISchemaTestCases:
                 return property_schema["items"]["$ref"].split("/")[-1]
             # TODO: extend to handle other cases as needed?
             self.fail(f"Property schema not as expected: {property_schema}")
-            return None
 
         def assert_nullable_property(self, component_schema, property_name):
             """Test method to assert that the given component property is marked as nullable."""

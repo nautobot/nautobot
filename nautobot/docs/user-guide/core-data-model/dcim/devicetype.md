@@ -8,6 +8,7 @@ Some devices house child devices which share physical resources, like space and 
 
 * A parent device (which has device bays)
 * A child device (which must be installed within a device bay)
+* A parent-child device (which can both host device bays and be installed in a device bay)
 * Neither
 
 !!! note
@@ -49,3 +50,6 @@ Once component templates have been created, every new device that you create as 
 
 +++ 2.3.0
     The [ModuleBay](modulebay.md) and [ModuleBayTemplate](modulebaytemplate.md) models have been introduced to represent a space or slot within a parent [Device](device.md) or [Module](module.md) in which a module may be installed. This is used to model modular components within a device, such as line cards, supervisor modules, network modules, or transceivers.
+
++/- 3.1.0
+    The Parent/child status field now supports a "Parent and Child" option which allows the modeling of more deeply nested [Device](device.md) hierarchies. The "Parent and Child" option for "Parent/child status" can be used for Devices between the topmost Parent and the last Child.

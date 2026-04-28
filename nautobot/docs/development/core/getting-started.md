@@ -190,6 +190,7 @@ Available tasks:
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.
   eslint                       Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag.
+  generate-release-notes       Generate Release Notes using Towncrier.
   hadolint                     Check Dockerfile for hadolint compliance and other style issues.
   lint                         Run all linters.
   loaddata                     Load data from file.

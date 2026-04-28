@@ -1,13 +1,15 @@
 import functools
+import json
 import logging
 from queue import Empty, Queue
 import subprocess
-import sys
 import threading
 from typing import Any, Dict
 
+from django.conf import settings
 from django.utils import timezone
 
+from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobConsoleEntryOutputTypeChoices
 from nautobot.extras.models import JobConsoleEntry, JobResult
 
@@ -40,7 +42,9 @@ def store_job_output_line(job_result: JobResult, data: str, output_type: str = "
     if not data:
         return
 
-    JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, text=data)
+    text = sanitize(str(data))
+
+    JobConsoleEntry.objects.create(job_result=job_result, timestamp=timestamp, output_type=output_type, text=text)
 
 
 #
@@ -112,7 +116,7 @@ class JobConsoleLogExecutor:
     Main class for executing console log jobs and capturing output.
     """
 
-    def __init__(self, job_result_pk: str, print_output: bool = False):
+    def __init__(self, job_result_pk: str, job_kwargs: dict | None = None, print_output: bool = False):
         """
         Initialize job executor.
 
@@ -123,6 +127,7 @@ class JobConsoleLogExecutor:
 
         self.job_result_pk = job_result_pk
         self.job_result = JobResult.objects.get(pk=job_result_pk)
+        self.job_kwargs = job_kwargs or {}
         self.print_output = print_output
 
         store_stdout = functools.partial(store_job_output_line, job_result=self.job_result, output_type="stdout")
@@ -136,7 +141,14 @@ class JobConsoleLogExecutor:
 
     def _build_command(self) -> list:
         """Build command to execute."""
-        return [f"{sys.argv[0]}", "execute_job_result", f"{self.job_result_pk}"]
+        return [
+            "nautobot-server",
+            "execute_job_result",
+            f"{self.job_result_pk}",
+            f"--config={settings.SETTINGS_PATH}",
+            "--data",
+            json.dumps(self.job_kwargs),
+        ]
 
     def _print_output(self):
         """Print output in real-time while process runs."""
@@ -197,3 +209,10 @@ class JobConsoleLogExecutor:
             self.stderr_reader.join()
 
             self._handle_failure()
+
+        # This is important as it bubbles up to the return value of `run_console_log_job_and_return_job_result()`,
+        # which, as it is a Celery task itself, its return value will be set into the job_result.result automatically
+        # by django-celery-result. In other words, it doesn't actually matter what job_result.result is *now*,
+        # what really matters is what `run_console_log_and_return_job_result()` returns.
+        self.job_result.refresh_from_db()
+        return self.job_result.result

@@ -35,7 +35,7 @@
                     {% endif %}
                     {% if job_model.read_only %}
                         <div class="alert alert-info">
-                            <span aria-hidden="true" class="mdi mdi-info"></span>This job is read-only in its operation.
+                            <span aria-hidden="true" class="mdi mdi-info"></span> This job is read-only in its operation.
                         </div>
                     {% endif %}
                     {% if job_form.non_field_errors or schedule_form.non_field_errors %}
@@ -57,6 +57,12 @@
                             <div class="card-body">
                                 {% block job_form %}
                                     {% render_form job_form excluded_fields="[]" %}
+                                    {% if not job_form.visible_fields %}
+                                        <span class="form-text w-100">
+                                            <span class="mdi mdi-information-outline"></span>
+                                            This job does not take any user inputs.
+                                        </span>
+                                    {% endif %}
                                 {% endblock %}
                             </div>
                         </div>

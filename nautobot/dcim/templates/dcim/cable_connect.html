@@ -152,9 +152,6 @@
     // clear the select2 widget for the module when a new device is selected
     // jQuery required for select2
         document.addEventListener("DOMContentLoaded", function() {
-            $('select#id_termination_b_device').select2();
-            $('select#id_termination_b_module').select2();
-
             $('select#id_termination_b_device').on('change', function (e) {
                 $('select#id_termination_b_module').val(null).trigger('change');
             });

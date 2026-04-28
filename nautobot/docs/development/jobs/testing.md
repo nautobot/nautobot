@@ -63,19 +63,20 @@ The test files should be placed under the `tests` folder in the app's directory 
 
 Debugging the performance of Nautobot Jobs can be tricky, because they are executed in the Celery worker context. In order to gain extra visibility, [cProfile](https://docs.python.org/3/library/profile.html) can be used to profile the Job execution.
 
-The 'profile' form field on Jobs is automatically available when the `DEBUG` settings is `True`. When you select that checkbox, a profiling report in the pstats format will be written to the file system of the environment where the Job runs. Normally, this is on the file system of the worker process, but if you are using the `nautobot-server runjob` command with `--local`, it will end up in the file system of the web application itself. The path of the written file will be logged in the Job.
+The 'profile' form field on Jobs is automatically available when the `DEBUG` setting is `True`. When you select that checkbox, a profiling report in the pstats format will be attached to the Job Result and can be downloaded directly from the Job Result detail view in the GUI.
 
 !!! note
     If you need to run this in an environment where `DEBUG` is `False`, you have the option of using `nautobot-server runjob` with the `--profile` flag. According to the docs, `cProfile` should have minimal impact on the performance of the Job; still, proceed with caution when using this in a production environment.
 
 ## Reading Profiling Reports
 
-Profiling files are saved in the format expected by Python's `pstats` module. A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual). You can analyze them as follows:
+Profiling files are saved in the format expected by Python's `pstats` module. A full description on how to deal with the output of `cProfile` can be found in the [Instant User's Manual](https://docs.python.org/3/library/profile.html#instant-user-s-manual).
+
+Download the `.pstats` file from the Job Result detail view and analyze it locally:
 
 ```python
 import pstats
-job_result_uuid = "66b70231-002f-412b-8cc4-1cc9609c2c9b"
-stats = pstats.Stats(f"/tmp/nautobot-jobresult-{job_result_uuid}.pstats")
+stats = pstats.Stats("/path/to/downloaded/nautobot-jobresult-<uuid>.pstats")
 stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 ```
 

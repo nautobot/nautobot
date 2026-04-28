@@ -138,12 +138,24 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             **self.get_extra_context(request, instance),
         }
 
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            component = (
+                self.object_detail_content.get_component_by_id(request.GET["component_id"])
+                if self.object_detail_content is not None
+                else None
+            )
+            context["component"] = component
+
         # Some of the legacy views overriding title in `get_extra_context` method.
         # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model, view_type="").render(context)
 
-        return render(request, self.get_template_name(), context)
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            template_name = "components/htmx/component.html"
+        else:
+            template_name = self.get_template_name()
+        return render(request, template_name, context)
 
 
 class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
@@ -498,17 +510,20 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
-        form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.model_form(instance=obj, initial=initial_data, **form_kwargs)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
-        template_name = self.template_name
-        if self.request.headers.get("HX-Request", False):
-            template_name = "components/htmx/object_embedded_create.html"
-
-        return render(
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
+        response = render(
             request,
-            template_name,
+            self.template_name,
             {
+                "base_template": base_template,
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
@@ -519,6 +534,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 **self.get_extra_context(request, obj),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def successful_post(self, request, obj, created, logger):
         """Callback after the form is successfully saved but before redirecting the user."""
@@ -1385,19 +1402,28 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     def get(self, request):
         if self.form is None or self.model_form is None:
             raise RuntimeError("self.form and self.model_form must not be None")
-        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form), **form_kwargs)  # pylint: disable=not-callable
         model_form = self.model_form(request.GET)  # pylint: disable=not-callable
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
 
-        return render(
+        response = render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "component_type": self.queryset.model._meta.verbose_name,
                 "model_form": model_form,
                 "form": form,
                 "return_url": self.get_return_url(request),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")

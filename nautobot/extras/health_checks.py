@@ -157,7 +157,5 @@ class RedisBackend(RedisHealthCheck):
                 sentinel_servers=options.get("SENTINELS"), service_name=service_name, db=db, **remaining_args
             )
         # Sentinel is not used, so we check Redis directly
-        elif client_class == "django_redis.client.DefaultClient":
+        if client_class == "django_redis.client.DefaultClient":
             self.check_redis(redis_url=location, **options.get("CONNECTION_POOL_KWARGS", {}))
-        else:
-            self.add_error(ServiceUnavailable(f"{client_class} is an unsupported CLIENT_CLASS!"))

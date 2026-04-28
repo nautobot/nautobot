@@ -6,6 +6,7 @@ from django.db import models
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.validators import ExclusionValidator
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     PowerFeedBreakerPoleChoices,
     PowerFeedPhaseChoices,
@@ -19,6 +20,7 @@ from nautobot.dcim.constants import (
     POWERFEED_MAX_UTILIZATION_DEFAULT,
     POWERFEED_VOLTAGE_DEFAULT,
 )
+from nautobot.dcim.models.device_components import PowerPort
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 
@@ -338,3 +340,13 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
 
     def get_type_class(self):
         return PowerFeedTypeChoices.CSS_CLASSES.get(self.type)
+
+    @property
+    def utilization(self):
+        power_port = self.connected_endpoint
+        if not isinstance(power_port, PowerPort):
+            return None
+        utilization = power_port.get_power_draw()
+        allocated = utilization["allocated"]
+        available = self.available_power or 0
+        return UtilizationData(numerator=allocated, denominator=available)

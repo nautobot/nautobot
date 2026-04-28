@@ -1,0 +1,23 @@
+{% load helpers %}
+
+{% if diff_added == diff_removed %}
+    <span class="text-secondary" style="margin-left: 10px;">
+        {% if object.action == "create" %}
+            Object created
+        {% elif object.action == "delete" %}
+            Object deleted
+        {% else %}
+            No changes
+        {% endif %}
+    </span>
+{% else %}
+    <div
+        class="nb-editor-container"
+        data-mode="diff"
+        data-original="{{ diff_removed|render_json:False }}"
+        data-modified="{{ diff_added|render_json:False }}"
+        data-lang="json"
+        style="max-height: 730px"
+    >
+    </div>
+{% endif %}

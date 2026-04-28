@@ -4,6 +4,42 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 <!-- pyml disable-num-lines 500 proper-names -->
 
+## CVE-2026-34203
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>March 30, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>User creation and editing via the REST API failed to apply the password validation rules defined by Django's <code>AUTH_PASSWORD_VALIDATORS</code> setting (which defaults to an empty list, i.e., no specific rules, but can be configured in Nautobot's <code>nautobot_config.py</code> to apply various rules if desired). This could potentially allow for the creation or modification of users to have passwords that are weak or otherwise do not comply with configured standards.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-xmpv-j7p2-j873">GHSA-xmpv-j7p2-j873</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.30</li>
+        <li>&ge;3.0.0, &lt;3.0.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.30 (<a href="https://github.com/nautobot/nautobot/pull/8779">patch</a>)</li>
+        <li>3.0.10 (<a href="https://github.com/nautobot/nautobot/pull/8778">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## CVE-2025-49142
 
 <!-- pyml disable-next-line no-inline-html -->
