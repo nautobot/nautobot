@@ -612,6 +612,13 @@ class ViewTestCases:
                     # Instance does not have a valid detail view, do nothing here.
                     pass
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_create_object_as_superuser(self):
+            """Superuser loads the create view without crashing."""
+            self.user.is_superuser = True
+            self.user.save()
+            self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
             initial_count = self._get_queryset().count()
