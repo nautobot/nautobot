@@ -13,8 +13,15 @@ from django.utils.html import format_html
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, BulkEditForm, BulkEditNullBooleanSelect, DateTimePicker
-from nautobot.core.forms.widgets import StaticSelect2, StaticSelect2Multiple
+from nautobot.core.forms import (
+    BootstrapMixin,
+    BulkEditForm,
+    BulkEditNullBooleanSelect,
+    DateTimePicker,
+    DynamicModelMultipleChoiceField,
+)
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.models import User
 from nautobot.users.utils import serialize_user_without_config_and_views
@@ -38,6 +45,10 @@ class GroupFilterForm(BootstrapMixin, forms.Form):
     model = AdminGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
+    user = DynamicModelMultipleChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+    )
 
 
 class GroupForm(BootstrapMixin, forms.ModelForm):
@@ -122,6 +133,18 @@ class AdminPasswordChangeForm(_AdminPasswordChangeForm):
 class UserFilterForm(BootstrapMixin, forms.Form):
     model = User
     q = forms.CharField(required=False, label="Search")
+    is_active = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    is_staff = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    groups = DynamicModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+    )
 
 
 class UserCreateForm(BootstrapMixin, DjangoUserCreationForm):
@@ -198,7 +221,6 @@ class UserUpdateForm(BootstrapMixin, DjangoUserChangeForm):
             "is_active",
             "is_staff",
             "is_superuser",
-            "user_permissions",
             "last_login",
             "date_joined",
         )
@@ -206,7 +228,7 @@ class UserUpdateForm(BootstrapMixin, DjangoUserChangeForm):
 
 class UserBulkEditForm(BootstrapMixin, BulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=User.objects.all(), widget=forms.MultipleHiddenInput())
-    groups = forms.ModelMultipleChoiceField(queryset=Group.objects.all(), required=False, widget=StaticSelect2Multiple)
+    groups = DynamicModelMultipleChoiceField(queryset=Group.objects.all(), required=False)
     is_active = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     is_staff = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)
     is_superuser = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect)

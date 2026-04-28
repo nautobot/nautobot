@@ -41,6 +41,7 @@ class UserTable(BaseTable):
     is_superuser = BooleanColumn()
     is_staff = BooleanColumn()
     is_active = BooleanColumn()
+    actions = ButtonsColumn(User)
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
@@ -55,6 +56,7 @@ class UserTable(BaseTable):
             "is_superuser",
             "is_staff",
             "is_active",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -65,4 +67,5 @@ class UserTable(BaseTable):
             "is_superuser",
             "is_staff",
             "is_active",
+            "actions",
         )
