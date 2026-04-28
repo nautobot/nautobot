@@ -1,0 +1,1 @@
+Avoided unnecessary data gathering from DB on pages that don't need it
