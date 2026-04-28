@@ -471,7 +471,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -490,7 +490,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
