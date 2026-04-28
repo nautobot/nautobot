@@ -327,7 +327,6 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
 
     class Meta:
         ordering = ["name"]
-        verbose_name = "permission"
 
     def __str__(self):
         return self.name
