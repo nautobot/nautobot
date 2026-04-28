@@ -41,7 +41,13 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    RACK_U_HEIGHT_DEFAULT,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -118,6 +124,7 @@ from .constants import (
 )
 from .models import (
     Cable,
+    CableBreakoutType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -5943,3 +5950,65 @@ class VirtualDeviceContextFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+
+#
+# Cable Breakout Types
+#
+
+
+class CableBreakoutTypeForm(NautobotModelForm):
+    mapping = forms.JSONField(
+        required=False,
+        help_text="Lane mapping JSON. A list of <code>total_lanes</code> objects, each with keys "
+        "<code>a_connector</code>, <code>a_position</code>, <code>b_connector</code>, <code>b_position</code>, "
+        "and optionally <code>label</code>.",
+    )
+    a_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="A connectors"
+    )
+    b_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="B connectors"
+    )
+    total_lanes = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_LANES, required=True, label="Total lanes"
+    )
+
+    class Meta:
+        model = CableBreakoutType
+        fields = [
+            "name",
+            "description",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "mapping",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+        widgets = {
+            "polarity_method": StaticSelect2,
+        }
+
+
+class CableBreakoutTypeFilterForm(NautobotFilterForm):
+    model = CableBreakoutType
+    q = forms.CharField(required=False, label="Search")
+    is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    is_breakout = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    tags = TagFilterField(model)
+
+
+class CableBreakoutTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CableBreakoutType.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+    is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    polarity_method = forms.ChoiceField(
+        choices=add_blank_choice(CableBreakoutTypePolarityMethodChoices), required=False, widget=StaticSelect2()
+    )
+    strands_per_lane = forms.IntegerField(required=False, min_value=1)
+
+    class Meta:
+        nullable_fields = ["description"]

@@ -3,11 +3,13 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
     BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
     ColorColumn,
     TagColumn,
     ToggleColumn,
 )
-from nautobot.dcim.models import Cable
+from nautobot.dcim.models import Cable, CableBreakoutType
 from nautobot.extras.tables import StatusTableMixin
 
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
@@ -18,6 +20,44 @@ __all__ = ("CableTable",)
 #
 # Cables
 #
+
+
+class CableBreakoutTypeTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    is_shuffle = BooleanColumn()
+    total_strands = tables.Column(orderable=False)
+    is_breakout = BooleanColumn(orderable=False)
+    tags = TagColumn(url_name="dcim:cablebreakouttype_list")
+    actions = ButtonsColumn(CableBreakoutType)
+
+    class Meta(BaseTable.Meta):
+        model = CableBreakoutType
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "total_strands",
+            "is_breakout",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "tags",
+            "actions",
+        )
 
 
 class CableTable(StatusTableMixin, BaseTable):

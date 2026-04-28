@@ -4,9 +4,8 @@ from django.utils.http import urlencode
 import svgwrite
 
 from nautobot.core.utils.config import get_settings_or_config
-
-from .choices import DeviceFaceChoices
-from .constants import RACK_ELEVATION_BORDER_WIDTH
+from nautobot.dcim.choices import DeviceFaceChoices
+from nautobot.dcim.constants import RACK_ELEVATION_BORDER_WIDTH
 
 
 class RackElevationSVG:

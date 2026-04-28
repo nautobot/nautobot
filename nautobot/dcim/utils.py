@@ -10,6 +10,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
+from nautobot.dcim.constants import DEFAULT_CABLE_BREAKOUT_TYPES
 
 
 def compile_path_node(ct_id, object_id):
@@ -171,3 +172,147 @@ def render_software_version_and_image_files(instance, software_version, context)
             ),
         )
     return display
+
+
+def populate_default_cable_breakout_types(apps, schema_editor=None):
+    """Create default cable breakout type records."""
+    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
+    for name, defaults in DEFAULT_CABLE_BREAKOUT_TYPES.items():
+        CableBreakoutType.objects.get_or_create(name=name, defaults=defaults)
+
+
+def clear_default_cable_breakout_types(apps, schema_editor=None):
+    """Delete default cable breakout type records."""
+    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
+    for name in DEFAULT_CABLE_BREAKOUT_TYPES.keys():
+        CableBreakoutType.objects.filter(name=name).delete()
+
+
+def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_lanes: int):
+    """Generate a default mapping from the given connector and lane counts."""
+    a_positions = total_lanes // a_connectors
+    b_positions = total_lanes // b_connectors
+    mapping = []
+    lane_index = 0
+    for a_connector in range(a_connectors):
+        for a_position in range(a_positions):
+            b_connector = lane_index // b_positions
+            b_position = lane_index % b_positions
+            mapping.append(
+                {
+                    # Change 0-indexed iterations to 1-indexed mapping entries!
+                    "label": str(lane_index + 1),
+                    "a_connector": a_connector + 1,
+                    "a_position": a_position + 1,
+                    "b_connector": b_connector + 1,
+                    "b_position": b_position + 1,
+                }
+            )
+            lane_index += 1
+    return mapping
+
+
+def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connectors=None, total_lanes=None):
+    """Validate the mapping JSON structure and consistency with connector/position counts.
+
+    If any of `a_connectors`, `b_connectors`, or `total_lanes` is not provided, it will be
+    derived from the mapping itself (max `a_connector`/`b_connector` values, and `len(mapping)`
+    respectively). When provided, each is enforced against the mapping.
+
+    Missing `label` entries are filled in with the entry index as a string.
+    Raises ValidationError if the mapping is invalid.
+
+    Returns:
+        tuple: (mapping, a_connectors, b_connectors, total_lanes)
+    """
+
+    if not isinstance(mapping, list):
+        raise ValidationError({"mapping": "Mapping must be a JSON array."})
+
+    if total_lanes is not None and len(mapping) != total_lanes:
+        raise ValidationError({"mapping": f"Expected {total_lanes} lane definitions, but got {len(mapping)}."})
+    elif not mapping:
+        raise ValidationError({"mapping": "Empty mapping is not permitted."})
+
+    required_keys = {"a_connector", "a_position", "b_connector", "b_position"}
+    optional_keys = {"label"}
+
+    # First pass: structural checks (types, keys) so we can safely derive dimensions below.
+    for i, entry in enumerate(mapping):
+        if not isinstance(entry, dict):
+            raise ValidationError({"mapping": f"Entry {i} must be a JSON object."})
+
+        missing_keys = required_keys - set(entry.keys())
+        if missing_keys:
+            raise ValidationError(
+                {"mapping": f"Entry {i} is missing required keys: {', '.join(sorted(missing_keys))}."}
+            )
+
+        unknown_keys = set(entry.keys()) - required_keys - optional_keys
+        if unknown_keys:
+            raise ValidationError({"mapping": f"Entry {i} has unknown keys: {', '.join(sorted(unknown_keys))}"})
+
+        for key in required_keys:
+            if not isinstance(entry[key], int) or entry[key] < 1:
+                raise ValidationError({"mapping": f"Entry {i} key '{key}' must be a positive integer."})
+
+    if a_connectors is None:
+        a_connectors = max(e["a_connector"] for e in mapping)
+    if b_connectors is None:
+        b_connectors = max(e["b_connector"] for e in mapping)
+    if total_lanes is None:
+        total_lanes = len(mapping)
+
+    a_positions = total_lanes // a_connectors
+    b_positions = total_lanes // b_connectors
+
+    # Second pass: range and uniqueness checks, and fill in default labels.
+    seen_a_pairs = set()
+    seen_b_pairs = set()
+    seen_labels = set()
+
+    for i, entry in enumerate(mapping):
+        a_connector = entry["a_connector"]
+        a_position = entry["a_position"]
+        b_connector = entry["b_connector"]
+        b_position = entry["b_position"]
+
+        # Range checks - note that we already checked for typing and for values less than 1 in the first pass above
+        if a_connector > a_connectors:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: a_connector {a_connector} out of range [1, {a_connectors}]."}
+            )
+        if a_position > a_positions:
+            raise ValidationError({"mapping": f"Entry {i}: a_position {a_position} out of range [1, {a_positions}]."})
+        if b_connector > b_connectors:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: b_connector {b_connector} out of range [1, {b_connectors}]."}
+            )
+        if b_position > b_positions:
+            raise ValidationError({"mapping": f"Entry {i}: b_position {b_position} out of range [1, {b_positions}]."})
+
+        # Uniqueness checks
+        a_pair = (a_connector, a_position)
+        if a_pair in seen_a_pairs:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
+            )
+        seen_a_pairs.add(a_pair)
+
+        b_pair = (b_connector, b_position)
+        if b_pair in seen_b_pairs:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
+            )
+        seen_b_pairs.add(b_pair)
+
+        if "label" not in entry:
+            entry["label"] = str(i)
+        label = entry["label"]
+        if not isinstance(label, str):
+            raise ValidationError({"mapping": f"Entry {i}: Label {label} must be a string"})
+        if label in seen_labels:
+            raise ValidationError({"mapping": f"Entry {i}: Duplicate label: {label}"})
+        seen_labels.add(label)
+
+    return mapping, a_connectors, b_connectors, total_lanes

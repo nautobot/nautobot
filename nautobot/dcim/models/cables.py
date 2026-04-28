@@ -4,6 +4,7 @@ import logging
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Sum
 from django.utils.functional import classproperty
@@ -11,13 +12,22 @@ from django.utils.functional import classproperty
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
-from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices
-from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, COMPATIBLE_TERMINATION_TYPES, NONCONNECTABLE_IFACE_TYPES
+from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices, CableLengthUnitChoices, CableTypeChoices
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    CABLE_TERMINATION_MODELS,
+    COMPATIBLE_TERMINATION_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
+)
 from nautobot.dcim.fields import JSONPathField
+from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 from nautobot.dcim.utils import (
     decompile_path_node,
+    generate_cable_breakout_mapping,
     object_to_path_node,
     path_node_to_object,
+    validate_cable_breakout_mapping,
 )
 from nautobot.extras.models import Status, StatusField
 from nautobot.extras.utils import extras_features
@@ -33,10 +43,130 @@ from .devices import Device
 
 __all__ = (
     "Cable",
+    "CableBreakoutType",
     "CablePath",
 )
 
 logger = logging.getLogger(__name__)
+
+
+#
+# Cable Breakout Types
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class CableBreakoutType(PrimaryModel):
+    """
+    A reusable definition of a cable's internal lane structure, describing connectors on each side,
+    the total number of logical lanes, and the A-to-B lane mapping for breakout cables.
+
+    By convention and by model enforcement, any breakout is A-to-B, not B-to-A; that is, `a_connectors` may never be
+    greater than `b_connectors`, though they may be equal. `total_lanes` must be evenly divisible by both
+    `a_connectors` and `b_connectors`; the implied per-side positions per connector are derived from that division.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    a_connectors = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical connectors on the A side.",
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+    )
+    b_connectors = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical connectors on the B side.",
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+    )
+    total_lanes = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Total number of logical lanes in the breakout, distributed evenly across connectors on each side.",
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_LANES)],
+    )
+    mapping = models.JSONField(
+        help_text="A→B lane mapping as a JSON array of objects with keys: "
+        "label, a_connector, a_position, b_connector, b_position."
+    )
+    is_shuffle = models.BooleanField(
+        default=False,
+        help_text="Indicates non-linear (polarity-shuffled) position mapping. Informational only.",
+    )
+    strands_per_lane = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Number of physical strands per logical lane (e.g. 1 for copper, 2 for duplex fiber).",
+        validators=[MinValueValidator(1)],
+    )
+    polarity_method = models.CharField(
+        blank=True,
+        choices=CableBreakoutTypePolarityMethodChoices,
+        default="",
+        help_text="Fiber polarity method. Informational only.",
+        max_length=50,
+    )
+
+    natural_key_field_names = ["name"]
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def a_positions(self):
+        """Number of positions per A-side connector, derived as total_lanes // a_connectors."""
+        if not self.a_connectors:
+            return 0
+        return self.total_lanes // self.a_connectors
+
+    @property
+    def b_positions(self):
+        """Number of positions per B-side connector, derived as total_lanes // b_connectors."""
+        if not self.b_connectors:
+            return 0
+        return self.total_lanes // self.b_connectors
+
+    @property
+    def total_strands(self):
+        """Total physical strand count: total_lanes x strands_per_lane."""
+        return self.total_lanes * self.strands_per_lane
+
+    @property
+    def is_breakout(self):
+        """True if A-side and B-side connector counts differ."""
+        return self.a_connectors != self.b_connectors
+
+    def get_diagram_svg(self):
+        """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
+        diagram = BreakoutDiagramSVG(self.mapping, show_status=False)
+        return diagram.render()
+
+    def clean(self):
+        super().clean()
+
+        if self.a_connectors > self.b_connectors:
+            raise ValidationError(
+                {"b_connectors": "Wrong breakout direction, a_connectors must not exceed b_connectors"}
+            )
+
+        if self.total_lanes % self.a_connectors != 0:
+            raise ValidationError(
+                {"total_lanes": f"total_lanes must be evenly divisible by a_connectors ({self.a_connectors})."}
+            )
+        if self.total_lanes % self.b_connectors != 0:
+            raise ValidationError(
+                {"total_lanes": f"total_lanes must be evenly divisible by b_connectors ({self.b_connectors})."}
+            )
+
+        if not self.mapping:
+            self.mapping = generate_cable_breakout_mapping(self.a_connectors, self.b_connectors, self.total_lanes)
+        validate_cable_breakout_mapping(self.mapping, self.a_connectors, self.b_connectors, self.total_lanes)
 
 
 #

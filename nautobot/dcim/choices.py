@@ -1445,6 +1445,25 @@ class CableLengthUnitChoices(ChoiceSet):
 
 
 #
+# Polarity Methods (Cable Breakout Types)
+#
+
+
+class CableBreakoutTypePolarityMethodChoices(ChoiceSet):
+    METHOD_STRAIGHT = "straight-through"
+    METHOD_REVERSED = "reversed"
+    METHOD_PAIR_REVERSED = "pair-reversed"
+    METHOD_OTHER = "other"
+
+    CHOICES = (
+        (METHOD_STRAIGHT, "Straight-through"),
+        (METHOD_REVERSED, "Reversed"),
+        (METHOD_PAIR_REVERSED, "Pair-reversed"),
+        (METHOD_OTHER, "Other"),
+    )
+
+
+#
 # Power Panels
 #
 
