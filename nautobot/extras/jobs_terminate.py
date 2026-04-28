@@ -19,29 +19,9 @@ class JobTerminatorStrategy(ABC):
     `_perform_termination` hooks; `terminate` orchestrates them.
     """
 
-    def is_terminal(self, job_result: JobResult) -> bool:
-        """Return True if job_result is in a finished state.
-
-        Refreshes from the DB before checking, so callers get the live status
-        rather than whatever the in-memory object happened to hold.
-        """
-        job_result.refresh_from_db()
-        return job_result.status not in JobResultStatusChoices.NON_TERMINAL_STATUSES
-
-    def can_update_revocation_fields(self, job_result: JobResult) -> bool:
-        """Return True if revocation fields can be written for this job's current status.
-
-        Used inside `transaction.atomic` where `is_terminal` can't be called
-        (it would re-fetch and bypass the row lock).
-        """
-        return (
-            job_result.status
-            in (
-                JobResultStatusChoices.STATUS_PENDING,
-                JobResultStatusChoices.STATUS_STARTED,
-                JobResultStatusChoices.STATUS_REVOKED,  # Celery's own `revoke` has already populated status that's why it's here
-            )
-        )
+    def is_unready_state(self, job_result: JobResult) -> bool:
+        """Return True if job_result is in a not finished state."""
+        return job_result.status in JobResultStatusChoices.UNREADY_STATES
 
     @abstractmethod
     def is_alive(self, job_result: JobResult) -> bool | None:
@@ -55,48 +35,50 @@ class JobTerminatorStrategy(ABC):
     def _perform_termination(self, job_result: JobResult, user: User):
         """Send the backend-specific kill signal and mark the job revoked."""
 
-    def _mark_revoked(self, job_result: JobResult, user: User) -> tuple[JobResult, bool]:
-        """Mark a `JobResult` as revoked, filling in only fields that aren't already set.
+    def _apply_termination_metadata(self, job_result: JobResult, user: User) -> dict:
+        """Fill in termination metadata fields on a locked `JobResult`.
 
-        Locks the row and writes whichever of `status`, `date_done`,
-        `terminated_by`, and `terminated_at` are still unset.
-        Returns early if the row's status doesn't allow revocation updates.
+        Sets `date_done`, `terminated_by`, `terminated_user_name`, and
+        `terminated_at` only if they are not already set. Caller is responsible
+        for the surrounding transaction/lock and for calling `save()`.
 
         Args:
-            job_result: The `JobResult` to mark revoked.
-            user: The user requesting termination, recorded on `terminated_by`
-                when that field is unset.
+            job_result: The locked `JobResult` to update (modified in place).
+            user: The user requesting termination.
 
         Returns:
-            `(job_result, updated)` where `updated` is True
-            if job_result was mark as revoked.
+            Dict of the fields that were updated, suitable for `update_fields`.
         """
         now = timezone.now()
+        updates = {}
+
+        if job_result.date_done is None:
+            updates["date_done"] = now
+
+        if job_result.terminated_by is None:
+            updates["terminated_by"] = user
+
+        if not job_result.terminated_user_name:
+            updates["terminated_user_name"] = user.username
+
+        if job_result.terminated_at is None:
+            updates["terminated_at"] = now
+
+        for k, v in updates.items():
+            setattr(job_result, k, v)
+
+        return updates
+
+    def _mark_revoked(self, job_result: JobResult, user: User) -> tuple[JobResult, bool]:
+        """Mark a `JobResult` as revoked, filling in only fields that aren't already set."""
         with transaction.atomic():
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            if not self.can_update_revocation_fields(job_result):
-                return job_result, False
-
-            updates = {"status": JobResultStatusChoices.STATUS_REVOKED}
-
-            if job_result.date_done is None:
-                updates["date_done"] = now
-
-            if job_result.terminated_by is None:
-                updates["terminated_by"] = user
-
-            if not job_result.terminated_user_name:
-                updates["terminated_user_name"] = user.username
-
-            if job_result.terminated_at is None:
-                updates["terminated_at"] = now
-
-            for k, v in updates.items():
-                setattr(job_result, k, v)
-
+            updates = self._apply_termination_metadata(job_result, user)
+            job_result.status = JobResultStatusChoices.STATUS_REVOKED
+            updates["status"] = JobResultStatusChoices.STATUS_REVOKED
             job_result.save(update_fields=list(updates.keys()))
 
-        return job_result, True
+        return job_result
 
     def terminate(self, job_result, user) -> dict:
         """Reap or kill a job and return the outcome.
@@ -115,18 +97,8 @@ class JobTerminatorStrategy(ABC):
         """
         # REAP
         if self.should_reap(job_result):
-            job_result, revoked = self._mark_revoked(job_result, user)
-            if revoked:
-                logger.info("Reaped dead job %s", job_result.pk)
-                return {"job_result": job_result, "error": None}
-            else:
-                logger.info(
-                    "Reaped dead job %s not successed. Job in terminal state %s", job_result.pk, job_result.status
-                )
-                return {
-                    "job_result": job_result,
-                    "error": f"Reaped dead not successed. Job in terminal state {job_result.status}",
-                }
+            logger.info("Reaped dead job %s", job_result.pk)
+            return {"job_result": self._mark_revoked(job_result, user), "error": None}
 
         # TERMINATE
         try:
@@ -189,7 +161,7 @@ class CeleryStrategy(JobTerminatorStrategy):
         Reap when no worker will handle the job *and* the job isn't already done.
         `not self.is_alive(...)` covers both False (workers replied, none has the
         task) and None (couldn't reach workers at all) — both are treated as
-        "no worker will handle this." The `not is_terminal` guard prevents
+        "no worker will handle this." The `is_unready_state` guard prevents
         reaping a job that already finished normally.
 
         Args:
@@ -198,7 +170,7 @@ class CeleryStrategy(JobTerminatorStrategy):
         Returns:
             True if the job should be reaped, False otherwise.
         """
-        return not self.is_terminal(job_result) and not self.is_alive(job_result)
+        return self.is_unready_state(job_result) and not self.is_alive(job_result)
 
     def _perform_termination(self, job_result: JobResult, user: User):
         """Send a SIGKILL revoke to the Celery worker and mark the job revoked.
@@ -214,12 +186,17 @@ class CeleryStrategy(JobTerminatorStrategy):
                 Celery task ID.
             user: The user requesting termination, recorded on `terminated_by`.
         """
-        if self.is_terminal(job_result):
+        if not self.is_unready_state(job_result):
             return
         task_id = str(job_result.pk)
         celery_app = self.get_celery_app()
         celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
-        self._mark_revoked(job_result, user)
+
+        with transaction.atomic():
+            job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
+            updates = self._apply_termination_metadata(job_result, user)
+            if updates:
+                job_result.save(update_fields=list(updates.keys()))
 
 
 class K8sStrategy(JobTerminatorStrategy):

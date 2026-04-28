@@ -307,12 +307,6 @@ class JobResultStatusChoices(ChoiceSet):
     #: Set of states meaning the task result is not ready (hasn't been executed).
     # {PENDING, RECEIVED, STARTED, REJECTED, RETRY}
     UNREADY_STATES = states.UNREADY_STATES
-    #: Set of states meaning the task result is not in terminal state
-    # {PENDING, STARTED}
-    NON_TERMINAL_STATUSES = (
-        states.PENDING,
-        states.STARTED,
-    )
 
     @staticmethod
     def precedence(state):
