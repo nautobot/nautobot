@@ -19,11 +19,6 @@ class JobTerminatorStrategy(ABC):
     `_perform_termination` hooks; `terminate` orchestrates them.
     """
 
-    NON_TERMINAL_STATUSES = (
-        JobResultStatusChoices.STATUS_PENDING,
-        JobResultStatusChoices.STATUS_STARTED,
-    )
-
     def is_terminal(self, job_result: JobResult) -> bool:
         """Return True if job_result is in a finished state.
 
@@ -31,7 +26,7 @@ class JobTerminatorStrategy(ABC):
         rather than whatever the in-memory object happened to hold.
         """
         job_result.refresh_from_db()
-        return job_result.status not in self.NON_TERMINAL_STATUSES
+        return job_result.status not in JobResultStatusChoices.NON_TERMINAL_STATUSES
 
     def can_update_revocation_fields(self, job_result: JobResult) -> bool:
         """Return True if revocation fields can be written for this job's current status.
@@ -89,6 +84,9 @@ class JobTerminatorStrategy(ABC):
 
             if job_result.terminated_by is None:
                 updates["terminated_by"] = user
+
+            if not job_result.terminated_user_name:
+                updates["terminated_user_name"] = user.username
 
             if job_result.terminated_at is None:
                 updates["terminated_at"] = now

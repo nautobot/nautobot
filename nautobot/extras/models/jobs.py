@@ -725,10 +725,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         related_name="terminated_job_results",
         help_text="The user who initiated the kill action.",
     )
+    terminated_user_name = models.CharField(max_length=150, blank=True, editable=False)
     terminated_at = models.DateTimeField(
         null=True,
         blank=True,
-        db_index=True,
         help_text="Timestamp at which the kill was initiated.",
     )
 

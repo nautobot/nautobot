@@ -2221,8 +2221,6 @@ class JobLogsDBConnectionTest(TransactionTestCase):
 class JobTerminateTestCase(TransactionTestCase):
     """End-to-end tests for `CeleryStrategy.terminate`."""
 
-    # databases = ("default", "job_logs")
-
     @classmethod
     def setUpTestData(cls):
         cls.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
