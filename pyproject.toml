@@ -27,9 +27,9 @@ dependencies = [
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.7,<46.1)",
+    "cryptography (>=47.0.0,<47.1)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.13,<5.3)",
+    "django (>=6.0.4,<6.1)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -48,7 +48,7 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.2,<25.3)",
     # Health check endpoint
-    "django-health-check (>=3.20.8,<3.21)",
+    "django-health-check (>=4.4.0,<4.5)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -60,7 +60,7 @@ dependencies = [
     # Structured logging for Django
     "django-structlog[celery] (>=10.0.0,<10.1)",
     # Advanced HTML tables
-    "django-tables2 (>=2.8.0,<2.9)",
+    "django-tables2 (>=3.0.0,<3.1)",
     # Tags
     "django-taggit (>=6.1.0,<6.2)",
     # Represent time zones in Django
@@ -175,9 +175,9 @@ factory-boy = "~3.3.3"
 # Factory Boy dependency.
 faker = "^40.11.0"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~2.2.1"
+invoke = "~3.0.3"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~14.3.4"
+rich = "~15.0.0"
 # Change log management and generation
 towncrier = "~25.8.0"
 # Watch files for celery and mkdocs reload
