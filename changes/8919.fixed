@@ -1,0 +1,1 @@
+Fixed Docker build failing with "Illegal instruction" on ARM64 hosts by disabling Poetry's keyring lookup during dependency installation.
