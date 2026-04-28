@@ -3403,6 +3403,70 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.daily_utc_job.refresh_from_db()
                 self.assertEqual(self.daily_utc_job.state, state)
 
+    def test_save_populates_user_name_from_user(self):
+        """Test that save() populates user_name from the associated user's username."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="User Name Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        self.assertEqual(scheduled_job.user_name, self.user.username)
+
+    def test_save_populates_user_name_undefined_when_no_user(self):
+        """Test that save() populates user_name with 'Undefined' when no user is associated."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="No User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        self.assertEqual(scheduled_job.user_name, "Undefined")
+
+    def test_user_deletion_preserves_user_name(self):
+        """Test that deleting the associated user preserves user_name for historical record."""
+        original_username = self.user.username
+        scheduled_job = ScheduledJob.objects.create(
+            name="Preserve User Name Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        self.assertEqual(scheduled_job.user_name, original_username)
+
+        self.user.delete()
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.user)
+        self.assertEqual(scheduled_job.user_name, original_username)
+
+    def test_schedule_entry_does_not_disable_when_user_is_none(self):
+        """Regression test for #8413: NautobotScheduleEntry should not disable schedules when user is None."""
+        from nautobot.core.celery.schedulers import NautobotScheduleEntry
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="No User Schedule Entry Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertTrue(scheduled_job.enabled)
+        self.assertNotEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
     # def test_nautobot_database_scheduler_apply_async_method(self, mock_run_kubernetes_job_and_return_job_result):

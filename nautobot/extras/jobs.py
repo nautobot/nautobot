@@ -19,6 +19,7 @@ from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import UploadedFile
@@ -167,7 +168,9 @@ class BaseJob:
         else:
             change_context = ObjectChangeEventContextChoices.CONTEXT_JOB
 
-        with web_request_context(user=self.user, context_detail=self.class_path, context=change_context):
+        with web_request_context(
+            user=self.user or AnonymousUser(), context_detail=self.class_path, context=change_context
+        ):
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
@@ -1316,10 +1319,16 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
         )
 
     # Send notice that the job is running
+    if job_result.user:
+        user_name = job_result.user.username
+    elif job_result.scheduled_job:
+        user_name = job_result.scheduled_job.user_name
+    else:
+        user_name = "Undefined"
     event_payload = {
         "job_result_id": request.id,
         "job_name": job.name,  # TODO: should this be job.job_model.name instead? Possible breaking change
-        "user_name": job_result.user.username,
+        "user_name": user_name,
     }
     if not job.job_model.has_sensitive_variables:
         event_payload["job_kwargs"] = kwargs
