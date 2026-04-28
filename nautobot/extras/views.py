@@ -2539,7 +2539,6 @@ class JobUIViewSet(NautobotUIViewSet):
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
             job_result_key = request.POST.get("job_result_key", None)
-            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             job_modal_button_path = request.POST.get("job_modal_button", None)
 
             context = {
@@ -2547,7 +2546,6 @@ class JobUIViewSet(NautobotUIViewSet):
                 "title": job_model.name,
                 "detail_value": "",
                 "job_result_key": job_result_key,
-                "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": True,
                 "job_modal_button": job_modal_button_path,
             }
