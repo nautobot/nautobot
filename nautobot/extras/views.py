@@ -2538,14 +2538,20 @@ class JobUIViewSet(NautobotUIViewSet):
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
             job_result_key = request.POST.get("job_result_key", None)
+            job_modal_button_path = request.POST.get("job_modal_button", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-            if job_result_key:
-                url = f"{url}?job_result_key={job_result_key}&refresh_on_close_if_done={refresh_on_close_if_done}"
-            else:
-                url = f"{url}?refresh_on_close_if_done={refresh_on_close_if_done}"
-            response = redirect(url)
+
+            context = {
+                "result": job_result,
+                "title": job_model.name,
+                "detail_value": "",
+                "job_result_key": job_result_key,
+                "job_is_pending": True,
+                "job_modal_button": job_modal_button_path,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
+            }
+            response = render(request, "extras/jobresult_modal.html", context)
             patch_vary_headers(response, ["HX-Request"])
             return response
 
@@ -2587,29 +2593,19 @@ class JobUIViewSet(NautobotUIViewSet):
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
-        htmx_modal = False
+        job_modal_button = request.POST.get("job_modal_button", None)
+        is_htmx_modal = False
         title = job_model.name
         run_button_label = "Run Job Now"
-        job_result_key = None
-        refresh_on_close_if_done = "false"
         advanced_fields = ()
-        if htmx_request:
-            if request.method == "POST":
-                htmx_modal = request.POST.get("job_form_modal", False)
-                run_button_label = request.POST.get("run_button_label", "Run Job Now")
-                job_result_key = request.POST.get("job_result_key", None)
-                refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-                advanced_field_names = request.POST.getlist("advanced_fields")
-            else:
-                htmx_modal = request.GET.get("job_form_modal", False)
-                run_button_label = request.GET.get("run_button_label", "Run Job Now")
-                job_result_key = request.GET.get("job_result_key", None)
-                refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
-                advanced_field_names = request.GET.getlist("advanced_fields")
+        if htmx_request and job_modal_button:
+            is_htmx_modal = True
+            run_button_label = request.POST.get("run_button_label", "Run Job Now")
+            job_result_key = request.POST.get("job_result_key", None)
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+            advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
-
-        template_name = self._get_template_name(job_class, htmx_modal)
-        if htmx_request and htmx_modal:
+            template_name = self._get_template_name(job_class, is_htmx_modal)
             response = render(
                 request,
                 template_name,
@@ -2626,7 +2622,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     "job_result_key": job_result_key,
                     "hx_vals": json.dumps(
                         {
-                            "job_form_modal": True,
+                            "job_modal_button": job_modal_button,
                             "job_result_key": job_result_key,
                             "run_button_label": run_button_label,
                             "refresh_on_close_if_done": refresh_on_close_if_done,
@@ -2637,6 +2633,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 },
             )
         else:
+            template_name = self._get_template_name(job_class, is_htmx_modal)
             response = render(
                 request,
                 template_name,
@@ -2651,8 +2648,6 @@ class JobUIViewSet(NautobotUIViewSet):
         return response
 
     def _job_run_get(self, request, class_path=None, pk=None):
-        htmx_request = self.request.headers.get("HX-Request", False)
-        htmx_modal = request.GET.get("job_form_modal", False)
         job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         try:
@@ -2693,10 +2688,7 @@ class JobUIViewSet(NautobotUIViewSet):
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
-        except RuntimeError as err:
-            if htmx_request and htmx_modal:
-                return render(request, "extras/htmx/job_missing_modal.html", {"class_path": class_path})
-            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
+        except RuntimeError:
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
@@ -2710,6 +2702,15 @@ class JobUIViewSet(NautobotUIViewSet):
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+
+        # Render the job form inside the HTMX modal on first load
+        if request.POST.get("initial_job_modal_form_submit"):
+            initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
+            job_form = job_class.as_form(initial=initial_form_data)
+            job_execution_form = job_class.as_execution_form(initial=initial_form_data)
+            schedule_form = None
+            return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
+
         if job_execution_form is not None:
             job_execution_form_is_valid = job_execution_form.is_valid()
             job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
@@ -2827,7 +2828,6 @@ class JobUIViewSet(NautobotUIViewSet):
 
         if return_url:
             return redirect(return_url)
-
         return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
     @action(
@@ -3694,17 +3694,18 @@ class JobResultUIViewSet(
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
-    @action(
-        detail=True,
-        custom_view_base_action="view",
-    )
+    @action(detail=True, custom_view_base_action="view", methods=["POST"])
     def modal(self, request, *args, **kwargs):
         instance = self.get_object()
+        job_modal_button_class_path = request.POST.get("job_modal_button")
+        job_modal_button = registry["job_modal_buttons"].get(job_modal_button_class_path)
+        if job_modal_button is None:
+            return HttpResponseBadRequest("Invalid job_modal_button")
         title = "Run Job"
         if instance.job_model is not None:
             title = instance.job_model.name
-        job_result_key = request.GET.get("job_result_key", None)
-        refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
+        job_result_key = request.POST.get("job_result_key", None)
+        refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
         detail_value = f"Job finished with status: {instance.get_status_display()}"
         if instance.result and isinstance(instance.result, dict) and job_result_key:
             detail_value = instance.result.get(job_result_key, instance.result)
@@ -3717,10 +3718,13 @@ class JobResultUIViewSet(
                 "title": title,
                 "detail_value": detail_value,
                 "job_result_key": job_result_key,
+                "job_modal_button": job_modal_button_class_path,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
         )
+        if not job_is_pending:
+            context["redirect_button"] = job_modal_button.get_redirect_button(instance, request)
 
         return Response(
             {

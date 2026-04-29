@@ -19,6 +19,7 @@ from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import (
@@ -29,6 +30,7 @@ from nautobot.core.testing import (
     ViewTestCases,
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
+from nautobot.core.ui.object_detail import _JobModalButton
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -4181,6 +4183,9 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        cls.job_modal_button_key = str(
+            uuid.uuid5(NAMESPACE_JOBMODALBUTTON, f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
+        )
         JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
@@ -4535,7 +4540,14 @@ class JobResultTestCase(
         """Pending job: `refresh_on_close_if_done` must be preserved in the polling `hx-vals`."""
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.get(f"{url}?refresh_on_close_if_done=true", HTTP_HX_REQUEST="true")
+        response = self.client.post(
+            url,
+            data={
+                "job_modal_button": self.job_modal_button_key,
+                "refresh_on_close_if_done": "true",
+            },
+            HTTP_HX_REQUEST="true",
+        )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertIn('hx-trigger="every 2s"', content)
@@ -4547,7 +4559,14 @@ class JobResultTestCase(
         """Completed job: `refresh_on_close_if_done=true` must render the DOM marker used to trigger reload."""
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
-        response = self.client.get(f"{url}?refresh_on_close_if_done=true", HTTP_HX_REQUEST="true")
+        response = self.client.post(
+            url,
+            data={
+                "job_modal_button": self.job_modal_button_key,
+                "refresh_on_close_if_done": "true",
+            },
+            HTTP_HX_REQUEST="true",
+        )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertIn('data-nb-refresh-on-close="true"', content)
@@ -4558,14 +4577,22 @@ class JobResultTestCase(
         """Without the query parameter, neither the polling `hx-vals` nor the DOM marker should opt in to reload."""
         self.add_permissions("extras.view_jobresult")
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.get(pending_url, HTTP_HX_REQUEST="true")
+        response = self.client.post(
+            pending_url,
+            data={"job_modal_button": self.job_modal_button_key},
+            HTTP_HX_REQUEST="true",
+        )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertIn('"refresh_on_close_if_done": "false"', content)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
-        response = self.client.get(completed_url, HTTP_HX_REQUEST="true")
+        response = self.client.post(
+            completed_url,
+            data={"job_modal_button": self.job_modal_button_key},
+            HTTP_HX_REQUEST="true",
+        )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
@@ -4830,8 +4857,18 @@ class JobTestCase(
         so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
         """
         self.add_permissions("extras.run_job")
+        job_modal_button_key = str(
+            uuid.uuid5(NAMESPACE_JOBMODALBUTTON, f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
+        )
         for run_url in self.run_urls:
-            response = self.client.get(run_url, {"job_form_modal": True}, HTTP_HX_REQUEST="true")
+            response = self.client.post(
+                run_url,
+                data={
+                    "initial_job_modal_form_submit": True,
+                    "job_modal_button": job_modal_button_key,
+                },
+                HTTP_HX_REQUEST="true",
+            )
             self.assertBodyContains(response, "TestPassJob")
             self.assertBodyContains(response, "Show Advanced Settings")
             self.assertBodyContains(response, "Run Job Now")
@@ -4905,11 +4942,10 @@ class JobTestCase(
                 run_url, self.data_run_immediately, headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"}
             )
 
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
             result = JobResult.objects.latest()
-            self.assertRedirects(
-                response,
-                reverse("extras:jobresult_modal", kwargs={"pk": result.pk}) + "?refresh_on_close_if_done=false",
-            )
+            self.assertIn(str(result.pk), content)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):

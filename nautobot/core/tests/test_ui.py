@@ -2,6 +2,7 @@
 
 import json
 from unittest.mock import patch
+import uuid
 
 from django.db.models import Sum
 from django.template import Context
@@ -11,6 +12,7 @@ from django.urls import reverse
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
@@ -43,6 +45,7 @@ from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.extras.registry import registry
 from nautobot.ipam.models import Prefix
 from nautobot.ipam.views import PrefixUIViewSet
 
@@ -866,9 +869,14 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_location"], device.location.name)
 
         # Check static modal configuration
-        self.assertTrue(hx_vals["job_form_modal"])
+        self.assertTrue(hx_vals["initial_job_modal_form_submit"])
         self.assertEqual(hx_vals["run_button_label"], "Execute!")
         self.assertEqual(hx_vals["job_result_key"], "output_data")
+
+        # Verify job_modal_button in hx-vals is the class path of the _JobModalButton
+        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        self.assertEqual(hx_vals["job_modal_button"], class_path_as_uuid)
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -877,7 +885,7 @@ class _JobModalButtonTest(TestCase):
 
         # Verify URL generation
         expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
-        self.assertEqual(context["attributes"]["hx-get"], expected_url)
+        self.assertEqual(context["attributes"]["hx-post"], expected_url)
         # Since the class_path is not a real job, ensure disabled in attributes.
         self.assertIn("disabled", context["attributes"])
 
@@ -920,6 +928,23 @@ class _JobModalButtonTest(TestCase):
         ctx_fail_again = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail_again["attributes"])
         self.assertNotIn("disabled", btn_success.attributes)
+
+    def test_registry_contains_class_path(self):
+        """Verify that _JobModalButton and its subclasses are registered in the global registry."""
+
+        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        self.assertIn(class_path_as_uuid, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][class_path_as_uuid], _JobModalButton)
+
+        # Verify __init_subclass__ auto-registers subclasses
+        class _TestButton(_JobModalButton):
+            class_path = None
+
+        subclass_path = f"{_TestButton.__module__}.{_TestButton.__name__}"
+        subclass_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, subclass_path))
+        self.assertIn(subclass_path_as_uuid, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][subclass_path_as_uuid], _TestButton)
 
 
 class PostButtonTest(TestCase):
