@@ -741,4 +741,4 @@ def enqueue_custom_field_job(job_class, **job_kwargs):
     except Job.DoesNotExist:
         logger.error("Cannot enqueue %s: no Job model found in database.", job_class.__name__)
         return
-    transaction.on_commit(lambda: JobResult.enqueue_job(job_model, user, **job_kwargs))
+    transaction.on_commit(lambda: JobResult.enqueue_job(job_model, user, job_kwargs=job_kwargs))

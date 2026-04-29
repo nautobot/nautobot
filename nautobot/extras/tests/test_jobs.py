@@ -1322,12 +1322,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def run_command(self, *args):
         out = StringIO()
         err = StringIO()
-        call_command(
-            "runjob",
-            *args,
-            stdout=out,
-            stderr=err,
-        )
+        call_command("runjob", *args, stdout=out, stderr=err, data={})
 
         return (out.getvalue(), err.getvalue())
 
@@ -1943,26 +1938,18 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
 
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
     def test_console_log_executor_is_used_without_data_options(
         self,
-        mock_report_job_status,
-        mock_execute_job,
-        mock_executor_console_log,
     ):
-        """Command should set job_kwargs to {} when data it's not defined"""
+        """Command should raise an error when data it's not defined"""
 
-        call_command(
-            "runjob_with_job_result",
-            str(self.job_result.pk),
-        )
+        with self.assertRaises(CommandError) as err:
+            call_command(
+                "runjob_with_job_result",
+                str(self.job_result.pk),
+            )
 
-        mock_executor_console_log.assert_called_once_with(job_result_pk=str(self.job_result.pk), job_kwargs={})
-        mock_executor_console_log.return_value.execute.assert_called_once()
-        mock_report_job_status.assert_called_once()
-        mock_execute_job.assert_not_called()
+        self.assertEqual(str(err.exception), "Inavlid job data: None. Job data has to be defined.")
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")

@@ -982,7 +982,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
+                job_kwargs=job_class.serialize_data(cleaned_data),
             )
 
             scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
@@ -1024,7 +1024,7 @@ class JobViewSetBase(
             job_model,
             request.user,
             job_queue=job_queue,
-            **job_class.serialize_data(cleaned_data),
+            job_kwargs=job_class.serialize_data(cleaned_data),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
         return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
@@ -1243,7 +1243,7 @@ class ScheduledJobViewSet(
             job_model,
             request.user,
             celery_kwargs=scheduled_job.celery_kwargs or {},
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 

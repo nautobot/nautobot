@@ -35,7 +35,13 @@ class Command(BaseCommand):
             action="store_true",
             help="Run the job on the local system and not on a worker.",
         )
-        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
+        parser.add_argument(
+            "-d",
+            "--data",
+            type=str,
+            help="JSON string that populates the `data` variable of the job. If your job doesn't have any variables define put '{}'",
+            required=True,
+        )
 
     def handle(self, *args, **options):
         """Look up the job and user, then either run locally or enqueue on a worker.
@@ -95,7 +101,7 @@ class Command(BaseCommand):
                 stdout=self.stdout,
             )
         else:
-            job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], **data)
+            job_result = JobResult.enqueue_job(job_model, user, profile=options["profile"], job_kwargs=data)
 
         # Wait on the job to finish
         while job_result.status not in JobResultStatusChoices.READY_STATES:

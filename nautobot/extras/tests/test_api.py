@@ -2687,7 +2687,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
         # No new scheduled job should be created
@@ -2727,7 +2727,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 

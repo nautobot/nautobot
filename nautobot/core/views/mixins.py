@@ -1188,7 +1188,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkDeleteObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1199,7 +1199,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkDeleteObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1223,7 +1223,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkEditObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1234,7 +1234,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkEditObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
