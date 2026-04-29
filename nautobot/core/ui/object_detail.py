@@ -2788,6 +2788,6 @@ class _JobModalButton(Button):
 
 
 # Register the base class itself (__init_subclass__ only fires for subclasses)
-class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
-key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
-registry["job_modal_buttons"][key] = _JobModalButton
+_base_class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+_base_registry_key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, _base_class_path))
+registry["job_modal_buttons"][_base_registry_key] = _JobModalButton
