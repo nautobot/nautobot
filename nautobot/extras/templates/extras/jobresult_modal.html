@@ -51,8 +51,12 @@
 </div>
 
 <div class="modal-footer">
-    {% if not job_is_pending %}
-        {{ redirect_button }}
+    {% if not job_is_pending and redirect_button %}
+        <a href="{{ redirect_button.url }}">
+            <button type="button", class="btn btn-{{ redirect_button.color }} {{ redirect_button.extra_classes }}">
+                {{ redirect_button.label }}
+            </button>
+        </a>
     {% endif %}
     <a href="{{ result.get_absolute_url }}" class="btn btn-primary"><!--
         -->View job results
