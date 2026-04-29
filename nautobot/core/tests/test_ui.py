@@ -866,9 +866,12 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_location"], device.location.name)
 
         # Check static modal configuration
-        self.assertTrue(hx_vals["job_form_modal"])
+        self.assertTrue(hx_vals["initial_job_modal_form_submit"])
         self.assertEqual(hx_vals["run_button_label"], "Execute!")
         self.assertEqual(hx_vals["job_result_key"], "output_data")
+
+        # Verify job_modal_button in hx-vals is the class path of the _JobModalButton
+        self.assertEqual(hx_vals["job_modal_button"], f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -877,7 +880,7 @@ class _JobModalButtonTest(TestCase):
 
         # Verify URL generation
         expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
-        self.assertEqual(context["attributes"]["hx-get"], expected_url)
+        self.assertEqual(context["attributes"]["hx-post"], expected_url)
         # Since the class_path is not a real job, ensure disabled in attributes.
         self.assertIn("disabled", context["attributes"])
 
@@ -920,6 +923,22 @@ class _JobModalButtonTest(TestCase):
         ctx_fail_again = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail_again["attributes"])
         self.assertNotIn("disabled", btn_success.attributes)
+
+    def test_registry_contains_class_path(self):
+        """Verify that _JobModalButton and its subclasses are registered in the global registry."""
+        from nautobot.extras.registry import registry
+
+        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+        self.assertIn(class_path, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][class_path], _JobModalButton)
+
+        # Verify __init_subclass__ auto-registers subclasses
+        class _TestButton(_JobModalButton):
+            class_path = None
+
+        subclass_path = f"{_TestButton.__module__}.{_TestButton.__name__}"
+        self.assertIn(subclass_path, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][subclass_path], _TestButton)
 
 
 class PostButtonTest(TestCase):
