@@ -91,7 +91,6 @@ def load_revoked_on_start(sender=None, **kwargs):
     from nautobot.extras.jobs import JobResult
 
     queue_names = [q.name for q in sender.task_consumer.queues]
-    print(f"Consuming queues: {queue_names}")
     all_ids = []
     for qname in queue_names:
         all_ids.extend(_get_celery_queue_items(qname))
