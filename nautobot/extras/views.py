@@ -2688,7 +2688,7 @@ class JobUIViewSet(NautobotUIViewSet):
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
-        except RuntimeError as err:
+        except RuntimeError:
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
@@ -3718,6 +3718,7 @@ class JobResultUIViewSet(
                 "title": title,
                 "detail_value": detail_value,
                 "job_result_key": job_result_key,
+                "job_modal_button": job_modal_button_class_path,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
