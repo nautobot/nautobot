@@ -1388,6 +1388,81 @@ class ViewTestCases:
 
         bulk_create_count = 3
         bulk_create_data = {}
+        # Field on the parent form where the invalid-create scenario is expected to surface.
+        # Override per test case if the model's create form does not have a `label_pattern` field.
+        expected_invalid_create_form_field = "label_pattern"
+        # Field on the parent form where the invalid-component scenario is expected to surface,
+        # and a substring expected within at least one error on that field.
+        expected_invalid_component_form_field = "label_pattern"
+        expected_invalid_component_form_error = "Ensure this value has at most 255 characters"
+
+        def get_invalid_bulk_create_data(self):
+            data = self.bulk_create_data.copy()
+            data["label_pattern"] = "Mismatch [1-2]"
+            return data
+
+        def get_invalid_component_bulk_create_data(self):
+            data = self.bulk_create_data.copy()
+            # Keep name_pattern unchanged so its expansion count still matches any related
+            # fields the parent form cross-validates (e.g. rear_port_set, position_pattern).
+            # Reuse the same range in label_pattern with a too-long prefix so each generated
+            # label fails the child form's max-length validation on the `label` field.
+            name_pattern = data.get("name_pattern", "")
+            range_match = re.search(r"\[[^\]]+\]", name_pattern)
+            too_long = "X" * 300
+            if range_match:
+                data["label_pattern"] = too_long + range_match.group(0)
+            else:
+                data["label_pattern"] = too_long
+            return data
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_get_form(self):
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            url = self._get_url("add")
+            initial_params = {}
+            for field_name in ("device", "module", "virtual_machine", "device_type", "module_type"):
+                value = self.bulk_create_data.get(field_name)
+                if value not in (None, ""):
+                    initial_params[field_name] = value
+
+            if initial_params:
+                url = f"{url}?{urlencode(initial_params)}"
+
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_with_invalid_create_form(self):
+            initial_count = self._get_queryset().count()
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.post(self._get_url("add"), utils.post_data(self.get_invalid_bulk_create_data()))
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(self._get_queryset().count(), initial_count)
+            self.assertIn(self.expected_invalid_create_form_field, response.context["form"].errors)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_with_invalid_component_form(self):
+            initial_count = self._get_queryset().count()
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.post(
+                self._get_url("add"), utils.post_data(self.get_invalid_component_bulk_create_data())
+            )
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(self._get_queryset().count(), initial_count)
+            form_errors = response.context["form"].errors
+            field = self.expected_invalid_component_form_field
+            self.assertIn(field, form_errors)
+            self.assertTrue(
+                any(self.expected_invalid_component_form_error in error for error in form_errors[field]),
+                f"Expected substring {self.expected_invalid_component_form_error!r} not found in "
+                f"{field} errors: {form_errors[field]!r}",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_create_multiple_objects_without_permission(self):
@@ -1876,6 +1951,71 @@ class ViewTestCases:
             # Try POST without permission
             with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 403)
+
+        def get_invalid_bulk_rename_form_data(self, pk_list):
+            return {
+                "pk": pk_list,
+                "_preview": True,
+                "find": "(",
+                "replace": self.rename_data["replace"],
+                "use_regex": self.rename_data["use_regex"],
+            }
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_no_valid_selection(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            verbose_name_plural = self.model._meta.verbose_name_plural
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            for values in ([], [str(uuid.uuid4())]):
+                response = self.client.post(
+                    self._get_url("bulk_rename"),
+                    {"pk": values, "_apply": True, **self.rename_data},
+                    follow=True,
+                    headers={"HX-Request": "true"},
+                )
+                self.assertBodyContains(response, f"No valid {verbose_name_plural} were selected.")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_invalid_form(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            response = self.client.post(self._get_url("bulk_rename"), self.get_invalid_bulk_rename_form_data(pk_list))
+            self.assertHttpStatus(response, 200)
+            self.assertIn("find", response.context["form"].errors)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_invalid_regex_group_reference(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            objects = list(self._get_queryset().all()[:3])
+            pk_list = [obj.pk for obj in objects]
+            data = {
+                "pk": pk_list,
+                "_preview": True,
+                "find": self.rename_data["find"],
+                "replace": "\\2",
+                "use_regex": True,
+            }
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            preview_objects = list(response.context["selected_objects"])
+            for preview_object in preview_objects:
+                self.assertEqual(preview_object.new_name, preview_object.name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):

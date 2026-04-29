@@ -367,3 +367,21 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    # VMInterfaceCreateForm has no `label_pattern` field, so the base label-pattern
+    # scenarios do not apply. The invalid-create case is surfaced via mtu range
+    # validation; the invalid-component case is surfaced via the unique-together
+    # check by reusing an existing VMInterface name on the parent VM.
+    expected_invalid_create_form_field = "mtu"
+    expected_invalid_component_form_field = "__all__"
+    expected_invalid_component_form_error = "VM interface with this Virtual machine and Name already exists"
+
+    def get_invalid_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["mtu"] = 100000
+        return data
+
+    def get_invalid_component_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["name_pattern"] = "BRIDGE"
+        return data
