@@ -29,7 +29,7 @@ from nautobot.core.celery import (
     NautobotKombuJSONEncoder,
     setup_nautobot_job_logging,
 )
-from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH, USERNAME_MAX_LENGTH
 from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -1561,7 +1561,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         null=True,
         help_text="User that requested the schedule",
     )
-    user_name = models.CharField(max_length=150, editable=False, db_index=True)
+    user_name = models.CharField(max_length=USERNAME_MAX_LENGTH, editable=False, db_index=True)
 
     # todoindex:
     decision_date = models.DateTimeField(

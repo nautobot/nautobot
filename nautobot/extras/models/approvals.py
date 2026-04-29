@@ -8,7 +8,7 @@ from django.core.exceptions import FieldError, ValidationError
 from django.db import models
 from django.utils import timezone
 
-from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH, USERNAME_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
@@ -208,7 +208,7 @@ class ApprovalWorkflow(OrganizationalModel):
         blank=True,
         null=True,
     )
-    user_name = models.CharField(max_length=150, editable=False, db_index=True)
+    user_name = models.CharField(max_length=USERNAME_MAX_LENGTH, editable=False, db_index=True)
     documentation_static_path = "docs/user-guide/platform-functionality/approval-workflow.html"
 
     is_data_compliance_model = False

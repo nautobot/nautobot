@@ -107,6 +107,9 @@ CONFIG_SETTING_SEPARATOR = ","
 
 CHARFIELD_MAX_LENGTH = 255
 
+# This mirrors the max_length from django.contrib.auth.models.User
+USERNAME_MAX_LENGTH = 150
+
 # Default values for pagination settings.
 MAX_PAGE_SIZE_DEFAULT = 1000
 PAGINATE_COUNT_DEFAULT = 50

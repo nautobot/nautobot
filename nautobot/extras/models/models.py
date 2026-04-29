@@ -20,7 +20,7 @@ from jsonschema.exceptions import SchemaError, ValidationError as JSONSchemaVali
 from jsonschema.validators import Draft7Validator
 from rest_framework.utils.encoders import JSONEncoder
 
-from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH, USERNAME_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, LaxURLField
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
@@ -851,7 +851,7 @@ class Note(ChangeLoggedModel, DataComplianceModelMixin, BaseModel):
         blank=True,
         null=True,
     )
-    user_name = models.CharField(max_length=150, editable=False)
+    user_name = models.CharField(max_length=USERNAME_MAX_LENGTH, editable=False)
 
     note = models.TextField()
     objects = BaseManager.from_queryset(NotesQuerySet)()

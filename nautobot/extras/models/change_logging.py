@@ -6,6 +6,7 @@ from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
+from nautobot.core.constants import USERNAME_MAX_LENGTH
 from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import shallow_compare_dict
@@ -80,7 +81,7 @@ class ObjectChange(BaseModel):
         blank=True,
         null=True,
     )
-    user_name = models.CharField(max_length=150, editable=False, db_index=True)
+    user_name = models.CharField(max_length=USERNAME_MAX_LENGTH, editable=False, db_index=True)
     request_id = models.UUIDField(editable=False, db_index=True)
     action = models.CharField(max_length=50, choices=ObjectChangeActionChoices)
     changed_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
