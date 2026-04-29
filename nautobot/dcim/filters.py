@@ -1454,14 +1454,28 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
-class CableTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
+class CableTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "manufacturer__name": "icontains",
+            "part_number": "icontains",
+        }
+    )
     is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+    )
 
     class Meta:
         model = CableType
         fields = [
             "id",
             "name",
+            "part_number",
+            "has_embedded_transceivers",
             "a_connectors",
             "b_connectors",
             "total_lanes",

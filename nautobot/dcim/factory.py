@@ -149,11 +149,16 @@ def get_random_software_version_for_device_type(device_type):
 class CableTypeFactory(PrimaryModelFactory):
     class Meta:
         model = CableType
-        exclude = ("has_description",)
+        exclude = ("has_description", "has_manufacturer", "has_part_number")
 
     name = UniqueFaker("word")
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    has_manufacturer = NautobotBoolIterator()
+    manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
+    has_part_number = NautobotBoolIterator()
+    part_number = factory.Maybe("has_part_number", UniqueFaker("bothify", text="???-####"), "")
+    has_embedded_transceivers = NautobotBoolIterator()
 
     a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
     # Model requires a_connectors <= b_connectors

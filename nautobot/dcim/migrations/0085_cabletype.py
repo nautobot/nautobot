@@ -5,6 +5,7 @@ import uuid
 import django.core.serializers.json
 import django.core.validators
 from django.db import migrations, models
+import django.db.models.deletion
 
 import nautobot.core.models.fields
 import nautobot.extras.models.mixins
@@ -34,6 +35,18 @@ class Migration(migrations.Migration):
                 ),
                 ("name", models.CharField(max_length=255, unique=True)),
                 ("description", models.CharField(blank=True, max_length=255)),
+                (
+                    "manufacturer",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cable_types",
+                        to="dcim.manufacturer",
+                    ),
+                ),
+                ("part_number", models.CharField(blank=True, max_length=255)),
+                ("has_embedded_transceivers", models.BooleanField(default=False)),
                 (
                     "a_connectors",
                     models.PositiveSmallIntegerField(

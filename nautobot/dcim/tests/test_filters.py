@@ -3322,6 +3322,9 @@ class CableTypeTestCase(FilterTestCases.FilterTestCase):
     filterset = CableTypeFilterSet
     generic_filter_tests = [
         ("name",),
+        ("part_number",),
+        ("manufacturer", "manufacturer__id"),
+        ("manufacturer", "manufacturer__name"),
         ("a_connectors",),
         ("b_connectors",),
         ("total_lanes",),
@@ -3351,6 +3354,18 @@ class CableTypeTestCase(FilterTestCases.FilterTestCase):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_shuffle": False}, self.queryset).qs,
                 CableType.objects.filter(is_shuffle=False),
+            )
+
+    def test_has_embedded_transceivers(self):
+        with self.subTest("has_embedded_transceivers: True"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"has_embedded_transceivers": True}, self.queryset).qs,
+                CableType.objects.filter(has_embedded_transceivers=True),
+            )
+        with self.subTest("has_embedded_transceivers: False"):
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset({"has_embedded_transceivers": False}, self.queryset).qs,
+                CableType.objects.filter(has_embedded_transceivers=False),
             )
 
 

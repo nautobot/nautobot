@@ -227,9 +227,9 @@ class Command(BaseCommand):
             has_tenant=False,
         )
         populate_default_cable_types(apps, schema_editor=None)
-        _create_batch(CableTypeFactory, 10)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
+        _create_batch(CableTypeFactory, 10)
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")

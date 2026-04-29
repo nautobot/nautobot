@@ -5979,10 +5979,13 @@ class CableTypeForm(NautobotModelForm):
         fields = [
             "name",
             "description",
+            "manufacturer",
+            "part_number",
             "a_connectors",
             "b_connectors",
             "total_lanes",
             "mapping",
+            "has_embedded_transceivers",
             "is_shuffle",
             "strands_per_lane",
             "polarity_method",
@@ -5996,6 +5999,12 @@ class CableTypeForm(NautobotModelForm):
 class CableTypeFilterForm(NautobotFilterForm):
     model = CableType
     q = forms.CharField(required=False, label="Search")
+    manufacturer = DynamicModelMultipleChoiceField(
+        queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    has_embedded_transceivers = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     is_breakout = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
@@ -6004,6 +6013,10 @@ class CableTypeFilterForm(NautobotFilterForm):
 class CableTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=CableType.objects.all(), widget=forms.MultipleHiddenInput())
     description = forms.CharField(required=False)
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    has_embedded_transceivers = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
     is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     polarity_method = forms.ChoiceField(
         choices=add_blank_choice(CableTypePolarityMethodChoices), required=False, widget=StaticSelect2()
@@ -6011,4 +6024,4 @@ class CableTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     strands_per_lane = forms.IntegerField(required=False, min_value=1)
 
     class Meta:
-        nullable_fields = ["description"]
+        nullable_fields = ["description", "manufacturer"]

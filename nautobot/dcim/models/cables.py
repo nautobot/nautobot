@@ -76,6 +76,20 @@ class CableType(PrimaryModel):
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    manufacturer = models.ForeignKey(
+        to="dcim.Manufacturer",
+        on_delete=models.PROTECT,
+        related_name="cable_types",
+        blank=True,
+        null=True,
+    )
+    part_number = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
+    )
+    has_embedded_transceivers = models.BooleanField(
+        default=False,
+        help_text="Indicates that this cable type has transceivers (e.g. SFP) built in.",
+    )
     a_connectors = models.PositiveSmallIntegerField(
         default=1,
         help_text="Number of physical connectors on the A side.",

@@ -25,6 +25,8 @@ __all__ = ("CableTable", "CableTypeTable")
 class CableTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
+    manufacturer = tables.Column(linkify=True)
+    has_embedded_transceivers = BooleanColumn()
     is_shuffle = BooleanColumn()
     total_strands = tables.Column(orderable=False)
     is_breakout = BooleanColumn(orderable=False)
@@ -37,9 +39,12 @@ class CableTypeTable(BaseTable):
             "pk",
             "name",
             "description",
+            "manufacturer",
+            "part_number",
             "a_connectors",
             "b_connectors",
             "total_lanes",
+            "has_embedded_transceivers",
             "is_shuffle",
             "strands_per_lane",
             "polarity_method",
@@ -51,6 +56,8 @@ class CableTypeTable(BaseTable):
         default_columns = (
             "pk",
             "name",
+            "manufacturer",
+            "part_number",
             "a_connectors",
             "b_connectors",
             "total_lanes",

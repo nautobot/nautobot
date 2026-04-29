@@ -4086,32 +4086,41 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
 class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = CableType
 
-    form_data = {
-        "name": "New Breakout Type",
-        "description": "A brand new type",
-        "a_connectors": 2,
-        "b_connectors": 3,
-        "total_lanes": 6,
-        "mapping": json.dumps(
-            [
-                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},
-                {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2, "label": "A2"},
-                {"a_connector": 1, "a_position": 3, "b_connector": 2, "b_position": 1, "label": "A3"},
-                {"a_connector": 2, "a_position": 1, "b_connector": 2, "b_position": 2, "label": "B1"},
-                {"a_connector": 2, "a_position": 2, "b_connector": 3, "b_position": 1, "label": "B2"},
-                {"a_connector": 2, "a_position": 3, "b_connector": 3, "b_position": 2, "label": "B3"},
-            ]
-        ),
-        "is_shuffle": False,
-        "strands_per_lane": 1,
-        "polarity_method": "",
-    }
-    bulk_edit_data = {
-        "description": "Something generic",
-        "is_shuffle": True,
-        "strands_per_lane": 2,
-        "polarity_method": "other",
-    }
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        manufacturer = Manufacturer.objects.first()
+        cls.form_data = {
+            "name": "New Breakout Type",
+            "description": "A brand new type",
+            "manufacturer": manufacturer.pk,
+            "part_number": "ABC-123",
+            "a_connectors": 2,
+            "b_connectors": 3,
+            "total_lanes": 6,
+            "mapping": json.dumps(
+                [
+                    {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},
+                    {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2, "label": "A2"},
+                    {"a_connector": 1, "a_position": 3, "b_connector": 2, "b_position": 1, "label": "A3"},
+                    {"a_connector": 2, "a_position": 1, "b_connector": 2, "b_position": 2, "label": "B1"},
+                    {"a_connector": 2, "a_position": 2, "b_connector": 3, "b_position": 1, "label": "B2"},
+                    {"a_connector": 2, "a_position": 3, "b_connector": 3, "b_position": 2, "label": "B3"},
+                ]
+            ),
+            "has_embedded_transceivers": True,
+            "is_shuffle": False,
+            "strands_per_lane": 1,
+            "polarity_method": "",
+        }
+        cls.bulk_edit_data = {
+            "description": "Something generic",
+            "manufacturer": manufacturer.pk,
+            "has_embedded_transceivers": True,
+            "is_shuffle": True,
+            "strands_per_lane": 2,
+            "polarity_method": "other",
+        }
 
     def test_mapping_editor_requires_view_permission(self):
         """Unauthorized users should be denied the mapping_editor action."""

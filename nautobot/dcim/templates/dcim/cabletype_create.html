@@ -7,9 +7,12 @@
         <div class="card-body">
             {% render_field form.name %}
             {% render_field form.description %}
+            {% render_field form.manufacturer %}
+            {% render_field form.part_number %}
             {% render_field form.a_connectors %}
             {% render_field form.b_connectors %}
             {% render_field form.total_lanes %}
+            {% render_field form.has_embedded_transceivers %}
             {% render_field form.is_shuffle %}
             {% render_field form.strands_per_lane %}
             {% render_field form.polarity_method %}
