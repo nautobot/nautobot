@@ -903,6 +903,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # synchronous tasks are run before the JobResult is saved, so any fields required by
             # the job must be added before calling `apply()`
             job_result.date_started = timezone.now()
+            job_result.status = JobResultStatusChoices.STATUS_STARTED
             job_result.save()
 
             # setup synchronous task logging
