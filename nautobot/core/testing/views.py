@@ -1521,7 +1521,9 @@ class ViewTestCases:
 
                 # Verify that the provided self.bulk_edit_data was passed through correctly to the job.
                 # The below is a bit gross because of multiple layers of data encoding and decoding involved. Sorry!
-                job_form = BulkEditObjects.as_form(BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs))
+                job_form = BulkEditObjects.as_form(
+                    BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs["job_kwargs"])
+                )
                 job_form.is_valid()
                 job_kwargs = job_form.cleaned_data
 
@@ -1579,7 +1581,9 @@ class ViewTestCases:
                 self.validate_redirect_to_job_result(response)
                 mock_enqueue_job.assert_called()
 
-                self.assertEqual(mock_enqueue_job.call_args.kwargs["form_data"].get("_nullify"), data["_nullify"])
+                self.assertEqual(
+                    mock_enqueue_job.call_args.kwargs["job_kwargs"]["form_data"].get("_nullify"), data["_nullify"]
+                )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
