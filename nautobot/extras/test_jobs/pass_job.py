@@ -21,7 +21,7 @@ class TestPassJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         logger.info("before_start() was called as expected")
 
     def run(self):  # pylint: disable=arguments-differ
@@ -39,7 +39,7 @@ class TestPassJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not empty")
+            raise RuntimeError("Expected kwargs to be not empty")
         logger.info("on_success() was called as expected")
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -55,7 +55,7 @@ class TestPassJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         if einfo is not None:
             raise RuntimeError(f"Expected einfo to be None, but it was {einfo!r}")
         logger.info("after_return() was called as expected")

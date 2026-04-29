@@ -1503,6 +1503,6 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         elif get_job(job_model.class_path) is None:
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
         else:
-            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk, job_kwargs={})
+            JobResult.enqueue_job(job_model, object_change.user, job_kwargs={"object_change": object_change.pk})
 
     return jobs_reloaded, jobhook_queryset

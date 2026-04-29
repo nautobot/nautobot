@@ -76,12 +76,14 @@ def run_job_for_testing(job, username="test-user", profile=False, console_log=Fa
     # Run the job synchronously in the current thread as if it were being executed by a worker
     # TODO: in Nautobot core testing, we set `CELERY_TASK_ALWAYS_EAGER = True`, so we *could* use enqueue_job() instead,
     #       but switching now would be a potentially breaking change for apps...
+    celery_kwargs = kwargs.pop("celery_kwargs", None)
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,
         profile=profile,
         console_log=console_log,
         job_kwargs=kwargs,
+        celery_kwargs=celery_kwargs,
     )
     return job_result
 
