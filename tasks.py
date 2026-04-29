@@ -1101,6 +1101,7 @@ def check_schema(context, api_version=None):
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "no_input": "Suppress interactive prompts (e.g. confirmation when `--no-reusedb` would destroy an existing test database).",
         "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
         "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
         "pattern": "Only run tests which match the given substring. Can be used multiple times.",
@@ -1123,6 +1124,7 @@ def tests(
     failfast=False,
     keepdb=True,
     label="nautobot",
+    no_input=False,
     parallel=True,
     parallel_workers=None,
     pattern=None,
@@ -1164,6 +1166,8 @@ def tests(
         command += " --keepdb"
     if not reusedb:
         command += " --no-reusedb"
+    if no_input:
+        command += " --no-input"
     if failfast:
         command += " --failfast"
     if buffer:
