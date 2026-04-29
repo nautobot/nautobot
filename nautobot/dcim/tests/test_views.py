@@ -2458,6 +2458,48 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertInHTML("1/3", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_module_tree(self):
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        module = Module.objects.filter(parent_module_bay__isnull=True).first()
+
+        bay = ModuleBay.objects.create(parent_device=device, name="Tree Bay 1")
+        module.location = None
+        module.parent_module_bay = bay
+        module.validated_save()
+
+        url = reverse("dcim:device_moduletree", kwargs={"pk": device.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Tree Bay 1", response_body)
+        self.assertIn(str(module.module_type), response_body)
+
+    def test_device_module_tree_required_permissions(self):
+        """The module_tree action requires view permission on Device, ModuleBay, and Module.
+
+        This also exercises the fix for `custom_view_additional_permissions` being applied via
+        `list.extend` — passing more than one entry to `list.append` previously raised TypeError.
+        """
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        ModuleBay.objects.create(parent_device=device, name="Permission Test Bay")
+        url = reverse("dcim:device_moduletree", kwargs={"pk": device.pk})
+
+        # No permissions at all -> denied.
+        self.assertHttpStatus(self.client.get(url), 403)
+
+        # Only the device view permission -> still denied because additional perms are required.
+        self.add_permissions("dcim.view_device")
+        self.assertHttpStatus(self.client.get(url), 403)
+
+        # Adding only one of the two additional perms is still insufficient.
+        self.add_permissions("dcim.view_modulebay")
+        self.assertHttpStatus(self.client.get(url), 403)
+
+        # All three required perms present -> view renders successfully.
+        self.add_permissions("dcim.view_module")
+        self.assertHttpStatus(self.client.get(url), 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
 
