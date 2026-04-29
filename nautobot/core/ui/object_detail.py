@@ -26,6 +26,7 @@ from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags.helpers import (
     badge,
@@ -2664,7 +2665,9 @@ class _JobModalButton(Button):
     def __init_subclass__(cls, **kwargs):
         """Automatically register _JobModalButton subclasses in the global registry at class definition time."""
         super().__init_subclass__(**kwargs)
-        registry["job_modal_buttons"][f"{cls.__module__}.{cls.__name__}"] = cls
+        class_path = f"{cls.__module__}.{cls.__name__}"
+        key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        registry["job_modal_buttons"][key] = cls
 
     def __init__(self, **kwargs):
         """
@@ -2742,9 +2745,11 @@ class _JobModalButton(Button):
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
         hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
-        # TODO: This will probably change to a database PK if this gets integrated into JobButton
-        hx_vals["job_modal_button"] = f"{self.__module__}.{self.__class__.__name__}"
         hx_vals["initial_job_modal_form_submit"] = True
+        # TODO: This will probably change to a database PK if this gets integrated into JobButton
+        class_path = f"{self.__module__}.{self.__class__.__name__}"
+        key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        hx_vals["job_modal_button"] = key
 
         raw_attrs = base_context.get("attributes")
         attributes = {} if raw_attrs is None else raw_attrs.copy()
@@ -2783,4 +2788,6 @@ class _JobModalButton(Button):
 
 
 # Register the base class itself (__init_subclass__ only fires for subclasses)
-registry["job_modal_buttons"][f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"] = _JobModalButton
+class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+registry["job_modal_buttons"][key] = _JobModalButton

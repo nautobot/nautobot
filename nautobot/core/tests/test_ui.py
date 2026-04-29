@@ -2,6 +2,9 @@
 
 import json
 from unittest.mock import patch
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
+import uuid
+from nautobot.extras.registry import registry
 
 from django.db.models import Sum
 from django.template import Context
@@ -871,7 +874,9 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_result_key"], "output_data")
 
         # Verify job_modal_button in hx-vals is the class path of the _JobModalButton
-        self.assertEqual(hx_vals["job_modal_button"], f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
+        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
+        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        self.assertEqual(hx_vals["job_modal_button"], class_path_as_uuid)
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -926,19 +931,20 @@ class _JobModalButtonTest(TestCase):
 
     def test_registry_contains_class_path(self):
         """Verify that _JobModalButton and its subclasses are registered in the global registry."""
-        from nautobot.extras.registry import registry
 
         class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
-        self.assertIn(class_path, registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][class_path], _JobModalButton)
+        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        self.assertIn(class_path_as_uuid, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][class_path_as_uuid], _JobModalButton)
 
         # Verify __init_subclass__ auto-registers subclasses
         class _TestButton(_JobModalButton):
             class_path = None
 
         subclass_path = f"{_TestButton.__module__}.{_TestButton.__name__}"
-        self.assertIn(subclass_path, registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][subclass_path], _TestButton)
+        subclass_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, subclass_path))
+        self.assertIn(subclass_path_as_uuid, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][subclass_path_as_uuid], _TestButton)
 
 
 class PostButtonTest(TestCase):
