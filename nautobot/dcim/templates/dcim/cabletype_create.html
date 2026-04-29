@@ -44,7 +44,7 @@
 
             {# Table editor — loaded via HTMX from the server #}
             <div id="mapping-table-editor"
-                 hx-post="{% url 'dcim:cablebreakouttype_mapping_editor' %}"
+                 hx-post="{% url 'dcim:cabletype_mapping_editor' %}"
                  hx-trigger="load, change from:#id_a_connectors, change from:#id_b_connectors, change from:#id_total_lanes"
                  hx-params="a_connectors, b_connectors, total_lanes, mapping"
                  hx-target="#mapping-table-editor"

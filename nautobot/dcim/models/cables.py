@@ -12,7 +12,7 @@ from django.utils.functional import classproperty
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
-from nautobot.dcim.choices import CableBreakoutTypePolarityMethodChoices, CableLengthUnitChoices, CableTypeChoices
+from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, CableTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
@@ -43,15 +43,15 @@ from .devices import Device
 
 __all__ = (
     "Cable",
-    "CableBreakoutType",
     "CablePath",
+    "CableType",
 )
 
 logger = logging.getLogger(__name__)
 
 
 #
-# Cable Breakout Types
+# Cable Types
 #
 
 
@@ -62,10 +62,12 @@ logger = logging.getLogger(__name__)
     "graphql",
     "webhooks",
 )
-class CableBreakoutType(PrimaryModel):
+class CableType(PrimaryModel):
     """
-    A reusable definition of a cable's internal lane structure, describing connectors on each side,
-    the total number of logical lanes, and the A-to-B lane mapping for breakout cables.
+    A reusable definition of a kind of cable.
+
+    Includes (for breakout cables) internal lane structure, connectors on each side,
+    the total number of logical lanes, and the A-to-B lane mapping for the breakout.
 
     By convention and by model enforcement, any breakout is A-to-B, not B-to-A; that is, `a_connectors` may never be
     greater than `b_connectors`, though they may be equal. `total_lanes` must be evenly divisible by both
@@ -104,7 +106,7 @@ class CableBreakoutType(PrimaryModel):
     )
     polarity_method = models.CharField(
         blank=True,
-        choices=CableBreakoutTypePolarityMethodChoices,
+        choices=CableTypePolarityMethodChoices,
         default="",
         help_text="Fiber polarity method. Informational only.",
         max_length=50,

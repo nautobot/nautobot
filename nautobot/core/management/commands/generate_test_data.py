@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 CloudServiceFactory,
             )
             from nautobot.dcim.factory import (
-                CableBreakoutTypeFactory,
+                CableTypeFactory,
                 ConsolePortTemplateFactory,
                 ConsoleServerPortTemplateFactory,
                 ControllerFactory,
@@ -102,7 +102,7 @@ class Command(BaseCommand):
                 SoftwareVersionFactory,
                 VirtualDeviceContextFactory,
             )
-            from nautobot.dcim.utils import populate_default_cable_breakout_types
+            from nautobot.dcim.utils import populate_default_cable_types
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
@@ -226,8 +226,8 @@ class Command(BaseCommand):
             description="without a Tenant and without any Prefixes or IPAddresses",
             has_tenant=False,
         )
-        populate_default_cable_breakout_types(apps, schema_editor=None)
-        _create_batch(CableBreakoutTypeFactory, 10)
+        populate_default_cable_types(apps, schema_editor=None)
+        _create_batch(CableTypeFactory, 10)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)

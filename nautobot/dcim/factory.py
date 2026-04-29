@@ -19,7 +19,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
-    CableBreakoutTypePolarityMethodChoices,
+    CableTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -40,7 +40,7 @@ from nautobot.dcim.constants import (
     RACK_U_HEIGHT_MAXIMUM,
 )
 from nautobot.dcim.models import (
-    CableBreakoutType,
+    CableType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -146,9 +146,9 @@ def get_random_software_version_for_device_type(device_type):
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
-class CableBreakoutTypeFactory(PrimaryModelFactory):
+class CableTypeFactory(PrimaryModelFactory):
     class Meta:
-        model = CableBreakoutType
+        model = CableType
         exclude = ("has_description",)
 
     name = UniqueFaker("word")
@@ -170,7 +170,7 @@ class CableBreakoutTypeFactory(PrimaryModelFactory):
     is_shuffle = NautobotBoolIterator()
     strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
     polarity_method = factory.LazyFunction(
-        lambda: factory.random.randgen.choice(CableBreakoutTypePolarityMethodChoices.values())
+        lambda: factory.random.randgen.choice(CableTypePolarityMethodChoices.values())
     )
     mapping = factory.LazyAttribute(
         lambda o: generate_cable_breakout_mapping(o.a_connectors, o.b_connectors, o.total_lanes)

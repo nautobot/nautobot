@@ -1,4 +1,4 @@
-# Create CableBreakoutType model.
+# Create CableType model.
 
 import uuid
 
@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="CableBreakoutType",
+            name="CableType",
             fields=[
                 (
                     "id",

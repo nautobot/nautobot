@@ -29,8 +29,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES
 from nautobot.dcim.filters import (
-    CableBreakoutTypeFilterSet,
     CableFilterSet,
+    CableTypeFilterSet,
     ConsolePortFilterSet,
     ConsolePortTemplateFilterSet,
     ConsoleServerPortFilterSet,
@@ -80,7 +80,7 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableBreakoutType,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -3317,9 +3317,9 @@ class VirtualChassisTestCase(FilterTestCases.FilterTestCase):
         Device.objects.filter(pk=devices[5].pk).update(virtual_chassis=virtual_chassis[2])
 
 
-class CableBreakoutTypeTestCase(FilterTestCases.FilterTestCase):
-    queryset = CableBreakoutType.objects.all()
-    filterset = CableBreakoutTypeFilterSet
+class CableTypeTestCase(FilterTestCases.FilterTestCase):
+    queryset = CableType.objects.all()
+    filterset = CableTypeFilterSet
     generic_filter_tests = [
         ("name",),
         ("a_connectors",),
@@ -3333,24 +3333,24 @@ class CableBreakoutTypeTestCase(FilterTestCases.FilterTestCase):
         with self.subTest("is_breakout: True"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_breakout": True}, self.queryset).qs,
-                CableBreakoutType.objects.exclude(a_connectors=F("b_connectors")),
+                CableType.objects.exclude(a_connectors=F("b_connectors")),
             )
         with self.subTest("is_breakout: False"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_breakout": False}, self.queryset).qs,
-                CableBreakoutType.objects.filter(a_connectors=F("b_connectors")),
+                CableType.objects.filter(a_connectors=F("b_connectors")),
             )
 
     def test_is_shuffle(self):
         with self.subTest("is_shuffle: True"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_shuffle": True}, self.queryset).qs,
-                CableBreakoutType.objects.filter(is_shuffle=True),
+                CableType.objects.filter(is_shuffle=True),
             )
         with self.subTest("is_shuffle: False"):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset({"is_shuffle": False}, self.queryset).qs,
-                CableBreakoutType.objects.filter(is_shuffle=False),
+                CableType.objects.filter(is_shuffle=False),
             )
 
 

@@ -51,7 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableBreakoutType,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -114,9 +114,9 @@ from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
-    "CableBreakoutTypeFilterSet",
     "CableFilterSet",
     "CableTerminationModelFilterSetMixin",
+    "CableTypeFilterSet",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
     "ConsolePortTemplateFilterSet",
@@ -1454,11 +1454,11 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
-class CableBreakoutTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
+class CableTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
     is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
 
     class Meta:
-        model = CableBreakoutType
+        model = CableType
         fields = [
             "id",
             "name",

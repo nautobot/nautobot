@@ -9,12 +9,12 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.dcim.models import Cable, CableBreakoutType
+from nautobot.dcim.models import Cable, CableType
 from nautobot.extras.tables import StatusTableMixin
 
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
 
-__all__ = ("CableTable",)
+__all__ = ("CableTable", "CableTypeTable")
 
 
 #
@@ -22,17 +22,17 @@ __all__ = ("CableTable",)
 #
 
 
-class CableBreakoutTypeTable(BaseTable):
+class CableTypeTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     is_shuffle = BooleanColumn()
     total_strands = tables.Column(orderable=False)
     is_breakout = BooleanColumn(orderable=False)
-    tags = TagColumn(url_name="dcim:cablebreakouttype_list")
-    actions = ButtonsColumn(CableBreakoutType)
+    tags = TagColumn(url_name="dcim:cabletype_list")
+    actions = ButtonsColumn(CableType)
 
     class Meta(BaseTable.Meta):
-        model = CableBreakoutType
+        model = CableType
         fields = (
             "pk",
             "name",

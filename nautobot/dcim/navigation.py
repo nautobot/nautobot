@@ -411,11 +411,11 @@ menu_items = (
                 weight=500,
                 items=(
                     NavMenuItem(
-                        link="dcim:cablebreakouttype_list",
-                        name="Cable Breakout Types",
+                        link="dcim:cabletype_list",
+                        name="Cable Types",
                         weight=50,
                         permissions=[
-                            "dcim.view_cablebreakouttype",
+                            "dcim.view_cabletype",
                         ],
                         buttons=(),
                     ),
