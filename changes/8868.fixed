@@ -1,0 +1,1 @@
+Fixed `NautobotViewSetMixin.get_required_permission` to correctly apply multiple `custom_view_additional_permissions` entries instead of raising `TypeError`.
