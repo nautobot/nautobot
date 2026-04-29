@@ -11,6 +11,7 @@ import uuid
 
 from constance.test import override_config
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -41,7 +42,7 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.jobs import _prepare_job, BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
@@ -1717,6 +1718,71 @@ class ScheduledJobIntervalTestCase(TestCase):
         schedule_day_of_week = next(iter(scheduled_job.schedule.day_of_week))
         scheduled_job_weekday = self.cron_days[schedule_day_of_week]
         self.assertEqual(scheduled_job_weekday, requested_weekday)
+
+
+class PrepareJobUserNameTestCase(TransactionTestCase):
+    """Tests for the user_name fallback in `_prepare_job`'s event payload (regression for #8413)."""
+
+    def setUp(self):
+        super().setUp()
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        self.job_model.enabled = True
+        self.job_model.save()
+
+    def _build_request(self, job_result):
+        request = mock.Mock()
+        request.id = str(job_result.pk)
+        return request
+
+    @mock.patch("nautobot.extras.jobs.publish_event")
+    def test_prepare_job_uses_scheduled_job_user_name_when_user_deleted(self, mock_publish_event):
+        """When JobResult.user is None but scheduled_job has a preserved user_name, the event payload uses it."""
+        deleted_username = "deleteduser"
+        deleted_user = get_user_model().objects.create(username=deleted_username, is_active=True)
+        scheduled_job = models.ScheduledJob.objects.create(
+            name="Scheduled Job For Deleted User",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=deleted_user,
+            interval=JobExecutionType.TYPE_FUTURE,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+        )
+        deleted_user.delete()
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.user)
+        self.assertEqual(scheduled_job.user_name, deleted_username)
+
+        job_result = JobResult.objects.create(
+            name=self.job_model.name,
+            job_model=self.job_model,
+            scheduled_job=scheduled_job,
+            user=None,
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+        _prepare_job("pass_job.TestPassJob", self._build_request(job_result), {})
+
+        mock_publish_event.assert_called_once()
+        topic = mock_publish_event.call_args.kwargs["topic"]
+        payload = mock_publish_event.call_args.kwargs["payload"]
+        self.assertEqual(topic, "nautobot.jobs.job.started")
+        self.assertEqual(payload["user_name"], deleted_username)
+
+    @mock.patch("nautobot.extras.jobs.publish_event")
+    def test_prepare_job_uses_undefined_when_no_user_and_no_scheduled_job(self, mock_publish_event):
+        """When JobResult has no user and no scheduled_job, the event payload uses 'Undefined'."""
+        job_result = JobResult.objects.create(
+            name=self.job_model.name,
+            job_model=self.job_model,
+            user=None,
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+
+        _prepare_job("pass_job.TestPassJob", self._build_request(job_result), {})
+
+        mock_publish_event.assert_called_once()
+        payload = mock_publish_event.call_args.kwargs["payload"]
+        self.assertEqual(payload["user_name"], "Undefined")
 
 
 class JobResultEnqueueJobCase(TransactionTestCase):

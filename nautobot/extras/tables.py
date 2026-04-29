@@ -1577,7 +1577,11 @@ class ScheduledJobApprovalQueueTable(BaseTable):
     job_model = tables.Column(verbose_name="Job", linkify=True)
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
-    user = tables.Column(verbose_name="Requestor")
+    user = tables.TemplateColumn(
+        template_code="{% if record.user %}{{ record.user }}{% else %}{{ record.user_name }}{% endif %}",
+        verbose_name="Requestor",
+        order_by=("user__username", "user_name"),
+    )
     actions = tables.TemplateColumn(
         SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS,
         attrs={

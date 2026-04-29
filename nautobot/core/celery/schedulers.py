@@ -73,12 +73,6 @@ class NautobotScheduleEntry(ModelEntry):
 
         if model.user:
             self.options["nautobot_job_user_id"] = model.user.id
-        else:
-            logger.error(
-                "Disabling schedule %s with missing user",
-                self.name,
-            )
-            self._disable(model)
 
         if model.job_model:
             self.options["nautobot_job_job_model_id"] = model.job_model.id

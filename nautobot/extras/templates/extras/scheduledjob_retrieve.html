@@ -58,7 +58,7 @@
             <tr>
                 <td>Requester</td>
                 <td>
-                    {{ object.user|placeholder }}
+                    {% if object.user %}{{ object.user }}{% else %}{{ object.user_name|placeholder }}{% endif %}
                 </td>
             </tr>
             <tr>
