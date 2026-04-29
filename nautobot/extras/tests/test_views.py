@@ -19,6 +19,7 @@ from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import (
@@ -29,6 +30,7 @@ from nautobot.core.testing import (
     ViewTestCases,
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
+from nautobot.core.ui.object_detail import _JobModalButton
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -4181,6 +4183,9 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        cls.job_modal_button_key = str(
+            uuid.uuid5(NAMESPACE_JOBMODALBUTTON, f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
+        )
         JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
@@ -4538,7 +4543,7 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": "nautobot.core.ui.object_detail._JobModalButton",
+                "job_modal_button": self.job_modal_button_key,
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
@@ -4557,7 +4562,7 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": "nautobot.core.ui.object_detail._JobModalButton",
+                "job_modal_button": self.job_modal_button_key,
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
@@ -4574,7 +4579,7 @@ class JobResultTestCase(
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
         response = self.client.post(
             pending_url,
-            data={"job_modal_button": "nautobot.core.ui.object_detail._JobModalButton"},
+            data={"job_modal_button": self.job_modal_button_key},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4585,7 +4590,7 @@ class JobResultTestCase(
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.post(
             completed_url,
-            data={"job_modal_button": "nautobot.core.ui.object_detail._JobModalButton"},
+            data={"job_modal_button": self.job_modal_button_key},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4852,12 +4857,15 @@ class JobTestCase(
         so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
         """
         self.add_permissions("extras.run_job")
+        job_modal_button_key = str(
+            uuid.uuid5(NAMESPACE_JOBMODALBUTTON, f"{_JobModalButton.__module__}.{_JobModalButton.__name__}")
+        )
         for run_url in self.run_urls:
             response = self.client.post(
                 run_url,
                 data={
                     "initial_job_modal_form_submit": True,
-                    "job_modal_button": "nautobot.core.ui.object_detail._JobModalButton",
+                    "job_modal_button": job_modal_button_key,
                 },
                 HTTP_HX_REQUEST="true",
             )
