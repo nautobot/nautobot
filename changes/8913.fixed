@@ -1,0 +1,1 @@
+Fixed `store_result` writing null instead of empty collections for task_args, task_kwargs, and celery_kwargs when no arguments were provided.

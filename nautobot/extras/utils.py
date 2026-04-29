@@ -41,8 +41,8 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import (
     CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL,
     EXTRAS_FEATURES,
-    JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    NAME_MAX_LENGTH,
 )
 from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
@@ -533,18 +533,18 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     )
 
     # Unrecoverable errors
-    if len(job_class.__module__) > JOB_MAX_NAME_LENGTH:
+    if len(job_class.__module__) > NAME_MAX_LENGTH:
         logger.error(
             'Unable to store Jobs from module "%s" as Job models because the module exceeds %d characters in length!',
             job_class.__module__,
-            JOB_MAX_NAME_LENGTH,
+            NAME_MAX_LENGTH,
         )
         return (None, False)
-    if len(job_class.__name__) > JOB_MAX_NAME_LENGTH:
+    if len(job_class.__name__) > NAME_MAX_LENGTH:
         logger.error(
             'Unable to represent Job class "%s" as a Job model because the class name exceeds %d characters in length!',
             job_class.__name__,
-            JOB_MAX_NAME_LENGTH,
+            NAME_MAX_LENGTH,
         )
         return (None, False)
     if issubclass(job_class, JobHookReceiver) and issubclass(job_class, JobButtonReceiver):
@@ -562,29 +562,29 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
             job_class.grouping,
             CHARFIELD_MAX_LENGTH,
         )
-    if len(job_class.name) > JOB_MAX_NAME_LENGTH:
+    if len(job_class.name) > NAME_MAX_LENGTH:
         logger.warning(
             'Job class "%s" name "%s" exceeds %d characters in length, it will be truncated in the database.',
             job_class.__name__,
             job_class.name,
-            JOB_MAX_NAME_LENGTH,
+            NAME_MAX_LENGTH,
         )
 
     # handle duplicate names by appending an incrementing counter to the end
-    default_job_name = job_class.name[:JOB_MAX_NAME_LENGTH]
+    default_job_name = job_class.name[:NAME_MAX_LENGTH]
     job_name = default_job_name
     append_counter = 2
     existing_job_names = (
         job_model_class.objects.filter(name__startswith=job_name)
         .exclude(
-            module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
-            job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+            module_name=job_class.__module__[:NAME_MAX_LENGTH],
+            job_class_name=job_class.__name__[:NAME_MAX_LENGTH],
         )
         .values_list("name", flat=True)
     )
     while job_name in existing_job_names:
         job_name_append = f" ({append_counter})"
-        max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
+        max_name_length = NAME_MAX_LENGTH - len(job_name_append)
         job_name = default_job_name[:max_name_length] + job_name_append
         append_counter += 1
     if job_name != default_job_name and "test" not in sys.argv:
@@ -602,8 +602,8 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
                 defaults={"queue_type": JobQueueTypeChoices.TYPE_CELERY},
             )
             job_model, created = job_model_class.objects.get_or_create(
-                module_name=job_class.__module__[:JOB_MAX_NAME_LENGTH],
-                job_class_name=job_class.__name__[:JOB_MAX_NAME_LENGTH],
+                module_name=job_class.__module__[:NAME_MAX_LENGTH],
+                job_class_name=job_class.__name__[:NAME_MAX_LENGTH],
                 defaults={
                     "grouping": job_class.grouping[:CHARFIELD_MAX_LENGTH],
                     "name": job_name,

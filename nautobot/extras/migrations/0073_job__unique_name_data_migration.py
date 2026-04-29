@@ -3,7 +3,7 @@
 from django.db import migrations
 
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.extras.constants import JOB_MAX_NAME_LENGTH
+from nautobot.extras.constants import NAME_MAX_LENGTH
 
 
 def generate_unique_job_names(apps, schema_editor):
@@ -18,7 +18,7 @@ def generate_unique_job_names(apps, schema_editor):
         append_counter = 2
         while job_name in job_names:
             job_name_append = f" ({append_counter})"
-            max_name_length = JOB_MAX_NAME_LENGTH - len(job_name_append)
+            max_name_length = NAME_MAX_LENGTH - len(job_name_append)
             job_name = original_job_name[:max_name_length] + job_name_append
             append_counter += 1
         if job_name != original_job_name:

@@ -1,0 +1,2 @@
+Added `terminated_by`, `terminated_by_user_name`` and `terminated_at` fields to `JobResult`.
+Added support for terminating running and pending jobs with backend-agnostic strategies for Celery and Kubernetes.
