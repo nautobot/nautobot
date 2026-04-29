@@ -1,0 +1,2 @@
+Added a "Module Tree" tab to the Device detail view that displays the full hierarchy of Module Bays and installed Modules as a collapsible, indented tree.
+Added `Device.get_module_tree()` method that returns a nested structure of a device's Module Bays and their installed Modules.

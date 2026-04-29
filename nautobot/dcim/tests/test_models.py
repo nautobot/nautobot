@@ -1975,6 +1975,67 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.device.all_power_ports.count(), 3)
         self.assertEqual(self.device.all_power_outlets.count(), 3)
 
+    def test_get_module_tree(self):
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(manufacturer=manufacturer, model="Module Tree Test Type")
+        ModuleBayTemplate.objects.create(module_type=module_type, position="child")
+        status = Status.objects.get_for_model(Module).first()
+
+        # Device starts with one device-level module bay (from setUp's ModuleBayTemplate).
+        # Empty bay -> single root node, no module, no children.
+        tree = self.device.get_module_tree()
+        self.assertEqual(len(tree), 1)
+        root_bay = self.device.all_module_bays.first()
+        self.assertEqual(tree[0]["bay"], root_bay)
+        self.assertIsNone(tree[0]["module"])
+        self.assertEqual(tree[0]["children"], [])
+
+        # Install a module in the root bay; it should populate "module" and inherit a nested empty bay.
+        root_module = Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=root_bay,
+        )
+        tree = self.device.get_module_tree()
+        self.assertEqual(len(tree), 1)
+        self.assertEqual(tree[0]["bay"], root_bay)
+        self.assertEqual(tree[0]["module"], root_module)
+        # The installed module brings one nested ModuleBay (from its ModuleBayTemplate).
+        self.assertEqual(len(tree[0]["children"]), 1)
+        nested_bay = root_module.module_bays.first()
+        self.assertEqual(tree[0]["children"][0]["bay"], nested_bay)
+        self.assertIsNone(tree[0]["children"][0]["module"])
+        self.assertEqual(tree[0]["children"][0]["children"], [])
+
+        # Install a module in the nested bay to verify recursion to depth 2.
+        nested_module = Module.objects.create(
+            module_type=module_type,
+            status=status,
+            parent_module_bay=nested_bay,
+        )
+        tree = self.device.get_module_tree()
+        nested_node = tree[0]["children"][0]
+        self.assertEqual(nested_node["module"], nested_module)
+        self.assertEqual(len(nested_node["children"]), 1)
+        self.assertEqual(nested_node["children"][0]["bay"], nested_module.module_bays.first())
+
+        # Add a sibling top-level bay to verify multiple roots are returned in order.
+        sibling_bay = ModuleBay.objects.create(parent_device=self.device, name="Sibling Bay")
+        tree = self.device.get_module_tree()
+        self.assertEqual(len(tree), 2)
+        self.assertEqual({node["bay"] for node in tree}, {root_bay, sibling_bay})
+
+        # Devices with no module bays should return an empty list.
+        bare_device = Device.objects.create(
+            location=self.location_3,
+            device_type=DeviceType.objects.create(manufacturer=manufacturer, model="Bare Type"),
+            role=self.device_role,
+            status=self.device_status,
+            name="Bare Device",
+        )
+        self.assertFalse(bare_device.has_module_bays)
+        self.assertEqual(bare_device.get_module_tree(), [])
+
     def test_child_devices_are_not_saved_when_unnecessary(self):
         parent_device = Device.objects.create(
             name="Parent Device 1",
