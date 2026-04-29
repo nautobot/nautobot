@@ -82,7 +82,11 @@ from nautobot.core.views.utils import common_detail_view_context, get_obj_from_c
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
+from nautobot.dcim.utils import (
+    generate_cable_breakout_mapping,
+    get_all_network_driver_mappings,
+    render_software_version_and_image_files,
+)
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.ipam.models import IPAddress
@@ -5492,7 +5496,7 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=False,
-        methods=["get"],
+        methods=["post"],
         url_name="mapping_editor",
         url_path="mapping-editor",
         custom_view_base_action="view",
@@ -5500,16 +5504,16 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
     def mapping_editor(self, request):
         """HTMX endpoint: return a server-rendered mapping table for given connector/lane counts."""
 
-        a_connectors = int(request.GET.get("a_connectors", 0) or 0)
-        b_connectors = int(request.GET.get("b_connectors", 0) or 0)
-        total_lanes = int(request.GET.get("total_lanes", 0) or 0)
+        a_connectors = int(request.POST.get("a_connectors", 0) or 0)
+        b_connectors = int(request.POST.get("b_connectors", 0) or 0)
+        total_lanes = int(request.POST.get("total_lanes", 0) or 0)
 
         # Derive per-side positions if the inputs are consistent; otherwise, we can't render a valid table.
         a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
         b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
 
         mapping = None
-        mapping_json = request.GET.get("mapping", "")
+        mapping_json = request.POST.get("mapping", "")
         if mapping_json:
             try:
                 mapping = json.loads(mapping_json)
@@ -5519,9 +5523,7 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 mapping = None
 
         if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
-            mapping = CableBreakoutType(
-                a_connectors=a_connectors, b_connectors=b_connectors, total_lanes=total_lanes
-            ).autogenerate_mapping()
+            mapping = generate_cable_breakout_mapping(a_connectors, b_connectors, total_lanes)
 
         return render(
             request,
