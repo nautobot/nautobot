@@ -81,7 +81,7 @@ def run_job_for_testing(job, username="test-user", profile=False, console_log=Fa
         user=user_instance,
         profile=profile,
         console_log=console_log,
-        **kwargs,
+        job_kwargs=kwargs,
     )
     return job_result
 

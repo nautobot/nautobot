@@ -20,8 +20,8 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs is None:
+            raise RuntimeError(f"Expected kwargs to be not `None`")
         logger.info("before_start() was called as expected")
 
     def run(self):  # pylint: disable=arguments-differ
@@ -31,15 +31,15 @@ class TestPassJob(Job):
         logger.info("Success")
         return True
 
-    def on_success(self, retval, task_id, args, kwargs):
+    def on_success(self, retval, task_id, args, kwargs=None):
         if retval is not True:
             raise RuntimeError(f"Expected retval to be True, but it was {retval!r}")
         if task_id != self.request.id:
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs is None:
+            raise RuntimeError(f"Expected kwargs to be not empty")
         logger.info("on_success() was called as expected")
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -54,8 +54,8 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs is None:
+            raise RuntimeError(f"Expected kwargs to be not `None`")
         if einfo is not None:
             raise RuntimeError(f"Expected einfo to be None, but it was {einfo!r}")
         logger.info("after_return() was called as expected")

@@ -1,0 +1,5 @@
+Added `job_kwargs` as a required parameters to `create_schedule`, `enqueue_job`, `execute_job`.
+Changed `data` options as required in `runjob` command.
+Added raise ValueError to `validate_job_and_job_data` to avoid `data=None`.
+Added raise ValueError to `apply_sync` to avoid `entry_kwargs=None`.
+Fixed Docker build failing with "Illegal instruction" on ARM64 hosts by disabling Poetry's keyring lookup during dependency installation.

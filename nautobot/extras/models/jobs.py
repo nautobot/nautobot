@@ -840,7 +840,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         self.error_log_count = db_log_counts["error_log_count"]
 
     @classmethod
-    def execute_job(cls, *args, **kwargs):
+    def execute_job(cls, *args, job_kwargs=None, **extra_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
@@ -852,7 +852,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        return cls.enqueue_job(*args, **kwargs, synchronous=True)
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
+
+        return cls.enqueue_job(*args, **extra_kwargs, job_kwargs=job_kwargs, synchronous=True)
 
     execute_job.__func__.alters_data = True
 
@@ -939,7 +947,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         job_result: Optional["JobResult"] = None,
         synchronous: bool = False,
         ignore_singleton_lock: bool = False,
-        **job_kwargs,
+        job_kwargs=None,
+        **extra_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
@@ -980,13 +989,21 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             ignore_singleton_lock (bool): If True, invalidate the singleton lock before running the job.
               This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
               of the job failed to remove it for any reason.
+            job_kwargs: keyword args passed to the job task
             *job_args: positional args passed to the job task (UNUSED)
-            **job_kwargs: keyword args passed to the job task
 
         Returns:
             JobResult instance
         """
         from nautobot.extras.jobs import run_console_log_job_and_return_job_result, run_job  # TODO circular import
+
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
@@ -1712,7 +1729,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
-        **job_kwargs,
+        job_kwargs=None,
+        **extra_kwargs,
     ):
         """
         Schedule a job with the specified parameters.
@@ -1739,6 +1757,13 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         Returns:
             ScheduledJob instance
         """
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
 
         if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
             raise ValueError("task_queue and job_queue are mutually exclusive")
