@@ -119,7 +119,7 @@ BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
 
 # AOC Ethernet Breakouts (strands_per_lane=1)
 # Fiber MPO Fanouts (strands_per_lane=2, duplex)
-DEFAULT_CABLE_BREAKOUT_TYPES = {
+DEFAULT_CABLE_TYPES = {
     # ── AOC Ethernet Breakouts ──
     "1x2 AOC Fanout": {
         "description": "1 trunk connector broken out to 2 individual legs",

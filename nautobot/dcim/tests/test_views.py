@@ -64,8 +64,8 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableBreakoutType,
     CablePath,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -4083,49 +4083,58 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.skipTest("InventoryItem table has no implementation of indentation.")
 
 
-class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
-    model = CableBreakoutType
+class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = CableType
 
-    form_data = {
-        "name": "New Breakout Type",
-        "description": "A brand new type",
-        "a_connectors": 2,
-        "b_connectors": 3,
-        "total_lanes": 6,
-        "mapping": json.dumps(
-            [
-                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},
-                {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2, "label": "A2"},
-                {"a_connector": 1, "a_position": 3, "b_connector": 2, "b_position": 1, "label": "A3"},
-                {"a_connector": 2, "a_position": 1, "b_connector": 2, "b_position": 2, "label": "B1"},
-                {"a_connector": 2, "a_position": 2, "b_connector": 3, "b_position": 1, "label": "B2"},
-                {"a_connector": 2, "a_position": 3, "b_connector": 3, "b_position": 2, "label": "B3"},
-            ]
-        ),
-        "is_shuffle": False,
-        "strands_per_lane": 1,
-        "polarity_method": "",
-    }
-    bulk_edit_data = {
-        "description": "Something generic",
-        "is_shuffle": True,
-        "strands_per_lane": 2,
-        "polarity_method": "other",
-    }
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        manufacturer = Manufacturer.objects.first()
+        cls.form_data = {
+            "name": "New Breakout Type",
+            "description": "A brand new type",
+            "manufacturer": manufacturer.pk,
+            "part_number": "ABC-123",
+            "a_connectors": 2,
+            "b_connectors": 3,
+            "total_lanes": 6,
+            "mapping": json.dumps(
+                [
+                    {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "A1"},
+                    {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2, "label": "A2"},
+                    {"a_connector": 1, "a_position": 3, "b_connector": 2, "b_position": 1, "label": "A3"},
+                    {"a_connector": 2, "a_position": 1, "b_connector": 2, "b_position": 2, "label": "B1"},
+                    {"a_connector": 2, "a_position": 2, "b_connector": 3, "b_position": 1, "label": "B2"},
+                    {"a_connector": 2, "a_position": 3, "b_connector": 3, "b_position": 2, "label": "B3"},
+                ]
+            ),
+            "has_embedded_transceivers": True,
+            "is_shuffle": False,
+            "strands_per_lane": 1,
+            "polarity_method": "",
+        }
+        cls.bulk_edit_data = {
+            "description": "Something generic",
+            "manufacturer": manufacturer.pk,
+            "has_embedded_transceivers": True,
+            "is_shuffle": True,
+            "strands_per_lane": 2,
+            "polarity_method": "other",
+        }
 
     def test_mapping_editor_requires_view_permission(self):
         """Unauthorized users should be denied the mapping_editor action."""
         self.client.logout()
         self.client.force_login(self.user)  # user starts with no perms
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
+            reverse("dcim:cabletype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
         )
         self.assertEqual(response.status_code, 403)
 
     def test_mapping_editor_autogenerates_mapping_from_valid_params(self):
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
+            reverse("dcim:cabletype_mapping_editor"), {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2}
         )
         self.assertEqual(response.status_code, 200)
         ctx = response.context
@@ -4144,13 +4153,13 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(list(ctx["b_position_range"]), [1])
 
     def test_mapping_editor_uses_explicit_mapping_when_provided(self):
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         explicit_mapping = [
             {"label": "X", "a_connector": 1, "a_position": 1, "b_connector": 2, "b_position": 1},
             {"label": "Y", "a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 1},
         ]
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"),
+            reverse("dcim:cabletype_mapping_editor"),
             {
                 "a_connectors": 1,
                 "b_connectors": 2,
@@ -4162,18 +4171,18 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(response.context["mapping"], explicit_mapping)
 
     def test_mapping_editor_falls_back_to_autogen_on_invalid_mapping_json(self):
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"),
+            reverse("dcim:cabletype_mapping_editor"),
             {"a_connectors": 1, "b_connectors": 2, "total_lanes": 2, "mapping": "not-valid-json"},
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context["mapping"]), 2)
 
     def test_mapping_editor_falls_back_to_autogen_when_mapping_is_not_a_list(self):
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"),
+            reverse("dcim:cabletype_mapping_editor"),
             {
                 "a_connectors": 1,
                 "b_connectors": 2,
@@ -4185,25 +4194,25 @@ class CableBreakoutTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(len(response.context["mapping"]), 2)
 
     def test_mapping_editor_missing_params_returns_no_mapping(self):
-        self.add_permissions("dcim.view_cablebreakouttype")
-        response = self.client.post(reverse("dcim:cablebreakouttype_mapping_editor"))
+        self.add_permissions("dcim.view_cabletype")
+        response = self.client.post(reverse("dcim:cabletype_mapping_editor"))
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["mapping"])
 
     def test_mapping_editor_non_divisible_total_lanes_returns_no_mapping(self):
         """If total_lanes is not evenly divisible by a_connectors (or b_connectors), autogen is skipped."""
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"), {"a_connectors": 2, "b_connectors": 3, "total_lanes": 7}
+            reverse("dcim:cabletype_mapping_editor"), {"a_connectors": 2, "b_connectors": 3, "total_lanes": 7}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["mapping"])
 
     def test_mapping_editor_blank_param_values_do_not_crash(self):
         """Empty-string params from HTMX on initial load should be treated as zero, not trigger ValueError."""
-        self.add_permissions("dcim.view_cablebreakouttype")
+        self.add_permissions("dcim.view_cabletype")
         response = self.client.post(
-            reverse("dcim:cablebreakouttype_mapping_editor"),
+            reverse("dcim:cabletype_mapping_editor"),
             {"a_connectors": "", "b_connectors": "", "total_lanes": "", "mapping": ""},
         )
         self.assertEqual(response.status_code, 200)

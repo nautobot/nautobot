@@ -35,7 +35,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableBreakoutType,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -2797,15 +2797,15 @@ class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
         """No docs for this through table model."""
 
 
-class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
-    model = CableBreakoutType
+class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = CableType
 
     def test_get_docs_url(self):
         """Docs page for this model doesn't exist yet."""
-        # TODO: remove this override once a docs page is added for CableBreakoutType.
+        # TODO: remove this override once a docs page is added for CableType.
 
     def test_derived_properties(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Test 1-to-4",
             a_connectors=1,
             b_connectors=4,
@@ -2817,7 +2817,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(breakout.total_strands, 16)
         self.assertTrue(breakout.is_breakout)
 
-        straight = CableBreakoutType(
+        straight = CableType(
             name="Test straight",
             a_connectors=2,
             b_connectors=2,
@@ -2831,13 +2831,13 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_positions_with_zero_connectors(self):
         """Guard against ZeroDivisionError when connector counts are zero (e.g. unsaved instance)."""
-        breakout = CableBreakoutType(a_connectors=0, b_connectors=0, total_lanes=4)
+        breakout = CableType(a_connectors=0, b_connectors=0, total_lanes=4)
         self.assertEqual(breakout.a_positions, 0)
         self.assertEqual(breakout.b_positions, 0)
 
     def test_clean_wrong_direction(self):
         """a_connectors must not exceed b_connectors."""
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Wrong direction",
             a_connectors=4,
             b_connectors=1,
@@ -2847,7 +2847,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_clean_total_lanes_not_divisible_by_a(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Bad a divisor",
             a_connectors=3,
             b_connectors=4,
@@ -2857,7 +2857,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_clean_total_lanes_not_divisible_by_b(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Bad b divisor",
             a_connectors=2,
             b_connectors=6,
@@ -2867,7 +2867,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_clean_autogenerates_mapping_when_missing(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Auto map",
             a_connectors=1,
             b_connectors=2,
@@ -2881,7 +2881,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         )
 
     def test_validate_mapping_not_a_list(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Bad mapping type",
             a_connectors=1,
             b_connectors=1,
@@ -2892,7 +2892,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_wrong_length(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Bad mapping length",
             a_connectors=1,
             b_connectors=1,
@@ -2903,7 +2903,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_entry_not_dict(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Bad entry type",
             a_connectors=1,
             b_connectors=1,
@@ -2914,7 +2914,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_missing_keys(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Missing keys",
             a_connectors=1,
             b_connectors=1,
@@ -2925,7 +2925,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_unknown_keys(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Unknown keys",
             a_connectors=1,
             b_connectors=1,
@@ -2944,7 +2944,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_non_integer_value(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Non-int",
             a_connectors=1,
             b_connectors=1,
@@ -2968,7 +2968,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
                     entry,
                     {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
                 ]
-                breakout = CableBreakoutType(
+                breakout = CableType(
                     name=f"OOR {expected_message}",
                     a_connectors=1,
                     b_connectors=1,
@@ -2979,7 +2979,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
                     breakout.clean()
 
     def test_validate_mapping_duplicate_a_pair(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Dup A",
             a_connectors=1,
             b_connectors=1,
@@ -2993,7 +2993,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_duplicate_b_pair(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Dup B",
             a_connectors=1,
             b_connectors=1,
@@ -3007,7 +3007,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_non_string_label(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Non-string label",
             a_connectors=1,
             b_connectors=1,
@@ -3018,7 +3018,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             breakout.clean()
 
     def test_validate_mapping_duplicate_label(self):
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Dup label",
             a_connectors=1,
             b_connectors=1,
@@ -3036,7 +3036,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
             {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
             {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
         ]
-        breakout = CableBreakoutType(
+        breakout = CableType(
             name="Default labels",
             a_connectors=1,
             b_connectors=1,
@@ -3048,7 +3048,7 @@ class CableBreakoutTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(breakout.mapping[0]["label"], "0")
         self.assertEqual(breakout.mapping[1]["label"], "1")
 
-    # TODO: add a test for cable_count once Cable has a FK (related_name="cables") to CableBreakoutType.
+    # TODO: add a test for cable_count once Cable has a FK (related_name="cables") to CableType.
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):

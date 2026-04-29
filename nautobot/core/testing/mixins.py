@@ -262,7 +262,7 @@ class NautobotTestCaseMixin:
         for k, v in model_dict.items():
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
-                if k == "mapping":  # CableBreakoutType, a list of dicts, not sortable
+                if k == "mapping":  # CableType, a list of dicts, not sortable
                     new_model_dict[k] = json.dumps(v, sort_keys=True)
                 else:
                     new_model_dict[k] = sorted(v)
@@ -281,7 +281,7 @@ class NautobotTestCaseMixin:
             if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
-                    if k == "mapping":  # CableBreakoutType, a list of dicts, not sortable
+                    if k == "mapping":  # CableType, a list of dicts, not sortable
                         new_model_dict[k] = json.dumps(v, sort_keys=True)
                     else:
                         relevant_data[k] = sorted(v)
