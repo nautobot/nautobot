@@ -569,6 +569,7 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
+              - Job Terminate: "user-guide/platform-functionality/jobs/job-terminate.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"

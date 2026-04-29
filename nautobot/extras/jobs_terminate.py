@@ -38,7 +38,7 @@ class JobTerminatorStrategy(ABC):
     def _apply_termination_metadata(self, job_result: JobResult, user: User) -> dict:
         """Fill in termination metadata fields on a locked `JobResult`.
 
-        Sets `date_done`, `terminated_by`, `terminated_user_name`, and
+        Sets `date_done`, `terminated_by`, `terminated_by_user_name`, and
         `terminated_at` only if they are not already set. Caller is responsible
         for the surrounding transaction/lock and for calling `save()`.
 
@@ -58,8 +58,8 @@ class JobTerminatorStrategy(ABC):
         if job_result.terminated_by is None:
             updates["terminated_by"] = user
 
-        if not job_result.terminated_user_name:
-            updates["terminated_user_name"] = user.username
+        if not job_result.terminated_by_user_name:
+            updates["terminated_by_user_name"] = user.username
 
         if job_result.terminated_at is None:
             updates["terminated_at"] = now
@@ -122,7 +122,7 @@ class CeleryStrategy(JobTerminatorStrategy):
 
         return app
 
-    def is_alive(self, job_result) -> bool | None:
+    def is_alive(self, job_result) -> bool:
         """
         Check whether a Celery worker is currently aware of (and likely processing)
         a given task.
@@ -137,10 +137,10 @@ class CeleryStrategy(JobTerminatorStrategy):
                 Celery task ID.
 
         Returns:
-            bool | None:
+            bool:
                 - True if at least one worker reports the task ID.
                 - False if workers respond but none contain the task.
-                - None if the worker state could not be determined (e.g., no
+                - False if the worker state could not be determined (e.g., no
                 replies or an exception occurred while querying workers).
         """
         try:
@@ -149,9 +149,9 @@ class CeleryStrategy(JobTerminatorStrategy):
             replies = celery_app.control.inspect().query_task([task_id])
         except Exception as e:
             logger.warning("Failed to query Celery workers: %s", e)
-            return None
+            return False
         if replies is None:
-            return None
+            return False
         # replies shape: {worker_hostname: {task_id: [state, info]}}
         return any(task_id in worker_tasks for worker_tasks in replies.values())
 

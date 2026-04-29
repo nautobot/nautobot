@@ -48,8 +48,8 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
-    JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    NAME_MAX_LENGTH,
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
@@ -107,13 +107,13 @@ class Job(PrimaryModel):
 
     # Information used to locate the Job source code
     module_name = models.CharField(
-        max_length=JOB_MAX_NAME_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         editable=False,
         db_index=True,
         help_text="Dotted name of the Python module providing this job",
     )
     job_class_name = models.CharField(
-        max_length=JOB_MAX_NAME_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         editable=False,
         db_index=True,
         help_text="Name of the Python class providing this job",
@@ -127,7 +127,7 @@ class Job(PrimaryModel):
         db_index=True,
     )
     name = models.CharField(
-        max_length=JOB_MAX_NAME_LENGTH,
+        max_length=NAME_MAX_LENGTH,
         help_text="Human-readable name of this job",
         unique=True,
     )
@@ -393,14 +393,14 @@ class Job(PrimaryModel):
                 self.task_queues = job_class.task_queues or [settings.CELERY_TASK_DEFAULT_QUEUE]
 
         # Protect against invalid input when auto-creating Job records
-        if len(self.module_name) > JOB_MAX_NAME_LENGTH:
-            raise ValidationError(f"Module name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
-        if len(self.job_class_name) > JOB_MAX_NAME_LENGTH:
-            raise ValidationError(f"Job class name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.module_name) > NAME_MAX_LENGTH:
+            raise ValidationError(f"Module name may not exceed {NAME_MAX_LENGTH} characters in length")
+        if len(self.job_class_name) > NAME_MAX_LENGTH:
+            raise ValidationError(f"Job class name may not exceed {NAME_MAX_LENGTH} characters in length")
         if len(self.grouping) > CHARFIELD_MAX_LENGTH:
             raise ValidationError(f"Grouping may not exceed {CHARFIELD_MAX_LENGTH} characters in length")
-        if len(self.name) > JOB_MAX_NAME_LENGTH:
-            raise ValidationError(f"Name may not exceed {JOB_MAX_NAME_LENGTH} characters in length")
+        if len(self.name) > NAME_MAX_LENGTH:
+            raise ValidationError(f"Name may not exceed {NAME_MAX_LENGTH} characters in length")
 
     def save(self, *args, **kwargs):
         """When a Job is uninstalled, auto-disable all associated JobButtons, JobHooks, and ScheduledJobs."""
@@ -725,7 +725,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         related_name="terminated_job_results",
         help_text="The user who initiated the kill action.",
     )
-    terminated_user_name = models.CharField(max_length=150, blank=True, editable=False)
+    terminated_by_user_name = models.CharField(max_length=NAME_MAX_LENGTH, blank=True, editable=False)
     terminated_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -1384,9 +1384,9 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     # equivalent to PeriodicTask.task
     task = models.CharField(
-        # JOB_MAX_NAME_LENGTH is the longest permitted module name as well as the longest permitted class name,
+        # NAME_MAX_LENGTH is the longest permitted module name as well as the longest permitted class name,
         # so we need to permit a task name of MAX.MAX at a minimum:
-        max_length=JOB_MAX_NAME_LENGTH + 1 + JOB_MAX_NAME_LENGTH,  # note: max_length=200 in PeriodicTask model
+        max_length=NAME_MAX_LENGTH + 1 + NAME_MAX_LENGTH,  # note: max_length=200 in PeriodicTask model
         verbose_name="Task Name",
         help_text='The name of the Celery task that should be run. (Example: "proj.tasks.import_contacts")',
         db_index=True,
