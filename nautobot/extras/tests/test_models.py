@@ -2923,6 +2923,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="Crontab UTC Job",
             interval=JobExecutionType.TYPE_CUSTOM,
             crontab="0 17 * * *",
+            job_kwargs={},
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
@@ -2947,6 +2948,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off EST Job",
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            job_kwargs={},
         )
         self.one_off_immediately_job = ScheduledJob.create_schedule(
             job_model=self.job_model,
@@ -2954,6 +2956,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off IMMEDIATELY job",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             start_time=now(),
+            job_kwargs={},
         )
 
     def test_scheduled_job_queue_setter(self):
@@ -3344,6 +3347,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 name="Custom No Start Time",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="0 17 * * *",  # 5 PM daily
+                job_kwargs={},
             )
             # start_time should be the next crontab match (2050-01-22 17:00 UTC), not ~now
             self.assertEqual(job.start_time.hour, 17)
@@ -3361,6 +3365,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 name="Custom All Fields",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="5 4 3 2 1",
+                job_kwargs={},
             )
             self.assertEqual(job.start_time.minute, 5)
             self.assertEqual(job.start_time.hour, 4)
