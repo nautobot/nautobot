@@ -2,9 +2,7 @@
 
 import json
 from unittest.mock import patch
-from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 import uuid
-from nautobot.extras.registry import registry
 
 from django.db.models import Sum
 from django.template import Context
@@ -14,6 +12,7 @@ from django.urls import reverse
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
+from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
@@ -46,6 +45,7 @@ from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.extras.registry import registry
 from nautobot.ipam.models import Prefix
 from nautobot.ipam.views import PrefixUIViewSet
 
