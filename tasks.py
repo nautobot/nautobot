@@ -17,6 +17,7 @@ import json
 import os
 import platform
 import re
+import shlex
 import time
 
 from invoke import Collection, task as invoke_task
@@ -639,18 +640,21 @@ def logs(context, service=None, follow=False, tail=0):
     help={
         "quiet": "Suppress verbose output on launch",
         "print_sql": "Enable printing of all executed SQL statements",
+        "command": "Python code to execute non-interactively, instead of launching an interactive shell",
     }
 )
-def nbshell(context, quiet=False, print_sql=False):
-    """Launch an interactive Nautobot shell."""
-    command = "nautobot-server nbshell"
+def nbshell(context, quiet=False, print_sql=False, command=None):
+    """Launch an interactive Nautobot shell, or run a single Python command non-interactively."""
+    cmd = "nautobot-server nbshell"
 
     if quiet:
-        command += " --quiet"
+        cmd += " --quiet"
     if print_sql:
-        command += " --print-sql"
+        cmd += " --print-sql"
+    if command:
+        cmd += f" --command {shlex.quote(command)}"
 
-    run_command(context, command)
+    run_command(context, cmd)
 
 
 @task(
@@ -1101,6 +1105,7 @@ def check_schema(context, api_version=None):
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "no_input": "Suppress interactive prompts (e.g. confirmation when `--no-reusedb` would destroy an existing test database).",
         "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
         "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
         "pattern": "Only run tests which match the given substring. Can be used multiple times.",
@@ -1123,6 +1128,7 @@ def tests(
     failfast=False,
     keepdb=True,
     label="nautobot",
+    no_input=False,
     parallel=True,
     parallel_workers=None,
     pattern=None,
@@ -1164,6 +1170,8 @@ def tests(
         command += " --keepdb"
     if not reusedb:
         command += " --no-reusedb"
+    if no_input:
+        command += " --no-input"
     if failfast:
         command += " --failfast"
     if buffer:

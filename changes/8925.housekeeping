@@ -1,0 +1,2 @@
+Added support for `--no-input` option to `invoke tests` task.
+Added support for `--command` option to `invoke nbshell` task.
