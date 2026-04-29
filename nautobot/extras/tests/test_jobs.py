@@ -1322,13 +1322,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def run_command(self, *args):
         out = StringIO()
         err = StringIO()
-        call_command(
-            "runjob",
-            *args,
-            stdout=out,
-            stderr=err,
-            data={}
-        )
+        call_command("runjob", *args, stdout=out, stderr=err, data={})
 
         return (out.getvalue(), err.getvalue())
 
@@ -1956,7 +1950,6 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
             )
 
         self.assertEqual(str(err.exception), "Inavlid job data: None. Job data has to be defined.")
-
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")

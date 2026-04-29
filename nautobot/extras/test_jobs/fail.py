@@ -20,7 +20,7 @@ class TestFailJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         logger.info("before_start() was called as expected")
 
     def run(self):  # pylint:disable=arguments-differ
@@ -41,7 +41,7 @@ class TestFailJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         if not isinstance(einfo, ExceptionInfo):
             raise RuntimeError(f"Expected einfo to be an ExceptionInfo, but it was {einfo!r}")
         logger.info("on_failure() was called as expected")
@@ -56,7 +56,7 @@ class TestFailJob(Job):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         if not isinstance(einfo, ExceptionInfo):
             raise RuntimeError(f"Expected einfo to be an ExceptionInfo, but it was {einfo!r}")
         logger.info("after_return() was called as expected")
@@ -123,7 +123,7 @@ class TestFailCleanly(TestFailJob):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         if einfo is not None:
             raise RuntimeError(f"Expected einfo to be None, but it was {einfo!r}")
         logger.info("on_failure() was called as expected")
@@ -138,7 +138,7 @@ class TestFailCleanly(TestFailJob):
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
         if kwargs is None:
-            raise RuntimeError(f"Expected kwargs to be not `None`")
+            raise RuntimeError("Expected kwargs to be not `None`")
         if einfo is not None:
             raise RuntimeError(f"Expected einfo to be None, but it was {einfo!r}")
         logger.info("after_return() was called as expected")
