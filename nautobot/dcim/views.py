@@ -2187,12 +2187,21 @@ class ModuleTypeUIViewSet(
 class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
     create_form_class: type[Form]
     form_class: type[Form]
+    create_template_name = "dcim/device_component_add.html"
 
     def get_create_form(self, request, data=None):
         return self.create_form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
+            if parent:
+                return parent.display
+        return ""
 
     def get_model_form(self, request, data=None):
         return self.form_class(  # pylint: disable=not-callable
@@ -2303,15 +2312,6 @@ class ConsolePortTemplateUIViewSet(
     table_class = tables.ConsolePortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
     create_form_class = forms.ConsolePortTemplateCreateForm
-    create_template_name = "dcim/device_component_add.html"
-
-    def get_selected_objects_parents_name(self, selected_objects):
-        selected_object = selected_objects.first()
-        if selected_object and selected_object.device_type:
-            return selected_object.device_type.display
-        if selected_object and selected_object.module_type:
-            return selected_object.module_type.display
-        return ""
 
 
 #

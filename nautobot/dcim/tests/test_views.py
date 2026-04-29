@@ -2282,6 +2282,16 @@ class ModuleBayTemplateTestCase(ViewTestCases.DeviceComponentTemplateViewTestCas
             "module_family": module_family.pk,
         }
 
+    # ModuleBayCommonViewSetMixin.perform_create cannot propagate child form errors on
+    # `name`/`label`/`position` back to the parent form's *_pattern fields. Trigger a
+    # parent-form-level count mismatch so the surface (label_pattern error) is still verified.
+    expected_invalid_component_form_error = "These counts must match"
+
+    def get_invalid_component_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["label_pattern"] = "Mismatch [1-2]"
+        return data
+
 
 class PlatformTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = Platform
@@ -3976,6 +3986,16 @@ class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def get_deletable_object_pks(self):
         # Since Modules and ModuleBays are nestable, we need to delete ModuleBays that don't have any child ModuleBays
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
+
+    # ModuleBayCommonViewSetMixin.perform_create cannot propagate child form errors on
+    # `name`/`label`/`position` back to the parent form's *_pattern fields. Trigger a
+    # parent-form-level count mismatch so the surface (label_pattern error) is still verified.
+    expected_invalid_component_form_error = "These counts must match"
+
+    def get_invalid_component_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["label_pattern"] = "Mismatch [1-2]"
+        return data
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_add_component(self):
