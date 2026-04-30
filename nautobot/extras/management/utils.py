@@ -11,7 +11,7 @@ from nautobot.extras.models import Job, JobLogEntry
 
 def validate_job_and_job_data(command, user, job_class_path, data=None):
     if data is None:
-        raise CommandError(f"Inavlid job data: {data}. Job data has to be defined.")
+        raise CommandError(f"Invalid job data: {data}. Job data has to be defined.")
     elif isinstance(data, str):
         try:
             job_data = json.loads(data)

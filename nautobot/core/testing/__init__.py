@@ -50,7 +50,7 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, username="test-user", profile=False, console_log=False, **kwargs):
+def run_job_for_testing(job, username="test-user", profile=False, console_log=False, celery_kwargs=None, **job_kwargs):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
@@ -76,13 +76,12 @@ def run_job_for_testing(job, username="test-user", profile=False, console_log=Fa
     # Run the job synchronously in the current thread as if it were being executed by a worker
     # TODO: in Nautobot core testing, we set `CELERY_TASK_ALWAYS_EAGER = True`, so we *could* use enqueue_job() instead,
     #       but switching now would be a potentially breaking change for apps...
-    celery_kwargs = kwargs.pop("celery_kwargs", None)
     job_result = JobResult.execute_job(
         job_model=job,
         user=user_instance,
         profile=profile,
         console_log=console_log,
-        job_kwargs=kwargs,
+        job_kwargs=job_kwargs,
         celery_kwargs=celery_kwargs,
     )
     return job_result

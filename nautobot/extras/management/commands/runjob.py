@@ -39,8 +39,8 @@ class Command(BaseCommand):
             "-d",
             "--data",
             type=str,
-            help="JSON string that populates the `data` variable of the job. If your job doesn't have any variables define put '{}'",
-            required=True,
+            default="{}",
+            help="JSON string that populates the `data` variable of the job. Defaults to '{}'",
         )
 
     def handle(self, *args, **options):

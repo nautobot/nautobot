@@ -1370,6 +1370,36 @@ class RunJobManagementCommandTest(TransactionTestCase):
         status = models.Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
 
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_runjob_enqueue_called(self, mock_enqueue):
+        """Ensure enqueue_job is called with correct arguments when --local is NOT used."""
+        module = "pass_job"
+        name = "TestPassJob"
+        _job_class, job_model = get_job_class_and_model(module, name)
+
+        job_result = models.JobResult.objects.create(
+            name=job_model.name,
+            job_model=job_model,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+
+        mock_enqueue.return_value = job_result
+
+        self.run_command(
+            "--no-color",
+            "--username",
+            self.user.username,
+            job_model.class_path,
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            profile=False,
+            job_kwargs={},  # because default "--data" = "{}"
+        )
+
 
 class JobLocationCustomFieldTest(TransactionTestCase):
     """Test a job that creates a location and a custom field."""
@@ -1942,7 +1972,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
     def test_console_log_executor_is_used_without_data_options(
         self,
     ):
-        """Command should raise an error when data it's not defined"""
+        """Command should raise an error when data is not defined"""
 
         with self.assertRaises(CommandError) as err:
             call_command(
@@ -1950,7 +1980,7 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
                 str(self.job_result.pk),
             )
 
-        self.assertEqual(str(err.exception), "Inavlid job data: None. Job data has to be defined.")
+        self.assertEqual(str(err.exception), "Invalid job data: None. Job data has to be defined.")
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")

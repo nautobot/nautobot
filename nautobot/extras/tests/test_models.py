@@ -3372,6 +3372,45 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             self.assertEqual(job.start_time.month, 2)
             self.assertEqual(job.start_time.day, 3)
 
+    def test_create_schedule_uses_extra_kwargs_when_job_kwargs_none(self):
+        """Ensure deprecated extra_kwargs are used when job_kwargs is None."""
+        extra_kwargs = {"foo": "bar"}
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Deprecated kwargs fallback",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                job_kwargs=None,
+                **extra_kwargs,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        self.assertEqual(job.kwargs.get("foo"), "bar")
+
+    def test_create_schedule_raises_when_no_kwargs_provided(self):
+        """Ensure ValueError is raised if both job_kwargs and extra_kwargs are missing."""
+        with self.assertRaises(ValueError) as err:
+            ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Missing kwargs",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                job_kwargs=None,
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
     def test_on_workflow_canceled(self):
         """Should set status to CANCELED, disable the job and set decision_date."""
         decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
@@ -4245,6 +4284,119 @@ class JobResultTestCase(TestCase):
                 self.job_result.log("test message")
 
                 self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result).count(), 0)
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_enqueue):
+        """execute_job should fallback to extra_kwargs and log a warning when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+                foo="bar",
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs=None,
+            synchronous=True,
+        )
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_extract_celery_kwargs_is_are_in_extra_kwargs(self, mock_enqueue):
+        """execute_job should extract celery_kwargs when exist in extra_kwargs when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(job_model, self.user, foo="bar", celery_kwargs={"test": "test"})
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs={"test": "test"},
+            synchronous=True,
+        )
+
+    def test_execute_job_raises_when_no_kwargs(self):
+        """execute_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+                job_kwargs=None,
+            )
+
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    @mock.patch("nautobot.extras.jobs.run_job.apply")
+    @mock.patch("nautobot.extras.models.JobResult._sync_eager_result_to_job_result")
+    def test_enqueue_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_sync, mock_run_job_apply):
+        """enqueue_job should fallback to extra_kwargs and log a warning."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+                foo="bar",
+                synchronous=True,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        job_result = JobResult.objects.first()
+        mock_run_job_apply.assert_called_once_with(
+            args=[job_model.class_path],
+            kwargs={"foo": "bar"},
+            task_id=str(job_result.id),
+            **job_result.celery_kwargs,
+        )
+        mock_sync.assert_called_once()
+
+    def test_enqueue_job_raises_when_no_kwargs(self):
+        """enqueue_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+                job_kwargs=None,
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

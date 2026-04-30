@@ -877,12 +877,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if job_kwargs is None:
             if not extra_kwargs:
                 raise ValueError("`job_kwargs` has to be defined.")
+            celery_kwargs = extra_kwargs.pop("celery_kwargs", None)
             logger.warning(
                 "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
             )
             job_kwargs = extra_kwargs
 
-        return cls.enqueue_job(*args, **extra_kwargs, job_kwargs=job_kwargs, synchronous=True)
+        return cls.enqueue_job(
+            *args, **extra_kwargs, job_kwargs=job_kwargs, celery_kwargs=celery_kwargs, synchronous=True
+        )
 
     execute_job.__func__.alters_data = True
 
@@ -991,7 +994,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         IMPORTANT:
             If changes are made to job execution behavior (status transitions,
             result handling, logging, profiling, or error propagation), the
-            corresponding logic in ``execute_job_result`` must be reviewed and
+            corresponding logic in `execute_job_result` must be reviewed and
             updated as needed to keep behavior consistent across execution modes.
 
         This duplication is intentional but requires ongoing coordination.
@@ -1013,6 +1016,9 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
               of the job failed to remove it for any reason.
             job_kwargs: keyword args passed to the job task
             *job_args: positional args passed to the job task (UNUSED)
+            **extra_kwargs: Deprecated way of passing keyword arguments directly. If `job_kwargs`
+                is not provided, these values will be used instead and a warning
+                will be logged. Will be removed in a future version.
 
         Returns:
             JobResult instance
@@ -1774,7 +1780,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
             ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
-            **job_kwargs: Additional keyword arguments to pass to the job.
+            job_kwargs: Additional keyword arguments to pass to the job.
+            **extra_kwargs: Deprecated way of passing additional keyword arguments directly. If `job_kwargs`
+                is not provided, these values will be used instead and a warning
+                will be logged. Will be removed in a future version.
 
         Returns:
             ScheduledJob instance
