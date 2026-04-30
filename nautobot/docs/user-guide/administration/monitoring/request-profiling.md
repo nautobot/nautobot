@@ -2,6 +2,14 @@
 
 Nautobot offers advanced request profiling through [`django-silk`](https://github.com/jazzband/django-silk). This allows administrators to collect debug information about user activities, which can be used to troubleshoot issues with the system.
 
+Request Profiling captures the **per-request** picture: SQL queries issued, cache calls made, and a Python cProfile trace of the call stack. It is complementary to the aggregate views in the rest of this section:
+
+- [Prometheus Metrics](./prometheus-metrics.md) — Django request-latency histograms across all traffic.
+- [Backing Stores — `pg_stat_statements`](./backing-stores.md#pg_stat_statements-the-slow-query-investigator) — aggregate slow-query stats across the whole database, independent of which view issued them.
+- [Backing Stores — Redis Slowlog](./backing-stores.md#slowlog-the-why-is-the-cache-slow-answer) — slow Redis commands, also without per-request attribution.
+
+Use Request Profiling when you have a specific slow URL or Job and need to trace it back to a query plan or a tight Python loop. Use the aggregate tools when you don't yet know *which* request to look at. See the [Monitoring overview](./index.md) for the broader picture.
+
 ## User Setting
 
 Request profiling may be enabled by individual users in their profile within the web interface. This can be found under the "Advanced Settings" section.

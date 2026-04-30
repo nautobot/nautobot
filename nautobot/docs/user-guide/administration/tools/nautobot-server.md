@@ -388,7 +388,7 @@ DefaultFileStorageHealthCheck ... working
 RedisBackend             ... working
 ```
 
-Please see the [health-checks documentation](../guides/health-checks.md) for more information.
+Please see the [health-checks documentation](../monitoring/health-checks.md) for more information.
 
 ### `init`
 

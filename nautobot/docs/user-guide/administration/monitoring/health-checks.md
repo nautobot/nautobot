@@ -1,10 +1,12 @@
-# Nautobot Health Checks
+# Health Checks
 
-In a production deployment of Nautobot, you'll want health checks (also termed liveness checks, readiness checks, etc.) for each distinct component of the Nautobot system, to be able to detect if any component fails and ideally respond automatically. While this topic can be (and is) the subject of multiple books, this document attempts to provide some basic "best practices" guidelines. If you're deploying Nautobot as part of a larger enterprise system, of course you'll want to follow your organization's experts and their guidance, but if you're "on your own", you can do worse than starting here.
+Production deployments of Nautobot should expose health-check endpoints for each distinct component (web server, Celery worker, Celery Beat, PostgreSQL, Redis) so that the orchestrator can detect failures and recover automatically. This page covers the probes Nautobot exposes and how to wire them into Kubernetes, Docker Compose, and systemd.
 
-## Health Check Approaches
+For the alert rules that fire on probe failure or staleness, see [Alerting](./alerting.md). For the *why* behind file-based worker probes — and the broader Celery reliability picture — see [Celery and Jobs](./celery-jobs.md). For backing-store HA caveats that go beyond a basic liveness probe, see [Backing Stores](./backing-stores.md).
 
-In general the following commands or HTTP requests can serve as health checks for the various components of a Nautobot system.
+## Health-check approaches
+
+The commands and HTTP requests below can serve as health checks for the various components of a Nautobot system.
 
 ### Nautobot HTTP Server
 
@@ -38,6 +40,9 @@ In addition to monitoring the existence of a given Celery worker process ID, you
 !!! tip
     A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
 
+!!! warning
+    `inspect ping` has a default timeout of **1 second**. On a busy worker — or a worker wedged on a syscall — the ping can fail to return in time and the probe will report the worker as unhealthy when it isn't. For most production deployments the file-based probe described below is more reliable. See [Celery and Jobs — Worker silent-death](./celery-jobs.md#worker-silent-death) for the rationale.
+
 Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the (optional)  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) settings in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
 
 ```shell
@@ -52,11 +57,17 @@ In addition to monitoring the Celery Beat process ID, you can use the fact that 
 [ $(find $NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE -mmin -0.1 | wc -l) -eq 1 ] || false
 ```
 
+!!! info
+    The heartbeat file confirms that Beat is *running*. It does not confirm that any individual scheduled Job is *firing on time* — Beat does not backfill missed runs. For a per-schedule liveness check that detects silent schedule drift, see [Celery and Jobs — Beat schedule drift](./celery-jobs.md#beat-schedule-drift).
+
 ### Databases
 
 #### PostgreSQL
 
 PostgreSQL provides the [`pg_isready` CLI command](https://www.postgresql.org/docs/current/app-pg-isready.html) to check whether the database server is running and accepting connections.
+
+!!! warning "HA topologies"
+    `pg_isready` only confirms TCP reachability — it does **not** detect whether the node is in recovery (read-only). In a Patroni / repmgr / RDS multi-AZ topology, a connection probe can pass against a follower that Nautobot cannot write to. Add `psql -c "SELECT NOT pg_is_in_recovery();"` as a secondary probe — it returns `t` only on the primary. See [Backing Stores — PostgreSQL HA-specific signals](./backing-stores.md#ha-specific-signals) for the full rationale and additional ongoing-monitoring queries.
 
 #### MySQL
 
@@ -68,6 +79,9 @@ Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping
 
 !!! tip
     If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
+
+!!! warning "HA topologies"
+    `redis-cli ping` returns `PONG` on both master and replica nodes. In a Sentinel topology, add `redis-cli INFO replication | grep role:master` as a secondary probe so a recently-demoted replica does not pass the liveness check. See [Backing Stores — Redis HA considerations](./backing-stores.md#ha-considerations).
 
 If you have implemented a custom redis `CLIENT_CLASS` for use within `CACHES`, you can provide a custom health check to register. This must be in the format shown below.
 

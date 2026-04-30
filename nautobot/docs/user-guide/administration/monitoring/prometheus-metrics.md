@@ -2,6 +2,8 @@
 
 Nautobot supports optionally exposing native Prometheus metrics from the application. [Prometheus](https://prometheus.io/) is a popular time series metric platform used for monitoring.
 
+This page describes the metrics Nautobot exposes and how to enable them. For example alert rules built on top of these metrics, see [Alerting](./alerting.md). For backing-store metrics that complement Nautobot's own — exposed via `redis_exporter` and `postgres_exporter` — see [Backing Stores](./backing-stores.md). For the broader monitoring picture, see the [Monitoring overview](./index.md).
+
 ## Configuration
 
 Metrics are not exposed by default. Metric exposition can be toggled with the `METRICS_ENABLED` configuration setting which exposes metrics at the `/metrics` HTTP endpoint, e.g. `https://nautobot.local/metrics`.
@@ -34,7 +36,7 @@ For more information see the [`django-prometheus`](https://github.com/korfuri/dj
 
 +++ 2.1.5
 
-Metrics by default do not require authentication to view. Authentication can be toggled with the `METRICS_AUTHENTICATION` configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
+Metrics by default do not require authentication to view. Authentication can be toggled with the [`METRICS_AUTHENTICATED`](../configuration/settings.md#metrics_authenticated) configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
 ### Sample Telegraf configuration
 
@@ -66,11 +68,13 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 |--------------------------------------|----------------------------------------------------------------------------|---------|------------|
 | `health_check_database_info`         | Result of the last database health check                                   | Gauge   | Web Server |
 | `health_check_redis_backend_info`    | Result of the last redis health check                                      | Gauge   | Web Server |
-| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps     | Gauge   | Web Server |
+| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps. Useful for detecting an App with a slow custom-metric collector — a sustained increase points at the App, not Nautobot core. | Gauge   | Web Server |
 | `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | Worker     |
 | `nautobot_worker_finished_jobs`      | The amount of jobs that were finished (incl. status label)                 | Counter | Worker     |
 | `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
 | `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
+
+For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample alert rules](./alerting.md#sample-alert-rules). For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
 
 !!! note
     Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.

@@ -168,7 +168,7 @@ Nautobot uses a relational database to store its data. Both MySQL and PostgreSQL
     For additional features:
 
     * [NAPALM support](../../platform-functionality/napalm.md) for retrieving operational data from network devices
-    * [Prometheus metrics](../guides/prometheus-metrics.md) for exporting application performance and telemetry data
+    * [Prometheus metrics](../monitoring/prometheus-metrics.md) for exporting application performance and telemetry data
 
 ## Upgrading
 
