@@ -361,6 +361,151 @@ class LocationRackGroupsPanel(object_detail.Panel):
         return format_html_join("", "{}", ((row,) for row in rows))
 
 
+class DeviceModuleTreePanel(object_detail.Panel):
+    """Recursively renders a Device's ModuleBay/Module hierarchy as an indented table."""
+
+    INDENT_PX = 30
+
+    def render_header_extra_content(self, context):
+        device = get_obj_from_context(context)
+        if not device or not device.get_module_tree():
+            return ""
+        return format_html(
+            '<div class="pull-right">'
+            '<button type="button" class="btn btn-default btn-xs" id="module-tree-expand-all">'
+            '<i class="mdi mdi-arrow-expand-all"></i> Expand All</button> '
+            '<button type="button" class="btn btn-default btn-xs" id="module-tree-collapse-all">'
+            '<i class="mdi mdi-arrow-collapse-all"></i> Collapse All</button>'
+            "</div>"
+        )
+
+    def render_body_content(self, context):
+        device = get_obj_from_context(context)
+        if not device:
+            return ""
+        tree = device.get_module_tree()
+        if not tree:
+            return format_html(
+                "<tbody><tr><td>"
+                '<span class="text-muted">&mdash; No module bays found for this device. &mdash;</span>'
+                "</td></tr></tbody>"
+            )
+
+        rows = []
+        for node in tree:
+            self._build_rows(node, depth=0, parent_bay_pk=None, rows=rows)
+
+        return format_html(
+            "<thead><tr>"
+            "<th>Module Bay</th><th>Module</th><th>Status</th><th>Role</th><th>Serial / Asset Tag</th>"
+            "</tr></thead><tbody>{}</tbody>",
+            format_html_join("", "{}", ((row,) for row in rows)),
+        )
+
+    def render_footer_content(self, context):
+        return format_html('<script src="{}"></script>', helpers.versioned_static("js/module_tree.js"))
+
+    def _build_rows(self, node, depth, parent_bay_pk, rows):
+        bay = node["bay"]
+        module = node["module"]
+        children = node["children"]
+        indent = depth * self.INDENT_PX
+
+        if children:
+            icon = format_html(
+                '<a href="#" class="module-tree-toggle" data-bay-pk="{}" title="Toggle children">'
+                '<i class="mdi mdi-chevron-down"></i></a>',
+                bay.pk,
+            )
+        elif depth > 0:
+            icon = format_html('<i class="mdi mdi-subdirectory-arrow-right text-muted"></i>')
+        else:
+            icon = format_html('<span style="display: inline-block; width: 20px;"></span>')
+
+        if bay.position and bay.position != bay.name:
+            position_marker = format_html(' <span class="text-muted">(pos: {})</span>', bay.position)
+        else:
+            position_marker = ""
+
+        if module:
+            module_html = format_html(
+                '<i class="mdi mdi-memory" title="Module"></i> <a href="{}">{}</a>',
+                module.get_absolute_url(),
+                module.module_type,
+            )
+            status_html = (
+                helpers.hyperlinked_object_with_color(module.status)
+                if module.status
+                else format_html('<span class="text-muted">&mdash;</span>')
+            )
+            role_html = (
+                helpers.hyperlinked_object(module.role)
+                if module.role
+                else format_html('<span class="text-muted">&mdash;</span>')
+            )
+            serial_parts = []
+            if module.serial:
+                serial_parts.append(format_html("S/N: {}", module.serial))
+            if module.asset_tag:
+                serial_parts.append(format_html("Asset: {}", module.asset_tag))
+            serial_html = (
+                format_html_join(" / ", "{}", ((part,) for part in serial_parts))
+                if serial_parts
+                else format_html('<span class="text-muted">&mdash;</span>')
+            )
+        else:
+            module_html = format_html('<span class="text-muted"><em>Empty</em></span>')
+            status_html = format_html('<span class="text-muted">&mdash;</span>')
+            role_html = format_html('<span class="text-muted">&mdash;</span>')
+            serial_html = format_html('<span class="text-muted">&mdash;</span>')
+
+        if depth > 0 and parent_bay_pk:
+            row_attrs = format_html('data-bay-pk="{}" data-parent-bay="{}"', bay.pk, parent_bay_pk)
+        else:
+            row_attrs = format_html('data-bay-pk="{}"', bay.pk)
+
+        rows.append(
+            format_html(
+                "<tr {}>"
+                '<td><span style="padding-left: {}px; white-space: nowrap;">{}'
+                ' <i class="mdi mdi-expansion-card text-muted" title="Module Bay"></i>'
+                ' <a href="{}">{}</a>{}</span></td>'
+                "<td>{}</td><td>{}</td><td>{}</td><td>{}</td>"
+                "</tr>",
+                row_attrs,
+                indent,
+                icon,
+                bay.get_absolute_url(),
+                bay.name,
+                position_marker,
+                module_html,
+                status_html,
+                role_html,
+                serial_html,
+            )
+        )
+
+        if children:
+            child_indent = (depth + 1) * self.INDENT_PX
+            rows.append(
+                format_html(
+                    '<tr class="active" data-parent-bay="{}">'
+                    '<td colspan="5"><span style="padding-left: {}px; white-space: nowrap;">'
+                    '<i class="mdi mdi-memory text-muted"></i> <strong><a href="{}">{}</a></strong>'
+                    ' <span class="text-muted">&mdash; {} bay{}</span>'
+                    "</span></td></tr>",
+                    bay.pk,
+                    child_indent,
+                    module.get_absolute_url(),
+                    module,
+                    len(children),
+                    "" if len(children) == 1 else "s",
+                )
+            )
+            for child in children:
+                self._build_rows(child, depth + 1, bay.pk, rows)
+
+
 class LocationImageAttachmentsTablePanel(object_detail.ObjectsTablePanel):
     """
     ObjectsTablePanel with a custom _get_table_add_url() implementation.
@@ -2759,6 +2904,14 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 url_name="dcim:device_moduletree",
                 related_object_attribute="module_bays",
                 hide_if_empty=True,
+                panels=(
+                    DeviceModuleTreePanel(
+                        weight=100,
+                        section=SectionChoices.FULL_WIDTH,
+                        label="Module Hierarchy",
+                        body_wrapper_template_path="components/panel/body_wrapper_generic_table.html",
+                    ),
+                ),
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 200,
@@ -3172,13 +3325,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["dcim.view_modulebay", "dcim.view_module"],
     )
     def module_tree(self, request, *args, **kwargs):
-        instance = self.get_object()
-        return Response(
-            {
-                "template": "dcim/device/module_tree.html",
-                "module_tree": instance.get_module_tree(),
-            },
-        )
+        return Response({})
 
     @action(
         detail=True,
