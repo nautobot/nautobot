@@ -2353,7 +2353,7 @@ class JobTerminateTestCase(TransactionTestCase):
                     f"Expected an info log about the termination succeced, got: {log_cm.output}",
                 )
 
-    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy._perform_termination")
+    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.perform_termination")
     @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.should_reap")
     def test_terminate_returns_error_when_perform_termination_raises(self, mock_should_reap, mock_perform_termination):
         mock_should_reap.return_value = False
@@ -2385,7 +2385,7 @@ class JobTerminateTestCase(TransactionTestCase):
 
     @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.should_reap")
     def test_perform_termination_skips_when_job_in_ready_state(self, mock_should_reap):
-        """When the job is already terminal, _perform_termination must not
+        """When the job is already terminal, perform_termination must not
         send a revoke or touch the JobResult fields."""
         mock_should_reap.return_value = False  # force the kill path
 

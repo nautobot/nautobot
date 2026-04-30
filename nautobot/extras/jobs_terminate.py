@@ -15,13 +15,9 @@ class JobTerminatorStrategy(ABC):
     """Abstract base class for job termination strategies across different queues.
 
     Defines the interface for various backends (Celery, Kubernetes, etc.).
-    Subclasses implement the `is_alive`, `should_reap`, `_mark_revoked`, and
-    `_perform_termination` hooks; `terminate` orchestrates them.
+    Subclasses implement the `is_alive`, `should_reap`, and
+    `perform_termination` hooks; `terminate` orchestrates them.
     """
-
-    def is_unready_state(self, job_result: JobResult) -> bool:
-        """Return True if job_result is in a not finished state."""
-        return job_result.status in JobResultStatusChoices.UNREADY_STATES
 
     @abstractmethod
     def is_alive(self, job_result: JobResult) -> bool | None:
@@ -32,8 +28,12 @@ class JobTerminatorStrategy(ABC):
         """Return True if the job can be marked revoked without sending a kill signal."""
 
     @abstractmethod
-    def _perform_termination(self, job_result: JobResult, user: User):
+    def perform_termination(self, job_result: JobResult, user: User):
         """Send the backend-specific kill signal and mark the job revoked."""
+
+    def _is_unready_state(self, job_result: JobResult) -> bool:
+        """Return True if job_result is in a not finished state."""
+        return job_result.status in JobResultStatusChoices.UNREADY_STATES
 
     def _apply_termination_metadata(self, job_result: JobResult, user: User) -> dict:
         """Fill in termination metadata fields on a locked `JobResult`.
@@ -84,7 +84,7 @@ class JobTerminatorStrategy(ABC):
         """Reap or kill a job and return the outcome.
 
         Reaps when `should_reap` is True (no signal sent). Otherwise sends
-        the backend kill signal via `_perform_termination`. Exceptions from
+        the backend kill signal via `perform_termination`. Exceptions from
         the kill path are caught and reported in the result.
 
         Args:
@@ -93,7 +93,7 @@ class JobTerminatorStrategy(ABC):
 
         Returns:
             `{"job_result": JobResult, "error": str | None}`. `error` is
-            set only when `_perform_termination` raised.
+            set only when `perform_termination` raised.
         """
         # REAP
         if self.should_reap(job_result):
@@ -102,7 +102,7 @@ class JobTerminatorStrategy(ABC):
 
         # TERMINATE
         try:
-            self._perform_termination(job_result, user)
+            self.perform_termination(job_result, user)
         except Exception as e:
             logger.error("Termination failed for %s: %s", job_result.pk, e)
             return {"job_result": job_result, "error": f"Termination failed: {e}"}
@@ -161,7 +161,7 @@ class CeleryStrategy(JobTerminatorStrategy):
         Reap when no worker will handle the job *and* the job isn't already done.
         `not self.is_alive(...)` covers both False (workers replied, none has the
         task) and None (couldn't reach workers at all) — both are treated as
-        "no worker will handle this." The `is_unready_state` guard prevents
+        "no worker will handle this." The `_is_unready_state` guard prevents
         reaping a job that already finished normally.
 
         Args:
@@ -170,9 +170,9 @@ class CeleryStrategy(JobTerminatorStrategy):
         Returns:
             True if the job should be reaped, False otherwise.
         """
-        return self.is_unready_state(job_result) and not self.is_alive(job_result)
+        return self._is_unready_state(job_result) and not self.is_alive(job_result)
 
-    def _perform_termination(self, job_result: JobResult, user: User):
+    def perform_termination(self, job_result: JobResult, user: User):
         """Send a SIGKILL revoke to the Celery worker and mark the job revoked.
 
         Fires a `revoke(terminate=True, signal="SIGKILL")` control message to
@@ -186,7 +186,7 @@ class CeleryStrategy(JobTerminatorStrategy):
                 Celery task ID.
             user: The user requesting termination, recorded on `terminated_by`.
         """
-        if not self.is_unready_state(job_result):
+        if not self._is_unready_state(job_result):
             return
         task_id = str(job_result.pk)
         celery_app = self.get_celery_app()
