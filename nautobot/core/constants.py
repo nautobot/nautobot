@@ -214,5 +214,5 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
 # M2M fields that are included by default in API responses if exclude_m2m is not provided
 DEFAULT_M2M_FIELDS = ["tags", "content_types", "object_types"]
 
-# Custom namespace UUID for generating deterministic UUIDs for job modal buttons via uuid5().
+# Randomly generated, fixed namespace UUID for generating deterministic registry keys for job modal buttons via uuid5().
 NAMESPACE_JOBMODALBUTTON = UUID("229fb8b8-bdc5-46c6-8f7d-5c876e9cc10d")

@@ -945,6 +945,7 @@ class _JobModalButtonTest(TestCase):
         subclass_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, subclass_path))
         self.assertIn(subclass_path_as_uuid, registry["job_modal_buttons"])
         self.assertIs(registry["job_modal_buttons"][subclass_path_as_uuid], _TestButton)
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(subclass_path_as_uuid, None))
 
 
 class PostButtonTest(TestCase):

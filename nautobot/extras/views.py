@@ -2688,7 +2688,8 @@ class JobUIViewSet(NautobotUIViewSet):
             job_form = job_class.as_form(initial=initial)
             job_execution_form = job_class.as_execution_form(initial=initial)
 
-        except RuntimeError:
+        except RuntimeError as err:
+            messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
         schedule_form = forms.JobScheduleForm(initial=initial)
