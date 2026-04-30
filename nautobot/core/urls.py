@@ -9,6 +9,7 @@ from nautobot.core.views import (
     CustomGraphQLView,
     get_file_with_authorization,
     HomeView,
+    LiveSearchView,
     MediaView,
     MessagesView,
     NautobotMetricsView,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("messages/", MessagesView.as_view(), name="messages"),
     path("search/", SearchView.as_view(), name="search"),
     path("search/<str:content_type>/", SearchContentTypeView.as_view(), name="search_content_type"),
+    path("live-search/<path:path>", LiveSearchView.as_view(), name="live_search"),
     # Login/logout
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),

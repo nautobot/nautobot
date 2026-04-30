@@ -27,7 +27,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import NoReverseMatch, resolve, reverse
+from django.urls import NoReverseMatch, resolve, Resolver404, reverse
 from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
@@ -53,16 +53,18 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import SEARCH_MAX_RESULTS
+from nautobot.core.constants import LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_model_for_view_name,
     get_model_from_name,
     get_related_class_for_model,
     get_route_for_model,
+    get_table_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -463,6 +465,45 @@ class SearchContentTypeView(AccessMixin, View):
                 request,
                 "components/htmx/object_embedded_search.html",
                 {"filter_form": filter_form, "model": model},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class LiveSearchView(AccessMixin, View):
+    def get(self, request, path):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            restricted_queryset = None
+            table = None
+
+            try:
+                view_name = resolve(f"/{path}").view_name
+                model = get_model_for_view_name(view_name)
+                filterset = get_filterset_for_model(model)
+                table_class = get_table_for_model(model)
+            except (Resolver404, TypeError, ValueError):
+                filterset = None
+                table_class = None
+
+            if filterset and table_class:
+                filtered_queryset = filterset(request.GET).qs
+                if filtered_queryset:
+                    restricted_queryset = filtered_queryset.restrict(request.user, "view")
+                    table = table_class(
+                        restricted_queryset, hide_hierarchy_ui=True, is_object_embedded_search_results=True
+                    )
+                    if table:
+                        table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
+
+            return render(
+                request,
+                "components/htmx/live_search_results.html",
+                {"href": f"/{path}?{request.GET.urlencode()}", "table": table},
             )
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")

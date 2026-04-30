@@ -1,0 +1,43 @@
+{% load helpers %}
+
+{% if table %}
+    <ul class="nb-search-list-group" data-nb-results-type="live-search">
+        {% for row in table.page.object_list|default:table.rows %}
+            <li>
+                <div
+                    class="nb-search-list-group-item nb-subtree {% if forloop.last and not table.page.has_next %}nb-subtree-no-next-sibling{% else %}nb-subtree-next-sibling{% endif %}"
+                    data-href="{{ row.record|get_object_link }}"
+                    onclick="window.location.href = event.currentTarget.getAttribute('data-href');"
+                    onkeydown="if (event.key === 'Enter') { window.location.href = event.currentTarget.getAttribute('data-href'); }"
+                    role="link"
+                    tabindex="0"
+                >
+                    <div class="d-inline-flex gap-20 ps-4" inert>
+                        {% for column, cell in row.items %}
+                            {% if forloop.first %}
+                                <strong class="fw-medium text-primary text-nowrap">
+                                    {{ cell }}
+                                </strong>
+                            {% else %}
+                                <div class="d-inline-flex gap-4 text-nowrap">
+                                    <span class="text-secondary">
+                                        {{ column.header }}:
+                                    </span>
+                                    {{ cell }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </li>
+        {% endfor %}
+        {% if table.page.has_next %}
+            <li>
+                <a class="text-secondary nb-search-list-group-item nb-subtree nb-subtree-no-next-sibling" href="{{ href }}">
+                    {% widthratio table.paginator.per_page 1 -1 as negative_per_page %}
+                    More... ({{ table.paginator.count|add:negative_per_page }})
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+{% endif %}
