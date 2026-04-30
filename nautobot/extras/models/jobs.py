@@ -874,10 +874,12 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
+        celery_kwargs = extra_kwargs.pop("celery_kwargs", None)
+
         if job_kwargs is None:
             if not extra_kwargs:
                 raise ValueError("`job_kwargs` has to be defined.")
-            celery_kwargs = extra_kwargs.pop("celery_kwargs", None)
+
             logger.warning(
                 "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
             )
