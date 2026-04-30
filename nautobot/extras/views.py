@@ -2086,14 +2086,13 @@ def check_and_call_git_repository_function(request, pk, func):
         return HttpResponseForbidden()
 
     # Allow execution only if a worker process is running.
+    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
     if not get_worker_count():
         messages.error(request, "Unable to run job: Celery worker process not running.")
-        return redirect(reverse("extras:gitrepository", args=(pk,)), permanent=False)
+        return redirect(repository.get_absolute_url(), permanent=False)
     else:
-        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-        job_result = func(repository, request.user)
-
-    return redirect(job_result.get_absolute_url())
+        func(repository, request.user)
+        return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
 
 
 class DatasourceContentsPanel(object_detail.Panel):
@@ -2575,7 +2574,7 @@ class JobUIViewSet(NautobotUIViewSet):
                         self.request,
                         f'Unable to render requested custom HTMX job template "{job_class.htmx_template_name}": {err}',
                     )
-        elif hasattr(job_class, "template_name"):
+        elif job_class is not None and job_class.template_name:
             try:
                 get_template(job_class.template_name)
                 template_name = job_class.template_name

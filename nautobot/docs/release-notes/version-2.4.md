@@ -166,6 +166,53 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.32 (2026-04-27)
+
+### Security in v2.4.32
+
+- [#8842](https://github.com/nautobot/nautobot/issues/8842) - Updated dependency `Pillow` to `^12.2.0` to mitigate a number of security vulnerabilities.
+- [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8904](https://github.com/nautobot/nautobot/issues/8904) - Updated dependency `GitPython` to `~3.1.47` to mitigate CVE-2026-42215 and CVE-2026-42284.
+
+### Fixed in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Fixed an issue where filtering a nested relation (e.g. interfaces with role filter on devices) via GraphQL would produce N+1 queries.
+- [#8629](https://github.com/nautobot/nautobot/issues/8629) - Fixed a scenario where rendering a GitRepository-related Jobs "Scheduled Job View" would sometimes show the Job as not installed.
+- [#8690](https://github.com/nautobot/nautobot/issues/8690) - Fixed a 500 error when using tag-based permission constraints on objects with multiple matching tags.
+- [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
+
+### Housekeeping in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Added the AssertNoRepeatedQueries context manager test helper to detect N+1 patterns in SQL queries.
+
+## v2.4.31 (2026-04-09)
+
+### Security in v2.4.31
+
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pygments` to `2.20.0` to mitigate CVE-2026-4539. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pymdown-extensions` to `10.21.2` to address an incompatibility with `pygments` version `2.20`. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8790](https://github.com/nautobot/nautobot/issues/8790) - Updated dependency `Django` to `~4.2.30` to mitigate CVE-2026-33033 and others.
+- [#8790](https://github.com/nautobot/nautobot/issues/8790) - Updated dependency `cryptography` to `~46.0.7` to mitigate CVE-2026-39892.
+
+### Added in v2.4.31
+
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Added ARM64 variants for all published Docker images.
+
+### Fixed in v2.4.31
+
+- [#8316](https://github.com/nautobot/nautobot/issues/8316) - Fixed scheduled jobs with custom crontab schedules running once immediately (ASAP) before following their crontab schedule.
+- [#8824](https://github.com/nautobot/nautobot/issues/8824) - Fixed k8s job with sensitive variables.
+
+### Housekeeping in v2.4.31
+
+- [#6267](https://github.com/nautobot/nautobot/issues/6267) - Replaced third-party GitHub action in release CI.
+- [#8502](https://github.com/nautobot/nautobot/issues/8502) - Improved the Docker build process and tagging in CI.
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Refactored GitHub CI to use multi-architecture runners for Docker image build and publish.
+- [#8697](https://github.com/nautobot/nautobot/issues/8697) - Fixed Docker image publication for integration branches and releases.
+- [#8699](https://github.com/nautobot/nautobot/issues/8699) - Fixed isolation of docker image digests by cache scope when building multiple images in a single workflow.
+- [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated PyPI publication to use Trusted Publisher.
+- [#8799](https://github.com/nautobot/nautobot/issues/8799) - Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
+
 ## v2.4.30 (2026-03-30)
 
 ### Security in v2.4.30

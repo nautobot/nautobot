@@ -5,15 +5,22 @@ import re
 
 from django import forms
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
 from nautobot.core.forms.fields import CommentField, DynamicModelChoiceField, DynamicModelMultipleChoiceField
-from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
+from nautobot.core.utils.filtering import (
+    build_lookup_label,
+    get_filter_field_label,
+    get_filterset_for_model,
+    get_filterset_parameter_form_field,
+)
+from nautobot.core.utils.lookup import get_related_class_for_model, get_route_for_model
 from nautobot.ipam import formfields
 
 __all__ = (
@@ -133,11 +140,34 @@ class EmbeddedActionsFormMixin(forms.Form):
         form_meta_exclude_embedded_action = getattr(meta, f"exclude_embedded_{action}", None)
 
         if field_embedded_action is not None:
-            return field_embedded_action
-        if form_meta_embedded_action is not None:
-            return name in form_meta_embedded_action
-        if form_meta_exclude_embedded_action is not None:
-            return name not in form_meta_exclude_embedded_action
+            enabled = field_embedded_action
+        elif form_meta_embedded_action is not None:
+            enabled = name in form_meta_embedded_action
+        elif form_meta_exclude_embedded_action is not None:
+            enabled = name not in form_meta_exclude_embedded_action
+        else:
+            enabled = True
+
+        if not enabled:
+            return False
+
+        model = field.queryset.model
+        # ContentType is a Django built-in model that is not user-creatable and has no UI list view,
+        # so neither embedded create nor search apply.
+        if model is ContentType:
+            return False
+        # Disable when the target model lacks the required UI infrastructure.
+        if action == "create":
+            try:
+                reverse(get_route_for_model(model, "add"))
+            except NoReverseMatch:
+                return False
+        elif action == "search":
+            if (
+                get_filterset_for_model(model) is None
+                or get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm") is None
+            ):
+                return False
         return True
 
     def validate_mutually_exclusive_attributes(self, obj, *attributes):

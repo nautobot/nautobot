@@ -1,0 +1,1 @@
+Fixed `_JobModalButton` `refresh_on_close_if_done` flag being dropped during modal polling, causing the page to not reload when the Close button (footer, header, or Escape key) is used after a Job completes.
