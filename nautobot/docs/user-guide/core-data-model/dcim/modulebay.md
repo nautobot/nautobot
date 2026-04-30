@@ -12,3 +12,6 @@ Since module bays can be nested within modules, there are two fields on module b
 
 +++ 2.4.11
     Module bays may be assigned to a [module family](modulefamily.md), which limits the module types that may be installed in it.
+
++++ 2.4.32
+    The [Device](device.md) detail view now includes a **Module Tree** tab that renders the device's full Module Bay and installed Module hierarchy as a single collapsible, indented tree, including any nested Module → Module Bay → Module chains. The tab is hidden when the device has no module bays. See [Device — Module Tree](device.md#module-tree-tab) for details.

@@ -25,6 +25,19 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 +++ 2.3.0
     Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
 
+## Module Tree Tab
+
++++ 2.4.32
+
+For modular devices (any device with one or more [module bays](modulebay.md)), the device detail view exposes a **Module Tree** tab in addition to the existing **Module Bays** tab. While Module Bays renders a flat table of all bays on the device, Module Tree renders the full hierarchy of [Module Bays](modulebay.md) and their installed [Modules](module.md) as a single collapsible, indented tree:
+
+- Each top-level Module Bay appears as a root row, with its installed Module (or an *Empty* indicator) on the same row.
+- Modules that themselves contain Module Bays (for example, a line card with SFP slots) expand into nested rows for each of their bays — recursively, to whatever depth the device's hardware actually has.
+- Each row shows the bay name, installed module type, status, role, and serial / asset tag, with hyperlinks to the corresponding Module Bay and Module detail views.
+- **Expand All** and **Collapse All** buttons in the panel header, plus a per-bay toggle, let you focus on a specific subtree without scrolling through unrelated branches.
+
+The tab is hidden when the device has no module bays, so non-modular devices remain unaffected. Viewing the tab requires `dcim.view_device`, `dcim.view_modulebay`, and `dcim.view_module` permissions.
+
 ## Developer API
 
 The `Device` Django model class supports a method called `create_components()`. This method is normally called during `device_instance.save()`, which is called whenever you save create a Device via the GUI or the REST API, but if you are working directly in the ORM and encounter one of the two following scenarios, `device_instance.save()` is not called:
@@ -33,3 +46,6 @@ The `Device` Django model class supports a method called `create_components()`. 
 - Usage of `device_instance.save()` during handling of the `nautobot_database_ready` signal (which uses [historical models](https://docs.djangoproject.com/en/3.2/topics/migrations/#historical-models))
 
 In these cases you will have to manually run `device_instance.create_components()` in order to instantiate the [device type's](devicetype.md) component templates (interfaces, power ports, etc.).
+
++++ 2.4.32
+    `Device.get_module_tree()` returns a nested list of `{"bay": ModuleBay, "module": Module|None, "children": [...]}` dicts representing the device's full Module Bay / Module hierarchy. Each `children` entry uses the same shape and recurses to whatever depth the device's hardware has. Top-level bays (those attached directly to the device rather than to an installed module) appear as the outer list. Devices with no module bays return an empty list. This is the data backing the [Module Tree tab](#module-tree-tab); App authors can call it directly when they need the same hierarchical view in their own UIs or jobs.
