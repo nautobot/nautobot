@@ -716,6 +716,23 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
+    # Revoke switch fields
+    revoked_by = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="terminated_job_results",
+        help_text="The user who initiated the kill action.",
+    )
+    # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
+    revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
+    terminated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp at which the job was forcibly terminated",
+    )
+
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -793,6 +810,11 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     @property
     def job_description(self):
         return self.job_model.description if self.job_model else None
+
+    @property
+    def is_unready_state(self) -> bool:
+        """Return True if job_result is in a not finished state."""
+        return self.status in JobResultStatusChoices.UNREADY_STATES
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
