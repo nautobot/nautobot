@@ -502,8 +502,7 @@ class LiveSearchView(AccessMixin, View):
                     table = table_class(
                         restricted_queryset, hide_hierarchy_ui=True, is_object_embedded_search_results=True
                     )
-                    if table:
-                        table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
+                    table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
 
             return render(
                 request,
