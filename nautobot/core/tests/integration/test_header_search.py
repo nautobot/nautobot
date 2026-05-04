@@ -100,7 +100,7 @@ class HomeTestCase(SeleniumTestCase):
         self.assertEqual(len(results), 3)
 
         # Assert that the first typeahead suggestion is "in: Devices", and click it
-        self.assertTrue(results.first.text, 'in: Devices')
+        self.assertTrue(results.first.text, "in: Devices")
         results.first.click()
 
         # Assert that `Device` content type badge is rendered, and that its link and has text are valid
