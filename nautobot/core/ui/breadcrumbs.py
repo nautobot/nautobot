@@ -517,7 +517,7 @@ class AncestorsInstanceBreadcrumbItem(InstanceBreadcrumbItem):
         ("/dcim/locations/<pk>", "Parent 2"), ("/dcim/locations/<pk>", "Parent 1"), ("/dcim/locations/<pk>", "Location")
     """
 
-    ancestor_item: Callable[[Model], BaseBreadcrumbItem] = lambda instance: InstanceBreadcrumbItem(instance=instance)
+    ancestor_item: Callable[[Model]] = lambda instance: InstanceBreadcrumbItem(instance=instance)
     include_self: bool = False
 
     def as_pair(self, context: Context) -> Iterator[tuple[str, str]]:
