@@ -2367,12 +2367,7 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
       margin-block-end: map.get($spacers, 2);
       margin-block-start: map.get($spacers, 10);
       margin-inline: 0;
-    }  $subtree-icon-height: 5.625rem; /* 90px */
-  $subtree-icon-width: 1.25rem; /* 20px */
-  $subtree-ancestor-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/></svg>";
-  $subtree-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
-  $subtree-no-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
-
+    }
 
     .nb-tile-header {
       align-items: center;
