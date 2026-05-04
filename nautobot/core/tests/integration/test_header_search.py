@@ -99,7 +99,8 @@ class HomeTestCase(SeleniumTestCase):
         results = self.get_search_popup_results()
         self.assertEqual(len(results), 3)
 
-        # Click on the first typeahead suggestion, it is expected to be "in: Devices"
+        # Assert that the first typeahead suggestion is "in: Devices", and click it
+        self.assertTrue(results.first.text, 'in: Devices')
         results.first.click()
 
         # Assert that `Device` content type badge is rendered, and that its link and has text are valid
