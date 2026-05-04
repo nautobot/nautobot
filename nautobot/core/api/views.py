@@ -749,9 +749,6 @@ class GraphQLDRFAPIView(NautobotAPIVersionMixin, APIView):
             else:
                 self.middleware = list(instantiate_middleware(self.middleware))
 
-        self.execution_context_class = self.execution_context_class
-        self.root_value = self.root_value
-
         if not isinstance(self.schema.graphql_schema, GraphQLSchema):
             raise ValueError("A Schema is required to be provided to GraphQLAPIView.")
 

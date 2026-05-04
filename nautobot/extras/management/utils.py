@@ -77,7 +77,7 @@ def report_job_status(command, job_result):
             if status == "success":
                 status = command.style.SUCCESS(status)
             elif status == "info":
-                status = status
+                pass  # no styling
             elif status == "warning":
                 status = command.style.WARNING(status)
             elif status in ["failure", "error", "critical"]:
