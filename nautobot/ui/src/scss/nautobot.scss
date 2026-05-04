@@ -2699,6 +2699,27 @@ pre.version, pre.version-stamp {
   }
 }
 
+.nb-search-list-group {
+  @extend .list-group;
+
+  list-style-type: none;
+}
+
+.nb-search-list-group-item {
+  @extend .list-group-item;
+
+  border: none;
+  cursor: pointer;
+  /* `text-align` and `width` are cloned from `.list-group-item-action`, but this entire class must not be extended! */
+  text-align: inherit;
+  width: 100%;
+
+  span.mdi::before { /* It is required to bump selector specificity here with `span`. */
+    font-size: $font-size-lg;
+    top: map.get($spacers, 2);
+  }
+}
+
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
 .d-none {
   display: none !important;
