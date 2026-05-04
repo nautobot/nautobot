@@ -42,7 +42,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
-from nautobot.extras.jobs_terminate import CeleryStrategy, TerminatorFactory
+from nautobot.extras.jobs_revoke import CeleryStrategy, RevokeFactory
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
@@ -2218,12 +2218,8 @@ class JobLogsDBConnectionTest(TransactionTestCase):
         self.assertGreater(new_conn_close_at, original_conn_close_at)
 
 
-class JobTerminateTestCase(TransactionTestCase):
-    """End-to-end tests for `CeleryStrategy.terminate`."""
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+class JobRevokeTestCase(TransactionTestCase):
+    """End-to-end tests for `CeleryStrategy.revoke`."""
 
     def setUp(self):
         super().setUp()
@@ -2264,7 +2260,7 @@ class JobTerminateTestCase(TransactionTestCase):
 
     @mock.patch("nautobot.core.celery.app.control.inspect")
     def test_is_alive_returns_false_when_query_task_returns_none(self, mock_inspect):
-        """No workers responded at all -> None (unknown, not False)."""
+        """Return False when no Celery workers respond to the query."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
         mock_inspect.return_value.query_task.return_value = None
 
@@ -2276,12 +2272,18 @@ class JobTerminateTestCase(TransactionTestCase):
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
         mock_inspect.return_value.query_task.side_effect = ConnectionError("broker down")
 
-        with self.assertLogs("nautobot.extras.jobs_terminate", level="WARNING") as log_cm:
+        with self.assertLogs("nautobot.extras.jobs_revoke", level="WARNING") as log_cm:
             self.assertFalse(self.strategy.is_alive(job_result))
 
         self.assertTrue(
             any("Failed to query Celery workers" in msg for msg in log_cm.output),
             f"Expected a warning log about the inspection failure, got: {log_cm.output}",
+        )
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                message__contains="Failed to query Celery workers",
+            ).exists()
         )
 
     def test_terminate_test_should_reap_True(self):
@@ -2297,12 +2299,12 @@ class JobTerminateTestCase(TransactionTestCase):
                 self.assertFalse(self.strategy.should_reap(job_result))
 
     def test_factory_returns_celery_strategy_for_celery_queue(self):
-        strategy = TerminatorFactory.get_strategy(JobQueueTypeChoices.TYPE_CELERY)
+        strategy = RevokeFactory.get_strategy(JobQueueTypeChoices.TYPE_CELERY)
         self.assertIsInstance(strategy, CeleryStrategy)
 
     def test_factory_raises_value_error_for_unknown_queue_type(self):
         with self.assertRaises(ValueError) as cm:
-            TerminatorFactory.get_strategy("not-a-queue-type")
+            RevokeFactory.get_strategy("not-a-queue-type")
         self.assertIn("not-a-queue-type", str(cm.exception))
 
     # ------------------------------------------------------------------ #
@@ -2314,23 +2316,30 @@ class JobTerminateTestCase(TransactionTestCase):
         for status in JobResultStatusChoices.UNREADY_STATES:
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
-                with self.assertLogs("nautobot.extras.jobs_terminate", level="INFO") as log_cm:
-                    result = self.strategy.terminate(job_result, self.user)
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
 
                 self.assertTrue(
                     any("Reaped dead job" in msg for msg in log_cm.output),
                     f"Expected an info log about 'Reaped dead job', got: {log_cm.output}",
                 )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains="Reaped dead job",
+                    ).exists()
+                )
                 self.assertIsNone(result["error"])
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, "REVOKED")
-                self.assertEqual(job_result.terminated_by, self.user)
-                self.assertIsNotNone(job_result.terminated_at)
+                self.assertEqual(job_result.revoked_by, self.user)
+                # terminated_at should be only set when action is terminate
+                self.assertIsNone(job_result.terminated_at)
 
     # ------------------------------------------------------------------ #
     # Kill path: PENDING/STARTED + worker present -> SIGKILL sent.
     # ------------------------------------------------------------------ #
-    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.should_reap")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
     def test_terminate_perform_termination_when_worker_alive(self, mock_should_reap):
         # Reap path is taken naturally (no real workers in tests with
         # ALWAYS_EAGER, so is_alive() returns None -> should_reap is True).
@@ -2340,21 +2349,31 @@ class JobTerminateTestCase(TransactionTestCase):
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
 
-                with self.assertLogs("nautobot.extras.jobs_terminate", level="INFO") as log_cm:
-                    result = self.strategy.terminate(job_result, self.user)
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
 
                 self.assertIsNone(result["error"])
                 job_result.refresh_from_db()
-                # I can't check REVOKED sttus here because celery doesn't work
-                self.assertEqual(job_result.terminated_by, self.user)
+                # The status flip to REVOKED
+                # happens later, when the live worker receives the signal, kills the task,
+                # and writes the new state back through the result backend. Tests run
+                # without a real worker, so we can verify the metadata was stamped but
+                # not the eventual status transition.
+                self.assertEqual(job_result.revoked_by, self.user)
                 self.assertIsNotNone(job_result.terminated_at)
                 self.assertTrue(
                     any(f"Job {job_result.pk} terminated by {self.user}" in msg for msg in log_cm.output),
                     f"Expected an info log about the termination succeced, got: {log_cm.output}",
                 )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Job {job_result.pk} terminated by {self.user}",
+                    ).exists()
+                )
 
-    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.perform_termination")
-    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.should_reap")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.perform_termination")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
     def test_terminate_returns_error_when_perform_termination_raises(self, mock_should_reap, mock_perform_termination):
         mock_should_reap.return_value = False
         mock_perform_termination.side_effect = RuntimeError("revoke blew up")
@@ -2363,8 +2382,8 @@ class JobTerminateTestCase(TransactionTestCase):
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
 
-                with self.assertLogs("nautobot.extras.jobs_terminate", level="ERROR") as log_cm:
-                    result = self.strategy.terminate(job_result, self.user)
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="ERROR") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
 
                 # Returned dict carries the error string.
                 self.assertEqual(result["job_result"], job_result)
@@ -2375,15 +2394,21 @@ class JobTerminateTestCase(TransactionTestCase):
                 # JobResult should not changed
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, status)
-                self.assertIsNone(job_result.terminated_by)
+                self.assertIsNone(job_result.revoked_by)
                 self.assertIsNone(job_result.terminated_at)
 
                 self.assertTrue(
                     any(f"Termination failed for {job_result.pk}" in msg for msg in log_cm.output),
                     f"Expected an error log about the termination failure, got: {log_cm.output}",
                 )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Termination failed for {job_result.pk}",
+                    ).exists()
+                )
 
-    @mock.patch("nautobot.extras.jobs_terminate.CeleryStrategy.should_reap")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
     def test_perform_termination_skips_when_job_in_ready_state(self, mock_should_reap):
         """When the job is already terminal, perform_termination must not
         send a revoke or touch the JobResult fields."""
@@ -2393,14 +2418,34 @@ class JobTerminateTestCase(TransactionTestCase):
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
 
-                with mock.patch.object(self.strategy, "get_celery_app") as mock_get_app:
-                    result = self.strategy.terminate(job_result, self.user)
+                with (
+                    mock.patch.object(self.strategy, "get_celery_app") as mock_get_app,
+                    self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
+                ):
+                    result = self.strategy.revoke(job_result, self.user)
 
+                # No celery app should have been fetched.
                 mock_get_app.assert_not_called()
 
+                # Returned dict reports success with no error.
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+
+                # JobResult should be untouched.
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, status)
-                self.assertIsNone(job_result.terminated_by)
+                self.assertIsNone(job_result.date_done)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertFalse(job_result.revoked_by_user_name)
                 self.assertIsNone(job_result.terminated_at)
 
-                self.assertIsNone(result["error"])
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Job {job_result.pk} is already in terminated state",
+                    ).exists()
+                )
