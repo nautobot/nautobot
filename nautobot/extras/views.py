@@ -2785,12 +2785,12 @@ class JobUIViewSet(NautobotUIViewSet):
                         "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
                     )
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                 else:
                     if dryrun and not is_scheduled:
                         # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
                         scheduled_job.delete()
-                        scheduled_job = None
+                        del scheduled_job
                         return self._handle_immediate_execution(
                             request,
                             job_model,
@@ -2812,7 +2812,7 @@ class JobUIViewSet(NautobotUIViewSet):
 
                     # Step 4: Immediate execution (no schedule, no approval)
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                     return self._handle_immediate_execution(
                         request,
                         job_model,

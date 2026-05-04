@@ -993,14 +993,14 @@ class JobViewSetBase(
                     and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
                 ):
                     schedule.delete()
-                    schedule = None
+                    del schedule
                     raise ValidationError(
                         {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
                     )
                 # check approval_required pointer
                 if scheduled_job_has_approval_workflow:
                     schedule.delete()
-                    schedule = None
+                    del schedule
                     raise ValidationError(
                         "Unable to run or schedule job: "
                         "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
@@ -1018,7 +1018,7 @@ class JobViewSetBase(
                 return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
 
             schedule.delete()
-            schedule = None
+            del schedule
 
         job_result = JobResult.enqueue_job(
             job_model,
