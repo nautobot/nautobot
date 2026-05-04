@@ -25,7 +25,7 @@ menu_items = (
                         link="users:group_list",
                         name="Groups",
                         weight=440,
-                        permissions=["auth.view_group"],
+                        permissions=["users.view_admingroup"],
                     ),
                 ),
             ),

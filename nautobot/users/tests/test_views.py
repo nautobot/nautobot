@@ -3,6 +3,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
@@ -12,6 +13,7 @@ from social_django.utils import load_backend, load_strategy
 from nautobot.core.testing import TestCase, utils
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
+from nautobot.users.models import AdminGroup, ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
@@ -188,3 +190,94 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class GroupUIViewSetTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.list_url = reverse("users:group_list")
+        cls.add_url = reverse("users:group_add")
+        cls.user_ct = ContentType.objects.get_for_model(User)
+
+    def _make_object_permission(self, name="View users"):
+        op = ObjectPermission.objects.create(name=name, actions=["view"])
+        op.object_types.add(self.user_ct)
+        return op
+
+    def _empty_permission_formset_data(self, total_forms="1", initial_forms="0"):
+        return {
+            "object_permissions-TOTAL_FORMS": total_forms,
+            "object_permissions-INITIAL_FORMS": initial_forms,
+            "object_permissions-MIN_NUM_FORMS": "0",
+            "object_permissions-MAX_NUM_FORMS": "1000",
+            "object_permissions-0-objectpermission": "",
+            "object_permissions-0-DELETE": "",
+        }
+
+    def test_anonymous_user_redirected_to_login(self):
+        self.client.logout()
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+
+    def test_non_staff_user_forbidden(self):
+        # Default test user has neither is_staff nor is_superuser; check_permissions must reject.
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_can_list_groups(self):
+        self.user.is_superuser = True
+        self.user.save()
+        AdminGroup.objects.create(name="Network Admins")
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 200)
+
+        htmx_response = self.client.get(self.list_url, headers={"HX-Request": "true"})
+        self.assertEqual(htmx_response.status_code, 200)
+        self.assertContains(htmx_response, "Network Admins")
+
+    def test_superuser_can_create_group_with_object_permissions(self):
+        self.user.is_superuser = True
+        self.user.save()
+        op = self._make_object_permission()
+        form_data = {"name": "Operators"}
+        form_data.update(self._empty_permission_formset_data())
+        form_data["object_permissions-0-objectpermission"] = str(op.pk)
+
+        response = self.client.post(self.add_url, data=post_data(form_data), follow=True)
+        self.assertEqual(response.status_code, 200)
+        group = AdminGroup.objects.get(name="Operators")
+        self.assertIn(op, group.object_permissions.all())
+
+    def test_superuser_can_update_group_object_permissions(self):
+        self.user.is_superuser = True
+        self.user.save()
+        group = AdminGroup.objects.create(name="Auditors")
+        existing_op = self._make_object_permission(name="Existing")
+        new_op = self._make_object_permission(name="Replacement")
+        existing_op.groups.add(group)
+
+        through_link = group.object_permissions.through.objects.get(group=group, objectpermission=existing_op)
+        edit_url = reverse("users:group_edit", kwargs={"pk": group.pk})
+        form_data = {
+            "name": "Auditors",
+            "object_permissions-TOTAL_FORMS": "2",
+            "object_permissions-INITIAL_FORMS": "1",
+            "object_permissions-MIN_NUM_FORMS": "0",
+            "object_permissions-MAX_NUM_FORMS": "1000",
+            "object_permissions-0-id": str(through_link.pk),
+            "object_permissions-0-group": str(group.pk),
+            "object_permissions-0-objectpermission": str(existing_op.pk),
+            "object_permissions-0-DELETE": "on",
+            "object_permissions-1-objectpermission": str(new_op.pk),
+            "object_permissions-1-DELETE": "",
+        }
+        response = self.client.post(edit_url, data=post_data(form_data), follow=True)
+        self.assertEqual(response.status_code, 200)
+        group.refresh_from_db()
+        self.assertNotIn(existing_op, group.object_permissions.all())
+        self.assertIn(new_op, group.object_permissions.all())
+
+    def test_get_absolute_url_uses_users_namespace(self):
+        group = AdminGroup.objects.create(name="Reporters")
+        self.assertEqual(group.get_absolute_url(), reverse("users:group", kwargs={"pk": group.pk}))

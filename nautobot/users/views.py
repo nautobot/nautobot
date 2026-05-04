@@ -544,6 +544,8 @@ class GroupUIViewSet(
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
 ):
+    """Admin UI viewset for managing user groups and their object permissions."""
+
     queryset = AdminGroup.objects.order_by("name")
     filterset_class = filters.GroupFilterSet
     filterset_form_class = GroupFilterForm
@@ -611,7 +613,7 @@ class GroupUIViewSet(
         context = super().get_extra_context(request, instance)
         if self.action in ("create", "update") and "object_permission_formset" not in context:
             formset_class = self.get_object_permission_formset_class()
-            bound_instance = instance if instance is not None else self.get_object()
+            bound_instance = instance or self.queryset.model()
             if request.method == "POST":
                 context["object_permission_formset"] = formset_class(
                     data=request.POST,
@@ -633,7 +635,7 @@ class GroupUIViewSet(
             obj = self.form_save(form)
             queryset.get(pk=obj.pk)
             msg = f"{'Created' if object_created else 'Modified'} {queryset.model._meta.verbose_name}"
-            self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
+            self.logger.info("%s %s (PK: %s)", msg, obj, obj.pk)
             try:
                 msg = format_html('{} <a href="{}">{}</a>', msg, obj.get_absolute_url(), obj)
             except AttributeError:
@@ -658,7 +660,7 @@ class GroupUIViewSet(
                 self.success_url = self.get_return_url(request, obj)
 
     def perform_create(self, request, *args, **kwargs):
-        self.obj = self.get_object()
+        self.obj = self.queryset.model()
         form_class = self.get_form_class()
         form = form_class(
             data=request.POST,
@@ -677,6 +679,7 @@ class GroupUIViewSet(
             with transaction.atomic():
                 response = self.form_valid(form)
                 if not getattr(self, "has_error", False):
+                    # Parent acquires its pk during form_valid(); rebind so the formset's FKs resolve on save.
                     object_permission_formset.instance = form.instance
                     object_permission_formset.save()
             return response

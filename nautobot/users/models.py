@@ -270,14 +270,7 @@ Group.documentation_static_path = ""
 Group.is_metadata_associable_model = False
 Group.is_saved_view_model = True
 Group.present_in_database = property(lambda self: self.pk is not None)
-
-
-def _group_get_absolute_url(self, api=False):
-    view_name = "users-api:group-detail" if api else "users:group"
-    return reverse(view_name, kwargs={"pk": self.pk})
-
-
-Group.get_absolute_url = _group_get_absolute_url
+Group.get_absolute_url = AdminGroup.get_absolute_url
 
 
 #

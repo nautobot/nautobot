@@ -42,6 +42,8 @@ class PasswordChangeForm(BootstrapMixin, DjangoPasswordChangeForm):
 
 
 class GroupFilterForm(BootstrapMixin, forms.Form):
+    """Filter form for the Group list view."""
+
     model = AdminGroup
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
@@ -52,6 +54,8 @@ class GroupFilterForm(BootstrapMixin, forms.Form):
 
 
 class GroupForm(BootstrapMixin, forms.ModelForm):
+    """Create/update form for an `AdminGroup`."""
+
     class Meta:
         model = AdminGroup
         fields = ["name"]

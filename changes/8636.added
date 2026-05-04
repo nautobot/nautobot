@@ -1,0 +1,1 @@
+Added `GroupUIViewSet` for managing user groups and their object permissions in the Nautobot UI.
