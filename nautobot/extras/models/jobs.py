@@ -730,7 +730,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     terminated_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Timestamp at which the terminated was initiated.",
+        help_text="Timestamp at which the job was forcibly terminated",
     )
 
     objects = JobResultManager()

@@ -6,7 +6,7 @@ The Job Revocation gives operators the ability to terminate running or pending j
 
 ## Overview
 
-Long-running or stuck jobs are a normal part of operating Nautobot. Sometimes a job is taking longer than expected and needs to be cancelled. Sometimes a worker crashed mid-job and the `JobResult` is left sitting in `STARTED` forever, even though nothing is actually running. Job Revocation handles both situations through a single user action(clicking `Revoke Job` on a `JobResult`) and decides what to do based on whether a worker is still alive.
+Sometimes a job is taking longer than expected and needs to be cancelled. Sometimes a worker crashed mid-job and the `JobResult` is left sitting in `STARTED` forever, even though nothing is actually running. Sometimes a job might have been incorrectly enqueued to a queue that doesn't actually have any workers servicing it. Job Revocation handles such situations through a single user action (clicking `Revoke Job` on a `JobResult`) and moves the JobResult to `REVOKED` state, doing any appropriate additional actions as described below.
 When an operator terminates a job, Nautobot first asks the backend whether any worker still holds the task. There are three possible answers:
 
 1. **A worker is processing the task**. Nautobot sends a hard kill (SIGKILL on Celery) to stop it immediately. The worker tears the task down, and the `JobResult` is updated with the user who initiated the kill, the time, and a final status of `REVOKED`.
