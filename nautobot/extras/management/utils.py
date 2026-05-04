@@ -28,7 +28,7 @@ def validate_job_and_job_data(command, user, job_class_path, data=None):
         raise CommandError(f'Job "{job_class_path}" not found')
 
     try:
-        job_model = Job.objects.get_for_class_path(job_class_path)
+        Job.objects.get_for_class_path(job_class_path)
     except Job.DoesNotExist as error:
         raise CommandError(f"Job {job_class_path} does not exist.") from error
 

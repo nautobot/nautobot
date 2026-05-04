@@ -1296,7 +1296,7 @@ class ApprovalWorkflowStageViewTestCase(
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         # create new response with a comment
         second_user = User.objects.last()
-        new_response = ApprovalWorkflowStageResponse.objects.create(
+        ApprovalWorkflowStageResponse.objects.create(
             approval_workflow_stage=approval_workflow_stage,
             user=second_user,
             comments="existing comment",

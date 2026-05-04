@@ -186,6 +186,7 @@ class PreferenceTestCase(TestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
         response = self.client.get(url)
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)

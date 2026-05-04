@@ -863,8 +863,6 @@ class ApprovalWorkflowStageTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_pending_my_approvals(self):
         base_url = reverse("extras-api:approvalworkflowstage-list")
-        query_params = urlencode({"pending_my_approvals": "true"})
-        url = f"{base_url}?{query_params}"
         self.add_permissions(
             "extras.view_approvalworkflowstage",
         )
@@ -4852,7 +4850,7 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = secrets = (
+        secrets = (
             Secret.objects.create(
                 name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
             ),
