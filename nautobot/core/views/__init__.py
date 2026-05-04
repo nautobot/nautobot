@@ -54,6 +54,7 @@ from rest_framework.views import APIView
 
 from nautobot.core.celery import app
 from nautobot.core.constants import LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.releases import get_latest_release
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
@@ -493,7 +494,11 @@ class LiveSearchView(AccessMixin, View):
             if filterset and table_class:
                 filtered_queryset = filterset(request.GET).qs
                 if filtered_queryset:
-                    restricted_queryset = filtered_queryset.restrict(request.user, "view")
+                    restricted_queryset = (
+                        filtered_queryset.restrict(request.user, "view")
+                        if isinstance(filtered_queryset, RestrictedQuerySet)
+                        else filtered_queryset
+                    )
                     table = table_class(
                         restricted_queryset, hide_hierarchy_ui=True, is_object_embedded_search_results=True
                     )
