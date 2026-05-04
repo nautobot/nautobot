@@ -4346,8 +4346,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             {
                 "relationships": {
                     "vlans_devices_m2m": [
-                        "VLANs require at least one device, but no devices exist yet. "
-                        "Create a device by posting to /api/dcim/devices/",
+                        (
+                            "VLANs require at least one device, but no devices exist yet. "
+                            "Create a device by posting to /api/dcim/devices/"
+                        ),
                         'You need to specify ["relationships"]["vlans_devices_m2m"]["source"]["objects"].',
                     ]
                 }
