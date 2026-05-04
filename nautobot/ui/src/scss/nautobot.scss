@@ -2699,14 +2699,12 @@ pre.version, pre.version-stamp {
   }
 }
 
-#search_popup {
-  .htmx-indicator {
-    display: none;
-  }
-
-  .htmx-request.htmx-indicator {
-    display: block;
-  }
+/*
+ * Default `.htmx-indicator` style just fades out the indicator while still occupying space in the user interface.
+ * In this particular case, it is desirable to completely remove the element from the interface, hence `display: none;`.
+ */
+#search_popup .htmx-indicator:not(.htmx-request) {
+  display: none;
 }
 
 .nb-search-list-group {
