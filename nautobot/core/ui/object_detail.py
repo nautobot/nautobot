@@ -2747,7 +2747,7 @@ class _JobModalButton(Button):
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
         hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
-        hx_vals["initial_job_modal_form_submit"] = True
+        hx_vals["render_job_form"] = True
         # TODO: This will probably change to a database PK if this gets integrated into JobButton
         hx_vals["job_modal_button"] = self.__class__._registry_key
 
