@@ -1,0 +1,9 @@
+<li id="component-{{ component.component_id }}">
+    <form method="post" action="{{ link }}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="dropdown-item">
+            {% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+            {{ label }}
+        </button>
+    </form>
+</li>

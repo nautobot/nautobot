@@ -52,6 +52,7 @@ from nautobot.extras.choices import (
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
@@ -4149,6 +4150,126 @@ class ScheduledJobTestCase(
         response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
+
+    def _make_scheduled_job(self, name, **kwargs):
+        defaults = {
+            "task": "pass_job.TestPassJob",
+            "interval": JobExecutionType.TYPE_DAILY,
+            "user": self.user,
+            "start_time": timezone.now(),
+        }
+        defaults.update(kwargs)
+        return ScheduledJob.objects.create(name=name, **defaults)
+
+    def test_detail_view_shows_banner_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_null_user", user=None)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_no_banner_when_user_is_present(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_with_user")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_shows_assume_ownership_button_with_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_button_with_perm")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_run_job_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        sj = self._make_scheduled_job("assume_button_no_run")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_button_no_change")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_assume_ownership_succeeds_with_required_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="prior_owner", is_active=True)
+        sj = self._make_scheduled_job("assume_other_owner", user=other_user, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_recovers_schedule_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_null_owner", user=None, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_forbidden_without_run_job_perm(self):
+        self.add_permissions("extras.change_scheduledjob")
+        sj = self._make_scheduled_job("assume_forbidden_no_run")
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)  # unchanged from setup default
+
+    def test_assume_ownership_forbidden_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_forbidden_no_change")
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+
+    def test_assume_ownership_idempotent_when_already_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_idempotent")  # already owned by self.user
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
 
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):

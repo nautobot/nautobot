@@ -22,6 +22,7 @@ from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
+from nautobot.core.celery.schedulers import NautobotScheduleEntry
 from nautobot.core.choices import ColorChoices
 from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
@@ -3267,7 +3268,6 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
 
     def test_schedule_entry_sets_last_run_at(self):
         """Test that NautobotScheduleEntry sets last_run_at to start_time - 1 minute when model has no last_run_at."""
-        from nautobot.core.celery.schedulers import NautobotScheduleEntry
 
         for job, interval_type in [
             (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
@@ -3287,7 +3287,6 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         on each tick) correctly waits for the next crontab match instead of running ASAP.
         Regression test for https://github.com/nautobot/nautobot/issues/8316
         """
-        from nautobot.core.celery.schedulers import NautobotScheduleEntry
 
         with self.subTest("TYPE_CUSTOM crontab job should not be immediately due"):
             with time_machine.travel("2050-01-22 12:00 +0000"):
@@ -3402,6 +3401,78 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 self.daily_utc_job.save()
                 self.daily_utc_job.refresh_from_db()
                 self.assertEqual(self.daily_utc_job.state, state)
+
+    def test_schedule_entry_records_failure_when_user_is_null(self):
+        """ScheduledJob with user=None should: create failed JobResult, disable, set state=ERRORED."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Null User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
+        job_results = JobResult.objects.filter(scheduled_job=scheduled_job)
+        self.assertEqual(job_results.count(), 1)
+        job_result = job_results.first()
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIsNone(job_result.user)
+        self.assertIn("originating user has been removed", job_result.traceback)
+        log_entries = JobLogEntry.objects.filter(job_result=job_result)
+        self.assertEqual(log_entries.count(), 1)
+        self.assertEqual(log_entries.first().log_level, "error")
+
+    def test_schedule_entry_records_failure_when_user_is_orphan_fk(self):
+        """When user_id refers to a deleted user (FK orphan), behave like user=None."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Orphan FK Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        # Simulate a FK orphan: a user_id that doesn't correspond to any auth_user row.
+        # We do this by pointing user_id at a random UUID via queryset.update() to bypass
+        # Django's on_delete logic — mirroring how raw-SQL deletes can leave dangling FKs.
+        ScheduledJob.objects.filter(pk=scheduled_job.pk).update(user_id=uuid.uuid4())
+        scheduled_job.refresh_from_db()
+
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.user_id)
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 1)
+
+    def test_schedule_entry_with_valid_user_does_not_record_failure(self):
+        """Sanity check: a valid user should not trigger the failure path."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Valid User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertTrue(scheduled_job.enabled)
+        self.assertEqual(entry.options["nautobot_job_user_id"], self.user.id)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
