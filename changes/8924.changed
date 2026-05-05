@@ -1,0 +1,1 @@
+Renamed `CableBreakoutType` model to `CableType` to reflect a broader scope; renamed associated classes, URL paths, and permissions accordingly.

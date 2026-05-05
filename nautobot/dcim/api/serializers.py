@@ -53,9 +53,9 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
 from nautobot.dcim.models import (
     Cable,
-    CableBreakoutType,
     CablePath,
     CableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -809,9 +809,9 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
 #
 
 
-class CableBreakoutTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+class CableTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     class Meta:
-        model = CableBreakoutType
+        model = CableType
         fields = "__all__"
 
 

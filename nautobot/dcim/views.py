@@ -111,8 +111,8 @@ from .choices import DeviceFaceChoices
 from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
-    CableBreakoutType,
     CablePath,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -5364,16 +5364,16 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 
 
 #
-# Cable Breakout Types
+# Cable Types
 #
-class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.CableBreakoutTypeFilterSet
-    filterset_form_class = forms.CableBreakoutTypeFilterForm
-    form_class = forms.CableBreakoutTypeForm
-    bulk_update_form_class = forms.CableBreakoutTypeBulkEditForm
-    queryset = CableBreakoutType.objects.all()
-    serializer_class = serializers.CableBreakoutTypeSerializer
-    table_class = tables.CableBreakoutTypeTable
+class CableTypeUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.CableTypeFilterSet
+    filterset_form_class = forms.CableTypeFilterForm
+    form_class = forms.CableTypeForm
+    bulk_update_form_class = forms.CableTypeBulkEditForm
+    queryset = CableType.objects.all()
+    serializer_class = serializers.CableTypeSerializer
+    table_class = tables.CableTypeTable
     lookup_field = "pk"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -5386,7 +5386,7 @@ class CableBreakoutTypeUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.RIGHT_HALF,
                 label="Lane Mapping Diagram",
-                body_content_template_path="dcim/inc/cablebreakouttype_diagram_panel.html",
+                body_content_template_path="dcim/inc/cabletype_diagram_panel.html",
             ),
             object_detail.ObjectTextPanel(
                 weight=200,

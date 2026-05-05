@@ -8,7 +8,7 @@ class DCIMConfig(NautobotConfig):
     verbose_name = "DCIM"
     searchable_models = [
         "cable",
-        "cablebreakouttype",
+        "cabletype",
         "controller",
         "device",
         "devicefamily",

@@ -10,7 +10,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import DEFAULT_CABLE_BREAKOUT_TYPES
+from nautobot.dcim.constants import DEFAULT_CABLE_TYPES
 
 
 def compile_path_node(ct_id, object_id):
@@ -174,18 +174,18 @@ def render_software_version_and_image_files(instance, software_version, context)
     return display
 
 
-def populate_default_cable_breakout_types(apps, schema_editor=None):
-    """Create default cable breakout type records."""
-    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
-    for name, defaults in DEFAULT_CABLE_BREAKOUT_TYPES.items():
-        CableBreakoutType.objects.get_or_create(name=name, defaults=defaults)
+def populate_default_cable_types(apps, schema_editor=None):
+    """Create default cable type records."""
+    CableType = apps.get_model("dcim", "CableType")
+    for name, defaults in DEFAULT_CABLE_TYPES.items():
+        CableType.objects.get_or_create(name=name, defaults=defaults)
 
 
-def clear_default_cable_breakout_types(apps, schema_editor=None):
-    """Delete default cable breakout type records."""
-    CableBreakoutType = apps.get_model("dcim", "CableBreakoutType")
-    for name in DEFAULT_CABLE_BREAKOUT_TYPES.keys():
-        CableBreakoutType.objects.filter(name=name).delete()
+def clear_default_cable_types(apps, schema_editor=None):
+    """Delete default cable type records."""
+    CableType = apps.get_model("dcim", "CableType")
+    for name in DEFAULT_CABLE_TYPES.keys():
+        CableType.objects.filter(name=name).delete()
 
 
 def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_lanes: int):
