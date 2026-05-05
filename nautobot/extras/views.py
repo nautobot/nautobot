@@ -2605,6 +2605,9 @@ class JobUIViewSet(NautobotUIViewSet):
                 refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
                 advanced_field_names = request.GET.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+        else:
+            run_button_label = "Run Job Now"
+            refresh_on_close_if_done = "false"
 
         template_name = self._get_template_name(job_class, htmx_modal)
         if htmx_request and htmx_modal:
