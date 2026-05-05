@@ -2653,7 +2653,28 @@ def resolve_attr(obj, dotted_path: str):
 
 
 class _JobModalButton(Button):
-    """A Button that, when clicked, opens a modal dialog for running a Job. This is experimental and subject to change or removal without deprecation."""
+    """A Button that, when clicked, opens a modal dialog for running a Job.
+
+    This is experimental and subject to change or removal without deprecation.
+
+    Usage:
+        Add a ``_JobModalButton`` to a viewset's ``object_detail_content.extra_buttons``.
+        To provide a custom redirect button in the modal footer after the job completes,
+        subclass ``_JobModalButton`` and override ``get_redirect_button()``. Subclasses are
+        automatically registered at class definition time.
+
+    How it works:
+        1. Defining a subclass triggers ``__init_subclass__``, which computes a deterministic UUID5
+           key from the class's fully qualified path and stores the class in
+           ``registry["job_modal_buttons"]``.
+        2. When the button is rendered on a detail page, the registry key is embedded in the HTMX
+           ``hx-vals`` as ``job_modal_button``.
+        3. Clicking the button fires an HTMX POST that opens the job form modal. The registry key
+           travels with every subsequent POST (form submission, polling).
+        4. Once the job completes, the view looks up the originating button class from the registry
+           and calls ``get_redirect_button()`` to render an optional redirect button in the modal
+           footer.
+    """
 
     class_path = None
     advanced_fields = ()
@@ -2662,11 +2683,16 @@ class _JobModalButton(Button):
     job_result_key = None
     refresh_on_close_if_done = False
 
+    @classmethod
+    def _get_registry_key(cls):
+        """Compute the deterministic registry key for this class."""
+        class_path = f"{cls.__module__}.{cls.__name__}"
+        return str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+
     def __init_subclass__(cls, **kwargs):
         """Automatically register _JobModalButton subclasses in the global registry at class definition time."""
         super().__init_subclass__(**kwargs)
-        class_path = f"{cls.__module__}.{cls.__name__}"
-        cls._registry_key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
+        cls._registry_key = cls._get_registry_key()
         registry["job_modal_buttons"][cls._registry_key] = cls
 
     def __init__(self, **kwargs):
@@ -2788,6 +2814,5 @@ class _JobModalButton(Button):
 
 
 # Register the base class itself (__init_subclass__ only fires for subclasses)
-_base_class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
-_JobModalButton._registry_key = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, _base_class_path))
+_JobModalButton._registry_key = _JobModalButton._get_registry_key()
 registry["job_modal_buttons"][_JobModalButton._registry_key] = _JobModalButton
