@@ -4539,7 +4539,7 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": _JobModalButton._registry_key,
+                "job_modal_button": _JobModalButton._get_registry_key(),
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
@@ -4558,7 +4558,7 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": _JobModalButton._registry_key,
+                "job_modal_button": _JobModalButton._get_registry_key(),
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
@@ -4575,7 +4575,7 @@ class JobResultTestCase(
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
         response = self.client.post(
             pending_url,
-            data={"job_modal_button": _JobModalButton._registry_key},
+            data={"job_modal_button": _JobModalButton._get_registry_key()},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4586,7 +4586,7 @@ class JobResultTestCase(
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.post(
             completed_url,
-            data={"job_modal_button": _JobModalButton._registry_key},
+            data={"job_modal_button": _JobModalButton._get_registry_key()},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4859,7 +4859,7 @@ class JobTestCase(
                 run_url,
                 data={
                     "initial_job_modal_form_submit": True,
-                    "job_modal_button": _JobModalButton._registry_key,
+                    "job_modal_button": _JobModalButton._get_registry_key(),
                 },
                 HTTP_HX_REQUEST="true",
             )

@@ -874,9 +874,7 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_result_key"], "output_data")
 
         # Verify job_modal_button in hx-vals is the class path of the _JobModalButton
-        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
-        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
-        self.assertEqual(hx_vals["job_modal_button"], class_path_as_uuid)
+        self.assertEqual(hx_vals["job_modal_button"], _JobModalButton._get_registry_key())
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -932,20 +930,18 @@ class _JobModalButtonTest(TestCase):
     def test_registry_contains_class_path(self):
         """Verify that _JobModalButton and its subclasses are registered in the global registry."""
 
-        class_path = f"{_JobModalButton.__module__}.{_JobModalButton.__name__}"
-        class_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, class_path))
-        self.assertIn(class_path_as_uuid, registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][class_path_as_uuid], _JobModalButton)
+        base_class_registry_key = _JobModalButton._get_registry_key()
+        self.assertIn(_JobModalButton._get_registry_key(), registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][base_class_registry_key], _JobModalButton)
 
         # Verify __init_subclass__ auto-registers subclasses
         class _TestButton(_JobModalButton):
             class_path = None
 
-        subclass_path = f"{_TestButton.__module__}.{_TestButton.__name__}"
-        subclass_path_as_uuid = str(uuid.uuid5(NAMESPACE_JOBMODALBUTTON, subclass_path))
-        self.assertIn(subclass_path_as_uuid, registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][subclass_path_as_uuid], _TestButton)
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(subclass_path_as_uuid, None))
+        subclass_registry_key = _TestButton._get_registry_key()
+        self.assertIn(subclass_registry_key, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][subclass_registry_key], _TestButton)
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(subclass_registry_key, None))
 
 
 class PostButtonTest(TestCase):
