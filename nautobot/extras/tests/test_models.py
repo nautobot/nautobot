@@ -3443,10 +3443,10 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             time_zone=get_default_timezone(),
         )
         # Simulate a FK orphan: a user_id that doesn't correspond to any auth_user row.
-        # We do this by pointing user_id at a random UUID via queryset.update() to bypass
-        # Django's on_delete logic — mirroring how raw-SQL deletes can leave dangling FKs.
-        ScheduledJob.objects.filter(pk=scheduled_job.pk).update(user_id=uuid.uuid4())
-        scheduled_job.refresh_from_db()
+        # We can't write the orphan to the DB on MySQL (FK enforced on UPDATE), so we
+        # mutate the in-memory model instead; the schedulers code reads from the in-memory
+        # model and that's the code path we want to verify.
+        scheduled_job.user_id = uuid.uuid4()
 
         entry = NautobotScheduleEntry(model=scheduled_job)
         scheduled_job.refresh_from_db()
