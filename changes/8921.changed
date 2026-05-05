@@ -1,0 +1,5 @@
+`job_kwargs` is now a required parameter for `create_schedule`, `enqueue_job`, `execute_job` and `run_job_for_testing`. Previously optional, this argument is now mandatory to ensure consistent job configuration and avoid implicit defaults.
+Added Backward compatibility layer introduced (with warning). Calls that omit `job_kwargs` or rely on `**extra_kwargs` will still work temporarily, but will emit a warning. This fallback will be removed in a future release.
+Updated `runjob` command data behavior. The default value is now `{}` instead of allowing `None`.
+Added stricter validation for job inputs in `validate_job_and_job_data`. Now raises ValueError if `data=None`.
+Added stricter validation for job inputs in `apply_sync`. Now raises ValueError if `entry.kwargs=None`.

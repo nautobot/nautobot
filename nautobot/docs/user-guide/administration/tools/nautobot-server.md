@@ -691,7 +691,10 @@ nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 Run the job on the local system and not on a worker.
 
 `--data <data>`
-JSON string that populates the `data` variable of the job.
+JSON string that populates the `data` variable of the job. Defaults to `{}` (an empty dict). Passing `null` will result in a validation error.
+
++++ 3.2.0
+    The default value of `--data` is now `{}` instead of `None`. Job input validation is also stricter: passing `data=null` raises a `ValueError` rather than being silently treated as an empty input.
 
 ```no-highlight
 nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars

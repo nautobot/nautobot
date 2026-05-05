@@ -3383,7 +3383,6 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 name="Deprecated kwargs fallback",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="5 4 3 2 1",
-                job_kwargs=None,
                 **extra_kwargs,
             )
 
@@ -3407,7 +3406,6 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 name="Missing kwargs",
                 interval=JobExecutionType.TYPE_CUSTOM,
                 crontab="5 4 3 2 1",
-                job_kwargs=None,
             )
         self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
 
@@ -4349,7 +4347,6 @@ class JobResultTestCase(TestCase):
             JobResult.execute_job(
                 job_model,
                 self.user,
-                job_kwargs=None,
             )
 
         self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
@@ -4394,7 +4391,6 @@ class JobResultTestCase(TestCase):
             JobResult.enqueue_job(
                 job_model,
                 self.user,
-                job_kwargs=None,
             )
         self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
 
