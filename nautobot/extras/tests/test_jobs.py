@@ -1323,12 +1323,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def run_command(self, *args):
         out = StringIO()
         err = StringIO()
-        call_command(
-            "runjob",
-            *args,
-            stdout=out,
-            stderr=err,
-        )
+        call_command("runjob", *args, stdout=out, stderr=err, data={})
 
         return (out.getvalue(), err.getvalue())
 
@@ -1374,6 +1369,36 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
         status = models.Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_runjob_enqueue_called(self, mock_enqueue):
+        """Ensure enqueue_job is called with correct arguments when --local is NOT used."""
+        module = "pass_job"
+        name = "TestPassJob"
+        _job_class, job_model = get_job_class_and_model(module, name)
+
+        job_result = models.JobResult.objects.create(
+            name=job_model.name,
+            job_model=job_model,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+
+        mock_enqueue.return_value = job_result
+
+        self.run_command(
+            "--no-color",
+            "--username",
+            self.user.username,
+            job_model.class_path,
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            profile=False,
+            job_kwargs={},  # because default "--data" = "{}"
+        )
 
 
 class JobLocationCustomFieldTest(TransactionTestCase):
@@ -1944,26 +1969,18 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
 
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobResult.execute_job")
-    @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.report_job_status")
     def test_console_log_executor_is_used_without_data_options(
         self,
-        mock_report_job_status,
-        mock_execute_job,
-        mock_executor_console_log,
     ):
-        """Command should set job_kwargs to {} when data it's not defined"""
+        """Command should raise an error when data is not defined"""
 
-        call_command(
-            "runjob_with_job_result",
-            str(self.job_result.pk),
-        )
+        with self.assertRaises(CommandError) as err:
+            call_command(
+                "runjob_with_job_result",
+                str(self.job_result.pk),
+            )
 
-        mock_executor_console_log.assert_called_once_with(job_result_pk=str(self.job_result.pk), job_kwargs={})
-        mock_executor_console_log.return_value.execute.assert_called_once()
-        mock_report_job_status.assert_called_once()
-        mock_execute_job.assert_not_called()
+        self.assertEqual(str(err.exception), "Invalid job data: None. Job data has to be defined.")
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")

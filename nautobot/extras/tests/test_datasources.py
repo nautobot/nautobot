@@ -321,7 +321,7 @@ class GitTest(TransactionTestCase):
                 self.repo.branch = "valid-files"  # actually a tag
                 self.repo.save()
                 job_model = GitRepositorySync().job_model
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -369,7 +369,7 @@ class GitTest(TransactionTestCase):
                 self.repo.save()
 
                 # Run the Git operation and refresh the object from the DB
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -422,7 +422,7 @@ class GitTest(TransactionTestCase):
                 self.assertIsNotNone(job_model)
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
@@ -523,7 +523,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
@@ -603,7 +603,7 @@ class GitTest(TransactionTestCase):
                 self.repo.branch = "valid-files"  # actually a tag
                 self.repo.save()
                 job_model = GitRepositorySync().job_model
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -635,7 +635,7 @@ class GitTest(TransactionTestCase):
                 self.repo.save()
 
                 # Resync, attempting and failing to update to the new commit
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -674,7 +674,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositoryDryRun().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
