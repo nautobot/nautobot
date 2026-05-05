@@ -2754,9 +2754,9 @@ class _JobModalButton(Button):
 
         Returns:
             dict: A dictionary with keys ``url``, ``label``, ``color``, and optionally ``attributes``,
-                or an empty string/falsy value to render no button.
+                or an empty dict to render no button.
         """
-        return ""
+        return {}
 
     def get_link(self, context):
         """Override the default `get_link()` behavior since this button opens a modal."""

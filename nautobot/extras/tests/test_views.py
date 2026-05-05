@@ -19,7 +19,6 @@ from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
-from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.testing import (
