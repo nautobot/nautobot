@@ -18,7 +18,7 @@ Action Required:
 2. Recreate all Scheduled jobs which has `kwargs=None`, because now may fail at runtime due to stricter validation.
 
 !!! tip
-Treat any warnings `"Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"about missing` as indicators that your code should be updated to the new explicit pattern.
+Treat any warnings `"Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"` as indicators that your code should be updated to the new explicit pattern.
 
 ## Release Overview
 
