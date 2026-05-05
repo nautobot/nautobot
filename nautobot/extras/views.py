@@ -2704,8 +2704,9 @@ class JobUIViewSet(NautobotUIViewSet):
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
 
-        # Render the job form inside the HTMX modal on first load
-        if request.POST.get("initial_job_modal_form_submit"):
+        # Render the job form instead of running the job on a POST request.
+        # Required for the job modal.
+        if request.POST.get("render_job_form"):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
