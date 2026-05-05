@@ -869,7 +869,7 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_location"], device.location.name)
 
         # Check static modal configuration
-        self.assertTrue(hx_vals["initial_job_modal_form_submit"])
+        self.assertTrue(hx_vals["render_job_form"])
         self.assertEqual(hx_vals["run_button_label"], "Execute!")
         self.assertEqual(hx_vals["job_result_key"], "output_data")
 
