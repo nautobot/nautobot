@@ -59,7 +59,7 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     """
     job_model = job_class().job_model
 
-    return JobResult.enqueue_job(job_model, user, repository=repository.pk)
+    return JobResult.enqueue_job(job_model, user, job_kwargs={"repository": repository.pk})
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
