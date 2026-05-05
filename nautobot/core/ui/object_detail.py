@@ -2674,6 +2674,16 @@ class _JobModalButton(Button):
         4. Once the job completes, the view looks up the originating button class from the registry
            and calls ``get_redirect_button()`` to render an optional redirect button in the modal
            footer.
+
+    hx-vals keys sent with every POST in the modal lifecycle:
+        job_modal_button: Registry key (UUID5 string) identifying this button class.
+        render_job_form: Signals the view to render the form rather than execute the job.
+        run_button_label: Label text for the submit button in the modal form.
+        job_result_key: Optional key to extract a specific value from ``JobResult.result``.
+        refresh_on_close_if_done: If ``"true"``, the page reloads when the modal is closed after
+            job completion.
+        advanced_fields: List of form field names to hide behind an "Advanced" toggle.
+        initial_field_mapping values: Pre-filled form field values resolved from the detail view object.
     """
 
     class_path = None
