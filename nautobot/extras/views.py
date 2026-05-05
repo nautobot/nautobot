@@ -2605,9 +2605,6 @@ class JobUIViewSet(NautobotUIViewSet):
                 refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
                 advanced_field_names = request.GET.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
-        else:
-            run_button_label = "Run Job Now"
-            refresh_on_close_if_done = "false"
 
         template_name = self._get_template_name(job_class, htmx_modal)
         if htmx_request and htmx_modal:
@@ -2617,7 +2614,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": run_button_label,
+                    "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
@@ -2629,8 +2626,8 @@ class JobUIViewSet(NautobotUIViewSet):
                         {
                             "job_form_modal": True,
                             "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
+                            "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
+                            "refresh_on_close_if_done": refresh_on_close_if_done,  # pylint: disable=possibly-used-before-assignment
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
