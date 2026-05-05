@@ -14,6 +14,7 @@ from nautobot.core.models.fields import ColorField
 from nautobot.core.utils.data import to_meters
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, CableTypePolarityMethodChoices
 from nautobot.dcim.constants import (
+    BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
     CABLE_TERMINATION_MODELS,
@@ -329,9 +330,8 @@ class Cable(PrimaryModel):
     @property
     def breakout_eligible(self):
         """Whether this cable's termination types support breakout lane modeling."""
-        from nautobot.dcim.constants import BREAKOUT_COMPATIBLE_TERMINATION_TYPES
 
-        if not self.pk:
+        if not self.present_in_database:
             return True  # New cable, no terminations yet
         for endpoint in self.terminations.select_related("termination_type").all():
             if endpoint.termination_type.model not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:
@@ -369,18 +369,10 @@ class Cable(PrimaryModel):
                     b_labels[endpoint.connector] = label
         return connected_a, connected_b, a_labels, b_labels
 
-    def get_mapping_diagram_rows(self):
-        """Return diagram rows for the lane mapping visual, with connected status from this cable's terminations."""
-        if not self.cable_type_id:
-            return []
-        connected_a, connected_b, _, _ = self._get_connector_status()
-        return self.cable_type.get_diagram_rows(connected_a=connected_a, connected_b=connected_b)
-
     def get_mapping_diagram_svg(self):
         """Return SVG string for the breakout lane mapping diagram with connection status and tooltips."""
         if not self.cable_type_id:
             return ""
-        from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 
         _, _, a_labels, b_labels = self._get_connector_status()
         diagram = BreakoutDiagramSVG(
@@ -555,9 +547,7 @@ class Cable(PrimaryModel):
         super().clean()
 
         # Validate cable type compatibility with termination types
-        if self.cable_type_id and self.pk:
-            from nautobot.dcim.constants import BREAKOUT_COMPATIBLE_TERMINATION_TYPES
-
+        if self.cable_type_id and self.present_in_database:
             for ct_row in self.terminations.select_related("termination_type").all():
                 model_name = ct_row.termination_type.model
                 if model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:

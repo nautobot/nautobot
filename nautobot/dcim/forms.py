@@ -3,6 +3,7 @@ import re
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from timezone_field import TimeZoneFormField
@@ -124,6 +125,8 @@ from .constants import (
 )
 from .models import (
     Cable,
+    CablePath,
+    CableTerminationEndpoint,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -152,6 +155,7 @@ from .models import (
     ModuleBayTemplate,
     ModuleFamily,
     ModuleType,
+    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -4642,8 +4646,6 @@ class CableForm(NautobotModelForm):
         initial_a_type = self.initial.get("termination_a_type")
         initial_a_id = self.initial.get("termination_a_id")
         if not existing_a and initial_a_type and initial_a_id:
-            from django.contrib.contenttypes.models import ContentType
-
             app_label, model_name = str(initial_a_type).split(".")
             content_type = ContentType.objects.get_by_natural_key(app_label, model_name)
             termination_obj = content_type.model_class().objects.get(pk=initial_a_id)
@@ -4763,10 +4765,6 @@ class CableForm(NautobotModelForm):
 
     def _save_connection_terminations(self, cable):
         """Process connector-based form fields — create/update CableTermination rows."""
-        from django.contrib.contenttypes.models import ContentType
-
-        from nautobot.dcim.models import CablePath, CableTerminationEndpoint, PathEndpoint
-
         info = getattr(self, "connection_info", None)
         if not info:
             return

@@ -112,6 +112,7 @@ from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
+    CableTerminationEndpoint,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -158,6 +159,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +193,6 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
 
             if form.is_valid():
                 with transaction.atomic():
-                    from nautobot.dcim.utils import disconnect_termination
-
                     count = 0
                     disconnected_cables = []
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
@@ -5501,8 +5501,6 @@ class CableUIViewSet(NautobotUIViewSet):
         cable_type_id = request.GET.get("cable_type")
         if cable_type_id:
             try:
-                from nautobot.dcim.models import CableType
-
                 cable.cable_type = CableType.objects.get(pk=cable_type_id)
             except CableType.DoesNotExist:
                 pass
@@ -5557,8 +5555,6 @@ class CableUIViewSet(NautobotUIViewSet):
     @action(detail=True, methods=["get"], url_path="disconnect", custom_view_base_action="change")
     def disconnect(self, request, pk=None):
         """Disconnect a single termination from this cable without deleting the cable."""
-        from nautobot.dcim.models import CableTerminationEndpoint
-        from nautobot.dcim.utils import disconnect_termination
 
         cable = self.get_object()
         termination_type = request.GET.get("termination_type")
@@ -5619,7 +5615,6 @@ class PathTraceView(generic.ObjectView):
             path = instance._path
 
             # Check if this is a trunk-side breakout termination that fans out
-            from nautobot.dcim.models import CableTerminationEndpoint
 
             if path and instance.cable_id:
                 cable = instance.cable
