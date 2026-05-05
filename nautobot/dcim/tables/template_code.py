@@ -39,6 +39,7 @@ CABLE_TERMINATION_PARENT = """
 """
 
 CABLE_TERMINATIONS_MULTI = """
+{% load cables %}
 {% load helpers %}
 {% for endpoint in value %}
     {% with term=endpoint.termination %}

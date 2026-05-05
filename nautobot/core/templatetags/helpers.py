@@ -1504,38 +1504,3 @@ class CaptureasNode(template.Node):
         output = output.strip()
         context[self.varname] = mark_safe(output)  # noqa: S308  # we already rendered it, so it's 'safe' now?
         return ""
-
-
-@register.simple_tag
-def get_cable_lane_info(cable, termination):
-    """Return the CableTermination row for a given cable+termination pair, or None.
-
-    Used in cable trace views to display breakout lane info (connector, position).
-    """
-    if not cable or not termination:
-        return None
-    if not getattr(cable, "cable_type_id", None):
-        return None
-    from nautobot.dcim.models import CableTerminationEndpoint
-
-    return CableTerminationEndpoint.objects.filter(cable=cable, termination_id=termination.pk).first()
-
-
-@register.simple_tag
-def termination_type_icon(termination):
-    """Return an MDI icon class string for a cable termination object based on its type."""
-    if termination is None:
-        return "mdi-help-circle-outline"
-    model_name = termination._meta.model_name
-    icons = {
-        "interface": "mdi-ethernet",
-        "frontport": "mdi-arrow-right-bold-box",
-        "rearport": "mdi-arrow-left-bold-box",
-        "consoleport": "mdi-console",
-        "consoleserverport": "mdi-console-network",
-        "powerport": "mdi-power-plug",
-        "poweroutlet": "mdi-power-socket",
-        "powerfeed": "mdi-flash",
-        "circuittermination": "mdi-cable-data",
-    }
-    return icons.get(model_name, "mdi-cable-data")
