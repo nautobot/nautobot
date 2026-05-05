@@ -2661,7 +2661,7 @@ class _JobModalButton(Button):
         Add a ``_JobModalButton`` to a viewset's ``object_detail_content.extra_buttons``.
         To provide a custom redirect button in the modal footer after the job completes,
         subclass ``_JobModalButton`` and override ``get_redirect_button()``. Subclasses are
-        automatically registered at class definition time.
+        automatically registered in the global registry at class definition time.
 
     How it works:
         1. Defining a subclass triggers ``__init_subclass__``, which computes a deterministic UUID5

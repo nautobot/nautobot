@@ -4573,9 +4573,10 @@ class JobResultTestCase(
         """Without the query parameter, neither the polling `hx-vals` nor the DOM marker should opt in to reload."""
         self.add_permissions("extras.view_jobresult")
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
+        job_modal_registry_key = _JobModalButton._get_registry_key()
         response = self.client.post(
             pending_url,
-            data={"job_modal_button": _JobModalButton._get_registry_key()},
+            data={"job_modal_button": job_modal_registry_key},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4586,7 +4587,7 @@ class JobResultTestCase(
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.post(
             completed_url,
-            data={"job_modal_button": _JobModalButton._get_registry_key()},
+            data={"job_modal_button": job_modal_registry_key},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
