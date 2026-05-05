@@ -2,7 +2,6 @@
 
 import json
 from unittest.mock import patch
-import uuid
 
 from django.db.models import Sum
 from django.template import Context
@@ -12,7 +11,6 @@ from django.urls import reverse
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
-from nautobot.core.constants import NAMESPACE_JOBMODALBUTTON
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
