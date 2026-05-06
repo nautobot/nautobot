@@ -22,6 +22,7 @@ from nautobot.core.views.mixins import (
     NautobotViewSetMixin,
     ObjectBulkCreateViewMixin,  # 3.0 TODO: deprecated, will be removed in 3.0
     ObjectBulkDestroyViewMixin,
+    ObjectBulkDisconnectViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDataComplianceViewMixin,
@@ -71,6 +72,7 @@ __all__ = (
     "ObjectApprovalWorkflowView",
     "ObjectBulkCreateViewMixin",  # 3.0 TODO: remove this
     "ObjectBulkDestroyViewMixin",
+    "ObjectBulkDisconnectViewMixin",
     "ObjectBulkUpdateViewMixin",
     "ObjectChangeLogViewMixin",
     "ObjectDataComplianceViewMixin",

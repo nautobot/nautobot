@@ -64,6 +64,7 @@ from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkDisconnectViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
@@ -4410,67 +4411,43 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 #
 
 
-class ConsolePortListView(generic.ObjectListView):
+class ConsolePortUIViewSet(
+    DeviceComponentPageMixin,
+    ModuleBayCommonViewSetMixin,
+    ObjectBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    filterset_form = forms.ConsolePortFilterForm
-    table = tables.ConsolePortTable
+    bulk_update_form_class = forms.ConsolePortBulkEditForm
+    create_form_class = forms.ConsolePortCreateForm
+    filterset_class = filters.ConsolePortFilterSet
+    filterset_form_class = forms.ConsolePortFilterForm
+    form_class = forms.ConsolePortForm
+    model_form_class = forms.ConsolePortForm
+    serializer_class = serializers.ConsolePortSerializer
+    table_class = tables.ConsolePortTable
     action_buttons = ("import", "export")
-
-
-class ConsolePortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = ConsolePort.objects.all()
+    create_template_name = "dcim/device_component_add.html"
     device_breadcrumb_url = "dcim:device_consoleports"
     module_breadcrumb_url = "dcim:module_consoleports"
 
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.device or selected_object.module
+            return parent.display
+        return ""
 
-
-class ConsolePortCreateView(generic.ComponentCreateView):
-    queryset = ConsolePort.objects.all()
-    form = forms.ConsolePortCreateForm
-    model_form = forms.ConsolePortForm
-
-
-class ConsolePortEditView(generic.ObjectEditView):
-    queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsolePortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsolePort.objects.all()
-    table = tables.ConsolePortTable
-
-
-class ConsolePortBulkEditView(generic.BulkEditView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
-    form = forms.ConsolePortBulkEditForm
-
-
-class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDisconnectView(BulkDisconnectView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
+    @action(
+        detail=False,
+        methods=["GET", "POST"],
+        url_path="rename",
+        url_name="bulk_rename",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_consoleport"],
+    )
+    def bulk_rename(self, request, *args, **kwargs):
+        return self._bulk_rename(request, *args, **kwargs)
 
 
 #

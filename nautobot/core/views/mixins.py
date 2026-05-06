@@ -82,6 +82,7 @@ PERMISSIONS_ACTION_MAP = {
     "update": "change",
     "bulk_create": "add",  # 3.0 TODO: remove, replaced by system Job
     "bulk_destroy": "delete",
+    "bulk_disconnect": "change",
     "bulk_rename": "change",
     "bulk_update": "change",
     "changelog": "view",
@@ -1336,6 +1337,98 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
                 "delete_all": delete_all,
             }
         )
+        return Response(data)
+
+
+class ObjectBulkDisconnectViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin to bulk disconnect cabled components (console/power/interface, etc.).
+
+    Subclasses (or the consuming UIViewSet) should set ``bulk_disconnect_form_class``
+    if a custom confirmation form is required; otherwise a default ConfirmationForm
+    with a hidden ``pk`` ModelMultipleChoiceField is generated from the queryset.
+    """
+
+    bulk_disconnect_form_class: Optional[Type[Form]] = None
+    bulk_disconnect_template_name: ClassVar[str] = "dcim/bulk_disconnect.html"
+    logger = logging.getLogger(__name__)
+
+    def get_form_class(self, **kwargs):
+        """Provide a default ConfirmationForm if the consuming view didn't set one."""
+        form_class = super().get_form_class(**kwargs)
+        if not form_class and self.action == "bulk_disconnect":
+            queryset = self.get_queryset()
+
+            class BulkDisconnectForm(ConfirmationForm):
+                pk = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput)
+
+            return BulkDisconnectForm
+        return form_class
+
+    def _process_bulk_disconnect_form(self, form):
+        """Delete the cable on each selected component inside a single transaction."""
+        request = self.request
+        queryset = self.get_queryset()
+        model = queryset.model
+
+        try:
+            with transaction.atomic():
+                count = 0
+                for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
+                    if obj.cable is None:
+                        continue
+                    obj.cable.delete()
+                    count += 1
+
+            msg = f"Disconnected {count} {model._meta.verbose_name_plural}"
+            self.logger.info(msg)
+            self.success_url = self.get_return_url(request)
+            messages.success(request, msg)
+        except ProtectedError as e:
+            self.logger.info("Caught ProtectedError while attempting to disconnect cables")
+            handle_protectederror(queryset, request, e)
+            self.success_url = self.get_return_url(request)
+
+    @drf_action(detail=False, methods=["post"], url_path="disconnect", url_name="bulk_disconnect")
+    def bulk_disconnect(self, request, *args, **kwargs):
+        """
+        Call perform_bulk_disconnect().
+
+        Mirrors DRF's {action}/perform_{action} pattern used by the other bulk mixins.
+        Override this to run any pre-disconnect logic.
+        """
+        return self.perform_bulk_disconnect(request, **kwargs)
+
+    def perform_bulk_disconnect(self, request, **kwargs):
+        """
+        request.POST without "_confirm": render the selection of components in
+        ``bulk_disconnect_template_name`` via Response (handled by NautobotHTMLRenderer).
+        request.POST with "_confirm": validate the form and disconnect cables; on
+        invalid form, re-render with errors via form_invalid().
+        """
+        queryset = self.get_queryset()
+        model = queryset.model
+        self.pk_list = list(request.POST.getlist("pk"))
+
+        form_class = self.get_form_class(**kwargs)
+
+        if "_confirm" in request.POST:
+            form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
+            if form.is_valid():
+                self._process_bulk_disconnect_form(form)
+                return redirect(self.get_return_url(request))
+            return self.form_invalid(form)
+
+        form = form_class(initial={"pk": self.pk_list})
+        selected_objects = queryset.filter(pk__in=self.pk_list)
+
+        data = {
+            "form": form,
+            "obj_type_plural": model._meta.verbose_name_plural,
+            "selected_objects": selected_objects,
+            "return_url": self.get_return_url(request),
+            "template": self.bulk_disconnect_template_name,
+        }
         return Response(data)
 
 
