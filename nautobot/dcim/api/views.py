@@ -588,31 +588,31 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsolePort.objects.prefetch_related("_path__destination")
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination")
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerPort.objects.prefetch_related("_path__destination")
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerOutlet.objects.prefetch_related("_path__destination")
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer").annotate(
+    queryset = Interface.objects.prefetch_related("_path__destination").annotate(
         _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
     )
     serializer_class = serializers.InterfaceSerializer
@@ -732,7 +732,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.prefetch_related("_cable_peer", "_path__destination")
+    queryset = PowerFeed.objects.prefetch_related("_path__destination")
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 

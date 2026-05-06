@@ -1,7 +1,6 @@
 from decimal import Decimal
 import re
 
-from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -39,7 +38,7 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-from nautobot.dcim.utils import convert_watts_to_va
+from nautobot.dcim.utils import convert_watts_to_va, power_ports_connected_to
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
@@ -221,9 +220,8 @@ class CableTermination(models.Model):
     An abstract model inherited by all models to which a Cable can terminate (certain device components, PowerFeed, and
     CircuitTermination instances). The `cable` field indicates the Cable instance which is terminated to this instance.
 
-    `_cable_peer` is a GenericForeignKey used to cache the far-end CableTermination on the local instance; this is a
-    shortcut to referencing `cable.termination_b`, for example. `_cable_peer` is set or cleared by the receivers in
-    dcim.signals when a Cable instance is created or deleted, respectively.
+    Use `get_cable_peer()` (singular) or `get_cable_peers()` (plural; required for breakout cables) to look up the
+    far-end termination(s) via the CableTerminationEndpoint join table.
     """
 
     cable = models.ForeignKey(
@@ -233,15 +231,6 @@ class CableTermination(models.Model):
         blank=True,
         null=True,
     )
-    _cable_peer_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-    )
-    _cable_peer_id = models.UUIDField(blank=True, null=True)
-    _cable_peer = GenericForeignKey(ct_field="_cable_peer_type", fk_field="_cable_peer_id")
 
     # NOTE: We intentionally do NOT have a GenericRelation to CableTerminationEndpoint here.
     # Deleting a termination object should NOT cascade-delete the Cable.
@@ -252,26 +241,17 @@ class CableTermination(models.Model):
         abstract = True
 
     def get_cable_peer(self):
-        """Return the cached far-end termination of this cable, or look it up from the CableTermination table."""
-        if self._cable_peer_id:
-            return self._cable_peer
-        # Fallback: look up via the CableTermination join table
-        if self.cable_id:
-            from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+        """Return the far-end termination of this cable, or the first peer for breakout/multi-termination cables."""
+        peers = self.get_cable_peers()
+        return peers[0] if peers else None
 
-            my_ct = CableTerminationModel.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
-            if my_ct:
-                other_end = "B" if my_ct.cable_end == "A" else "A"
-                if my_ct.connector is not None and my_ct.position is not None:
-                    # Breakout cable — find the mapped opposite-side termination
-                    from nautobot.dcim.utils import get_opposite_lane_termination
+    @property
+    def cable_peer(self):
+        """First far-end termination on the connected cable, or None.
 
-                    return get_opposite_lane_termination(self.cable, my_ct.cable_end, my_ct.connector, my_ct.position)
-                else:
-                    # Standard cable — just find the other end
-                    peer_ct = CableTerminationModel.objects.filter(cable_id=self.cable_id, cable_end=other_end).first()
-                    return peer_ct.termination if peer_ct else None
-        return None
+        For breakout/multi-termination cables, use `get_cable_peers()` to retrieve all peers.
+        """
+        return self.get_cable_peer()
 
     def get_cable_peers(self):
         """Return the opposite-side termination objects mapped to this termination's lane(s).
@@ -477,13 +457,12 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         """
         Return the allocated and maximum power draw (in VA) and child PowerOutlet count for this PowerPort.
         """
+
         # Calculate aggregate draw of all child power outlets if no numbers have been defined manually
         if self.allocated_draw is None and self.maximum_draw is None:
-            poweroutlet_ct = ContentType.objects.get_for_model(PowerOutlet)
-            outlet_ids = PowerOutlet.objects.filter(power_port=self).values_list("pk", flat=True)
-            utilization = PowerPort.objects.filter(
-                _cable_peer_type=poweroutlet_ct, _cable_peer_id__in=outlet_ids
-            ).aggregate(
+            outlet_qs = PowerOutlet.objects.filter(power_port=self)
+            outlet_count = outlet_qs.count()
+            utilization = power_ports_connected_to(outlet_qs).aggregate(
                 maximum_draw_total=Sum("maximum_draw"),
                 allocated_draw_total=Sum("allocated_draw"),
             )
@@ -495,7 +474,7 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
             ret = {
                 "allocated": allocated_va,
                 "maximum": maximum_va,
-                "outlet_count": len(outlet_ids),
+                "outlet_count": outlet_count,
                 "legs": [],
                 "utilization_data": UtilizationData(
                     numerator=allocated_va,
@@ -504,13 +483,12 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
             }
 
             # Calculate per-leg aggregates for three-phase feeds
-            if getattr(self._cable_peer, "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
+            if getattr(self.get_cable_peer(), "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
                 # Setup numerator and denominator for later display.
                 for leg, leg_name in PowerOutletFeedLegChoices:
-                    outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list("pk", flat=True)
-                    utilization = PowerPort.objects.filter(
-                        _cable_peer_type=poweroutlet_ct, _cable_peer_id__in=outlet_ids
-                    ).aggregate(
+                    leg_outlet_qs = PowerOutlet.objects.filter(power_port=self, feed_leg=leg)
+                    leg_outlet_count = leg_outlet_qs.count()
+                    utilization = power_ports_connected_to(leg_outlet_qs).aggregate(
                         maximum_draw_total=Sum("maximum_draw"),
                         allocated_draw_total=Sum("allocated_draw"),
                     )
@@ -524,7 +502,7 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
                             "name": leg_name,
                             "allocated": leg_allocated_va,
                             "maximum": leg_maximum_va,
-                            "outlet_count": len(outlet_ids),
+                            "outlet_count": leg_outlet_count,
                         }
                     )
 

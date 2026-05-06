@@ -342,40 +342,14 @@ def _create_cable_termination_rows(instance, logger):
 
 
 def _sync_termination_caches(instance, logger):
-    """Sync cable and _cable_peer on termination objects from the CableTerminationEndpoint rows."""
-    all_endpoints = list(instance.terminations.all())
-    a_endpoints = [endpoint for endpoint in all_endpoints if endpoint.cable_end == "A"]
-    b_endpoints = [endpoint for endpoint in all_endpoints if endpoint.cable_end == "B"]
-
-    # For each termination, set cable FK and _cable_peer cache
-    for endpoint in all_endpoints:
+    """Sync the `cable` FK on termination objects from the CableTerminationEndpoint rows."""
+    for endpoint in instance.terminations.all():
         termination = endpoint.termination
         if termination is None:
             continue
-
-        # Find the opposite-side peer
-        if endpoint.connector is not None and endpoint.position is not None:
-            # Breakout cable — find mapped peer via template
-            from nautobot.dcim.utils import get_opposite_lane_termination
-
-            peer = get_opposite_lane_termination(instance, endpoint.cable_end, endpoint.connector, endpoint.position)
-        else:
-            # Standard cable — peer is the other side
-            if endpoint.cable_end == "A":
-                peer = b_endpoints[0].termination if b_endpoints else None
-            else:
-                peer = a_endpoints[0].termination if a_endpoints else None
-
-        # Update mixin cache fields if they differ
-        needs_save = False
         if termination.cable_id != instance.pk:
+            logger.debug(f"Syncing cable FK for {termination} on cable {instance}")
             termination.cable = instance
-            needs_save = True
-        if termination._cable_peer != peer:
-            termination._cable_peer = peer
-            needs_save = True
-        if needs_save:
-            logger.debug(f"Syncing cache for {termination} on cable {instance}")
             termination.save()
 
 
@@ -387,13 +361,12 @@ def nullify_connected_endpoints(instance, **kwargs):
     """
     logger = logging.getLogger(__name__ + ".cable")
 
-    # Clear cable and _cable_peer on all termination objects
+    # Clear the cable FK on all termination objects
     for endpoint in instance.terminations.all():
         termination = endpoint.termination
         if termination is not None:
             logger.debug(f"Nullifying termination {termination} for cable {instance}")
             termination.cable = None
-            termination._cable_peer = None
             termination.save()
 
     # CableTerminationEndpoint rows will be CASCADE-deleted with the Cable.

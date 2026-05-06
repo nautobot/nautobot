@@ -1,4 +1,5 @@
-# Remove old GFK fields from Cable (data migrated to CableTerminationEndpoint).
+# Remove legacy GFK fields from Cable (data migrated to CableTerminationEndpoint) and from
+# CableTermination subclasses (peers are now resolved via CableTerminationEndpoint).
 from django.db import migrations
 
 
@@ -11,4 +12,20 @@ class Migration(migrations.Migration):
         migrations.RemoveField(model_name="cable", name="termination_a_type"),
         migrations.RemoveField(model_name="cable", name="termination_b_id"),
         migrations.RemoveField(model_name="cable", name="termination_b_type"),
+        migrations.RemoveField(model_name="consoleport", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="consoleport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="consoleserverport", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="consoleserverport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="frontport", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="frontport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="interface", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="interface", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="powerfeed", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="powerfeed", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="poweroutlet", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="poweroutlet", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="powerport", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="powerport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="rearport", name="_cable_peer_id"),
+        migrations.RemoveField(model_name="rearport", name="_cable_peer_type"),
     ]

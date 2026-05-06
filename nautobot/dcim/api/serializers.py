@@ -117,8 +117,9 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_cable_peer_type(self, obj):
-        if obj._cable_peer is not None:
-            return f"{obj._cable_peer._meta.app_label}.{obj._cable_peer._meta.model_name}"
+        peer = obj.get_cable_peer()
+        if peer is not None:
+            return f"{peer._meta.app_label}.{peer._meta.model_name}"
         return None
 
     @extend_schema_field(
@@ -132,10 +133,13 @@ class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
     def get_cable_peer(self, obj):
         """
         Return the appropriate serializer for the cable termination model.
+
+        For breakout/multi-termination cables, returns the first peer.
         """
-        if obj._cable_peer is not None:
+        peer = obj.get_cable_peer()
+        if peer is not None:
             depth = get_nested_serializer_depth(self)
-            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj._cable_peer, "_cable_peer")
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, peer, "cable_peer")
         return None
 
 

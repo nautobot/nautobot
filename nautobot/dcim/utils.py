@@ -325,11 +325,11 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
 def disconnect_termination(termination):
     """Disconnect a single termination from its cable without deleting the cable.
 
-    Clears the CableTerminationEndpoint row, clears mixin caches on both the termination
-    and its peer, and cleans up CablePaths. Returns the cable if successful, None otherwise.
+    Removes the CableTerminationEndpoint row, clears the cable FK and `_path` on this
+    termination, and invalidates the peer's `_path` (which traversed this side of the cable).
+    The cable itself and any other terminations on it are left intact. Returns the cable if
+    successful, None otherwise.
     """
-    from django.contrib.contenttypes.models import ContentType
-
     from nautobot.dcim.models import CablePath, CableTerminationEndpoint
 
     if not termination or not termination.cable_id:
@@ -337,18 +337,13 @@ def disconnect_termination(termination):
 
     cable = termination.cable
 
-    # Clear the peer's caches
-    peer = termination._cable_peer
-    if peer is not None:
-        peer.cable = None
-        peer._cable_peer = None
-        if getattr(peer, "_path_id", None):
-            path_id = peer._path_id
-            peer._path = None
-            peer.save()
-            CablePath.objects.filter(pk=path_id).delete()
-        else:
-            peer.save()
+    peer = termination.get_cable_peer()
+    if peer is not None and getattr(peer, "_path_id", None):
+        # Disconnecting this termination invalidates the peer's path through this side of the cable.
+        path_id = peer._path_id
+        peer._path = None
+        peer.save()
+        CablePath.objects.filter(pk=path_id).delete()
 
     # Clear _path FK before deleting CablePath to avoid FK constraint violation
     if getattr(termination, "_path_id", None):
@@ -363,12 +358,34 @@ def disconnect_termination(termination):
         termination_id=termination.pk,
     ).delete()
 
-    # Clear the mixin cache on this termination
     termination.cable = None
-    termination._cable_peer = None
     termination.save()
 
     return cable
+
+
+def power_ports_connected_to(target_queryset):
+    """Return a queryset of PowerPorts whose cable peer is one of the objects in `target_queryset`.
+
+    `target_queryset` must be a queryset of CableTermination subclass instances (typically
+    PowerOutlet or PowerFeed).
+    """
+    from nautobot.dcim.models import CableTerminationEndpoint, PowerPort
+
+    target_ct = ContentType.objects.get_for_model(target_queryset.model)
+    powerport_ct = ContentType.objects.get_for_model(PowerPort)
+
+    target_cables = CableTerminationEndpoint.objects.filter(
+        termination_type=target_ct,
+        termination_id__in=target_queryset.values("pk"),
+    ).values("cable_id")
+
+    powerport_endpoint_ids = CableTerminationEndpoint.objects.filter(
+        termination_type=powerport_ct,
+        cable_id__in=target_cables,
+    ).values("termination_id")
+
+    return PowerPort.objects.filter(pk__in=powerport_endpoint_ids)
 
 
 # Breakout cable lane utilities

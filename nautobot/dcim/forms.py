@@ -4808,16 +4808,8 @@ class CableForm(NautobotModelForm):
             old_termination = stale_endpoint.termination
             if old_termination:
                 old_termination.cable = None
-                old_termination._cable_peer = None
                 old_termination.save()
             stale_endpoint.delete()
-
-        # Sync _cable_peer caches: for standard cables, A↔B peer each other
-        if not info["is_breakout"] and len(all_terminations) == 2:
-            all_terminations[0]._cable_peer = all_terminations[1]
-            all_terminations[0].save()
-            all_terminations[1]._cable_peer = all_terminations[0]
-            all_terminations[1].save()
 
         # Rebuild CablePaths (uses create_cablepath which handles per-lane paths for breakout cables)
         from nautobot.dcim.signals import create_cablepath

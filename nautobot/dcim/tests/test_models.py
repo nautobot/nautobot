@@ -3155,14 +3155,16 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_cable_creation(self):
         """
-        When a new Cable is created, it must be cached on either termination point.
+        When a new Cable is created, each termination should resolve its peer via the CableTerminationEndpoint table.
         """
         interface1 = Interface.objects.get(pk=self.interface1.pk)
         interface2 = Interface.objects.get(pk=self.interface2.pk)
         self.assertEqual(self.cable.termination_a, interface1)
-        self.assertEqual(interface1._cable_peer, interface2)
+        self.assertEqual(interface1.get_cable_peer(), interface2)
+        self.assertEqual(interface1.get_cable_peers(), [interface2])
         self.assertEqual(self.cable.termination_b, interface2)
-        self.assertEqual(interface2._cable_peer, interface1)
+        self.assertEqual(interface2.get_cable_peer(), interface1)
+        self.assertEqual(interface2.get_cable_peers(), [interface1])
 
     def test_cable_deletion(self):
         """
@@ -3174,18 +3176,29 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertNotEqual(str(self.cable), "#None")
         interface1 = Interface.objects.get(pk=self.interface1.pk)
         self.assertIsNone(interface1.cable)
-        self.assertIsNone(interface1._cable_peer)
+        self.assertIsNone(interface1.get_cable_peer())
+        self.assertEqual(interface1.get_cable_peers(), [])
         interface2 = Interface.objects.get(pk=self.interface2.pk)
         self.assertIsNone(interface2.cable)
-        self.assertIsNone(interface2._cable_peer)
+        self.assertIsNone(interface2.get_cable_peer())
+        self.assertEqual(interface2.get_cable_peers(), [])
 
     def test_cabletermination_deletion(self):
         """
-        When a CableTermination object is deleted, its attached Cable (if any) must also be deleted.
+        When a CableTermination object is deleted, its CableTerminationEndpoint row is removed but the
+        Cable itself survives.
         """
+        from nautobot.dcim.models import CableTerminationEndpoint
+
         self.interface1.delete()
         cable = Cable.objects.filter(pk=self.cable.pk).first()
-        self.assertIsNone(cable)
+        self.assertIsNotNone(cable)
+        self.assertFalse(
+            CableTerminationEndpoint.objects.filter(cable=cable, termination_id=self.interface1.pk).exists()
+        )
+        # The other end is still attached to the cable
+        interface2 = Interface.objects.get(pk=self.interface2.pk)
+        self.assertEqual(interface2.cable, cable)
 
     def test_cable_validates_compatible_types(self):
         """
