@@ -804,6 +804,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         return None
 
     @property
+    def queue_type(self):
+        return self.celery_kwargs.get("nautobot_job_queue_type", None)
+
+    @property
     def console_log(self):
         return self.celery_kwargs.get("nautobot_job_console_log", False)
 
@@ -884,6 +888,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         job_model: "Job",
         user: "User",
         task_queue: str,
+        queue_type: JobQueueTypeChoices,
         profile: bool = False,
         console_log: bool = False,
         ignore_singleton_lock: bool = False,
@@ -897,6 +902,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             "nautobot_job_user_id": str(user.id),
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": queue_type,
             "queue": task_queue,
         }
 
@@ -1048,6 +1054,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_model=job_model,
             user=user,
             task_queue=task_queue,
+            queue_type=job_queue.queue_type,
             profile=profile,
             console_log=console_log,
             ignore_singleton_lock=ignore_singleton_lock,
@@ -1795,6 +1802,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": job_queue.queue_type,  # need a migration to set this field
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

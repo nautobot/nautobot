@@ -1,0 +1,9 @@
+{% if result.status == 'REVOKED' %}
+    {% if result.terminated_at %}
+        <span class="badge bg-danger">Terminated</span>
+    {% else %}
+        <span class="badge bg-warning">Reaped</span>
+    {% endif %}
+{% else %}
+    <span class="badge bg-body-secondary border">N/A</span>
+{% endif %}

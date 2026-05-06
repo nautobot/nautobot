@@ -107,8 +107,12 @@ class JobRevokeStrategy(ABC):
         """
         # REAP
         if self.should_reap(job_result):
-            logger.info("Reaped dead job %s", job_result.pk)
-            job_result.log(f"Reaped dead job {job_result.pk}", grouping="revoking")
+            logger.info("Reaped dead job %s by %s", job_result.pk, user)
+            job_result.log(
+                f"Reaped dead job {job_result.pk} by {user}",
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="revoking",
+            )
             return {"job_result": self._mark_revoked(job_result, user), "error": None}
 
         # TERMINATE
@@ -216,8 +220,6 @@ class CeleryStrategy(JobRevokeStrategy):
 
         task_id = str(job_result.pk)
         celery_app = self.get_celery_app()
-        celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
-
         with transaction.atomic():
             now = timezone.now()
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
@@ -228,8 +230,12 @@ class CeleryStrategy(JobRevokeStrategy):
 
             job_result.save(update_fields=list(changed))
 
+            celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
+
         logger.info("Job %s terminated by %s", job_result.pk, user)
-        job_result.log(f"Job {job_result.pk} terminated by {user}", grouping="revoking")
+        job_result.log(
+            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
+        )
 
 
 class K8sStrategy(JobRevokeStrategy):

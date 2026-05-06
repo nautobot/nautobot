@@ -29,6 +29,7 @@ from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -1223,6 +1224,25 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         field_name="job_console_entries",
         label="Has Job Console Entries",
     )
+
+    revocation_type = django_filters.ChoiceFilter(
+        choices=(JobRevocationTypeChoices),
+        method="filter_revocation_type",
+        label="Revocation Type",
+    )
+
+    def filter_revocation_type(self, queryset, name, value):
+        if value == "terminated":
+            return queryset.filter(
+                status=JobResultStatusChoices.STATUS_REVOKED,
+                terminated_at__isnull=False,
+            )
+        if value == "reaped":
+            return queryset.filter(
+                status=JobResultStatusChoices.STATUS_REVOKED,
+                terminated_at__isnull=True,
+            )
+        return queryset
 
     class Meta:
         model = JobResult

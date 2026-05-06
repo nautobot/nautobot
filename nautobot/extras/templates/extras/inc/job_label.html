@@ -6,6 +6,8 @@
     <span class="badge bg-warning">Running</span>
 {% elif result.status == 'SUCCESS' %}
     <span class="badge bg-success">Completed</span>
+{% elif result.status == 'REVOKED' %}
+    <span class="badge bg-danger border">Revoked</span>
 {% else %}
     <span class="badge bg-body-secondary border">N/A</span>
 {% endif %}

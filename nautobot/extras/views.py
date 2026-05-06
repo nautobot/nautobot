@@ -96,6 +96,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.jobs_revoke import RevokeFactory
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -3289,6 +3290,7 @@ def render_jobresult_status(status):
         "PENDING": ("bg-body-secondary border", "Pending"),
         "STARTED": ("bg-warning", "Running"),
         "SUCCESS": ("bg-success", "Completed"),
+        "REVOKED": ("bg-danger", "Revoked"),
     }
 
     css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
@@ -3463,6 +3465,18 @@ class JobResultUIViewSet(
                     "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
+            JobResultButton(
+                weight=140,
+                label="Revoke Job",
+                color=ButtonActionColorChoices.DELETE,
+                icon="mdi-close-circle",
+                required_permissions=["extras.change_jobresult"],
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_revoke_job", kwargs={"pk": ctx["object"].pk})
+                    if ctx["object"].is_unready_state
+                    else None
+                ),
+            ),
         ),
         extra_tabs=[
             JobResultJobConsoleEntriesTab(
@@ -3503,9 +3517,18 @@ class JobResultUIViewSet(
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
         object_detail.ObjectFieldsPanel(
+            label="Revocation",
+            section=SectionChoices.RIGHT_HALF,
+            weight=100,
+            fields=[
+                "terminated_at",
+                "revoked_by_user_name",
+            ],
+        ),
+        object_detail.ObjectFieldsPanel(
             label="Worker",
             section=SectionChoices.RIGHT_HALF,
-            weight=110,
+            weight=200,
             fields=[
                 "worker",
                 "queue",
@@ -3516,7 +3539,7 @@ class JobResultUIViewSet(
         object_detail.ObjectTextPanel(
             label="Traceback",
             section=SectionChoices.RIGHT_HALF,
-            weight=200,
+            weight=300,
             object_field="traceback",
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
         ),
@@ -3728,6 +3751,43 @@ class JobResultUIViewSet(
                 **context,
             }
         )
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="revoke-job",
+        url_name="revoke_job",
+        custom_view_base_action="change",
+    )
+    def revoke_job(self, request, pk=None):
+        """Terminate a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+
+        if not job_result.is_unready_state:
+            messages.info(request, "Job is already finished. Nothing to do.")
+            return redirect(job_result.get_absolute_url())
+
+        job_is_running = strategy.is_alive(job_result)
+        if request.method == "GET":
+            return render(
+                request,
+                "extras/job_revoke.html",
+                {
+                    "object": job_result,
+                    "job_is_running": job_is_running,
+                    "timestamp": now(),
+                    "return_url": job_result.get_absolute_url(),
+                },
+            )
+
+        result = strategy.revoke(job_result, user=request.user)
+        if result["error"]:
+            messages.error(request, result["error"])
+        else:
+            messages.success(request, "Job terminated.")
+        return redirect(job_result.get_absolute_url())
 
 
 #

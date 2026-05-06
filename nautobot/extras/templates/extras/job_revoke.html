@@ -1,0 +1,34 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block title %}
+    Revoke Job?
+{% endblock %}
+
+{% block message %}
+    <p>Are you sure you want to revoke <strong>{{ object.name }}</strong>?</p>
+    <p>
+        As of the time {{ timestamp }} of this job is: {% if job_is_running %}<strong>RUNNING</strong>{% else %}<strong> NOT RUNNING</strong>{% endif %}
+    </p>
+    <p>
+        Would you like revoke the job? Which will <strong>REAP</strong> or <strong>TERMINATE</strong> the job.
+    </p>
+
+    <p>This action cannot be undone.</p>
+
+    <details>
+        <summary>What's the difference between REAP and TERMINATE?</summary>
+        <div class="alert alert-info" role="alert">
+            <p>
+                <strong>REAP:</strong> No worker is currently running this Job, so no kill signal
+                will be sent. The JobResult will simply be marked as revoked.
+            </p>
+            <p>
+                <strong>TERMINATE:</strong> A SIGKILL signal will be sent to the worker running
+                this Job. The Job will stop immediately with no opportunity to clean up. Any
+                in-flight operations will be cut off.
+            </p>
+        </div>
+    </details>
+{% endblock %}
