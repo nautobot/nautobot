@@ -2597,7 +2597,6 @@ class JobUIViewSet(NautobotUIViewSet):
         is_htmx_modal = False
         title = job_model.name
         run_button_label = "Run Job Now"
-        job_result_key = None
         advanced_fields = ()
         if htmx_request and job_modal_button:
             is_htmx_modal = True
