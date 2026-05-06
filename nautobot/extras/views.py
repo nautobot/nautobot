@@ -2595,11 +2595,10 @@ class JobUIViewSet(NautobotUIViewSet):
         htmx_request = self.request.headers.get("HX-Request", False)
         job_modal_button = request.POST.get("job_modal_button", None)
         is_htmx_modal = False
-        title = job_model.name
-        run_button_label = "Run Job Now"
         advanced_fields = ()
         if htmx_request and job_modal_button:
             is_htmx_modal = True
+            title = job_model.name
             run_button_label = request.POST.get("run_button_label", "Run Job Now")
             job_result_key = request.POST.get("job_result_key", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
@@ -2612,7 +2611,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
+                    "run_button_label": run_button_label,
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
@@ -2624,8 +2623,8 @@ class JobUIViewSet(NautobotUIViewSet):
                         {
                             "job_modal_button": job_modal_button,
                             "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
-                            "refresh_on_close_if_done": refresh_on_close_if_done,  # pylint: disable=possibly-used-before-assignment
+                            "run_button_label": run_button_label,
+                            "refresh_on_close_if_done": refresh_on_close_if_done,
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
