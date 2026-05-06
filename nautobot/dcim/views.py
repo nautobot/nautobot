@@ -2189,17 +2189,29 @@ class ModuleTypeUIViewSet(
 
 
 class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+    """
+    UI mixin to bulk-create device/module component template instances from a single
+    parent form using `name_pattern`/`label_pattern` expansion.
+
+    Intentionally overrides `ObjectEditViewMixin.create()` via MRO so that the standard
+    single-object create flow is replaced with the component bulk-create flow. Concrete
+    viewsets must list `ComponentCreateViewMixin` *before* `ObjectEditViewMixin` in their
+    bases for this override to take effect.
+    """
+
     create_form_class: type[Form]
     form_class: type[Form]
     create_template_name = "dcim/device_component_add.html"
 
-    def get_create_form(self, request, data=None):
+    def get_component_create_form(self, request, data=None):
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
         return self.create_form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
 
     def get_selected_objects_parents_name(self, selected_objects):
+        """Return the display name of the device_type/module_type that owns the selected component templates."""
         selected_object = selected_objects.first()
         if selected_object:
             parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
@@ -2207,23 +2219,34 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 return parent.display
         return ""
 
-    def get_model_form(self, request, data=None):
+    def get_component_model_form(self, request, data=None):
+        """Return the per-instance component model form used to validate/save each expanded child."""
         return self.form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.form_class),
         )
 
     def create(self, request, *args, **kwargs):
+        """
+        Component bulk-create entry point. Intentionally overrides `ObjectEditViewMixin.create()`
+        so that GET renders the bulk-create form and POST expands `name_pattern`/`label_pattern`
+        into individual component instances via `process_component_create_form()`.
+        """
         if request.method == "POST":
-            return self.process_form(request, *args, **kwargs)
+            return self.process_component_create_form(request, *args, **kwargs)
 
-        return self.render_form_response(request)
+        return self.render_component_create_response(request)
 
-    def process_form(self, request, *args, **kwargs):
-        create_form = self.get_create_form(request, data=request.POST)
+    def process_component_create_form(self, request, *args, **kwargs):
+        """
+        Validate the parent bulk-create form, expand the patterns into individual child
+        component forms, and save them atomically. Errors on any expanded child form are
+        re-raised on the parent form's `name_pattern`/`label_pattern` fields.
+        """
+        create_form = self.get_component_create_form(request, data=request.POST)
 
         if not create_form.is_valid():
-            return self.render_form_response(request, create_form)
+            return self.render_component_create_response(request, create_form)
 
         new_components = []
         data = deepcopy(request.POST)
@@ -2242,7 +2265,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 data.update(create_form.get_iterative_data(i))
 
             # Recreate the form for each iteration with updated data
-            component_form = self.get_model_form(request, data=data)
+            component_form = self.get_component_model_form(request, data=data)
             if component_form.is_valid():
                 new_components.append(component_form)
             else:
@@ -2254,7 +2277,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                         create_form.add_error(parent_field, f"{name}: {err_str}")
 
         if create_form.errors:
-            return self.render_form_response(request, create_form)
+            return self.render_component_create_response(request, create_form)
 
         try:
             with transaction.atomic():
@@ -2277,13 +2300,18 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
 
         except ObjectDoesNotExist:
             create_form.add_error(None, "Component creation failed due to object-level permissions violation")
-        return self.render_form_response(request, create_form)
+        return self.render_component_create_response(request, create_form)
 
-    def render_form_response(self, request, create_form=None):
+    def render_component_create_response(self, request, create_form=None):
+        """Render the component bulk-create template with the parent and per-instance forms."""
         if create_form is None:
-            create_form = self.get_create_form(request, data=request.POST if request.method == "POST" else None)
+            create_form = self.get_component_create_form(
+                request, data=request.POST if request.method == "POST" else None
+            )
 
-        model_form = self.get_model_form(request, data=request.POST if request.method == "POST" else None)
+        model_form = self.get_component_model_form(
+            request, data=request.POST if request.method == "POST" else None
+        )
 
         return Response(
             {

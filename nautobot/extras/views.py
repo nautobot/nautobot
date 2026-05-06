@@ -2534,7 +2534,7 @@ class JobUIViewSet(NautobotUIViewSet):
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
             console_log=console_log,
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
@@ -2773,7 +2773,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     profile=profile,
                     console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
-                    **job_class.serialize_data(job_form.cleaned_data),
+                    job_kwargs=job_class.serialize_data(job_form.cleaned_data),
                 )
                 scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
                 is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES

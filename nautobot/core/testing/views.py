@@ -1398,7 +1398,7 @@ class ViewTestCases:
 
         def get_invalid_bulk_create_data(self):
             data = self.bulk_create_data.copy()
-            data["label_pattern"] = "Mismatch [1-2]"
+            data[self.expected_invalid_create_form_field] = "Mismatch [1-2]"
             return data
 
         def get_invalid_component_bulk_create_data(self):
@@ -1411,9 +1411,9 @@ class ViewTestCases:
             range_match = re.search(r"\[[^\]]+\]", name_pattern)
             too_long = "X" * 300
             if range_match:
-                data["label_pattern"] = too_long + range_match.group(0)
+                data[self.expected_invalid_component_form_field] = too_long + range_match.group(0)
             else:
-                data["label_pattern"] = too_long
+                data[self.expected_invalid_component_form_field] = too_long
             return data
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
