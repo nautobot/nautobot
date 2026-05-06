@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest import expectedFailure
 from unittest.mock import MagicMock, patch, PropertyMock
 
 from constance.test import override_config
@@ -35,6 +36,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableTerminationEndpoint,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -3188,7 +3190,6 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         When a CableTermination object is deleted, its CableTerminationEndpoint row is removed but the
         Cable itself survives.
         """
-        from nautobot.dcim.models import CableTerminationEndpoint
 
         self.interface1.delete()
         cable = Cable.objects.filter(pk=self.cable.pk).first()
@@ -3445,6 +3446,42 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # Enable change logging
         with context_managers.web_request_context(self.user):
             self.device1.delete()
+
+    @expectedFailure
+    def test_breakout_cable_pair_validation_iterates_all_lanes(self):
+        """A breakout cable's pair-wise validation should iterate all lane pairs, not just the first.
+
+        Marked `expectedFailure` while Cable.clean() only validates the first A/B pair. When full
+        lane iteration is implemented, this test should start passing — at which point remove the
+        decorator.
+        """
+        Cable.objects.all().delete()
+
+        cable_type = CableType.objects.create(
+            name="Test 1-to-2 breakout",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=2,
+        )
+        cable = Cable.objects.create(
+            termination_a=self.interface1,
+            termination_b=self.interface2,
+            cable_type=cable_type,
+            status=self.status,
+        )
+
+        # Lane 2: add an incompatible PowerPort on the B side, bypassing the form layer.
+        CableTerminationEndpoint.objects.create(
+            cable=cable,
+            cable_end="B",
+            termination_type=ContentType.objects.get_for_model(PowerPort),
+            termination_id=self.power_port1.pk,
+            connector=2,
+            position=1,
+        )
+
+        with self.assertRaises(ValidationError):
+            cable.clean()
 
 
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):

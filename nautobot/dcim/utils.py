@@ -11,7 +11,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import DEFAULT_CABLE_TYPES
+from nautobot.dcim.constants import DEFAULT_CABLE_TYPES, NONCONNECTABLE_IFACE_TYPES
 
 
 def compile_path_node(ct_id, object_id):
@@ -317,6 +317,38 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         seen_labels.add(label)
 
     return mapping, a_connectors, b_connectors, total_lanes
+
+
+# Cable validation utilities
+
+
+def validate_cable_termination(termination, cable_id=None):
+    """Run per-termination validations independent of any peer.
+
+    Raises ValidationError if the termination is not a valid endpoint for a cable, namely:
+    * an Interface of a non-connectable type (virtual or wireless),
+    * a CircuitTermination attached to a provider network, or
+    * a termination already attached to a different cable than `cable_id`.
+    """
+    from nautobot.circuits.models import CircuitTermination
+    from nautobot.dcim.models import Interface
+
+    if termination is None:
+        return
+
+    if isinstance(termination, Interface) and termination.type in NONCONNECTABLE_IFACE_TYPES:
+        raise ValidationError(f"Cables cannot be terminated to {termination.get_type_display()} interfaces")
+
+    if isinstance(termination, CircuitTermination) and termination.provider_network_id is not None:
+        raise ValidationError("Circuit terminations attached to a provider network may not be cabled.")
+
+    if termination.present_in_database:
+        # Re-query rather than trusting the in-memory cable_id, which may be stale.
+        current_cable_id = (
+            type(termination).objects.filter(pk=termination.pk).values_list("cable_id", flat=True).first()
+        )
+        if current_cable_id and current_cable_id != cable_id:
+            raise ValidationError(f"{termination} already has a cable attached (#{current_cable_id})")
 
 
 # Cable disconnect utilities

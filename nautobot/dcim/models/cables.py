@@ -28,6 +28,7 @@ from nautobot.dcim.utils import (
     object_to_path_node,
     path_node_to_object,
     validate_cable_breakout_mapping,
+    validate_cable_termination,
 )
 from nautobot.extras.models import Status, StatusField
 from nautobot.extras.utils import extras_features
@@ -559,11 +560,55 @@ class Cable(PrimaryModel):
                         }
                     )
 
+        # Per-termination validations on the first A/B terminations (sufficient for standard cables;
+        # breakout-cable iteration across all lanes is a future enhancement).
+        validate_cable_termination(self.termination_a, cable_id=self.pk)
+        validate_cable_termination(self.termination_b, cable_id=self.pk)
+
+        # Pair-wise validation on the first A/B pair.
+        self._validate_termination_pair(self.termination_a, self.termination_b)
+
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:
             raise ValidationError("Must specify a unit when setting a cable length")
         elif self.length is None:
             self.length_unit = ""
+
+    @staticmethod
+    def _validate_termination_pair(term_a, term_b):
+        """Validate compatibility of one A-side / B-side termination pair.
+
+        Raises ValidationError if the pair is incompatible (mismatched types, same termination on both
+        sides, FrontPort connected to its corresponding RearPort, or RearPorts with mismatched position
+        counts).
+        """
+        if term_a is None or term_b is None:
+            return
+
+        type_a = term_a._meta.model_name
+        type_b = term_b._meta.model_name
+
+        if term_a == term_b:
+            raise ValidationError(f"Cannot connect {term_a._meta.verbose_name} to itself")
+
+        if type_b not in COMPATIBLE_TERMINATION_TYPES.get(type_a, ()):
+            raise ValidationError(f"Incompatible termination types: {type_a} and {type_b}")
+
+        if (
+            type_a in ("frontport", "rearport")
+            and type_b in ("frontport", "rearport")
+            and (
+                getattr(term_a, "rear_port_id", None) == term_b.pk or getattr(term_b, "rear_port_id", None) == term_a.pk
+            )
+        ):
+            raise ValidationError("A front port cannot be connected to its corresponding rear port")
+
+        if isinstance(term_a, RearPort) and isinstance(term_b, RearPort):
+            if term_a.positions > 1 and term_b.positions > 1 and term_a.positions != term_b.positions:
+                raise ValidationError(
+                    f"{term_a} has {term_a.positions} position(s) but {term_b} has {term_b.positions}. "
+                    f"Both terminations must have the same number of positions (if greater than one)."
+                )
 
     def save(self, *args, **kwargs):
         # Store the given length (if any) in meters for use in database ordering
@@ -650,6 +695,15 @@ class CableTerminationEndpoint(BaseModel):
 
     def __str__(self):
         return f"{self.cable} {self.cable_end}-side: {self.termination}"
+
+    def clean(self):
+        super().clean()
+
+        if self.termination_type_id and self.termination_id:
+            try:
+                validate_cable_termination(self.termination, cable_id=self.cable_id)
+            except ObjectDoesNotExist:
+                pass
 
     def save(self, *args, **kwargs):
         # Cache the parent device for filtering
