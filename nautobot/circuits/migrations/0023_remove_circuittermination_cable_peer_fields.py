@@ -1,4 +1,4 @@
-# Remove legacy GFK fields from CircuitTermination — peers are now resolved via CableTerminationEndpoint.
+# Remove legacy GFK fields from CircuitTermination — peers are now resolved via CableToCableTermination.
 from django.db import migrations
 
 

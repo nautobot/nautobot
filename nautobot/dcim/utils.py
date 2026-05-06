@@ -357,12 +357,12 @@ def validate_cable_termination(termination, cable_id=None):
 def disconnect_termination(termination):
     """Disconnect a single termination from its cable without deleting the cable.
 
-    Removes the CableTerminationEndpoint row, clears the cable FK and `_path` on this
+    Removes the CableToCableTermination row, clears the cable FK and `_path` on this
     termination, and invalidates the peer's `_path` (which traversed this side of the cable).
     The cable itself and any other terminations on it are left intact. Returns the cable if
     successful, None otherwise.
     """
-    from nautobot.dcim.models import CablePath, CableTerminationEndpoint
+    from nautobot.dcim.models import CablePath, CableToCableTermination
 
     if not termination or not termination.cable_id:
         return None
@@ -384,8 +384,8 @@ def disconnect_termination(termination):
         termination.save()
         CablePath.objects.filter(pk=path_id).delete()
 
-    # Remove the CableTerminationEndpoint row
-    CableTerminationEndpoint.objects.filter(
+    # Remove the CableToCableTermination row
+    CableToCableTermination.objects.filter(
         termination_type=ContentType.objects.get_for_model(termination),
         termination_id=termination.pk,
     ).delete()
@@ -402,17 +402,17 @@ def power_ports_connected_to(target_queryset):
     `target_queryset` must be a queryset of CableTermination subclass instances (typically
     PowerOutlet or PowerFeed).
     """
-    from nautobot.dcim.models import CableTerminationEndpoint, PowerPort
+    from nautobot.dcim.models import CableToCableTermination, PowerPort
 
     target_ct = ContentType.objects.get_for_model(target_queryset.model)
     powerport_ct = ContentType.objects.get_for_model(PowerPort)
 
-    target_cables = CableTerminationEndpoint.objects.filter(
+    target_cables = CableToCableTermination.objects.filter(
         termination_type=target_ct,
         termination_id__in=target_queryset.values("pk"),
     ).values("cable_id")
 
-    powerport_endpoint_ids = CableTerminationEndpoint.objects.filter(
+    powerport_endpoint_ids = CableToCableTermination.objects.filter(
         termination_type=powerport_ct,
         cable_id__in=target_cables,
     ).values("termination_id")
@@ -457,7 +457,7 @@ def get_all_lane_terminations(cable):
 
     Returns a QuerySet of CableTermination model instances.
     """
-    from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+    from nautobot.dcim.models.cables import CableToCableTermination as CableTerminationModel
 
     return CableTerminationModel.objects.filter(cable=cable).order_by("cable_end", "connector", "position")
 
@@ -469,7 +469,7 @@ def get_opposite_lane_termination(cable, side, connector, position):
 
     Returns the termination object or None if the opposite lane is unconnected.
     """
-    from nautobot.dcim.models.cables import CableTerminationEndpoint as CableTerminationModel
+    from nautobot.dcim.models.cables import CableToCableTermination as CableTerminationModel
 
     if not cable.cable_type_id:
         return None

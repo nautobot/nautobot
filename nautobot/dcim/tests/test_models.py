@@ -36,7 +36,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -3157,7 +3157,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_cable_creation(self):
         """
-        When a new Cable is created, each termination should resolve its peer via the CableTerminationEndpoint table.
+        When a new Cable is created, each termination should resolve its peer via the CableToCableTermination table.
         """
         interface1 = Interface.objects.get(pk=self.interface1.pk)
         interface2 = Interface.objects.get(pk=self.interface2.pk)
@@ -3187,7 +3187,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_cabletermination_deletion(self):
         """
-        When a CableTermination object is deleted, its CableTerminationEndpoint row is removed but the
+        When a CableTermination object is deleted, its CableToCableTermination row is removed but the
         Cable itself survives.
         """
 
@@ -3195,7 +3195,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         cable = Cable.objects.filter(pk=self.cable.pk).first()
         self.assertIsNotNone(cable)
         self.assertFalse(
-            CableTerminationEndpoint.objects.filter(cable=cable, termination_id=self.interface1.pk).exists()
+            CableToCableTermination.objects.filter(cable=cable, termination_id=self.interface1.pk).exists()
         )
         # The other end is still attached to the cable
         interface2 = Interface.objects.get(pk=self.interface2.pk)
@@ -3477,7 +3477,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         # Lane 2: FrontPort on A side, its corresponding RearPort on B side — pair check should fail.
-        CableTerminationEndpoint.objects.create(
+        CableToCableTermination.objects.create(
             cable=cable,
             cable_end="A",
             termination_type=ContentType.objects.get_for_model(FrontPort),
@@ -3485,7 +3485,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             connector=2,
             position=1,
         )
-        CableTerminationEndpoint.objects.create(
+        CableToCableTermination.objects.create(
             cable=cable,
             cable_end="B",
             termination_type=ContentType.objects.get_for_model(RearPort),

@@ -126,7 +126,7 @@ from .constants import (
 from .models import (
     Cable,
     CablePath,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -4770,7 +4770,7 @@ class CableForm(NautobotModelForm):
             return
 
         # Collect all old endpoint rows for this cable so we can remove stale ones
-        old_endpoints = {endpoint.pk: endpoint for endpoint in CableTerminationEndpoint.objects.filter(cable=cable)}
+        old_endpoints = {endpoint.pk: endpoint for endpoint in CableToCableTermination.objects.filter(cable=cable)}
         new_endpoint_pks = set()
         all_terminations = []
         seen_termination_pks = set()
@@ -4786,7 +4786,7 @@ class CableForm(NautobotModelForm):
                     seen_termination_pks.add(termination.pk)
 
                     content_type = ContentType.objects.get_for_model(termination)
-                    endpoint, _ = CableTerminationEndpoint.objects.update_or_create(
+                    endpoint, _ = CableToCableTermination.objects.update_or_create(
                         termination_type=content_type,
                         termination_id=termination.pk,
                         defaults={

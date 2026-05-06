@@ -12,7 +12,7 @@ from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     ConsolePort,
     ConsoleServerPort,
     ControllerManagedDeviceGroup,
@@ -44,7 +44,7 @@ def create_cablepath(node, rebuild=True):
 
     rebuild (bool) - Used to refresh paths where this node is not an endpoint.
     """
-    from nautobot.dcim.models import CableTerminationEndpoint
+    from nautobot.dcim.models import CableToCableTermination
 
     if not node.cable_id:
         if rebuild:
@@ -55,7 +55,7 @@ def create_cablepath(node, rebuild=True):
 
     # Check if this is a breakout cable with multiple far-side lanes
     if cable.cable_type_id:
-        my_endpoint = CableTerminationEndpoint.objects.filter(cable=cable, termination_id=node.pk).first()
+        my_endpoint = CableToCableTermination.objects.filter(cable=cable, termination_id=node.pk).first()
 
         if my_endpoint and my_endpoint.connector is not None:
             opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
@@ -70,7 +70,7 @@ def create_cablepath(node, rebuild=True):
                     far_position = mapping_entry.get(far_position_key, 1)
 
                     # Find the actual far-end termination for this lane
-                    far_ep = CableTerminationEndpoint.objects.filter(
+                    far_ep = CableToCableTermination.objects.filter(
                         cable=cable,
                         cable_end=opposite_side,
                         connector=far_connector,
@@ -320,7 +320,7 @@ def _create_cable_termination_rows(instance, logger):
 
     if term_a:
         ct_a = ContentType.objects.get_for_model(term_a)
-        CableTerminationEndpoint.objects.get_or_create(
+        CableToCableTermination.objects.get_or_create(
             cable=instance,
             cable_end="A",
             termination_type=ct_a,
@@ -331,7 +331,7 @@ def _create_cable_termination_rows(instance, logger):
 
     if term_b:
         ct_b = ContentType.objects.get_for_model(term_b)
-        CableTerminationEndpoint.objects.get_or_create(
+        CableToCableTermination.objects.get_or_create(
             cable=instance,
             cable_end="B",
             termination_type=ct_b,
@@ -342,7 +342,7 @@ def _create_cable_termination_rows(instance, logger):
 
 
 def _sync_termination_caches(instance, logger):
-    """Sync the `cable` FK on termination objects from the CableTerminationEndpoint rows."""
+    """Sync the `cable` FK on termination objects from the CableToCableTermination rows."""
     for endpoint in instance.terminations.all():
         termination = endpoint.termination
         if termination is None:
@@ -369,7 +369,7 @@ def nullify_connected_endpoints(instance, **kwargs):
             termination.cable = None
             termination.save()
 
-    # CableTerminationEndpoint rows will be CASCADE-deleted with the Cable.
+    # CableToCableTermination rows will be CASCADE-deleted with the Cable.
     # Retrace any dependent cable paths.
     for cablepath in CablePath.objects.filter(path__contains=instance):
         cp = CablePath.from_origin(cablepath.origin)
@@ -386,7 +386,7 @@ def nullify_connected_endpoints(instance, **kwargs):
 
 
 #
-# Termination object deletion — clean up CableTerminationEndpoint without cascading to Cable
+# Termination object deletion — clean up CableToCableTermination without cascading to Cable
 #
 
 
@@ -409,7 +409,7 @@ def _get_cable_termination_senders():
 
 def handle_termination_delete(sender, instance, **kwargs):
     """
-    When a termination object is deleted, remove its CableTerminationEndpoint row
+    When a termination object is deleted, remove its CableToCableTermination row
     and clean up caches. The Cable itself survives — it just loses this termination.
     """
     if not instance.cable_id:
@@ -418,9 +418,9 @@ def handle_termination_delete(sender, instance, **kwargs):
     logger = logging.getLogger(__name__ + ".cable")
     logger.debug(f"Handling termination delete for {instance} (cable: {instance.cable})")
 
-    # Delete the CableTerminationEndpoint row for this termination
+    # Delete the CableToCableTermination row for this termination
     ct_type = ContentType.objects.get_for_model(instance)
-    CableTerminationEndpoint.objects.filter(
+    CableToCableTermination.objects.filter(
         termination_type=ct_type,
         termination_id=instance.pk,
     ).delete()

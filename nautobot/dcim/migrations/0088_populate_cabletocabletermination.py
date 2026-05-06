@@ -1,14 +1,14 @@
-"""Data migration: populate CableTerminationEndpoint from Cable GFK fields."""
+"""Data migration: populate CableToCableTermination rows from the legacy Cable GFK fields."""
 
 from django.db import migrations
 
 
-def populate_cable_termination_endpoints(apps, schema_editor):
+def populate_cable_to_cable_terminations(apps, schema_editor):
     Cable = apps.get_model("dcim", "Cable")
-    CableTerminationEndpoint = apps.get_model("dcim", "CableTerminationEndpoint")
+    CableToCableTermination = apps.get_model("dcim", "CableToCableTermination")
     for cable in Cable.objects.all().iterator():
         if cable.termination_a_type_id and cable.termination_a_id:
-            CableTerminationEndpoint.objects.get_or_create(
+            CableToCableTermination.objects.get_or_create(
                 termination_type_id=cable.termination_a_type_id,
                 termination_id=cable.termination_a_id,
                 defaults={
@@ -18,7 +18,7 @@ def populate_cable_termination_endpoints(apps, schema_editor):
                 },
             )
         if cable.termination_b_type_id and cable.termination_b_id:
-            CableTerminationEndpoint.objects.get_or_create(
+            CableToCableTermination.objects.get_or_create(
                 termination_type_id=cable.termination_b_type_id,
                 termination_id=cable.termination_b_id,
                 defaults={
@@ -30,5 +30,5 @@ def populate_cable_termination_endpoints(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("dcim", "0087_cable_termination_endpoint")]
-    operations = [migrations.RunPython(populate_cable_termination_endpoints, migrations.RunPython.noop)]
+    dependencies = [("dcim", "0087_cabletocabletermination")]
+    operations = [migrations.RunPython(populate_cable_to_cable_terminations, migrations.RunPython.noop)]

@@ -45,7 +45,7 @@ from .devices import Device
 __all__ = (
     "Cable",
     "CablePath",
-    "CableTerminationEndpoint",
+    "CableToCableTermination",
     "CableType",
 )
 
@@ -275,10 +275,10 @@ class Cable(PrimaryModel):
 
         return cls.__status_connected
 
-    # ─── Termination properties (read from CableTerminationEndpoint join table) ───
+    # ─── Termination properties (read from CableToCableTermination join table) ───
 
     def _first_endpoint(self, side):
-        """Return the first CableTerminationEndpoint row for the given side, or None."""
+        """Return the first CableToCableTermination row for the given side, or None."""
         return self.terminations.filter(cable_end=side).order_by("connector", "position").first()
 
     def _get_termination_attr(self, side, endpoint_attr, fallback_attr):
@@ -414,7 +414,7 @@ class Cable(PrimaryModel):
         if not self.cable_type_id:
             return []
 
-        # Build lookup: (cable_end, connector, position) → CableTerminationEndpoint
+        # Build lookup: (cable_end, connector, position) → CableToCableTermination
         endpoint_lookup = {}
         # Also collect unassigned endpoints (connector=None) keyed by cable_end
         unassigned_endpoints = {"A": [], "B": []}
@@ -663,7 +663,8 @@ def _resolve_termination_device(termination):
     return None
 
 
-class CableTerminationEndpoint(BaseModel):
+@extras_features("graphql")
+class CableToCableTermination(BaseModel):
     """
     A concrete model representing the association between a Cable and a terminating object (Interface,
     FrontPort, RearPort, etc.). Each cable has at least two CableTermination rows (one A-side, one B-side).

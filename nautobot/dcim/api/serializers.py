@@ -55,7 +55,7 @@ from nautobot.dcim.models import (
     Cable,
     CablePath,
     CableTermination,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -978,7 +978,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             a_term_obj = self._resolve_termination_object(lane_data.get("a_termination"))
             if a_term_obj:
                 ct = ContentType.objects.get_for_model(a_term_obj)
-                CableTerminationEndpoint.objects.update_or_create(
+                CableToCableTermination.objects.update_or_create(
                     termination_type=ct,
                     termination_id=a_term_obj.pk,
                     defaults={
@@ -992,7 +992,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             b_term_obj = self._resolve_termination_object(lane_data.get("b_termination"))
             if b_term_obj:
                 ct = ContentType.objects.get_for_model(b_term_obj)
-                CableTerminationEndpoint.objects.update_or_create(
+                CableToCableTermination.objects.update_or_create(
                     termination_type=ct,
                     termination_id=b_term_obj.pk,
                     defaults={

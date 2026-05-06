@@ -51,7 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -1605,10 +1605,10 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        """Filter cables by device-related fields via the CableTerminationEndpoint join table.
+        """Filter cables by device-related fields via the CableToCableTermination join table.
 
         The filter's `field_name` (e.g. "device", "device__rack", "device__location") is translated
-        into a lookup path on CableTerminationEndpoint by replacing the leading "device" segment with
+        into a lookup path on CableToCableTermination by replacing the leading "device" segment with
         the cached `_termination_device` FK.
         """
         filter_obj = self.filters.get(name)
@@ -1623,17 +1623,17 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         has_null = any(v == "null" for v in value)
         value = [v for v in value if v != "null"]
         if value:
-            cable_ids = CableTerminationEndpoint.objects.filter(**{f"{lookup_path}__in": value}).values_list(
+            cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__in": value}).values_list(
                 "cable_id", flat=True
             )
             if has_null:
-                null_cable_ids = CableTerminationEndpoint.objects.filter(
-                    **{f"{lookup_path}__isnull": True}
-                ).values_list("cable_id", flat=True)
+                null_cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
+                    "cable_id", flat=True
+                )
                 return queryset.filter(Q(pk__in=cable_ids) | Q(pk__in=null_cable_ids))
             return queryset.filter(pk__in=cable_ids)
         elif has_null:
-            cable_ids = CableTerminationEndpoint.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
+            cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
                 "cable_id", flat=True
             )
             return queryset.filter(pk__in=cable_ids)
@@ -1642,7 +1642,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     def generate_query_filter_device_id(self, value):
         if not hasattr(value, "__iter__") or isinstance(value, str):
             value = [value]
-        cable_ids = CableTerminationEndpoint.objects.filter(_termination_device_id__in=value).values_list(
+        cable_ids = CableToCableTermination.objects.filter(_termination_device_id__in=value).values_list(
             "cable_id", flat=True
         )
         return Q(pk__in=cable_ids)
@@ -1658,7 +1658,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableTerminationEndpoint.objects.filter(type_q).values_list("cable_id", flat=True)
+        cable_ids = CableToCableTermination.objects.filter(type_q).values_list("cable_id", flat=True)
         return Q(pk__in=cable_ids)
 
     @extend_schema_field({"type": "string"})
@@ -1672,7 +1672,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableTerminationEndpoint.objects.filter(type_q, cable_end="A").values_list("cable_id", flat=True)
+        cable_ids = CableToCableTermination.objects.filter(type_q, cable_end="A").values_list("cable_id", flat=True)
         return queryset.filter(pk__in=cable_ids).distinct()
 
     @extend_schema_field({"type": "string"})
@@ -1682,19 +1682,19 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableTerminationEndpoint.objects.filter(type_q, cable_end="B").values_list("cable_id", flat=True)
+        cable_ids = CableToCableTermination.objects.filter(type_q, cable_end="B").values_list("cable_id", flat=True)
         return queryset.filter(pk__in=cable_ids).distinct()
 
     def _termination_a_id(self, queryset, name, value):
         """Filter cables by A-side termination ID (backward compatible)."""
-        cable_ids = CableTerminationEndpoint.objects.filter(cable_end="A", termination_id__in=value).values_list(
+        cable_ids = CableToCableTermination.objects.filter(cable_end="A", termination_id__in=value).values_list(
             "cable_id", flat=True
         )
         return queryset.filter(pk__in=cable_ids)
 
     def _termination_b_id(self, queryset, name, value):
         """Filter cables by B-side termination ID (backward compatible)."""
-        cable_ids = CableTerminationEndpoint.objects.filter(cable_end="B", termination_id__in=value).values_list(
+        cable_ids = CableToCableTermination.objects.filter(cable_end="B", termination_id__in=value).values_list(
             "cable_id", flat=True
         )
         return queryset.filter(pk__in=cable_ids)

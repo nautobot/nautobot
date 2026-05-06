@@ -80,7 +80,7 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -3817,8 +3817,8 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_termination_a_id_and_b_id(self):
         """Test the termination_a_id and termination_b_id filters."""
-        a_endpoints = list(CableTerminationEndpoint.objects.filter(cable_end="A")[:2])
-        b_endpoints = list(CableTerminationEndpoint.objects.filter(cable_end="B")[:2])
+        a_endpoints = list(CableToCableTermination.objects.filter(cable_end="A")[:2])
+        b_endpoints = list(CableToCableTermination.objects.filter(cable_end="B")[:2])
         with self.subTest("termination_a_id"):
             params = {"termination_a_id": [str(ep.termination_id) for ep in a_endpoints]}
             self.assertQuerySetEqualAndNotEmpty(

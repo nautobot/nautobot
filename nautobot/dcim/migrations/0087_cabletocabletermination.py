@@ -1,4 +1,4 @@
-# Cable changes + CableTerminationEndpoint model.
+# Cable changes + CableToCableTermination join model.
 import uuid
 
 from django.db import migrations, models
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.CreateModel(
-            name="CableTerminationEndpoint",
+            name="CableToCableTermination",
             fields=[
                 (
                     "id",

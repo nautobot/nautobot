@@ -112,7 +112,7 @@ from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
-    CableTerminationEndpoint,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -5598,7 +5598,7 @@ class CableUIViewSet(NautobotUIViewSet):
         if termination_type and termination_id:
             app_label, model_name = termination_type.split(".")
             content_type = ContentType.objects.get_by_natural_key(app_label, model_name)
-            endpoint = CableTerminationEndpoint.objects.filter(
+            endpoint = CableToCableTermination.objects.filter(
                 cable=cable,
                 termination_type=content_type,
                 termination_id=termination_id,
@@ -5653,8 +5653,8 @@ class PathTraceView(generic.ObjectView):
             if path and instance.cable_id:
                 cable = instance.cable
                 if cable and cable.cable_type_id:
-                    # Find this termination's CableTerminationEndpoint row
-                    ct_row = CableTerminationEndpoint.objects.filter(
+                    # Find this termination's CableToCableTermination row
+                    ct_row = CableToCableTermination.objects.filter(
                         cable=cable,
                         termination_id=instance.pk,
                     ).first()

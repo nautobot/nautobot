@@ -221,7 +221,7 @@ class CableTermination(models.Model):
     CircuitTermination instances). The `cable` field indicates the Cable instance which is terminated to this instance.
 
     Use `get_cable_peer()` (singular) or `get_cable_peers()` (plural; required for breakout cables) to look up the
-    far-end termination(s) via the CableTerminationEndpoint join table.
+    far-end termination(s) via the CableToCableTermination join table.
     """
 
     cable = models.ForeignKey(
@@ -232,9 +232,9 @@ class CableTermination(models.Model):
         null=True,
     )
 
-    # NOTE: We intentionally do NOT have a GenericRelation to CableTerminationEndpoint here.
+    # NOTE: We intentionally do NOT have a GenericRelation to CableToCableTermination here.
     # Deleting a termination object should NOT cascade-delete the Cable.
-    # Instead, a pre_delete signal handler in signals.py removes the CableTerminationEndpoint
+    # Instead, a pre_delete signal handler in signals.py removes the CableToCableTermination
     # row and cleans up caches, leaving the Cable intact.
 
     class Meta:
@@ -262,9 +262,9 @@ class CableTermination(models.Model):
         if not self.cable_id:
             return []
 
-        from nautobot.dcim.models.cables import CableTerminationEndpoint
+        from nautobot.dcim.models.cables import CableToCableTermination
 
-        my_endpoint = CableTerminationEndpoint.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
+        my_endpoint = CableToCableTermination.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
         if not my_endpoint:
             return []
 
@@ -280,11 +280,11 @@ class CableTermination(models.Model):
                 if entry[origin_side_key] == my_endpoint.connector:
                     mapped_far_connectors.add(entry[far_side_key])
 
-            opposite_endpoints = CableTerminationEndpoint.objects.filter(
+            opposite_endpoints = CableToCableTermination.objects.filter(
                 cable_id=self.cable_id, cable_end=opposite_side, connector__in=mapped_far_connectors
             ).order_by("connector", "position")
         else:
-            opposite_endpoints = CableTerminationEndpoint.objects.filter(
+            opposite_endpoints = CableToCableTermination.objects.filter(
                 cable_id=self.cable_id, cable_end=opposite_side
             ).order_by("connector", "position")
 
