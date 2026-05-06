@@ -3448,8 +3448,13 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             self.device1.delete()
 
     @expectedFailure
-    def test_breakout_cable_pair_validation_iterates_all_lanes(self):
-        """A breakout cable's pair-wise validation should iterate all lane pairs, not just the first.
+    def test_multilane_cable_pair_validation_iterates_all_lanes(self):
+        """A multi-lane cable's pair-wise validation should iterate all lane pairs, not just the first.
+
+        Constructs a 2×2 cable where lane 1 (interface↔interface) is valid but lane 2 wires a
+        FrontPort to its corresponding RearPort — a pair-wise rule violation that *only* manifests
+        when all lanes are checked. Both terminations are breakout-compatible types so the existing
+        `cable_type`/`BREAKOUT_COMPATIBLE_TERMINATION_TYPES` check doesn't catch it.
 
         Marked `expectedFailure` while Cable.clean() only validates the first A/B pair. When full
         lane iteration is implemented, this test should start passing — at which point remove the
@@ -3457,12 +3462,13 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         """
         Cable.objects.all().delete()
 
-        cable_type = CableType.objects.create(
-            name="Test 1-to-2 breakout",
-            a_connectors=1,
+        cable_type = CableType(
+            name="Test 2-to-2 multi-lane",
+            a_connectors=2,
             b_connectors=2,
             total_lanes=2,
         )
+        cable_type.validated_save()  # populates mapping
         cable = Cable.objects.create(
             termination_a=self.interface1,
             termination_b=self.interface2,
@@ -3470,17 +3476,25 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
         )
 
-        # Lane 2: add an incompatible PowerPort on the B side, bypassing the form layer.
+        # Lane 2: FrontPort on A side, its corresponding RearPort on B side — pair check should fail.
+        CableTerminationEndpoint.objects.create(
+            cable=cable,
+            cable_end="A",
+            termination_type=ContentType.objects.get_for_model(FrontPort),
+            termination_id=self.front_port1.pk,
+            connector=2,
+            position=1,
+        )
         CableTerminationEndpoint.objects.create(
             cable=cable,
             cable_end="B",
-            termination_type=ContentType.objects.get_for_model(PowerPort),
-            termination_id=self.power_port1.pk,
+            termination_type=ContentType.objects.get_for_model(RearPort),
+            termination_id=self.rear_port1.pk,
             connector=2,
             position=1,
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):
             cable.clean()
 
 
