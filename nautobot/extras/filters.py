@@ -1226,7 +1226,7 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
     )
 
     revocation_type = django_filters.MultipleChoiceFilter(
-        choices=JobRevocationTypeChoices,
+        choices=JobRevocationTypeChoices.CHOICES,
         method="filter_revocation_type",
         label="Revocation Type",
     )
