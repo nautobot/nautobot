@@ -3040,6 +3040,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         utilization_data = Context(
                             helpers.utilization_graph_raw_data(leg["allocated"], connected_endpoint.available_power / 3)
                         )
+                        utilization_graph = object_detail.render_component_template(
+                            "utilities/templatetags/utilization_graph.html", utilization_data
+                        )
                     else:
                         available_power = helpers.HTML_NONE
                         utilization_graph = helpers.HTML_NONE

@@ -2113,11 +2113,11 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
 
             with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
                 with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
-                    path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+                    self.repo.clone_to_directory(path=specified_path, head="non-existent")
 
             with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
                 with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
-                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
+                    self.repo.clone_to_directory(branch="main", head="valid-files")
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
