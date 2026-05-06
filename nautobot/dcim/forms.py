@@ -4595,7 +4595,7 @@ class CableForm(NautobotModelForm):
 
         # Disable cable type field for cables with incompatible termination types
         # TODO revisit this, should permit non-breakout CableTypes here...
-        if self.instance and self.instance.pk and not self.instance.breakout_eligible:
+        if self.instance and self.instance.present_in_database and not self.instance.breakout_eligible:
             self.fields["cable_type"].disabled = True
             self.fields["cable_type"].help_text = (
                 "Cable types are not available for this cable. "
@@ -4611,7 +4611,7 @@ class CableForm(NautobotModelForm):
         cable_type = None
 
         # Determine the cable type (saved, or being submitted)
-        if self.instance and self.instance.pk and self.instance.cable_type_id:
+        if self.instance and self.instance.present_in_database and self.instance.cable_type_id:
             cable_type = self.instance.cable_type
         elif self.data and self.data.get("cable_type"):
             try:

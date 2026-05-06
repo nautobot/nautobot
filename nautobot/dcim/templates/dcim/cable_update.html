@@ -6,7 +6,7 @@
 
 {% block javascript %}
     {{ block.super }}
-    {% if form.instance.pk %}
+    {% if form.instance.present_in_database %}
     <script>
         $(document).ready(function() {
             // --- CableType change → reload entire lane form ---
