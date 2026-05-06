@@ -115,8 +115,8 @@ from .choices import DeviceFaceChoices
 from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
-    CableType,
     CablePath,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -2309,9 +2309,7 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
                 request, data=request.POST if request.method == "POST" else None
             )
 
-        model_form = self.get_component_model_form(
-            request, data=request.POST if request.method == "POST" else None
-        )
+        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
 
         return Response(
             {
