@@ -5415,8 +5415,36 @@ class CableTypeUIViewSet(NautobotUIViewSet):
                 object_field="mapping",
                 render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
             ),
-        )
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="cables",
+                label="Cables",
+                url_name="dcim:cabletype_cables",
+                related_object_attribute="cables",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.CableTable,
+                        table_filter="cable_type",
+                        tab_id="cables",
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+        ),
     )
+
+    @action(
+        detail=True,
+        url_path="cables",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_cable"],
+    )
+    def cables(self, request, *args, **kwargs):
+        return Response({})
 
     @action(
         detail=False,
