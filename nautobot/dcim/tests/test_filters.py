@@ -2071,7 +2071,7 @@ class ConsolePortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTest
     filterset = ConsolePortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
     ]
 
     @classmethod
@@ -2119,7 +2119,7 @@ class ConsoleServerPortTestCase(
     filterset = ConsoleServerPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
     ]
 
     @classmethod
@@ -2166,7 +2166,7 @@ class PowerPortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("allocated_draw",),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("maximum_draw",),
         ("power_outlets", "power_outlets__id"),
         ("power_outlets", "power_outlets__name"),
@@ -2217,7 +2217,7 @@ class PowerOutletTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTest
     filterset = PowerOutletFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("feed_leg",),
         ("power_port", "power_port__id"),
     ]
@@ -2270,7 +2270,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("bridge", "bridge__name"),
         ("bridged_interfaces", "bridged_interfaces__id"),
         ("bridged_interfaces", "bridged_interfaces__name"),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("child_interfaces", "child_interfaces__id"),
         ("child_interfaces", "child_interfaces__name"),
         ("description",),
@@ -2868,7 +2868,7 @@ class FrontPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterT
     filterset = FrontPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("rear_port", "rear_port__id"),
         ("rear_port", "rear_port__name"),
         ("rear_port_position",),
@@ -3018,7 +3018,7 @@ class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTe
     filterset = RearPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("front_ports", "front_ports__id"),
         ("front_ports", "front_ports__name"),
         ("positions",),
@@ -3771,47 +3771,43 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
-                    terminations__cable_end="A",
-                    terminations__termination_type__model__in=["interface", "consoleport"],
+                    Q(terminations__cable_end="A", terminations__interface__isnull=False)
+                    | Q(terminations__cable_end="A", terminations__console_port__isnull=False)
                 ).distinct(),
             )
         with self.subTest("termination_a_type: interface"):
             params = {"termination_a_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations__cable_end="A", terminations__termination_type__model__in=["interface"]
-                ).distinct(),
+                self.queryset.filter(terminations__cable_end="A", terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_b_type: interface, console_server_port"):
             params = {"termination_b_type": [type_interface, type_console_server_port]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
-                    terminations__cable_end="B",
-                    terminations__termination_type__model__in=["interface", "consoleserverport"],
+                    Q(terminations__cable_end="B", terminations__interface__isnull=False)
+                    | Q(terminations__cable_end="B", terminations__console_server_port__isnull=False)
                 ).distinct(),
             )
         with self.subTest("termination_b_type: interface"):
             params = {"termination_b_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations__cable_end="B", terminations__termination_type__model__in=["interface"]
-                ).distinct(),
+                self.queryset.filter(terminations__cable_end="B", terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_type: interface"):
             params = {"termination_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(terminations__termination_type__model__in=["interface"]).distinct(),
+                self.queryset.filter(terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_type: console_port, console_server_port"):
             params = {"termination_type": [type_console_port, type_console_server_port]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
-                    terminations__termination_type__model__in=["consoleport", "consoleserverport"]
+                    Q(terminations__console_port__isnull=False) | Q(terminations__console_server_port__isnull=False)
                 ).distinct(),
             )
 
@@ -3857,7 +3853,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
         ("available_power",),
         ("breaker_pole_count",),
         ("breaker_position",),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("comments",),
         ("destination_panel", "destination_panel__id"),
         ("destination_panel", "destination_panel__name"),

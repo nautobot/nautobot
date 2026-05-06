@@ -3191,12 +3191,11 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         Cable itself survives.
         """
 
+        interface1_pk = self.interface1.pk
         self.interface1.delete()
         cable = Cable.objects.filter(pk=self.cable.pk).first()
         self.assertIsNotNone(cable)
-        self.assertFalse(
-            CableToCableTermination.objects.filter(cable=cable, termination_id=self.interface1.pk).exists()
-        )
+        self.assertFalse(CableToCableTermination.objects.filter(cable=cable, interface_id=interface1_pk).exists())
         # The other end is still attached to the cable
         interface2 = Interface.objects.get(pk=self.interface2.pk)
         self.assertEqual(interface2.cable, cable)
@@ -3480,16 +3479,14 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         CableToCableTermination.objects.create(
             cable=cable,
             cable_end="A",
-            termination_type=ContentType.objects.get_for_model(FrontPort),
-            termination_id=self.front_port1.pk,
+            front_port=self.front_port1,
             connector=2,
             position=1,
         )
         CableToCableTermination.objects.create(
             cable=cable,
             cable_end="B",
-            termination_type=ContentType.objects.get_for_model(RearPort),
-            termination_id=self.rear_port1.pk,
+            rear_port=self.rear_port1,
             connector=2,
             position=1,
         )

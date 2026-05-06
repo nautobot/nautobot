@@ -343,9 +343,12 @@ def validate_cable_termination(termination, cable_id=None):
         raise ValidationError("Circuit terminations attached to a provider network may not be cabled.")
 
     if termination.present_in_database:
-        # Re-query rather than trusting the in-memory cable_id, which may be stale.
+        # Re-query through the join table rather than trusting an in-memory cable reference (which may be stale).
         current_cable_id = (
-            type(termination).objects.filter(pk=termination.pk).values_list("cable_id", flat=True).first()
+            type(termination)
+            .objects.filter(pk=termination.pk)
+            .values_list("cable_termination__cable_id", flat=True)
+            .first()
         )
         if current_cable_id and current_cable_id != cable_id:
             raise ValidationError(f"{termination} already has a cable attached (#{current_cable_id})")
@@ -357,17 +360,19 @@ def validate_cable_termination(termination, cable_id=None):
 def disconnect_termination(termination):
     """Disconnect a single termination from its cable without deleting the cable.
 
-    Removes the CableToCableTermination row, clears the cable FK and `_path` on this
-    termination, and invalidates the peer's `_path` (which traversed this side of the cable).
-    The cable itself and any other terminations on it are left intact. Returns the cable if
-    successful, None otherwise.
+    Removes the CableToCableTermination row for this termination and invalidates path FKs as
+    appropriate. The cable itself and any other terminations on it are left intact. Returns the
+    cable if successful, None otherwise.
     """
-    from nautobot.dcim.models import CablePath, CableToCableTermination
+    from nautobot.dcim.models import CablePath
 
-    if not termination or not termination.cable_id:
+    if not termination:
+        return None
+    cable_termination = getattr(termination, "cable_termination", None)
+    if cable_termination is None:
         return None
 
-    cable = termination.cable
+    cable = cable_termination.cable
 
     peer = termination.get_cable_peer()
     if peer is not None and getattr(peer, "_path_id", None):
@@ -384,14 +389,8 @@ def disconnect_termination(termination):
         termination.save()
         CablePath.objects.filter(pk=path_id).delete()
 
-    # Remove the CableToCableTermination row
-    CableToCableTermination.objects.filter(
-        termination_type=ContentType.objects.get_for_model(termination),
-        termination_id=termination.pk,
-    ).delete()
-
-    termination.cable = None
-    termination.save()
+    # Remove the CableToCableTermination row.
+    cable_termination.delete()
 
     return cable
 
@@ -403,21 +402,19 @@ def power_ports_connected_to(target_queryset):
     PowerOutlet or PowerFeed).
     """
     from nautobot.dcim.models import CableToCableTermination, PowerPort
+    from nautobot.dcim.models.cables import termination_fk_field
 
-    target_ct = ContentType.objects.get_for_model(target_queryset.model)
-    powerport_ct = ContentType.objects.get_for_model(PowerPort)
+    target_fk = termination_fk_field(target_queryset.model)
+    if target_fk is None:
+        return PowerPort.objects.none()
 
-    target_cables = CableToCableTermination.objects.filter(
-        termination_type=target_ct,
-        termination_id__in=target_queryset.values("pk"),
-    ).values("cable_id")
+    target_cables = CableToCableTermination.objects.filter(**{f"{target_fk}__in": target_queryset}).values("cable_id")
 
-    powerport_endpoint_ids = CableToCableTermination.objects.filter(
-        termination_type=powerport_ct,
-        cable_id__in=target_cables,
-    ).values("termination_id")
+    powerport_ids = CableToCableTermination.objects.filter(power_port__isnull=False, cable_id__in=target_cables).values(
+        "power_port_id"
+    )
 
-    return PowerPort.objects.filter(pk__in=powerport_endpoint_ids)
+    return PowerPort.objects.filter(pk__in=powerport_ids)
 
 
 # Breakout cable lane utilities

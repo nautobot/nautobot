@@ -1,5 +1,6 @@
 from decimal import Decimal
 import re
+import warnings
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -12,8 +13,10 @@ from django.utils.functional import classproperty
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, PrimaryModel
+from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
@@ -215,30 +218,156 @@ class ModularComponentModel(ComponentModel):
             raise ValidationError("Either device or module must be set")
 
 
+class CableTerminationQuerySet(RestrictedQuerySet):
+    """RestrictedQuerySet with backward-compat translation for `cable=`-style lookups.
+
+    The `cable` FK is no longer a real field on CableTermination subclasses; cable membership lives
+    on the `CableToCableTermination` join model and is exposed via the `cable_termination` reverse
+    OneToOneField. To preserve common existing query patterns, this queryset translates
+    `cable`/`cable_id`/`cable__*`/`cable_id__*` lookup kwargs (and `select_related("cable")`) into
+    the equivalent `cable_termination__cable[...]` paths, with a `DeprecationWarning` for each
+    translated lookup.
+
+    Patterns NOT translated (use the explicit form on these instead):
+      * Q expressions referencing `cable` (use `Q(cable_termination__cable=...)`)
+      * `order_by("cable")` (use `order_by("cable_termination__cable")`)
+      * `values("cable")` / `values_list("cable")` (use `cable_termination__cable`)
+    """
+
+    @staticmethod
+    def _warn(old, new):
+        warnings.warn(
+            f"Querying CableTermination subclasses by `{old}` is deprecated; use `{new}` instead. "
+            "The `cable` field has been replaced with the `cable_termination` reverse OneToOneField.",
+            DeprecationWarning,
+            stacklevel=4,
+        )
+
+    @classmethod
+    def _translate_cable_kwargs(cls, kwargs):
+        out = {}
+        for key, value in kwargs.items():
+            if key == "cable":
+                if value is None:
+                    cls._warn("cable=None", "cable_termination__isnull=True")
+                    out["cable_termination__isnull"] = True
+                else:
+                    cls._warn("cable=...", "cable_termination__cable=...")
+                    out["cable_termination__cable"] = value
+            elif key == "cable_id":
+                if value is None:
+                    cls._warn("cable_id=None", "cable_termination__isnull=True")
+                    out["cable_termination__isnull"] = True
+                else:
+                    cls._warn("cable_id=...", "cable_termination__cable_id=...")
+                    out["cable_termination__cable_id"] = value
+            elif key == "cable__isnull":
+                cls._warn("cable__isnull=...", "cable_termination__isnull=...")
+                out["cable_termination__isnull"] = bool(value)
+            elif key.startswith("cable__"):
+                cls._warn(f"{key}=...", f"cable_termination__{key}=...")
+                out[f"cable_termination__cable__{key[len('cable__') :]}"] = value
+            elif key.startswith("cable_id__"):
+                cls._warn(f"{key}=...", f"cable_termination__{key}=...")
+                out[f"cable_termination__cable_id__{key[len('cable_id__') :]}"] = value
+            else:
+                out[key] = value
+        return out
+
+    @classmethod
+    def _translate_select_related_fields(cls, fields):
+        translated = []
+        for field in fields:
+            if field == "cable":
+                cls._warn('select_related("cable")', 'select_related("cable_termination__cable")')
+                translated.append("cable_termination__cable")
+            elif field.startswith("cable__"):
+                cls._warn(f'select_related("{field}")', f'select_related("cable_termination__{field}")')
+                translated.append(f"cable_termination__cable__{field[len('cable__') :]}")
+            else:
+                translated.append(field)
+        return translated
+
+    def filter(self, *args, **kwargs):
+        return super().filter(*args, **self._translate_cable_kwargs(kwargs))
+
+    def exclude(self, *args, **kwargs):
+        return super().exclude(*args, **self._translate_cable_kwargs(kwargs))
+
+    def get(self, *args, **kwargs):
+        return super().get(*args, **self._translate_cable_kwargs(kwargs))
+
+    def select_related(self, *fields):
+        return super().select_related(*self._translate_select_related_fields(fields))
+
+
+# Manager class wired to the translation queryset; concrete CableTermination subclasses set this
+# as their default `objects` manager.
+CableTerminationManager = BaseManager.from_queryset(CableTerminationQuerySet)
+
+
 class CableTermination(models.Model):
     """
     An abstract model inherited by all models to which a Cable can terminate (certain device components, PowerFeed, and
-    CircuitTermination instances). The `cable` field indicates the Cable instance which is terminated to this instance.
+    CircuitTermination instances).
+
+    Cable membership is recorded in the `CableToCableTermination` join model. Each concrete subclass gets a reverse
+    `cable_termination` accessor (a single related row, or `None`/`DoesNotExist` if not connected). The `cable`
+    property below is a backward-compat shorthand for `self.cable_termination.cable`.
 
     Use `get_cable_peer()` (singular) or `get_cable_peers()` (plural; required for breakout cables) to look up the
     far-end termination(s) via the CableToCableTermination join table.
+
+    Each concrete subclass overrides `objects = CableTerminationManager()` to enable backward-compat
+    `cable=...`/`select_related("cable")` query translation. (We don't put it here because Django's
+    MRO-based manager resolution would be overridden by `BaseModel.objects` for any subclass that
+    inherits from a non-abstract base earlier in the parent list.)
     """
-
-    cable = models.ForeignKey(
-        to="dcim.Cable",
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-    )
-
-    # NOTE: We intentionally do NOT have a GenericRelation to CableToCableTermination here.
-    # Deleting a termination object should NOT cascade-delete the Cable.
-    # Instead, a pre_delete signal handler in signals.py removes the CableToCableTermination
-    # row and cleans up caches, leaving the Cable intact.
 
     class Meta:
         abstract = True
+
+    @property
+    def cable(self):
+        """The Cable this termination is connected to, or None.
+
+        Backward-compat shorthand for `self.cable_termination.cable`. Issues up to two queries on first
+        access (one for the join-table row, one for the cable). Use
+        `select_related("cable_termination__cable")` on the parent queryset to avoid the queries.
+        """
+        if getattr(self, "_pending_cable_disconnect", False):
+            return None
+        ct = getattr(self, "cable_termination", None)
+        return ct.cable if ct is not None else None
+
+    @cable.setter
+    def cable(self, value):
+        """Backward-compat setter for `termination.cable = None` (disconnect).
+
+        Setting to None marks this termination for disconnect on the next ``save()``: the
+        CableToCableTermination row will be removed and dependent paths cleaned up at that point.
+        Setting to a Cable instance is not supported in the new model: use
+        ``Cable.objects.create(termination_a=..., termination_b=..., ...)`` to connect a termination,
+        or write the appropriate ``CableToCableTermination`` row directly.
+        """
+        if value is None:
+            self._pending_cable_disconnect = True
+        else:
+            raise NotImplementedError(
+                f"Connecting {self} to a Cable via `termination.cable = ...` is not supported. "
+                "Use Cable.objects.create(termination_a=..., termination_b=...) instead, or write a "
+                "CableToCableTermination row directly."
+            )
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if getattr(self, "_pending_cable_disconnect", False):
+            # Clear the flag first to prevent re-entry from disconnect_termination's internal save calls.
+            self._pending_cable_disconnect = False
+            from nautobot.dcim.utils import disconnect_termination
+
+            if getattr(self, "cable_termination", None) is not None:
+                disconnect_termination(self)
 
     def get_cable_peer(self):
         """Return the far-end termination of this cable, or the first peer for breakout/multi-termination cables."""
@@ -259,33 +388,31 @@ class CableTermination(models.Model):
         For standard cables, returns a list with one peer.
         For breakout cables, returns peers mapped to this termination's connector via the template.
         """
-        if not self.cable_id:
-            return []
-
         from nautobot.dcim.models.cables import CableToCableTermination
 
-        my_endpoint = CableToCableTermination.objects.filter(cable_id=self.cable_id, termination_id=self.pk).first()
-        if not my_endpoint:
+        my_endpoint = getattr(self, "cable_termination", None)
+        if my_endpoint is None:
             return []
 
+        cable = my_endpoint.cable
         opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
 
         # For breakout cables, find only the connectors mapped to this termination's connector
-        if self.cable.cable_type_id and my_endpoint.connector is not None:
+        if cable.cable_type_id and my_endpoint.connector is not None:
             origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
             far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
 
             mapped_far_connectors = set()
-            for entry in self.cable.cable_type.mapping:
+            for entry in cable.cable_type.mapping:
                 if entry[origin_side_key] == my_endpoint.connector:
                     mapped_far_connectors.add(entry[far_side_key])
 
             opposite_endpoints = CableToCableTermination.objects.filter(
-                cable_id=self.cable_id, cable_end=opposite_side, connector__in=mapped_far_connectors
+                cable_id=cable.pk, cable_end=opposite_side, connector__in=mapped_far_connectors
             ).order_by("connector", "position")
         else:
             opposite_endpoints = CableToCableTermination.objects.filter(
-                cable_id=self.cable_id, cable_end=opposite_side
+                cable_id=cable.pk, cable_end=opposite_side
             ).order_by("connector", "position")
 
         return [ep.termination for ep in opposite_endpoints if ep.termination is not None]
@@ -373,6 +500,8 @@ class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
     A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
 
+    objects = CableTerminationManager()
+
     type = models.CharField(
         max_length=50,
         choices=ConsolePortTypeChoices,
@@ -391,6 +520,8 @@ class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
+
+    objects = CableTerminationManager()
 
     type = models.CharField(
         max_length=50,
@@ -417,6 +548,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
+
+    objects = CableTerminationManager()
 
     type = models.CharField(
         max_length=50,
@@ -536,6 +669,8 @@ class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
+
+    objects = CableTerminationManager()
 
     type = models.CharField(
         max_length=50,
@@ -725,6 +860,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     """
     A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
+
+    objects = CableTerminationManager()
 
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
@@ -1097,6 +1234,8 @@ class FrontPort(ModularComponentModel, CableTermination):
     A pass-through port on the front of a Device or Module.
     """
 
+    objects = CableTerminationManager()
+
     type = models.CharField(max_length=50, choices=PortTypeChoices)
     rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="front_ports")
     rear_port_position = models.PositiveSmallIntegerField(
@@ -1140,6 +1279,8 @@ class RearPort(ModularComponentModel, CableTermination):
     """
     A pass-through port on the rear of a Device or Module.
     """
+
+    objects = CableTerminationManager()
 
     type = models.CharField(max_length=50, choices=PortTypeChoices)
     positions = models.PositiveSmallIntegerField(

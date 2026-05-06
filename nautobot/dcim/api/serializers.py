@@ -105,6 +105,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.models.cables import termination_fk_field
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
@@ -112,8 +113,18 @@ from nautobot.extras.utils import FeatureQuery
 
 
 class CableTerminationModelSerializerMixin(serializers.ModelSerializer):
+    cable = serializers.SerializerMethodField(read_only=True)
     cable_peer_type = serializers.SerializerMethodField(read_only=True)
     cable_peer = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field({"type": "object", "nullable": True})
+    def get_cable(self, obj):
+        """Return the connected Cable as a brief dict (or None)."""
+        cable = obj.cable
+        if cable is None:
+            return None
+        depth = get_nested_serializer_depth(self)
+        return return_nested_serializer_data_based_on_depth(self, depth, obj, cable, "cable")
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_cable_peer_type(self, obj):
@@ -622,7 +633,7 @@ class ConsoleServerPortSerializer(
     class Meta:
         model = ConsoleServerPort
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
 
@@ -638,7 +649,7 @@ class ConsolePortSerializer(
     class Meta:
         model = ConsolePort
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
 
@@ -655,7 +666,7 @@ class PowerOutletSerializer(
     class Meta:
         model = PowerOutlet
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
 
@@ -671,7 +682,7 @@ class PowerPortSerializer(
     class Meta:
         model = PowerPort
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
 
@@ -711,7 +722,7 @@ class InterfaceSerializer(
     class Meta:
         model = Interface
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
     def validate(self, data):
@@ -747,7 +758,7 @@ class RearPortSerializer(
     class Meta:
         model = RearPort
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = []
 
 
@@ -762,7 +773,7 @@ class FrontPortSerializer(
     class Meta:
         model = FrontPort
         fields = "__all__"
-        extra_kwargs = {"cable": {"read_only": True}}
+        # `cable` is no longer a model field; the SerializerMethodField on the mixin handles it.
         validators = [
             UniqueTogetherValidator(
                 queryset=FrontPort.objects.all(),
@@ -963,7 +974,8 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         return cable
 
     def _assign_lanes(self, cable, lanes_data):
-        """Assign lane terminations to a breakout cable via CableTermination rows."""
+        """Assign lane terminations to a breakout cable via CableToCableTermination rows."""
+
         cable_type = cable.cable_type
         mapping = cable_type.mapping
 
@@ -975,31 +987,23 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 )
             entry = mapping[lane_num - 1]
 
-            a_term_obj = self._resolve_termination_object(lane_data.get("a_termination"))
-            if a_term_obj:
-                ct = ContentType.objects.get_for_model(a_term_obj)
+            for key, side, conn, pos in (
+                ("a_termination", "A", entry["a_connector"], entry["a_position"]),
+                ("b_termination", "B", entry["b_connector"], entry["b_position"]),
+            ):
+                term_obj = self._resolve_termination_object(lane_data.get(key))
+                if term_obj is None:
+                    continue
+                fk_field = termination_fk_field(term_obj)
+                if fk_field is None:
+                    raise serializers.ValidationError(f"{term_obj._meta.label} is not a valid CableTermination type.")
                 CableToCableTermination.objects.update_or_create(
-                    termination_type=ct,
-                    termination_id=a_term_obj.pk,
+                    **{fk_field: term_obj},
                     defaults={
                         "cable": cable,
-                        "cable_end": "A",
-                        "connector": entry["a_connector"],
-                        "position": entry["a_position"],
-                    },
-                )
-
-            b_term_obj = self._resolve_termination_object(lane_data.get("b_termination"))
-            if b_term_obj:
-                ct = ContentType.objects.get_for_model(b_term_obj)
-                CableToCableTermination.objects.update_or_create(
-                    termination_type=ct,
-                    termination_id=b_term_obj.pk,
-                    defaults={
-                        "cable": cable,
-                        "cable_end": "B",
-                        "connector": entry["b_connector"],
-                        "position": entry["b_position"],
+                        "cable_end": side,
+                        "connector": conn,
+                        "position": pos,
                     },
                 )
 

@@ -159,6 +159,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .models.cables import _NATURAL_KEY_TO_TERMINATION_FK
 from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
@@ -5597,12 +5598,12 @@ class CableUIViewSet(NautobotUIViewSet):
 
         if termination_type and termination_id:
             app_label, model_name = termination_type.split(".")
-            content_type = ContentType.objects.get_by_natural_key(app_label, model_name)
-            endpoint = CableToCableTermination.objects.filter(
-                cable=cable,
-                termination_type=content_type,
-                termination_id=termination_id,
-            ).first()
+            fk_field = _NATURAL_KEY_TO_TERMINATION_FK.get((app_label, model_name))
+            endpoint = (
+                CableToCableTermination.objects.filter(cable=cable, **{f"{fk_field}_id": termination_id}).first()
+                if fk_field
+                else None
+            )
 
             if endpoint:
                 termination = endpoint.termination
@@ -5650,20 +5651,15 @@ class PathTraceView(generic.ObjectView):
 
             # Check if this is a trunk-side breakout termination that fans out
 
-            if path and instance.cable_id:
-                cable = instance.cable
-                if cable and cable.cable_type_id:
-                    # Find this termination's CableToCableTermination row
-                    ct_row = CableToCableTermination.objects.filter(
-                        cable=cable,
-                        termination_id=instance.pk,
-                    ).first()
-                    if ct_row and ct_row.connector is not None:
-                        # Find all CablePaths through this cable (all lanes)
-                        all_cable_paths = CablePath.objects.filter(path__contains=cable).prefetch_related("origin")
-                        if all_cable_paths.count() > 1:
-                            related_paths = all_cable_paths
-                            breakout_fanout = True
+            ct_row = getattr(instance, "cable_termination", None) if path else None
+            if ct_row is not None:
+                cable = ct_row.cable
+                if cable and cable.cable_type_id and ct_row.connector is not None:
+                    # Find all CablePaths through this cable (all lanes)
+                    all_cable_paths = CablePath.objects.filter(path__contains=cable).prefetch_related("origin")
+                    if all_cable_paths.count() > 1:
+                        related_paths = all_cable_paths
+                        breakout_fanout = True
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:

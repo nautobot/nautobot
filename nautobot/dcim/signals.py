@@ -32,6 +32,7 @@ from .models import (
     RearPort,
     VirtualChassis,
 )
+from .models.cables import termination_fk_field
 from .utils import validate_interface_tagged_vlans
 
 
@@ -46,18 +47,17 @@ def create_cablepath(node, rebuild=True):
     """
     from nautobot.dcim.models import CableToCableTermination
 
-    if not node.cable_id:
+    my_endpoint = getattr(node, "cable_termination", None)
+    if my_endpoint is None:
         if rebuild:
             rebuild_paths(node)
         return
 
-    cable = node.cable
+    cable = my_endpoint.cable
 
     # Check if this is a breakout cable with multiple far-side lanes
     if cable.cable_type_id:
-        my_endpoint = CableToCableTermination.objects.filter(cable=cable, termination_id=node.pk).first()
-
-        if my_endpoint and my_endpoint.connector is not None:
+        if my_endpoint.connector is not None:
             opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
             origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
             far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
@@ -275,10 +275,9 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
         logger.debug(f"Skipping endpoint updates for imported cable {instance}")
         return
 
-    # On creation, create CableTermination rows and sync caches
+    # On creation, create CableToCableTermination rows
     if created:
         _create_cable_termination_rows(instance, logger)
-        _sync_termination_caches(instance, logger)
         for ct_row in instance.terminations.all():
             term = ct_row.termination
             if isinstance(term, PathEndpoint):
@@ -291,13 +290,13 @@ def update_connected_endpoints(instance, created, raw=False, **kwargs):
             CablePath.objects.filter(path__contains=instance).update(is_active=False)
         else:
             rebuild_paths(instance)
-    # NOTE: On regular updates (form save), we do NOT sync termination caches here.
-    # The form's _save_connection_terminations() handles CableTermination row
-    # creation/updates and cache syncing AFTER this signal runs.
+    # NOTE: On regular updates (form save), we do NOT touch termination rows here.
+    # The form's _save_connection_terminations() handles CableToCableTermination row
+    # creation/updates AFTER this signal runs.
 
 
 def _create_cable_termination_rows(instance, logger):
-    """Create CableTermination rows from the Cable's _initial_termination_a/b attributes."""
+    """Create CableToCableTermination rows from the Cable's _initial_termination_a/b attributes."""
     term_a = getattr(instance, "_initial_termination_a", None)
     term_b = getattr(instance, "_initial_termination_b", None)
 
@@ -318,59 +317,37 @@ def _create_cable_termination_rows(instance, logger):
         b_connector = entry["b_connector"]
         b_position = entry["b_position"]
 
-    if term_a:
-        ct_a = ContentType.objects.get_for_model(term_a)
-        CableToCableTermination.objects.get_or_create(
-            cable=instance,
-            cable_end="A",
-            termination_type=ct_a,
-            termination_id=term_a.pk,
-            defaults={"connector": a_connector, "position": a_position},
-        )
-        logger.debug(f"Created CableTermination A-side for {term_a} on cable {instance}")
-
-    if term_b:
-        ct_b = ContentType.objects.get_for_model(term_b)
-        CableToCableTermination.objects.get_or_create(
-            cable=instance,
-            cable_end="B",
-            termination_type=ct_b,
-            termination_id=term_b.pk,
-            defaults={"connector": b_connector, "position": b_position},
-        )
-        logger.debug(f"Created CableTermination B-side for {term_b} on cable {instance}")
-
-
-def _sync_termination_caches(instance, logger):
-    """Sync the `cable` FK on termination objects from the CableToCableTermination rows."""
-    for endpoint in instance.terminations.all():
-        termination = endpoint.termination
-        if termination is None:
+    for term, end, conn, pos in (
+        (term_a, "A", a_connector, a_position),
+        (term_b, "B", b_connector, b_position),
+    ):
+        if not term:
             continue
-        if termination.cable_id != instance.pk:
-            logger.debug(f"Syncing cable FK for {termination} on cable {instance}")
-            termination.cable = instance
-            termination.save()
+        fk_field = termination_fk_field(term)
+        if fk_field is None:
+            logger.warning(f"Termination {term} has no matching FK on CableToCableTermination; skipping")
+            continue
+        CableToCableTermination.objects.get_or_create(
+            cable=instance,
+            cable_end=end,
+            **{fk_field: term},
+            defaults={"connector": conn, "position": pos},
+        )
+        logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {instance}")
 
 
 @receiver(pre_delete, sender=Cable)
 def nullify_connected_endpoints(instance, **kwargs):
     """
-    When a Cable is deleted, clear cable/peer caches on all termination objects
-    and retrace dependent cable paths.
+    When a Cable is deleted, retrace dependent cable paths.
+
+    Removes this cable's join-table rows up front so that path-retrace logic sees each affected
+    termination as no-longer-connected; otherwise `from_origin` would still find the (about-to-be-
+    deleted) cable in the DB. The Cable.delete() that triggered this signal would CASCADE-remove
+    these rows anyway — we just bring it forward.
     """
-    logger = logging.getLogger(__name__ + ".cable")
+    instance.terminations.all().delete()
 
-    # Clear the cable FK on all termination objects
-    for endpoint in instance.terminations.all():
-        termination = endpoint.termination
-        if termination is not None:
-            logger.debug(f"Nullifying termination {termination} for cable {instance}")
-            termination.cable = None
-            termination.save()
-
-    # CableToCableTermination rows will be CASCADE-deleted with the Cable.
-    # Retrace any dependent cable paths.
     for cablepath in CablePath.objects.filter(path__contains=instance):
         cp = CablePath.from_origin(cablepath.origin)
         if cp:
@@ -409,28 +386,19 @@ def _get_cable_termination_senders():
 
 def handle_termination_delete(sender, instance, **kwargs):
     """
-    When a termination object is deleted, remove its CableToCableTermination row
-    and clean up caches. The Cable itself survives — it just loses this termination.
+    When a termination object is deleted, retrace cable paths on the connected cable (if any).
+
+    The CableToCableTermination row pointing at this termination is CASCADE-deleted automatically
+    via the per-type OneToOneField; the Cable itself survives.
     """
-    if not instance.cable_id:
+    cable_termination = getattr(instance, "cable_termination", None)
+    if cable_termination is None:
         return
 
     logger = logging.getLogger(__name__ + ".cable")
-    logger.debug(f"Handling termination delete for {instance} (cable: {instance.cable})")
-
-    # Delete the CableToCableTermination row for this termination
-    ct_type = ContentType.objects.get_for_model(instance)
-    CableToCableTermination.objects.filter(
-        termination_type=ct_type,
-        termination_id=instance.pk,
-    ).delete()
-
-    # Rebuild CablePaths that passed through this cable
-    try:
-        cable = Cable.objects.get(pk=instance.cable_id)
-        rebuild_paths(cable)
-    except Cable.DoesNotExist:
-        pass
+    cable = cable_termination.cable
+    logger.debug(f"Handling termination delete for {instance} (cable: {cable})")
+    rebuild_paths(cable)
 
 
 for _sender in _get_cable_termination_senders():

@@ -17,7 +17,6 @@ from nautobot.dcim.constants import (
     BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
-    CABLE_TERMINATION_MODELS,
     COMPATIBLE_TERMINATION_TYPES,
 )
 from nautobot.dcim.fields import JSONPathField
@@ -40,7 +39,6 @@ from nautobot.extras.utils import extras_features
 from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
 from .device_components import FrontPort, RearPort
-from .devices import Device
 
 __all__ = (
     "Cable",
@@ -232,6 +230,66 @@ class Cable(PrimaryModel):
     # Stores the normalized length (in meters) for database ordering
     _abs_length = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
 
+    # Typed many-to-many accessors for each terminating model. The through model is
+    # CableToCableTermination, which carries the cable_end / connector / position lane attributes.
+    # Reverse access (`<termination>.cable_termination`) is provided by the OneToOneFields on the
+    # through model itself; reverse here is suppressed via `related_name="+"` to avoid a misleading
+    # plural "cables" on each terminating model (each termination is on at most one cable).
+    circuit_terminations = models.ManyToManyField(
+        to="circuits.CircuitTermination",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "circuit_termination"),
+        related_name="+",
+    )
+    console_ports = models.ManyToManyField(
+        to="dcim.ConsolePort",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "console_port"),
+        related_name="+",
+    )
+    console_server_ports = models.ManyToManyField(
+        to="dcim.ConsoleServerPort",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "console_server_port"),
+        related_name="+",
+    )
+    front_ports = models.ManyToManyField(
+        to="dcim.FrontPort",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "front_port"),
+        related_name="+",
+    )
+    interfaces = models.ManyToManyField(
+        to="dcim.Interface",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "interface"),
+        related_name="+",
+    )
+    power_feeds = models.ManyToManyField(
+        to="dcim.PowerFeed",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "power_feed"),
+        related_name="+",
+    )
+    power_outlets = models.ManyToManyField(
+        to="dcim.PowerOutlet",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "power_outlet"),
+        related_name="+",
+    )
+    power_ports = models.ManyToManyField(
+        to="dcim.PowerPort",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "power_port"),
+        related_name="+",
+    )
+    rear_ports = models.ManyToManyField(
+        to="dcim.RearPort",
+        through="dcim.CableToCableTermination",
+        through_fields=("cable", "rear_port"),
+        related_name="+",
+    )
+
     natural_key_field_names = ["pk"]
 
     class Meta:
@@ -336,8 +394,9 @@ class Cable(PrimaryModel):
 
         if not self.present_in_database:
             return True  # New cable, no terminations yet
-        for endpoint in self.terminations.select_related("termination_type").all():
-            if endpoint.termination_type.model not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:
+        for endpoint in self.terminations.all():
+            term = endpoint.termination
+            if term is not None and term._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:
                 return False
         return True
 
@@ -551,13 +610,16 @@ class Cable(PrimaryModel):
 
         # Validate cable type compatibility with termination types
         if self.cable_type_id and self.present_in_database:
-            for ct_row in self.terminations.select_related("termination_type").all():
-                model_name = ct_row.termination_type.model
+            for ct_row in self.terminations.all():
+                term = ct_row.termination
+                if term is None:
+                    continue
+                model_name = term._meta.model_name
                 if model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:
                     raise ValidationError(
                         {
                             "cable_type": f"Breakout cable types cannot be assigned to cables with "
-                            f"{ct_row.termination_type} terminations. Only interface, front port, "
+                            f"{model_name} terminations. Only interface, front port, "
                             f"rear port, and circuit termination types are supported."
                         }
                     )
@@ -643,8 +705,39 @@ CABLE_END_CHOICES = (
 )
 
 
+# Per-type one-to-one FK field name → (app_label, model) natural key for its target model.
+# The dict is the source of truth; `TERMINATION_FK_FIELDS` is derived for ordered iteration.
+# Exactly one of these FKs must be non-null on each CableToCableTermination row; enforced by a
+# CheckConstraint below.
+_TERMINATION_FK_TO_NATURAL_KEY = {
+    "circuit_termination": ("circuits", "circuittermination"),
+    "console_port": ("dcim", "consoleport"),
+    "console_server_port": ("dcim", "consoleserverport"),
+    "front_port": ("dcim", "frontport"),
+    "interface": ("dcim", "interface"),
+    "power_feed": ("dcim", "powerfeed"),
+    "power_outlet": ("dcim", "poweroutlet"),
+    "power_port": ("dcim", "powerport"),
+    "rear_port": ("dcim", "rearport"),
+}
+TERMINATION_FK_FIELDS = tuple(_TERMINATION_FK_TO_NATURAL_KEY)
+
+# Reverse map: (app_label, model_name) → FK field name. Used by signal/form/serializer code that
+# needs to write to the right per-type FK on CableToCableTermination given a termination instance.
+_NATURAL_KEY_TO_TERMINATION_FK = {nk: fk for fk, nk in _TERMINATION_FK_TO_NATURAL_KEY.items()}
+
+
+def termination_fk_field(model_or_instance):
+    """Return the CableToCableTermination FK field name corresponding to the given model class or instance.
+
+    Returns None if the given model isn't a known CableTermination subclass.
+    """
+    opts = model_or_instance._meta
+    return _NATURAL_KEY_TO_TERMINATION_FK.get((opts.app_label, opts.model_name))
+
+
 def _resolve_termination_device(termination):
-    """Return the parent Device of a termination, walking through any chain of nested modules."""
+    """Return the effective parent Device of a termination, walking through any chain of nested modules."""
     if termination is None:
         return None
     direct_device = getattr(termination, "device", None)
@@ -663,12 +756,27 @@ def _resolve_termination_device(termination):
     return None
 
 
+def _exactly_one_termination_q():
+    """Build a Q expression that's true iff exactly one of the TERMINATION_FK_FIELDS is non-null."""
+    expr = models.Q()
+    for field in TERMINATION_FK_FIELDS:
+        clause = models.Q(**{f"{field}__isnull": False})
+        for other in TERMINATION_FK_FIELDS:
+            if other != field:
+                clause &= models.Q(**{f"{other}__isnull": True})
+        expr |= clause
+    return expr
+
+
 @extras_features("graphql")
 class CableToCableTermination(BaseModel):
     """
-    A concrete model representing the association between a Cable and a terminating object (Interface,
-    FrontPort, RearPort, etc.). Each cable has at least two CableTermination rows (one A-side, one B-side).
-    Breakout cables have multiple rows per side, each with connector and position identifying the lane.
+    Join model between a Cable and a terminating object (Interface, FrontPort, RearPort, etc.).
+    Each cable has at least two such rows (one A-side, one B-side); breakout cables have multiple
+    rows per side, each with connector and position identifying the lane.
+
+    Exactly one of the per-type foreign key fields (`interface`, `console_port`, etc.) is set on each
+    row, enforced via a CheckConstraint.
     """
 
     cable = models.ForeignKey(
@@ -680,16 +788,73 @@ class CableToCableTermination(BaseModel):
         max_length=1,
         choices=CABLE_END_CHOICES,
     )
-    termination_type = models.ForeignKey(
-        to=ContentType,
-        limit_choices_to=CABLE_TERMINATION_MODELS,
-        on_delete=models.PROTECT,
-        related_name="+",
-    )
-    termination_id = models.UUIDField()
-    termination = GenericForeignKey(ct_field="termination_type", fk_field="termination_id")
 
-    # Breakout cable lane fields — null for standard cables
+    # Per-type one-to-one foreign keys to each concrete CableTermination subclass.
+    circuit_termination = models.OneToOneField(
+        to="circuits.CircuitTermination",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    console_port = models.OneToOneField(
+        to="dcim.ConsolePort",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    console_server_port = models.OneToOneField(
+        to="dcim.ConsoleServerPort",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    front_port = models.OneToOneField(
+        to="dcim.FrontPort",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    interface = models.OneToOneField(
+        to="dcim.Interface",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    power_feed = models.OneToOneField(
+        to="dcim.PowerFeed",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    power_outlet = models.OneToOneField(
+        to="dcim.PowerOutlet",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    power_port = models.OneToOneField(
+        to="dcim.PowerPort",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+    rear_port = models.OneToOneField(
+        to="dcim.RearPort",
+        on_delete=models.CASCADE,
+        related_name="cable_termination",
+        blank=True,
+        null=True,
+    )
+
+    # Breakout cable lane fields — null for standard cables.
     connector = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
@@ -701,9 +866,11 @@ class CableToCableTermination(BaseModel):
         help_text="The position (lane) within the connector. Null for standard cables.",
     )
 
-    # Cache the parent Device for filtering
+    # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
+    # Necessary denormalization: the effective device of a modular component is reached through a
+    # recursive parent_module_bay/parent_module chain, which can't be expressed as a single ORM JOIN.
     _termination_device = models.ForeignKey(
-        to=Device,
+        to="dcim.Device",
         on_delete=models.CASCADE,
         related_name="+",
         blank=True,
@@ -714,22 +881,73 @@ class CableToCableTermination(BaseModel):
 
     class Meta:
         ordering = ["cable", "cable_end", "connector", "position"]
-        unique_together = [("termination_type", "termination_id")]
+        constraints = [
+            # Non-breakout cables: at most one A and one B per cable.
+            models.UniqueConstraint(
+                fields=["cable", "cable_end"],
+                condition=models.Q(connector__isnull=True),
+                name="dcim_cabletocabletermination_unique_nonbreakout_lane",
+            ),
+            # Breakout cables: at most one row per (cable, cable_end, connector, position).
+            models.UniqueConstraint(
+                fields=["cable", "cable_end", "connector", "position"],
+                condition=models.Q(connector__isnull=False),
+                name="dcim_cabletocabletermination_unique_breakout_lane",
+            ),
+            # Exactly one of the per-type termination foreign keys must be set.
+            models.CheckConstraint(
+                name="dcim_cabletocabletermination_exactly_one_termination",
+                check=_exactly_one_termination_q(),
+            ),
+        ]
+
+    @property
+    def termination(self):
+        """The single non-null termination FK on this row."""
+        for field in TERMINATION_FK_FIELDS:
+            obj = getattr(self, field, None)
+            if obj is not None:
+                return obj
+        return None
+
+    @property
+    def termination_type(self):
+        """The ContentType of this row's termination, or None if unset.
+
+        Inspects the FK `*_id` columns rather than fetching the related object.
+        """
+        for field in TERMINATION_FK_FIELDS:
+            if getattr(self, f"{field}_id", None) is not None:
+                app_label, model = _TERMINATION_FK_TO_NATURAL_KEY[field]
+                return ContentType.objects.get_by_natural_key(app_label, model)
+        return None
+
+    @property
+    def termination_id(self):
+        """The PK of this row's termination, or None if unset.
+
+        Inspects the FK `*_id` columns rather than fetching the related object.
+        """
+        for field in TERMINATION_FK_FIELDS:
+            pk = getattr(self, f"{field}_id", None)
+            if pk is not None:
+                return pk
+        return None
 
     def __str__(self):
         return f"{self.cable} {self.cable_end}-side: {self.termination}"
 
     def clean(self):
         super().clean()
-
-        if self.termination_type_id and self.termination_id:
+        term = self.termination
+        if term is not None:
             try:
-                validate_cable_termination(self.termination, cable_id=self.cable_id)
+                validate_cable_termination(term, cable_id=self.cable_id)
             except ObjectDoesNotExist:
                 pass
 
     def save(self, *args, **kwargs):
-        # Cache the parent device (walking up through any chain of nested modules) for filtering.
+        # Cache the effective parent device for filtering. See `_termination_device` field comment.
         self._termination_device = _resolve_termination_device(self.termination)
         super().save(*args, **kwargs)
 

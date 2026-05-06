@@ -1605,11 +1605,10 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        """Filter cables by device-related fields via the CableToCableTermination join table.
+        """Filter cables by device-related fields via the cached `_termination_device` FK on the join table.
 
         The filter's `field_name` (e.g. "device", "device__rack", "device__location") is translated
-        into a lookup path on CableToCableTermination by replacing the leading "device" segment with
-        the cached `_termination_device` FK.
+        into a lookup path by replacing the leading "device" segment with `_termination_device`.
         """
         filter_obj = self.filters.get(name)
         field_name = filter_obj.field_name if filter_obj else name
@@ -1653,12 +1652,27 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         params = self.generate_query_filter_device_id(value)
         return queryset.filter(params)
 
-    def generate_query__termination_type(self, value):
-        type_q = Q()
+    @staticmethod
+    def _build_termination_type_q(value, cable_end=None):
+        """Build a Q matching CableToCableTermination rows whose populated FK matches one of the given content-type labels."""
+        from nautobot.dcim.models.cables import _TERMINATION_FK_TO_NATURAL_KEY
+
+        q = Q()
         for label in value:
             app_label, model = label.split(".")
-            type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableToCableTermination.objects.filter(type_q).values_list("cable_id", flat=True)
+            for fk, nk in _TERMINATION_FK_TO_NATURAL_KEY.items():
+                if nk == (app_label, model):
+                    clause = Q(**{f"{fk}__isnull": False})
+                    if cable_end:
+                        clause &= Q(cable_end=cable_end)
+                    q |= clause
+                    break
+        return q
+
+    def generate_query__termination_type(self, value):
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value)).values_list(
+            "cable_id", flat=True
+        )
         return Q(pk__in=cable_ids)
 
     @extend_schema_field({"type": "string"})
@@ -1668,33 +1682,39 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     @extend_schema_field({"type": "string"})
     def _termination_a_type(self, queryset, name, value):
         """Filter cables by A-side termination type (backward compatible)."""
-        type_q = Q()
-        for label in value:
-            app_label, model = label.split(".")
-            type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableToCableTermination.objects.filter(type_q, cable_end="A").values_list("cable_id", flat=True)
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "A")).values_list(
+            "cable_id", flat=True
+        )
         return queryset.filter(pk__in=cable_ids).distinct()
 
     @extend_schema_field({"type": "string"})
     def _termination_b_type(self, queryset, name, value):
         """Filter cables by B-side termination type (backward compatible)."""
-        type_q = Q()
-        for label in value:
-            app_label, model = label.split(".")
-            type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CableToCableTermination.objects.filter(type_q, cable_end="B").values_list("cable_id", flat=True)
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "B")).values_list(
+            "cable_id", flat=True
+        )
         return queryset.filter(pk__in=cable_ids).distinct()
+
+    @staticmethod
+    def _build_termination_id_q(value, cable_end):
+        """Build a Q matching CableToCableTermination rows whose populated termination FK has its PK in `value`."""
+        from nautobot.dcim.models.cables import TERMINATION_FK_FIELDS
+
+        q = Q()
+        for fk in TERMINATION_FK_FIELDS:
+            q |= Q(**{f"{fk}_id__in": value})
+        return q & Q(cable_end=cable_end)
 
     def _termination_a_id(self, queryset, name, value):
         """Filter cables by A-side termination ID (backward compatible)."""
-        cable_ids = CableToCableTermination.objects.filter(cable_end="A", termination_id__in=value).values_list(
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value, "A")).values_list(
             "cable_id", flat=True
         )
         return queryset.filter(pk__in=cable_ids)
 
     def _termination_b_id(self, queryset, name, value):
         """Filter cables by B-side termination ID (backward compatible)."""
-        cable_ids = CableToCableTermination.objects.filter(cable_end="B", termination_id__in=value).values_list(
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value, "B")).values_list(
             "cable_id", flat=True
         )
         return queryset.filter(pk__in=cable_ids)

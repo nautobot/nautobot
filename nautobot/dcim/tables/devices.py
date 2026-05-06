@@ -412,7 +412,9 @@ class ModularDeviceComponentTable(DeviceComponentTable):
 
 
 class CableTerminationTable(BaseTable):
-    cable = tables.Column(linkify=True)
+    # `cable` is a property on CableTermination subclasses (resolved via the cable_termination
+    # join row), not a real model field, so the column is not DB-orderable.
+    cable = tables.Column(linkify=True, orderable=False)
     cable_peer = tables.TemplateColumn(
         accessor="get_cable_peers",
         template_code=CABLETERMINATION,

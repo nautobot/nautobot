@@ -1,5 +1,7 @@
 # Remove legacy GFK fields from Cable (data migrated to CableToCableTermination) and from
-# CableTermination subclasses (peers are now resolved via CableToCableTermination).
+# CableTermination subclasses (peers are now resolved via CableToCableTermination, and the cached
+# `cable` FK is replaced with a property derived from the join model's reverse `cable_termination`
+# accessor).
 from django.db import migrations
 
 
@@ -14,18 +16,26 @@ class Migration(migrations.Migration):
         migrations.RemoveField(model_name="cable", name="termination_b_type"),
         migrations.RemoveField(model_name="consoleport", name="_cable_peer_id"),
         migrations.RemoveField(model_name="consoleport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="consoleport", name="cable"),
         migrations.RemoveField(model_name="consoleserverport", name="_cable_peer_id"),
         migrations.RemoveField(model_name="consoleserverport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="consoleserverport", name="cable"),
         migrations.RemoveField(model_name="frontport", name="_cable_peer_id"),
         migrations.RemoveField(model_name="frontport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="frontport", name="cable"),
         migrations.RemoveField(model_name="interface", name="_cable_peer_id"),
         migrations.RemoveField(model_name="interface", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="interface", name="cable"),
         migrations.RemoveField(model_name="powerfeed", name="_cable_peer_id"),
         migrations.RemoveField(model_name="powerfeed", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="powerfeed", name="cable"),
         migrations.RemoveField(model_name="poweroutlet", name="_cable_peer_id"),
         migrations.RemoveField(model_name="poweroutlet", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="poweroutlet", name="cable"),
         migrations.RemoveField(model_name="powerport", name="_cable_peer_id"),
         migrations.RemoveField(model_name="powerport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="powerport", name="cable"),
         migrations.RemoveField(model_name="rearport", name="_cable_peer_id"),
         migrations.RemoveField(model_name="rearport", name="_cable_peer_type"),
+        migrations.RemoveField(model_name="rearport", name="cable"),
     ]

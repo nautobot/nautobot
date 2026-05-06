@@ -42,12 +42,15 @@ from nautobot.extras.filter_mixins import CustomFieldModelFilterSetMixin, Relati
 
 
 class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
+    # `cable` is no longer a real model field on CableTermination subclasses; we filter through
+    # the join model's reverse `cable_termination` OneToOneField instead.
     has_cable = RelatedMembershipBooleanFilter(
-        field_name="cable",
+        field_name="cable_termination",
         label="Has cable",
     )
     cable = django_filters.ModelMultipleChoiceFilter(
         queryset=Cable.objects.all(),
+        field_name="cable_termination__cable",
         label="Cable",
     )
 
