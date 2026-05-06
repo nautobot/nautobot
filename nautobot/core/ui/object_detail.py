@@ -2763,7 +2763,7 @@ class _JobModalButton(Button):
             **kwargs: Arbitrary keyword arguments required in all subclasses.
 
         Returns:
-            dict: A dictionary with keys ``url``, ``label``, ``color``, and optionally ``attributes``,
+            dict: A dictionary with keys `url`, `label`, `color`, and optionally `attributes`,
                 or an empty dict to render no button.
         """
         return {}

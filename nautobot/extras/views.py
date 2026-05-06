@@ -2705,7 +2705,7 @@ class JobUIViewSet(NautobotUIViewSet):
 
         # Render the job form instead of running the job on a POST request.
         # Required for the job modal.
-        if request.POST.get("render_job_form"):
+        if self.request.headers.get("HX-Request", False) and request.POST.get("render_job_form"):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
