@@ -51,6 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableTerminationEndpoint,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -1582,6 +1583,8 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         method="_termination_b_type",
         label="Termination B type",
     )
+    termination_a_id = MultiValueUUIDFilter(method="_termination_a_id", label="Termination A (ID)")
+    termination_b_id = MultiValueUUIDFilter(method="_termination_b_id", label="Termination B (ID)")
     termination_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
@@ -1602,30 +1605,46 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         ]
 
     def filter_device(self, queryset, name, value):
-        """Filter cables by device-related fields via the CableTermination join table."""
-        from nautobot.dcim.models import CableTerminationEndpoint as CT
+        """Filter cables by device-related fields via the CableTerminationEndpoint join table.
+
+        The filter's `field_name` (e.g. "device", "device__rack", "device__location") is translated
+        into a lookup path on CableTerminationEndpoint by replacing the leading "device" segment with
+        the cached `_termination_device` FK.
+        """
+        filter_obj = self.filters.get(name)
+        field_name = filter_obj.field_name if filter_obj else name
+        if field_name == "device":
+            lookup_path = "_termination_device"
+        elif field_name.startswith("device__"):
+            lookup_path = "_termination_device__" + field_name[len("device__") :]
+        else:
+            lookup_path = field_name
 
         has_null = any(v == "null" for v in value)
         value = [v for v in value if v != "null"]
         if value:
-            cable_ids = CT.objects.filter(**{f"_termination_{name}__in": value}).values_list("cable_id", flat=True)
+            cable_ids = CableTerminationEndpoint.objects.filter(**{f"{lookup_path}__in": value}).values_list(
+                "cable_id", flat=True
+            )
             if has_null:
-                null_cable_ids = CT.objects.filter(**{f"_termination_{name}__isnull": True}).values_list(
-                    "cable_id", flat=True
-                )
+                null_cable_ids = CableTerminationEndpoint.objects.filter(
+                    **{f"{lookup_path}__isnull": True}
+                ).values_list("cable_id", flat=True)
                 return queryset.filter(Q(pk__in=cable_ids) | Q(pk__in=null_cable_ids))
             return queryset.filter(pk__in=cable_ids)
         elif has_null:
-            cable_ids = CT.objects.filter(**{f"_termination_{name}__isnull": True}).values_list("cable_id", flat=True)
+            cable_ids = CableTerminationEndpoint.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
+                "cable_id", flat=True
+            )
             return queryset.filter(pk__in=cable_ids)
         return queryset
 
     def generate_query_filter_device_id(self, value):
-        from nautobot.dcim.models import CableTerminationEndpoint as CT
-
         if not hasattr(value, "__iter__") or isinstance(value, str):
             value = [value]
-        cable_ids = CT.objects.filter(_termination_device_id__in=value).values_list("cable_id", flat=True)
+        cable_ids = CableTerminationEndpoint.objects.filter(_termination_device_id__in=value).values_list(
+            "cable_id", flat=True
+        )
         return Q(pk__in=cable_ids)
 
     def filter_device_id(self, queryset, name, value):
@@ -1635,13 +1654,11 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         return queryset.filter(params)
 
     def generate_query__termination_type(self, value):
-        from nautobot.dcim.models import CableTerminationEndpoint as CT
-
         type_q = Q()
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CT.objects.filter(type_q).values_list("cable_id", flat=True)
+        cable_ids = CableTerminationEndpoint.objects.filter(type_q).values_list("cable_id", flat=True)
         return Q(pk__in=cable_ids)
 
     @extend_schema_field({"type": "string"})
@@ -1651,26 +1668,36 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     @extend_schema_field({"type": "string"})
     def _termination_a_type(self, queryset, name, value):
         """Filter cables by A-side termination type (backward compatible)."""
-        from nautobot.dcim.models import CableTerminationEndpoint as CT
-
         type_q = Q()
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CT.objects.filter(type_q, cable_end="A").values_list("cable_id", flat=True)
+        cable_ids = CableTerminationEndpoint.objects.filter(type_q, cable_end="A").values_list("cable_id", flat=True)
         return queryset.filter(pk__in=cable_ids).distinct()
 
     @extend_schema_field({"type": "string"})
     def _termination_b_type(self, queryset, name, value):
         """Filter cables by B-side termination type (backward compatible)."""
-        from nautobot.dcim.models import CableTerminationEndpoint as CT
-
         type_q = Q()
         for label in value:
             app_label, model = label.split(".")
             type_q |= Q(termination_type__app_label=app_label, termination_type__model=model)
-        cable_ids = CT.objects.filter(type_q, cable_end="B").values_list("cable_id", flat=True)
+        cable_ids = CableTerminationEndpoint.objects.filter(type_q, cable_end="B").values_list("cable_id", flat=True)
         return queryset.filter(pk__in=cable_ids).distinct()
+
+    def _termination_a_id(self, queryset, name, value):
+        """Filter cables by A-side termination ID (backward compatible)."""
+        cable_ids = CableTerminationEndpoint.objects.filter(cable_end="A", termination_id__in=value).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    def _termination_b_id(self, queryset, name, value):
+        """Filter cables by B-side termination ID (backward compatible)."""
+        cable_ids = CableTerminationEndpoint.objects.filter(cable_end="B", termination_id__in=value).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
 
 
 class ConnectionFilterSetMixin:

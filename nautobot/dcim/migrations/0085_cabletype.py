@@ -77,7 +77,7 @@ class Migration(migrations.Migration):
                         ],
                     ),
                 ),
-                ("mapping", models.JSONField()),
+                ("mapping", models.JSONField(blank=True, default=list)),
                 ("is_shuffle", models.BooleanField(default=False)),
                 (
                     "strands_per_lane",

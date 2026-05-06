@@ -108,8 +108,10 @@ class CableType(PrimaryModel):
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_LANES)],
     )
     mapping = models.JSONField(
+        default=list,
+        blank=True,
         help_text="A→B lane mapping as a JSON array of objects with keys: "
-        "label, a_connector, a_position, b_connector, b_position."
+        "label, a_connector, a_position, b_connector, b_position. If empty, populated by clean().",
     )
     is_shuffle = models.BooleanField(
         default=False,
@@ -641,6 +643,26 @@ CABLE_END_CHOICES = (
 )
 
 
+def _resolve_termination_device(termination):
+    """Return the parent Device of a termination, walking through any chain of nested modules."""
+    if termination is None:
+        return None
+    direct_device = getattr(termination, "device", None)
+    if direct_device is not None:
+        return direct_device
+    module = getattr(termination, "module", None)
+    while module is not None:
+        if module.device is not None:
+            return module.device
+        parent_bay = getattr(module, "parent_module_bay", None)
+        if parent_bay is None:
+            return None
+        if getattr(parent_bay, "parent_device", None) is not None:
+            return parent_bay.parent_device
+        module = getattr(parent_bay, "parent_module", None)
+    return None
+
+
 class CableTerminationEndpoint(BaseModel):
     """
     A concrete model representing the association between a Cable and a terminating object (Interface,
@@ -706,14 +728,8 @@ class CableTerminationEndpoint(BaseModel):
                 pass
 
     def save(self, *args, **kwargs):
-        # Cache the parent device for filtering
-        term = self.termination
-        if term and hasattr(term, "device"):
-            self._termination_device = term.device
-        elif term and hasattr(term, "module") and getattr(term.module, "device", None):
-            self._termination_device = term.module.device
-        else:
-            self._termination_device = None
+        # Cache the parent device (walking up through any chain of nested modules) for filtering.
+        self._termination_device = _resolve_termination_device(self.termination)
         super().save(*args, **kwargs)
 
 

@@ -5552,7 +5552,13 @@ class CableUIViewSet(NautobotUIViewSet):
             },
         )
 
-    @action(detail=True, methods=["get"], url_path="disconnect", custom_view_base_action="change")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="disconnect",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.view_cable"],
+    )
     def disconnect(self, request, pk=None):
         """Disconnect a single termination from this cable without deleting the cable."""
 
@@ -5649,13 +5655,8 @@ class PathTraceView(generic.ObjectView):
             else:
                 path = related_paths.first()
 
-        # Generate SVG trace diagram
-        from nautobot.dcim.trace_diagram import CableTraceSVG
-
+        # SVG trace diagram rendering will be added back in a follow-up; leave the slot empty for now.
         trace_svg = ""
-        if isinstance(instance, PathEndpoint):
-            diagram = CableTraceSVG(instance, base_url=request.build_absolute_uri("/").rstrip("/"))
-            trace_svg = diagram.render()
 
         return {
             "path": path,
