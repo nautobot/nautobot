@@ -727,7 +727,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     )
     # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
     revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
-    terminated_at = models.DateTimeField(
+    date_terminated = models.DateTimeField(
         null=True,
         blank=True,
         help_text="Timestamp at which the job was forcibly terminated",
@@ -888,7 +888,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         job_model: "Job",
         user: "User",
         task_queue: str,
-        queue_type: JobQueueTypeChoices,
         profile: bool = False,
         console_log: bool = False,
         ignore_singleton_lock: bool = False,
@@ -896,6 +895,12 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         celery_kwargs: Optional[dict] = None,
     ) -> dict:
         """Build the celery kwargs dict common to all job execution paths."""
+
+        try:
+            queue_type = JobQueue.objects.get(name=task_queue).queue_type
+        except JobQueue.DoesNotExist:
+            queue_type = "unknown"
+
         job_celery_kwargs = {
             "nautobot_job_job_model_id": str(job_model.id),
             "nautobot_job_profile": profile,
@@ -1054,7 +1059,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             job_model=job_model,
             user=user,
             task_queue=task_queue,
-            queue_type=job_queue.queue_type,
             profile=profile,
             console_log=console_log,
             ignore_singleton_lock=ignore_singleton_lock,

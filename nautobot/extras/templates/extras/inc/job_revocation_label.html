@@ -1,5 +1,5 @@
 {% if result.status == 'REVOKED' %}
-    {% if result.terminated_at %}
+    {% if result.date_terminated %}
         <span class="badge bg-danger">Terminated</span>
     {% else %}
         <span class="badge bg-warning">Reaped</span>

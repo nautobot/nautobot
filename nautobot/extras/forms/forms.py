@@ -1959,11 +1959,11 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         label="Has Job Console Entries",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    revocation_type = forms.ChoiceField(
-        choices=add_blank_choice(JobRevocationTypeChoices),
+    revocation_type = forms.MultipleChoiceField(
+        choices=JobRevocationTypeChoices,
         required=False,
         label="Revocation Type",
-        widget=StaticSelect2(),
+        widget=StaticSelect2Multiple(),
     )
 
 

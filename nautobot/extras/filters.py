@@ -1225,24 +1225,28 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Has Job Console Entries",
     )
 
-    revocation_type = django_filters.ChoiceFilter(
-        choices=(JobRevocationTypeChoices),
+    revocation_type = django_filters.MultipleChoiceFilter(
+        choices=JobRevocationTypeChoices,
         method="filter_revocation_type",
         label="Revocation Type",
     )
 
     def filter_revocation_type(self, queryset, name, value):
-        if value == "terminated":
-            return queryset.filter(
+        if not value:
+            return queryset
+
+        q = Q()
+        if "terminated" in value:
+            q |= Q(
                 status=JobResultStatusChoices.STATUS_REVOKED,
-                terminated_at__isnull=False,
+                date_terminated__isnull=False,
             )
-        if value == "reaped":
-            return queryset.filter(
+        if "reaped" in value:
+            q |= Q(
                 status=JobResultStatusChoices.STATUS_REVOKED,
-                terminated_at__isnull=True,
+                date_terminated__isnull=True,
             )
-        return queryset
+        return queryset.filter(q)
 
     class Meta:
         model = JobResult

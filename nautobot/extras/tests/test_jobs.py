@@ -2333,8 +2333,8 @@ class JobRevokeTestCase(TransactionTestCase):
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, "REVOKED")
                 self.assertEqual(job_result.revoked_by, self.user)
-                # terminated_at should be only set when action is terminate
-                self.assertIsNone(job_result.terminated_at)
+                # date_terminated should be only set when action is terminate
+                self.assertIsNone(job_result.date_terminated)
 
     # ------------------------------------------------------------------ #
     # Kill path: PENDING/STARTED + worker present -> SIGKILL sent.
@@ -2360,7 +2360,7 @@ class JobRevokeTestCase(TransactionTestCase):
                 # without a real worker, so we can verify the metadata was stamped but
                 # not the eventual status transition.
                 self.assertEqual(job_result.revoked_by, self.user)
-                self.assertIsNotNone(job_result.terminated_at)
+                self.assertIsNotNone(job_result.date_terminated)
                 self.assertTrue(
                     any(f"Job {job_result.pk} terminated by {self.user}" in msg for msg in log_cm.output),
                     f"Expected an info log about the termination succeced, got: {log_cm.output}",
@@ -2395,7 +2395,7 @@ class JobRevokeTestCase(TransactionTestCase):
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, status)
                 self.assertIsNone(job_result.revoked_by)
-                self.assertIsNone(job_result.terminated_at)
+                self.assertIsNone(job_result.date_terminated)
 
                 self.assertTrue(
                     any(f"Termination failed for {job_result.pk}" in msg for msg in log_cm.output),
@@ -2437,7 +2437,7 @@ class JobRevokeTestCase(TransactionTestCase):
                 self.assertIsNone(job_result.date_done)
                 self.assertIsNone(job_result.revoked_by)
                 self.assertFalse(job_result.revoked_by_user_name)
-                self.assertIsNone(job_result.terminated_at)
+                self.assertIsNone(job_result.date_terminated)
 
                 self.assertTrue(
                     any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),

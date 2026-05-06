@@ -3521,7 +3521,7 @@ class JobResultUIViewSet(
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "terminated_at",
+                "date_terminated",
                 "revoked_by_user_name",
             ],
         ),

@@ -1,0 +1,7 @@
+Added `nautobot_job_queue_type` to JobResult `celery_kwargs` dict.
+Added `JobRevocationTypeChoices` choices.
+Added `Revocation` ObjectFieldsPanel to Advanced Tab in detail JobResult view.
+Added `revoke-job` endpoint to terminate a running or pending Job, or reap it if its worker is gone.
+Added column `Revocation Type` to JobResult list view to see what kind od revoke type was executed.
+Added filter `Revocation Type` to JobResult list view to can filter by revoke type Terminated or Reaped.
+Added `Revoke Job` button to JobResult detail view to can execute revoke action.

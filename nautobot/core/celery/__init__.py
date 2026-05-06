@@ -6,16 +6,16 @@ import shutil
 import sys
 
 from celery import bootsteps, Celery, shared_task, signals
-import redis
-from celery.worker.state import revoked as revoked_tasks
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
+from celery.worker.state import revoked as revoked_tasks
 from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
+import redis
 
 from nautobot import add_failure_logger, add_success_logger
 from nautobot.core.branching import BranchContext

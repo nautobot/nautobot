@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
 
-from nautobot.core.celery import app as celery_app
 from celery.exceptions import TaskRevokedError
 from django.db import transaction
 from django.utils import timezone
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobQueueTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobResult
@@ -216,8 +216,8 @@ class CeleryStrategy(JobRevokeStrategy):
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
             changed = self._apply_termination_metadata(job_result, user, now)
 
-            job_result.terminated_at = now
-            changed.add("terminated_at")
+            job_result.date_terminated = now
+            changed.add("date_terminated")
 
             job_result.save(update_fields=list(changed))
 
