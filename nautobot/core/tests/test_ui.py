@@ -196,7 +196,7 @@ class ObjectFieldsPanelTest(TestCase):
 
         panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=False)
         with self.assertRaises(AttributeError):
-            data = panel.get_data(context)
+            panel.get_data(context)
 
 
 class BaseTextPanelTest(TestCase):

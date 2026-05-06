@@ -17,7 +17,6 @@ class ApprovalWorkflowTestMixin:
     @classmethod
     def setUpTestData(cls):
         scheduled_job_ct = ContentType.objects.get_for_model(models.ScheduledJob)
-        scheduled_jobs = list(models.ScheduledJob.objects.all())
         cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
         cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
         users = list(User.objects.all())

@@ -251,7 +251,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         skip_user_and_global_default_saved_view = False
         if self.filterset is not None:
             skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
-                request.GET.copy(),
+                filter_params,
                 self.non_filter_params,
                 self.filterset(),
             )
