@@ -6,6 +6,8 @@ import shutil
 import sys
 
 from celery import bootsteps, Celery, shared_task, signals
+import redis
+from celery.worker.state import revoked as revoked_tasks
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
 from django.apps import apps
@@ -58,8 +60,6 @@ def _get_celery_queue_items(queue_name):
     Returns:
         A list of task ID strings, in queue order (head to tail).
     """
-    import redis
-
     r = redis.Redis.from_url(app.conf.broker_url, decode_responses=True)
     raw_tasks = r.lrange(queue_name, 0, -1)
 
@@ -86,7 +86,6 @@ def load_revoked_on_start(sender=None, **kwargs):
 
     Connected via the `worker_ready` signal; not intended to be called directly.
     """
-    from celery.worker.state import revoked as revoked_tasks
 
     from nautobot.extras.jobs import JobResult
 

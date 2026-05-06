@@ -2409,7 +2409,8 @@ class JobRevokeTestCase(TransactionTestCase):
                 )
 
     @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
-    def test_perform_termination_skips_when_job_in_ready_state(self, mock_should_reap):
+    @mock.patch("nautobot.extras.jobs_revoke.celery_app.control.revoke")
+    def test_perform_termination_skips_when_job_in_ready_state(self, mock_celery_revoke, mock_should_reap):
         """When the job is already terminal, perform_termination must not
         send a revoke or touch the JobResult fields."""
         mock_should_reap.return_value = False  # force the kill path
@@ -2419,13 +2420,12 @@ class JobRevokeTestCase(TransactionTestCase):
                 job_result = self._make_job_result(status)
 
                 with (
-                    mock.patch.object(self.strategy, "get_celery_app") as mock_get_app,
                     self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
                 ):
                     result = self.strategy.revoke(job_result, self.user)
 
                 # No celery app should have been fetched.
-                mock_get_app.assert_not_called()
+                mock_celery_revoke.assert_not_called()
 
                 # Returned dict reports success with no error.
                 self.assertEqual(result["job_result"], job_result)

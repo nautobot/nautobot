@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
 
+from nautobot.core.celery import app as celery_app
 from celery.exceptions import TaskRevokedError
 from django.db import transaction
 from django.utils import timezone
@@ -133,14 +134,6 @@ class JobRevokeStrategy(ABC):
 class CeleryStrategy(JobRevokeStrategy):
     "Termination strategy for jobs running on Celery workers."
 
-    def get_celery_app(self):
-        """Return the Nautobot Celery app."""
-
-        # TBD: move it to constructor?
-        from nautobot.core.celery import app
-
-        return app
-
     def is_alive(self, job_result) -> bool:
         """
         Check whether a Celery worker is currently aware of (and likely processing)
@@ -164,7 +157,6 @@ class CeleryStrategy(JobRevokeStrategy):
         """
         try:
             task_id = str(job_result.pk)
-            celery_app = self.get_celery_app()
             replies = celery_app.control.inspect().query_task([task_id])
         except Exception as e:
             logger.warning("Failed to query Celery workers: %s", e)
@@ -219,7 +211,6 @@ class CeleryStrategy(JobRevokeStrategy):
             return
 
         task_id = str(job_result.pk)
-        celery_app = self.get_celery_app()
         with transaction.atomic():
             now = timezone.now()
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
