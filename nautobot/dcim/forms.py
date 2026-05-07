@@ -4636,11 +4636,12 @@ class CableForm(NautobotModelForm):
         # Determine the cable type (saved, or being submitted)
         if self.instance and self.instance.present_in_database and self.instance.cable_type_id:
             cable_type = self.instance.cable_type
-        elif self.data and self.data.get("cable_type"):
+        elif self.initial and self.initial.get("cable_type"):
             try:
-                cable_type = CableType.objects.get(pk=self.data["cable_type"])
+                # TODO permissions restriction on cable_type lookup?
+                cable_type = CableType.objects.get(pk=self.initial["cable_type"])
             except (CableType.DoesNotExist, ValueError):
-                pass
+                pass  # TODO?
 
         # Determine connector counts per side
         if cable_type:
@@ -4734,8 +4735,29 @@ class CableForm(NautobotModelForm):
         a_enriched = {conn["connector"]: _enrich(conn) for conn in info["a_side"]}
         b_enriched = {conn["connector"]: _enrich(conn) for conn in info["b_side"]}
 
-        if info["is_breakout"] and self.instance and self.instance.cable_type_id:
-            cable_type = self.instance.cable_type
+        cable_type = None
+        if info["is_breakout"]:
+            if self.instance and self.instance.cable_type_id:
+                cable_type = self.instance.cable_type
+            elif self.initial and self.initial.get("cable_type"):
+                try:
+                    # TODO: permissions restrictions on CableType lookup?
+                    cable_type = CableType.objects.get(pk=self.initial["cable_type"])
+                except (CableType.DoesNotExist, ValueError):
+                    pass  # TODO?
+
+        if cable_type is None:
+            rows = [
+                {
+                    "a": a_enriched.get(1, {}),
+                    "b": b_enriched.get(1, {}),
+                    "a_rowspan": 1,
+                    "b_rowspan": 1,
+                    "_ac": 1,
+                    "_bc": 1,
+                }
+            ]
+        else:
             a_to_b = {}
             b_to_a = {}
             for entry in cable_type.mapping:
@@ -4764,17 +4786,6 @@ class CableForm(NautobotModelForm):
                         "_bc": bc,
                     }
                 )
-        else:
-            rows = [
-                {
-                    "a": a_enriched.get(1, {}),
-                    "b": b_enriched.get(1, {}),
-                    "a_rowspan": 1,
-                    "b_rowspan": 1,
-                    "_ac": 1,
-                    "_bc": 1,
-                }
-            ]
 
         return {
             "rows": rows,

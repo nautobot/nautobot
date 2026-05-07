@@ -5534,19 +5534,12 @@ class CableUIViewSet(NautobotUIViewSet):
     )
     def lane_form_new(self, request):
         """HTMX endpoint: return the lane termination form partial for a new (unsaved) cable."""
-        cable = Cable()
-        return self._render_lane_form(request, cable)
+        return self._render_lane_form(request, cable=None)
 
     def _render_lane_form(self, request, cable):
-        """Shared: render the lane form partial with an optional breakout template override."""
+        """Shared: render the lane form partial with an optional cable-type override."""
         cable_type_id = request.GET.get("cable_type")
-        if cable_type_id:
-            try:
-                cable.cable_type = CableType.objects.get(pk=cable_type_id)
-            except CableType.DoesNotExist:
-                pass
-
-        initial = {}
+        initial = {"cable_type": cable_type_id}
         for key in ("termination_a_type", "termination_a_id"):
             if request.GET.get(key):
                 initial[key] = request.GET[key]
