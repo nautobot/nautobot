@@ -1,0 +1,1 @@
+Updated dependency `gitpython` to `>=3.1.49,<3.2` to mitigate CVE-2026-44243 and CVE-2026-44244.
