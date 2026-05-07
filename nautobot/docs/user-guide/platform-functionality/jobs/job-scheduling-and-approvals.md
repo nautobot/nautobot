@@ -25,7 +25,7 @@ Once a job has been scheduled, the schedule can be deleted by navigating to `Job
 
 ### Assuming Ownership of a Scheduled Job
 
-Each scheduled job is owned by the user that created it. If that user is removed, the schedule can no longer run and is automatically disabled with a state of `Errored` the next time it would have fired; a failed `JobResult` is also recorded.
+Each scheduled job is owned by, and runs as, the user that created it. If that user is removed, the schedule can no longer run and is automatically disabled with a state of `Errored` the next time it would have fired; a failed `JobResult` is also recorded.
 
 Ownership of a scheduled job can be transferred at any time from the `Assume Ownership` action in the Actions dropdown on the Scheduled Job detail view. Clicking it reassigns the schedule to the current user. If the scheduled job was previously disabled due to a failure, the button also re-enables it, and resets its state to `Active`.
 
