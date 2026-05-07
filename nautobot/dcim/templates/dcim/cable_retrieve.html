@@ -123,9 +123,7 @@
             <span class="float-end">{{ object.cable_type|hyperlinked_object }}</span>
         </div>
         <div class="card-body">
-            {% with diagram_svg=object.get_mapping_diagram_svg %}
-                {% include 'dcim/inc/breakout_mapping_diagram.html' %}
-            {% endwith %}
+            {{ object.get_mapping_diagram_svg }}
         </div>
     </div>
     {% endif %}
