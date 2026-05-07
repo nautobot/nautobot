@@ -815,7 +815,6 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
 
 
 class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    # TODO: termination_a_type/termination_b_type are a bit redundant with the full termination_a/termination_b dicts
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)

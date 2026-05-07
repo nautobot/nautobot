@@ -2,7 +2,7 @@ import contextlib
 import logging
 import uuid
 
-from django.contrib.contenttypes.fields import GenericRel
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -538,10 +538,48 @@ class ValidatedModelSerializer(BaseModelSerializer):
         local_attrs.pop("relationships", None)
         local_attrs.pop("tags", None)
 
-        # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
             if isinstance(field, models.ManyToManyField):
+                # Skip ManyToManyFields
                 local_attrs.pop(field.name, None)
+            elif isinstance(field, GenericForeignKey):
+                # Only validate the GFK target if this request is actually assigning it. A partial
+                # update that touches neither ct_field nor fk_field leaves the existing reference
+                # untouched, and re-checking parent view permission would block legitimate edits to
+                # unrelated fields.
+                ct_provided = field.ct_field in local_attrs
+                fk_provided = field.fk_field in local_attrs
+                if not ct_provided and not fk_provided:
+                    continue
+                # For a partial update that changes only one side, fall back to the saved instance
+                # for the unchanged side so we validate the resulting target.
+                ct = local_attrs.get(field.ct_field)
+                fk = local_attrs.get(field.fk_field)
+                if self.instance is not None:
+                    if ct is None:
+                        ct = getattr(self.instance, field.ct_field, None)
+                    if fk is None:
+                        fk = getattr(self.instance, field.fk_field, None)
+                if ct is None or fk is None:
+                    # Creation with one side missing: required-field validation will flag it downstream.
+                    continue
+                ct_model = ct.model_class()
+                if ct_model is None:
+                    raise ValidationError({field.ct_field: "Invalid content-type"})
+                qs = ct_model.objects
+                # Layer view permission on top of the existence check when we have an authenticated
+                # request; programmatic use without a request still gets the existence check.
+                if (
+                    "request" in self.context
+                    and self.context["request"]
+                    and self.context["request"].user
+                    and hasattr(qs, "restrict")
+                ):
+                    qs = qs.restrict(self.context["request"].user, "view")
+                try:
+                    qs.get(pk=fk)
+                except ObjectDoesNotExist as e:
+                    raise ValidationError({field.fk_field: "Object not found"}) from e
 
         # Run clean() on an instance of the model
         if self.instance is None:

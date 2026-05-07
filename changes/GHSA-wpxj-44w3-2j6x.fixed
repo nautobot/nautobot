@@ -1,0 +1,3 @@
+Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
+Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
+Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
