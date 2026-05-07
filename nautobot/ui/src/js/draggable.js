@@ -20,7 +20,7 @@ export const initializeDraggable = () => {
    * are enumerable but not readable. Hence, store drag details in this `dragDataRef.current` React-style ref object.
    * Source: https://html.spec.whatwg.org/multipage/dnd.html#the-drag-data-store
    */
-  const dragDataRef = { current: { draggable: null, insertBefore: {} } };
+  const dragDataRef = { current: { draggable: null, insert: {} } };
 
   const onMouseDown = createHandleOnMouseListener(true);
   const onMouseUp = createHandleOnMouseListener(false);
@@ -33,7 +33,13 @@ export const initializeDraggable = () => {
       dragDataRef.current = {
         ...dragDataRef.current,
         draggable: event.target,
-        insertBefore: { ...dragDataRef.current.insertBefore, [event.target.id]: event.target.nextElementSibling },
+        insert: {
+          ...dragDataRef.current.insert,
+          [event.target.id]: {
+            after: event.target.nextElementSibling ? null : event.target,
+            before: event.target.nextElementSibling,
+          },
+        },
       };
     }
   };
@@ -44,19 +50,18 @@ export const initializeDraggable = () => {
       draggable.classList.remove(DRAGGING_CLASS);
       draggable.setAttribute('draggable', 'false');
 
-      // When dragging is finished, remove `dragData` `draggable` element and its `insertBefore` data.
-      const { [draggable.id]: insertBefore, ...nextDragDataInsertBefore } = dragDataRef.current.insertBefore;
-      dragDataRef.current = { ...dragDataRef.current, draggable: null, insertBefore: nextDragDataInsertBefore };
+      // When dragging is finished, remove `dragData` `draggable` element and its `insert` data.
+      const { [draggable.id]: insert, ...nextDragDataInsert } = dragDataRef.current.insert;
+      dragDataRef.current = { ...dragDataRef.current, draggable: null, insert: nextDragDataInsert };
 
       // Remove drop indicator by resetting its `inset` CSS property to initial 0 size.
       const draggableContainer = closest(event.target, DRAGGABLE_CONTAINER_CLASS);
       draggableContainer.style.setProperty('--drop-indicator-inset', '0 0 100% 100%');
 
-      if (insertBefore) {
-        draggableContainer.insertBefore(draggable, insertBefore);
-      } else if (insertBefore === null) {
-        // Add to end of the list.
-        draggableContainer.append(draggable);
+      if (insert.after && insert.after !== draggable && insert.after.nextElementSibling !== draggable) {
+        insert.after.after(draggable);
+      } else if (insert.before && insert.before !== draggable && insert.before.previousElementSibling !== draggable) {
+        insert.before.before(draggable);
       }
     }
   };
@@ -73,42 +78,47 @@ export const initializeDraggable = () => {
     if (draggable && draggableContainer) {
       event.preventDefault();
 
-      const insertBefore = (() => {
-        // Were we dropped onto another draggable?
-        const dropDraggable = closest(event.target, DRAGGABLE_CLASS);
-        if (dropDraggable) {
-          /*
-           * Were we dropped in the top half or the bottom half of the target draggable?
-           *   - Top half - insert before that draggable.
-           *   - Bottom half - insert after that draggable.
-           */
-          const { height, top } = dropDraggable.getBoundingClientRect();
-          const isTopHalf = event.clientY < top + height / 2;
-          return isTopHalf ? dropDraggable : dropDraggable.nextElementSibling;
-        }
+      const insert = (() => {
+        const findNearestElement = (selector) =>
+          [...draggableContainer.querySelectorAll(selector)].reduce(
+            ({ nearestElement, nearestElementDistance }, element) => {
+              const { bottom, left, right, top } = element.getBoundingClientRect();
 
-        // We were dropped into empty space - find the closest draggable by geometry.
-        return [...draggableContainer.children]
-          .filter((child) => child.classList.contains(DRAGGABLE_CLASS))
-          .find((child) => {
-            const { left, right, top } = child.getBoundingClientRect();
-            // Are we in the correct column?
-            if (left > event.clientX) {
-              // Found the first child that is too far to the right, so we insert before that child.
-              return true;
-            } else if (right >= event.clientX) {
-              // Child is in the correct column.
-              if (top >= event.clientY) {
-                // Found the first child in this column we were dropped above, so we insert before that child.
-                return true;
-              }
-            }
-            return false;
-          });
+              const distanceX = Math.min(Math.abs(event.clientX - left), Math.abs(event.clientX - right));
+              const distanceY = Math.min(Math.abs(event.clientY - bottom), Math.abs(event.clientY - top));
+              // eslint-disable-next-line id-length
+              const distance = { normalized: Math.sqrt(distanceX ** 2 + distanceY ** 2), x: distanceX, y: distanceY };
+
+              return distance.normalized < nearestElementDistance.normalized
+                ? { nearestElement: element, nearestElementDistance: distance }
+                : { nearestElement, nearestElementDistance };
+            },
+            // eslint-disable-next-line id-length
+            { nearestElement: null, nearestElementDistance: { normalized: Infinity, x: Infinity, y: Infinity } },
+          );
+
+        const nearestElementSelector = `.${DRAGGABLE_CLASS}`;
+
+        const draggableAncestor = event.target.closest(nearestElementSelector);
+
+        const nearestDraggable = draggableAncestor ?? findNearestElement(nearestElementSelector).nearestElement;
+        const nearestDraggableRect = nearestDraggable.getBoundingClientRect();
+        const nearestDraggableCenterCords = {
+          x: nearestDraggableRect.left + nearestDraggableRect.width / 2, // eslint-disable-line id-length
+          y: nearestDraggableRect.top + nearestDraggableRect.height / 2, // eslint-disable-line id-length
+        };
+
+        const isBelowTheNearestDraggable = nearestDraggableCenterCords.y < event.clientY;
+        return isBelowTheNearestDraggable
+          ? { after: nearestDraggable, before: null }
+          : { after: null, before: nearestDraggable };
       })();
 
-      // Only re-calculate drop indicator position when `insertBefore` element has changed, otherwise skip it.
-      if (insertBefore !== dragDataRef.current.insertBefore[draggable.id]) {
+      // Re-calculate drop indicator position when `insert` `after` or `before` element has changed, otherwise skip it.
+      if (
+        insert.after !== dragDataRef.current.insert[draggable.id]?.after ||
+        insert.before !== dragDataRef.current.insert[draggable.id]?.before
+      ) {
         // Calculate the drop indicator line geometry in relation to its offset parent (nearest positioned ancestor).
         draggableContainer.style.setProperty(
           '--drop-indicator-inset',
@@ -116,41 +126,40 @@ export const initializeDraggable = () => {
             const HEIGHT = '0.125rem'; // Constant drop indicator height = `0.125rem` (`2px`).
             const heightHalf = `${parseFloat(HEIGHT) / 2}rem`;
 
-            if (insertBefore) {
-              const bottom = `calc(${insertBefore.offsetParent.offsetHeight - insertBefore.offsetTop}px - ${heightHalf})`;
-              const left = `${insertBefore.offsetLeft}px`;
-              const right = `${insertBefore.offsetParent.offsetWidth - (insertBefore.offsetLeft + insertBefore.offsetWidth)}px`;
-              const top = `calc(${insertBefore.offsetTop}px - ${heightHalf})`;
+            if (insert.after) {
+              const bottom = `calc(${insert.after.offsetParent.offsetHeight - (insert.after.offsetTop + insert.after.offsetHeight)}px - ${heightHalf})`;
+              const left = `${insert.after.offsetLeft}px`;
+              const right = `${insert.after.offsetParent.offsetWidth - (insert.after.offsetLeft + insert.after.offsetWidth)}px`;
+              const top = `calc(${insert.after.offsetTop + insert.after.offsetHeight}px - ${heightHalf})`;
               return `${top} ${right} ${bottom} ${left}`;
             }
 
-            /*
-             * When `insertBefore` is explicitly `null`, it means there is no node to insert the element *before*, so
-             * instead insert it *after* the last child in the container, effectively at the end of the list.
-             */
-            const insertAfter = draggableContainer.lastElementChild;
-            const bottom = `calc(${insertAfter.offsetParent.offsetHeight - (insertAfter.offsetTop + insertAfter.offsetHeight)}px - ${heightHalf})`;
-            const left = `${insertAfter.offsetLeft}px`;
-            const right = `${insertAfter.offsetParent.offsetWidth - (insertAfter.offsetLeft + insertAfter.offsetWidth)}px`;
-            const top = `calc(${insertAfter.offsetTop + insertAfter.offsetHeight}px - ${heightHalf})`;
-            return `${top} ${right} ${bottom} ${left}`;
+            if (insert.before) {
+              const bottom = `calc(${insert.before.offsetParent.offsetHeight - insert.before.offsetTop}px - ${heightHalf})`;
+              const left = `${insert.before.offsetLeft}px`;
+              const right = `${insert.before.offsetParent.offsetWidth - (insert.before.offsetLeft + insert.before.offsetWidth)}px`;
+              const top = `calc(${insert.before.offsetTop}px - ${heightHalf})`;
+              return `${top} ${right} ${bottom} ${left}`;
+            }
+
+            return '0 0 100% 100%';
           })(),
         );
       }
 
       dragDataRef.current = {
         ...dragDataRef.current,
-        insertBefore: { ...dragDataRef.current.insertBefore, [draggable.id]: insertBefore ?? null },
+        insert: { ...dragDataRef.current.insert, [draggable.id]: insert ?? null },
       };
     } else if (draggable && !draggableContainer) {
       /*
-       * Remove the `insertBefore` node stored for this draggable element and the drop indicator from its draggable
-       * container. To get valid container, traverse the tree up from the currently dragged element (`draggable`). This
-       * is partially similar to (but not the same as!) `onDragEnd` event handler above.
+       * Remove the `insert` node stored for this draggable element and the drop indicator from its draggable container.
+       * To get valid container, traverse the tree up from the currently dragged element (`draggable`). This is
+       * partially similar to (but not the same as!) `onDragEnd` event handler above.
        */
       // eslint-disable-next-line id-length, no-unused-vars
-      const { [draggable.id]: _, ...nextDragDataInsertBefore } = dragDataRef.current.insertBefore;
-      dragDataRef.current = { ...dragDataRef.current, insertBefore: nextDragDataInsertBefore };
+      const { [draggable.id]: _, ...nextDragDataInsert } = dragDataRef.current.insert;
+      dragDataRef.current = { ...dragDataRef.current, insert: nextDragDataInsert };
 
       const validDraggableContainer = closest(draggable, DRAGGABLE_CONTAINER_CLASS);
       validDraggableContainer.style.setProperty('--drop-indicator-inset', '0 0 100% 100%');
