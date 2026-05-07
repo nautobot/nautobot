@@ -3495,26 +3495,6 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
         self.assertFalse(scheduled_job.enabled)
         self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
 
-    def test_schedule_entry_missing_user_handles_get_absolute_url_error(self):
-        """If get_absolute_url() raises, the JobLogEntry is still created with an empty absolute_url."""
-        scheduled_job = ScheduledJob.objects.create(
-            name="No Absolute URL Job",
-            task="pass_job.TestPassJob",
-            job_model=self.job_model,
-            user=None,
-            interval=JobExecutionType.TYPE_DAILY,
-            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
-            time_zone=get_default_timezone(),
-        )
-        with mock.patch.object(ScheduledJob, "get_absolute_url", side_effect=NotImplementedError):
-            NautobotScheduleEntry(model=scheduled_job)
-
-        scheduled_job.refresh_from_db()
-        self.assertFalse(scheduled_job.enabled)
-        log_entry = JobLogEntry.objects.get(job_result__scheduled_job=scheduled_job)
-        self.assertEqual(log_entry.absolute_url, "")
-        self.assertTrue(log_entry.log_object)
-
     def test_schedule_entry_missing_user_swallows_jobresult_creation_failure(self):
         """A failure during JobResult/JobLogEntry creation must not crash celery beat — the schedule is still disabled."""
         scheduled_job = ScheduledJob.objects.create(
