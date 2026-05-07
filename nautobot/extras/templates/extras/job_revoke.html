@@ -9,7 +9,7 @@
 {% block message %}
     <p>Are you sure you want to revoke <strong>{{ object.name }}</strong>?</p>
     <p>
-        As of {{ timestamp }} this job is: {% if job_is_running %}<strong>RUNNING</strong>{% else %}<strong>NOT RUNNING</strong>{% endif %}
+        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is: {% if job_is_running %}<strong>RUNNING</strong>{% else %}<strong>NOT RUNNING</strong>{% endif %}
     </p>
     <p>
         Would you like revoke the job? Which will <strong>REAP</strong> or <strong>TERMINATE</strong> the job.
