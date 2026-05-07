@@ -119,7 +119,7 @@ class CableTerminationFieldSet:
         Produce form fields for selecting a cable termination.
 
         Args:
-            prefix: Field name prefix (e.g., "lane_1_a")
+            prefix: Field name prefix (e.g., "a_conn_1")
             term_type: Termination type string (e.g., "interface"). Auto-detected if not provided.
             existing_term: Existing termination object for pre-population.
 
@@ -138,7 +138,8 @@ class CableTerminationFieldSet:
         fields = {}
         initial = {}
 
-        # Type selector field
+        # Type selector field. The form/view layer is expected to attach any HTMX-related widget
+        # attrs after the fact — this fieldset is independent of any specific UI flow.
         type_field_name = f"{prefix}_type"
         fields[type_field_name] = django_forms.ChoiceField(
             choices=TERMINATION_TYPE_CHOICES,
@@ -156,6 +157,8 @@ class CableTerminationFieldSet:
             label=config["parent_label"],
             required=False,
             initial=parent if parent else None,
+            embedded_create=False,  # TODO: disabled for now for consistency with fields[term_field_name] below
+            embedded_search=True,
         )
         if parent:
             initial[parent_field_name] = parent.pk
@@ -178,6 +181,8 @@ class CableTerminationFieldSet:
             disabled_indicator="cable",
             initial=existing_term if existing_term else None,
             query_params=query_params,
+            embedded_create=False,  # TODO: disabled for now as ComponentCreateView doesn't work properly as embedded
+            embedded_search=True,
         )
         if existing_term:
             initial[term_field_name] = existing_term.pk

@@ -23,14 +23,14 @@
                 <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end p-3">
                     {% with a=row.a %}
                         {% if conns.is_breakout %}
-                            <h6><strong>A{{ a.connector }}</strong>{% if a.lanes > 1 %} <span class="badge bg-secondary">{{ a.lanes }} lanes</span>{% endif %}</h6>
-                        {% else %}
-                            <h6 class="text-muted">Side A</h6>
+                            <h4><strong>A{{ a.connector }}</strong>{% if a.lanes > 1 %} <span class="badge bg-secondary">{{ a.lanes }} lanes</span>{% endif %}</h4>
                         {% endif %}
                         <div id="a_conn_{{ a.connector }}_fields">
                             {% render_field a.type_field %}
-                            {% render_field a.parent_field %}
-                            {% render_field a.term_field %}
+                            <div id="a_conn_{{ a.connector }}_termination_fields">
+                                {% render_field a.parent_field %}
+                                {% render_field a.term_field %}
+                            </div>
                         </div>
                     {% endwith %}
                 </td>
@@ -39,14 +39,14 @@
                 <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top p-3">
                     {% with b=row.b %}
                         {% if conns.is_breakout %}
-                            <h6><span class="mdi mdi-arrow-right text-muted"></span> <strong>B{{ b.connector }}</strong>{% if b.lanes > 1 %} <span class="badge bg-secondary">{{ b.lanes }} lanes</span>{% endif %}</h6>
-                        {% else %}
-                            <h6 class="text-muted">Side B</h6>
+                            <h4><strong>B{{ b.connector }}</strong>{% if b.lanes > 1 %} <span class="badge bg-secondary">{{ b.lanes }} lanes</span>{% endif %}</h4>
                         {% endif %}
                         <div id="b_conn_{{ b.connector }}_fields">
                             {% render_field b.type_field %}
-                            {% render_field b.parent_field %}
-                            {% render_field b.term_field %}
+                            <div id="b_conn_{{ b.connector }}_termination_fields">
+                                {% render_field b.parent_field %}
+                                {% render_field b.term_field %}
+                            </div>
                         </div>
                     {% endwith %}
                 </td>

@@ -5513,13 +5513,25 @@ class CableUIViewSet(NautobotUIViewSet):
             queryset = queryset.prefetch_related(None)
         return queryset
 
-    @action(detail=True, methods=["get"], url_path="lane-form", custom_view_base_action="view")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="lane-form",
+        url_name="lane_form",
+        custom_view_base_action="view",
+    )
     def lane_form(self, request, pk=None):
         """HTMX endpoint: return the lane termination form partial for an existing cable."""
         cable = self.get_object()
         return self._render_lane_form(request, cable)
 
-    @action(detail=False, methods=["get"], url_path="lane-form-new", custom_view_base_action="view")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-form-new",
+        url_name="lane_form_new",
+        custom_view_base_action="view",
+    )
     def lane_form_new(self, request):
         """HTMX endpoint: return the lane termination form partial for a new (unsaved) cable."""
         cable = Cable()
@@ -5542,23 +5554,26 @@ class CableUIViewSet(NautobotUIViewSet):
         form = forms.CableForm(instance=cable, initial=initial)
         return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
 
-    @action(detail=False, methods=["get"], url_path="lane-side-fields-new", custom_view_base_action="view")
-    def lane_side_fields_new(self, request):
-        """HTMX endpoint (no-pk variant): return parent+termination fields when type changes."""
-        return self._render_lane_side_fields(request)
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-side-fields",
+        url_name="lane_side_fields",
+        custom_view_base_action="view",
+    )
+    def lane_side_fields(self, request):
+        """HTMX endpoint: return parent+termination fields for a specific lane side when the type changes.
 
-    @action(detail=True, methods=["get"], url_path="lane-side-fields", custom_view_base_action="view")
-    def lane_side_fields(self, request, pk=None):
-        """HTMX endpoint: return parent+termination fields for a specific lane side when type changes."""
-        return self._render_lane_side_fields(request)
-
-    def _render_lane_side_fields(self, request):
+        The current cable's pk is not needed since the response only depends on the selected
+        termination type, side, and connector — not on any existing cable state.
+        """
         from nautobot.dcim.termination_field_set import CableTerminationFieldSet
 
         connector = request.GET.get("connector", "1")
         side = request.GET.get("side", "a")
-        term_type = request.GET.get("type", "interface")
         prefix = f"{side}_conn_{connector}"
+        # HTMX-only endpoint: the requesting type select sends its value as `<prefix>_type` via hx-include.
+        term_type = request.GET.get(f"{prefix}_type", "interface")
 
         fieldset = CableTerminationFieldSet()
         result = fieldset.get_fields(prefix, term_type=term_type)

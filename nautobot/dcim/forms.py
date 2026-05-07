@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 
@@ -6,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.urls import reverse
 from timezone_field import TimeZoneFormField
 
 from nautobot.circuits.models import Circuit, CircuitTermination, Provider
@@ -4602,6 +4604,27 @@ class CableForm(NautobotModelForm):
                 "Only cables with interface, front port, rear port, or circuit termination types support breakout."
             )
 
+        # Resolve HTMX endpoint URLs. The lane-form endpoint differs by saved-ness (renders the
+        # current cable's lanes); lane-side-fields is independent of any cable.
+        if self.instance.present_in_database:
+            self._lane_form_url = reverse("dcim:cable_lane_form", kwargs={"pk": self.instance.pk})
+        else:
+            self._lane_form_url = reverse("dcim:cable_lane_form_new")
+        self._lane_side_fields_url = reverse("dcim:cable_lane_side_fields")
+
+        # Wire up HTMX on the cable_type select: changing it reloads the entire lane form panel.
+        # (Re-initializing form widgets on the swapped content is handled by a body-level
+        # htmx:afterSwap listener in the cable update template.)
+        self.fields["cable_type"].widget.attrs.update(
+            {
+                "hx-get": self._lane_form_url,
+                "hx-trigger": "change",
+                "hx-target": "#lane-terminations-container",
+                "hx-swap": "innerHTML",
+                "hx-include": "this",
+            }
+        )
+
         self._init_lane_fields()
 
     def _init_lane_fields(self):
@@ -4661,33 +4684,36 @@ class CableForm(NautobotModelForm):
             "b_positions": b_positions,
         }
 
-        for c in range(1, a_connectors + 1):
-            term = existing_a.get(c)
-            submitted_type = self.data.get(f"a_conn_{c}_type") if self.data else None
-            result = fieldset.get_fields(f"a_conn_{c}", existing_term=term, term_type=submitted_type)
-            self.fields.update(result["fields"])
-            self.initial.update(result["initial"])
-            self.connection_info["a_side"].append(
-                {
-                    "connector": c,
-                    "lanes": a_positions,
-                    "meta": result["meta"],
-                }
-            )
-
-        for c in range(1, b_connectors + 1):
-            term = existing_b.get(c)
-            submitted_type = self.data.get(f"b_conn_{c}_type") if self.data else None
-            result = fieldset.get_fields(f"b_conn_{c}", existing_term=term, term_type=submitted_type)
-            self.fields.update(result["fields"])
-            self.initial.update(result["initial"])
-            self.connection_info["b_side"].append(
-                {
-                    "connector": c,
-                    "lanes": b_positions,
-                    "meta": result["meta"],
-                }
-            )
+        for side, connector_count, existing, side_info_key in (
+            ("a", a_connectors, existing_a, "a_side"),
+            ("b", b_connectors, existing_b, "b_side"),
+        ):
+            for c in range(1, connector_count + 1):
+                prefix = f"{side}_conn_{c}"
+                term = existing.get(c)
+                submitted_type = self.data.get(f"{prefix}_type") if self.data else None
+                result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type)
+                self.fields.update(result["fields"])
+                self.initial.update(result["initial"])
+                # Wire HTMX onto the type selector: changing it fetches fresh parent + termination
+                # fields and swaps them into this lane's `<prefix>_termination_fields` container.
+                self.fields[result["meta"]["type_field"]].widget.attrs.update(
+                    {
+                        "hx-get": self._lane_side_fields_url,
+                        "hx-trigger": "change",
+                        "hx-target": f"#{prefix}_termination_fields",
+                        "hx-swap": "innerHTML",
+                        "hx-include": "this",
+                        "hx-vals": json.dumps({"connector": str(c), "side": side}),
+                    }
+                )
+                self.connection_info[side_info_key].append(
+                    {
+                        "connector": c,
+                        "lanes": a_positions if side == "a" else b_positions,
+                        "meta": result["meta"],
+                    }
+                )
 
     def get_connection_fields(self):
         """Return connection_info with BoundField objects, A-left B-right with rowspan."""
