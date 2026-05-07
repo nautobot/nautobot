@@ -143,12 +143,14 @@ In HTML there is available `render_title` helper that use the `Title` instance f
 The Breadcrumbs component creates navigation trails that help users understand their location within the application hierarchy.
 
 There are 3 main breadcrumb items classes:
+
 - `ViewNameBreadcrumbItem` - Handles breadcrumbs that are generated from Django view names using URL reversing.
 - `ModelBreadcrumbItem` - Generates breadcrumbs from Django model metadata, automatically creating appropriate URLs and labels.
 - `InstanceBreadcrumbItem` - Creates detail breadcrumbs for specific object instances, generating URLs to the object's detail page.
 - `BaseBreadcrumbItem` - Can be used to create custom breadcrumb items or to show just empty "label" within the breadcrumbs path.
 
 By default, breadcrumbs class will add to the breadcrumbs path following items:
+
 - link to the `list_url` at the beginning; label taken from model associated to this path or `title` (if in the context)
 - link to view the `object` details at the end - built-in behavior
 

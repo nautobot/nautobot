@@ -95,7 +95,7 @@ drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.15.0"
 # Git integrations for Python
-GitPython = "~3.1.47"
+GitPython = "~3.1.50"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
@@ -217,7 +217,7 @@ pylint = "~3.3.9"
 # Pylint extensions for Django
 pylint-django = "~2.6.1"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.33"
+pymarkdownlnt = "~0.9.37"
 # Combination linter and code formatter
 ruff = "~0.14.8"
 # YAML linting
