@@ -4292,8 +4292,6 @@ class ScheduledJobTestCase(
 
     def test_assume_ownership_rejected_without_run_perm_on_specific_job(self):
         """A user with extras.run_job at the model level but no per-Job run constraint match is rejected."""
-        from nautobot.users.models import ObjectPermission
-
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
         # Grant `run` on a constraint that does NOT match the schedule's job_model.
         obj_perm = ObjectPermission.objects.create(
