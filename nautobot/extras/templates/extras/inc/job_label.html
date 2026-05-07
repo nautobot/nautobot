@@ -16,6 +16,8 @@
     <span class="badge bg-body-warning">Received</span>
 {% elif result.status == "RETRY" %}
     <span class="badge bg-body-warning">Retry</span>
+{% elif not result %}
+    <span class="badge bg-body-secondary border">N/A</span>
 {% else %}
     <span class="badge bg-body-secondary border">{{ result.status }} (unrecognized)</span>
 {% endif %}

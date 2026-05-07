@@ -788,11 +788,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     @property
     def duration(self):
-        if not self.date_done:
+        if not self.date_done or not self.date_started:
             return None
 
-        # Older records may not have a date_started value, so we use date_created as a fallback.
-        duration = self.date_done - (self.date_started or self.date_created)
+        duration = self.date_done - self.date_started
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"

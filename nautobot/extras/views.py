@@ -3314,6 +3314,8 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
                 return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
         if key == "result" and value is None:
             return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        if key == "result" and obj.status != JobResultStatusChoices.STATUS_SUCCESS:
+            return helpers.placeholder(None)  # not render Result Data field
         return super().render_value(key, value, context)
 
 
