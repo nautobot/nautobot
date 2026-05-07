@@ -877,27 +877,3 @@ Nautobot version: 2.2.0a1
 Django version: 3.2.24
 Configuration file: /opt/nautobot/nautobot_config.py
 ```
-
-### `webhook_receiver`
-
-`nautobot-server webhook_receiver`
-
-Start a simple listener to display received HTTP requests.
-
-`--port PORT`  
-Optional port number (default: `9000`)
-
-`--no-headers`  
-Hide HTTP request headers.
-
-```no-highlight
-nautobot-server webhook_receiver --port 9001 --no-headers
-```
-
-Example output:
-
-```no-highlight
-Listening on port http://localhost:9000. Stop with CONTROL-C.
-```
-
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.
