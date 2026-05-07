@@ -71,14 +71,11 @@ def _record_missing_user_failure(model):
             date_started=timestamp,
             date_done=timestamp,
             traceback=err_message,
+            # We are intentionally omitting JobResult fields that are not necessary
+            # as we only need it to create a JobLogEntry to log the failure.
         )
         log_object = str(model)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH]
-        absolute_url = ""
-        if hasattr(model, "get_absolute_url"):
-            try:
-                absolute_url = model.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
-            except (AttributeError, NotImplementedError):
-                logger.debug("Scheduled job %s does not provide a usable absolute URL", model.name)
+        absolute_url = model.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
         JobLogEntry.objects.create(
             job_result=job_result,
             log_level=LogLevelChoices.LOG_ERROR,
