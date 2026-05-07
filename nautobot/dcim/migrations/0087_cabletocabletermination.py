@@ -195,4 +195,95 @@ class Migration(migrations.Migration):
                 name="dcim_cabletocabletermination_exactly_one_termination",
             ),
         ),
+        # Typed many-to-many accessors on Cable that resolve through CableToCableTermination.
+        migrations.AddField(
+            model_name="cable",
+            name="circuit_terminations",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "circuit_termination"),
+                to="circuits.circuittermination",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="console_ports",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "console_port"),
+                to="dcim.consoleport",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="console_server_ports",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "console_server_port"),
+                to="dcim.consoleserverport",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="front_ports",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "front_port"),
+                to="dcim.frontport",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="interfaces",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "interface"),
+                to="dcim.interface",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="power_feeds",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "power_feed"),
+                to="dcim.powerfeed",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="power_outlets",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "power_outlet"),
+                to="dcim.poweroutlet",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="power_ports",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "power_port"),
+                to="dcim.powerport",
+            ),
+        ),
+        migrations.AddField(
+            model_name="cable",
+            name="rear_ports",
+            field=models.ManyToManyField(
+                related_name="+",
+                through="dcim.CableToCableTermination",
+                through_fields=("cable", "rear_port"),
+                to="dcim.rearport",
+            ),
+        ),
     ]
