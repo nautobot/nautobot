@@ -4284,3 +4284,21 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
             conflicts["type_create"],
             [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
         )
+
+    def test_clean_payload_url_validation(self):
+        """`Webhook.clean()` surfaces SSRF policy violations against the `payload_url` field."""
+        cases = [
+            ("bad scheme is rejected", "ftp://example.com/", False),
+            ("loopback ip literal is rejected", "http://127.0.0.1/", False),
+            ("link-local ip literal is rejected", "http://169.254.169.254/", False),
+            ("public url is accepted", "https://example.com/hooks/abc", True),
+        ]
+        for desc, payload_url, should_pass in cases:
+            with self.subTest(desc):
+                webhook = Webhook(name="test-webhook", type_create=True, payload_url=payload_url)
+                if should_pass:
+                    webhook.clean()
+                else:
+                    with self.assertRaises(ValidationError) as ctx:
+                        webhook.clean()
+                    self.assertIn("payload_url", ctx.exception.message_dict)
