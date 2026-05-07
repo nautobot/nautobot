@@ -44,17 +44,20 @@ Nautobot now includes a general-purpose, extensible [event publication framework
 As of v2.4.0, Nautobot publishes events with the following topics:
 
 Data model manipulation:
+
 - `nautobot.create.<app>.<model>`
 - `nautobot.update.<app>.<model>`
 - `nautobot.delete.<app>.<model>`
 
 User interaction:
+
 - `nautobot.users.user.login`
 - `nautobot.users.user.logout`
 - `nautobot.users.user.change_password`
 - `nautobot.admin.user.change_password`
 
 Jobs:
+
 - `nautobot.jobs.job.started`
 - `nautobot.jobs.job.completed`
 - `nautobot.jobs.approval.approved`
