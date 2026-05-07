@@ -2,7 +2,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
 import logging
-import re
 import uuid
 
 from django.contrib import messages
@@ -27,13 +26,12 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
-from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
+from nautobot.core.forms import ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
@@ -63,6 +61,7 @@ from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
@@ -2484,7 +2483,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 class ModuleBayCommonViewSetMixin:
-    """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
+    """NautobotUIViewSet for ModuleBay views to handle templated create views."""
 
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
@@ -2578,81 +2577,13 @@ class ModuleBayCommonViewSetMixin:
             },
         )
 
-    def _bulk_rename(self, request, *args, **kwargs):
-        # TODO: This shouldn't be needed but default behavior of custom actions that don't support "GET" is broken
-        if request.method != "POST":
-            raise MethodNotAllowed(request.method)
-
-        query_pks = request.POST.getlist("pk")
-        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
-
-        # Create a new Form class from BulkRenameForm
-        class _Form(BulkRenameForm):
-            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
-
-        # selected_objects would return False; if no query_pks or invalid query_pks
-        if not selected_objects:
-            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
-            return redirect(self.get_return_url(request))
-
-        if "_preview" in request.POST or "_apply" in request.POST:
-            form = _Form(request.POST, initial={"pk": query_pks})
-            if form.is_valid():
-                try:
-                    with transaction.atomic():
-                        renamed_pks = []
-                        for obj in selected_objects:
-                            find = form.cleaned_data["find"]
-                            replace = form.cleaned_data["replace"]
-                            if form.cleaned_data["use_regex"]:
-                                try:
-                                    obj.new_name = re.sub(find, replace, obj.name)
-                                # Catch regex group reference errors
-                                except re.error:
-                                    obj.new_name = obj.name
-                            else:
-                                obj.new_name = obj.name.replace(find, replace)
-                            renamed_pks.append(obj.pk)
-
-                        if "_apply" in request.POST:
-                            for obj in selected_objects:
-                                obj.name = obj.new_name
-                                obj.save()
-
-                            # Enforce constrained permissions
-                            if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
-                                raise ObjectDoesNotExist
-
-                            messages.success(
-                                request,
-                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
-                            )
-                            return redirect(self.get_return_url(request))
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    form.add_error(None, msg)
-
-        else:
-            form = _Form(initial={"pk": query_pks})
-
-        return Response(
-            {
-                "template": "generic/object_bulk_rename.html",
-                "form": form,
-                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
-                "selected_objects": selected_objects,
-                "return_url": self.get_return_url(request),
-                "parent_name": self.get_selected_objects_parents_name(selected_objects),
-            }
-        )
-
 
 class ModuleBayTemplateUIViewSet(
     ModuleBayCommonViewSetMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
 ):
     queryset = ModuleBayTemplate.objects.all()
@@ -2672,17 +2603,6 @@ class ModuleBayTemplateUIViewSet(
             parent = selected_object.device_type or selected_object.module_type
             return parent.display
         return ""
-
-    @action(
-        detail=False,
-        methods=["GET", "POST"],
-        url_path="rename",
-        url_name="bulk_rename",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_modulebaytemplate"],
-    )
-    def bulk_rename(self, request, *args, **kwargs):
-        return self._bulk_rename(request, *args, **kwargs)
 
 
 #
@@ -5097,7 +5017,7 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
+class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectBulkRenameViewMixin):
     queryset = ModuleBay.objects.all()
     filterset_class = filters.ModuleBayFilterSet
     filterset_form_class = forms.ModuleBayFilterForm
@@ -5161,17 +5081,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             parent = selected_object.parent_device or selected_object.parent_module
             return parent.display
         return ""
-
-    @action(
-        detail=False,
-        methods=["GET", "POST"],
-        url_path="rename",
-        url_name="bulk_rename",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_modulebay"],
-    )
-    def bulk_rename(self, request, *args, **kwargs):
-        return self._bulk_rename(request, *args, **kwargs)
 
 
 #

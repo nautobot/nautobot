@@ -113,6 +113,8 @@ dependencies = [
     "pyuwsgi (>=2.0.30,<2.1)",
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
+    # Enhanced version of Python's built-in `re` module
+    "regex (>=2026.4.4)",
     # Social authentication/registration with support for many auth providers
     "social-auth-app-django (>=5.7.0,<5.8)",
     # Rendering of SVG images (for rack elevations, etc.)
