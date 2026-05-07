@@ -3170,7 +3170,14 @@ class ScheduledJobUIViewSet(
             icon="mdi-account-arrow-right",
             link_name="extras:scheduledjob_assume_ownership",
             template_path="extras/inc/scheduledjob_assume_ownership_dropdown_item.html",
-            permission_check=lambda user, obj: can_change(user, obj) and user.has_perm("extras.run_job"),
+            # Hide the button when the requester is already the owner, lacks change perms,
+            # or doesn't have run permission on the specific Job that this schedule runs.
+            permission_check=lambda user, obj: (
+                obj.user_id != user.id
+                and can_change(user, obj)
+                and obj.job_model is not None
+                and JobModel.objects.restrict(user, "run").filter(pk=obj.job_model_id).exists()
+            ),
             weight=100,
         )
     ]
@@ -3229,14 +3236,22 @@ class ScheduledJobUIViewSet(
     def assume_ownership(self, request, pk=None):
         """Reassign this scheduled job's owner to the requesting user and re-enable it."""
         obj = self.get_object()
-        if obj.user_id == request.user.id and obj.enabled and obj.state == ScheduledJobStateChoices.ACTIVE:
+        if obj.user_id == request.user.id:
             messages.info(request, f"You already own scheduled job '{obj.name}'.")
-        else:
-            obj.user = request.user
-            obj.enabled = True
-            obj.state = ScheduledJobStateChoices.ACTIVE
-            obj.validated_save()
-            messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
+            return redirect(obj.get_absolute_url())
+        # Defensively confirm the requester can run this specific Job — the UI hides the
+        # button in this case but a direct POST could still reach here.
+        if (
+            obj.job_model is None
+            or not JobModel.objects.restrict(request.user, "run").filter(pk=obj.job_model_id).exists()
+        ):
+            messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
+            return redirect(obj.get_absolute_url())
+        obj.user = request.user
+        obj.enabled = True
+        obj.state = ScheduledJobStateChoices.ACTIVE
+        obj.validated_save()
+        messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
         return redirect(obj.get_absolute_url())
 
 

@@ -4157,6 +4157,7 @@ class ScheduledJobTestCase(
             "interval": JobExecutionType.TYPE_DAILY,
             "user": self.user,
             "start_time": timezone.now(),
+            "job_model": Job.objects.get(name="TestPassJob"),
         }
         defaults.update(kwargs)
         return ScheduledJob.objects.create(name=name, **defaults)
@@ -4181,16 +4182,27 @@ class ScheduledJobTestCase(
 
     def test_detail_view_shows_assume_ownership_button_with_perms(self):
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
-        sj = self._make_scheduled_job("assume_button_with_perm")
+        other_user = User.objects.create(username="other_owner_button_visible", is_active=True)
+        sj = self._make_scheduled_job("assume_button_with_perm", user=other_user)
 
         response = self.client.get(sj.get_absolute_url())
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
         self.assertIn("Assume Ownership", body)
 
+    def test_detail_view_hides_assume_ownership_button_when_already_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_button_already_owner")  # owned by self.user
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
     def test_detail_view_hides_assume_ownership_button_without_run_job_perm(self):
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
-        sj = self._make_scheduled_job("assume_button_no_run")
+        other_user = User.objects.create(username="other_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_run", user=other_user)
 
         response = self.client.get(sj.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -4199,7 +4211,8 @@ class ScheduledJobTestCase(
 
     def test_detail_view_hides_assume_ownership_button_without_change_perm(self):
         self.add_permissions("extras.view_scheduledjob", "extras.run_job")
-        sj = self._make_scheduled_job("assume_button_no_change")
+        other_user = User.objects.create(username="other_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_change", user=other_user)
 
         response = self.client.get(sj.get_absolute_url())
         self.assertHttpStatus(response, 200)
@@ -4239,37 +4252,69 @@ class ScheduledJobTestCase(
 
     def test_assume_ownership_forbidden_without_run_job_perm(self):
         self.add_permissions("extras.change_scheduledjob")
-        sj = self._make_scheduled_job("assume_forbidden_no_run")
+        other_user = User.objects.create(username="prior_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_run", user=other_user)
 
         url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
 
         sj.refresh_from_db()
-        self.assertEqual(sj.user_id, self.user.id)  # unchanged from setup default
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
 
     def test_assume_ownership_forbidden_without_change_perm(self):
         self.add_permissions("extras.view_scheduledjob", "extras.run_job")
-        sj = self._make_scheduled_job("assume_forbidden_no_change")
+        other_user = User.objects.create(username="prior_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_change", user=other_user)
 
         url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
 
         sj.refresh_from_db()
-        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.user_id, other_user.id)
 
-    def test_assume_ownership_idempotent_when_already_owner(self):
+    def test_assume_ownership_no_op_when_already_owner(self):
+        """A direct POST while already owning the schedule short-circuits without modification."""
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
-        sj = self._make_scheduled_job("assume_idempotent")  # already owned by self.user
+        sj = self._make_scheduled_job("assume_already_owner_post", enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
 
         url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
         response = self.client.post(url, follow=True)
         self.assertHttpStatus(response, 200)
 
+        # State must NOT have been mutated since the requester already owns it.
         sj.refresh_from_db()
-        self.assertEqual(sj.user_id, self.user.id)
-        self.assertTrue(sj.enabled)
+        self.assertFalse(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ERRORED)
+
+    def test_assume_ownership_rejected_without_run_perm_on_specific_job(self):
+        """A user with extras.run_job at the model level but no per-Job run constraint match is rejected."""
+        from nautobot.users.models import ObjectPermission
+
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        # Grant `run` on a constraint that does NOT match the schedule's job_model.
+        obj_perm = ObjectPermission.objects.create(
+            name="run only fail jobs",
+            actions=["run"],
+            constraints={"name": "TestFailJob"},
+        )
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        other_user = User.objects.create(username="other_owner_no_run_for_job", is_active=True)
+        sj = self._make_scheduled_job("assume_no_run_specific_job", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("do not have permission to run the job", body)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
 
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
