@@ -1843,6 +1843,51 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
 
+    def test_clean_rejects_invalid_branch(self):
+        """`clean()` rejects branch values that are empty, contain whitespace, or start with '-'."""
+        for bad_value in ("", " main", "main\n", "--orphan"):
+            with self.subTest(branch=bad_value):
+                self.repo.branch = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("branch", handler.exception.message_dict)
+
+    def test_clean_rejects_invalid_current_head(self):
+        """`clean()` rejects non-empty `current_head` values that aren't valid hex commit identifiers."""
+        for bad_value in ("--detach", "deadbeef-not-hex", "abc", "z" * 40):
+            with self.subTest(current_head=bad_value):
+                self.repo.current_head = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("current_head", handler.exception.message_dict)
+
+    def test_clean_accepts_empty_current_head(self):
+        """Empty `current_head` is the default for un-synced repos and must remain accepted."""
+        self.repo.current_head = ""
+        self.repo.validated_save()
+
+    def test_clone_to_directory_rejects_invalid_inputs_without_tempdir_leak(self):
+        """`clone_to_directory()` must validate `branch`/`head` before creating its temp dir.
+
+        Otherwise an option-shaped or whitespace-containing value would only fail inside
+        `GitRepo`, by which point the empty temp dir has already been created and orphaned.
+        """
+        target_dir = tempfile.mkdtemp()
+        try:
+            cases = [
+                {"branch": "--upload-pack=evil"},
+                {"branch": " main"},
+                {"head": "--detach"},
+                {"head": "ref\nname"},
+            ]
+            for kwargs in cases:
+                with self.subTest(**kwargs):
+                    with self.assertRaises(ValueError):
+                        self.repo.clone_to_directory(path=target_dir, **kwargs)
+                    self.assertEqual(os.listdir(target_dir), [])
+        finally:
+            shutil.rmtree(target_dir, ignore_errors=True)
+
     def test_clone_to_directory_context_manager(self):
         """Confirm that the clone_to_directory_context() context manager method works as expected."""
         try:

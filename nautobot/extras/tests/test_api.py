@@ -2194,6 +2194,36 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(list(response.data["provided_contents"]), data["provided_contents"])
 
+    def test_current_head_is_read_only(self):
+        """`current_head` is set by the sync job and must not be writable via the REST API."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        bogus_sha = "0000000000000000000000000000000000000000"
+
+        # Create: any client-supplied `current_head` should be ignored.
+        create_url = self._get_list_url()
+        create_data = {
+            "name": "read_only_head_create",
+            "slug": "read_only_head_create",
+            "remote_url": "https://example.com/read_only_head_create.git",
+            "current_head": bogus_sha,
+        }
+        response = self.client.post(create_url, create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = GitRepository.objects.get(slug="read_only_head_create")
+        self.assertEqual(created.current_head, "")
+        self.assertNotEqual(response.data["current_head"], bogus_sha)
+
+        # Update: PATCHing `current_head` should not modify the stored value.
+        repo = self.repos[0]
+        original_head = repo.current_head
+        detail_url = self._get_detail_url(repo)
+        response = self.client.patch(detail_url, {"current_head": bogus_sha}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        repo.refresh_from_db()
+        self.assertEqual(repo.current_head, original_head)
+        self.assertNotEqual(response.data["current_head"], bogus_sha)
+
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery

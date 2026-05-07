@@ -555,6 +555,7 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
     class Meta:
         model = GitRepository
         fields = "__all__"
+        read_only_fields = ["current_head"]
 
 
 #
