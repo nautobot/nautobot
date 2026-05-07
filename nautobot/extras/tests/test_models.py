@@ -4105,6 +4105,7 @@ class JobResultTestCase(TestCase):
             "nautobot_job_console_log",
             "nautobot_job_user_id",
             "nautobot_job_ignore_singleton_lock",
+            "nautobot_job_queue_type",
             "queue",
         }
         self.assertEqual(set(result.keys()), expected_keys)

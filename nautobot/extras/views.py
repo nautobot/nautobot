@@ -3287,13 +3287,17 @@ def render_jobresult_status(status):
     """
     mapping = {
         "FAILURE": ("bg-danger", "Failed"),
+        "REVOKED": ("bg-danger", "Revoked"),
+        "IGNORED": ("bg-danger", "Ignored"),
+        "REJECTED": ("bg-danger", "Rejected"),
         "PENDING": ("bg-body-secondary border", "Pending"),
         "STARTED": ("bg-warning", "Running"),
         "SUCCESS": ("bg-success", "Completed"),
-        "REVOKED": ("bg-danger", "Revoked"),
+        "RECEIVED": ("bg-warning", "Received"),
+        "RETRY": ("bg-warning", "Retry"),
     }
 
-    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
+    css_class, text = mapping.get(status, ("bg-body-secondary border", f"{status} (unrecognized)"))
     return format_html(
         '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
         css_class,
@@ -3342,6 +3346,11 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
             return True
 
         return False
+
+
+class RevocationPanel(object_detail.ObjectFieldsPanel):
+    def should_render(self, context):
+        return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
 
 class JobResultUIViewSet(
@@ -3470,10 +3479,13 @@ class JobResultUIViewSet(
                 label="Revoke Job",
                 color=ButtonActionColorChoices.DELETE,
                 icon="mdi-close-circle",
-                required_permissions=["extras.change_jobresult"],
+                required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
                     reverse("extras:jobresult_revoke_job", kwargs={"pk": ctx["object"].pk})
-                    if ctx["object"].is_unready_state
+                    if (
+                        ctx["object"].is_unready_state
+                        and (ctx["object"].user == ctx["request"].user or ctx["request"].user.is_staff)
+                    )
                     else None
                 ),
             ),
@@ -3516,7 +3528,7 @@ class JobResultUIViewSet(
             object_field="celery_kwargs",
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
-        object_detail.ObjectFieldsPanel(
+        RevocationPanel(
             label="Revocation",
             section=SectionChoices.RIGHT_HALF,
             weight=100,

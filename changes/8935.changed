@@ -1,3 +1,4 @@
 Recreated migrations file due to change filed `terminated_at` to `date_terminated` in JobResult model.
 Changed job result log level to FAILURE from INFO in revoke flow.
-
+Changed `job_label.html`. Added handling for all other current JobResultStatusChoices values.
+Changed `render_jobresult_status`. Added handling for all other current JobResultStatusChoices values.

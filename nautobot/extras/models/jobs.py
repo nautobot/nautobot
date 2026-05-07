@@ -805,7 +805,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     @property
     def queue_type(self):
-        return self.celery_kwargs.get("nautobot_job_queue_type", None)
+        return self.celery_kwargs.get("nautobot_job_queue_type") or JobQueue.objects.filter(name=self.queue).first()
 
     @property
     def console_log(self):

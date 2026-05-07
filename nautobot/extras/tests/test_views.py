@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
@@ -57,6 +58,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.jobs_revoke import CeleryStrategy
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -4181,8 +4183,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass_job.TestPassJob")
-        JobResult.objects.create(name="fail.TestFailJob")
+        JobResult.objects.create(name="pass_job.TestPassJob", celery_kwargs={"nautobot_job_queue_type": "celery"})
+        JobResult.objects.create(name="fail.TestFailJob", celery_kwargs={"nautobot_job_queue_type": "celery"})
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
             job_result=JobResult.objects.first(),
@@ -4569,6 +4571,139 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
+
+    def test_revoke_job_get_anonymous_redirects_to_login(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(revoke_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={revoke_url}")
+
+    def test_revoke_job_get_without_permission(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(revoke_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_is_alive, mock_revoke):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "extras/job_revoke.html")
+        self.assertEqual(response.context["object"], self.job_result_pending)
+        self.assertTrue(response.context["job_is_running"])
+        self.assertEqual(
+            response.context["return_url"],
+            self.job_result_pending.get_absolute_url(),
+        )
+        mock_is_alive.assert_called_once_with(self.job_result_pending)
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=False)
+    def test_revoke_job_get_renders_confirmation_for_dead_worker(self, mock_is_alive, mock_revoke):
+        """`job_is_running=False` is the 'reap' branch — confirmation page still shown."""
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(response.context["job_is_running"])
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive")
+    def test_revoke_job_get_already_finished_redirects(self, mock_is_alive, mock_revoke):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_is_alive.assert_not_called()
+        mock_revoke.assert_not_called()
+
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("already finished" in str(m).lower() for m in messages_list),
+            f"Expected an info message about the job being finished, got: {messages_list}",
+        )
+
+    def test_revoke_job_post_without_permission(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(revoke_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "revoke")
+    def test_revoke_job_post_success(self, mock_revoke, mock_is_alive):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        mock_revoke.return_value = {
+            "job_result": self.job_result_pending,
+            "error": None,
+        }
+
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("terminated" in m.lower() for m in messages_list),
+            f"Expected a success message, got: {messages_list}",
+        )
+
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "revoke")
+    def test_revoke_job_post_strategy_returns_error(self, mock_revoke, mock_is_alive):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        error_message = "Broker is unreachable; could not revoke."
+        mock_revoke.return_value = {
+            "job_result": self.job_result_pending,
+            "error": error_message,
+        }
+
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(error_message, messages_list)
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive")
+    def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_is_alive, mock_revoke):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_is_alive.assert_not_called()
+        mock_revoke.assert_not_called()
 
 
 class JobTestCase(
