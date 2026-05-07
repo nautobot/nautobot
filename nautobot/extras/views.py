@@ -3169,7 +3169,7 @@ class ScheduledJobUIViewSet(
             label="Assume Ownership",
             icon="mdi-account-arrow-right",
             link_name="extras:scheduledjob_assume_ownership",
-            template_path="extras/inc/scheduledjob_assume_ownership_dropdown_item.html",
+            template_path="components/button/post_extradetailviewactionbutton.html",
             # Hide the button when the requester is already the owner, lacks change perms,
             # or doesn't have run permission on the specific Job that this schedule runs.
             permission_check=lambda user, obj: (
