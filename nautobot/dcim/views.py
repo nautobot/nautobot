@@ -28,7 +28,6 @@ from django.utils.html import format_html, format_html_join, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
-from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
@@ -65,7 +64,6 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
-    NautobotViewSetMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -2188,15 +2186,14 @@ class ModuleTypeUIViewSet(
         )
 
 
-class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
+class ComponentCreateViewMixin(ObjectEditViewMixin):
     """
     UI mixin to bulk-create device/module component template instances from a single
     parent form using `name_pattern`/`label_pattern` expansion.
 
-    Intentionally overrides `ObjectEditViewMixin.create()` via MRO so that the standard
-    single-object create flow is replaced with the component bulk-create flow. Concrete
-    viewsets must list `ComponentCreateViewMixin` *before* `ObjectEditViewMixin` in their
-    bases for this override to take effect.
+    Specializes `ObjectEditViewMixin` by overriding `create()` with the bulk-component
+    flow; update/edit behavior (`update()`, `perform_update()`, `_process_create_or_update_form`,
+    etc.) is inherited unchanged.
     """
 
     create_form_class: type[Form]
@@ -2228,9 +2225,10 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
 
     def create(self, request, *args, **kwargs):
         """
-        Component bulk-create entry point. Intentionally overrides `ObjectEditViewMixin.create()`
-        so that GET renders the bulk-create form and POST expands `name_pattern`/`label_pattern`
-        into individual component instances via `process_component_create_form()`.
+        Component bulk-create entry point. Overrides the inherited single-object create
+        flow so that GET renders the bulk-create form and POST expands `name_pattern`/
+        `label_pattern` into individual component instances via
+        `process_component_create_form()`.
         """
         if request.method == "POST":
             return self.process_component_create_form(request, *args, **kwargs)
@@ -2330,7 +2328,6 @@ class ComponentCreateViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin):
 class ConsolePortTemplateUIViewSet(
     ComponentCreateViewMixin,
     ObjectBulkRenameViewMixin,
-    ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
