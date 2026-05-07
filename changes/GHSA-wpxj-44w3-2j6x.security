@@ -1,0 +1,1 @@
+Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (GHSA-wpxj-44w3-2j6x).

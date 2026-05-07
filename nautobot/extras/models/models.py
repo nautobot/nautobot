@@ -797,6 +797,13 @@ class ImageAttachment(BaseModel):
         filename = self.image.name.rsplit("/", 1)[-1]
         return filename.split("_", 2)[2]
 
+    def clean(self):
+        super().clean()
+        # Currently only Device, Rack, and Location support ImageAttachment records.
+        # If this changes, various other code paths will need similar updates, e.g. the REST API.
+        if self.content_type.app_label != "dcim" or self.content_type.model not in ["device", "location", "rack"]:
+            raise ValidationError({"content_type": "Not a permitted content-type for ImageAttachments."})
+
     def delete(self, *args, **kwargs):
         _name = self.image.name
 
