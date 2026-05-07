@@ -38,7 +38,7 @@ class MyJobTestCase(TransactionTestCase):
         # Testing of Job "MyJob" in file "my_job_file.py" in $JOBS_ROOT
         job = Job.objects.get(job_class_name="MyJob", module_name="my_job_file")
         # or, job = Job.objects.get_for_class_path("local/my_job_file/MyJob")
-        job_result = run_job_for_testing(job, var1="abc", var2=123)
+        job_result = run_job_for_testing(job, job_kwargs={"var1": "abc", "var2": 123})
 
         # Inspect the logs created by running the job
         log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -47,6 +47,44 @@ class MyJobTestCase(TransactionTestCase):
 ```
 
 The test files should be placed under the `tests` folder in the app's directory or under `JOBS_ROOT`.
+
+### Parameters
+
+`run_job_for_testing()` accepts the following parameters:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `job` | `Job` | Job model instance (not Job class) to run. Required. |
+| `username` | `str` | Username of an existing or to-be-created `User` account that owns the resulting `JobResult`. Defaults to `"test-user"`. |
+| `profile` | `bool` | Whether to profile Job execution with `cProfile`. Defaults to `False`. |
+| `console_log` | `bool` | Whether to enable console logging during execution. Defaults to `False`. |
+| `celery_kwargs` | `dict` | Keyword arguments forwarded to Celery's `apply()` when the Job is executed. Defaults to `None`. |
+| `job_kwargs` | `dict` | Keyword arguments forwarded to the Job's `run()` method. **Required** — pass `{}` if the Job takes no parameters. |
+
++++ 3.2.0
+
+`job_kwargs` is now a required parameter for `run_job_for_testing()`, alongside `JobResult.enqueue_job()`, `nautobot-server execute_job`, and `ScheduledJob.create_schedule()`. Previously optional, this argument is now mandatory to ensure consistent Job configuration and avoid implicit defaults.
+
+For Jobs that take no parameters, pass `job_kwargs={}` explicitly:
+
+```python
+    job_result = run_job_for_testing(job, job_kwargs={})
+```
+
+!!! warning "Deprecated: Passing Job parameters as loose kwargs"
+    A backward-compatibility layer is in place for the previous calling style, where Job parameters were passed directly as keyword arguments to `run_job_for_testing()`:
+
+    ```python
+        # Deprecated - emits a warning
+        run_job_for_testing(job, var1="abc", var2=123)
+    ```
+
+    Calls that omit `job_kwargs` or rely on this loose-kwargs style will still work temporarily but emit a `DeprecationWarning`. This fallback will be removed in a future release. Update your tests to use the explicit `job_kwargs` form:
+
+    ```python
+        # Preferred
+        run_job_for_testing(job, job_kwargs={"var1": "abc", "var2": 123})
+    ```
 
 !!! tip "Running Tests"
     You can run Job tests using either Django's test runner or `pytest`, depending on your environment:

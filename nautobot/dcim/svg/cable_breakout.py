@@ -10,7 +10,7 @@ from nautobot.dcim.utils import validate_cable_breakout_mapping
 
 @dataclass(frozen=True)
 class MappingEntry:
-    """A single row in a CableBreakoutType mapping."""
+    """A single row in a CableType mapping."""
 
     label: str
     a_connector: int
@@ -55,7 +55,7 @@ class BreakoutDiagramSVG:
     ):
         """
         Args:
-            mapping: list of dicts describing each lane, e.g. from `CableBreakoutType.mapping`.
+            mapping: list of dicts describing each lane, e.g. from `CableType.mapping`.
                 Each entry must contain keys: `label`, `a_connector`, `a_position`, `b_connector`, `b_position`.
             show_status: if True, color connected lanes/connectors as green
             a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips

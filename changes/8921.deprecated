@@ -1,0 +1,1 @@
+Deprecated passing job parameters as loose `**extra_kwargs` to `JobResult.enqueue_job()`, `JobResult.execute_job()`, and `nautobot.apps.testing.run_job_for_testing()`. Job parameters must now be passed as a single `job_kwargs` dict argument. The legacy calling style still works for backward compatibility but logs a warning, and will be removed in a future release.
