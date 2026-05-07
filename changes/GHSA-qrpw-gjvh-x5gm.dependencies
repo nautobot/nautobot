@@ -1,0 +1,1 @@
+Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)

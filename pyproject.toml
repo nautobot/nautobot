@@ -137,6 +137,8 @@ python-slugify = "~8.0.4"
 pyuwsgi = "~2.0.30"
 # YAML parsing and rendering
 PyYAML = "~6.0.3"
+# Enhanced version of Python's built-in `re` module
+regex = ">=2026.4.4"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.

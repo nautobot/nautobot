@@ -2,7 +2,6 @@ from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
 import logging
-import re
 import uuid
 
 from django.contrib import messages
@@ -25,6 +24,7 @@ from django.utils.html import format_html, format_html_join, mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
+import regex
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
@@ -1966,6 +1966,8 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 class ModuleBayCommonViewSetMixin:
     """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
 
+    bulk_rename_regex_timeout = 1.0
+
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
             return self.perform_create(request, *args, **kwargs)
@@ -2078,26 +2080,40 @@ class ModuleBayCommonViewSetMixin:
         if "_preview" in request.POST or "_apply" in request.POST:
             form = _Form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
-                try:
-                    with transaction.atomic():
-                        renamed_pks = []
-                        for obj in selected_objects:
-                            find = form.cleaned_data["find"]
-                            replace = form.cleaned_data["replace"]
-                            if form.cleaned_data["use_regex"]:
-                                try:
-                                    obj.new_name = re.sub(find, replace, obj.name)
-                                # Catch regex group reference errors
-                                except re.error:
-                                    obj.new_name = obj.name
-                            else:
-                                obj.new_name = obj.name.replace(find, replace)
-                            renamed_pks.append(obj.pk)
+                find = form.cleaned_data["find"]
+                replace = form.cleaned_data["replace"]
+                use_regex = form.cleaned_data["use_regex"]
 
-                        if "_apply" in request.POST:
+                # Phase 1: compute new_name for each object so the preview can show old -> new,
+                # surfacing any regex compile error or timeout to the form.
+                if use_regex:
+                    try:
+                        pattern = regex.compile(find)
+                    except regex.error as e:
+                        form.add_error("find", f"Invalid regex: {e}")
+                    else:
+                        try:
+                            for obj in selected_objects:
+                                obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                        except TimeoutError:
+                            form.add_error(
+                                "find",
+                                f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                                "the pattern may have catastrophic backtracking. Please simplify the expression.",
+                            )
+                else:
+                    for obj in selected_objects:
+                        obj.new_name = obj.name.replace(find, replace)
+
+                # Phase 2: persist the rename only if "Apply" was clicked and Phase 1 succeeded
+                if "_apply" in request.POST and not form.errors:
+                    try:
+                        with transaction.atomic():
+                            renamed_pks = []
                             for obj in selected_objects:
                                 obj.name = obj.new_name
                                 obj.save()
+                                renamed_pks.append(obj.pk)
 
                             # Enforce constrained permissions
                             if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
@@ -2109,9 +2125,9 @@ class ModuleBayCommonViewSetMixin:
                             )
                             return redirect(self.get_return_url(request))
 
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    form.add_error(None, msg)
+                    except ObjectDoesNotExist:
+                        msg = "Object update failed due to object-level permissions violation"
+                        form.add_error(None, msg)
 
         else:
             form = _Form(initial={"pk": query_pks})
