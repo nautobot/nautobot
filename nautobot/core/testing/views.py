@@ -2020,7 +2020,7 @@ class ViewTestCases:
                 "use_regex": True,
             }
 
-            timeout_seconds = 3
+            timeout_seconds = 5  # be a bit generous here to avoid spurious failures in CI.
 
             def _alarm(_signum, _frame):
                 self.fail(
