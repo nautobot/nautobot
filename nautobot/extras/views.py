@@ -2597,7 +2597,7 @@ class JobUIViewSet(NautobotUIViewSet):
             title = job_model.name
             job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
             if job_modal_button is None:
-                raise ValueError(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
+                return HttpResponseBadRequest(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
             advanced_field_names = job_modal_button.advanced_fields
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
             template_name = self._get_template_name(job_class=job_class, htmx_modal=True)

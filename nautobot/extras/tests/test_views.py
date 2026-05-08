@@ -106,6 +106,7 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from nautobot.extras.registry import registry
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
@@ -4352,6 +4353,7 @@ class JobResultTestCase(
             button_id="test_jobresult_modal_button",
             refresh_on_close_if_done=True,
         )
+        cls.addClassCleanup(lambda: registry["job_modal_buttons"].pop(cls.test_modal_button.button_id, None))
         JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
@@ -4788,6 +4790,7 @@ class JobTestCase(
             class_path="nautobot.core.jobs.ValidateModelData",
             button_id="test_job_modal_button",
         )
+        cls.addClassCleanup(lambda: registry["job_modal_buttons"].pop(cls.test_modal_button.button_id, None))
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately

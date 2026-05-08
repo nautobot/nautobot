@@ -1,0 +1,1 @@
+The `_JobModalButton` now requires a unique `button_id` parameter and uses POST requests instead of GET requests for the job modal flow.
