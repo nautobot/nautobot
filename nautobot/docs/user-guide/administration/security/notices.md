@@ -4,7 +4,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 <!-- pyml disable-num-lines 700 proper-names -->
 
-## GHSA-p3hx-pwf3-j8wr
+## CVE-2026-44798
 
 <!-- pyml disable-next-line no-inline-html -->
 <table>
@@ -40,7 +40,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
 </table>
 
-## GHSA-c35q-vxrp-ph26
+## CVE-2026-44797
 
 <!-- pyml disable-next-line no-inline-html -->
 <table>
@@ -76,7 +76,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
 </table>
 
-## GHSA-qrpw-gjvh-x5gm
+## CVE-2026-44796
 
 <!-- pyml disable-next-line no-inline-html -->
 <table>
@@ -112,7 +112,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
 </table>
 
-## GHSA-wpxj-44w3-2j6x
+## CVE-2026-44794
 
 <!-- pyml disable-next-line no-inline-html -->
 <table>
