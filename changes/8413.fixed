@@ -1,0 +1,1 @@
+Fixed silent failure of scheduled jobs whose originating user has been removed. The scheduler now records a failed JobResult as well as disables the schedule.

@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
@@ -2111,7 +2112,9 @@ class SavedViewUIViewSet(
 
 
 class ScheduledJobListView(generic.ObjectListView):
-    queryset = ScheduledJob.objects.enabled()
+    # Show enabled schedules plus schedules whose owning user has been removed (auto-disabled
+    # by the scheduler) so admins can still see them and reassign ownership.
+    queryset = ScheduledJob.objects.filter(Q(pk__in=ScheduledJob.objects.enabled().values("pk")) | Q(user__isnull=True))
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
@@ -2146,12 +2149,54 @@ class ScheduledJobView(generic.ObjectView):
                     labels[name] = field.label
                 else:
                     labels[name] = pretty_name(name)
+        # Hide the "Assume Ownership" button when the requester is already the owner,
+        # lacks change perms, or doesn't have run permission on the specific Job that
+        # this schedule runs.
+        can_assume_ownership = (
+            instance.user_id != request.user.id
+            and request.user.has_perm("extras.change_scheduledjob")
+            and instance.job_model is not None
+            and JobModel.objects.restrict(request.user, "run").filter(pk=instance.job_model_id).exists()
+        )
         return {
             "labels": labels,
             "job_class_found": (job_class is not None),
             "default_time_zone": get_current_timezone(),
+            "can_assume_ownership": can_assume_ownership,
             **super().get_extra_context(request, instance),
         }
+
+
+class ScheduledJobAssumeOwnershipView(LoginRequiredMixin, View):
+    """Reassign this scheduled job's owner to the requesting user and re-enable it."""
+
+    queryset = ScheduledJob.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponseForbidden()
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.has_perm("extras.run_job"):
+            return HttpResponseForbidden()
+        if not request.user.has_perm("extras.change_scheduledjob"):
+            return HttpResponseForbidden()
+        obj = get_object_or_404(self.queryset, pk=kwargs["pk"])
+        if obj.user_id == request.user.id:
+            messages.info(request, f"You already own scheduled job '{obj.name}'.")
+            return redirect(obj.get_absolute_url())
+        # Defensively confirm the requester can run this specific Job — the UI hides the
+        # button in this case but a direct POST could still reach here.
+        if (
+            obj.job_model is None
+            or not JobModel.objects.restrict(request.user, "run").filter(pk=obj.job_model_id).exists()
+        ):
+            messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
+            return redirect(obj.get_absolute_url())
+        obj.user = request.user
+        obj.enabled = True
+        obj.validated_save()
+        messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
+        return redirect(obj.get_absolute_url())
 
 
 class ScheduledJobDeleteView(generic.ObjectDeleteView):
