@@ -29,7 +29,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=46.0.7,<46.1)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.13,<5.3)",
+    "django (>=5.2.14,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -97,7 +97,7 @@ dependencies = [
     #       we permit a looser (^) version constraint here.
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.4,<0.4)",
+    "nh3 (>=0.3.5,<0.4)",
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library
@@ -175,7 +175,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^40.11.0"
+faker = "^40.15.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -219,7 +219,7 @@ pylint = "~4.0.5"
 # Pylint extensions for Django
 pylint-django = "~2.7.0"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.36"
+pymarkdownlnt = "~0.9.37"
 # Combination linter and code formatter
 ruff = "~0.15.12"
 # YAML linting
