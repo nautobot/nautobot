@@ -2652,37 +2652,14 @@ def resolve_attr(obj, dotted_path: str):
 
 
 class _JobModalButton(Button):
-    """A Button that, when clicked, opens a modal dialog for running a Job.
+    """A Button that opens a modal dialog for running a Job. Experimental — subject to change without deprecation.
 
-    This is experimental and subject to change or removal without deprecation.
+    Each instance is registered in ``registry["job_modal_buttons"]`` by its ``button_id`` at init time.
+    The ``button_id`` travels through HTMX POST data so the view can look up the instance at any time
+    and call ``get_redirect_button()`` to optionally render a redirect button in the modal footer.
 
-    Usage:
-        Add a ``_JobModalButton`` to a viewset's ``object_detail_content.extra_buttons``.
-        To provide a custom redirect button in the modal footer after the job completes,
-        subclass ``_JobModalButton`` and override ``get_redirect_button()``. Subclasses are
-        automatically registered in the global registry at class definition time.
-
-    How it works:
-        1. Defining a subclass triggers ``__init_subclass__``, which computes a deterministic UUID5
-           key from the class's fully qualified path and stores the class in
-           ``registry["job_modal_buttons"]``.
-        2. When the button is rendered on a detail page, the registry key is embedded in the HTMX
-           ``hx-vals`` as ``job_modal_button``.
-        3. Clicking the button fires an HTMX POST that opens the job form modal. The registry key
-           travels with every subsequent POST (form submission, polling).
-        4. Once the job completes, the view looks up the originating button class from the registry
-           and calls ``get_redirect_button()`` to render an optional redirect button in the modal
-           footer.
-
-    hx-vals keys sent with every POST in the modal lifecycle:
-        job_modal_button: Registry key (UUID5 string) identifying this button class.
-        render_job_form: Signals the view to render the form rather than execute the job.
-        run_button_label: Label text for the submit button in the modal form.
-        job_result_key: Optional key to extract a specific value from ``JobResult.result``.
-        refresh_on_close_if_done: If ``"true"``, the page reloads when the modal is closed after
-            job completion.
-        advanced_fields: List of form field names to hide behind an "Advanced" toggle.
-        initial_field_mapping values: Pre-filled form field values resolved from the detail view object.
+    To add a redirect button, pass a ``redirect_button_callback`` or subclass and override
+    ``get_redirect_button()``.
     """
 
     class_path = None
@@ -2693,13 +2670,14 @@ class _JobModalButton(Button):
     refresh_on_close_if_done = False
     redirect_button_callback = None
     button_id = None
-    app_label = None
 
     def __init__(self, **kwargs):
         """
         Initialize a _JobModalButton component.
 
         Keyword Args:
+            button_id (str): A globally unique identifier for this button instance. Used as the registry key.
+                Use your app name as a prefix to avoid collisions, e.g. ``"my_app.take_snapshot"``.
             class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
             label (str): The text of this button, not including any icon.
             color (ButtonColorChoices, optional): The color (class) of this button.
@@ -2732,8 +2710,7 @@ class _JobModalButton(Button):
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
                 The component will only be rendered if the user has these permissions.
 
-            Example::
-
+            Example:
                 _JobModalButton(
                     label="Validate Device Location Data",
                     weight=200,
@@ -2749,15 +2726,14 @@ class _JobModalButton(Button):
                     },
                 )
         """
-
         super().__init__(**kwargs)
         if self.class_path is None:
             raise TypeError("class_path is required")
         if self.button_id is None:
-            raise TypeError("button_id is required")
+            raise TypeError("A globally unique button_id is required")
 
         if self.button_id in registry["job_modal_buttons"]:
-            raise ValueError(f"{self.button_id} must be unique")
+            raise ValueError(f"{self.button_id} must be globally unique")
         registry["job_modal_buttons"][self.button_id] = self
 
     def get_redirect_button(self, job_result, request, **kwargs):
@@ -2772,8 +2748,8 @@ class _JobModalButton(Button):
             **kwargs: Reserved for future use.
 
         Returns:
-            dict: A dictionary with keys ``url``, ``label``, ``color``, and optionally ``attributes``,
-                or a falsy value to render no button.
+            dict: A dictionary with keys `url`, `label`, `color`, and optionally `attributes`,
+                or a empty dict to render no button.
         """
         if self.redirect_button_callback is not None:
             return self.redirect_button_callback(job_result, request)

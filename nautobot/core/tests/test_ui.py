@@ -827,8 +827,7 @@ class _JobModalButtonTest(TestCase):
         """Verify that class_path is a required argument."""
         # Should raise TypeError if class_path is missing
         with self.assertRaises(TypeError) as cm:
-            job_modal_button_error = _JobModalButton(weight=100, label="Test", button_id="test_job_modal_button_1")
-            self.addCleanup(lambda: registry["job_modal_buttons"].pop(job_modal_button_error.button_id, None))
+            _JobModalButton(weight=100, label="Test", button_id="test_job_modal_button_1")
 
         self.assertIn("class_path is required", str(cm.exception))
 
@@ -836,7 +835,7 @@ class _JobModalButtonTest(TestCase):
         btn = _JobModalButton(
             weight=100,
             label="Run Test",
-            button_id="test_job_modal_button_2",
+            button_id="test_job_modal_button_1",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
         self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
@@ -947,7 +946,7 @@ class _JobModalButtonTest(TestCase):
         self.assertNotIn("disabled", btn_success.attributes)
 
     def test_registry_contains_button_id(self):
-        """Verify that _JobModalButton and its subclasses are registered in the global registry."""
+        """Verify that a _JobModalButton instance is registered by its button_id at init time."""
 
         job_modal_button = _JobModalButton(
             weight=100, label="Run Job", class_path="non.existent.job", button_id="test_job_modal_button"
@@ -964,7 +963,7 @@ class _JobModalButtonTest(TestCase):
 
         with self.assertRaises(ValueError) as cm:
             _JobModalButton(weight=100, label="Duplicate", class_path="some.other.job", button_id="test_unique_button")
-        self.assertIn("must be unique", str(cm.exception))
+        self.assertIn("must be globally unique", str(cm.exception))
 
 
 class PostButtonTest(TestCase):

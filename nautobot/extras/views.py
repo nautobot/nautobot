@@ -2538,18 +2538,14 @@ class JobUIViewSet(NautobotUIViewSet):
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            job_result_key = request.POST.get("job_result_key", None)
-            job_modal_button_id = request.POST.get("job_modal_button", None)
-            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+            job_modal_button_registry_id = request.POST.get("job_modal_button", None)
 
             context = {
                 "result": job_result,
                 "title": job_model.name,
                 "detail_value": "",
-                "job_result_key": job_result_key,
                 "job_is_pending": True,
-                "job_modal_button": job_modal_button_id,
-                "refresh_on_close_if_done": refresh_on_close_if_done,
+                "job_modal_button": job_modal_button_registry_id,
             }
             response = render(request, "extras/jobresult_modal.html", context)
             patch_vary_headers(response, ["HX-Request"])
@@ -2621,10 +2617,6 @@ class JobUIViewSet(NautobotUIViewSet):
                     "hx_vals": json.dumps(
                         {
                             "job_modal_button": job_modal_button_registry_id,
-                            "job_result_key": job_modal_button.job_result_key,
-                            "run_button_label": job_modal_button.run_button_label,
-                            "refresh_on_close_if_done": job_modal_button.refresh_on_close_if_done,
-                            "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
                     ),
@@ -2702,8 +2694,7 @@ class JobUIViewSet(NautobotUIViewSet):
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
 
-        # Render the job form instead of running the job on a POST request.
-        # Required for the job modal.
+        # HTMX modal: render the job form with pre-filled data instead of executing the job.
         if self.request.headers.get("HX-Request", False) and request.POST.get("render_job_form"):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
@@ -3696,6 +3687,7 @@ class JobResultUIViewSet(
 
     @action(detail=True, custom_view_base_action="view", methods=["POST"])
     def modal(self, request, *args, **kwargs):
+        """Render the job result modal content, polling while pending and showing results on completion."""
         job_result = self.get_object()
         job_modal_button_registry_id = request.POST.get("job_modal_button")
         job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
@@ -3705,7 +3697,6 @@ class JobResultUIViewSet(
         if job_result.job_model is not None:
             title = job_result.job_model.name
         job_result_key = job_modal_button.job_result_key
-        refresh_on_close_if_done = job_modal_button.refresh_on_close_if_done
         detail_value = f"Job finished with status: {job_result.get_status_display()}"
         if job_result.result and isinstance(job_result.result, dict) and job_result_key:
             detail_value = job_result.result.get(job_result_key, job_result.result)
@@ -3717,15 +3708,19 @@ class JobResultUIViewSet(
             {
                 "title": title,
                 "detail_value": detail_value,
-                "job_result_key": job_result_key,
                 "job_modal_button": job_modal_button_registry_id,
-                "refresh_on_close_if_done": refresh_on_close_if_done,
+                "refresh_on_close_if_done": job_modal_button.refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
         )
         if not job_is_pending:
-            # TODO: Fix this not handling default cases
-            context["redirect_button"] = job_modal_button.get_redirect_button(job_result, request)
+            redirect_button = job_modal_button.get_redirect_button(job_result, request)
+            if redirect_button:
+                for key in ("url", "label"):
+                    if key not in redirect_button:
+                        raise ValueError(f"redirect_button is missing required key '{key}'")
+                redirect_button.setdefault("color", "primary")
+                context["redirect_button"] = redirect_button
 
         return Response(
             {
