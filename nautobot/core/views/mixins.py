@@ -1389,7 +1389,13 @@ class ObjectBulkDisconnectViewMixin(NautobotViewSetMixin):
             handle_protectederror(queryset, request, e)
             self.success_url = self.get_return_url(request)
 
-    @drf_action(detail=False, methods=["post"], url_path="disconnect", url_name="bulk_disconnect")
+    @drf_action(
+        detail=False,
+        methods=["post"],
+        url_path="disconnect",
+        url_name="bulk_disconnect",
+        custom_view_base_action="change",
+    )
     def bulk_disconnect(self, request, *args, **kwargs):
         """
         Call perform_bulk_disconnect().
