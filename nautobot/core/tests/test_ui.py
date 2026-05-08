@@ -827,16 +827,27 @@ class _JobModalButtonTest(TestCase):
         """Verify that class_path is a required argument."""
         # Should raise TypeError if class_path is missing
         with self.assertRaises(TypeError) as cm:
-            _JobModalButton(weight=100, label="Test")
+            job_modal_button_error = _JobModalButton(weight=100, label="Test", button_id="test_job_modal_button_1")
+            self.addCleanup(lambda: registry["job_modal_buttons"].pop(job_modal_button_error.button_id, None))
+
         self.assertIn("class_path is required", str(cm.exception))
 
         # Should initialize fine with class_path
-        btn = _JobModalButton(weight=100, label="Run Test", class_path="nautobot.core.jobs.ValidateModelData")
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Test",
+            button_id="test_job_modal_button_2",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+
         self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
 
     def test_get_link(self):
         """Verify get_link returns None because the button uses htmx to open a modal."""
-        btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
+        btn = _JobModalButton(weight=100, label="Test", class_path="some.job", button_id="test_job_modal_button")
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+
         self.assertIsNone(btn.get_link(Context({})))
 
     def test_get_extra_context_and_mapping(self):
@@ -847,6 +858,7 @@ class _JobModalButtonTest(TestCase):
         mapping = {"job_field_name": "name", "job_location": "location__name"}
 
         btn = _JobModalButton(
+            button_id="test_job_modal_button_1",
             weight=100,
             label="Run Job",
             class_path="nautobot.core.jobs.SampleJob",
@@ -854,6 +866,7 @@ class _JobModalButtonTest(TestCase):
             run_button_label="Execute!",
             job_result_key="output_data",
         )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
 
         context = Context({"object": device})
         context = btn.get_extra_context(context)
@@ -868,11 +881,9 @@ class _JobModalButtonTest(TestCase):
 
         # Check static modal configuration
         self.assertTrue(hx_vals["render_job_form"])
-        self.assertEqual(hx_vals["run_button_label"], "Execute!")
-        self.assertEqual(hx_vals["job_result_key"], "output_data")
 
-        # Verify job_modal_button in hx-vals is the class path of the _JobModalButton
-        self.assertEqual(hx_vals["job_modal_button"], _JobModalButton._get_registry_key())
+        # Verify job_modal_button in hx-vals is the unique button_id on the job modal button
+        self.assertEqual(hx_vals["job_modal_button"], "test_job_modal_button_1")
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -887,10 +898,13 @@ class _JobModalButtonTest(TestCase):
 
         # Ensure real job class paths are not disabled
         real_job_btn = _JobModalButton(
+            button_id="test_job_modal_button_2",
             weight=100,
             label="Run Real Job",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(real_job_btn.button_id, None))
+
         context = Context({"object": device})
         context = real_job_btn.get_extra_context(context)
         self.assertNotIn("disabled", context["attributes"])
@@ -901,7 +915,11 @@ class _JobModalButtonTest(TestCase):
         context = Context({"object": device})
 
         # 1. Create a button for a non-existent job (should be disabled)
-        btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
+        btn_fail = _JobModalButton(
+            weight=100, label="Fail", class_path="non.existent.job", button_id="test_job_modal_button_1"
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn_fail.button_id, None))
+
         ctx_fail = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail["attributes"])
         # Crucially: ensure the instance attribute didn't get polluted
@@ -912,8 +930,11 @@ class _JobModalButtonTest(TestCase):
             weight=100,
             label="Success",
             class_path="nautobot.core.jobs.ValidateModelData",
+            button_id="test_job_modal_button_2",
             attributes={"custom": "value"},
         )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn_success.button_id, None))
+
         ctx_success = btn_success.get_extra_context(context)
 
         # Verify result in context
@@ -925,21 +946,25 @@ class _JobModalButtonTest(TestCase):
         self.assertIn("disabled", ctx_fail_again["attributes"])
         self.assertNotIn("disabled", btn_success.attributes)
 
-    def test_registry_contains_class_path(self):
+    def test_registry_contains_button_id(self):
         """Verify that _JobModalButton and its subclasses are registered in the global registry."""
 
-        base_class_registry_key = _JobModalButton._get_registry_key()
-        self.assertIn(_JobModalButton._get_registry_key(), registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][base_class_registry_key], _JobModalButton)
+        job_modal_button = _JobModalButton(
+            weight=100, label="Run Job", class_path="non.existent.job", button_id="test_job_modal_button"
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(job_modal_button.button_id, None))
 
-        # Verify __init_subclass__ auto-registers subclasses
-        class _TestButton(_JobModalButton):
-            class_path = None
+        self.assertIn(job_modal_button.button_id, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][job_modal_button.button_id], job_modal_button)
 
-        subclass_registry_key = _TestButton._get_registry_key()
-        self.assertIn(subclass_registry_key, registry["job_modal_buttons"])
-        self.assertIs(registry["job_modal_buttons"][subclass_registry_key], _TestButton)
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(subclass_registry_key, None))
+    def test_button_id_must_be_unique(self):
+        """Verify that creating two buttons with the same button_id raises ValueError."""
+        btn = _JobModalButton(weight=100, label="First", class_path="some.job", button_id="test_unique_button")
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(weight=100, label="Duplicate", class_path="some.other.job", button_id="test_unique_button")
+        self.assertIn("must be unique", str(cm.exception))
 
 
 class PostButtonTest(TestCase):

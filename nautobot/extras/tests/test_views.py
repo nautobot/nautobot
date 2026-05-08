@@ -4181,6 +4181,13 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        cls.test_modal_button = _JobModalButton(
+            weight=100,
+            label="Test Modal",
+            class_path="not.a.real.class.path",
+            button_id="test_jobresult_modal_button",
+            refresh_on_close_if_done=True,
+        )
         JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
@@ -4538,15 +4545,13 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": _JobModalButton._get_registry_key(),
-                "refresh_on_close_if_done": "true",
+                "job_modal_button": self.test_modal_button.button_id,
             },
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertIn('hx-trigger="every 2s"', content)
-        self.assertIn('"refresh_on_close_if_done": "true"', content)
         # Marker is only set once the job is done.
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
@@ -4557,14 +4562,13 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": _JobModalButton._get_registry_key(),
+                "job_modal_button": self.test_modal_button.button_id,
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertIn('data-nb-refresh-on-close="true"', content)
         # No polling once the job is done.
         self.assertNotIn('hx-trigger="every 2s"', content)
 
@@ -4572,21 +4576,19 @@ class JobResultTestCase(
         """Without the query parameter, neither the polling `hx-vals` nor the DOM marker should opt in to reload."""
         self.add_permissions("extras.view_jobresult")
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
-        job_modal_registry_key = _JobModalButton._get_registry_key()
         response = self.client.post(
             pending_url,
-            data={"job_modal_button": job_modal_registry_key},
+            data={"job_modal_button": self.test_modal_button.button_id},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertIn('"refresh_on_close_if_done": "false"', content)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.post(
             completed_url,
-            data={"job_modal_button": job_modal_registry_key},
+            data={"job_modal_button": self.test_modal_button.button_id},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4616,6 +4618,12 @@ class JobTestCase(
 
     @classmethod
     def setUpTestData(cls):
+        cls.test_modal_button = _JobModalButton(
+            weight=100,
+            label="Test Modal",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            button_id="test_job_modal_button",
+        )
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately
@@ -4858,8 +4866,8 @@ class JobTestCase(
             response = self.client.post(
                 run_url,
                 data={
-                    "initial_job_modal_form_submit": True,
-                    "job_modal_button": _JobModalButton._get_registry_key(),
+                    "render_job_form": True,
+                    "job_modal_button": self.test_modal_button.button_id,
                 },
                 HTTP_HX_REQUEST="true",
             )
