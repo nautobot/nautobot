@@ -148,6 +148,60 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.2 (2026-05-08)
+
+### Security in v3.1.2
+
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_SCHEMES` settings variable. By default new or updated `Webhook` records will be restricted to HTTP or HTTPS only, disallowing other schemes that may have been previously allowed. Administrators should audit existing `Webhook` records to identify any that are invalid, and either update/delete said records or customize `WEBHOOK_ALLOWED_SCHEMES` as appropriate.
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` settings variable. This can be used to specify additional IP networks that should be denied to `Webhook` sending, for example some deployments may wish to disallow RFC1918 addresses.
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_HOSTS` settings variable. This can be used to provide an allow-list of specific hosts that would otherwise be blocked by any `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` configuration.
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added logic to deny loopback, link-local, multicast, unspecified, or reserved IP addresses when defining or executing a `Webhook`. Administrators should audit existing `Webhook` records to identify any that are invalid and delete said records (CVE-2026-44797).
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added various logic to protect `Webhook` definitions against being used as a vector for server-side request forgery (SSRF) (CVE-2026-44797).
+- [#GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/issues/GHSA-p3hx-pwf3-j8wr) - Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
+- [#GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/issues/GHSA-p3hx-pwf3-j8wr) - Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
+- [#GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/issues/GHSA-qrpw-gjvh-x5gm) - Added a timeout to `bulk-rename` views (both legacy `BulkRenameView` and viewset `ObjectBulkRenameViewMixin`) when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
+- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated dependency `django` to `>=5.2.14,<5.3` to mitigate CVE-2026-5766, CVE-2026-35192, and CVE-2026-6907.
+- [#8940](https://github.com/nautobot/nautobot/issues/8940) - Updated dependency `gitpython` to `>=3.1.50,<3.2` to mitigate CVE-2026-44243, CVE-2026-44244, and GHSA-mv93-w799-cj2w.
+
+### Added in v3.1.2
+
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Added an "Assume Ownership" action button on the Scheduled Job detail view that allows users with the required permissions to take over ownership of a scheduled job.
+
+### Removed in v3.1.2
+
+- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Removed support for `nautobot-server webhook_receiver` command.
+
+### Fixed in v3.1.2
+
+- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
+- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
+- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Fixed silent failure of scheduled jobs whose originating user has been removed. The scheduler now records a failed JobResult as well as disables the schedule with state ERRORED.
+- [#8861](https://github.com/nautobot/nautobot/issues/8861) - Add an iterator to the queryset in migration 0130_jobresult_generate_log_entry_counts to prevent resource exhaustion.
+- [#8884](https://github.com/nautobot/nautobot/issues/8884) - Fixed `_JobModalButton` `refresh_on_close_if_done` flag being dropped during modal polling, causing the page to not reload when the Close button (footer, header, or Escape key) is used after a Job completes.
+- [#8890](https://github.com/nautobot/nautobot/issues/8890) - Fixed N+1 query patterns on the VRF detail view for templated fields (devices, vms, virtual device contexts).
+- [#8937](https://github.com/nautobot/nautobot/issues/8937) - Fixed Job History home page panel sorting.
+
+### Dependencies in v3.1.2
+
+- [#GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/issues/GHSA-qrpw-gjvh-x5gm) - Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated dependency `nh3` to `>=0.3.5,<0.4`.
+
+### Documentation in v3.1.2
+
+- [#8943](https://github.com/nautobot/nautobot/issues/8943) - Updated the security notices documentation.
+
+### Housekeeping in v3.1.2
+
+- [#GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/issues/GHSA-qrpw-gjvh-x5gm) - Replaced bespoke `bulk_rename` actions on `ModuleBayUIViewSet` and `ModuleBayTemplateUIViewSet` with the generic `ObjectBulkRenameViewMixin`.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--no-input` option to `invoke tests` task.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--command` option to `invoke nbshell` task.
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated development dependency `faker` to `^40.15.0`.
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated development dependency `pymarkdownlnt` to `~0.9.37`.
+- [#8932](https://github.com/nautobot/nautobot/issues/8932) - Addressed a number of CodeQL-reported issues in the code base.
+- [#8940](https://github.com/nautobot/nautobot/issues/8940) - Loosened timeout requirement in `test_bulk_rename_regex_redos_protection` to reduce spurious failures in CI.
+
 ## v3.1.1 (2026-04-27)
 
 ### Security in v3.1.1

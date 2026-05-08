@@ -1,1 +1,0 @@
-Replaced bespoke `bulk_rename` actions on `ModuleBayUIViewSet` and `ModuleBayTemplateUIViewSet` with the generic `ObjectBulkRenameViewMixin`.
