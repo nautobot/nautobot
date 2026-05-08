@@ -173,15 +173,15 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Security in v2.4.33
 
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_SCHEMES` settings variable. By default new or updated `Webhook` records will be restricted to HTTP or HTTPS only, disallowing other schemes that may have been previously allowed. Administrators should audit existing `Webhook` records to identify any that are invalid, and either update/delete said records or customize `WEBHOOK_ALLOWED_SCHEMES` as appropriate.
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` settings variable. This can be used to specify additional IP networks that should be denied to `Webhook` sending, for example some deployments may wish to disallow RFC1918 addresses.
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_HOSTS` settings variable. This can be used to provide an allow-list of specific hosts that would otherwise be blocked by any `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` configuration.
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added logic to deny loopback, link-local, multicast, unspecified, or reserved IP addresses when defining or executing a `Webhook`. Administrators should audit existing `Webhook` records to identify any that are invalid and delete said records (CVE-2026-44797).
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Added various logic to protect `Webhook` definitions against being used as a vector for server-side request forgery (SSRF) (CVE-2026-44797).
-- [#GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/issues/GHSA-p3hx-pwf3-j8wr) - Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
-- [#GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/issues/GHSA-p3hx-pwf3-j8wr) - Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
-- [#GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/issues/GHSA-qrpw-gjvh-x5gm) - Added a timeout to `bulk-rename` views when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
-- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_SCHEMES` settings variable. By default new or updated `Webhook` records will be restricted to HTTP or HTTPS only, disallowing other schemes that may have been previously allowed. Administrators should audit existing `Webhook` records to identify any that are invalid, and either update/delete said records or customize `WEBHOOK_ALLOWED_SCHEMES` as appropriate.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` settings variable. This can be used to specify additional IP networks that should be denied to `Webhook` sending, for example some deployments may wish to disallow RFC1918 addresses.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_HOSTS` settings variable. This can be used to provide an allow-list of specific hosts that would otherwise be blocked by any `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` configuration.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added logic to deny loopback, link-local, multicast, unspecified, or reserved IP addresses when defining or executing a `Webhook`. Administrators should audit existing `Webhook` records to identify any that are invalid and delete said records (CVE-2026-44797).
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added various logic to protect `Webhook` definitions against being used as a vector for server-side request forgery (SSRF) (CVE-2026-44797).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added a timeout to `bulk-rename` views when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
 - [#8944](https://github.com/nautobot/nautobot/issues/8944) - Updated dependency `gitpython` to `~3.1.50` to mitigate CVE-2026-44243, CVE-2026-44244, and GHSA-mv93-w799-cj2w.
 
 ### Added in v2.4.33
@@ -194,20 +194,20 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Removed in v2.4.33
 
-- [#GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/issues/GHSA-c35q-vxrp-ph26) - Removed support for `nautobot-server webhook_receiver` command.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Removed support for `nautobot-server webhook_receiver` command.
 
 ### Fixed in v2.4.33
 
-- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
-- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
-- [#GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/issues/GHSA-wpxj-44w3-2j6x) - Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
 - [#8413](https://github.com/nautobot/nautobot/issues/8413) - Fixed silent failure of scheduled jobs whose originating user has been removed. The scheduler now records a failed JobResult as well as disables the schedule.
 - [#8560](https://github.com/nautobot/nautobot/issues/8560) - Fixed an issue where the `JobResult` status was not being set to `STARTED` when a job was run synchronously.
 - [#8937](https://github.com/nautobot/nautobot/issues/8937) - Fixed Job History home page panel sorting.
 
 ### Dependencies in v2.4.33
 
-- [#GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/issues/GHSA-qrpw-gjvh-x5gm) - Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)
 
 ### Documentation in v2.4.33
 
