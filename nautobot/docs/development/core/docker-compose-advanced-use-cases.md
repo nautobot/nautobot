@@ -166,6 +166,7 @@ To open VS Code in the development container, first open VS Code in your local c
 ### Debugging inside a Dev Container
 
 You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
+
 - **Python: Nautobot** - Targets the Django server process
 - **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
@@ -197,6 +198,7 @@ Follow either of the options below to configure VS Code to debug Nautobot and Ce
 #### Running inside the Nautobot workspace
 
 If you have opened the project via the workspace file `nautobot.code-workspace` then there are two debug configurations for remote debugging available. These can be run via one of the debug tasks:
+
 - `Python: Nautobot (Remote)` or
 - `Python: Nautobot-Celery (Remote)`
 

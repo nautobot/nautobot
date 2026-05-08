@@ -1,6 +1,5 @@
 from copy import deepcopy
 import logging
-import re
 from typing import ClassVar, Optional
 
 from django.conf import settings
@@ -25,6 +24,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_filters import FilterSet
 from django_tables2 import RequestConfig, Table
+import regex
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -1176,6 +1176,7 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_rename.html"
+    bulk_rename_regex_timeout = 1.0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1202,26 +1203,40 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         if "_preview" in request.POST or "_apply" in request.POST:
             form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
-                try:
-                    with transaction.atomic():
-                        renamed_pks = []
-                        for obj in selected_objects:
-                            find = form.cleaned_data["find"]
-                            replace = form.cleaned_data["replace"]
-                            if form.cleaned_data["use_regex"]:
-                                try:
-                                    obj.new_name = re.sub(find, replace, obj.name)
-                                # Catch regex group reference errors
-                                except re.error:
-                                    obj.new_name = obj.name
-                            else:
-                                obj.new_name = obj.name.replace(find, replace)
-                            renamed_pks.append(obj.pk)
+                find = form.cleaned_data["find"]
+                replace = form.cleaned_data["replace"]
+                use_regex = form.cleaned_data["use_regex"]
 
-                        if "_apply" in request.POST:
+                # Phase 1: compute new_name for each object so the preview can show old → new,
+                # surfacing any regex compile error or timeout to the form.
+                if use_regex:
+                    try:
+                        pattern = regex.compile(find)
+                    except regex.error as e:
+                        form.add_error("find", f"Invalid regex: {e}")
+                    else:
+                        try:
+                            for obj in selected_objects:
+                                obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                        except TimeoutError:
+                            form.add_error(
+                                "find",
+                                f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                                "the pattern may have catastrophic backtracking. Please simplify the expression.",
+                            )
+                else:
+                    for obj in selected_objects:
+                        obj.new_name = obj.name.replace(find, replace)
+
+                # Phase 2: persist the rename only if "Apply" was clicked and Phase 1 succeeded.
+                if "_apply" in request.POST and not form.errors:
+                    try:
+                        with transaction.atomic():
+                            renamed_pks = []
                             for obj in selected_objects:
                                 obj.name = obj.new_name
                                 obj.save()
+                                renamed_pks.append(obj.pk)
 
                             # Enforce constrained permissions
                             if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
@@ -1232,11 +1247,10 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                                 f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
                             )
                             return redirect(self.get_return_url(request))
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
+                    except ObjectDoesNotExist:
+                        msg = "Object update failed due to object-level permissions violation"
+                        logger.debug(msg)
+                        form.add_error(None, msg)
 
         else:
             form = self.form(initial={"pk": query_pks})
