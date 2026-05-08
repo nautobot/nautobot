@@ -39,7 +39,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.templatetags.perms import can_cancel
+from nautobot.core.templatetags.perms import can_cancel, can_change
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
@@ -119,6 +119,7 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    ScheduledJobStateChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -2589,9 +2590,7 @@ class JobUIViewSet(NautobotUIViewSet):
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = False
         title = job_model.name
-        run_button_label = "Run Job Now"
         job_result_key = None
-        refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
             if request.method == "POST":
@@ -2616,7 +2615,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": run_button_label,
+                    "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
@@ -2628,8 +2627,8 @@ class JobUIViewSet(NautobotUIViewSet):
                         {
                             "job_form_modal": True,
                             "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
+                            "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
+                            "refresh_on_close_if_done": refresh_on_close_if_done,  # pylint: disable=possibly-used-before-assignment
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
@@ -2785,12 +2784,12 @@ class JobUIViewSet(NautobotUIViewSet):
                         "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
                     )
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                 else:
                     if dryrun and not is_scheduled:
                         # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
                         scheduled_job.delete()
-                        scheduled_job = None
+                        del scheduled_job
                         return self._handle_immediate_execution(
                             request,
                             job_model,
@@ -2812,7 +2811,7 @@ class JobUIViewSet(NautobotUIViewSet):
 
                     # Step 4: Immediate execution (no schedule, no approval)
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                     return self._handle_immediate_execution(
                         request,
                         job_model,
@@ -3162,6 +3161,24 @@ class ScheduledJobUIViewSet(
     serializer_class = serializers.ScheduledJobSerializer
     table_class = tables.ScheduledJobTable
     action_buttons = ()
+    extra_detail_view_action_buttons = [
+        object_detail.ExtraDetailViewActionButton(
+            action="assume_ownership",
+            label="Assume Ownership",
+            icon="mdi-account-arrow-right",
+            link_name="extras:scheduledjob_assume_ownership",
+            template_path="components/button/post_extradetailviewactionbutton.html",
+            # Hide the button when the requester is already the owner, lacks change perms,
+            # or doesn't have run permission on the specific Job that this schedule runs.
+            permission_check=lambda user, obj: (
+                obj.user_id != user.id
+                and can_change(user, obj)
+                and obj.job_model is not None
+                and JobModel.objects.restrict(user, "run").filter(pk=obj.job_model_id).exists()
+            ),
+            weight=100,
+        )
+    ]
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -3205,6 +3222,35 @@ class ScheduledJobUIViewSet(
         )
 
         return context
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="assume-ownership",
+        url_name="assume_ownership",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.run_job"],
+    )
+    def assume_ownership(self, request, pk=None):
+        """Reassign this scheduled job's owner to the requesting user and re-enable it."""
+        obj = self.get_object()
+        if obj.user_id == request.user.id:
+            messages.info(request, f"You already own scheduled job '{obj.name}'.")
+            return redirect(obj.get_absolute_url())
+        # Defensively confirm the requester can run this specific Job — the UI hides the
+        # button in this case but a direct POST could still reach here.
+        if (
+            obj.job_model is None
+            or not JobModel.objects.restrict(request.user, "run").filter(pk=obj.job_model_id).exists()
+        ):
+            messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
+            return redirect(obj.get_absolute_url())
+        obj.user = request.user
+        obj.enabled = True
+        obj.state = ScheduledJobStateChoices.ACTIVE
+        obj.validated_save()
+        messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
+        return redirect(obj.get_absolute_url())
 
 
 #
