@@ -14,6 +14,13 @@
             This scheduled job will fail to run unless reinstalled at the original location.
         </div>
     {% endif %}
+    {% if not object.user %}
+        <div class="alert alert-danger">
+            <span class="mdi mdi-alert"></span>
+            The user that scheduled this job has been removed.
+            The job will not run until ownership is reassigned.
+        </div>
+    {% endif %}
     {{ block.super }}
 {% endblock content %}
 

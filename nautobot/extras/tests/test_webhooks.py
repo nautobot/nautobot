@@ -31,8 +31,8 @@ User = get_user_model()
 
 
 class WebhookTest(APITestCase):
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
+        super().setUp()
         location_ct = ContentType.objects.get_for_model(Location)
         # https://8.8.8.8/ skips DNS resolution (IP literal), isn't in any block-list, and uses HTTPS with
         # verification (the default), so the worker takes the requests.Session.send path that these tests mock.
@@ -53,13 +53,20 @@ class WebhookTest(APITestCase):
                 type_update=True,
                 payload_url=MOCK_URL,
                 secret=MOCK_SECRET,
-                additional_headers="X-Foo: Bar",
+                additional_headers="X-Foo: Baz",
+            ),
+            Webhook.objects.create(
+                name="Location Delete Webhook",
+                type_delete=True,
+                payload_url=MOCK_URL,
+                secret=MOCK_SECRET,
+                additional_headers="X-Foo: Bat",
             ),
         )
         for webhook in webhooks:
             webhook.content_types.set([location_ct])
 
-        cls.statuses = Status.objects.get_for_model(Location)
+        self.statuses = Status.objects.get_for_model(Location)
 
     def test_webhooks_process_webhook_on_update(self):
         """
@@ -68,7 +75,7 @@ class WebhookTest(APITestCase):
         """
 
         request_id = uuid.uuid4()
-        webhook = Webhook.objects.get(type_create=True)
+        webhook = Webhook.objects.get(type_update=True)
         timestamp = str(timezone.now())
 
         def mock_send(_, request, **kwargs):
@@ -81,11 +88,11 @@ class WebhookTest(APITestCase):
             # Validate the outgoing request headers
             self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
             self.assertEqual(request.headers["X-Hook-Signature"], signature)
-            self.assertEqual(request.headers["X-Foo"], "Bar")
+            self.assertEqual(request.headers["X-Foo"], "Baz")
 
             # Validate the outgoing request body
             body = json.loads(request.body)
-            self.assertEqual(body["event"], "created")
+            self.assertEqual(body["event"], "updated")
             self.assertEqual(body["timestamp"], timestamp)
             self.assertEqual(body["model"], "location")
             self.assertEqual(body["username"], "nautobotuser")
@@ -128,7 +135,7 @@ class WebhookTest(APITestCase):
                     webhook.pk,
                     serializer.data,
                     Location._meta.model_name,
-                    ObjectChangeActionChoices.ACTION_CREATE,
+                    ObjectChangeActionChoices.ACTION_UPDATE,
                     timestamp,
                     self.user.username,
                     request_id,
@@ -141,8 +148,20 @@ class WebhookTest(APITestCase):
         timestamp = str(timezone.now())
 
         def mock_send(_, request, **kwargs):
+            signature = generate_signature(request.body, webhook.secret)
+
+            # Validate the outgoing request headers
+            self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
+            self.assertEqual(request.headers["X-Hook-Signature"], signature)
+            self.assertEqual(request.headers["X-Foo"], "Bar")
+
             # Validate the outgoing request body
             body = json.loads(request.body)
+            self.assertEqual(body["event"], "created")
+            self.assertEqual(body["timestamp"], timestamp)
+            self.assertEqual(body["model"], "location")
+            self.assertEqual(body["username"], "nautobotuser")
+            self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["prechange"], None)
             self.assertEqual(body["snapshots"]["postchange"]["name"], "Location 1")
@@ -179,12 +198,24 @@ class WebhookTest(APITestCase):
 
     def test_webhooks_snapshot_on_delete(self):
         request_id = uuid.uuid4()
-        webhook = Webhook.objects.get(type_create=True)
+        webhook = Webhook.objects.get(type_delete=True)
         timestamp = str(timezone.now())
 
         def mock_send(_, request, **kwargs):
+            signature = generate_signature(request.body, webhook.secret)
+
+            # Validate the outgoing request headers
+            self.assertEqual(request.headers["Content-Type"], webhook.http_content_type)
+            self.assertEqual(request.headers["X-Hook-Signature"], signature)
+            self.assertEqual(request.headers["X-Foo"], "Bat")
+
             # Validate the outgoing request body
             body = json.loads(request.body)
+            self.assertEqual(body["event"], "deleted")
+            self.assertEqual(body["timestamp"], timestamp)
+            self.assertEqual(body["model"], "location")
+            self.assertEqual(body["username"], "nautobotuser")
+            self.assertEqual(body["request_id"], str(request_id))
             self.assertEqual(body["data"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["prechange"]["name"], "Location 1")
             self.assertEqual(body["snapshots"]["postchange"], None)
@@ -216,7 +247,7 @@ class WebhookTest(APITestCase):
                     webhook.pk,
                     serializer.data,
                     Location._meta.model_name,
-                    ObjectChangeActionChoices.ACTION_CREATE,
+                    ObjectChangeActionChoices.ACTION_DELETE,
                     timestamp,
                     self.user.username,
                     request_id,
@@ -272,7 +303,7 @@ class WebhookTest(APITestCase):
                     webhook.pk,
                     serializer.data,
                     Location._meta.model_name,
-                    ObjectChangeActionChoices.ACTION_CREATE,
+                    ObjectChangeActionChoices.ACTION_UPDATE,
                     timestamp,
                     self.user.username,
                     request_id,
@@ -281,6 +312,46 @@ class WebhookTest(APITestCase):
 
     def test_webhook_render_body_with_utf8(self):
         self.assertEqual(Webhook().render_body({"utf8": "I am UTF-8! 😀"}), '{"utf8": "I am UTF-8! 😀"}')
+
+    def test_webhook_body_template_is_used(self):
+        request_id = uuid.uuid4()
+        webhook = Webhook.objects.get(type_create=True)
+        webhook.body_template = '{"message": "{{ event }}"}'
+        webhook.validated_save()
+        timestamp = str(timezone.now())
+
+        def mock_send(_, request, **kwargs):
+            # Validate the outgoing request body
+            body = json.loads(request.body)
+
+            self.assertEqual(body, {"message": "created"})
+
+            class FakeResponse:
+                ok = True
+                status_code = 200
+
+            return FakeResponse()
+
+        with patch.object(Session, "send", mock_send):
+            with web_request_context(self.user, change_id=request_id):
+                location_type = LocationType.objects.get(name="Campus")
+                location = Location(name="Location 1", location_type=location_type, status=self.statuses[0])
+                location.save()
+
+                serializer = LocationSerializer(location, context={"request": None})
+                oc = get_changes_for_model(location).first()
+                snapshots = oc.get_snapshots()
+
+                process_webhook(
+                    webhook.pk,
+                    serializer.data,
+                    Location._meta.model_name,
+                    ObjectChangeActionChoices.ACTION_CREATE,
+                    timestamp,
+                    self.user.username,
+                    request_id,
+                    snapshots,
+                )
 
     def test_process_webhook_does_not_follow_redirects(self):
         """SSRF defense: redirects must not be followed, since the SSRF block-list only validates the initial URL."""
