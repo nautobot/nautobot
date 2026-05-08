@@ -2113,9 +2113,7 @@ class SavedViewUIViewSet(
 class ScheduledJobListView(generic.ObjectListView):
     # Show enabled schedules plus schedules whose owning user has been removed (auto-disabled
     # by the scheduler) so admins can still see them and reassign ownership.
-    queryset = ScheduledJob.objects.filter(
-        Q(pk__in=ScheduledJob.objects.enabled().values("pk")) | Q(user__isnull=True)
-    )
+    queryset = ScheduledJob.objects.filter(Q(pk__in=ScheduledJob.objects.enabled().values("pk")) | Q(user__isnull=True))
     table = tables.ScheduledJobTable
     filterset = filters.ScheduledJobFilterSet
     filterset_form = forms.ScheduledJobFilterForm
