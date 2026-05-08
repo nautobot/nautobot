@@ -41,9 +41,6 @@
         #draggable-homepage-panels > .nb-panel-group {
             height: fit-content;
         }
-        #draggable-homepage-panels > .nb-panel-group > .card.nb-draggable:not(:first-child) {
-            margin-block-start: 1.25rem; /* 20px */
-        }
         #draggable-homepage-panels > .nb-panel-group > .card.nb-draggable > .list-group {
             max-height: 25rem; /* 400px */
         }
@@ -55,6 +52,7 @@
     <div
         id="draggable-homepage-panels"
         class="row opacity-0 nb-draggable-container nb-transition-fade"
+        data-nb-draggable-flow="column"
         hx-ext="json-enc"
         hx-swap="none"
         hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
@@ -175,33 +173,61 @@
                     );
                     const firstRightmostColumnIndex = columns.indexOf(firstRightmostColumn);
 
+                    // Reset all columns `marginBlockStart` to start offset calculations from scratch.
                     columns.forEach((column) => (column.style.marginBlockStart = 0));
 
+                    // Force wait for the `marginBlockStart` style set above to take effect.
                     columns.forEach((column) => window.getComputedStyle(column).marginBlockStart);
 
-                    columns.forEach((column, index) => {
-                        /*
-                         * `column` must be wrapped in case it is rendered after the first rightmost column encountered,
-                         * i.e. when its `index` is higher than `firstRightmostColumnIndex`.
-                         */
-                        const isColumnWrapped = index > firstRightmostColumnIndex;
-                        if (isColumnWrapped) {
+                    (function moveWrappedColumnsUp() {
+                        const columnOffsetTopTargets = columns.map((column, index) => {
                             /*
-                             * `columnAbove` is assumed to be the first preceding column with the same `offsetLeft`
-                             * value as currently iterated `column`, so essentially with the same X coordinate.
+                             * `column` must be wrapped in case it is rendered after the first rightmost column
+                             * encountered, i.e. when its `index` is higher than `firstRightmostColumnIndex`.
                              */
-                            const columnAbove = columns
-                                .slice(0, index)
-                                .reverse()
-                                .find(({ offsetLeft }) => offsetLeft === column.offsetLeft);
-                            const columnAboveLastChild = columnAbove.children[columnAbove.children.length - 1];
-                            const columnAboveBottom =
-                                columnAboveLastChild.offsetTop +
-                            columnAboveLastChild.offsetHeight +
-                            parseInt(window.getComputedStyle(columnAboveLastChild).marginBlockEnd, 10);
-                            column.style.marginBlockStart = `-${column.offsetTop - columnAboveBottom}px`;
+                            const isColumnWrapped = index > firstRightmostColumnIndex;
+                            if (isColumnWrapped) {
+                                /*
+                                 * `columnAbove` is assumed to be the first preceding column with the same `offsetLeft`
+                                 * value as currently iterated `column`, so essentially with the same X coordinate.
+                                 */
+                                const columnAbove = columns
+                                    .slice(0, index)
+                                    .reverse()
+                                    .find(({ offsetLeft }) => offsetLeft === column.offsetLeft);
+                                const columnAboveLastChild =
+                                    // Fall back to the `columnAbove` itself here, in case it has no children.
+                                columnAbove.children[columnAbove.children.length - 1] ?? columnAbove;
+                                return (
+                                    columnAboveLastChild.offsetTop +
+                                    columnAboveLastChild.offsetHeight +
+                                    parseInt(window.getComputedStyle(columnAboveLastChild).marginBlockEnd, 10)
+                                );
+                            }
+                            return column.offsetTop;
+                        });
+
+                        columns.forEach((column, index) => {
+                            // Re-calculate column top margin to seamlessly align it with the column above.
+                            column.style.marginBlockStart = `${parseInt(window.getComputedStyle(column).marginBlockStart, 10) - (column.offsetTop - columnOffsetTopTargets[index])}px`;
+                            // Force wait for the `marginBlockStart` style set above to take effect.
+                            window.getComputedStyle(column).marginBlockStart;
+                        });
+
+                        /*
+                         * The complexity of calculating exact margin top initially stems from the fact that it does not
+                         * only depend on the columns above, but also on the total height of columns container, that is
+                         * the main row. Because the row height is also affected by moving wrapped columns up, it is
+                         * straight up simpler to just re-calculate again if the columns did not end up at their target
+                         * places, rather than try to get all the positions exactly right at the first time.
+                         */
+                        const areAllColumnsAtTheirTargets = columns.every(
+                            (column, index) => column.offsetTop <= columnOffsetTopTargets[index],
+                        );
+                        if (!areAllColumnsAtTheirTargets) {
+                            moveWrappedColumnsUp();
                         }
-                    });
+                    })();
                 };
 
                 const resizeObserver = new ResizeObserver(() => collapseVerticalWhitespace());

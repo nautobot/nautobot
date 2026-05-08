@@ -3,6 +3,14 @@ const DRAGGABLE_CONTAINER_CLASS = 'nb-draggable-container';
 const DRAGGABLE_HANDLE_CLASS = 'nb-draggable-handle';
 const DRAGGING_CLASS = 'nb-dragging';
 
+/*
+ * Available draggable flows are:
+ *   - `BIDIRECTIONAL`: default value, agnostic of the axis in which the nearest draggable should be looked for.
+ *   - `COLUMN`: prioritizes searching the nearest draggable in the nearest column container, if such structure exists.
+ */
+const DRAGGABLE_FLOW = { BIDIRECTIONAL: 'bidirectional', COLUMN: 'column' };
+const DRAGGABLE_FLOW_DATA_ATTRIBUTE = 'data-nb-draggable-flow';
+
 export const initializeDraggable = () => {
   const closest = (element, className) => element?.closest?.(`.${className}`);
 
@@ -38,6 +46,7 @@ export const initializeDraggable = () => {
           [event.target.id]: {
             after: event.target.nextElementSibling ? null : event.target,
             before: event.target.nextElementSibling,
+            inside: null,
           },
         },
       };
@@ -62,6 +71,8 @@ export const initializeDraggable = () => {
         insert.after.after(draggable);
       } else if (insert.before && insert.before !== draggable && insert.before.previousElementSibling !== draggable) {
         insert.before.before(draggable);
+      } else if (insert.inside) {
+        insert.inside.append(draggable);
       }
     }
   };
@@ -79,45 +90,68 @@ export const initializeDraggable = () => {
       event.preventDefault();
 
       const insert = (() => {
-        const findNearestElement = (selector) =>
-          [...draggableContainer.querySelectorAll(selector)].reduce(
-            ({ nearestElement, nearestElementDistance }, element) => {
+        const findNearestElement = (container, selector, options) =>
+          [...container.querySelectorAll(selector)]
+            .map((element) => {
               const { bottom, left, right, top } = element.getBoundingClientRect();
 
-              const distanceX = Math.min(Math.abs(event.clientX - left), Math.abs(event.clientX - right));
-              const distanceY = Math.min(Math.abs(event.clientY - bottom), Math.abs(event.clientY - top));
+              const isWithinXBounds = event.clientX >= left && event.clientX <= right;
+              const isWithinYBounds = event.clientY >= top && event.clientY <= bottom;
+
+              const distanceX = isWithinXBounds
+                ? 0
+                : Math.min(Math.abs(event.clientX - left), Math.abs(event.clientX - right));
+              const distanceY = isWithinYBounds
+                ? 0
+                : Math.min(Math.abs(event.clientY - bottom), Math.abs(event.clientY - top));
               // eslint-disable-next-line id-length
               const distance = { normalized: Math.sqrt(distanceX ** 2 + distanceY ** 2), x: distanceX, y: distanceY };
 
-              return distance.normalized < nearestElementDistance.normalized
-                ? { nearestElement: element, nearestElementDistance: distance }
-                : { nearestElement, nearestElementDistance };
-            },
-            // eslint-disable-next-line id-length
-            { nearestElement: null, nearestElementDistance: { normalized: Infinity, x: Infinity, y: Infinity } },
+              return { element, distance };
+            })
+            .sort((a, b) => {
+              const prioritizeAxis = options?.prioritizeAxis;
+              return prioritizeAxis && a.distance[prioritizeAxis] !== b.distance[prioritizeAxis]
+                ? b.distance[prioritizeAxis] - a.distance[prioritizeAxis]
+                : b.distance.normalized - a.distance.normalized;
+            })
+            .pop()?.element;
+
+        const container = (() => {
+          const draggableFlow =
+            draggableContainer.getAttribute(DRAGGABLE_FLOW_DATA_ATTRIBUTE) ?? DRAGGABLE_FLOW.BIDIRECTIONAL;
+          const areDraggablesGrouped = [...draggableContainer.children].every(
+            (child) => !child.classList.contains(DRAGGABLE_CLASS),
           );
+          if (draggableFlow === DRAGGABLE_FLOW.COLUMN && areDraggablesGrouped) {
+            return findNearestElement(draggableContainer, ':scope > *', { prioritizeAxis: 'x' });
+          }
 
-        const nearestElementSelector = `.${DRAGGABLE_CLASS}`;
+          return draggableContainer;
+        })();
 
-        const draggableAncestor = event.target.closest(nearestElementSelector);
+        const nearestDraggable = findNearestElement(container, `.${DRAGGABLE_CLASS}`);
+        if (nearestDraggable) {
+          const nearestDraggableRect = nearestDraggable.getBoundingClientRect();
+          const nearestDraggableCenterCords = {
+            x: nearestDraggableRect.left + nearestDraggableRect.width / 2, // eslint-disable-line id-length
+            y: nearestDraggableRect.top + nearestDraggableRect.height / 2, // eslint-disable-line id-length
+          };
 
-        const nearestDraggable = draggableAncestor ?? findNearestElement(nearestElementSelector).nearestElement;
-        const nearestDraggableRect = nearestDraggable.getBoundingClientRect();
-        const nearestDraggableCenterCords = {
-          x: nearestDraggableRect.left + nearestDraggableRect.width / 2, // eslint-disable-line id-length
-          y: nearestDraggableRect.top + nearestDraggableRect.height / 2, // eslint-disable-line id-length
-        };
+          const isBelowTheNearestDraggable = nearestDraggableCenterCords.y < event.clientY;
+          return isBelowTheNearestDraggable
+            ? { after: nearestDraggable, before: null, inside: null }
+            : { after: null, before: nearestDraggable, inside: null };
+        }
 
-        const isBelowTheNearestDraggable = nearestDraggableCenterCords.y < event.clientY;
-        return isBelowTheNearestDraggable
-          ? { after: nearestDraggable, before: null }
-          : { after: null, before: nearestDraggable };
+        return { after: null, before: null, inside: container };
       })();
 
-      // Re-calculate drop indicator position when `insert` `after` or `before` element has changed, otherwise skip it.
+      // Re-calculate drop indicator position when `insert` element has changed, otherwise skip the entire operation.
       if (
         insert.after !== dragDataRef.current.insert[draggable.id]?.after ||
-        insert.before !== dragDataRef.current.insert[draggable.id]?.before
+        insert.before !== dragDataRef.current.insert[draggable.id]?.before ||
+        insert.inside !== dragDataRef.current.insert[draggable.id]?.inside
       ) {
         // Calculate the drop indicator line geometry in relation to its offset parent (nearest positioned ancestor).
         draggableContainer.style.setProperty(
@@ -127,18 +161,30 @@ export const initializeDraggable = () => {
             const heightHalf = `${parseFloat(HEIGHT) / 2}rem`;
 
             if (insert.after) {
-              const bottom = `calc(${insert.after.offsetParent.offsetHeight - (insert.after.offsetTop + insert.after.offsetHeight)}px - ${heightHalf})`;
+              // Take whitespace into calculations only if the next sibling element is in the same column.
+              const whitespace =
+                insert.after.nextElementSibling?.offsetLeft === insert.after.offsetLeft
+                  ? insert.after.nextElementSibling.offsetTop - (insert.after.offsetTop + insert.after.offsetHeight)
+                  : 0;
+              const bottom = `calc(${insert.after.offsetParent.offsetHeight - (insert.after.offsetTop + insert.after.offsetHeight) - whitespace / 2}px - ${heightHalf})`;
               const left = `${insert.after.offsetLeft}px`;
               const right = `${insert.after.offsetParent.offsetWidth - (insert.after.offsetLeft + insert.after.offsetWidth)}px`;
-              const top = `calc(${insert.after.offsetTop + insert.after.offsetHeight}px - ${heightHalf})`;
+              const top = `calc(${insert.after.offsetTop + insert.after.offsetHeight + whitespace / 2}px - ${heightHalf})`;
               return `${top} ${right} ${bottom} ${left}`;
             }
 
-            if (insert.before) {
-              const bottom = `calc(${insert.before.offsetParent.offsetHeight - insert.before.offsetTop}px - ${heightHalf})`;
-              const left = `${insert.before.offsetLeft}px`;
-              const right = `${insert.before.offsetParent.offsetWidth - (insert.before.offsetLeft + insert.before.offsetWidth)}px`;
-              const top = `calc(${insert.before.offsetTop}px - ${heightHalf})`;
+            if (insert.before || insert.inside) {
+              const insertElement = insert.before ?? insert.inside;
+              // Take whitespace into calculations only if the previous sibling element is in the same column.
+              const whitespace =
+                insert.before && insert.before.previousElementSibling?.offsetLeft === insert.before.offsetLeft
+                  ? insert.before.offsetTop -
+                    (insert.before.previousElementSibling.offsetTop + insert.before.previousElementSibling.offsetHeight)
+                  : 0;
+              const bottom = `calc(${insertElement.offsetParent.offsetHeight - insertElement.offsetTop + whitespace / 2}px - ${heightHalf})`;
+              const left = `${insertElement.offsetLeft}px`;
+              const right = `${insertElement.offsetParent.offsetWidth - (insertElement.offsetLeft + insertElement.offsetWidth)}px`;
+              const top = `calc(${insertElement.offsetTop - whitespace / 2}px - ${heightHalf})`;
               return `${top} ${right} ${bottom} ${left}`;
             }
 
