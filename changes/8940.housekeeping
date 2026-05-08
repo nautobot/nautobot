@@ -1,0 +1,1 @@
+Loosened timeout requirement in `test_bulk_rename_regex_redos_protection` to reduce spurious failures in CI.

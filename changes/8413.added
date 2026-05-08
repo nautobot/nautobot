@@ -1,0 +1,1 @@
+Added an "Assume Ownership" action button on the Scheduled Job detail view that allows users with the required permissions to take over ownership of a scheduled job.
