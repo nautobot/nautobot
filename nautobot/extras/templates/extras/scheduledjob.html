@@ -8,6 +8,14 @@
 
 {% block buttons %}
     {% plugin_buttons object %}
+    {% if can_assume_ownership %}
+        <form method="post" action="{% url 'extras:scheduledjob_assume_ownership' pk=object.pk %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <span class="mdi mdi-account-arrow-right" aria-hidden="true"></span> Assume Ownership
+            </button>
+        </form>
+    {% endif %}
     {% if user|can_delete:object %}
         {% delete_button object %}
     {% endif %}
@@ -19,6 +27,13 @@
             <i class="mdi mdi-alert"></i>
             This job source for this scheduled job is no longer installed.
             This scheduled job will fail to run unless reinstalled at the original location.
+        </div>
+    {% endif %}
+    {% if not object.user %}
+        <div class="alert alert-danger">
+            <span class="mdi mdi-alert"></span>
+            The user that scheduled this job has been removed.
+            The job will not run until ownership is reassigned.
         </div>
     {% endif %}
     {{ block.super }}

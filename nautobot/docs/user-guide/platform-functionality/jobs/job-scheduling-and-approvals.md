@@ -23,6 +23,20 @@ If the job requires no approval, it will then be added to the queue of scheduled
 
 Once a job has been scheduled, the schedule can be deleted by navigating to `Jobs > Scheduled Jobs`, selecting the schedule name and clicking the `Delete` button. You can also select multiple schedules and click the `Delete Selected` button to delete them all at once.
 
+### Assuming Ownership of a Scheduled Job
+
+Each scheduled job is owned by, and runs as, the user that created it. If that user is removed, the schedule can no longer run and is automatically disabled the next time it would have fired; a failed `JobResult` is also recorded.
+
+Ownership of a scheduled job can be transferred at any time via the `Assume Ownership` button on the Scheduled Job detail view. Clicking it reassigns the schedule to the current user. If the scheduled job was previously disabled due to a failure, the button also re-enables it.
+
+The button is hidden when the requester is already the current owner, and is only visible to users that meet **all** of the following criteria:
+
+- They are not the current owner of the scheduled job.
+- They have the `extras.change_scheduledjob` permission.
+- They have the `extras.run_job` permission for the specific Job that the schedule runs (object-level permissions on the Job are honored).
+
+The most common reason to use this action is to recover a scheduled job whose original owner was removed, but it can also be used to hand off a recurring schedule to another administrator.
+
 ### Scheduling via the API
 
 Jobs can also be scheduled via the REST API. The endpoint used for this is the regular job endpoint; specifying the optional `schedule` parameter will act just as scheduling in the UI.

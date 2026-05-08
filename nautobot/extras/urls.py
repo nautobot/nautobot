@@ -71,6 +71,11 @@ urlpatterns = [
     path("jobs/", views.JobListView.as_view(), name="job_list"),
     path("jobs/scheduled-jobs/", views.ScheduledJobListView.as_view(), name="scheduledjob_list"),
     path("jobs/scheduled-jobs/<uuid:pk>/", views.ScheduledJobView.as_view(), name="scheduledjob"),
+    path(
+        "jobs/scheduled-jobs/<uuid:pk>/assume-ownership/",
+        views.ScheduledJobAssumeOwnershipView.as_view(),
+        name="scheduledjob_assume_ownership",
+    ),
     path("jobs/scheduled-jobs/<uuid:pk>/delete/", views.ScheduledJobDeleteView.as_view(), name="scheduledjob_delete"),
     path(
         "jobs/scheduled-jobs/delete/",
