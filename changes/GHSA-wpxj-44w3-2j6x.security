@@ -1,1 +1,0 @@
-Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
