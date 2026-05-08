@@ -36,6 +36,7 @@ from nautobot.extras import filters
 from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_revoke import RevokeFactory
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1147,12 +1148,84 @@ class JobResultViewSet(
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
+    class RevokeJobPermission(TokenPermissions):
+        """
+        Enforce `view_jobresult` permission (instead of default `add_jobresult` for POST).
+        """
+
+        perms_map = {
+            "POST": ["%(app_label)s.view_jobresult"],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /revoke/ endpoint.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"revoke": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], permission_classes=[RevokeJobPermission])
+    def revoke(self, request, pk=None):
+        """Terminate a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        if not request.user.has_perm("extras.run_job") and not request.user.is_staff:
+            raise PermissionDenied("Job can not be revoked user without permission to run jobs.")
+
+        if job_result.user != request.user and not request.user.is_staff:
+            raise PermissionDenied("Job can not be revoked only by owners/staff.")
+
+        if not job_result.is_unready_state:
+            return Response(
+                {"detail": "Job is already finished. Nothing to do."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        try:
+            strategy = RevokeFactory.get_strategy(job_result.queue_type)
+        except ValueError as e:
+            return Response({"detail": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        job_is_running = strategy.is_alive(job_result)
+
+        confirm = request.data.get("confirm")
+
+        if not confirm:
+            detail = {
+                "error": "Confirmation required",
+                "message": f"Are you sure you want to revoke '{job_result.name}'?",
+                "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
+                "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "action_description": "This will REAP or TERMINATE the job.",
+                "irreversible": "This action cannot be undone.",
+                "confirm_instruction": "Set `confirm=True` to proceed.",
+                "details": {
+                    "REAP": "No worker running; marks JobResult as revoked without signal.",
+                    "TERMINATE": "SIGKILL to worker; stops immediately, no cleanup.",
+                },
+            }
+            return Response(detail, status=status.HTTP_400_BAD_REQUEST)
+
+        result = strategy.revoke(job_result, user=request.user)
+
+        if result["error"]:
+            return Response({"detail": result["error"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        job_result.refresh_from_db()
+        serializer = self.get_serializer(job_result)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 #

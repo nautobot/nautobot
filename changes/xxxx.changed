@@ -1,0 +1,2 @@
+Job revocation (both UI and API) now requires the `extras.run_job` permission.
+Non-staff users can only revoke jobs they themselves submitted. Staff users bypass both the `run_job` requirement and the ownership requirement.

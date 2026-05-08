@@ -1,0 +1,1 @@
+Added `POST /api/extras/job-results/{id}/revoke/` API endpoint for revoking a running or pending job.

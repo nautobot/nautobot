@@ -3771,11 +3771,19 @@ class JobResultUIViewSet(
         methods=["get", "post"],
         url_path="revoke-job",
         url_name="revoke_job",
-        custom_view_base_action="change",
+        custom_view_base_action="view",
     )
     def revoke_job(self, request, pk=None):
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
+
+        if not request.user.has_perm("extras.run_job") and not request.user.is_staff:
+            messages.error(request, "Job can not be revoked by user without permission to run jobs.")
+            return redirect(job_result.get_absolute_url())
+
+        if job_result.user != request.user and not request.user.is_staff:
+            messages.error(request, "Job can not be revoked only by owners/staff.")
+            return redirect(job_result.get_absolute_url())
 
         strategy = RevokeFactory.get_strategy(job_result.queue_type)
 
