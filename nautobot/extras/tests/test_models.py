@@ -4147,6 +4147,7 @@ class JobResultTestCase(TestCase):
             "nautobot_job_console_log",
             "nautobot_job_user_id",
             "nautobot_job_ignore_singleton_lock",
+            "nautobot_job_queue_type",
             "queue",
         }
         self.assertEqual(set(result.keys()), expected_keys)
@@ -4393,6 +4394,25 @@ class JobResultTestCase(TestCase):
                 self.user,
             )
         self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    def test_queue_type_property(self):
+        """queue_type property should prefer celery_kwargs and fallback to JobQueue lookup."""
+
+        with self.subTest("Returns queue type from celery_kwargs when present"):
+            self.job_result.celery_kwargs = {"nautobot_job_queue_type": "celery", "queue": "test-default"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns queue type from JobQueue lookup"):
+            JobQueue.objects.create(
+                name="test-celery",
+                queue_type="celery",
+            )
+            self.job_result.celery_kwargs = {"queue": "test-celery"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns None when JobQueue does not exist"):
+            self.job_result.celery_kwargs = {"queue": "does-not-exist"}
+            self.assertIsNone(self.job_result.queue_type)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

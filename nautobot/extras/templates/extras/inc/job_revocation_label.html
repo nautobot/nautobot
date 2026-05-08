@@ -1,0 +1,11 @@
+{% load helpers %}
+
+{% if result.status == 'REVOKED' %}
+    {% if result.date_terminated %}
+        <span class="badge bg-danger">Terminated</span>
+    {% else %}
+        <span class="badge bg-warning">Reaped</span>
+    {% endif %}
+{% else %}
+    <span> {{ None | placeholder }} </span>
+{% endif %}

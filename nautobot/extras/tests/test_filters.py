@@ -1500,6 +1500,54 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
+    def test_revocation_type(self):
+        user = UserFactory.create()
+        job = self.jobs[0]
+
+        # "terminated" - REVOKED with date_terminated set
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            date_terminated=now(),
+        )
+        # "reaped" - REVOKED with date_terminated NULL
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            date_terminated=None,
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["terminated"]}, self.queryset).qs,
+            self.queryset.filter(
+                status=JobResultStatusChoices.STATUS_REVOKED,
+                date_terminated__isnull=False,
+            ).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["reaped"]}, self.queryset).qs,
+            self.queryset.filter(
+                status=JobResultStatusChoices.STATUS_REVOKED,
+                date_terminated__isnull=True,
+            ).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["terminated", "reaped"]}, self.queryset).qs,
+            self.queryset.filter(status=JobResultStatusChoices.STATUS_REVOKED).distinct(),
+        )
+
+        self.assertQuerySetEqual(
+            self.filterset({"revocation_type": []}, self.queryset).qs,
+            self.queryset.all(),
+            ordered=False,
+        )
+
 
 class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobHook.objects.all()
