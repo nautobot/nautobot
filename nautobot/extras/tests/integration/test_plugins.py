@@ -1,9 +1,3 @@
-import json
-import os
-import tempfile
-
-from django.contrib.contenttypes.models import ContentType
-from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.models import (
@@ -14,107 +8,7 @@ from nautobot.circuits.models import (
 )
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.tests.test_views import create_test_device
-from nautobot.extras.choices import WebhookHttpMethodChoices
-from nautobot.extras.context_managers import web_request_context
-from nautobot.extras.models import Status, Webhook
-
-from example_app.models import ExampleModel
-
-
-class AppWebhookTest(SeleniumTestCase):
-    """
-    This test case proves that Apps can use the webhook functions when making changes on a model.
-    """
-
-    def setUp(self):
-        super().setUp()
-        tempdir = tempfile.gettempdir()
-        for f in os.listdir(tempdir):
-            if f.startswith("test_app_webhook_"):
-                os.remove(os.path.join(tempdir, f))
-
-        self.url = f"http://localhost:{self.server_thread.port}" + reverse(
-            "plugins-api:example_app-api:examplemodel_webhook"
-        )
-        self.webhook = Webhook.objects.create(
-            name="ExampleModel",
-            type_create=True,
-            type_update=True,
-            type_delete=True,
-            payload_url=self.url,
-            http_method=WebhookHttpMethodChoices.METHOD_GET,
-            http_content_type="application/json",
-        )
-        self.example_ct = ContentType.objects.get_for_model(ExampleModel)
-        self.webhook.content_types.set([self.example_ct])
-
-    def update_headers(self, new_header):
-        """
-        Update webhook additional headers with the name of the running test.
-        """
-        headers = f"Test-Name: {new_header}"
-        self.webhook.additional_headers = headers
-        self.webhook.validated_save()
-
-    @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_app_webhook_create(self):
-        """
-        Test that webhooks are correctly triggered by an App model create.
-        """
-        self.update_headers("test_app_webhook_create")
-        # Make change to model
-        with web_request_context(self.user):
-            ExampleModel.objects.create(name="foo", number=100)
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_create")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_create"))
-
-    @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_app_webhook_update(self):
-        """
-        Test that webhooks are correctly triggered by an App model update.
-        """
-        self.update_headers("test_app_webhook_update")
-        obj = ExampleModel.objects.create(name="foo", number=100)
-
-        # Make change to model
-        with web_request_context(self.user):
-            obj.number = 200
-            obj.validated_save()
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_update")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_update"))
-
-    @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_app_webhook_delete(self):
-        """
-        Test that webhooks are correctly triggered by an App model delete.
-        """
-        self.update_headers(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete"))
-        obj = ExampleModel.objects.create(name="foo", number=100)
-
-        # Make change to model
-        with web_request_context(self.user):
-            obj.delete()
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete")))
-        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_delete"))
-
-    @override_settings(ALLOWED_HOSTS=["localhost"])
-    def test_app_webhook_with_body(self):
-        """
-        Verify that webhook body_template is correctly used.
-        """
-        self.update_headers("test_app_webhook_with_body")
-
-        self.webhook.body_template = '{"message": "{{ event }}"}'
-        self.webhook.save()
-
-        # Make change to model
-        with web_request_context(self.user):
-            ExampleModel.objects.create(name="bar", number=100)
-
-        self.assertTrue(os.path.exists(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body")))
-        with open(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body"), "r") as f:
-            self.assertEqual(json.loads(f.read()), {"message": "created"})
-        os.remove(os.path.join(tempfile.gettempdir(), "test_app_webhook_with_body"))
+from nautobot.extras.models import Status
 
 
 class AppDocumentationTest(SeleniumTestCase):

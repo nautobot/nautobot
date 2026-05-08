@@ -1,2 +1,2 @@
-Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (GHSA-p3hx-pwf3-j8wr).
+Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
 Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
