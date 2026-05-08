@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
@@ -2166,7 +2167,7 @@ class ScheduledJobView(generic.ObjectView):
         }
 
 
-class ScheduledJobAssumeOwnershipView(View):
+class ScheduledJobAssumeOwnershipView(LoginRequiredMixin, View):
     """Reassign this scheduled job's owner to the requesting user and re-enable it."""
 
     queryset = ScheduledJob.objects.all()
