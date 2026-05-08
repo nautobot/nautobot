@@ -2292,9 +2292,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             )
 
             if "_addanother" in request.POST:
-                return redirect(request.get_full_path())
-            else:
-                return redirect(self.get_return_url(request))
+                next_url = request.get_full_path()
+                if url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                    return redirect(iri_to_uri(next_url))
+            return redirect(self.get_return_url(request))
 
         except ObjectDoesNotExist:
             create_form.add_error(None, "Component creation failed due to object-level permissions violation")
