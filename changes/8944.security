@@ -1,1 +1,0 @@
-Updated dependency `gitpython` to `~3.1.50` to mitigate CVE-2026-44243, CVE-2026-44244, and GHSA-mv93-w799-cj2w.

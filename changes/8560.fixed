@@ -1,1 +1,0 @@
-Fixed an issue where the `JobResult` status was not being set to `STARTED` when a job was run synchronously.
