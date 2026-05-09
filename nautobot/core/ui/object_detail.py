@@ -14,11 +14,11 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import models
-from django.db.models import CharField, JSONField, Q, URLField
+from django.db.models import CharField, DateField, DateTimeField, JSONField, Q, URLField
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
-from django.template.defaultfilters import truncatechars
+from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
@@ -1746,6 +1746,12 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # For example, Secret.provider -> Secret.get_provider_display()
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
+
+        if isinstance(field_instance, (DateTimeField, DateField)):
+            if value is None:
+                return placeholder(value)
+            format_string = "DATETIME_FORMAT" if isinstance(field_instance, DateTimeField) else "DATE_FORMAT"
+            return format_date(value, format_string)
 
         return super().render_value(key, value, context)
 
