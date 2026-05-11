@@ -1,0 +1,1 @@
+Updated development npm dependency `fast-uri` to `3.1.2` to mitigate CVE-2026-6321 and CVE-2026-6322.
