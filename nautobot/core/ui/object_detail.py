@@ -2752,7 +2752,7 @@ class _JobModalButton(Button):
                 or a empty dict to render no button.
         """
         if self.redirect_button_callback is not None:
-            return self.redirect_button_callback(job_result, request)
+            return self.redirect_button_callback(job_result, request, **kwargs)
         return {}
 
     def get_link(self, context):
