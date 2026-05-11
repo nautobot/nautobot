@@ -3764,11 +3764,16 @@ class JobResultUIViewSet(
         if not job_is_pending:
             redirect_button = job_modal_button.get_redirect_button(job_result, request)
             if redirect_button:
-                for key in ("url", "label"):
-                    if key not in redirect_button:
-                        raise ValueError(f"redirect_button is missing required key '{key}'")
-                redirect_button.setdefault("color", "primary")
-                context["redirect_button"] = redirect_button
+                missing_keys = [key for key in ("url", "label") if key not in redirect_button]
+                if missing_keys:
+                    logger.warning(
+                        "The redirect_button with the button_id: %s is missing the required key(s) %s.",
+                        job_modal_button.button_id,
+                        missing_keys,
+                    )
+                else:
+                    redirect_button.setdefault("color", "primary")
+                    context["redirect_button"] = redirect_button
 
         return Response(
             {
