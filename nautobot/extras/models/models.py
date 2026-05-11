@@ -797,6 +797,13 @@ class ImageAttachment(BaseModel):
         filename = self.image.name.rsplit("/", 1)[-1]
         return filename.split("_", 2)[2]
 
+    def clean(self):
+        super().clean()
+        # Currently only Device, Rack, and Location support ImageAttachment records.
+        # If this changes, various other code paths will need similar updates, e.g. the REST API.
+        if self.content_type.app_label != "dcim" or self.content_type.model not in ["device", "location", "rack"]:
+            raise ValidationError({"content_type": "Not a permitted content-type for ImageAttachments."})
+
     def delete(self, *args, **kwargs):
         _name = self.image.name
 
@@ -1059,6 +1066,17 @@ class Webhook(
             raise ValidationError(
                 {"ca_file_path": "Do not specify a CA certificate file if SSL verification is disabled."}
             )
+
+        # Validate payload_url against SSRF policy (scheme allow-list, host allow-list, IP-literal block-list).
+        # DNS-based block-list enforcement happens at request-send time in process_webhook, since the web server
+        # and worker may have different DNS views.
+        # Imported here to avoid a circular import: nautobot.extras.webhooks imports the Webhook model.
+        from nautobot.extras.webhooks import validate_webhook_url_format
+
+        try:
+            validate_webhook_url_format(self.payload_url)
+        except ValidationError as exc:
+            raise ValidationError({"payload_url": exc.messages})
 
     def render_headers(self, context):
         """

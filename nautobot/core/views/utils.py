@@ -679,5 +679,6 @@ def get_bulk_queryset_from_view(
         log.debug("Saved view with no filters specified, returning all objects")
         return queryset
 
+    # This should be unreachable code.
     log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")

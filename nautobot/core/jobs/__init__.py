@@ -299,7 +299,7 @@ class ImportObjects(Job):
                 if validation_failed:
                     raise AbortTransaction
                 return new_objs, validation_failed
-        # If validation failed return an empty list, since all objs created where rolled back
+        # If validation failed return an empty list, since all objs created were rolled back
         self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 

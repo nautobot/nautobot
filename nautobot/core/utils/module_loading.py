@@ -97,7 +97,6 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
     if module_path is None:
-        module_path = []
         module_prefix = None
     else:
         module_prefix = ".".join(module_path)

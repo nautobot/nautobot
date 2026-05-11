@@ -87,7 +87,7 @@ class CableConnectFormTestCase(SeleniumTestCase):
 
         # Device 2 has no interface, ensure that is filtered properly
         with self.assertRaises(ElementDoesNotExist) as context:
-            selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
+            self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first  # pylint: disable=expression-not-assigned
         self.assertIn("no elements could be found", str(context.exception))
 
         # check the correct css query is present in the HTML
