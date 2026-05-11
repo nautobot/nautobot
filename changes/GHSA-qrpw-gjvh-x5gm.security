@@ -1,1 +1,0 @@
-Added a timeout to `bulk-rename` views (both legacy `BulkRenameView` and viewset `ObjectBulkRenameViewMixin`) when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
