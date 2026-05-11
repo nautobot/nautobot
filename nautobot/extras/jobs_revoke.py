@@ -6,6 +6,7 @@ from celery.exceptions import TaskRevokedError
 from django.db import transaction
 from django.utils import timezone
 
+from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobQueueTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobResult
@@ -107,8 +108,12 @@ class JobRevokeStrategy(ABC):
         """
         # REAP
         if self.should_reap(job_result):
-            logger.info("Reaped dead job %s", job_result.pk)
-            job_result.log(f"Reaped dead job {job_result.pk}", grouping="revoking")
+            logger.info("Reaped dead job %s by %s", job_result.pk, user)
+            job_result.log(
+                f"Reaped dead job {job_result.pk} by {user}",
+                level_choice=LogLevelChoices.LOG_FAILURE,
+                grouping="revoking",
+            )
             return {"job_result": self._mark_revoked(job_result, user), "error": None}
 
         # TERMINATE
@@ -128,14 +133,6 @@ class JobRevokeStrategy(ABC):
 
 class CeleryStrategy(JobRevokeStrategy):
     "Termination strategy for jobs running on Celery workers."
-
-    def get_celery_app(self):
-        """Return the Nautobot Celery app."""
-
-        # TBD: move it to constructor?
-        from nautobot.core.celery import app
-
-        return app
 
     def is_alive(self, job_result) -> bool:
         """
@@ -160,7 +157,6 @@ class CeleryStrategy(JobRevokeStrategy):
         """
         try:
             task_id = str(job_result.pk)
-            celery_app = self.get_celery_app()
             replies = celery_app.control.inspect().query_task([task_id])
         except Exception as e:
             logger.warning("Failed to query Celery workers: %s", e)
@@ -215,21 +211,22 @@ class CeleryStrategy(JobRevokeStrategy):
             return
 
         task_id = str(job_result.pk)
-        celery_app = self.get_celery_app()
-        celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
-
         with transaction.atomic():
             now = timezone.now()
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
             changed = self._apply_termination_metadata(job_result, user, now)
 
-            job_result.terminated_at = now
-            changed.add("terminated_at")
+            job_result.date_terminated = now
+            changed.add("date_terminated")
 
             job_result.save(update_fields=list(changed))
 
+            celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
+
         logger.info("Job %s terminated by %s", job_result.pk, user)
-        job_result.log(f"Job {job_result.pk} terminated by {user}", grouping="revoking")
+        job_result.log(
+            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
+        )
 
 
 class K8sStrategy(JobRevokeStrategy):

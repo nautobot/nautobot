@@ -727,7 +727,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     )
     # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
     revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
-    terminated_at = models.DateTimeField(
+    date_terminated = models.DateTimeField(
         null=True,
         blank=True,
         help_text="Timestamp at which the job was forcibly terminated",
@@ -788,11 +788,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     @property
     def duration(self):
-        if not self.date_done:
+        if not self.date_done or not self.date_started:
             return None
 
-        # Older records may not have a date_started value, so we use date_created as a fallback.
-        duration = self.date_done - (self.date_started or self.date_created)
+        duration = self.date_done - self.date_started
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
@@ -802,6 +801,15 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if self.celery_kwargs and isinstance(self.celery_kwargs, dict):
             return self.celery_kwargs.get("queue")
         return None
+
+    @property
+    def queue_type(self):
+        if queue_type := self.celery_kwargs.get("nautobot_job_queue_type"):
+            return queue_type
+        try:
+            return JobQueue.objects.get(name=self.queue).queue_type
+        except JobQueue.DoesNotExist:
+            return None
 
     @property
     def console_log(self):
@@ -904,12 +912,19 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         celery_kwargs: Optional[dict] = None,
     ) -> dict:
         """Build the celery kwargs dict common to all job execution paths."""
+
+        try:
+            queue_type = JobQueue.objects.get(name=task_queue).queue_type
+        except JobQueue.DoesNotExist:
+            queue_type = "unknown"
+
         job_celery_kwargs = {
             "nautobot_job_job_model_id": str(job_model.id),
             "nautobot_job_profile": profile,
             "nautobot_job_user_id": str(user.id),
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": queue_type,
             "queue": task_queue,
         }
 
@@ -1831,6 +1846,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": job_queue.queue_type,  # need a migration to set this field
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error
