@@ -322,7 +322,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
-            resolved_path = resolve(request.path)
+            resolved_path = resolve(request.path_info)
             # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
             list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None

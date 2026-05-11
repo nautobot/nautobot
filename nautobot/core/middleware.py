@@ -95,7 +95,7 @@ class ObjectChangeMiddleware:
     def __call__(self, request):
         # Determine the resolved path of the request that initiated the change
         try:
-            change_context_detail = resolve(request.path).view_name
+            change_context_detail = resolve(request.path_info).view_name
         except Resolver404:
             change_context_detail = ""
 

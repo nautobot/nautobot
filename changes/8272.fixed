@@ -1,0 +1,1 @@
+Fixed `Resolver404` / 404 errors on UI list views and `ObjectChangeMiddleware` when hosting Nautobot at a URL subpath via `FORCE_SCRIPT_NAME`. Four call sites in `nautobot/core/` were using `request.path` (which includes the script name) instead of `request.path_info` (which is what the URLconf is mounted against).

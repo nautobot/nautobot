@@ -241,7 +241,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         filter_form = None
         hide_hierarchy_ui = False
         clear_view = request.GET.get("clear_view", False)
-        resolved_path = resolve(request.path)
+        resolved_path = resolve(request.path_info)
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
         htmx_request = self.request.headers.get("HX-Request", False)

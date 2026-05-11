@@ -939,7 +939,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
                 self.filterset_class(),
             )
 
-        resolved_path = resolve(request.path)
+        resolved_path = resolve(request.path_info)
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         view_name = f"{resolved_path.app_name}:{resolved_path.url_name}"
 
