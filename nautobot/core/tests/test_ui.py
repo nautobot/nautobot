@@ -1,18 +1,16 @@
 """Test cases for nautobot.core.ui module."""
 
-import json
 from datetime import date, datetime, timezone as datetime_timezone
-from unittest.mock import patch
-from unittest.mock import Mock
+import json
+from unittest.mock import Mock, patch
 from zoneinfo import ZoneInfo
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import DateField, DateTimeField, Sum
 from django.template import Context
-from django.test import RequestFactory
-from django.test import override_settings
-from django.utils import timezone
+from django.test import override_settings, RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
@@ -216,9 +214,16 @@ class ObjectFieldsPanelTest(TestCase):
 
         utc_datetime = datetime(2024, 1, 1, 0, 30, tzinfo=datetime_timezone.utc)
 
-        with override_settings(DATETIME_FORMAT="Y-m-d H:i:s", DATE_FORMAT="Y-m-d"), timezone.override(ZoneInfo("Asia/Tokyo")):
-            self.assertEqual(panel.render_value("decision_date", utc_datetime, build_context(DateTimeField())), "2024-01-01 09:30:00")
-            self.assertEqual(panel.render_value("install_date", date(2024, 1, 1), build_context(DateField())), "2024-01-01")
+        with (
+            override_settings(DATETIME_FORMAT="Y-m-d H:i:s", DATE_FORMAT="Y-m-d"),
+            timezone.override(ZoneInfo("Asia/Tokyo")),
+        ):
+            self.assertEqual(
+                panel.render_value("decision_date", utc_datetime, build_context(DateTimeField())), "2024-01-01 09:30:00"
+            )
+            self.assertEqual(
+                panel.render_value("install_date", date(2024, 1, 1), build_context(DateField())), "2024-01-01"
+            )
             self.assertEqual(
                 panel.render_value("related__decision_date", utc_datetime, build_context(None)),
                 "2024-01-01 09:30:00",
