@@ -1,1 +1,0 @@
-Fixed N+1 query patterns on the VRF detail view for templated fields (devices, vms, virtual device contexts).
