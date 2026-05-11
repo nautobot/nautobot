@@ -1748,13 +1748,10 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
 
-        if value is None:
-            return super().render_value(key, value, context)
-
-        if isinstance(field_instance, DateTimeField) or isinstance(value, datetime):
+        if isinstance(value, datetime):
             return format_date(value, "DATETIME_FORMAT")
 
-        if isinstance(field_instance, DateField) or isinstance(value, date):
+        if isinstance(value, date):
             return format_date(value, "DATE_FORMAT")
 
         return super().render_value(key, value, context)
