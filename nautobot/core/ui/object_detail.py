@@ -3,6 +3,7 @@
 import contextlib
 from dataclasses import dataclass
 from enum import Enum
+from datetime import date, datetime
 import hashlib
 import json
 import logging
@@ -1747,11 +1748,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
 
-        if isinstance(field_instance, (DateTimeField, DateField)):
-            if value is None:
-                return placeholder(value)
-            format_string = "DATETIME_FORMAT" if isinstance(field_instance, DateTimeField) else "DATE_FORMAT"
-            return format_date(value, format_string)
+        if value is None:
+            return super().render_value(key, value, context)
+
+        if isinstance(field_instance, DateTimeField) or isinstance(value, datetime):
+            return format_date(value, "DATETIME_FORMAT")
+
+        if isinstance(field_instance, DateField) or isinstance(value, date):
+            return format_date(value, "DATE_FORMAT")
 
         return super().render_value(key, value, context)
 
