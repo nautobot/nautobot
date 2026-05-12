@@ -965,6 +965,17 @@ class _JobModalButtonTest(TestCase):
             _JobModalButton(weight=100, label="Duplicate", class_path="some.other.job", button_id="test_unique_button")
         self.assertIn("must be globally unique", str(cm.exception))
 
+    def test_redirect_button_callback_requires_button_id(self):
+        """Verify that a redirect_button_callback without a button_id raises ValueError."""
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(
+                weight=100,
+                label="Redirect Without ID",
+                class_path="some.fake.job",
+                redirect_button_callback=lambda job_result, request: {"url": "/", "label": "Go", "color": "primary"},
+            )
+        self.assertIn("button_id is required", str(cm.exception))
+
 
 class PostButtonTest(TestCase):
     def test_render_uses_request_for_csrf_token_tag(self):
