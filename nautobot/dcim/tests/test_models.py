@@ -3450,7 +3450,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
     def test_multilane_cable_pair_validation_iterates_all_lanes(self):
         """A multi-lane cable's pair-wise validation should iterate all lane pairs, not just the first.
 
-        Constructs a 2×2 cable where lane 1 (interface↔interface) is valid but lane 2 wires a
+        Constructs a 2x2 cable where lane 1 (interface↔interface) is valid but lane 2 wires a
         FrontPort to its corresponding RearPort — a pair-wise rule violation that *only* manifests
         when all lanes are checked. Both terminations are breakout-compatible types so the existing
         `cable_type`/`BREAKOUT_COMPATIBLE_TERMINATION_TYPES` check doesn't catch it.

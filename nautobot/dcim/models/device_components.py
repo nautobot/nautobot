@@ -327,6 +327,16 @@ class CableTermination(models.Model):
     class Meta:
         abstract = True
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if getattr(self, "_pending_cable_disconnect", False):
+            # Clear the flag first to prevent re-entry from disconnect_termination's internal save calls.
+            self._pending_cable_disconnect = False
+            from nautobot.dcim.utils import disconnect_termination
+
+            if getattr(self, "cable_termination", None) is not None:
+                disconnect_termination(self)
+
     @property
     def cable(self):
         """The Cable this termination is connected to, or None.
@@ -358,16 +368,6 @@ class CableTermination(models.Model):
                 "Use Cable.objects.create(termination_a=..., termination_b=...) instead, or write a "
                 "CableToCableTermination row directly."
             )
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if getattr(self, "_pending_cable_disconnect", False):
-            # Clear the flag first to prevent re-entry from disconnect_termination's internal save calls.
-            self._pending_cable_disconnect = False
-            from nautobot.dcim.utils import disconnect_termination
-
-            if getattr(self, "cable_termination", None) is not None:
-                disconnect_termination(self)
 
     def get_cable_peer(self):
         """Return the far-end termination of this cable, or the first peer for breakout/multi-termination cables."""
@@ -496,14 +496,14 @@ class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
     A physical console port within a Device or Module. ConsolePorts connect to ConsoleServerPorts.
     """
 
-    objects = CableTerminationManager()
-
     type = models.CharField(
         max_length=50,
         choices=ConsolePortTypeChoices,
         blank=True,
         help_text="Physical port type",
     )
+
+    objects = CableTerminationManager()
 
 
 #
@@ -517,14 +517,14 @@ class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
     A physical port within a Device or Module (typically a designated console server) which provides access to ConsolePorts.
     """
 
-    objects = CableTerminationManager()
-
     type = models.CharField(
         max_length=50,
         choices=ConsolePortTypeChoices,
         blank=True,
         help_text="Physical port type",
     )
+
+    objects = CableTerminationManager()
 
 
 #
@@ -544,8 +544,6 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     """
     A physical power supply (intake) port within a Device or Module. PowerPorts connect to PowerOutlets.
     """
-
-    objects = CableTerminationManager()
 
     type = models.CharField(
         max_length=50,
@@ -572,6 +570,8 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
         help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
     )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
@@ -666,8 +666,6 @@ class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
     A physical power outlet (output) within a Device or Module which provides power to a PowerPort.
     """
 
-    objects = CableTerminationManager()
-
     type = models.CharField(
         max_length=50,
         choices=PowerOutletTypeChoices,
@@ -688,6 +686,8 @@ class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
         blank=True,
         help_text="Phase (for three-phase feeds)",
     )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
@@ -857,8 +857,6 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     A network interface within a Device or Module. A physical Interface can connect to exactly one other Interface.
     """
 
-    objects = CableTerminationManager()
-
     # Override ComponentModel._name to specify naturalize_interface function
     _name = NaturalOrderingField(
         target_field="name",
@@ -921,6 +919,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     # Operational attributes (distinct from interface type capabilities)
     speed = models.PositiveIntegerField(null=True, blank=True)
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
+
+    objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
@@ -1230,8 +1230,6 @@ class FrontPort(ModularComponentModel, CableTermination):
     A pass-through port on the front of a Device or Module.
     """
 
-    objects = CableTerminationManager()
-
     type = models.CharField(max_length=50, choices=PortTypeChoices)
     rear_port = models.ForeignKey(to="dcim.RearPort", on_delete=models.CASCADE, related_name="front_ports")
     rear_port_position = models.PositiveSmallIntegerField(
@@ -1243,6 +1241,8 @@ class FrontPort(ModularComponentModel, CableTermination):
     )
 
     natural_key_field_names = ["device", "module", "name", "rear_port", "rear_port_position"]
+
+    objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
         constraints = [
@@ -1276,8 +1276,6 @@ class RearPort(ModularComponentModel, CableTermination):
     A pass-through port on the rear of a Device or Module.
     """
 
-    objects = CableTerminationManager()
-
     type = models.CharField(max_length=50, choices=PortTypeChoices)
     positions = models.PositiveSmallIntegerField(
         default=1,
@@ -1286,6 +1284,8 @@ class RearPort(ModularComponentModel, CableTermination):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
