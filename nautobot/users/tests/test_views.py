@@ -338,3 +338,76 @@ class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         token.refresh_from_db()
         self.assertEqual(token.user, self.other_user)
         self.assertEqual(token.description, "after-edit")
+
+    def test_non_staff_can_delete_own_token(self):
+        self.add_permissions("users.delete_token", "users.view_token")
+        token = Token.objects.create(user=self.user, description="own-delete")
+        response = self.client.post(
+            reverse("user:token_delete", kwargs={"pk": token.pk}),
+            data=post_data({"confirm": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        self.assertFalse(Token.objects.filter(pk=token.pk).exists())
+
+    def test_non_staff_cannot_delete_other_users_token(self):
+        self.add_permissions("users.delete_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="not-deletable")
+        response = self.client.post(
+            reverse("user:token_delete", kwargs={"pk": token.pk}),
+            data=post_data({"confirm": True}),
+        )
+        self.assertHttpStatus(response, 404)
+        self.assertTrue(Token.objects.filter(pk=token.pk).exists())
+
+    def test_staff_can_delete_other_users_token(self):
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.delete_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="staff-delete-other")
+        response = self.client.post(
+            reverse("user:token_delete", kwargs={"pk": token.pk}),
+            data=post_data({"confirm": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        self.assertFalse(Token.objects.filter(pk=token.pk).exists())
+
+    def test_staff_edit_form_does_not_expose_existing_token_key(self):
+        """Even admin users must not see the raw key value in the edit form."""
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="staff-edit-other")
+
+        response = self.client.get(reverse("user:token_edit", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+        self.assertNotIn(token.key, body)
+        self.assertNotIn("If no key is provided", body)
+
+    def test_edit_cannot_overwrite_existing_token_key(self):
+        """Posting a `key` value to the edit form is ignored; the stored key must not change."""
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.other_user, description="key-must-not-change")
+        original_key = token.key
+
+        response = self.client.post(
+            reverse("user:token_edit", kwargs={"pk": token.pk}),
+            data={
+                "user": str(self.other_user.pk),
+                "key": "0" * 40,
+                "description": "edited",
+                "write_enabled": "on",
+            },
+        )
+        self.assertHttpStatus(response, 302)
+
+        token.refresh_from_db()
+        self.assertEqual(token.key, original_key)

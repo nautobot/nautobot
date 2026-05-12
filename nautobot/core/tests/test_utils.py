@@ -501,7 +501,15 @@ class GetFooForModelTest(TestCase):
         with self.subTest("Test unconventional model views."):
             self.assertEqual(lookup.get_model_for_view_name("extras-api:contenttype-detail"), ContentType)
             self.assertEqual(lookup.get_model_for_view_name("users-api:group-detail"), Group)
+        with self.subTest("Test legacy 'user:' URL namespace is mapped to the 'users' app label."):
+            # nautobot.users URLs historically declare ``app_name = "user"`` (singular)
+            # even though the Django app label is ``users`` (plural).
+            # ``get_model_for_view_name`` has a compatibility shim mapping ``user`` -> ``users``;
+            # both the legacy and canonical forms should resolve to the same model.
             self.assertEqual(lookup.get_model_for_view_name("user:token_list"), Token)
+            self.assertEqual(lookup.get_model_for_view_name("user:token"), Token)
+            self.assertEqual(lookup.get_model_for_view_name("users:token_list"), Token)
+            self.assertEqual(lookup.get_model_for_view_name("users:token"), Token)
         with self.subTest("Test unexpected view."):
             with self.assertRaises(ValueError) as err:
                 lookup.get_model_for_view_name("unknown:plugins:example_app:examplemodel_list")
