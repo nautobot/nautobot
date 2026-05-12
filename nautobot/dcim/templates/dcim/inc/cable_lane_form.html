@@ -6,8 +6,11 @@
 {% with conns=form.get_connection_fields %}
 {% if conns %}
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex align-items-center justify-content-between">
         <strong>Connections</strong>
+        <button type="button" id="cable-swap-sides" class="btn btn-secondary btn-sm" title="Swap A and B side termination values">
+            <span aria-hidden="true" class="mdi mdi-swap-horizontal me-4"></span>Swap A / B
+        </button>
     </div>
     <table class="table mb-0">
         <thead>

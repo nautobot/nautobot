@@ -16,6 +16,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
+    CableForm,
     DeviceFilterForm,
     DeviceForm,
     InterfaceBulkEditForm,
@@ -25,6 +26,8 @@ from nautobot.dcim.forms import (
     RackForm,
 )
 from nautobot.dcim.models import (
+    Cable,
+    CableToCableTermination,
     Device,
     DeviceBay,
     DeviceType,
@@ -781,3 +784,96 @@ class CableTerminationFieldSetTestCase(TestCase):
         result = CableTerminationFieldSet().get_fields("b_conn_1", term_type="powerfeed")
         self.assertIs(result["fields"]["b_conn_1_parent"].queryset.model, PowerPanel)
         self.assertIs(result["fields"]["b_conn_1_termination"].queryset.model, PowerFeed)
+
+
+class CableFormTestCase(FormTestCases.BaseFormTestCase):
+    """Behavioral tests for `CableForm`. Scope expected to grow over time."""
+
+    form_class = CableForm
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Cable Swap DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            name="Cable Swap Device",
+            device_type=device_type,
+            role=device_role,
+            location=location,
+            status=device_status,
+        )
+        iface_status = Status.objects.get_for_model(Interface).first()
+        cls.iface_a = Interface.objects.create(
+            device=cls.device, name="iface-a", status=iface_status, type="1000base-t"
+        )
+        cls.iface_b = Interface.objects.create(
+            device=cls.device, name="iface-b", status=iface_status, type="1000base-t"
+        )
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.cable = Cable.objects.create(termination_a=cls.iface_a, termination_b=cls.iface_b, status=cls.cable_status)
+
+    def _form_data_with_swapped_terminations(self):
+        """Return POST data for the existing cable with A/B termination assignments swapped."""
+        iface_ct_natural = "dcim.interface"
+        return {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": "",
+            # Swapped: was A=iface_a, B=iface_b — now A=iface_b, B=iface_a.
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(self.iface_b.pk),
+            "b_conn_1_type": "interface",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(self.iface_a.pk),
+        }
+
+    def test_swap_termination_sides_saves_cleanly(self):
+        """A form submission that flips A/B terminations should save without IntegrityError."""
+        form = CableForm(data=self._form_data_with_swapped_terminations(), instance=self.cable)
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        form.save()  # Must not raise IntegrityError on the (cable, cable_end) unique constraint.
+
+        rows = {row.cable_end: row.termination for row in CableToCableTermination.objects.filter(cable=self.cable)}
+        self.assertEqual(rows.get("A"), self.iface_b)
+        self.assertEqual(rows.get("B"), self.iface_a)
+        # Exactly two join rows — no orphans left from the previous arrangement.
+        self.assertEqual(CableToCableTermination.objects.filter(cable=self.cable).count(), 2)
+
+    def test_unchanged_terminations_preserve_join_rows(self):
+        """Saving the form without touching terminations should leave the CableToCableTermination
+        rows (and their PKs) untouched — no spurious change-log churn for unrelated edits."""
+        original_pks = set(CableToCableTermination.objects.filter(cable=self.cable).values_list("pk", flat=True))
+
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "42",
+            "length_unit": "m",
+            "label": "edited-length",
+            "cable_type": "",
+            # Same termination arrangement as setUpTestData.
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(self.iface_a.pk),
+            "b_conn_1_type": "interface",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(self.iface_b.pk),
+        }
+        form = CableForm(data=data, instance=self.cable)
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        form.save()
+
+        self.cable.refresh_from_db()
+        self.assertEqual(self.cable.label, "edited-length")
+        # Same set of CableToCableTermination row PKs as before — no delete/recreate happened.
+        new_pks = set(CableToCableTermination.objects.filter(cable=self.cable).values_list("pk", flat=True))
+        self.assertSetEqual(new_pks, original_pks)

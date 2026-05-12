@@ -4817,19 +4817,44 @@ class CableForm(NautobotModelForm):
         return cable
 
     def _save_connection_terminations(self, cable):
-        """Process connector-based form fields — create/update CableToCableTermination rows."""
+        """Process connector-based form fields — replace this cable's CableToCableTermination rows.
+
+        Old rows are deleted and fresh rows are created from the cleaned form data. The previous
+        update-in-place implementation tripped the `(cable, cable_end)` unique constraint when the
+        form swapped A and B termination assignments (e.g. via the "Swap A / B" button) — updating
+        side B's row to cable_end="A" while side A's existing row was still on cable_end="A" is a
+        constraint violation. Replacing rows wholesale sidesteps that ordering hazard.
+
+        Short-circuit: if the proposed termination set is identical to what's already stored
+        (matching cable_end + connector + position + termination object on every row), we leave
+        the existing rows untouched. This keeps row PKs, change-log entries, and CablePath rows
+        stable across edits that don't actually touch terminations (e.g. changing only length or
+        status).
+        """
         from nautobot.dcim.models.cables import termination_fk_field
 
         info = getattr(self, "connection_info", None)
         if not info:
             return
 
-        # Collect all old endpoint rows for this cable so we can remove stale ones.
-        old_endpoints = list(CableToCableTermination.objects.filter(cable=cable))
-        new_endpoint_pks = set()
-        all_terminations = []
-        seen_termination_pks = set()
+        def _row_key(cable_end, connector, position, termination):
+            return (
+                cable_end,
+                connector,
+                position,
+                ContentType.objects.get_for_model(termination).pk,
+                termination.pk,
+            )
 
+        existing_keys = {
+            _row_key(row.cable_end, row.connector, row.position, row.termination)
+            for row in cable.terminations.all()
+            if row.termination is not None
+        }
+
+        proposed_keys = set()
+        proposed_rows = []  # (cable_end, connector, position, termination) tuples
+        seen_termination_pks = set()
         for side_key, side_label in [("a_side", "A"), ("b_side", "B")]:
             for conn in info[side_key]:
                 connector_number = conn["connector"]
@@ -4838,32 +4863,31 @@ class CableForm(NautobotModelForm):
                 if not termination or termination.pk in seen_termination_pks:
                     continue
                 seen_termination_pks.add(termination.pk)
+                connector = connector_number if info["is_breakout"] else None
+                position = 1 if info["is_breakout"] else None
+                proposed_keys.add(_row_key(side_label, connector, position, termination))
+                proposed_rows.append((side_label, connector, position, termination))
 
-                fk_field = termination_fk_field(termination)
-                if fk_field is None:
-                    continue
+        if existing_keys == proposed_keys:
+            return
 
-                endpoint, _ = CableToCableTermination.objects.update_or_create(
-                    **{fk_field: termination},
-                    defaults={
-                        "cable": cable,
-                        "cable_end": side_label,
-                        "connector": connector_number if info["is_breakout"] else None,
-                        "position": 1 if info["is_breakout"] else None,
-                    },
-                )
-                new_endpoint_pks.add(endpoint.pk)
-                all_terminations.append(termination)
-
-        # Remove stale endpoint rows (old terminations that were replaced).
-        for stale_endpoint in old_endpoints:
-            if stale_endpoint.pk not in new_endpoint_pks:
-                stale_endpoint.delete()
+        CableToCableTermination.objects.filter(cable=cable).delete()
+        for side_label, connector, position, termination in proposed_rows:
+            fk_field = termination_fk_field(termination)
+            if fk_field is None:
+                continue
+            CableToCableTermination.objects.create(
+                cable=cable,
+                cable_end=side_label,
+                connector=connector,
+                position=position,
+                **{fk_field: termination},
+            )
 
         # Rebuild CablePaths (uses create_cablepath which handles per-lane paths for breakout cables)
         from nautobot.dcim.signals import create_cablepath
 
-        for termination in all_terminations:
+        for _, _, _, termination in proposed_rows:
             if isinstance(termination, PathEndpoint):
                 CablePath.objects.filter(
                     origin_type=ContentType.objects.get_for_model(termination),
