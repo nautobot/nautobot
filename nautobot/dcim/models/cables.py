@@ -351,30 +351,56 @@ class Cable(PrimaryModel):
         """First A-side termination object (backward compat)."""
         return self._get_termination_attr("A", "termination", "_initial_termination_a")
 
+    @termination_a.setter
+    def termination_a(self, value):
+        # Backward-compatibility setter: store on `_initial_termination_a` for the post_save signal
+        # (on create) or for explicit consumers to materialize into a CableToCableTermination row.
+        self._initial_termination_a = value
+
     @property
     def termination_b(self):
         """First B-side termination object (backward compat)."""
         return self._get_termination_attr("B", "termination", "_initial_termination_b")
+
+    @termination_b.setter
+    def termination_b(self, value):
+        self._initial_termination_b = value
 
     @property
     def termination_a_type(self):
         """ContentType of first A-side termination (backward compat)."""
         return self._get_termination_attr("A", "termination_type", "_initial_termination_a_type")
 
+    @termination_a_type.setter
+    def termination_a_type(self, value):
+        self._initial_termination_a_type = value
+
     @property
     def termination_a_id(self):
         """UUID of first A-side termination (backward compat)."""
         return self._get_termination_attr("A", "termination_id", "_initial_termination_a_id")
+
+    @termination_a_id.setter
+    def termination_a_id(self, value):
+        self._initial_termination_a_id = value
 
     @property
     def termination_b_type(self):
         """ContentType of first B-side termination (backward compat)."""
         return self._get_termination_attr("B", "termination_type", "_initial_termination_b_type")
 
+    @termination_b_type.setter
+    def termination_b_type(self, value):
+        self._initial_termination_b_type = value
+
     @property
     def termination_b_id(self):
         """UUID of first B-side termination (backward compat)."""
         return self._get_termination_attr("B", "termination_id", "_initial_termination_b_id")
+
+    @termination_b_id.setter
+    def termination_b_id(self, value):
+        self._initial_termination_b_id = value
 
     @property
     def terminations_a(self):
