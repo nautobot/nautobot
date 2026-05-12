@@ -3379,7 +3379,7 @@ class JobRunButton(JobResultButton):
     template_path = "extras/inc/jobresult_jobrunbutton.html"
 
     def get_link(self, context):
-        obj = context["object"]
+        obj = get_obj_from_context(context)
         if not obj.job_model:
             return None
         url = reverse("extras:job_run", kwargs={"pk": obj.job_model.pk})
@@ -3388,7 +3388,7 @@ class JobRunButton(JobResultButton):
         return url
 
     def get_extra_context(self, context):
-        rerun = bool(context["object"].task_kwargs)
+        rerun = bool(get_obj_from_context(context).task_kwargs)
         return {
             **super().get_extra_context(context),
             "label": "Re-Run" if rerun else "Run",
