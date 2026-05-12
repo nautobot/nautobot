@@ -55,9 +55,7 @@
                     <td>Cable</td>
                     <td>
                         {{ object.cable|hyperlinked_object }}
-                        <a href="{% url 'dcim:poweroutlet_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
-                            <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
-                        </a>
+                        {% include 'dcim/inc/cable_actions.html' with trace_url_name='dcim:poweroutlet_trace' %}
                     </td>
                 </tr>
                 {% if object.connected_endpoint %}

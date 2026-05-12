@@ -1,0 +1,15 @@
+{# Renders the trace + cable-action dropdown for a connected cable on a CableTermination detail view. #}
+{# Required context: `object` (the CableTermination), `trace_url_name` (e.g. 'dcim:interface_trace'). #}
+<span class="float-end">
+    <a href="{% url trace_url_name pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
+        <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
+    </a>
+    <span class="dropdown">
+        <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
+            <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% include 'dcim/inc/cable_toggle_buttons.html' with cable=object.cable termination=object %}
+        </ul>
+    </span>
+</span>

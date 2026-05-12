@@ -1,5 +1,11 @@
 {% load helpers %}
 {% if perms.dcim.change_cable %}
+    <li>
+        <a class="dropdown-item" href="{% url 'dcim:cable_edit' pk=cable.pk %}?return_url={{ request.path }}">
+            <span class="mdi mdi-pencil" aria-hidden="true"></span>
+            Edit cable
+        </a>
+    </li>
     {% if cable.status.name == 'Connected' %}
         <li>
             <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">

@@ -108,37 +108,7 @@
                         <td>Cable</td>
                         <td>
                             {{ object.cable|hyperlinked_object }}
-                            <span class="float-end">
-                                <a href="{% url 'dcim:interface_trace' pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
-                                    <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
-                                </a>
-                                <span class="dropdown">
-                                    <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
-                                        <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        {% if perms.dcim.change_cable %}
-                                            <li>
-                                                <a class="dropdown-item" href="{% url 'dcim:cable_edit' pk=object.cable.pk %}?return_url={{ object.get_absolute_url }}">
-                                                    <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit cable
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item text-warning" href="{% url 'dcim:cable_disconnect' pk=object.cable.pk %}?termination_type={{ object|meta:"app_label" }}.{{ object|meta:"model_name" }}&termination_id={{ object.pk }}&return_url={{ object.get_absolute_url }}">
-                                                    <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span> Disconnect
-                                                </a>
-                                            </li>
-                                        {% endif %}
-                                        {% if perms.dcim.delete_cable %}
-                                            <li>
-                                                <a class="dropdown-item text-danger" href="{% url 'dcim:cable_delete' pk=object.cable.pk %}?return_url={{ object.get_absolute_url }}">
-                                                    <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span> Delete cable
-                                                </a>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </span>
-                            </span>
+                            {% include 'dcim/inc/cable_actions.html' with trace_url_name='dcim:interface_trace' %}
                         </td>
                     </tr>
                     {% if object.connected_endpoint.device or object.connected_endpoint.module %}
