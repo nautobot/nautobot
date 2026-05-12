@@ -119,6 +119,8 @@ dependencies = [
     "social-auth-app-django (>=5.7.0,<5.8)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
+    # Enhanced HTTP client library
+    "urllib3 (>=2.7.0,<3.0.0)",
 ]
 
 [project.optional-dependencies]
