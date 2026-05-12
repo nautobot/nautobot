@@ -25,8 +25,13 @@ from nautobot.dcim.models import (
 
 
 # Maps termination model name → configuration for building form fields
-def _device_term_config(term_model, term_label, display, extra_query_params=None):
-    """Build a config entry for a Device-parented termination type."""
+def _device_term_config(term_model, term_label, display, has_filter, extra_query_params=None):
+    """Build a config entry for a Device-parented termination type.
+
+    `has_filter` is the corresponding `has_<plural>` boolean filter on `DeviceFilterSet` (e.g.
+    `has_front_ports`) used to constrain the parent Device dropdown to devices that can host this
+    type of termination.
+    """
     query_params = {"device": None}
     if extra_query_params:
         query_params.update(extra_query_params)
@@ -34,6 +39,7 @@ def _device_term_config(term_model, term_label, display, extra_query_params=None
         "parent_model": Device,
         "parent_label": "Device",
         "parent_field_name": "device",
+        "parent_query_params": {has_filter: True},
         "term_model": term_model,
         "term_label": term_label,
         "term_query_params": query_params,
@@ -44,18 +50,21 @@ def _device_term_config(term_model, term_label, display, extra_query_params=None
 # Maps termination model name -> configuration for building form fields
 TERMINATION_TYPE_CONFIGS = {
     # Device-parented termination types
-    "interface": _device_term_config(Interface, "Interface", "Interface", {"kind": "physical"}),
-    "frontport": _device_term_config(FrontPort, "Front Port", "Front Port"),
-    "rearport": _device_term_config(RearPort, "Rear Port", "Rear Port"),
-    "consoleport": _device_term_config(ConsolePort, "Console Port", "Console Port"),
-    "consoleserverport": _device_term_config(ConsoleServerPort, "Console Server Port", "Console Server Port"),
-    "powerport": _device_term_config(PowerPort, "Power Port", "Power Port"),
-    "poweroutlet": _device_term_config(PowerOutlet, "Power Outlet", "Power Outlet"),
+    "interface": _device_term_config(Interface, "Interface", "Interface", "has_interfaces", {"kind": "physical"}),
+    "frontport": _device_term_config(FrontPort, "Front Port", "Front Port", "has_front_ports"),
+    "rearport": _device_term_config(RearPort, "Rear Port", "Rear Port", "has_rear_ports"),
+    "consoleport": _device_term_config(ConsolePort, "Console Port", "Console Port", "has_console_ports"),
+    "consoleserverport": _device_term_config(
+        ConsoleServerPort, "Console Server Port", "Console Server Port", "has_console_server_ports"
+    ),
+    "powerport": _device_term_config(PowerPort, "Power Port", "Power Port", "has_power_ports"),
+    "poweroutlet": _device_term_config(PowerOutlet, "Power Outlet", "Power Outlet", "has_power_outlets"),
     # Non-device termination types
     "circuittermination": {
         "parent_model": Circuit,
         "parent_label": "Circuit",
         "parent_field_name": "circuit",
+        "parent_query_params": {"has_terminations": True},
         "term_model": CircuitTermination,
         "term_label": "Termination",
         "term_query_params": {"circuit": None},
@@ -65,6 +74,7 @@ TERMINATION_TYPE_CONFIGS = {
         "parent_model": PowerPanel,
         "parent_label": "Power Panel",
         "parent_field_name": "power_panel",
+        "parent_query_params": {"has_power_feeds": True},
         "term_model": PowerFeed,
         "term_label": "Power Feed",
         "term_query_params": {"power_panel": None},
@@ -153,13 +163,16 @@ class CableTerminationFieldSet:
         )
         initial[type_field_name] = term_type
 
-        # Parent field (Device, Circuit, or PowerPanel)
+        # Parent field (Device, Circuit, or PowerPanel). `parent_query_params` constrains the
+        # dropdown to parents that can host this termination type (e.g. devices with at least
+        # one front port, circuits with at least one termination).
         parent_field_name = f"{prefix}_parent"
         fields[parent_field_name] = DynamicModelChoiceField(
             queryset=config["parent_model"].objects.all(),
             label=config["parent_label"],
             required=False,
             initial=parent if parent else None,
+            query_params=config["parent_query_params"],
             embedded_create=False,  # TODO: disabled for now for consistency with fields[term_field_name] below
             embedded_search=True,
         )
