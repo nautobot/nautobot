@@ -624,6 +624,23 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #     """
 #     return str(device_display_name).split(".")[0]
 
+# Webhook URL schemes permitted for the `payload_url` field. Defaults to HTTP and HTTPS.
+#
+# WEBHOOK_ALLOWED_SCHEMES = ["http", "https"]
+
+# Hostnames that Webhooks may target even if they would otherwise resolve into a blocked network range. Django
+# `ALLOWED_HOSTS`-style: literal hostnames or `.example.com` to match a domain and all of its subdomains. Use `*`
+# to disable network filtering entirely (not recommended).
+#
+# WEBHOOK_ALLOWED_HOSTS = []
+
+# Network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list (loopback,
+# link-local including cloud metadata endpoints such as 169.254.169.254, unspecified, multicast, and reserved)
+# is enforced unconditionally and cannot be disabled. Use this setting to extend it -- e.g. add the RFC1918
+# private ranges below for stricter posture in deployments that don't legitimately webhook into private networks.
+#
+# WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
+
 # A list of strings designating all applications that are enabled in this Django installation.
 # Each string should be a dotted Python path to an application configuration class (preferred),
 # or a package containing an application.
