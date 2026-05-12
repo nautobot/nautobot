@@ -2733,6 +2733,45 @@ pre.version, pre.version-stamp {
   }
 }
 
+.nb-live-search-results {
+  @extend .nb-embedded-search-results;
+
+  overflow: clip;
+  padding: 0;
+  position: relative;
+  white-space: nowrap;
+
+  /* Required to properly handle row highlight and selection via `search.js` script. */
+  > .table > tbody > tr {
+    > * {
+      @include transition($btn-transition);
+    }
+
+    &.active > * {
+      --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
+      --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
+    }
+  }
+
+  &::after {
+    background-image: linear-gradient(to left, var(--#{$prefix}body-bg) 25%, transparent 100%);
+    bottom: 0;
+    content: "";
+    display: none;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 3.75rem; /* 60px */
+  }
+
+  &.nb-live-search-results-fade-out {
+    &::after {
+      display: block;
+    }
+  }
+}
+
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */
 .d-none {
   display: none !important;

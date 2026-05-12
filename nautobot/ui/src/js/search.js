@@ -260,7 +260,7 @@ export const initializeSearch = () => {
       [...badges.children].slice(0, -1 * MAX_BADGE_COUNT).forEach((child) => child.remove());
     };
 
-    const getResultItems = () => [...results.querySelectorAll('.nb-search-list-group-item')];
+    const getResultItems = () => [...results.querySelectorAll('.nb-search-list-group-item, .table > tbody > tr')];
 
     const isResultItemActive = (item) => item.classList.contains('active');
 
@@ -268,7 +268,7 @@ export const initializeSearch = () => {
 
     const removeResultsList = (type) =>
       results
-        .querySelectorAll(`ul${type ? `[data-nb-results-type="${type}"]` : ''}`)
+        .querySelectorAll(type ? `[data-nb-results-type="${type}"]` : ':scope > *')
         .forEach((resultsList) => resultsList.remove());
 
     /*
@@ -321,8 +321,9 @@ export const initializeSearch = () => {
       spinner.classList.toggle('htmx-request', false); // See the comment on the opposite logic below for more context.
       toggleResultsVisible(true); // Always force show results list when users are typing.
 
+      const hasBadges = badges.children.length > 0;
       const isPhraseIn = input.value.match(IN_REG_EXP);
-      if (isPhraseIn) {
+      if (!hasBadges && isPhraseIn) {
         /*
          * Phrases that start with `'in'` are treated as a special case of looking for the best searchable model match,
          * rather than executing a standard search query. Two scenarios are being covered here:
@@ -502,11 +503,21 @@ export const initializeSearch = () => {
       toggleResultsVisible(true); // Show results list when HTMX response is about to populate it with new entries.
     });
 
+    results.addEventListener('htmx:afterSwap', () => {
+      /*
+       * After response HTML content swap, check if said content is wider than its container and in case it is, display
+       * a fade-out overlay at the right edge.
+       */
+      const resultsList = document.querySelector('[data-nb-results-type="live-search"]');
+      const shouldFadeOut = resultsList && resultsList.scrollWidth > resultsList.parentElement.scrollWidth;
+      resultsList?.classList.toggle('nb-live-search-results-fade-out', shouldFadeOut);
+    });
+
     // When mouse is moved over or leaves the `results` element, track the item highlight accordingly.
     const onMouseEvent = (event) => {
       const items = getResultItems();
       const active = items.find(isResultItemActive);
-      const hoveredOver = event.target.closest('.nb-search-list-group-item');
+      const hoveredOver = event.target.closest('.nb-search-list-group-item, .table > tbody > tr');
       /*
        * Clear *tentative* selection from the currently `active` item, but do not move it over to the next (`hoveredOver`)
        * active item. Remember that *tentative* selection is reserved exclusively for keyboard selection.
