@@ -3655,6 +3655,26 @@ class JobResultTest(
         self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
         mock_revoke.assert_called_once()
 
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": "Revoke failed: worker not responding."})
+    def test_revoke_strategy_error_returns_400(self, mock_revoke, mock_is_alive):
+        """When the revoke strategy returns an error, the endpoint returns 400 with the error detail."""
+        self.user.is_staff = False
+        self.user.save()
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Revoke failed: worker not responding.")
+        mock_revoke.assert_called_once()
+
 
 class JobLogEntryTest(
     APIViewTestCases.GetObjectViewTestCase,
