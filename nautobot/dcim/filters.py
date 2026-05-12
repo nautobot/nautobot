@@ -1504,6 +1504,10 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         field_name="cable_type",
         label="Has cable type",
     )
+    is_disconnected = django_filters.BooleanFilter(
+        method="filter_is_disconnected",
+        label="Is disconnected (missing one or both side terminations)",
+    )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
     device_id = django_filters.ModelMultipleChoiceFilter(
@@ -1604,6 +1608,25 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "length_unit",
             "tags",
         ]
+
+    def filter_is_disconnected(self, queryset, name, value):
+        """
+        Match cables that have at least one side (A or B) missing a termination.
+
+        Note: this is a coarse "has both sides connected" check; for breakout cables it does
+        *not* verify that every fan-out lane is populated. Per-lane completeness against the
+        cable's `cable_type` connector counts is a future refinement.
+        """
+        if value is None:
+            return queryset
+        from django.db.models import Exists, OuterRef
+
+        has_a = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="A"))
+        has_b = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="B"))
+        annotated = queryset.annotate(_has_a_side=has_a, _has_b_side=has_b)
+        if value:
+            return annotated.filter(Q(_has_a_side=False) | Q(_has_b_side=False))
+        return annotated.filter(_has_a_side=True, _has_b_side=True)
 
     def filter_device(self, queryset, name, value):
         """Filter cables by device-related fields via the cached `_termination_device` FK on the join table.

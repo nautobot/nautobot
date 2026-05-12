@@ -4988,6 +4988,11 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
             "rack": "$rack",
         },
     )
+    is_disconnected = forms.NullBooleanField(
+        required=False,
+        label="Is disconnected",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
 
 

@@ -3599,6 +3599,30 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(length_unit=CableLengthUnitChoices.UNIT_FOOT)
         )
 
+    def test_is_disconnected(self):
+        """A cable lacking either an A-side or B-side termination matches `is_disconnected=True`."""
+        # Create a cable with only an A-side termination.
+        uncabled_iface = Interface.objects.filter(cable__isnull=True).first()
+        cable_a_only = Cable.objects.create(termination_a=uncabled_iface, status=self.status_connected)
+
+        with self.subTest("is_disconnected=True returns only the disconnected cable"):
+            result = self.filterset({"is_disconnected": True}, self.queryset).qs
+            self.assertIn(cable_a_only, result)
+            for cable in result:
+                has_a = CableToCableTermination.objects.filter(cable=cable, cable_end="A").exists()
+                has_b = CableToCableTermination.objects.filter(cable=cable, cable_end="B").exists()
+                self.assertFalse(has_a and has_b, msg=f"{cable} is fully connected, should not match")
+
+        with self.subTest("is_disconnected=False excludes the disconnected cable"):
+            result = self.filterset({"is_disconnected": False}, self.queryset).qs
+            self.assertNotIn(cable_a_only, result)
+            for cable in result:
+                self.assertTrue(
+                    CableToCableTermination.objects.filter(cable=cable, cable_end="A").exists()
+                    and CableToCableTermination.objects.filter(cable=cable, cable_end="B").exists(),
+                    msg=f"{cable} is missing a side, should not match",
+                )
+
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
         interfaces = list(Interface.objects.filter(cable__isnull=True)[:3])
