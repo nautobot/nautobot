@@ -707,10 +707,94 @@ class Cable(PrimaryModel):
         else:
             self._abs_length = None
 
+        is_creation = self._state.adding
+        status_changed = (not is_creation) and self.status != self._orig_status
+
         super().save(*args, **kwargs)
 
         # Update the private pk used in __str__ in case this is a new object (i.e. just got its pk)
         self._pk = self.pk
+
+        # Side effects previously handled by the `update_connected_endpoints` post_save signal.
+        # Loaddata bypasses `save()` entirely (it calls `save_base()`), so we no longer need a
+        # `raw=True` guard here.
+        if is_creation:
+            self._materialize_initial_terminations()
+            self._build_cable_paths_for_terminations()
+        elif status_changed:
+            self._sync_cable_path_active_flags()
+
+        # Reset the cached "previous status" so subsequent saves compare against the value just
+        # persisted, not against the initial value captured in __init__.
+        self._orig_status = self.status
+
+    def _materialize_initial_terminations(self):
+        """
+        Create `CableToCableTermination` rows from any `_initial_termination_*` attrs supplied via
+        __init__ / property setter / direct attribute assignment. Used for newly-created cables;
+        edits to existing cables go through forms / serializers that manage the join rows directly.
+        """
+        term_a = getattr(self, "_initial_termination_a", None)
+        term_b = getattr(self, "_initial_termination_b", None)
+
+        # Also handle type/id kwargs for the case where termination objects aren't resolved yet.
+        if term_a is None and getattr(self, "_initial_termination_a_type", None):
+            ct = self._initial_termination_a_type
+            term_a = ct.model_class().objects.get(pk=self._initial_termination_a_id)
+        if term_b is None and getattr(self, "_initial_termination_b_type", None):
+            ct = self._initial_termination_b_type
+            term_b = ct.model_class().objects.get(pk=self._initial_termination_b_id)
+
+        # Determine lane 1 connector/position if this is a breakout cable.
+        a_connector = a_position = b_connector = b_position = None
+        if self.cable_type_id and self.cable_type.mapping:
+            entry = self.cable_type.mapping[0]
+            a_connector = entry["a_connector"]
+            a_position = entry["a_position"]
+            b_connector = entry["b_connector"]
+            b_position = entry["b_position"]
+
+        for term, end, conn, pos in (
+            (term_a, "A", a_connector, a_position),
+            (term_b, "B", b_connector, b_position),
+        ):
+            if not term:
+                continue
+            fk_field = termination_fk_field(term)
+            if fk_field is None:
+                logger.warning(f"Termination {term} has no matching FK on CableToCableTermination; skipping")
+                continue
+            CableToCableTermination.objects.get_or_create(
+                cable=self,
+                cable_end=end,
+                **{fk_field: term},
+                defaults={"connector": conn, "position": pos},
+            )
+            logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {self}")
+
+    def _build_cable_paths_for_terminations(self):
+        """
+        Build `CablePath` rows for each termination on this cable. Deferred imports avoid a
+        circular dependency between `dcim.models.cables` and `dcim.signals`.
+        """
+        from nautobot.dcim.models.device_components import PathEndpoint
+        from nautobot.dcim.signals import create_cablepath, rebuild_paths
+
+        for ct_row in self.terminations.all():
+            term = ct_row.termination
+            if isinstance(term, PathEndpoint):
+                create_cablepath(term)
+            else:
+                rebuild_paths(term)
+
+    def _sync_cable_path_active_flags(self):
+        """Reflect a Cable status change onto any CablePath that traverses this cable."""
+        from nautobot.dcim.signals import rebuild_paths
+
+        if self.status != Cable.STATUS_CONNECTED:
+            CablePath.objects.filter(path__contains=self).update(is_active=False)
+        else:
+            rebuild_paths(self)
 
     def get_compatible_types(self):
         """

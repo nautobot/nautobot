@@ -12,7 +12,6 @@ from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
-    CableToCableTermination,
     ConsolePort,
     ConsoleServerPort,
     ControllerManagedDeviceGroup,
@@ -22,7 +21,6 @@ from .models import (
     Interface,
     InterfaceVDCAssignment,
     LocationType,
-    PathEndpoint,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -32,7 +30,6 @@ from .models import (
     RearPort,
     VirtualChassis,
 )
-from .models.cables import termination_fk_field
 from .utils import validate_interface_tagged_vlans
 
 
@@ -262,78 +259,6 @@ def clear_virtualchassis_members(instance, **kwargs):
 #
 # Cables
 #
-
-
-@receiver(post_save, sender=Cable)
-def update_connected_endpoints(instance, created, raw=False, **kwargs):
-    """
-    When a Cable is saved, create CableTermination rows from initial terminations,
-    sync cable/peer caches on termination objects, and create/update CablePaths.
-    """
-    logger = logging.getLogger(__name__ + ".cable")
-    if raw:
-        logger.debug(f"Skipping endpoint updates for imported cable {instance}")
-        return
-
-    # On creation, create CableToCableTermination rows
-    if created:
-        _create_cable_termination_rows(instance, logger)
-        for ct_row in instance.terminations.all():
-            term = ct_row.termination
-            if isinstance(term, PathEndpoint):
-                create_cablepath(term)
-            else:
-                rebuild_paths(term)
-    elif instance.status != instance._orig_status:
-        # Status changed — update path active flags or rebuild
-        if instance.status != Cable.STATUS_CONNECTED:
-            CablePath.objects.filter(path__contains=instance).update(is_active=False)
-        else:
-            rebuild_paths(instance)
-    # NOTE: On regular updates (form save), we do NOT touch termination rows here.
-    # The form's _save_connection_terminations() handles CableToCableTermination row
-    # creation/updates AFTER this signal runs.
-
-
-def _create_cable_termination_rows(instance, logger):
-    """Create CableToCableTermination rows from the Cable's _initial_termination_a/b attributes."""
-    term_a = getattr(instance, "_initial_termination_a", None)
-    term_b = getattr(instance, "_initial_termination_b", None)
-
-    # Also handle type/id kwargs for the case where termination objects aren't resolved yet
-    if term_a is None and getattr(instance, "_initial_termination_a_type", None):
-        ct = instance._initial_termination_a_type
-        term_a = ct.model_class().objects.get(pk=instance._initial_termination_a_id)
-    if term_b is None and getattr(instance, "_initial_termination_b_type", None):
-        ct = instance._initial_termination_b_type
-        term_b = ct.model_class().objects.get(pk=instance._initial_termination_b_id)
-
-    # Determine lane 1 connector/position if this is a breakout cable
-    a_connector = a_position = b_connector = b_position = None
-    if instance.cable_type_id and instance.cable_type.mapping:
-        entry = instance.cable_type.mapping[0]
-        a_connector = entry["a_connector"]
-        a_position = entry["a_position"]
-        b_connector = entry["b_connector"]
-        b_position = entry["b_position"]
-
-    for term, end, conn, pos in (
-        (term_a, "A", a_connector, a_position),
-        (term_b, "B", b_connector, b_position),
-    ):
-        if not term:
-            continue
-        fk_field = termination_fk_field(term)
-        if fk_field is None:
-            logger.warning(f"Termination {term} has no matching FK on CableToCableTermination; skipping")
-            continue
-        CableToCableTermination.objects.get_or_create(
-            cable=instance,
-            cable_end=end,
-            **{fk_field: term},
-            defaults={"connector": conn, "position": pos},
-        )
-        logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {instance}")
 
 
 @receiver(pre_delete, sender=Cable)
