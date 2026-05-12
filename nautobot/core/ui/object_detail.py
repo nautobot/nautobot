@@ -2654,12 +2654,12 @@ def resolve_attr(obj, dotted_path: str):
 class _JobModalButton(Button):
     """A Button that opens a modal dialog for running a Job. Experimental — subject to change without deprecation.
 
-    Each instance is registered in `registry["job_modal_buttons"]` by its `button_id` at init time.
-    The `button_id` travels through HTMX POST data so the view can look up the instance at any time
-    and call `get_redirect_button()` to optionally render a redirect button in the modal footer.
+    If a `button_id` is provided, the instance is registered in `registry["job_modal_buttons"]` at init time.
+    The `button_id` travels through HTMX POST data so the view can look up the instance and call
+    `get_redirect_button()` to optionally render a redirect button in the third modal page's footer.
 
-    To add a redirect button, pass a `redirect_button_callback` or subclass and override
-    `get_redirect_button()`.
+    To add a redirect button, a `button_id` must be defined, and either pass a `redirect_button_callback`
+    or subclass and override `get_redirect_button()`.
     """
 
     class_path = None
@@ -2676,8 +2676,6 @@ class _JobModalButton(Button):
         Initialize a _JobModalButton component.
 
         Keyword Args:
-            button_id (str): A globally unique identifier for this button instance. Used as the registry key.
-                Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
             class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
             label (str): The text of this button, not including any icon.
             color (ButtonColorChoices, optional): The color (class) of this button.
@@ -2693,8 +2691,12 @@ class _JobModalButton(Button):
                 is displayed directly.
             refresh_on_close_if_done (bool, optional): If True, if the modal is dismissed after the Job is run to
                 completion (whether successful or not), a refresh of the page will be automatically triggered.
+            button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
+                Required when using redirect_button_callback.
+                Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
             redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
-                modal footer after the job completes. Signature: `callback(job_result, request) -> dict`.
+                modal footer after the job completes. Requires button_id to be set.
+                Signature: `callback(job_result, request) -> dict`.
                 The dict should have keys `url`, `label`, `color`, and optionally `extra_classes`.
                 Return an empty dict to render no button.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
@@ -2719,6 +2721,7 @@ class _JobModalButton(Button):
                     advanced_fields=("verbose", "skip_related_objects"),
                     required_permissions=["dcim.view_location"],
                     run_button_label="Run Validation",
+                    button_id="my_app.take_snapshot",
                     redirect_button_callback=lambda job_result, request: {
                         "url": f"/plugins/my-app/results/?job={job_result.pk}",
                         "label": "View Results",
@@ -2735,7 +2738,7 @@ class _JobModalButton(Button):
         if self.button_id:
             if self.button_id in registry["job_modal_buttons"]:
                 raise ValueError(f"{self.button_id} must be globally unique")
-        registry["job_modal_buttons"][self.button_id] = self
+            registry["job_modal_buttons"][self.button_id] = self
 
     def get_redirect_button(self, job_result, request, **kwargs):
         """Optionally provide a redirect button on the final page of the modal after the job has completed.

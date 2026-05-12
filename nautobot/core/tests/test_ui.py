@@ -827,7 +827,7 @@ class _JobModalButtonTest(TestCase):
         """Verify that class_path is a required argument."""
         # Should raise TypeError if class_path is missing
         with self.assertRaises(TypeError) as cm:
-            _JobModalButton(weight=100, label="Test", button_id="test_job_modal_button_1")
+            _JobModalButton(weight=100, label="Test")
 
         self.assertIn("class_path is required", str(cm.exception))
 
@@ -835,17 +835,14 @@ class _JobModalButtonTest(TestCase):
         btn = _JobModalButton(
             weight=100,
             label="Run Test",
-            button_id="test_job_modal_button_1",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
 
         self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
 
     def test_get_link(self):
         """Verify get_link returns None because the button uses htmx to open a modal."""
-        btn = _JobModalButton(weight=100, label="Test", class_path="some.job", button_id="test_job_modal_button")
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+        btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
 
         self.assertIsNone(btn.get_link(Context({})))
 
@@ -857,13 +854,13 @@ class _JobModalButtonTest(TestCase):
         mapping = {"job_field_name": "name", "job_location": "location__name"}
 
         btn = _JobModalButton(
-            button_id="test_job_modal_button_1",
             weight=100,
             label="Run Job",
             class_path="nautobot.core.jobs.SampleJob",
             initial_field_mapping=mapping,
             run_button_label="Execute!",
             job_result_key="output_data",
+            button_id="test_job_modal_button_1",
         )
         self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
 
@@ -897,12 +894,10 @@ class _JobModalButtonTest(TestCase):
 
         # Ensure real job class paths are not disabled
         real_job_btn = _JobModalButton(
-            button_id="test_job_modal_button_2",
             weight=100,
             label="Run Real Job",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(real_job_btn.button_id, None))
 
         context = Context({"object": device})
         context = real_job_btn.get_extra_context(context)
@@ -914,10 +909,7 @@ class _JobModalButtonTest(TestCase):
         context = Context({"object": device})
 
         # 1. Create a button for a non-existent job (should be disabled)
-        btn_fail = _JobModalButton(
-            weight=100, label="Fail", class_path="non.existent.job", button_id="test_job_modal_button_1"
-        )
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn_fail.button_id, None))
+        btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
 
         ctx_fail = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail["attributes"])
@@ -929,10 +921,8 @@ class _JobModalButtonTest(TestCase):
             weight=100,
             label="Success",
             class_path="nautobot.core.jobs.ValidateModelData",
-            button_id="test_job_modal_button_2",
             attributes={"custom": "value"},
         )
-        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn_success.button_id, None))
 
         ctx_success = btn_success.get_extra_context(context)
 

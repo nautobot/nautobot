@@ -4346,14 +4346,6 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        cls.test_modal_button = _JobModalButton(
-            weight=100,
-            label="Test Modal",
-            class_path="not.a.real.class.path",
-            button_id="test_jobresult_modal_button",
-            refresh_on_close_if_done=True,
-        )
-        cls.addClassCleanup(lambda: registry["job_modal_buttons"].pop(cls.test_modal_button.button_id, None))
         JobResult.objects.create(name="pass_job.TestPassJob")
         JobResult.objects.create(name="fail.TestFailJob")
         JobLogEntry.objects.create(
@@ -4710,9 +4702,6 @@ class JobResultTestCase(
         url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
         response = self.client.post(
             url,
-            data={
-                "job_modal_button": self.test_modal_button.button_id,
-            },
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4728,7 +4717,6 @@ class JobResultTestCase(
         response = self.client.post(
             url,
             data={
-                "job_modal_button": self.test_modal_button.button_id,
                 "refresh_on_close_if_done": "true",
             },
             HTTP_HX_REQUEST="true",
@@ -4744,7 +4732,6 @@ class JobResultTestCase(
         pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
         response = self.client.post(
             pending_url,
-            data={"job_modal_button": self.test_modal_button.button_id},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4754,7 +4741,6 @@ class JobResultTestCase(
         completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
         response = self.client.post(
             completed_url,
-            data={"job_modal_button": self.test_modal_button.button_id},
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
@@ -4784,13 +4770,6 @@ class JobTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        cls.test_modal_button = _JobModalButton(
-            weight=100,
-            label="Test Modal",
-            class_path="nautobot.core.jobs.ValidateModelData",
-            button_id="test_job_modal_button",
-        )
-        cls.addClassCleanup(lambda: registry["job_modal_buttons"].pop(cls.test_modal_button.button_id, None))
         # Job model objects are automatically created during database migrations
 
         # But we do need to make sure the ones we're testing are flagged appropriately
@@ -5034,7 +5013,6 @@ class JobTestCase(
                 run_url,
                 data={
                     "render_job_form": True,
-                    "job_modal_button": self.test_modal_button.button_id,
                 },
                 HTTP_HX_REQUEST="true",
             )
