@@ -222,6 +222,10 @@ class ObjectFieldsPanelTest(TestCase):
                 panel.render_value("decision_date", utc_datetime, build_context(DateTimeField())), "2024-01-01 09:30:00"
             )
             self.assertEqual(
+                panel.render_value("decision_date", datetime(2024, 1, 1, 0, 30), build_context(DateTimeField())),
+                "2024-01-01 09:30:00",
+            )
+            self.assertEqual(
                 panel.render_value("install_date", date(2024, 1, 1), build_context(DateField())), "2024-01-01"
             )
             self.assertEqual(
