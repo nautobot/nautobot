@@ -191,11 +191,11 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     def test_connected(self):
         params = {"connected": True}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(_path__is_active=True).distinct()
+        qs_result = self.queryset.filter(cable_paths__is_active=True).distinct()
         self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
         params = {"connected": False}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)).distinct()
+        qs_result = self.queryset.filter(Q(cable_paths__isnull=True) | Q(cable_paths__is_active=False)).distinct()
         self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
 

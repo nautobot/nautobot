@@ -1,5 +1,8 @@
-# Add connector/position to CablePath for per-lane breakout paths.
+# Add connector/position to CablePath for per-lane breakout paths, and drop the denormalized `_path`
+# FK from PathEndpoint subclasses (replaced by a GenericRelation `cable_paths` resolving through
+# CablePath.origin — see circuits/0023 for the CircuitTermination counterpart).
 from django.db import migrations, models
+import django.db.models.expressions
 
 
 class Migration(migrations.Migration):
@@ -14,4 +17,19 @@ class Migration(migrations.Migration):
         migrations.AlterUniqueTogether(
             name="cablepath", unique_together={("origin_type", "origin_id", "connector", "position")}
         ),
+        migrations.AlterModelOptions(
+            name="cablepath",
+            options={
+                "ordering": [
+                    django.db.models.expressions.OrderBy(django.db.models.expressions.F("connector"), nulls_first=True),
+                    "position",
+                ]
+            },
+        ),
+        migrations.RemoveField(model_name="consoleport", name="_path"),
+        migrations.RemoveField(model_name="consoleserverport", name="_path"),
+        migrations.RemoveField(model_name="powerport", name="_path"),
+        migrations.RemoveField(model_name="poweroutlet", name="_path"),
+        migrations.RemoveField(model_name="interface", name="_path"),
+        migrations.RemoveField(model_name="powerfeed", name="_path"),
     ]

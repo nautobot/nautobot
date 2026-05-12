@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -1005,20 +1005,11 @@ class CablePath(BaseModel):
 
     class Meta:
         unique_together = ("origin_type", "origin_id", "connector", "position")
+        ordering = [F("connector").asc(nulls_first=True), "position"]
 
     def __str__(self):
         status = " (active)" if self.is_active else " (split)" if self.is_split else ""
         return f"Path #{self.pk}: {self.origin} to {self.destination} via {len(self.path)} nodes{status}"
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-
-        # Record a direct reference to this CablePath on its originating object.
-        # For breakout cables with multiple paths per origin, only set _path to
-        # the primary path (first lane or null connector = standard cable).
-        if self.connector is None or (self.connector == 1 and (self.position is None or self.position == 1)):
-            model = self.origin._meta.model
-            model.objects.filter(pk=self.origin.pk).update(_path=self.pk)
 
     @property
     def segment_count(self):

@@ -2,7 +2,7 @@ from decimal import Decimal
 import re
 import warnings
 
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericRelation
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -432,54 +432,50 @@ class PathEndpoint(models.Model):
     An abstract model inherited by any CableTermination subclass which represents the end of a CablePath; specifically,
     these include ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, PowerFeed, and CircuitTermination.
 
-    `_path` references the CablePath originating from this instance, if any. It is set or cleared by the receivers in
-    dcim.signals in response to changes in the cable path, and complements the `origin` GenericForeignKey field on the
-    CablePath model. `_path` should not be accessed directly; rather, use the `path` property.
-
-    `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
+    `cable_paths` is a GenericRelation to CablePath rows that have this instance as their origin. For non-breakout
+    cables there is at most one such row; for breakout cables there is one per fan-out lane.
     """
 
-    _path = ForeignKeyWithAutoRelatedName(
-        to="dcim.CablePath",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+    cable_paths = GenericRelation(
+        "dcim.CablePath",
+        content_type_field="origin_type",
+        object_id_field="origin_id",
+        related_query_name="origin_endpoint",
     )
 
     class Meta:
         abstract = True
 
     def trace(self):
-        if self._path is None:
+        path_obj = self.cable_paths.first()
+        if path_obj is None:
             return []
 
         # Construct the complete path
-        path = [self, *self._path.get_path()]  # pylint: disable=no-member
+        path = [self, *path_obj.get_path()]
         while (len(path) + 1) % 3:
             # Pad to ensure we have complete three-tuples (e.g. for paths that end at a RearPort)
             path.append(None)
-        path.append(self._path.destination)  # pylint: disable=no-member
+        path.append(path_obj.destination)
 
         # Return the path as a list of three-tuples (A termination, cable, B termination)
         return list(zip(*[iter(path)] * 3))
 
     @property
     def path(self):
-        return self._path
+        return self.cable_paths.first()
 
     def get_all_paths(self):
         """Return all CablePaths originating from this endpoint (multiple for breakout cables)."""
-        from nautobot.dcim.models.cables import CablePath
-
-        content_type = ContentType.objects.get_for_model(self)
-        return CablePath.objects.filter(origin_type=content_type, origin_id=self.pk).order_by("connector", "position")
+        return self.cable_paths.all()
 
     @property
     def connected_endpoint(self):
         """
         Return the attached CablePath's destination (if any)
         """
-        return self._path.destination if self._path else None  # pylint: disable=no-member
+        path_obj = self.cable_paths.first()
+        return path_obj.destination if path_obj else None
 
 
 #

@@ -364,7 +364,7 @@ def disconnect_termination(termination):
     appropriate. The cable itself and any other terminations on it are left intact. Returns the
     cable if successful, None otherwise.
     """
-    from nautobot.dcim.models import CablePath
+    from nautobot.dcim.models.device_components import PathEndpoint
 
     if not termination:
         return None
@@ -375,19 +375,12 @@ def disconnect_termination(termination):
     cable = cable_termination.cable
 
     peer = termination.get_cable_peer()
-    if peer is not None and getattr(peer, "_path_id", None):
+    if isinstance(peer, PathEndpoint):
         # Disconnecting this termination invalidates the peer's path through this side of the cable.
-        path_id = peer._path_id
-        peer._path = None
-        peer.save()
-        CablePath.objects.filter(pk=path_id).delete()
+        peer.cable_paths.all().delete()
 
-    # Clear _path FK before deleting CablePath to avoid FK constraint violation
-    if getattr(termination, "_path_id", None):
-        path_id = termination._path_id
-        termination._path = None
-        termination.save()
-        CablePath.objects.filter(pk=path_id).delete()
+    if isinstance(termination, PathEndpoint):
+        termination.cable_paths.all().delete()
 
     # Remove the CableToCableTermination row.
     cable_termination.delete()

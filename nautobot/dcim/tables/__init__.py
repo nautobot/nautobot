@@ -139,20 +139,20 @@ __all__ = (
 
 class ConsoleConnectionTable(BaseTable):
     console_server = tables.Column(
-        accessor=Accessor("_path__destination__parent"),
+        accessor=Accessor("cable_paths__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="Console Server",
     )
     console_server_port = tables.Column(
-        accessor=Accessor("_path__destination"),
+        accessor=Accessor("cable_paths__destination"),
         orderable=False,
         linkify=True,
         verbose_name="Port",
     )
     device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Console Port")
-    reachable = BooleanColumn(accessor=Accessor("_path__is_active"), verbose_name="Reachable")
+    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
 
     class Meta(BaseTable.Meta):
         model = ConsolePort
@@ -167,20 +167,20 @@ class ConsoleConnectionTable(BaseTable):
 
 class PowerConnectionTable(BaseTable):
     pdu = tables.Column(
-        accessor=Accessor("_path__destination__parent"),
+        accessor=Accessor("cable_paths__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="PDU",
     )
     outlet = tables.Column(
-        accessor=Accessor("_path__destination"),
+        accessor=Accessor("cable_paths__destination"),
         orderable=False,
         linkify=True,
         verbose_name="Outlet",
     )
     device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Power Port")
-    reachable = BooleanColumn(accessor=Accessor("_path__is_active"), verbose_name="Reachable")
+    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
 
     class Meta(BaseTable.Meta):
         model = PowerPort
@@ -191,18 +191,18 @@ class InterfaceConnectionTable(BaseTable):
     device_a = tables.Column(accessor=Accessor("parent"), linkify=True, verbose_name="Device A", orderable=False)
     interface_a = tables.Column(accessor=Accessor("name"), linkify=True, verbose_name="Interface A")
     device_b = tables.Column(
-        accessor=Accessor("_path__destination__parent"),
+        accessor=Accessor("cable_paths__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="Device B",
     )
     interface_b = tables.Column(
-        accessor=Accessor("_path__destination"),
+        accessor=Accessor("cable_paths__destination"),
         orderable=False,
         linkify=True,
         verbose_name="Interface B",
     )
-    reachable = BooleanColumn(accessor=Accessor("_path__is_active"), verbose_name="Reachable")
+    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
 
     class Meta(BaseTable.Meta):
         model = Interface

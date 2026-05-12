@@ -7,25 +7,28 @@ from nautobot.dcim import models
 
 def _connected_console_ports_count(request):
     # Match queryset used in dcim.views.ConsoleConnectionsListView
-    return models.ConsolePort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
+    return (
+        models.ConsolePort.objects.restrict(request.user, "view").filter(cable_paths__isnull=False).distinct().count()
+    )
 
 
 def _connected_interfaces_count(request):
     # Match queryset used in dcim.views.InterfaceConnectionsListView
     return (
         models.Interface.objects.restrict(request.user, "view")
-        .filter(_path__isnull=False)
+        .filter(cable_paths__isnull=False)
         .exclude(
-            _path__destination_type=ContentType.objects.get_for_model(models.Interface),
-            pk__lt=F("_path__destination_id"),
+            cable_paths__destination_type=ContentType.objects.get_for_model(models.Interface),
+            pk__lt=F("cable_paths__destination_id"),
         )
+        .distinct()
         .count()
     )
 
 
 def _connected_power_ports_count(request):
     # Match queryset used in dcim.views.PowerConnectionsListView
-    return models.PowerPort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
+    return models.PowerPort.objects.restrict(request.user, "view").filter(cable_paths__isnull=False).distinct().count()
 
 
 layout = (

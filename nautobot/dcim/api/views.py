@@ -588,31 +588,31 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.prefetch_related("_path__destination")
+    queryset = ConsolePort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination")
+    queryset = ConsoleServerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.prefetch_related("_path__destination")
+    queryset = PowerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.prefetch_related("_path__destination")
+    queryset = PowerOutlet.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("_path__destination").annotate(
+    queryset = Interface.objects.prefetch_related("cable_paths__destination").annotate(
         _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
     )
     serializer_class = serializers.InterfaceSerializer
@@ -658,22 +658,38 @@ class ModuleBayViewSet(NautobotModelViewSet):
 
 
 class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = ConsolePort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        ConsolePort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = PowerPort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        PowerPort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
 
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = Interface.objects.select_related("device", "_path").filter(
-        # Avoid duplicate connections by only selecting the lower PK in a connected pair
-        _path__destination_id__isnull=False,
-        pk__lt=F("_path__destination_id"),
+    # TODO (task #14): The pk__lt dedup trick is fragile with breakout cables where a single Interface
+    # has multiple cable_paths. Revisit by pivoting this viewset to query CablePath directly.
+    queryset = (
+        Interface.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(
+            cable_paths__destination_id__isnull=False,
+            pk__lt=F("cable_paths__destination_id"),
+        )
+        .distinct()
     )
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
@@ -697,7 +713,7 @@ class CableViewSet(NautobotModelViewSet):
 
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
-        # DeviceInterface is not properly cleared of _path_id
+        # DeviceInterface is not properly cleared of its cable_paths
         queryset = super().get_queryset()
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
@@ -732,7 +748,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.prefetch_related("_path__destination")
+    queryset = PowerFeed.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 

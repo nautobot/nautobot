@@ -162,8 +162,9 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_connected_endpoint_type(self, obj):
         with contextlib.suppress(CablePath.DoesNotExist):
-            if obj._path is not None and obj._path.destination is not None:
-                return f"{obj._path.destination._meta.app_label}.{obj._path.destination._meta.model_name}"
+            path_obj = obj.cable_paths.first()
+            if path_obj is not None and path_obj.destination is not None:
+                return f"{path_obj.destination._meta.app_label}.{path_obj.destination._meta.model_name}"
         return None
 
     @extend_schema_field(
@@ -179,18 +180,20 @@ class PathEndpointModelSerializerMixin(ValidatedModelSerializer):
         Return the appropriate serializer for the type of connected object.
         """
         with contextlib.suppress(CablePath.DoesNotExist):
-            if obj._path is not None and obj._path.destination is not None:
+            path_obj = obj.cable_paths.first()
+            if path_obj is not None and path_obj.destination is not None:
                 depth = get_nested_serializer_depth(self)
                 return return_nested_serializer_data_based_on_depth(
-                    self, depth, obj, obj._path.destination, "connected_endpoint"
+                    self, depth, obj, path_obj.destination, "connected_endpoint"
                 )
         return None
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
         with contextlib.suppress(CablePath.DoesNotExist):
-            if obj._path is not None:
-                return obj._path.is_active
+            path_obj = obj.cable_paths.first()
+            if path_obj is not None:
+                return path_obj.is_active
         return None
 
 
@@ -1105,8 +1108,9 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
-        if obj._path is not None:
-            return obj._path.is_active
+        path_obj = obj.cable_paths.first()
+        if path_obj is not None:
+            return path_obj.is_active
         return None
 
 

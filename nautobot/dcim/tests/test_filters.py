@@ -1038,13 +1038,13 @@ class PathEndpointModelTestMixin:
             params = {"connected": True}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_path__is_active=True),
+                self.queryset.filter(cable_paths__is_active=True).distinct(),
             )
         with self.subTest("connected: False"):
             params = {"connected": False}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)),
+                self.queryset.filter(Q(cable_paths__isnull=True) | Q(cable_paths__is_active=False)).distinct(),
             )
 
 

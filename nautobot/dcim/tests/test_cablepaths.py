@@ -117,7 +117,9 @@ class CablePathTestCase(TestCase):
         """
         if msg is None:
             msg = f"Path #{cablepath.pk} not set on originating endpoint {origin}"
-        self.assertEqual(origin._path_id, cablepath.pk, msg=msg)
+        primary_path = origin.cable_paths.first()
+        self.assertIsNotNone(primary_path, msg=msg)
+        self.assertEqual(primary_path.pk, cablepath.pk, msg=msg)
 
     def assertPathIsNotSet(self, origin, msg=None):
         """
@@ -126,9 +128,10 @@ class CablePathTestCase(TestCase):
         :param origin: The originating path endpoint
         :param msg: Custom failure message (optional)
         """
+        primary_path = origin.cable_paths.first()
         if msg is None:
-            msg = f"Path #{origin._path_id} set as origin on {origin}; should be None!"
-        self.assertIsNone(origin._path_id, msg=msg)
+            msg = f"Path #{primary_path.pk if primary_path else None} set as origin on {origin}; should be None!"
+        self.assertIsNone(primary_path, msg=msg)
 
     def assertContainedByPath(self, path_parts):
         """
