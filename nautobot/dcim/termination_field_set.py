@@ -79,13 +79,24 @@ TERMINATION_TYPE_CHOICES = [("", "---------")] + [
 
 
 def detect_termination_type(term):
-    """Detect the termination type string from an existing termination object."""
+    """
+    Detect the termination type string from an existing termination object.
+
+    Returns "interface" when `term` is None (the default starting type for a blank form).
+    Raises `ValueError` if `term._meta.model_name` is not a registered termination type, since
+    silently substituting "interface" hides a real bug (either the caller passed something that
+    isn't a CableTermination subclass, or a new termination type was added without registering
+    it in TERMINATION_TYPE_CONFIGS).
+    """
     if term is None:
         return "interface"  # default
     model_name = term._meta.model_name
-    if model_name in TERMINATION_TYPE_CONFIGS:
-        return model_name
-    return "interface"
+    if model_name not in TERMINATION_TYPE_CONFIGS:
+        raise ValueError(
+            f"{type(term).__name__} is not a registered cable termination type "
+            f"(model_name={model_name!r}, expected one of {sorted(TERMINATION_TYPE_CONFIGS)})"
+        )
+    return model_name
 
 
 def get_parent_from_term(term):
@@ -131,8 +142,13 @@ class CableTerminationFieldSet:
         """
         if term_type is None:
             term_type = detect_termination_type(existing_term)
+        elif term_type not in TERMINATION_TYPE_CONFIGS:
+            raise ValueError(
+                f"{term_type!r} is not a registered cable termination type "
+                f"(expected one of {sorted(TERMINATION_TYPE_CONFIGS)})"
+            )
 
-        config = TERMINATION_TYPE_CONFIGS.get(term_type, TERMINATION_TYPE_CONFIGS["interface"])
+        config = TERMINATION_TYPE_CONFIGS[term_type]
         parent = get_parent_from_term(existing_term) if existing_term else None
 
         fields = {}

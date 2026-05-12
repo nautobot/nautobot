@@ -36,6 +36,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
+from nautobot.dcim.termination_field_set import CableTerminationFieldSet, detect_termination_type
 from nautobot.extras.models import Role, SecretsGroup, Status
 from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
@@ -698,3 +699,23 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
         self.assertTrue(form_choice.is_valid())
         self.assertEqual(form_choice.cleaned_data["speed"], speed_choice)
         self.assertEqual(form_choice.cleaned_data["duplex"], InterfaceDuplexChoices.DUPLEX_AUTO)
+
+
+class CableTerminationFieldSetTestCase(TestCase):
+    """Tests for the centralized cable termination picker fieldset."""
+
+    def test_detect_termination_type_none_returns_default(self):
+        self.assertEqual(detect_termination_type(None), "interface")
+
+    def test_detect_termination_type_known_model(self):
+        # Unsaved instance is fine — only `_meta.model_name` is consulted.
+        self.assertEqual(detect_termination_type(Interface()), "interface")
+
+    def test_detect_termination_type_unknown_model_raises(self):
+        # Device is not a CableTermination subclass — should raise rather than silently default.
+        with self.assertRaisesMessage(ValueError, "not a registered cable termination type"):
+            detect_termination_type(Device())
+
+    def test_get_fields_unknown_term_type_raises(self):
+        with self.assertRaisesMessage(ValueError, "not a registered cable termination type"):
+            CableTerminationFieldSet().get_fields("test", term_type="not_a_real_type")
