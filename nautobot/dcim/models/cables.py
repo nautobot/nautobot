@@ -1159,12 +1159,10 @@ class CablePath(BaseModel):
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
-            # Bail out cleanly if we've hit a breakout cable past the origin's directly-connected
-            # hop. Origin-side breakouts are handled by `create_cablepath()` passing
-            # `far_end_override`; lane-aware routing *through* a mid-path breakout cable (e.g. an
-            # MPO trunk between pass-through ports in a cross-connect cabinet) is not yet
-            # supported, so we mark the path as split and stop tracing here rather than producing
-            # an arbitrary destination via `get_cable_peer()`.
+            # Mid-path breakout bail-out: don't even enter the cable. Lane-aware routing
+            # *through* a mid-path breakout cable (e.g. an MPO trunk between pass-through ports
+            # in a cross-connect cabinet) isn't supported, so we mark the path as split and stop
+            # at the previous pass-through rather than picking an arbitrary peer.
             if not first_hop:
                 node_ct = getattr(node, "cable_termination", None)
                 if node_ct is not None and node_ct.connector is not None:
@@ -1177,6 +1175,17 @@ class CablePath(BaseModel):
                 peer_termination = far_end_override
             else:
                 peer_termination = node.get_cable_peer()
+                # First-hop on a breakout cable with no lane override: caller is `create_cablepath`
+                # for a lane that has no far-side termination (e.g. disconnected or not yet
+                # connected). `get_cable_peer` would return some *other* lane's peer, producing a
+                # wrong-direction trace, so mark the path as split and halt the trace after this
+                # cable hop. The CablePath will carry the lane's connector/position assigned by
+                # the caller, with `destination=None` and `is_split=True`.
+                if first_hop:
+                    node_ct = getattr(node, "cable_termination", None)
+                    if node_ct is not None and node_ct.connector is not None:
+                        is_split = True
+                        peer_termination = None
             first_hop = False
 
             # Unconnected lane on a breakout cable, or broken path

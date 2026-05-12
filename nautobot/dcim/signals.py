@@ -21,6 +21,7 @@ from .models import (
     Interface,
     InterfaceVDCAssignment,
     LocationType,
+    PathEndpoint,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -102,15 +103,43 @@ def create_cablepath(node, rebuild=True):
 
 def rebuild_paths(obj):
     """
-    Rebuild all CablePaths which traverse the specified node
+    Rebuild all CablePaths which traverse the specified node.
+
+    When `obj` is a `Cable`, origins are sourced from the cable's *current* terminations — so
+    newly-added join rows are picked up and stale paths from removed join rows get replaced.
+    For any other node (a termination or pass-through), origins are derived from the paths
+    currently traversing it, since the node itself doesn't enumerate path origins.
+
+    Origins are deduplicated because a single PathEndpoint owns multiple CablePaths on breakout
+    cables (one per lane); `create_cablepath` is breakout-aware and rebuilds all of an origin's
+    lane paths in a single call, so calling it once per origin is both sufficient and necessary.
     """
     cable_paths = CablePath.objects.filter(path__contains=obj)
 
     with transaction.atomic():
-        for cp in cable_paths:
-            cp.delete()
-            # Prevent looping back to rebuild_paths during the atomic transaction.
-            create_cablepath(cp.origin, rebuild=False)
+        # Always include origins of existing paths through `obj` so paths whose origin lives on
+        # a *different* cable (e.g. an interface on the far side of a pass-through chain) get
+        # rebuilt too.
+        origins = [cp.origin for cp in cable_paths]
+        if isinstance(obj, Cable):
+            # Also include current PathEndpoint terminations on this cable so newly-added join
+            # rows that don't yet have a CablePath get one built.
+            origins.extend(
+                ct_row.termination for ct_row in obj.terminations.all() if isinstance(ct_row.termination, PathEndpoint)
+            )
+
+        cable_paths.delete()
+
+        seen = set()
+        for origin in origins:
+            if origin is None:
+                continue
+            key = (type(origin), origin.pk)
+            if key in seen:
+                continue
+            seen.add(key)
+            # `rebuild=False` prevents looping back into `rebuild_paths` during this atomic block.
+            create_cablepath(origin, rebuild=False)
 
 
 #
