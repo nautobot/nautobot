@@ -2669,7 +2669,7 @@ class _JobModalButton(Button):
     job_result_key = None
     refresh_on_close_if_done = False
     redirect_button_callback = None
-    button_id = None
+    button_id = ""
 
     def __init__(self, **kwargs):
         """
@@ -2729,11 +2729,12 @@ class _JobModalButton(Button):
         super().__init__(**kwargs)
         if self.class_path is None:
             raise TypeError("class_path is required")
-        if self.button_id is None:
-            raise TypeError("A globally unique button_id is required")
+        if self.redirect_button_callback and not self.button_id:
+            raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
 
-        if self.button_id in registry["job_modal_buttons"]:
-            raise ValueError(f"{self.button_id} must be globally unique")
+        if self.button_id:
+            if self.button_id in registry["job_modal_buttons"]:
+                raise ValueError(f"{self.button_id} must be globally unique")
         registry["job_modal_buttons"][self.button_id] = self
 
     def get_redirect_button(self, job_result, request, **kwargs):
@@ -2767,8 +2768,13 @@ class _JobModalButton(Button):
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
 
+        # TODO: Potentially refactor to use values from the instance using component_id instead of passing as hx_vals.
         hx_vals["render_job_form"] = True
         hx_vals["job_modal_button"] = self.button_id
+        hx_vals["advanced_fields"] = self.advanced_fields
+        hx_vals["run_button_label"] = self.run_button_label
+        hx_vals["job_result_key"] = self.job_result_key
+        hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
 
         raw_attrs = base_context.get("attributes")
         attributes = {} if raw_attrs is None else raw_attrs.copy()

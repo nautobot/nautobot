@@ -2539,14 +2539,17 @@ class JobUIViewSet(NautobotUIViewSet):
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            job_modal_button_registry_id = request.POST.get("job_modal_button", None)
-
+            job_modal_button_registry_id = request.POST.get("job_modal_button", "")
+            job_result_key = request.POST.get("job_result_key", None)
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             context = {
                 "result": job_result,
                 "title": job_model.name,
                 "detail_value": "",
                 "job_is_pending": True,
                 "job_modal_button": job_modal_button_registry_id,
+                "job_result_key": job_result_key,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
             }
             response = render(request, "extras/jobresult_modal.html", context)
             patch_vary_headers(response, ["HX-Request"])
@@ -2590,15 +2593,15 @@ class JobUIViewSet(NautobotUIViewSet):
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
-        job_modal_button_registry_id = request.POST.get("job_modal_button")
         advanced_fields = ()
 
-        if htmx_request and job_modal_button_registry_id:
+        if htmx_request:
+            job_modal_button_registry_id = request.POST.get("job_modal_button", "")
             title = job_model.name
-            job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
-            if job_modal_button is None:
-                return HttpResponseBadRequest(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
-            advanced_field_names = job_modal_button.advanced_fields
+            run_button_label = request.POST.get("run_button_label", "Run Job Now")
+            job_result_key = request.POST.get("job_result_key")
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+            advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
             template_name = self._get_template_name(job_class=job_class, htmx_modal=True)
             response = render(
@@ -2607,17 +2610,21 @@ class JobUIViewSet(NautobotUIViewSet):
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": job_modal_button.run_button_label,
+                    "run_button_label": run_button_label,
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
                     "advanced_field_names": advanced_field_names,
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
-                    "job_result_key": job_modal_button.job_result_key,
                     "hx_vals": json.dumps(
                         {
                             "job_modal_button": job_modal_button_registry_id,
+                            "job_form_modal": True,
+                            "job_result_key": job_result_key,
+                            "run_button_label": run_button_label,
+                            "refresh_on_close_if_done": refresh_on_close_if_done,
+                            "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
                     ),
@@ -3737,14 +3744,12 @@ class JobResultUIViewSet(
     def modal(self, request, *args, **kwargs):
         """Render the job result modal content, polling while pending and showing results on completion."""
         job_result = self.get_object()
-        job_modal_button_registry_id = request.POST.get("job_modal_button")
-        job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
-        if job_modal_button is None:
-            return HttpResponseBadRequest(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
+        job_modal_button_registry_id = request.POST.get("job_modal_button", "")
         title = "Run Job"
         if job_result.job_model is not None:
             title = job_result.job_model.name
-        job_result_key = job_modal_button.job_result_key
+        job_result_key = request.POST.get("job_result_key")
+        refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
         detail_value = f"Job finished with status: {job_result.get_status_display()}"
         if job_result.result and isinstance(job_result.result, dict) and job_result_key:
             detail_value = job_result.result.get(job_result_key, job_result.result)
@@ -3757,11 +3762,14 @@ class JobResultUIViewSet(
                 "title": title,
                 "detail_value": detail_value,
                 "job_modal_button": job_modal_button_registry_id,
-                "refresh_on_close_if_done": job_modal_button.refresh_on_close_if_done,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
         )
-        if not job_is_pending:
+        if not job_is_pending and job_modal_button_registry_id:
+            job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
+            if job_modal_button is None:
+                return HttpResponseBadRequest(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
             redirect_button = job_modal_button.get_redirect_button(job_result, request)
             if redirect_button:
                 missing_keys = [key for key in ("url", "label") if key not in redirect_button]

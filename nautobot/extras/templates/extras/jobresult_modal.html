@@ -10,8 +10,8 @@
              hx-trigger="every 2s"
              hx-target="#modal-content-container"
              hx-swap="innerHTML"
-             hx-vals='{"job_modal_button": "{{ job_modal_button }}"}'
-         {% endif %}>
+             hx-vals='{"title": "{{ title }}", "job_result_key": "{{ job_result_key }}", "refresh_on_close_if_done": "{{ refresh_on_close_if_done }}", "job_modal_button": "{{ job_modal_button }}"}'
+        {% endif %}>
         <div class="container-fluid gy-3">
             <div class="row align-items-center" style="margin-bottom: 12px;">
                 <div class="col-4 text-end fw-semibold">Job Status:</div>
