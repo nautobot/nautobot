@@ -5,6 +5,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination
 from nautobot.core.testing.forms import FormTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.dcim.choices import (
+    ConsolePortTypeChoices,
     DeviceFaceChoices,
     InterfaceDuplexChoices,
     InterfaceModeChoices,
@@ -28,6 +29,7 @@ from nautobot.dcim.forms import (
 from nautobot.dcim.models import (
     Cable,
     CableToCableTermination,
+    ConsolePort,
     Device,
     DeviceBay,
     DeviceType,
@@ -846,6 +848,108 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         self.assertEqual(rows.get("B"), self.iface_a)
         # Exactly two join rows — no orphans left from the previous arrangement.
         self.assertEqual(CableToCableTermination.objects.filter(cable=self.cable).count(), 2)
+
+    def test_blank_termination_type_falls_back_to_default(self):
+        """A form submission with an empty `<side>_conn_N_type` value should not raise from
+        `CableTerminationFieldSet.get_fields`. The "---------" choice in the type dropdown
+        (value="") is valid form input and should be treated as "no type selected" (default to
+        the existing-term-derived default), not as an unknown type."""
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": "",
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(self.iface_a.pk),
+            # User cleared the B side's type dropdown (and termination); the type field's
+            # empty-string value used to propagate into the fieldset and raise ValueError.
+            "b_conn_1_type": "",
+            "b_conn_1_parent": "",
+            "b_conn_1_termination": "",
+        }
+        # The form construction should succeed without raising.
+        form = CableForm(data=data, instance=self.cable)
+        self.assertTrue(hasattr(form, "fields"))
+
+    def test_disconnect_one_side_of_invalid_cable_is_allowed(self):
+        """A cable that's already in an invalid state (e.g. incompatible termination types saved
+        before the create-time validation gap was fixed) should be editable to *remove* one side's
+        termination so the user can recover. The form's pair-compatibility check must validate the
+        cleaned form data, not silently fall back to the existing saved (invalid) pair when the
+        user has cleared one side."""
+        iface_status = Status.objects.get_for_model(Interface).first()
+        iface_orphan = Interface.objects.create(
+            device=self.device, name="iface-orphan-for-disconnect", status=iface_status, type="1000base-t"
+        )
+        cp = ConsolePort.objects.create(
+            device=self.device, name="cp-incompatible-disconnect", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        # Bypass form validation to create an invalid cable directly via the join model. This
+        # mirrors the situation a user might be in before the create-time validation fix landed.
+        invalid_cable = Cable.objects.create(status=self.cable_status)
+        CableToCableTermination.objects.create(
+            cable=invalid_cable, cable_end="A", interface=iface_orphan, connector=None, position=None
+        )
+        CableToCableTermination.objects.create(
+            cable=invalid_cable, cable_end="B", console_port=cp, connector=None, position=None
+        )
+
+        # Edit the cable, clearing the B-side termination entirely.
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": "",
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(iface_orphan.pk),
+            "b_conn_1_type": "",
+            "b_conn_1_parent": "",
+            "b_conn_1_termination": "",
+        }
+        form = CableForm(data=data, instance=invalid_cable)
+        self.assertTrue(
+            form.is_valid(),
+            msg=f"Form should accept disconnecting one side, got errors: {form.errors}",
+        )
+
+    def test_incompatible_termination_pair_rejected_on_create(self):
+        """A new cable connecting an Interface to a ConsolePort should be rejected at form
+        validation time, the same way it is during edit. The previous implementation only ran
+        the pair-compatibility check via `Cable.clean()` reading the saved join rows, which
+        don't exist yet at create-time, so invalid pairs slipped through to save."""
+        iface_status = Status.objects.get_for_model(Interface).first()
+        iface_uncabled = Interface.objects.create(
+            device=self.device, name="iface-uncabled", status=iface_status, type="1000base-t"
+        )
+        cp = ConsolePort.objects.create(
+            device=self.device, name="cp-incompatible", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": "",
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(iface_uncabled.pk),
+            "b_conn_1_type": "consoleport",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(cp.pk),
+        }
+        form = CableForm(data=data)  # No `instance=` — creating a new cable.
+        self.assertFalse(form.is_valid(), msg="Form should have rejected the incompatible pair")
+        self.assertIn("Incompatible termination types", str(form.errors))
 
     def test_unchanged_terminations_preserve_join_rows(self):
         """Saving the form without touching terminations should leave the CableToCableTermination

@@ -652,11 +652,22 @@ class Cable(PrimaryModel):
 
         # Per-termination validations on the first A/B terminations (sufficient for standard cables;
         # breakout-cable iteration across all lanes is a future enhancement).
-        validate_cable_termination(self.termination_a, cable_id=self.pk)
-        validate_cable_termination(self.termination_b, cable_id=self.pk)
+        # Form-driven flows set `_form_cleaned_terminations` on the instance to tell us to use
+        # the cleaned form data (`_initial_termination_a/_b`) directly — including the case where
+        # the user has *cleared* a side (None) and wants us to validate the new partial pair, not
+        # the previously-saved invalid pair. For direct model usage we fall back to the saved-rows
+        # property as before.
+        if getattr(self, "_form_cleaned_terminations", False):
+            term_a = getattr(self, "_initial_termination_a", None)
+            term_b = getattr(self, "_initial_termination_b", None)
+        else:
+            term_a = self.termination_a
+            term_b = self.termination_b
+        validate_cable_termination(term_a, cable_id=self.pk)
+        validate_cable_termination(term_b, cable_id=self.pk)
 
         # Pair-wise validation on the first A/B pair.
-        self._validate_termination_pair(self.termination_a, self.termination_b)
+        self._validate_termination_pair(term_a, term_b)
 
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:

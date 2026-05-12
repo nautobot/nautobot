@@ -4808,6 +4808,30 @@ class CableForm(NautobotModelForm):
             "is_breakout": info["is_breakout"],
         }
 
+    def clean(self):
+        super().clean()
+        # `super().clean()` on some parent classes returns None and mutates `self.cleaned_data`
+        # in place; read from the attribute rather than the return value.
+        cleaned_data = self.cleaned_data
+        info = getattr(self, "connection_info", None)
+        if not info:
+            return cleaned_data
+
+        # Stash the cleaned first-A and first-B terminations onto the instance so that
+        # `Cable.clean()` (which runs in `_post_clean`) validates the *new* termination pair we're
+        # trying to save, rather than the saved-row-derived termination property (which is `None`
+        # on create and stale on edit). The `_form_cleaned_terminations` flag tells Cable.clean
+        # to use these values directly — including the case where the user has cleared one side
+        # (None), which must NOT fall back to the previously-saved (possibly invalid) value.
+        if info["a_side"]:
+            a_connector = info["a_side"][0]["connector"]
+            self.instance._initial_termination_a = cleaned_data.get(f"a_conn_{a_connector}_termination")
+        if info["b_side"]:
+            b_connector = info["b_side"][0]["connector"]
+            self.instance._initial_termination_b = cleaned_data.get(f"b_conn_{b_connector}_termination")
+        self.instance._form_cleaned_terminations = True
+        return cleaned_data
+
     def save(self, commit=True):
         cable = super().save(commit=commit)
 

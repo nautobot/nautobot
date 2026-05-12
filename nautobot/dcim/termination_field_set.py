@@ -137,7 +137,10 @@ class CableTerminationFieldSet:
                 "initial": dict of field_name → initial value (for form.initial)
                 "meta": dict with type info for template rendering
         """
-        if term_type is None:
+        # Treat an empty string the same as None: this happens when form data carries the
+        # "---------" choice (value="") from the type dropdown — a legitimate "no type
+        # selected" input, not an unknown type.
+        if not term_type:
             term_type = detect_termination_type(existing_term)
         elif term_type not in TERMINATION_TYPE_CONFIGS:
             raise ValueError(
