@@ -6,6 +6,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableType,
     ConsolePort,
     ConsoleServerPort,
     Device,
@@ -1186,6 +1187,69 @@ class CablePathTestCase(TestCase):
                 rearport2: 1,
             }
         )
+
+    def test_207a_mid_path_breakout_bails_out(self):
+        """
+        Mid-path breakout cables are not yet supported lane-aware. A trace that encounters a
+        breakout cable past the origin's directly-connected hop should stop with `is_split=True`
+        rather than picking an arbitrary peer via `get_cable_peer()`.
+
+        [IF1] --C1 (straight)-- [RP1] [FP1] --C2 (breakout 1:4)-- [FP2] [RP2]
+        """
+        breakout_type = CableType(
+            name="Test mid-path 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=self.device,
+            name="Front Port 1",
+            rear_port=rearport1,
+            rear_port_position=1,
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
+        frontport2 = FrontPort.objects.create(
+            device=self.device,
+            name="Front Port 2",
+            rear_port=rearport2,
+            rear_port_position=1,
+        )
+
+        # Regular cable: IF1 ↔ RP1 (pass-through to FP1).
+        cable1 = Cable(termination_a=interface1, termination_b=rearport1, status=self.status)
+        cable1.save()
+
+        # Sanity check: with only the straight cable, the trace stops at FP1 with no destination.
+        self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+
+        # Breakout cable mid-path: FP1 ↔ FP2 with breakout cable_type.
+        cable2 = Cable(
+            termination_a=frontport1,
+            termination_b=frontport2,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable2.save()
+
+        # The retraced path should still stop at FP1 — but now marked `is_split=True` because the
+        # trace hit a breakout cable it can't navigate.
+        cp = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+        self.assertTrue(cp.is_split, msg=f"Expected is_split=True on mid-path breakout; got {cp}")
 
     def test_208_single_path_via_circuit(self):
         """

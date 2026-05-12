@@ -1159,13 +1159,25 @@ class CablePath(BaseModel):
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
+            # Bail out cleanly if we've hit a breakout cable past the origin's directly-connected
+            # hop. Origin-side breakouts are handled by `create_cablepath()` passing
+            # `far_end_override`; lane-aware routing *through* a mid-path breakout cable (e.g. an
+            # MPO trunk between pass-through ports in a cross-connect cabinet) is not yet
+            # supported, so we mark the path as split and stop tracing here rather than producing
+            # an arbitrary destination via `get_cable_peer()`.
+            if not first_hop:
+                node_ct = getattr(node, "cable_termination", None)
+                if node_ct is not None and node_ct.connector is not None:
+                    is_split = True
+                    break
+
             # Follow the cable to its far-end termination
             path.append(object_to_path_node(node.cable))
             if first_hop and far_end_override is not None:
                 peer_termination = far_end_override
-                first_hop = False
             else:
                 peer_termination = node.get_cable_peer()
+            first_hop = False
 
             # Unconnected lane on a breakout cable, or broken path
             if peer_termination is None:
