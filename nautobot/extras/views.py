@@ -3762,6 +3762,7 @@ class JobResultUIViewSet(
                 "title": title,
                 "detail_value": detail_value,
                 "job_modal_button": job_modal_button_registry_id,
+                "job_result_key": job_result_key,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
