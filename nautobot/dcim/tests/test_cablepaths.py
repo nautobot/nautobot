@@ -6,7 +6,6 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.dcim.models import (
     Cable,
     CablePath,
-    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsoleServerPort,
@@ -23,7 +22,6 @@ from nautobot.dcim.models import (
     PowerPort,
     RearPort,
 )
-from nautobot.dcim.signals import rebuild_paths
 from nautobot.dcim.utils import disconnect_termination, object_to_path_node
 from nautobot.extras.models import Role, Status
 
@@ -1687,11 +1685,8 @@ class CablePathTestCase(TestCase):
         )
         cable.save()
 
-        # Manually add a join row for lane 2 (Cable.save only materializes lane 1 by default).
-        # `rebuild_paths(cable)` now picks up the new termination from the cable's current join
-        # rows, so no extra path-building call is needed here.
-        CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=if_lane2, connector=2, position=1)
-        rebuild_paths(cable)
+        # Add a join row for lane 2 (Cable.save only materializes lane 1 by default).
+        cable.add_termination(if_lane2, "B", connector=2, position=1)
 
         # Sanity check pre-disconnect: lane 1 + lane 2 complete, lanes 3-4 partial.
         trunk_paths_pre = CablePath.objects.filter(

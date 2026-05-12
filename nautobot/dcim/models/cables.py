@@ -774,8 +774,13 @@ class Cable(PrimaryModel):
 
     def _build_cable_paths_for_terminations(self):
         """
-        Build `CablePath` rows for each termination on this cable. Deferred imports avoid a
-        circular dependency between `dcim.models.cables` and `dcim.signals`.
+        Build `CablePath` rows for each termination on this cable. Called once at the end of
+        `Cable.save()` (for new cables) so that all terminations are present in the join table
+        before paths are traced.
+
+        Callers that add or remove `CableToCableTermination` rows directly (outside this flow)
+        are responsible for calling `rebuild_paths(cable)` themselves; see also the
+        `add_cable_termination` / `disconnect_termination` helpers in `nautobot.dcim.utils`.
         """
         from nautobot.dcim.models.device_components import PathEndpoint
         from nautobot.dcim.signals import create_cablepath, rebuild_paths
@@ -795,6 +800,47 @@ class Cable(PrimaryModel):
             CablePath.objects.filter(path__contains=self).update(is_active=False)
         else:
             rebuild_paths(self)
+
+    def add_termination(self, termination, cable_end, connector=None, position=None):
+        """
+        Attach `termination` to this cable, creating the `CableToCableTermination` join row and
+        rebuilding any affected `CablePath`s.
+
+        Use this in preference to creating `CableToCableTermination` rows directly when adding
+        terminations after a cable has been saved (e.g. for additional breakout lanes that the
+        single A/B kwargs on `Cable.__init__` can't express). The single-step Cable creation
+        flow (`Cable(termination_a=..., termination_b=..., ...).save()`) is unchanged.
+
+        Each call triggers a full `rebuild_paths(self)` after the row is inserted, so adding
+        many terminations one-by-one (e.g. populating all lanes of a wide breakout cable) is
+        O(N) path rebuilds. For bulk additions, prefer creating the `CableToCableTermination`
+        rows directly (e.g. via `CableToCableTermination.objects.bulk_create([...])`) and
+        calling `rebuild_paths(cable)` once after all rows are in place.
+
+        Args:
+            termination: A `CableTermination` subclass instance (Interface, FrontPort, RearPort,
+                CircuitTermination, PowerFeed, etc.).
+            cable_end: "A" or "B" — which side of the cable to attach to.
+            connector: Connector number on this cable end for breakout cables; `None` otherwise.
+            position: Position (lane) within the connector for breakout cables; `None` otherwise.
+
+        Returns:
+            The newly-created `CableToCableTermination` row.
+        """
+        from nautobot.dcim.signals import rebuild_paths
+
+        fk_field = termination_fk_field(termination)
+        if fk_field is None:
+            raise ValueError(f"{type(termination).__name__} is not a valid cable termination type")
+        row = CableToCableTermination.objects.create(
+            cable=self,
+            cable_end=cable_end,
+            connector=connector,
+            position=position,
+            **{fk_field: termination},
+        )
+        rebuild_paths(self)
+        return row
 
     def get_compatible_types(self):
         """
