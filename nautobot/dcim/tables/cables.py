@@ -108,6 +108,7 @@ class CableTable(StatusTableMixin, BaseTable):
     length = tables.TemplateColumn(template_code=CABLE_LENGTH, order_by="_abs_length")
     color = ColorColumn()
     tags = TagColumn(url_name="dcim:cable_list")
+    actions = ButtonsColumn(Cable)
 
     class Meta(BaseTable.Meta):
         model = Cable
@@ -127,6 +128,7 @@ class CableTable(StatusTableMixin, BaseTable):
             "color",
             "length",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -136,4 +138,5 @@ class CableTable(StatusTableMixin, BaseTable):
             "terminations_b",
             "status",
             "type",
+            "actions",
         )
