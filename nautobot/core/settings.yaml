@@ -2055,4 +2055,69 @@ properties:
 
       The function must return only one argument: a string of the truncated device display name.
     version_added: "1.4.0"
+  WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS:
+    default: []
+    description: >-
+      A list of network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list
+      (loopback, link-local including cloud metadata endpoints such as `169.254.169.254`, unspecified, multicast,
+      and reserved) is enforced unconditionally and cannot be disabled. Use this setting to extend it.
+    details: |-
+      For deployments that don't legitimately need to webhook into RFC1918 private networks, set this to
+      `["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]` (and the equivalent IPv6 ULA `fc00::/7`) for stricter
+      posture. Hosts listed in [`WEBHOOK_ALLOWED_HOSTS`](#webhook_allowed_hosts) bypass *this* admin-extended
+      list (but not the built-in list).
+
+      The block-list is enforced both when a Webhook is saved (for IP-literal hosts) and when the Celery worker
+      sends the request (after DNS resolution).
+    environment_variable: "NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ALLOWED_HOSTS`": "#webhook_allowed_hosts"
+      "`WEBHOOK_ALLOWED_SCHEMES`": "#webhook_allowed_schemes"
+    type: "array"
+    version_added: "3.1.2"
+  WEBHOOK_ALLOWED_HOSTS:
+    default: []
+    description: >-
+      Hostnames that Webhooks may target even if they would otherwise be blocked by the
+      [`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`](#webhook_additional_blocked_networks) admin-extended block-list.
+      Django `ALLOWED_HOSTS`-style: literal hostnames or `.example.com` to match a domain and all of its
+      subdomains. The wildcard `*` matches every hostname.
+    details: |-
+      The built-in block-list (loopback, link-local including cloud metadata endpoints such as
+      `169.254.169.254`, unspecified, multicast, reserved) is enforced unconditionally and is **not** bypassed
+      by this setting -- including the wildcard `*`. An allow-listed hostname whose DNS resolves into the
+      built-in block-list is still rejected at send time.
+
+      Typical use is to allow specific internal targets while leaving the rest of the network filtered. For
+      example, to permit a single internal monitoring host:
+
+      ```python
+      WEBHOOK_ALLOWED_HOSTS = ["monitoring.internal.example.com"]
+      ```
+    environment_variable: "NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`": "#webhook_additional_blocked_networks"
+      "`WEBHOOK_ALLOWED_SCHEMES`": "#webhook_allowed_schemes"
+      "Django documentation for `ALLOWED_HOSTS` (matching syntax)": "https://docs.djangoproject.com/en/stable/ref/settings/#allowed-hosts"
+    type: "array"
+    version_added: "3.1.2"
+  WEBHOOK_ALLOWED_SCHEMES:
+    default:
+    - "http"
+    - "https"
+    description: >-
+      URL schemes that Webhooks are permitted to target. Defaults to HTTP and HTTPS only; other schemes
+      (e.g. `file:`, `ftp:`, `gopher:`) are rejected at Webhook save time as a baseline SSRF protection.
+    environment_variable: "NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`": "#webhook_additional_blocked_networks"
+      "`WEBHOOK_ALLOWED_HOSTS`": "#webhook_allowed_hosts"
+    type: "array"
+    version_added: "3.1.2"
 ...

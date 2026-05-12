@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -309,7 +308,7 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.filter(FeatureQuery("contacts").get_query()))
 
     class Meta:
         model = ContactAssociation
@@ -556,6 +555,7 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
     class Meta:
         model = GitRepository
         fields = "__all__"
+        read_only_fields = ["current_head"]
 
 
 #
@@ -607,23 +607,16 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 
 
 class ImageAttachmentSerializer(ValidatedModelSerializer):
-    content_type = ContentTypeField(queryset=ContentType.objects.all())
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(app_label="dcim", model__in=["device", "location", "rack"])
+    )
 
     class Meta:
         model = ImageAttachment
         fields = "__all__"
-
-    def validate(self, attrs):
-        # Validate that the parent object exists
-        try:
-            attrs["content_type"].get_object_for_this_type(id=attrs["object_id"])
-        except ObjectDoesNotExist:
-            raise serializers.ValidationError(f"Invalid parent object: {attrs['content_type']} ID {attrs['object_id']}")
-
-        # Enforce model validation
-        super().validate(attrs)
-
-        return attrs
+        # image_height and image_width are auto-populated from the uploaded image via the ImageField's
+        # height_field/width_field declaration on the model, so clients must not supply them.
+        read_only_fields = ["image_height", "image_width"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(

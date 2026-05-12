@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
@@ -52,11 +53,13 @@ from nautobot.extras.choices import (
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.jobs_revoke import CeleryStrategy
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1296,7 +1299,7 @@ class ApprovalWorkflowStageViewTestCase(
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         # create new response with a comment
         second_user = User.objects.last()
-        new_response = ApprovalWorkflowStageResponse.objects.create(
+        ApprovalWorkflowStageResponse.objects.create(
             approval_workflow_stage=approval_workflow_stage,
             user=second_user,
             comments="existing comment",
@@ -3811,7 +3814,6 @@ class SavedViewTest(ModelViewTestCase):
             response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
-            response_body = extract_page_body(response.content.decode(response.charset))
             self.assertBodyContains(
                 response,
                 f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
@@ -4150,6 +4152,169 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
 
+    def _make_scheduled_job(self, name, **kwargs):
+        defaults = {
+            "task": "pass_job.TestPassJob",
+            "interval": JobExecutionType.TYPE_DAILY,
+            "user": self.user,
+            "start_time": timezone.now(),
+            "job_model": Job.objects.get(name="TestPassJob"),
+        }
+        defaults.update(kwargs)
+        return ScheduledJob.objects.create(name=name, **defaults)
+
+    def test_detail_view_shows_banner_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_null_user", user=None)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_no_banner_when_user_is_present(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_with_user")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_shows_assume_ownership_button_with_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="other_owner_button_visible", is_active=True)
+        sj = self._make_scheduled_job("assume_button_with_perm", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_when_already_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_button_already_owner")  # owned by self.user
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_run_job_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        other_user = User.objects.create(username="other_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_run", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="other_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_change", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_assume_ownership_succeeds_with_required_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="prior_owner", is_active=True)
+        sj = self._make_scheduled_job("assume_other_owner", user=other_user, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_recovers_schedule_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_null_owner", user=None, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_forbidden_without_run_job_perm(self):
+        self.add_permissions("extras.change_scheduledjob")
+        other_user = User.objects.create(username="prior_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_run", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
+
+    def test_assume_ownership_forbidden_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="prior_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_change", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)
+
+    def test_assume_ownership_no_op_when_already_owner(self):
+        """A direct POST while already owning the schedule short-circuits without modification."""
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_already_owner_post", enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        # State must NOT have been mutated since the requester already owns it.
+        sj.refresh_from_db()
+        self.assertFalse(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ERRORED)
+
+    def test_assume_ownership_rejected_without_run_perm_on_specific_job(self):
+        """A user with extras.run_job at the model level but no per-Job run constraint match is rejected."""
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        # Grant `run` on a constraint that does NOT match the schedule's job_model.
+        obj_perm = ObjectPermission.objects.create(
+            name="run only fail jobs",
+            actions=["run"],
+            constraints={"name": "TestFailJob"},
+        )
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        other_user = User.objects.create(username="other_owner_no_run_for_job", is_active=True)
+        sj = self._make_scheduled_job("assume_no_run_specific_job", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("do not have permission to run the job", body)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
+
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = JobQueue
@@ -4181,8 +4346,8 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass_job.TestPassJob")
-        JobResult.objects.create(name="fail.TestFailJob")
+        JobResult.objects.create(name="pass_job.TestPassJob", celery_kwargs={"nautobot_job_queue_type": "celery"})
+        JobResult.objects.create(name="fail.TestFailJob", celery_kwargs={"nautobot_job_queue_type": "celery"})
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
             job_result=JobResult.objects.first(),
@@ -4569,6 +4734,139 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
+
+    def test_revoke_job_get_anonymous_redirects_to_login(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(revoke_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={revoke_url}")
+
+    def test_revoke_job_get_without_permission(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(revoke_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_is_alive, mock_revoke):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "extras/job_revoke.html")
+        self.assertEqual(response.context["object"], self.job_result_pending)
+        self.assertTrue(response.context["job_is_running"])
+        self.assertEqual(
+            response.context["return_url"],
+            self.job_result_pending.get_absolute_url(),
+        )
+        mock_is_alive.assert_called_once_with(self.job_result_pending)
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=False)
+    def test_revoke_job_get_renders_confirmation_for_dead_worker(self, mock_is_alive, mock_revoke):
+        """`job_is_running=False` is the 'reap' branch — confirmation page still shown."""
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(response.context["job_is_running"])
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive")
+    def test_revoke_job_get_already_finished_redirects(self, mock_is_alive, mock_revoke):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.get(revoke_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_is_alive.assert_not_called()
+        mock_revoke.assert_not_called()
+
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("already finished" in str(m).lower() for m in messages_list),
+            f"Expected an info message about the job being finished, got: {messages_list}",
+        )
+
+    def test_revoke_job_post_without_permission(self):
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(revoke_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "revoke")
+    def test_revoke_job_post_success(self, mock_revoke, mock_is_alive):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        mock_revoke.return_value = {
+            "job_result": self.job_result_pending,
+            "error": None,
+        }
+
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("terminated" in m.lower() for m in messages_list),
+            f"Expected a success message, got: {messages_list}",
+        )
+
+    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "revoke")
+    def test_revoke_job_post_strategy_returns_error(self, mock_revoke, mock_is_alive):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        error_message = "Broker is unreachable; could not revoke."
+        mock_revoke.return_value = {
+            "job_result": self.job_result_pending,
+            "error": error_message,
+        }
+
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(error_message, messages_list)
+
+    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "is_alive")
+    def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_is_alive, mock_revoke):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_is_alive.assert_not_called()
+        mock_revoke.assert_not_called()
 
 
 class JobTestCase(
