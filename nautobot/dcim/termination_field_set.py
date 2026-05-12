@@ -99,21 +99,6 @@ def detect_termination_type(term):
     return model_name
 
 
-def get_parent_from_term(term):
-    """Extract the parent object (Device, Circuit, PowerPanel) from a termination object."""
-    if term is None:
-        return None
-    if hasattr(term, "device") and term.device:
-        return term.device
-    if hasattr(term, "module") and term.module and hasattr(term.module, "device") and term.module.device:
-        return term.module.device
-    if hasattr(term, "circuit"):
-        return term.circuit
-    if hasattr(term, "power_panel"):
-        return term.power_panel
-    return None
-
-
 class CableTerminationFieldSet:
     """
     Factory for producing form fields for a cable termination picker.
@@ -149,7 +134,7 @@ class CableTerminationFieldSet:
             )
 
         config = TERMINATION_TYPE_CONFIGS[term_type]
-        parent = get_parent_from_term(existing_term) if existing_term else None
+        parent = existing_term.parent if existing_term else None
 
         fields = {}
         initial = {}
