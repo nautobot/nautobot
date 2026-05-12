@@ -5741,19 +5741,29 @@ class CableCreateView(generic.ObjectEditView):
         return ct
 
     def get(self, request, *args, **kwargs):
-        # Redirect to the standard cable add form with A-side pre-populated via URL params.
-        # This unifies the connect and edit flows into a single form (CableForm).
+        # Redirect to the standard cable add form with A-side pre-populated via URL params, plus
+        # B-side type pre-selected (so the user lands on a form ready for them to pick the B-side
+        # parent and termination). Unifies the connect and edit flows into a single form (CableForm).
         termination_a_type = kwargs.get("termination_a_type")
         termination_a_id = kwargs.get("termination_a_id")
+        termination_b_type_name = kwargs.get("termination_b_type")
 
         if not termination_a_type or not termination_a_id:
             return HttpResponse(status_code=400)
 
-        ct = ContentType.objects.get_for_model(termination_a_type)
+        ct_a = ContentType.objects.get_for_model(termination_a_type)
         return_url = request.GET.get("return_url", "")
 
         add_url = reverse("dcim:cable_add")
-        params = f"?termination_a_type={ct.app_label}.{ct.model}&termination_a_id={termination_a_id}"
+        params = f"?termination_a_type={ct_a.app_label}.{ct_a.model}&termination_a_id={termination_a_id}"
+        if termination_b_type_name:
+            # The URL path captures the type in hyphenated form (e.g. "console-server-port");
+            # `ContentType.objects.get(model=...)` expects the model name (no hyphens).
+            try:
+                ct_b = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
+                params += f"&termination_b_type={ct_b.app_label}.{ct_b.model}"
+            except ContentType.DoesNotExist:
+                pass  # Unknown b_type; fall through and let the form default it.
         if return_url:
             params += f"&return_url={return_url}"
 

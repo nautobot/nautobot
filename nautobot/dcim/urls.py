@@ -812,11 +812,9 @@ urlpatterns = [
     ),
     path(
         "interfaces/<uuid:termination_a_id>/connect/<str:termination_b_type>/",
-        RedirectView.as_view(
-            url="/dcim/cables/add/?termination_a_type=dcim.interface&termination_a_id=%(termination_a_id)s"
-            "&return_url=/dcim/interfaces/%(termination_a_id)s/"
-        ),
+        views.CableCreateView.as_view(),
         name="interface_connect",
+        kwargs={"termination_a_type": Interface},
     ),
     path(
         "devices/interfaces/add/",

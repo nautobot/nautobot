@@ -4675,6 +4675,17 @@ class CableForm(NautobotModelForm):
             termination_obj = content_type.model_class().objects.get(pk=initial_a_id)
             existing_a[1] = termination_obj
 
+        # B-side type override from URL params (used by the connect flow when the user clicked a
+        # specific "Connect to X" link). No PK to pre-fill the termination from — the user picks
+        # the parent + termination next; we just preselect the type dropdown.
+        initial_b_type = self.initial.get("termination_b_type")
+        initial_b_type_name = None
+        if initial_b_type:
+            try:
+                _, initial_b_type_name = str(initial_b_type).split(".")
+            except ValueError:
+                pass
+
         # Create form fields using CableTerminationFieldSet
         fieldset = CableTerminationFieldSet()
         self.connection_info = {
@@ -4693,6 +4704,11 @@ class CableForm(NautobotModelForm):
                 prefix = f"{side}_conn_{c}"
                 term = existing.get(c)
                 submitted_type = self.data.get(f"{prefix}_type") if self.data else None
+                # When the user is creating a cable via the "Connect to X" flow, honor the
+                # URL-supplied b-side type for every B-side connector. Submitted form data
+                # (`submitted_type`) and any existing termination still take precedence.
+                if submitted_type is None and term is None and side == "b" and initial_b_type_name:
+                    submitted_type = initial_b_type_name
                 result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type)
                 self.fields.update(result["fields"])
                 self.initial.update(result["initial"])

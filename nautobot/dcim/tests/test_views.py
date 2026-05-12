@@ -4485,6 +4485,70 @@ class CableTestCase(
         self.assertTrue(cable_path_2.exists())
 
 
+class CableConnectURLTestCase(ModelViewTestCase):
+    """
+    Test that the `dcim:<port>_connect` URLs correctly forward `termination_b_type` from the URL
+    path into the cable-add form, so the B-side type dropdown is pre-populated to match the link
+    the user clicked.
+    """
+
+    model = Cable
+
+    @classmethod
+    def setUpTestData(cls):
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cls.device = create_test_device("Connect URL Test Device")
+        cls.interface = Interface.objects.create(
+            device=cls.device,
+            name="eth0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=interface_status,
+        )
+
+    def test_interface_connect_redirect_includes_termination_b_type(self):
+        """The connect URL should redirect to cable_add with termination_b_type in the query string."""
+        self.user.is_superuser = True
+        self.user.save()
+        url = reverse(
+            "dcim:interface_connect",
+            kwargs={"termination_a_id": self.interface.pk, "termination_b_type": "console-server-port"},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("termination_b_type=dcim.consoleserverport", response["Location"])
+        self.assertIn(f"termination_a_id={self.interface.pk}", response["Location"])
+        self.assertIn("termination_a_type=dcim.interface", response["Location"])
+
+    def test_interface_connect_redirect_circuit_termination_b_type(self):
+        """B-side type lookup must handle non-`dcim` apps (e.g. circuits.CircuitTermination)."""
+        self.user.is_superuser = True
+        self.user.save()
+        url = reverse(
+            "dcim:interface_connect",
+            kwargs={"termination_a_id": self.interface.pk, "termination_b_type": "circuit-termination"},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("termination_b_type=circuits.circuittermination", response["Location"])
+
+    def test_cable_add_preselects_b_side_type_from_termination_b_type_param(self):
+        """The cable add form should preselect the B-side type dropdown when `termination_b_type` is provided."""
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.get(
+            reverse("dcim:cable_add"),
+            {
+                "termination_a_type": "dcim.interface",
+                "termination_a_id": str(self.interface.pk),
+                "termination_b_type": "dcim.consoleserverport",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        # Form's first B-side connector should default to consoleserverport.
+        form = response.context["form"]
+        self.assertEqual(form.initial.get("b_conn_1_type"), "consoleserverport")
+
+
 class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
     Test the ConsoleConnectionsListView.
