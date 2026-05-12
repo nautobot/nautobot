@@ -1734,6 +1734,12 @@ class ConnectionFilterSetMixin:
 
 
 class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "device__name": "icontains",
+        },
+    )
     location = django_filters.CharFilter(
         method="filter_location",
         label="Location (name)",
@@ -1743,10 +1749,16 @@ class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 
     class Meta:
         model = ConsolePort
-        fields = ["name"]
+        fields = ["id", "name", "tags"]
 
 
 class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "device__name": "icontains",
+        },
+    )
     location = django_filters.CharFilter(
         method="filter_location",
         label="Location (name)",
@@ -1756,7 +1768,7 @@ class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 
     class Meta:
         model = PowerPort
-        fields = ["name"]
+        fields = ["id", "name", "tags"]
 
 
 class InterfaceConnectionFilterSet(BaseFilterSet):
@@ -1768,32 +1780,41 @@ class InterfaceConnectionFilterSet(BaseFilterSet):
     filter.
     """
 
+    q = django_filters.CharFilter(method="search", label="Search")
     location = django_filters.CharFilter(method="filter_location", label="Location (name)")
     device_id = MultiValueUUIDFilter(method="filter_device_id", label="Device (ID)")
     device = MultiValueCharFilter(method="filter_device_name", label="Device (name)")
 
     class Meta:
         model = CablePath
-        fields = []
+        fields = ["id"]
 
-    def _filter_either_endpoint(self, queryset, interface_lookup):
-        iface_pks = Interface.objects.filter(**interface_lookup).values("pk")
+    def _filter_either_endpoint(self, queryset, interface_filter):
+        """Return CablePaths whose origin OR destination is an Interface matching `interface_filter`."""
+        iface_pks = Interface.objects.filter(interface_filter).values("pk")
         return queryset.filter(Q(origin_id__in=iface_pks) | Q(destination_id__in=iface_pks))
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        # CablePath itself has no searchable fields; match against the interfaces at either
+        # endpoint by name or parent device name.
+        return self._filter_either_endpoint(queryset, Q(name__icontains=value) | Q(device__name__icontains=value))
 
     def filter_location(self, queryset, name, value):
         if not value.strip():
             return queryset
-        return self._filter_either_endpoint(queryset, {"device__location__name": value})
+        return self._filter_either_endpoint(queryset, Q(device__location__name=value))
 
     def filter_device_id(self, queryset, name, value):
         if not value:
             return queryset
-        return self._filter_either_endpoint(queryset, {"device_id__in": value})
+        return self._filter_either_endpoint(queryset, Q(device_id__in=value))
 
     def filter_device_name(self, queryset, name, value):
         if not value:
             return queryset
-        return self._filter_either_endpoint(queryset, {"device__name__in": value})
+        return self._filter_either_endpoint(queryset, Q(device__name__in=value))
 
 
 class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):

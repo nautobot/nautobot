@@ -31,6 +31,7 @@ from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TY
 from nautobot.dcim.filters import (
     CableFilterSet,
     CableTypeFilterSet,
+    ConsoleConnectionFilterSet,
     ConsolePortFilterSet,
     ConsolePortTemplateFilterSet,
     ConsoleServerPortFilterSet,
@@ -47,6 +48,7 @@ from nautobot.dcim.filters import (
     DeviceTypeToSoftwareImageFileFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
+    InterfaceConnectionFilterSet,
     InterfaceFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
@@ -62,6 +64,7 @@ from nautobot.dcim.filters import (
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
+    PowerConnectionFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
     PowerOutletTemplateFilterSet,
@@ -4746,3 +4749,162 @@ class DeviceClusterAssignmentTestCase(FilterTestCases.FilterTestCase):
             DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[2]),
             DeviceClusterAssignment.objects.create(device=devices[2], cluster=clusters[0]),
         )
+
+
+class _ConnectionFilterSetTestMixin:
+    """Shared device/port setup helpers for the per-port connection filtersets."""
+
+    @classmethod
+    def _make_device(cls, name):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model=f"DT for {name}")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        return Device.objects.create(
+            name=name, device_type=device_type, role=device_role, location=location, status=device_status
+        )
+
+
+class ConsoleConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """Exercise ConsoleConnectionFilterSet (search + device/location filters)."""
+
+    filterset = ConsoleConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_a = cls._make_device("Connection Console Device Alpha")
+        cls.device_b = cls._make_device("Connection Console Device Bravo")
+        cls.device_c = cls._make_device("Connection Console Device Charlie")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.cp_a = ConsolePort.objects.create(device=cls.device_a, name="CP-keyword-alpha")
+        cls.cp_b = ConsolePort.objects.create(device=cls.device_b, name="CP-2")
+        cls.cp_c = ConsolePort.objects.create(device=cls.device_c, name="CP-3")
+        Cable.objects.create(
+            termination_a=cls.cp_a,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_b, name="CSP-1"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.cp_b,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_a, name="CSP-2"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.cp_c,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_c, name="CSP-3"),
+            status=cable_status,
+        )
+        # Mirror the queryset shape used by `ConsoleConnectionsListView`. The filterset itself
+        # doesn't add DISTINCT — the view does — so we omit it here to keep the base test's
+        # `test_no_distinct_on_empty_filter_params` check meaningful.
+        cls.queryset = ConsolePort.objects.filter(cable_paths__isnull=False)
+
+
+class PowerConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """Exercise PowerConnectionFilterSet (search + device/location filters)."""
+
+    filterset = PowerConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_a = cls._make_device("Connection Power Device Alpha")
+        cls.device_b = cls._make_device("Connection Power Device Bravo")
+        cls.device_c = cls._make_device("Connection Power Device Charlie")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.pp_a = PowerPort.objects.create(device=cls.device_a, name="PP-keyword-alpha")
+        cls.pp_b = PowerPort.objects.create(device=cls.device_b, name="PP-2")
+        cls.pp_c = PowerPort.objects.create(device=cls.device_c, name="PP-3")
+        Cable.objects.create(
+            termination_a=cls.pp_a,
+            termination_b=PowerOutlet.objects.create(device=cls.device_b, name="PO-1"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.pp_b,
+            termination_b=PowerOutlet.objects.create(device=cls.device_a, name="PO-2"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.pp_c,
+            termination_b=PowerOutlet.objects.create(device=cls.device_c, name="PO-3"),
+            status=cable_status,
+        )
+        cls.queryset = PowerPort.objects.filter(cable_paths__isnull=False)
+
+
+class InterfaceConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """
+    Exercise InterfaceConnectionFilterSet, which operates on `CablePath` rows; the `q` filter is
+    implemented as a custom method (not a `SearchFilter`) because CablePath has no name fields,
+    so the base `test_q_filter_valid` skips and we cover the search behavior explicitly below.
+    """
+
+    filterset = InterfaceConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        from nautobot.dcim.models import CablePath
+
+        iface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.device_alpha = cls._make_device("Conn Iface Device Alpha")
+        cls.device_bravo = cls._make_device("Conn Iface Device Bravo")
+        cls.device_charlie = cls._make_device("Conn Iface Device Charlie")
+
+        cls.iface_alpha = Interface.objects.create(
+            device=cls.device_alpha, name="IF-keyword-alpha", status=iface_status, type="1000base-t"
+        )
+        cls.iface_bravo = Interface.objects.create(
+            device=cls.device_bravo, name="IF-bravo", status=iface_status, type="1000base-t"
+        )
+        cls.iface_charlie = Interface.objects.create(
+            device=cls.device_charlie, name="IF-charlie", status=iface_status, type="1000base-t"
+        )
+        iface_alpha_2 = Interface.objects.create(
+            device=cls.device_alpha, name="IF-alpha-2", status=iface_status, type="1000base-t"
+        )
+        iface_bravo_2 = Interface.objects.create(
+            device=cls.device_bravo, name="IF-bravo-2", status=iface_status, type="1000base-t"
+        )
+        iface_charlie_2 = Interface.objects.create(
+            device=cls.device_charlie, name="IF-charlie-2", status=iface_status, type="1000base-t"
+        )
+        # 3 iface↔iface connections so the base FilterTestCase has enough rows for its [:2] / id
+        # slicing tests.
+        # Connection 1: Alpha ↔ Bravo (one endpoint matches "keyword-alpha"; other matches "Bravo")
+        Cable.objects.create(termination_a=cls.iface_alpha, termination_b=cls.iface_bravo, status=cable_status)
+        # Connection 2: another Bravo iface ↔ Charlie (control — neither endpoint matches "keyword-alpha")
+        Cable.objects.create(termination_a=iface_bravo_2, termination_b=cls.iface_charlie, status=cable_status)
+        # Connection 3: Alpha2 ↔ Charlie2 (additional row for negate-lookup tests)
+        Cable.objects.create(termination_a=iface_alpha_2, termination_b=iface_charlie_2, status=cable_status)
+
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        cls.queryset = CablePath.objects.filter(
+            origin_type=iface_ct, destination_type=iface_ct, origin_id__lt=F("destination_id")
+        )
+
+    def test_q_matches_interface_name_either_endpoint(self):
+        """`q` matches a connection when EITHER endpoint's interface name matches."""
+        result = self.filterset({"q": "keyword-alpha"}, self.queryset).qs.distinct()
+        self.assertEqual(result.count(), 1)
+        cp = result.first()
+        endpoint_pks = {cp.origin_id, cp.destination_id}
+        self.assertIn(self.iface_alpha.pk, endpoint_pks)
+        self.assertIn(self.iface_bravo.pk, endpoint_pks)
+
+    def test_q_matches_device_name_either_endpoint(self):
+        """`q` matches a connection when EITHER endpoint's parent device name matches."""
+        # Connections 2 and 3 both involve device_charlie; connection 1 doesn't.
+        result = self.filterset({"q": "Charlie"}, self.queryset).qs.distinct()
+        self.assertEqual(result.count(), 2)
+        for cp in result:
+            self.assertIn(
+                self.device_charlie.pk,
+                {cp.origin.device.pk, cp.destination.device.pk},
+                msg=f"Charlie not on either endpoint of {cp}",
+            )
