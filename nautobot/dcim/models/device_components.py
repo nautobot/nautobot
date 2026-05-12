@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Prefetch, Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -387,9 +387,12 @@ class CableTermination(models.Model):
 
         For standard cables, returns a list with one peer.
         For breakout cables, returns peers mapped to this termination's connector via the template.
-        """
-        from nautobot.dcim.models.cables import CableToCableTermination
 
+        Reads `cable.terminations.all()` and filters / sorts in Python so callers can prefetch
+        the cable's terminations (with per-type FKs `select_related`'d) to avoid N+1 queries
+        when this is called for many rows in a table render. See
+        `CableTermination.optimize_queryset_for_cable_columns`.
+        """
         my_endpoint = getattr(self, "cable_termination", None)
         if my_endpoint is None:
             return []
@@ -397,25 +400,70 @@ class CableTermination(models.Model):
         cable = my_endpoint.cable
         opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
 
-        # For breakout cables, find only the connectors mapped to this termination's connector
+        all_rows = cable.terminations.all()
+
         if cable.cable_type_id and my_endpoint.connector is not None:
             origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
             far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
-
-            mapped_far_connectors = set()
-            for entry in cable.cable_type.mapping:
-                if entry[origin_side_key] == my_endpoint.connector:
-                    mapped_far_connectors.add(entry[far_side_key])
-
-            opposite_endpoints = CableToCableTermination.objects.filter(
-                cable_id=cable.pk, cable_end=opposite_side, connector__in=mapped_far_connectors
-            ).order_by("connector", "position")
+            mapped_far_connectors = {
+                entry[far_side_key]
+                for entry in cable.cable_type.mapping
+                if entry[origin_side_key] == my_endpoint.connector
+            }
+            opposite_endpoints = [
+                ep for ep in all_rows if ep.cable_end == opposite_side and ep.connector in mapped_far_connectors
+            ]
         else:
-            opposite_endpoints = CableToCableTermination.objects.filter(
-                cable_id=cable.pk, cable_end=opposite_side
-            ).order_by("connector", "position")
+            opposite_endpoints = [ep for ep in all_rows if ep.cable_end == opposite_side]
 
+        opposite_endpoints.sort(key=lambda ep: (ep.connector or 0, ep.position or 0))
         return [ep.termination for ep in opposite_endpoints if ep.termination is not None]
+
+    @classmethod
+    def cable_columns_select_related_fields(cls):
+        """
+        Return the list of `select_related` field paths needed for table renders of the `cable`
+        and `cable_peer` columns to avoid per-row queries against the join table / cable type.
+        """
+        return ["cable_termination__cable__cable_type"]
+
+    @classmethod
+    def cable_columns_prefetch_related_fields(cls):
+        """
+        Return the list of `prefetch_related` arguments (strings and/or `Prefetch` objects)
+        needed for table renders of the `cable_peer` column (and, for `PathEndpoint` subclasses,
+        the `connection` column) to avoid per-row queries.
+        """
+        from nautobot.dcim.models.cables import CableToCableTermination, TERMINATION_FK_FIELDS
+
+        prefetches = [
+            Prefetch(
+                "cable_termination__cable__terminations",
+                queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+            ),
+        ]
+        if issubclass(cls, PathEndpoint):
+            prefetches.append("cable_paths__destination")
+        return prefetches
+
+    @classmethod
+    def optimize_queryset_for_cable_columns(cls, queryset):
+        """
+        Apply `select_related` / `prefetch_related` to `queryset` so that table renders of the
+        `cable`, `cable_peer`, and (for PathEndpoint subclasses) `connection` columns avoid the
+        per-row N+1 queries that those accessors otherwise trigger.
+
+        Usage on a list view's `queryset`:
+
+            queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
+
+        For panel-based detail views that take `select_related_fields` / `prefetch_related_fields`
+        directly, use the underlying `cable_columns_select_related_fields()` /
+        `cable_columns_prefetch_related_fields()` classmethods instead.
+        """
+        queryset = queryset.select_related(*cls.cable_columns_select_related_fields())
+        queryset = queryset.prefetch_related(*cls.cable_columns_prefetch_related_fields())
+        return queryset
 
     @property
     def parent(self):

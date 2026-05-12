@@ -3387,8 +3387,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleInterfaceTable,
                         table_attribute="vc_interfaces",
                         order_by_fields=["_name"],
-                        prefetch_related_fields=["cable_paths__destination"],
-                        select_related_fields=["cable", "lag"],
+                        prefetch_related_fields=Interface.cable_columns_prefetch_related_fields(),
+                        select_related_fields=[*Interface.cable_columns_select_related_fields(), "lag"],
                         related_field_name="device",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
@@ -3415,7 +3415,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Front Ports",
                         table_class=tables.DeviceModuleFrontPortTable,
                         table_attribute="all_front_ports",
-                        select_related_fields=["cable", "rear_port"],
+                        select_related_fields=[*FrontPort.cable_columns_select_related_fields(), "rear_port"],
+                        prefetch_related_fields=FrontPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="front_ports",
                         enable_bulk_actions=True,
@@ -3441,7 +3442,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Rear Ports",
                         table_class=tables.DeviceModuleRearPortTable,
                         table_attribute="all_rear_ports",
-                        select_related_fields=["cable"],
+                        select_related_fields=RearPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=RearPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="rear_ports",
                         enable_bulk_actions=True,
@@ -3465,8 +3467,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Ports",
                         table_class=tables.DeviceModuleConsolePortTable,
                         table_attribute="all_console_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["cable_paths__destination"],
+                        select_related_fields=ConsolePort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=ConsolePort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_ports",
                         enable_bulk_actions=True,
@@ -3492,8 +3494,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Server Ports",
                         table_class=tables.DeviceModuleConsoleServerPortTable,
                         table_attribute="all_console_server_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["cable_paths__destination"],
+                        select_related_fields=ConsoleServerPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=ConsoleServerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_server_ports",
                         enable_bulk_actions=True,
@@ -3519,8 +3521,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Ports",
                         table_class=tables.DeviceModulePowerPortTable,
                         table_attribute="all_power_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["cable_paths__destination"],
+                        select_related_fields=PowerPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=PowerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_ports",
                         enable_bulk_actions=True,
@@ -3546,8 +3548,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Outlets",
                         table_class=tables.DeviceModulePowerOutletTable,
                         table_attribute="all_power_outlets",
-                        select_related_fields=["cable", "power_port"],
-                        prefetch_related_fields=["cable_paths__destination"],
+                        select_related_fields=[*PowerOutlet.cable_columns_select_related_fields(), "power_port"],
+                        prefetch_related_fields=PowerOutlet.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_outlets",
                         enable_bulk_actions=True,
@@ -3873,11 +3875,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
     )
     def lldp_neighbors(self, request, *args, **kwargs):
         instance = self.get_object()
-        interfaces = (
+        interfaces = Interface.optimize_queryset_for_cable_columns(
             instance.all_interfaces.restrict(request.user, "view")
-            .prefetch_related("cable_paths__destination")
-            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
-        )
+        ).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         return Response(
             {
                 "template": "dcim/device/lldp_neighbors.html",
@@ -4109,10 +4109,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def consoleports(self, request, *args, **kwargs):
         instance = self.get_object()
-        consoleports = (
+        consoleports = ConsolePort.optimize_queryset_for_cable_columns(
             instance.console_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("cable_paths__destination")
         )
         consoleport_table = tables.DeviceModuleConsolePortTable(
             data=consoleports, user=request.user, configurable=True, orderable=False
@@ -4136,10 +4134,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
-        consoleserverports = (
+        consoleserverports = ConsoleServerPort.optimize_queryset_for_cable_columns(
             instance.console_server_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("cable_paths__destination")
         )
         consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
             data=consoleserverports, user=request.user, orderable=False, configurable=True, parent_module=instance
@@ -4165,11 +4161,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
-        powerports = (
-            instance.power_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("cable_paths__destination")
-        )
+        powerports = PowerPort.optimize_queryset_for_cable_columns(instance.power_ports.restrict(request.user, "view"))
         powerport_table = tables.DeviceModulePowerPortTable(
             data=powerports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -4192,11 +4184,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
-        poweroutlets = (
+        poweroutlets = PowerOutlet.optimize_queryset_for_cable_columns(
             instance.power_outlets.restrict(request.user, "view")
-            .select_related("cable", "power_port")
-            .prefetch_related("cable_paths__destination")
-        )
+        ).select_related("power_port")
         poweroutlet_table = tables.DeviceModulePowerOutletTable(
             data=poweroutlets, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -4219,14 +4209,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
-            instance.interfaces.restrict(request.user, "view")
+            Interface.optimize_queryset_for_cable_columns(instance.interfaces.restrict(request.user, "view"))
             .prefetch_related(
                 Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
                 Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
-                "cable_paths__destination",
                 "tags",
             )
-            .select_related("lag", "cable")
+            .select_related("lag")
         )
         interface_table = tables.DeviceModuleInterfaceTable(
             data=interfaces, user=request.user, orderable=False, configurable=True, parent_module=instance
@@ -4250,7 +4239,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
-        frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
+        frontports = FrontPort.optimize_queryset_for_cable_columns(
+            instance.front_ports.restrict(request.user, "view")
+        ).select_related("rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(
             data=frontports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -4273,7 +4264,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
-        rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
+        rearports = RearPort.optimize_queryset_for_cable_columns(instance.rear_ports.restrict(request.user, "view"))
         rearport_table = tables.DeviceModuleRearPortTable(
             data=rearports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -4432,7 +4423,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
 
 class ConsolePortListView(generic.ObjectListView):
-    queryset = ConsolePort.objects.all()
+    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
     filterset = filters.ConsolePortFilterSet
     filterset_form = forms.ConsolePortFilterForm
     table = tables.ConsolePortTable
@@ -4500,7 +4491,7 @@ class ConsolePortBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConsoleServerPortListView(generic.ObjectListView):
-    queryset = ConsoleServerPort.objects.all()
+    queryset = ConsoleServerPort.optimize_queryset_for_cable_columns(ConsoleServerPort.objects.all())
     filterset = filters.ConsoleServerPortFilterSet
     filterset_form = forms.ConsoleServerPortFilterForm
     table = tables.ConsoleServerPortTable
@@ -4568,7 +4559,7 @@ class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPortListView(generic.ObjectListView):
-    queryset = PowerPort.objects.all()
+    queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
     filterset = filters.PowerPortFilterSet
     filterset_form = forms.PowerPortFilterForm
     table = tables.PowerPortTable
@@ -4636,7 +4627,7 @@ class PowerPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerOutletListView(generic.ObjectListView):
-    queryset = PowerOutlet.objects.all()
+    queryset = PowerOutlet.optimize_queryset_for_cable_columns(PowerOutlet.objects.all())
     filterset = filters.PowerOutletFilterSet
     filterset_form = forms.PowerOutletFilterForm
     table = tables.PowerOutletTable
@@ -4704,7 +4695,10 @@ class PowerOutletBulkDeleteView(generic.BulkDeleteView):
 
 
 class InterfaceListView(generic.ObjectListView):
-    queryset = Interface.objects.all()
+    # `optimize_queryset_for_cable_columns` adds the `select_related` / `prefetch_related` needed
+    # so `cable`, `cable_peer`, and `connection` columns don't trigger per-row N+1 queries against
+    # CableToCableTermination / CablePath.
+    queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
     filterset = filters.InterfaceFilterSet
     filterset_form = forms.InterfaceFilterForm
     table = tables.InterfaceTable
@@ -4839,7 +4833,7 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
 
 
 class FrontPortListView(generic.ObjectListView):
-    queryset = FrontPort.objects.all()
+    queryset = FrontPort.optimize_queryset_for_cable_columns(FrontPort.objects.all())
     filterset = filters.FrontPortFilterSet
     filterset_form = forms.FrontPortFilterForm
     table = tables.FrontPortTable
@@ -4907,7 +4901,7 @@ class FrontPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class RearPortListView(generic.ObjectListView):
-    queryset = RearPort.objects.all()
+    queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
     filterset = filters.RearPortFilterSet
     filterset_form = forms.RearPortFilterForm
     table = tables.RearPortTable
