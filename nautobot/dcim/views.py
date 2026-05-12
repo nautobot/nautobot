@@ -5802,31 +5802,46 @@ class InterfaceConnectionsListView(ConnectionsListView):
         super().__init__(*args, **kwargs)
         self.get_queryset()  # Populate self.queryset after init.
 
+    def get_required_permission(self):
+        # The view exposes interface connections; gate it on Interface view permission rather than
+        # CablePath view permission (which is the model of the underlying queryset).
+        return "dcim.view_interface"
+
     def get_queryset(self):
         """
-        This is a required so that the call to `ContentType.objects.get_for_model` does not result in a circular import.
+        Build a CablePath queryset of interface-to-interface connections.
+
+        Driven from CablePath rather than Interface so each connection is naturally one row (independent
+        of breakout-cable lanes). Lazy-built here so `ContentType.objects.get_for_model` doesn't run at
+        import time.
         """
-        qs = (
-            Interface.objects.filter(cable_paths__isnull=False)
-            .exclude(
-                # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
-                # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A)
-                # TODO: this is doubly broken now:
-                #       1. Filterset matching: if the filterset matches (A), the connection appears; if only (B)
-                #          matches, the connection is hidden.
-                #       2. Breakout cables: a single Interface may originate multiple CablePaths to different peer
-                #          Interfaces. The pk__lt dedup trick may exclude an Interface row entirely if *any* of its
-                #          cable_paths point at a higher-pk peer, dropping legitimate (A, B) rows for other lanes.
-                #       Needs a redesign — probably switch to a CablePath-side queryset rather than Interface-side.
-                cable_paths__destination_type=ContentType.objects.get_for_model(Interface),
-                pk__lt=F("cable_paths__destination_id"),
-            )
-            .distinct()
-        )
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        qs = CablePath.objects.filter(
+            origin_type=iface_ct,
+            destination_type=iface_ct,
+            # Canonicalize each iface↔iface pair: each connection produces two CablePaths (one per
+            # direction); keep only the one whose origin_id is the lower of the two. Breakout-lane
+            # CablePaths between distinct pairs are independent rows and all survive.
+            origin_id__lt=F("destination_id"),
+        ).prefetch_related("origin", "destination")
         if self.queryset is None:
             self.queryset = qs
 
         return self.queryset
+
+    def has_permission(self):
+        """
+        Override base permission filtering to apply Interface-level permission to BOTH endpoints of
+        each connection, rather than calling `CablePath.objects.restrict()` (which would key off the
+        non-existent `dcim.view_cablepath` permission).
+        """
+        user = self.request.user
+        permission_required = self.get_required_permission()
+        if not user.has_perms((permission_required, *self.additional_permissions)):
+            return False
+        visible_ifaces = Interface.objects.restrict(user, "view").values("pk")
+        self.queryset = self.queryset.filter(origin_id__in=visible_ifaces, destination_id__in=visible_ifaces)
+        return True
 
 
 #

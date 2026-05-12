@@ -1093,25 +1093,21 @@ class CablePathSerializer(serializers.ModelSerializer):
 
 
 class InterfaceConnectionSerializer(ValidatedModelSerializer):
-    interface_a = serializers.SerializerMethodField()
-    interface_b = InterfaceSerializer(source="connected_endpoint")
-    connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
+    """
+    Read-only serializer for an interface-to-interface connection.
+
+    Operates on `CablePath` rows internally (so each breakout lane is a distinct connection) but
+    exposes the legacy `interface_a` / `interface_b` / `connected_endpoint_reachable` JSON shape
+    that the `/dcim/interface-connections/` API has historically returned.
+    """
+
+    interface_a = InterfaceSerializer(source="origin")
+    interface_b = InterfaceSerializer(source="destination")
+    connected_endpoint_reachable = serializers.BooleanField(source="is_active", read_only=True, allow_null=True)
 
     class Meta:
-        model = Interface
+        model = CablePath
         fields = ["interface_a", "interface_b", "connected_endpoint_reachable"]
-
-    @extend_schema_field(InterfaceSerializer)
-    def get_interface_a(self, obj):
-        context = {"request": self.context["request"]}
-        return InterfaceSerializer(instance=obj, context=context).data
-
-    @extend_schema_field(serializers.BooleanField(allow_null=True))
-    def get_connected_endpoint_reachable(self, obj):
-        path_obj = obj.cable_paths.first()
-        if path_obj is not None:
-            return path_obj.is_active
-        return None
 
 
 #

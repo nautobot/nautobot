@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django_tables2.utils import Accessor
 
 from nautobot.core.tables import BaseTable, BooleanColumn
-from nautobot.dcim.models import ConsolePort, Interface, PowerPort
+from nautobot.dcim.models import CablePath, ConsolePort, Interface, PowerPort
 
 from .cables import CableTable, CableTypeTable
 from .devices import (
@@ -188,23 +188,19 @@ class PowerConnectionTable(BaseTable):
 
 
 class InterfaceConnectionTable(BaseTable):
-    device_a = tables.Column(accessor=Accessor("parent"), linkify=True, verbose_name="Device A", orderable=False)
-    interface_a = tables.Column(accessor=Accessor("name"), linkify=True, verbose_name="Interface A")
+    """Table over `CablePath` rows representing interface-to-interface connections."""
+
+    device_a = tables.Column(accessor=Accessor("origin.parent"), orderable=False, linkify=True, verbose_name="Device A")
+    interface_a = tables.Column(accessor=Accessor("origin"), orderable=False, linkify=True, verbose_name="Interface A")
     device_b = tables.Column(
-        accessor=Accessor("cable_paths__destination__parent"),
-        orderable=False,
-        linkify=True,
-        verbose_name="Device B",
+        accessor=Accessor("destination.parent"), orderable=False, linkify=True, verbose_name="Device B"
     )
     interface_b = tables.Column(
-        accessor=Accessor("cable_paths__destination"),
-        orderable=False,
-        linkify=True,
-        verbose_name="Interface B",
+        accessor=Accessor("destination"), orderable=False, linkify=True, verbose_name="Interface B"
     )
-    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
+    reachable = BooleanColumn(accessor=Accessor("is_active"), verbose_name="Reachable")
 
     class Meta(BaseTable.Meta):
-        model = Interface
+        model = CablePath
         fields = ("device_a", "interface_a", "device_b", "interface_b", "reachable")
         default_columns = ("device_a", "interface_a", "device_b", "interface_b", "reachable")

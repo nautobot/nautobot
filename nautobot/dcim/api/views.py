@@ -2,6 +2,7 @@ from collections import OrderedDict
 import socket
 
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.http import HttpResponse, HttpResponseForbidden
@@ -680,17 +681,20 @@ class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
 
 
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
-    # TODO (task #14): The pk__lt dedup trick is fragile with breakout cables where a single Interface
-    # has multiple cable_paths. Revisit by pivoting this viewset to query CablePath directly.
-    queryset = (
-        Interface.objects.select_related("device")
-        .prefetch_related("cable_paths__destination")
-        .filter(
-            cable_paths__destination_id__isnull=False,
-            pk__lt=F("cable_paths__destination_id"),
-        )
-        .distinct()
-    )
+    """
+    Lists interface-to-interface connections.
+
+    Backed by a `CablePath` queryset so each connection (including each breakout lane) is one row.
+    The serializer adapts each `CablePath` to the Interface-shaped JSON contract this endpoint has
+    historically exposed (`interface_a`, `interface_b`, `connected_endpoint_reachable`).
+    """
+
+    queryset = CablePath.objects.filter(
+        origin_type=ContentType.objects.get_for_model(Interface),
+        destination_type=ContentType.objects.get_for_model(Interface),
+        # Canonicalize each iface↔iface pair; see InterfaceConnectionsListView for the rationale.
+        origin_id__lt=F("destination_id"),
+    ).prefetch_related("origin", "destination")
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
 

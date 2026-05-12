@@ -51,6 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -1758,17 +1759,41 @@ class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
         fields = ["name"]
 
 
-class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
-    location = django_filters.CharFilter(
-        method="filter_location",
-        label="Location (name)",
-    )
-    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
+class InterfaceConnectionFilterSet(BaseFilterSet):
+    """
+    Filters CablePath rows representing interface-to-interface connections.
+
+    Each filter matches if EITHER endpoint of the connection (origin or destination Interface) matches
+    the supplied value, so a connection between Device A and Device B surfaces under either device's
+    filter.
+    """
+
+    location = django_filters.CharFilter(method="filter_location", label="Location (name)")
+    device_id = MultiValueUUIDFilter(method="filter_device_id", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device_name", label="Device (name)")
 
     class Meta:
-        model = Interface
+        model = CablePath
         fields = []
+
+    def _filter_either_endpoint(self, queryset, interface_lookup):
+        iface_pks = Interface.objects.filter(**interface_lookup).values("pk")
+        return queryset.filter(Q(origin_id__in=iface_pks) | Q(destination_id__in=iface_pks))
+
+    def filter_location(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return self._filter_either_endpoint(queryset, {"device__location__name": value})
+
+    def filter_device_id(self, queryset, name, value):
+        if not value:
+            return queryset
+        return self._filter_either_endpoint(queryset, {"device_id__in": value})
+
+    def filter_device_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return self._filter_either_endpoint(queryset, {"device__name__in": value})
 
 
 class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):

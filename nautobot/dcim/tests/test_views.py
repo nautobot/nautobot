@@ -8,7 +8,7 @@ import zoneinfo
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import F, Q
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
@@ -4610,14 +4610,21 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
 class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
-    Test the InterfaceConnectionsListView.
+    Test the InterfaceConnectionsListView, which is backed by a CablePath queryset internally but
+    presents Interface-to-Interface connections as table rows.
     """
 
     def _get_base_url(self):
         return "dcim:interface_connections_{}"
 
     def _get_queryset(self):
-        return Interface.objects.filter(cable__isnull=False)
+        # The list view returns CablePath rows; mirror that for accurate count/index-based assertions.
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        return CablePath.objects.filter(
+            origin_type=iface_ct,
+            destination_type=iface_ct,
+            origin_id__lt=F("destination_id"),
+        )
 
     def get_list_url(self):
         return "/dcim/interface-connections/"
@@ -4628,35 +4635,50 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     def get_list_view(self):
         return InterfaceConnectionsListView
 
+    # `model` drives permission/title in base tests; the view gates on dcim.view_interface.
     model = Interface
     filterset = InterfaceConnectionFilterSet
+
+    def get_display_verbose_name_plural(self):
+        # The list view's underlying queryset is over CablePath; the rendered banner / empty
+        # state reflect that even though `self.model` is Interface.
+        return CablePath._meta.verbose_name_plural
+
+    def get_instance_display_text_content(self, instance):
+        # The table renders the origin/destination interface names as linkified text.
+        return [instance.origin.name, instance.destination.name]
+
+    def get_instance_display_strings(self, instance):
+        # The table also links to the origin/destination interface detail URLs.
+        return [instance.origin.get_absolute_url(), instance.destination.get_absolute_url()]
 
     @classmethod
     def setUpTestData(cls):
         location = Location.objects.first()
 
-        device_1 = create_test_device("Device 1")
-        device_2 = create_test_device("Device 2")
+        cls.device_1 = create_test_device("Device 1")
+        cls.device_2 = create_test_device("Device 2")
+        cls.device_3 = create_test_device("Device 3")
 
         interface_status = Status.objects.get_for_model(Interface).first()
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interfaces = (
             Interface.objects.create(
-                device=device_1,
+                device=cls.device_1,
                 name="Interface A1",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
                 role=interface_role,
             ),
             Interface.objects.create(
-                device=device_1,
+                device=cls.device_1,
                 name="Interface A2",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
                 role=interface_role,
             ),
             Interface.objects.create(
-                device=device_1,
+                device=cls.device_1,
                 name="Interface A3",
                 type=InterfaceTypeChoices.TYPE_1GE_SFP,
                 status=interface_status,
@@ -4664,13 +4686,20 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
 
         cls.device_2_interface = Interface.objects.create(
-            device=device_2,
+            device=cls.device_2,
             name="Interface A1",
             type=InterfaceTypeChoices.TYPE_1GE_SFP,
             status=interface_status,
             role=interface_role,
         )
-        rearport = RearPort.objects.create(device=device_2, type=PortTypeChoices.TYPE_8P8C)
+        cls.device_3_interface = Interface.objects.create(
+            device=cls.device_3,
+            name="Interface A1",
+            type=InterfaceTypeChoices.TYPE_1GE_SFP,
+            status=interface_status,
+            role=interface_role,
+        )
+        rearport = RearPort.objects.create(device=cls.device_2, type=PortTypeChoices.TYPE_8P8C)
 
         provider = Provider.objects.first()
         circuittype = CircuitType.objects.first()
@@ -4689,6 +4718,7 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
 
         connected = Status.objects.get(name="Connected")
 
+        # iface↔iface connections (these show in the connection list)
         Cable.objects.create(
             termination_a=cls.interfaces[0],
             termination_b=cls.device_2_interface,
@@ -4696,47 +4726,75 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         )
         Cable.objects.create(
             termination_a=cls.interfaces[1],
+            termination_b=cls.device_3_interface,
+            status=connected,
+        )
+        # Non-iface↔iface connection (does not show in the iface connection list)
+        Cable.objects.create(
+            termination_a=cls.interfaces[2],
             termination_b=circuittermination,
             status=connected,
         )
-        Cable.objects.create(termination_a=cls.interfaces[2], termination_b=rearport, status=connected)
+        # Reference the rearport so the var stays used (and to exercise non-iface termination creation).
+        cls.rearport = rearport
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_objects_filtered(self):
-        """Extend base ListObjectsViewTestCase to filter based on *both ends* of a connection."""
-        # self.interfaces[0] is cabled to self.device_2_interface, and unfortunately with the way the queryset filtering
-        # works at present, we can't guarantee whether filtering on id=interfaces[0] will show it or not.
-        instance1, instance2 = self.interfaces[1], self.interfaces[2]
-        response = self.client.get(f"{self._get_url('list')}?id={instance1.pk}", headers={"HX-Request": "true"})
+        """Filter by device_id; the connection surfaces whether the matching device is on the A or B side."""
+        response = self.client.get(
+            f"{self._get_url('list')}?device_id={self.device_2.pk}", headers={"HX-Request": "true"}
+        )
         self.assertHttpStatus(response, 200)
-        content = extract_page_body(response.content.decode(response.charset))
-        if hasattr(self.model, "name"):
-            self.assertIn(instance1.name, content, msg=content)
-            self.assertNotIn(instance2.name, content, msg=content)
-        if hasattr(self.model, "get_absolute_url"):
-            self.assertIn(instance1.get_absolute_url(), content, msg=content)
-            self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+        content = response.content.decode(response.charset)
+        # Exactly one iface↔iface connection involves device_2.
+        self.assertEqual(content.count("<tr "), 1)
+        self.assertIn(self.device_2_interface.get_absolute_url(), content, msg=content)
+        # The other iface↔iface connection (device_1 ↔ device_3) should be absent.
+        self.assertNotIn(self.device_3_interface.get_absolute_url(), content, msg=content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
         """
-        Extend base GetObjectViewTestCase to have correct permissions for *both ends* of a connection.
-        """
-        instance1 = self._get_queryset().all()[0]
+        Constrained-permission test rewritten for the CablePath-backed list view.
 
-        # Add object-level permission for the remote end of this connection as well.
-        endpoint = instance1.connected_endpoint
+        The base test grants Interface object-permission for `instance1.pk` only; the connection
+        view filters out connections where the user can't see EITHER endpoint, so we grant view
+        permission for both endpoint interfaces of one connection and assert that connection's
+        peer interface URL appears in the rendered table while the other connection's does not.
+        """
+        connection1, connection2 = self._get_queryset().all()[:2]
+        visible_origin = connection1.origin
+        visible_destination = connection1.destination
+        hidden_origin = connection2.origin
+        hidden_destination = connection2.destination
+
         obj_perm = ObjectPermission(
-            name="Endpoint test permission",
-            constraints={"pk": endpoint.pk},
+            name="Visible-connection test permission",
+            constraints={"pk__in": [visible_origin.pk, visible_destination.pk]},
             actions=["view"],
         )
         obj_perm.save()
         obj_perm.users.add(self.user)
-        obj_perm.object_types.add(ContentType.objects.get_for_model(endpoint))
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Interface))
 
-        # super().test_list_objects_with_constrained_permission will add permissions for instance1 itself.
-        super().test_list_objects_with_constrained_permission()
+        # HTMX request for table content: only the visible connection should render.
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn(visible_origin.get_absolute_url(), content, msg=content)
+        self.assertIn(visible_destination.get_absolute_url(), content, msg=content)
+        self.assertNotIn(hidden_origin.get_absolute_url(), content, msg=content)
+        self.assertNotIn(hidden_destination.get_absolute_url(), content, msg=content)
+
+        # Non-HTMX request for the page structure should also succeed.
+        response = self.client.get(self._get_url("list"))
+        self.assertHttpStatus(response, 200)
+        # Connections list view has no import action.
+        page_content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn(
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+            page_content,
+        )
 
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
