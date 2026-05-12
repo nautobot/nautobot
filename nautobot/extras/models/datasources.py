@@ -19,7 +19,7 @@ from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
 from nautobot.core.utils.cache import construct_cache_key
-from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.git import GitRepo, validate_commit_hexsha, validate_git_ref
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
 from nautobot.extras.utils import extras_features
 
@@ -115,6 +115,15 @@ class GitRepository(PrimaryModel):
 
     def clean(self):
         super().clean()
+
+        try:
+            validate_git_ref(self.branch, field_name="branch")
+        except ValueError as exc:
+            raise ValidationError({"branch": str(exc)}) from exc
+        try:
+            validate_commit_hexsha(self.current_head, field_name="current_head")
+        except ValueError as exc:
+            raise ValidationError({"current_head": str(exc)}) from exc
 
         # Autogenerate slug now, rather than in pre_save(), if not set already, as we need to check it below.
         if self.slug == "":
@@ -246,6 +255,11 @@ class GitRepository(PrimaryModel):
 
         if branch and head:
             raise ValueError("Cannot specify both branch and head")
+        # Validate up-front so a malformed value doesn't leak a temp dir created below.
+        if branch is not None:
+            validate_git_ref(branch, field_name="branch")
+        if head:
+            validate_git_ref(head, field_name="head")
 
         try:
             path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)

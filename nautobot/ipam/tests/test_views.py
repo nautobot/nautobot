@@ -13,7 +13,7 @@ from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
-from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
+from nautobot.core.testing import AssertNoRepeatedQueries, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import (
@@ -46,6 +46,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -112,6 +113,38 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "add_virtual_device_contexts": [vdcs[2].id, vdcs[3].id],
             "remove_virtual_device_contexts": [vdcs[0].id],
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vrf_detail_no_n_plus_one_queries(self):
+        """Regression test for VRF detail view N+1 queries across all related-object panels."""
+        namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gte=15).first()
+        self.assertIsNotNone(namespace, "Test data requires a namespace with >=15 prefixes")
+        vrf = VRF.objects.create(name="VRF N+1 Regression", namespace=namespace)
+
+        for prefix in Prefix.objects.filter(namespace=namespace)[:15]:
+            vrf.prefixes.add(prefix)
+
+        targets = list(RouteTarget.objects.all()[:15])
+        self.assertGreaterEqual(len(targets), 15, "Test data requires >=15 route targets")
+        vrf.import_targets.set(targets)
+        vrf.export_targets.set(targets)
+
+        for device in Device.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, device=device)
+        for vm in VirtualMachine.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, virtual_machine=vm)
+        for vdc in VirtualDeviceContext.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, virtual_device_context=vdc)
+        self.assertGreater(
+            VRFDeviceAssignment.objects.filter(vrf=vrf).count(),
+            10,
+            "Need >10 VRF device assignments to exceed AssertNoRepeatedQueries threshold",
+        )
+
+        url = reverse("ipam:vrf", kwargs={"pk": vrf.pk})
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
 
 
 class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
