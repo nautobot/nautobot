@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.test.utils import override_settings
 
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.users.models import ObjectPermission, Token
 
 # Use the proper swappable User model
@@ -28,6 +29,31 @@ class TokenTest(ModelTestCases.BaseModelTestCase):
     def test_natural_key_does_not_expose_token_key(self):
         self.assertNotEqual(self.token.key, "")
         self.assertNotIn(self.token.key, self.token.natural_key())
+
+    def test_to_objectchange_excludes_key_from_object_data(self):
+        """The token `key` must not appear in the changelog payloads (object_data and object_data_v2)."""
+        objectchange = self.token.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertNotIn("key", objectchange.object_data)
+        self.assertNotIn("key", objectchange.object_data_v2)
+        self.assertNotIn(self.token.key, str(objectchange.object_data))
+        self.assertNotIn(self.token.key, str(objectchange.object_data_v2))
+
+    def test_to_objectchange_preserves_other_fields(self):
+        """Fields other than `key` should still be serialized into the changelog payloads."""
+        self.token.description = "non-secret description"
+        self.token.save()
+        objectchange = self.token.to_objectchange(ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(objectchange.object_data["description"], "non-secret description")
+        self.assertEqual(objectchange.object_data_v2["description"], "non-secret description")
+
+    def test_to_objectchange_respects_caller_exclude(self):
+        """Caller-supplied `object_data_exclude` should be honored alongside the `key` exclusion."""
+        objectchange = self.token.to_objectchange(
+            ObjectChangeActionChoices.ACTION_UPDATE,
+            object_data_exclude=["description"],
+        )
+        self.assertNotIn("key", objectchange.object_data)
+        self.assertNotIn("description", objectchange.object_data)
 
 
 class UserConfigTest(ModelTestCases.BaseModelTestCase):
