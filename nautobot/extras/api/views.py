@@ -1154,6 +1154,7 @@ class JobResultViewSet(
         """
 
         perms_map = {
+            "GET": ["%(app_label)s.view_jobresult"],
             "POST": ["%(app_label)s.view_jobresult"],
         }
 
@@ -1176,47 +1177,42 @@ class JobResultViewSet(
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"], permission_classes=[RevokeJobPermission])
+    @action(detail=True, methods=["get", "post"], permission_classes=[RevokeJobPermission])
     def revoke(self, request, pk=None):
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
         if not request.user.has_perm("extras.run_job") and not request.user.is_staff:
-            raise PermissionDenied("Job can not be revoked user without permission to run jobs.")
+            raise PermissionDenied("Job can not be revoked by user without permission to run jobs.")
 
         if job_result.user != request.user and not request.user.is_staff:
-            raise PermissionDenied("Job can not be revoked only by owners/staff.")
+            raise PermissionDenied("Job can only be revoked by owners/staff.")
 
-        if not job_result.is_unready_state:
+        if request.method == "POST" and not job_result.is_unready_state:
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
                 status=status.HTTP_409_CONFLICT,
             )
-
         try:
             strategy = RevokeFactory.get_strategy(job_result.queue_type)
-        except ValueError as e:
-            return Response({"detail": f"{e}"}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({"detail": "Invalid job queue type."}, status=status.HTTP_400_BAD_REQUEST)
 
         job_is_running = strategy.is_alive(job_result)
 
-        confirm = request.data.get("confirm")
-
-        if not confirm:
+        if request.method == "GET":
             detail = {
-                "error": "Confirmation required",
                 "message": f"Are you sure you want to revoke '{job_result.name}'?",
                 "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
                 "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "action_description": "This will REAP or TERMINATE the job.",
                 "irreversible": "This action cannot be undone.",
-                "confirm_instruction": "Set `confirm=True` to proceed.",
                 "details": {
                     "REAP": "No worker running; marks JobResult as revoked without signal.",
                     "TERMINATE": "SIGKILL to worker; stops immediately, no cleanup.",
                 },
             }
-            return Response(detail, status=status.HTTP_400_BAD_REQUEST)
+            return Response(detail, status=status.HTTP_200_OK)
 
         result = strategy.revoke(job_result, user=request.user)
 
@@ -1225,6 +1221,7 @@ class JobResultViewSet(
 
         job_result.refresh_from_db()
         serializer = self.get_serializer(job_result)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

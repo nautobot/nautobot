@@ -57,18 +57,21 @@ The button is shown only when the job is in an unfinished state and the current 
 
 ### Revocation via the API
 
-Job revocation can also be triggered via the REST API. The endpoint is exposed on the `JobResult` viewset under `revoke`. Revocation is a two-step flow by design: a first call returns a confirmation preview describing what will happen, and a second call with `confirm=true` performs the action.
+Job revocation can also be triggered via the REST API. The endpoint is exposed on the `JobResult` viewset under `revoke`.
+
+The API supports a two-step workflow:
+
+- `GET` returns a preview of the revoke operation and what action will be taken.
+- `POST` performs the actual revoke operation.
 
 #### Preview a revocation
 
-A `POST` without the `confirm` flag (or with `confirm=false`) returns details about the job and the action that would be taken. No worker is signaled and no `JobResult` is modified.
+A `GET` request returns details about the job and the action that would be taken. No worker is signaled and no `JobResult` is modified.
 
 ```no-highlight
-curl -X POST \
+curl -X GET \
 -H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
--d '{}' \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 ```
 
@@ -76,13 +79,11 @@ The response indicates whether the job is currently running (terminate path) or 
 
 ```json
 {
-    "error": "Confirmation required",
     "message": "Are you sure you want to revoke '<job name>'?",
     "job_status": "RUNNING",
     "timestamp": "2026-05-08 12:34:56",
     "action_description": "This will REAP or TERMINATE the job.",
     "irreversible": "This action cannot be undone.",
-    "confirm_instruction": "Set `confirm=True` to proceed.",
     "details": {
         "REAP": "No worker running; marks JobResult as revoked without signal.",
         "TERMINATE": "SIGKILL to worker; stops immediately, no cleanup."
@@ -90,26 +91,24 @@ The response indicates whether the job is currently running (terminate path) or 
 }
 ```
 
-#### Confirm a revocation
+#### Perform a revocation
 
-A `POST` with `confirm=true` performs the revoke. On success the response is the updated `JobResult` (now in `REVOKED` state, with `revoked_by` and `date_done` set):
+A `POST` request performs the revoke. On success the response is the updated `JobResult` (now in `REVOKED` state, with `revoked_by` and `date_done` set):
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
--H "Content-Type: application/json" \
 -H "Accept: application/json; version=1.3; indent=4" \
--d '{"confirm": true}' \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 ```
 
 #### Status codes
 
-| Code | Meaning                                                                                          |
-|------|--------------------------------------------------------------------------------------------------|
-| 200  | Revocation succeeded; response body is the updated `JobResult`.                                  |
-| 400  | Either confirmation is required (preview response) or the strategy reported an error.            |
-| 403  | The caller lacks `extras.run_job` and is not staff, or is not the job owner and is not staff.    |
-| 409  | The `JobResult` is already in a finished state and cannot be revoked.                            |
+| Code | Meaning                                                                                       |
+|------|-----------------------------------------------------------------------------------------------|
+| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).                      |
+| 400  | The revoke strategy reported an error or the queue type is unsupported.                      |
+| 403  | The caller lacks `extras.run_job` and is not staff, or is not the job owner and is not staff. |
+| 409  | The `JobResult` is already in a finished state and cannot be revoked.                        |
 
 See [Permissions](#permissions) for the full rules on who can revoke which jobs.

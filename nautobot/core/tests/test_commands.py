@@ -1,9 +1,11 @@
 from io import StringIO
+from unittest import mock
 
 from django.core.management import call_command
 import yaml
 
 from nautobot.core.testing import TestCase
+from nautobot.extras.models.jobs import JobResult
 
 
 class ManagementCommandTestCase(TestCase):
@@ -17,7 +19,8 @@ class ManagementCommandTestCase(TestCase):
         self.user.save()
         self.client.force_login(self.user)
 
-    def test_generate_performance_test_endpoints(self):
+    @mock.patch.object(JobResult, "queue_type", new_callable=mock.PropertyMock, return_value="celery")
+    def test_generate_performance_test_endpoints(self, mock_job_result_queue_type):
         """Test the generate_performance_test_endpoints management command."""
         out = StringIO()
         call_command("generate_performance_test_endpoints", stdout=out)
