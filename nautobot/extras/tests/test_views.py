@@ -29,7 +29,6 @@ from nautobot.core.testing import (
     ViewTestCases,
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
-from nautobot.core.ui.object_detail import _JobModalButton
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -106,7 +105,6 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
-from nautobot.extras.registry import registry
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
