@@ -105,9 +105,11 @@ class CableTerminationFieldSet:
 
     Usage:
         fieldset = CableTerminationFieldSet()
-        fields, initial, meta = fieldset.get_fields("lane_1_a", existing_term=some_interface)
-        form.fields.update(fields)
-        form.initial.update(initial)
+        result = fieldset.get_fields("lane_1_a", existing_term=some_interface)
+        form.fields.update(result["fields"])
+        form.initial.update(result["initial"])
+        # result["meta"] carries the resolved term_type plus the generated field-name mapping
+        # ({"type_field", "parent_field", "term_field"}) for template rendering.
     """
 
     def get_fields(self, prefix, term_type=None, existing_term=None):

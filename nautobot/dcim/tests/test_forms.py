@@ -1,6 +1,7 @@
 from constance.test import override_config
 from django.test import TestCase
 
+from nautobot.circuits.models import Circuit, CircuitTermination
 from nautobot.core.testing.forms import FormTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin
 from nautobot.dcim.choices import (
@@ -32,6 +33,8 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
     Platform,
+    PowerFeed,
+    PowerPanel,
     Rack,
     SoftwareImageFile,
     SoftwareVersion,
@@ -704,6 +707,25 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
 class CableTerminationFieldSetTestCase(TestCase):
     """Tests for the centralized cable termination picker fieldset."""
 
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Fieldset Test Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            location=location,
+            device_type=device_type,
+            role=device_role,
+            name="Fieldset Test Device",
+            status=device_status,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cls.interface = Interface.objects.create(
+            device=cls.device, name="eth0", status=interface_status, type="1000base-t"
+        )
+
     def test_detect_termination_type_none_returns_default(self):
         self.assertEqual(detect_termination_type(None), "interface")
 
@@ -719,3 +741,43 @@ class CableTerminationFieldSetTestCase(TestCase):
     def test_get_fields_unknown_term_type_raises(self):
         with self.assertRaisesMessage(ValueError, "not a registered cable termination type"):
             CableTerminationFieldSet().get_fields("test", term_type="not_a_real_type")
+
+    def test_get_fields_default_shape(self):
+        """With no args, get_fields() returns three fields plus a meta dict for the Interface default."""
+        result = CableTerminationFieldSet().get_fields("a_conn_1")
+        self.assertEqual(set(result.keys()), {"fields", "initial", "meta"})
+        self.assertEqual(
+            set(result["fields"].keys()),
+            {"a_conn_1_type", "a_conn_1_parent", "a_conn_1_termination"},
+        )
+        # The type field initial reflects the auto-detected default.
+        self.assertEqual(result["initial"]["a_conn_1_type"], "interface")
+        # The parent field's queryset model defaults to Device (interface is Device-parented).
+        self.assertIs(result["fields"]["a_conn_1_parent"].queryset.model, Device)
+        # No existing termination means no parent/term pre-population.
+        self.assertNotIn("a_conn_1_parent", result["initial"])
+        self.assertNotIn("a_conn_1_termination", result["initial"])
+        # Meta carries the resolved term_type and field-name mapping.
+        self.assertEqual(result["meta"]["term_type"], "interface")
+        self.assertEqual(result["meta"]["type_field"], "a_conn_1_type")
+        self.assertEqual(result["meta"]["parent_field"], "a_conn_1_parent")
+        self.assertEqual(result["meta"]["term_field"], "a_conn_1_termination")
+
+    def test_get_fields_prepopulates_from_existing_term(self):
+        """An existing termination pre-fills parent and termination initial values."""
+        result = CableTerminationFieldSet().get_fields("a_conn_1", existing_term=self.interface)
+        self.assertEqual(result["initial"]["a_conn_1_type"], "interface")
+        self.assertEqual(result["initial"]["a_conn_1_parent"], self.device.pk)
+        self.assertEqual(result["initial"]["a_conn_1_termination"], self.interface.pk)
+
+    def test_get_fields_circuittermination_uses_circuit_parent(self):
+        """The `circuittermination` config produces a Circuit parent field, not Device."""
+        result = CableTerminationFieldSet().get_fields("b_conn_1", term_type="circuittermination")
+        self.assertIs(result["fields"]["b_conn_1_parent"].queryset.model, Circuit)
+        self.assertIs(result["fields"]["b_conn_1_termination"].queryset.model, CircuitTermination)
+
+    def test_get_fields_powerfeed_uses_powerpanel_parent(self):
+        """The `powerfeed` config produces a PowerPanel parent field."""
+        result = CableTerminationFieldSet().get_fields("b_conn_1", term_type="powerfeed")
+        self.assertIs(result["fields"]["b_conn_1_parent"].queryset.model, PowerPanel)
+        self.assertIs(result["fields"]["b_conn_1_termination"].queryset.model, PowerFeed)
