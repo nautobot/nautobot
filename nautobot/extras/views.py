@@ -3373,6 +3373,30 @@ class JobResultButton(object_detail.Button):
         return super().render(context)
 
 
+class JobRunButton(JobResultButton):
+    label = "Run"  # placeholder; real label comes from get_extra_context
+    required_permissions = ["extras.run_job"]
+    template_path = "extras/inc/jobresult_jobrunbutton.html"
+
+    def get_link(self, context):
+        obj = context["object"]
+        if not obj.job_model:
+            return None
+        url = reverse("extras:job_run", kwargs={"pk": obj.job_model.pk})
+        if obj.task_kwargs:
+            url += f"?kwargs_from_job_result={obj.pk}"
+        return url
+
+    def get_extra_context(self, context):
+        rerun = bool(context["object"].task_kwargs)
+        return {
+            **super().get_extra_context(context),
+            "label": "Re-Run" if rerun else "Run",
+            "color": ButtonActionColorChoices.RERUN if rerun else ButtonActionColorChoices.RUN,
+            "icon": "mdi-repeat" if rerun else "mdi-play",
+        }
+
+
 class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
     def should_render(self, context):
         if not super().should_render(context):
@@ -3461,33 +3485,7 @@ class JobResultUIViewSet(
             ),
         ],
         extra_buttons=(
-            JobResultButton(
-                weight=100,
-                label="Re-Run",
-                color=ButtonActionColorChoices.RERUN,
-                icon="mdi-repeat",
-                required_permissions=["extras.run_job"],
-                link_name=lambda ctx: (
-                    (
-                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                        + f"?kwargs_from_job_result={ctx['object'].pk}"
-                    )
-                    if ctx["object"].job_model and ctx["object"].task_kwargs
-                    else None
-                ),
-            ),
-            JobResultButton(
-                weight=110,
-                label="Run",
-                color=ButtonActionColorChoices.RUN,
-                icon="mdi-play",
-                required_permissions=["extras.run_job"],
-                link_name=lambda ctx: (
-                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                    if ctx["object"].job_model and not ctx["object"].task_kwargs
-                    else None
-                ),
-            ),
+            JobRunButton(weight=100),
             JobResultButton(
                 weight=120,
                 label="Export Logs",
