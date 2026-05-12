@@ -477,6 +477,15 @@ class PathEndpoint(models.Model):
         path_obj = self.cable_paths.first()
         return path_obj.destination if path_obj else None
 
+    def get_connected_endpoints(self):
+        """
+        Return destinations of all CablePaths originating from this endpoint.
+
+        For standard cables there is at most one destination. For breakout cables there is one
+        destination per fan-out lane. Unresolved or split paths contribute no destinations.
+        """
+        return [path.destination for path in self.cable_paths.all() if path.destination is not None]
+
 
 #
 # Console ports

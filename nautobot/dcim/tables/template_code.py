@@ -13,10 +13,10 @@ CABLETERMINATION = """
 
 PATHENDPOINT = """
 {% if value %}
-    {% for peer in value %}
-        <a href="{{ peer.parent.get_absolute_url }}">{{ peer.parent }}</a>
+    {% for endpoint in value %}
+        <a href="{{ endpoint.parent.get_absolute_url }}">{{ endpoint.parent }}</a>
         <i class="mdi mdi-chevron-right"></i>
-        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>
+        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
 {% else %}

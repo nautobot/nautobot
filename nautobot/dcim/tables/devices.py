@@ -424,8 +424,11 @@ class CableTerminationTable(BaseTable):
 
 
 class PathEndpointTable(CableTerminationTable):
+    # The far-end of each CablePath originating from this endpoint (one per breakout lane).
+    # Distinct from `cable_peer` on the parent CableTerminationTable, which shows the immediate
+    # peer across the directly-connected cable rather than the resolved path destination.
     connection = tables.TemplateColumn(
-        accessor="get_cable_peers",
+        accessor="get_connected_endpoints",
         template_code=PATHENDPOINT,
         verbose_name="Connection",
         orderable=False,
