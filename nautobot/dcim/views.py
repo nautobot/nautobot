@@ -2659,12 +2659,14 @@ class ModuleBayCommonViewSetMixin:
                     new_components.append(component_form)
                 else:
                     for field, errors in component_form.errors.as_data().items():
-                        # Assign errors on the child form's name/position/label field to *_pattern fields on the parent form
-                        if field.endswith("_pattern"):
-                            field = field[:-8]
+                        parent_field = {
+                            "name": "name_pattern",
+                            "label": "label_pattern",
+                            "position": "position_pattern",
+                        }.get(field, field)
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            form.add_error(parent_field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
