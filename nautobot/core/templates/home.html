@@ -17,9 +17,6 @@
     {% endif %}
     <noscript>
         <style>
-            #draggable-homepage-panels {
-                opacity: 1 !important;
-            }
             #draggable-homepage-panels .nb-draggable-handle {
                 cursor: default;
             }
@@ -51,7 +48,7 @@
     {% registry %}
     <div
         id="draggable-homepage-panels"
-        class="row opacity-0 nb-draggable-container nb-transition-fade"
+        class="row nb-draggable-container"
         data-nb-draggable-flow="column"
         hx-ext="json-enc"
         hx-swap="none"
@@ -256,8 +253,6 @@
 
                 window.nb = window.nb || {};
                 window.nb.homepage = { serializePanels };
-
-                draggableHomepagePanels.classList.remove('opacity-0');
             });
         })();
     </script>

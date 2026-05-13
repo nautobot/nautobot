@@ -182,6 +182,42 @@ class HomeViewTestCase(TestCase):
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
 
+    def test_homepage_layout_panels_empty(self):
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertBodyContains(
+            response,
+            """
+                <div
+                    id="draggable-homepage-panels"
+                    class="row nb-draggable-container"
+                    data-nb-draggable-flow="column"
+                    hx-ext="json-enc"
+                    hx-swap="none"
+                    hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
+                >
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_homepage_layout_panels_filtered_by_user_permissions(self):
+        self.add_permissions("dcim.view_device", "dcim.view_location", "ipam.view_prefix", "ipam.view_ipaddress")
+
+        url = reverse("home")
+        response = self.client.get(url)
+
+        def assertBodyContains(html):
+            return self.assertBodyContains(response, html, html=True)
+
+        assertBodyContains("""<strong class="nb-text-none text-body">Organization</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/locations/">Locations</a></h4>""")
+        assertBodyContains("""<strong class="nb-text-none text-body">DCIM</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/devices/">Devices</a></h4>""")
+        assertBodyContains("""<strong class="nb-text-none text-body">IPAM</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/prefixes/">Prefixes</a></h4>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h4>""")
+
 
 class AppDocsViewTestCase(TestCase):
     def setUp(self):
