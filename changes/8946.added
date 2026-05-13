@@ -1,1 +1,2 @@
 Added `GET` and `POST /api/extras/job-results/{id}/revoke/` API endpoints for revoking a running or pending job.
+Added `celery_kwargs` to `JobResultFactory`.

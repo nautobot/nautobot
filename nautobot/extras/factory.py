@@ -181,7 +181,7 @@ class JobResultFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
-        # TODO has_scheduled_job? has_meta? has_celery_kwargs?
+        # TODO has_scheduled_job? has_meta?
 
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
     name = factory.Faker("word")
@@ -197,7 +197,6 @@ class JobResultFactory(BaseModelFactory):
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
-    # TODO celery_kwargs?
     # TODO meta?
 
     @factory.lazy_attribute
@@ -227,6 +226,22 @@ class JobResultFactory(BaseModelFactory):
             start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
         )
         self.date_created, self.date_started, self.date_done = timestamps
+
+    @factory.lazy_attribute
+    def celery_kwargs(self):
+        fake = faker.Faker()
+        kwargs = {
+            "nautobot_job_profile": fake.boolean(),
+            "nautobot_job_ignore_singleton_lock": fake.boolean(),
+            "nautobot_job_console_log": fake.boolean(),
+            "nautobot_job_queue_type": "celery",
+            "queue": fake.word(),
+        }
+        if self.job_model is not None:
+            kwargs["nautobot_job_job_model_id"] = str(self.job_model.id)
+        if self.user is not None:
+            kwargs["nautobot_job_user_id"] = str(self.user.id)
+        return kwargs
 
 
 class MetadataChoiceFactory(BaseModelFactory):
