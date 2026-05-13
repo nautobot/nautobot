@@ -5607,49 +5607,15 @@ class PathTraceView(generic.ObjectView):
         }
 
 
-class CableCreateView(generic.ObjectEditView):
-    queryset = Cable.objects.all()
-    template_name = "dcim/cable_connect.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        # Set the model_form class based on the type of component being connected
-        self.model_form = {
-            "console-port": forms.ConnectCableToConsolePortForm,
-            "console-server-port": forms.ConnectCableToConsoleServerPortForm,
-            "power-port": forms.ConnectCableToPowerPortForm,
-            "power-outlet": forms.ConnectCableToPowerOutletForm,
-            "interface": forms.ConnectCableToInterfaceForm,
-            "front-port": forms.ConnectCableToFrontPortForm,
-            "rear-port": forms.ConnectCableToRearPortForm,
-            "power-feed": forms.ConnectCableToPowerFeedForm,
-            "circuit-termination": forms.ConnectCableToCircuitTerminationForm,
-        }.get(kwargs.get("termination_b_type"), None)
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        termination_a_type = url_kwargs.get("termination_a_type")
-        termination_a_id = url_kwargs.get("termination_a_id")
-        termination_b_type_name = url_kwargs.get("termination_b_type")
-        self.termination_b_type = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
-
-        # Initialize Cable termination attributes (stored for post-save signal to create CableTermination rows)
-        obj._initial_termination_a = termination_a_type.objects.get(pk=termination_a_id)
-        obj._initial_termination_b_type = self.termination_b_type
-
-        return obj
-
-    def get_extra_context(self, request, instance):
-        ct = super().get_extra_context(request, instance)
-        term_a = getattr(instance, "_initial_termination_a", None) or instance.termination_a
-        ct["termination_a"] = term_a
-        ct["termination_b_type"] = getattr(self, "termination_b_type", ContentType()).name
-        return ct
+class CableCreateView(View):
+    """
+    Redirect shim for the per-termination-type `<port>_connect` URLs (referenced from row-action
+    menus across DCIM and Circuits). Forwards the A-side identity (plus an optional B-side type
+    pre-selection) into the unified `cable_add` form's query string, so the user lands on a
+    single form rather than a per-port specialization.
+    """
 
     def get(self, request, *args, **kwargs):
-        # Redirect to the standard cable add form with A-side pre-populated via URL params, plus
-        # B-side type pre-selected (so the user lands on a form ready for them to pick the B-side
-        # parent and termination). Unifies the connect and edit flows into a single form (CableForm).
         termination_a_type = kwargs.get("termination_a_type")
         termination_a_id = kwargs.get("termination_a_id")
         termination_b_type_name = kwargs.get("termination_b_type")
