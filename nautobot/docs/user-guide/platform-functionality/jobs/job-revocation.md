@@ -27,27 +27,9 @@ Both paths converge on the same final state: a `REVOKED` `JobResult` with all at
 
 There's one edge case worth knowing about: a job can be marked `REVOKED` in the database while its Celery message is still sitting in the broker queue. If the worker that was supposed to run it has been down, the message has not been consumed yet. When the worker comes back online, it would normally pick the message up and run the job, ignoring the database state. To prevent this, a `worker_ready` signal handler runs once at worker startup. It reads every queue the worker is consuming, finds messages whose `JobResult` is already `REVOKED` in the database, and adds those task IDs to Celery's in-memory revoked set. When the worker dequeues those messages it sees them in the revoked set and discards them. This closes the gap between "operator clicked Revoke Job" and "worker comes back online" — the kill survives a restart.
 
-## Permissions
+### Permissions
 
-Revoking a job requires two things: the right permission and the right relationship to the job.
-
-### Required permission
-
-The action checks `extras.run_job` and `extras.view_jobresult`. The reasoning: revoking is a job-execution concern. A user with broad view access to `JobResult` records should not implicitly gain the ability to terminate live workers. Conversely, a user trusted to run jobs is already trusted to stop their own.
-
-### Who can revoke which jobs
-
-| User                                  | Can revoke own jobs | Can revoke others' jobs |
-|---------------------------------------|:-------------------:|:-----------------------:|
-| Has `run_job`, not staff              |         Yes         |           No            |
-| Has `run_job`, is staff               |         Yes         |           Yes           |
-| No `run_job`, is staff                |         Yes         |           Yes           |
-| No `run_job`, not staff               |         No          |           No            |
-
-Two rules combine to produce the matrix:
-
-1. **Run permission OR staff.** A user without `extras.run_job` cannot revoke anything unless they are staff. Staff bypass this gate so that operators handling incidents can clean up jobs without being granted general job-execution rights.
-2. **Ownership OR staff.** Even with `run_job`, a user can only revoke jobs they themselves submitted. Staff bypass this gate as well, so that an operator can clean up a stuck job submitted by another user.
+Revoking requires `extras.run_job` and `extras.view_jobresult`. Users can revoke jobs they submitted. Staff can additionally revoke jobs submitted by other users. Staff without `run_job` cannot revoke anything.
 
 ### Revocation via the UI
 
@@ -75,19 +57,16 @@ curl -X GET \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 ```
 
-The response indicates whether the job is currently running (terminate path) or whether the worker has gone away (reap path):
+The `action` field indicates the path the server will take on `TERMINATE` when the worker is alive, `REAP` when it has gone away.
 
 ```json
 {
-    "message": "Are you sure you want to revoke '<job name>'?",
+    "message": "Are you sure you want to revoke '<jobresult_name>'?",
+    "action": "TERMINATE",
+    "action_description": "SIGKILL to worker. Stops immediately, no cleanup.",
     "job_status": "RUNNING",
-    "timestamp": "2026-05-08 12:34:56",
-    "action_description": "This will REAP or TERMINATE the job.",
     "irreversible": "This action cannot be undone.",
-    "details": {
-        "REAP": "No worker running; marks JobResult as revoked without signal.",
-        "TERMINATE": "SIGKILL to worker; stops immediately, no cleanup."
-    }
+    "timestamp": "2026-05-08 12:34:56"
 }
 ```
 
@@ -106,9 +85,9 @@ http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 
 | Code | Meaning                                                                                       |
 |------|-----------------------------------------------------------------------------------------------|
-| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).                      |
-| 400  | The revoke strategy reported an error or the queue type is unsupported.                      |
+| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).                       |
+| 500  | The revoke strategy reported an error or the queue type is unsupported.                       |
 | 403  | The caller lacks `extras.run_job` and is not staff, or is not the job owner and is not staff. |
-| 409  | The `JobResult` is already in a finished state and cannot be revoked.                        |
+| 409  | The `JobResult` is already in a finished state and cannot be revoked.                         |
 
 See [Permissions](#permissions) for the full rules on who can revoke which jobs.

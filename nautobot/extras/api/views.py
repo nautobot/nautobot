@@ -1182,35 +1182,34 @@ class JobResultViewSet(
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job") and not request.user.is_staff:
+        if not request.user.has_perm("extras.run_job"):
             raise PermissionDenied("Job can not be revoked by user without permission to run jobs.")
 
         if job_result.user != request.user and not request.user.is_staff:
-            raise PermissionDenied("Job can only be revoked by owners/staff.")
+            raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
 
         if request.method == "POST" and not job_result.is_unready_state:
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
                 status=status.HTTP_409_CONFLICT,
             )
-        try:
-            strategy = RevokeFactory.get_strategy(job_result.queue_type)
-        except ValueError:
-            return Response({"detail": "Invalid job queue type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        strategy = RevokeFactory.get_strategy(job_result.queue_type)
 
         job_is_running = strategy.is_alive(job_result)
 
         if request.method == "GET":
             detail = {
                 "message": f"Are you sure you want to revoke '{job_result.name}'?",
+                "action": "TERMINATE" if job_is_running else "REAP",
+                "action_description": (
+                    "SIGKILL to worker. Stops immediately, no cleanup."
+                    if job_is_running
+                    else "No worker running. Marks JobResult as revoked without signal."
+                ),
                 "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
-                "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "action_description": "This will REAP or TERMINATE the job.",
                 "irreversible": "This action cannot be undone.",
-                "details": {
-                    "REAP": "No worker running; marks JobResult as revoked without signal.",
-                    "TERMINATE": "SIGKILL to worker; stops immediately, no cleanup.",
-                },
+                "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
             return Response(detail, status=status.HTTP_200_OK)
 

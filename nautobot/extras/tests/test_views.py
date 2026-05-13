@@ -4623,7 +4623,7 @@ class JobResultTestCase(
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can not be revoked only by owners/staff." in m for m in messages_list),
+            any("Job can be revoked only by the submitter or by staff users." in m for m in messages_list),
         )
 
     def test_revoke_job_owner_without_permission(self):
@@ -4643,6 +4643,24 @@ class JobResultTestCase(
             any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list),
         )
 
+    def test_revoke_job_staff_without_run_job_permission_redirects(self):
+        """Staff users need run_job."""
+        self.user.is_staff = True
+        self.user.save()
+        self.job_result_pending.user = self.user
+        self.job_result_pending.save()
+        self.add_permissions("extras.view_jobresult")
+        self.remove_permissions("extras.run_job")
+
+        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(revoke_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list),
+        )
+
     @mock.patch.object(CeleryStrategy, "revoke")
     @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
     def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_is_alive, mock_revoke):
@@ -4651,7 +4669,7 @@ class JobResultTestCase(
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.get(revoke_url)
 
@@ -4675,7 +4693,7 @@ class JobResultTestCase(
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.get(revoke_url)
 
@@ -4691,7 +4709,7 @@ class JobResultTestCase(
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_completed.save()
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
-        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.get(revoke_url)
 
@@ -4723,7 +4741,7 @@ class JobResultTestCase(
         }
 
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.post(revoke_url)
 
@@ -4777,7 +4795,7 @@ class JobResultTestCase(
         }
 
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.post(revoke_url)
 
@@ -4790,10 +4808,12 @@ class JobResultTestCase(
     @mock.patch.object(CeleryStrategy, "revoke")
     @mock.patch.object(CeleryStrategy, "is_alive")
     def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_is_alive, mock_revoke):
+        self.user.is_staff = True
+        self.user.save()
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_completed.save()
         revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
-        self.add_permissions("extras.view_jobresult", "extras.change_jobresult")
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
 
         response = self.client.post(revoke_url)
 

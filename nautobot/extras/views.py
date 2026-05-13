@@ -3777,12 +3777,12 @@ class JobResultUIViewSet(
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job") and not request.user.is_staff:
+        if not request.user.has_perm("extras.run_job"):
             messages.error(request, "Job can not be revoked by user without permission to run jobs.")
             return redirect(job_result.get_absolute_url())
 
         if job_result.user != request.user and not request.user.is_staff:
-            messages.error(request, "Job can not be revoked only by owners/staff.")
+            messages.error(request, "Job can be revoked only by the submitter or by staff users.")
             return redirect(job_result.get_absolute_url())
 
         strategy = RevokeFactory.get_strategy(job_result.queue_type)
