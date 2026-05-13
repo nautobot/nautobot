@@ -60,30 +60,39 @@ def create_cablepath(node, rebuild=True):
             origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
             far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
 
-            # Find all far-side endpoints mapped to this origin's connector
-            far_position_key = "b_position" if my_endpoint.cable_end == "A" else "a_position"
+            # Find all distinct far-side connectors mapped from this origin's connector. Each
+            # far-side connector yields one CablePath; multiple mapping entries that share a
+            # far-side connector represent internal lanes that all terminate at the same far-end
+            # object, so they collapse to a single path.
+            seen_far_connectors = set()
             for mapping_entry in cable.cable_type.mapping:
-                if mapping_entry[origin_side_key] == my_endpoint.connector:
-                    far_connector = mapping_entry[far_side_key]
-                    far_position = mapping_entry.get(far_position_key, 1)
+                if mapping_entry[origin_side_key] != my_endpoint.connector:
+                    continue
+                far_connector = mapping_entry[far_side_key]
+                if far_connector in seen_far_connectors:
+                    continue
+                seen_far_connectors.add(far_connector)
 
-                    # Find the actual far-end termination for this lane
-                    far_ep = CableToCableTermination.objects.filter(
-                        cable=cable,
-                        cable_end=opposite_side,
-                        connector=far_connector,
-                    ).first()
-                    far_term = far_ep.termination if far_ep else None
+                # Find the actual far-end termination for this connector
+                far_ep = CableToCableTermination.objects.filter(
+                    cable=cable,
+                    cable_end=opposite_side,
+                    connector=far_connector,
+                ).first()
+                far_term = far_ep.termination if far_ep else None
 
-                    # Trace the path for this specific lane, overriding the first hop's peer
-                    cable_path = CablePath.from_origin(node, far_end_override=far_term)
-                    if cable_path:
-                        cable_path.connector = far_connector
-                        cable_path.position = far_position
-                        try:
-                            cable_path.save()
-                        except Exception:
-                            pass  # Duplicate path — already exists
+                # Trace the path for this specific far-side connector, overriding the first hop's peer
+                cable_path = CablePath.from_origin(node, far_end_override=far_term)
+                if cable_path:
+                    cable_path.connector = far_connector
+                    try:
+                        cable_path.save()
+                    except Exception:
+                        # TODO: swallowing every save error to dedupe (origin, connector) collisions
+                        # is too broad — it hides genuine integrity / validation failures. Replace
+                        # with a targeted check (e.g. IntegrityError on the unique_together, or an
+                        # explicit `exists()` guard before save) so unrelated errors propagate.
+                        pass  # Duplicate path — already exists
 
             if rebuild:
                 rebuild_paths(node)

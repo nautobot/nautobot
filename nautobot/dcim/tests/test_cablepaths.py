@@ -1685,8 +1685,8 @@ class CablePathTestCase(TestCase):
         )
         cable.save()
 
-        # Add a join row for lane 2 (Cable.save only materializes lane 1 by default).
-        cable.add_termination(if_lane2, "B", connector=2, position=1)
+        # Add a join row for connector 2 (Cable.save only materializes connector 1 by default).
+        cable.add_termination(if_lane2, "B", connector=2)
 
         # Sanity check pre-disconnect: lane 1 + lane 2 complete, lanes 3-4 partial.
         trunk_paths_pre = CablePath.objects.filter(

@@ -4850,10 +4850,9 @@ class CableForm(NautobotModelForm):
         constraint violation. Replacing rows wholesale sidesteps that ordering hazard.
 
         Short-circuit: if the proposed termination set is identical to what's already stored
-        (matching cable_end + connector + position + termination object on every row), we leave
-        the existing rows untouched. This keeps row PKs, change-log entries, and CablePath rows
-        stable across edits that don't actually touch terminations (e.g. changing only length or
-        status).
+        (matching cable_end + connector + termination object on every row), we leave the existing
+        rows untouched. This keeps row PKs, change-log entries, and CablePath rows stable across
+        edits that don't actually touch terminations (e.g. changing only length or status).
         """
         from nautobot.dcim.models.cables import termination_fk_field
 
@@ -4861,23 +4860,22 @@ class CableForm(NautobotModelForm):
         if not info:
             return
 
-        def _row_key(cable_end, connector, position, termination):
+        def _row_key(cable_end, connector, termination):
             return (
                 cable_end,
                 connector,
-                position,
                 ContentType.objects.get_for_model(termination).pk,
                 termination.pk,
             )
 
         existing_keys = {
-            _row_key(row.cable_end, row.connector, row.position, row.termination)
+            _row_key(row.cable_end, row.connector, row.termination)
             for row in cable.terminations.all()
             if row.termination is not None
         }
 
         proposed_keys = set()
-        proposed_rows = []  # (cable_end, connector, position, termination) tuples
+        proposed_rows = []  # (cable_end, connector, termination) tuples
         seen_termination_pks = set()
         for side_key, side_label in [("a_side", "A"), ("b_side", "B")]:
             for conn in info[side_key]:
@@ -4888,15 +4886,14 @@ class CableForm(NautobotModelForm):
                     continue
                 seen_termination_pks.add(termination.pk)
                 connector = connector_number if info["is_breakout"] else None
-                position = 1 if info["is_breakout"] else None
-                proposed_keys.add(_row_key(side_label, connector, position, termination))
-                proposed_rows.append((side_label, connector, position, termination))
+                proposed_keys.add(_row_key(side_label, connector, termination))
+                proposed_rows.append((side_label, connector, termination))
 
         if existing_keys == proposed_keys:
             return
 
         CableToCableTermination.objects.filter(cable=cable).delete()
-        for side_label, connector, position, termination in proposed_rows:
+        for side_label, connector, termination in proposed_rows:
             fk_field = termination_fk_field(termination)
             if fk_field is None:
                 continue
@@ -4904,14 +4901,13 @@ class CableForm(NautobotModelForm):
                 cable=cable,
                 cable_end=side_label,
                 connector=connector,
-                position=position,
                 **{fk_field: termination},
             )
 
-        # Rebuild CablePaths (uses create_cablepath which handles per-lane paths for breakout cables)
+        # Rebuild CablePaths (create_cablepath fans out one path per far-side connector for breakouts)
         from nautobot.dcim.signals import create_cablepath
 
-        for _, _, _, termination in proposed_rows:
+        for _, _, termination in proposed_rows:
             if isinstance(termination, PathEndpoint):
                 CablePath.objects.filter(
                     origin_type=ContentType.objects.get_for_model(termination),

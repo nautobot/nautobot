@@ -60,7 +60,6 @@ class Migration(migrations.Migration):
                 ),
                 ("cable_end", models.CharField(max_length=1)),
                 ("connector", models.PositiveSmallIntegerField(blank=True, null=True)),
-                ("position", models.PositiveSmallIntegerField(blank=True, null=True)),
                 (
                     "cable",
                     models.ForeignKey(
@@ -169,7 +168,7 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "ordering": ["cable", "cable_end", "connector", "position"],
+                "ordering": ["cable", "cable_end", "connector"],
             },
         ),
         migrations.AddConstraint(
@@ -183,7 +182,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="cabletocabletermination",
             constraint=models.UniqueConstraint(
-                fields=("cable", "cable_end", "connector", "position"),
+                fields=("cable", "cable_end", "connector"),
                 condition=models.Q(("connector__isnull", False)),
                 name="dcim_cabletocabletermination_unique_breakout_lane",
             ),

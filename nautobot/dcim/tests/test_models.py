@@ -3475,20 +3475,18 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
         )
 
-        # Lane 2: FrontPort on A side, its corresponding RearPort on B side — pair check should fail.
+        # Connector 2: FrontPort on A side, its corresponding RearPort on B side — pair check should fail.
         CableToCableTermination.objects.create(
             cable=cable,
             cable_end="A",
             front_port=self.front_port1,
             connector=2,
-            position=1,
         )
         CableToCableTermination.objects.create(
             cable=cable,
             cable_end="B",
             rear_port=self.rear_port1,
             connector=2,
-            position=1,
         )
 
         with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):

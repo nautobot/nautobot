@@ -416,7 +416,7 @@ class CableTermination(models.Model):
         else:
             opposite_endpoints = [ep for ep in all_rows if ep.cable_end == opposite_side]
 
-        opposite_endpoints.sort(key=lambda ep: (ep.connector or 0, ep.position or 0))
+        opposite_endpoints.sort(key=lambda ep: ep.connector or 0)
         return [ep.termination for ep in opposite_endpoints if ep.termination is not None]
 
     @classmethod

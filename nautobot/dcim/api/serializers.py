@@ -990,9 +990,9 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 )
             entry = mapping[lane_num - 1]
 
-            for key, side, conn, pos in (
-                ("a_termination", "A", entry["a_connector"], entry["a_position"]),
-                ("b_termination", "B", entry["b_connector"], entry["b_position"]),
+            for key, side, conn in (
+                ("a_termination", "A", entry["a_connector"]),
+                ("b_termination", "B", entry["b_connector"]),
             ):
                 term_obj = self._resolve_termination_object(lane_data.get(key))
                 if term_obj is None:
@@ -1006,7 +1006,6 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                         "cable": cable,
                         "cable_end": side,
                         "connector": conn,
-                        "position": pos,
                     },
                 )
 

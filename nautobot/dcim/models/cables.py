@@ -231,7 +231,7 @@ class Cable(PrimaryModel):
     _abs_length = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
 
     # Typed many-to-many accessors for each terminating model. The through model is
-    # CableToCableTermination, which carries the cable_end / connector / position lane attributes.
+    # CableToCableTermination, which carries the cable_end / connector lane attributes.
     # Reverse access (`<termination>.cable_termination`) is provided by the OneToOneFields on the
     # through model itself; reverse here is suppressed via `related_name="+"` to avoid a misleading
     # plural "cables" on each terminating model (each termination is on at most one cable).
@@ -337,7 +337,7 @@ class Cable(PrimaryModel):
 
     def _first_endpoint(self, side):
         """Return the first CableToCableTermination row for the given side, or None."""
-        return self.terminations.filter(cable_end=side).order_by("connector", "position").first()
+        return self.terminations.filter(cable_end=side).order_by("connector").first()
 
     def _get_termination_attr(self, side, endpoint_attr, fallback_attr):
         """Get an attribute from the first endpoint on the given side, or fall back to an _initial_* attr."""
@@ -405,12 +405,12 @@ class Cable(PrimaryModel):
     @property
     def terminations_a(self):
         """All A-side CableTermination rows."""
-        return self.terminations.filter(cable_end="A").order_by("connector", "position")
+        return self.terminations.filter(cable_end="A").order_by("connector")
 
     @property
     def terminations_b(self):
         """All B-side CableTermination rows."""
-        return self.terminations.filter(cable_end="B").order_by("connector", "position")
+        return self.terminations.filter(cable_end="B").order_by("connector")
 
     # ─── Breakout lane properties ───
 
@@ -495,24 +495,28 @@ class Cable(PrimaryModel):
         Return a list of lane dicts for breakout cables, each containing lane number,
         connector/position info, and actual termination objects (or None for unconnected).
         Returns an empty list for standard cables.
+
+        Note that multiple lanes which share a far-/near-side connector resolve to the same
+        termination object — the cable's mapping is what makes them distinct logical lanes,
+        not the termination row.
         """
         if not self.cable_type_id:
             return []
 
-        # Build lookup: (cable_end, connector, position) → CableToCableTermination
+        # Build lookup: (cable_end, connector) → CableToCableTermination
         endpoint_lookup = {}
         # Also collect unassigned endpoints (connector=None) keyed by cable_end
         unassigned_endpoints = {"A": [], "B": []}
         for endpoint in self.terminations.all():
-            if endpoint.connector is not None and endpoint.position is not None:
-                endpoint_lookup[(endpoint.cable_end, endpoint.connector, endpoint.position)] = endpoint
+            if endpoint.connector is not None:
+                endpoint_lookup[(endpoint.cable_end, endpoint.connector)] = endpoint
             else:
                 unassigned_endpoints[endpoint.cable_end].append(endpoint)
 
         lanes = []
         for lane_number, entry in enumerate(self.cable_type.mapping, start=1):
-            a_endpoint = endpoint_lookup.get(("A", entry["a_connector"], entry["a_position"]))
-            b_endpoint = endpoint_lookup.get(("B", entry["b_connector"], entry["b_position"]))
+            a_endpoint = endpoint_lookup.get(("A", entry["a_connector"]))
+            b_endpoint = endpoint_lookup.get(("B", entry["b_connector"]))
             # Fall back to unassigned endpoints for lane 1
             if a_endpoint is None and unassigned_endpoints["A"]:
                 a_endpoint = unassigned_endpoints["A"].pop(0)
@@ -756,18 +760,16 @@ class Cable(PrimaryModel):
             ct = self._initial_termination_b_type
             term_b = ct.model_class().objects.get(pk=self._initial_termination_b_id)
 
-        # Determine lane 1 connector/position if this is a breakout cable.
-        a_connector = a_position = b_connector = b_position = None
+        # Determine lane 1 connector if this is a breakout cable.
+        a_connector = b_connector = None
         if self.cable_type_id and self.cable_type.mapping:
             entry = self.cable_type.mapping[0]
             a_connector = entry["a_connector"]
-            a_position = entry["a_position"]
             b_connector = entry["b_connector"]
-            b_position = entry["b_position"]
 
-        for term, end, conn, pos in (
-            (term_a, "A", a_connector, a_position),
-            (term_b, "B", b_connector, b_position),
+        for term, end, conn in (
+            (term_a, "A", a_connector),
+            (term_b, "B", b_connector),
         ):
             if not term:
                 continue
@@ -779,7 +781,7 @@ class Cable(PrimaryModel):
                 cable=self,
                 cable_end=end,
                 **{fk_field: term},
-                defaults={"connector": conn, "position": pos},
+                defaults={"connector": conn},
             )
             logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {self}")
 
@@ -812,19 +814,19 @@ class Cable(PrimaryModel):
         else:
             rebuild_paths(self)
 
-    def add_termination(self, termination, cable_end, connector=None, position=None):
+    def add_termination(self, termination, cable_end, connector=None):
         """
         Attach `termination` to this cable, creating the `CableToCableTermination` join row and
         rebuilding any affected `CablePath`s.
 
         Use this in preference to creating `CableToCableTermination` rows directly when adding
-        terminations after a cable has been saved (e.g. for additional breakout lanes that the
-        single A/B kwargs on `Cable.__init__` can't express). The single-step Cable creation
+        terminations after a cable has been saved (e.g. for additional breakout connectors that
+        the single A/B kwargs on `Cable.__init__` can't express). The single-step Cable creation
         flow (`Cable(termination_a=..., termination_b=..., ...).save()`) is unchanged.
 
         Each call triggers a full `rebuild_paths(self)` after the row is inserted, so adding
-        many terminations one-by-one (e.g. populating all lanes of a wide breakout cable) is
-        O(N) path rebuilds. For bulk additions, prefer creating the `CableToCableTermination`
+        many terminations one-by-one (e.g. populating all connectors of a wide breakout cable)
+        is O(N) path rebuilds. For bulk additions, prefer creating the `CableToCableTermination`
         rows directly (e.g. via `CableToCableTermination.objects.bulk_create([...])`) and
         calling `rebuild_paths(cable)` once after all rows are in place.
 
@@ -833,7 +835,6 @@ class Cable(PrimaryModel):
                 CircuitTermination, PowerFeed, etc.).
             cable_end: "A" or "B" — which side of the cable to attach to.
             connector: Connector number on this cable end for breakout cables; `None` otherwise.
-            position: Position (lane) within the connector for breakout cables; `None` otherwise.
 
         Returns:
             The newly-created `CableToCableTermination` row.
@@ -847,7 +848,6 @@ class Cable(PrimaryModel):
             cable=self,
             cable_end=cable_end,
             connector=connector,
-            position=position,
             **{fk_field: termination},
         )
         rebuild_paths(self)
@@ -940,7 +940,10 @@ class CableToCableTermination(BaseModel):
     """
     Join model between a Cable and a terminating object (Interface, FrontPort, RearPort, etc.).
     Each cable has at least two such rows (one A-side, one B-side); breakout cables have multiple
-    rows per side, each with connector and position identifying the lane.
+    rows per side, each with a connector identifying the physical port on that cable end. Lane-
+    level (position-within-connector) routing lives in the cable's `CableType.mapping`, not here:
+    a single termination occupies a connector, and the mapping describes which logical lanes that
+    connector carries.
 
     Exactly one of the per-type foreign key fields (`interface`, `console_port`, etc.) is set on each
     row, enforced via a CheckConstraint.
@@ -1021,16 +1024,11 @@ class CableToCableTermination(BaseModel):
         null=True,
     )
 
-    # Breakout cable lane fields — null for standard cables.
+    # Breakout cable connector — null for standard cables.
     connector = models.PositiveSmallIntegerField(
         blank=True,
         null=True,
         help_text="The connector number on this cable end. Null for standard cables.",
-    )
-    position = models.PositiveSmallIntegerField(
-        blank=True,
-        null=True,
-        help_text="The position (lane) within the connector. Null for standard cables.",
     )
 
     # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
@@ -1047,7 +1045,7 @@ class CableToCableTermination(BaseModel):
     natural_key_field_names = ["pk"]
 
     class Meta:
-        ordering = ["cable", "cable_end", "connector", "position"]
+        ordering = ["cable", "cable_end", "connector"]
         constraints = [
             # Non-breakout cables: at most one A and one B per cable.
             models.UniqueConstraint(
@@ -1055,9 +1053,9 @@ class CableToCableTermination(BaseModel):
                 condition=models.Q(connector__isnull=True),
                 name="dcim_cabletocabletermination_unique_nonbreakout_lane",
             ),
-            # Breakout cables: at most one row per (cable, cable_end, connector, position).
+            # Breakout cables: at most one row per (cable, cable_end, connector).
             models.UniqueConstraint(
-                fields=["cable", "cable_end", "connector", "position"],
+                fields=["cable", "cable_end", "connector"],
                 condition=models.Q(connector__isnull=False),
                 name="dcim_cabletocabletermination_unique_breakout_lane",
             ),
@@ -1161,9 +1159,9 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
-    # Breakout lane identification — allows multiple CablePaths per origin (one per lane)
+    # Far-side connector that this path emerges on — allows multiple CablePaths per origin
+    # (one per far-side connector on a breakout fan-out). Null for non-breakout paths.
     connector = models.PositiveSmallIntegerField(blank=True, null=True)
-    position = models.PositiveSmallIntegerField(blank=True, null=True)
     # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
     # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
     is_metadata_associable_model = False
@@ -1171,8 +1169,8 @@ class CablePath(BaseModel):
     natural_key_field_names = ["pk"]
 
     class Meta:
-        unique_together = ("origin_type", "origin_id", "connector", "position")
-        ordering = [F("connector").asc(nulls_first=True), "position"]
+        unique_together = ("origin_type", "origin_id", "connector")
+        ordering = [F("connector").asc(nulls_first=True)]
 
     def __str__(self):
         status = " (active)" if self.is_active else " (split)" if self.is_split else ""
@@ -1232,12 +1230,12 @@ class CablePath(BaseModel):
                 peer_termination = far_end_override
             else:
                 peer_termination = node.get_cable_peer()
-                # First-hop on a breakout cable with no lane override: caller is `create_cablepath`
-                # for a lane that has no far-side termination (e.g. disconnected or not yet
-                # connected). `get_cable_peer` would return some *other* lane's peer, producing a
-                # wrong-direction trace, so mark the path as split and halt the trace after this
-                # cable hop. The CablePath will carry the lane's connector/position assigned by
-                # the caller, with `destination=None` and `is_split=True`.
+                # First-hop on a breakout cable with no far-end override: caller is
+                # `create_cablepath` for a far-side connector that has no termination (e.g.
+                # disconnected or not yet connected). `get_cable_peer` would return some *other*
+                # connector's peer, producing a wrong-direction trace, so mark the path as split
+                # and halt the trace after this cable hop. The CablePath will carry the far-side
+                # connector assigned by the caller, with `destination=None` and `is_split=True`.
                 if first_hop:
                     node_ct = getattr(node, "cable_termination", None)
                     if node_ct is not None and node_ct.connector is not None:
