@@ -47,6 +47,7 @@ from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
 from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
 from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.extras.registry import registry
 from nautobot.ipam.models import Prefix
 from nautobot.ipam.views import PrefixUIViewSet
 
@@ -865,15 +866,22 @@ class _JobModalButtonTest(TestCase):
         # Should raise TypeError if class_path is missing
         with self.assertRaises(TypeError) as cm:
             _JobModalButton(weight=100, label="Test")
+
         self.assertIn("class_path is required", str(cm.exception))
 
         # Should initialize fine with class_path
-        btn = _JobModalButton(weight=100, label="Run Test", class_path="nautobot.core.jobs.ValidateModelData")
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Test",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+
         self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
 
     def test_get_link(self):
         """Verify get_link returns None because the button uses htmx to open a modal."""
         btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
+
         self.assertIsNone(btn.get_link(Context({})))
 
     def test_get_extra_context_and_mapping(self):
@@ -890,7 +898,9 @@ class _JobModalButtonTest(TestCase):
             initial_field_mapping=mapping,
             run_button_label="Execute!",
             job_result_key="output_data",
+            button_id="test_job_modal_button_1",
         )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
 
         context = Context({"object": device})
         context = btn.get_extra_context(context)
@@ -904,9 +914,10 @@ class _JobModalButtonTest(TestCase):
         self.assertEqual(hx_vals["job_location"], device.location.name)
 
         # Check static modal configuration
-        self.assertTrue(hx_vals["job_form_modal"])
-        self.assertEqual(hx_vals["run_button_label"], "Execute!")
-        self.assertEqual(hx_vals["job_result_key"], "output_data")
+        self.assertTrue(hx_vals["render_job_form"])
+
+        # Verify job_modal_button in hx-vals is the unique button_id on the job modal button
+        self.assertEqual(hx_vals["job_modal_button"], "test_job_modal_button_1")
 
         # Verify Bootstrap and HTMX target attributes
         self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
@@ -915,7 +926,7 @@ class _JobModalButtonTest(TestCase):
 
         # Verify URL generation
         expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
-        self.assertEqual(context["attributes"]["hx-get"], expected_url)
+        self.assertEqual(context["attributes"]["hx-post"], expected_url)
         # Since the class_path is not a real job, ensure disabled in attributes.
         self.assertIn("disabled", context["attributes"])
 
@@ -925,6 +936,7 @@ class _JobModalButtonTest(TestCase):
             label="Run Real Job",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
+
         context = Context({"object": device})
         context = real_job_btn.get_extra_context(context)
         self.assertNotIn("disabled", context["attributes"])
@@ -936,6 +948,7 @@ class _JobModalButtonTest(TestCase):
 
         # 1. Create a button for a non-existent job (should be disabled)
         btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
+
         ctx_fail = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail["attributes"])
         # Crucially: ensure the instance attribute didn't get polluted
@@ -948,6 +961,7 @@ class _JobModalButtonTest(TestCase):
             class_path="nautobot.core.jobs.ValidateModelData",
             attributes={"custom": "value"},
         )
+
         ctx_success = btn_success.get_extra_context(context)
 
         # Verify result in context
@@ -958,6 +972,37 @@ class _JobModalButtonTest(TestCase):
         ctx_fail_again = btn_fail.get_extra_context(context)
         self.assertIn("disabled", ctx_fail_again["attributes"])
         self.assertNotIn("disabled", btn_success.attributes)
+
+    def test_registry_contains_button_id(self):
+        """Verify that a _JobModalButton instance is registered by its button_id at init time."""
+
+        job_modal_button = _JobModalButton(
+            weight=100, label="Run Job", class_path="non.existent.job", button_id="test_job_modal_button"
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(job_modal_button.button_id, None))
+
+        self.assertIn(job_modal_button.button_id, registry["job_modal_buttons"])
+        self.assertIs(registry["job_modal_buttons"][job_modal_button.button_id], job_modal_button)
+
+    def test_button_id_must_be_unique(self):
+        """Verify that creating two buttons with the same button_id raises ValueError."""
+        btn = _JobModalButton(weight=100, label="First", class_path="some.job", button_id="test_unique_button")
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(weight=100, label="Duplicate", class_path="some.other.job", button_id="test_unique_button")
+        self.assertIn("must be globally unique", str(cm.exception))
+
+    def test_redirect_button_callback_requires_button_id(self):
+        """Verify that a redirect_button_callback without a button_id raises ValueError."""
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(
+                weight=100,
+                label="Redirect Without ID",
+                class_path="some.fake.job",
+                redirect_button_callback=lambda job_result, request: {"url": "/", "label": "Go", "color": "primary"},
+            )
+        self.assertIn("button_id is required", str(cm.exception))
 
 
 class PostButtonTest(TestCase):
