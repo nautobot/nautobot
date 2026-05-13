@@ -38,6 +38,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -195,6 +196,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    result_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField

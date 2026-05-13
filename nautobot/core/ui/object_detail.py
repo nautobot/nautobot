@@ -2281,6 +2281,14 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
+    def render_value(self, key, value, context: Context):
+        """Render a given computed field value appropriately depending on what result type the computed field has."""
+        # TODO: this logic could be unified with ComputedFieldColumn.render()?
+        cf = key
+        if cf.result_type == CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            return render_markdown(value)
+        return super().render_value(key, value, context)
+
 
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""

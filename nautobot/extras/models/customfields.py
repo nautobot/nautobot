@@ -42,7 +42,7 @@ from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices, ComputedFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
@@ -146,6 +146,12 @@ class ComputedField(
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
+    )
+    result_type = models.CharField(
+        max_length=50,
+        choices=ComputedFieldTypeChoices,
+        default=ComputedFieldTypeChoices.TYPE_TEXT,
+        help_text="How the rendered result is to be interpreted, by default it is as Plain Text",
     )
     grouping = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
