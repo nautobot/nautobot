@@ -380,6 +380,21 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 
 
 #
+# JobRevocationType
+#
+
+
+class JobRevocationTypeChoices(ChoiceSet):
+    TYPE_TERMINATED = "terminated"
+    TYPE_REAPED = "reaped"
+
+    CHOICES = (
+        (TYPE_TERMINATED, "Terminated"),
+        (TYPE_REAPED, "Reaped"),
+    )
+
+
+#
 # ScheduledJob
 #
 

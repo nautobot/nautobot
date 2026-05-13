@@ -1302,6 +1302,7 @@ class JobResultTable(BaseTable):
     date_created = tables.DateTimeColumn(linkify=True, short=True)
     date_started = tables.DateTimeColumn(linkify=True, short=True)
     date_done = tables.DateTimeColumn(linkify=True, short=True)
+    date_terminated = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -1318,6 +1319,11 @@ class JobResultTable(BaseTable):
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
+    revocation_type = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
+        verbose_name="Revocation Type",
+        orderable=False,
+    )
 
     def render_summary(self, record):
         """
@@ -1354,6 +1360,8 @@ class JobResultTable(BaseTable):
             "date_created",
             "date_started",
             "date_done",
+            "date_terminated",
+            "revoked_by",
             "name",
             "job_model",
             "scheduled_job",
@@ -1915,7 +1923,7 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
-    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
+    actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation

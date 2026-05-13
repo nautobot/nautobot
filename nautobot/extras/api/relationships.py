@@ -136,17 +136,14 @@ class RelationshipsDataField(WritableSerializerMixin, JSONField):
                 other_side_model = other_type.model_class()
 
                 other_objects = [assoc.get_peer(value) for assoc in associations if assoc.get_peer(value) is not None]
-                if other_side_model is not None:
+                if other_side_model is not None and depth != 0 and associations and other_objects:
                     try:
-                        depth = int(self.context.get("depth", 0))
-                        if depth != 0:
-                            if associations and other_objects:
-                                relation_info = get_relation_info_for_nested_serializers(
-                                    associations[0], other_objects[0], f"{other_side}"
-                                )
-                                other_side_serializer, field_kwargs = self.build_nested_field(
-                                    f"{other_side}", relation_info, depth
-                                )
+                        relation_info = get_relation_info_for_nested_serializers(
+                            associations[0], other_objects[0], f"{other_side}"
+                        )
+                        other_side_serializer, field_kwargs = self.build_nested_field(
+                            f"{other_side}", relation_info, depth
+                        )
                     except SerializerNotFound:
                         pass
 
