@@ -691,7 +691,10 @@ nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 Run the job on the local system and not on a worker.
 
 `--data <data>`
-JSON string that populates the `data` variable of the job.
+JSON string that populates the `data` variable of the job. Defaults to `{}` (an empty dict). Passing `null` will result in a validation error.
+
++++ 3.2.0
+    The default value of `--data` is now `{}` instead of `None`. Job input validation is also stricter: passing `data=null` raises a `ValueError` rather than being silently treated as an empty input.
 
 ```no-highlight
 nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars
@@ -876,27 +879,3 @@ Nautobot version: 2.2.0a1
 Django version: 3.2.24
 Configuration file: /opt/nautobot/nautobot_config.py
 ```
-
-### `webhook_receiver`
-
-`nautobot-server webhook_receiver`
-
-Start a simple listener to display received HTTP requests.
-
-`--port PORT`  
-Optional port number (default: `9000`)
-
-`--no-headers`  
-Hide HTTP request headers.
-
-```no-highlight
-nautobot-server webhook_receiver --port 9001 --no-headers
-```
-
-Example output:
-
-```no-highlight
-Listening on port http://localhost:9000. Stop with CONTROL-C.
-```
-
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.

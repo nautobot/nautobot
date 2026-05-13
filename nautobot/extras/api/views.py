@@ -982,7 +982,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
+                job_kwargs=job_class.serialize_data(cleaned_data),
             )
 
             scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
@@ -993,14 +993,14 @@ class JobViewSetBase(
                     and request.data["schedule"]["interval"] != JobExecutionType.TYPE_IMMEDIATELY
                 ):
                     schedule.delete()
-                    schedule = None
+                    del schedule
                     raise ValidationError(
                         {"schedule": {"interval": ["Unable to schedule job: Job may have sensitive input variables"]}}
                     )
                 # check approval_required pointer
                 if scheduled_job_has_approval_workflow:
                     schedule.delete()
-                    schedule = None
+                    del schedule
                     raise ValidationError(
                         "Unable to run or schedule job: "
                         "This job is flagged as possibly having sensitive variables but also has an applicable approval workflow definition."
@@ -1018,13 +1018,13 @@ class JobViewSetBase(
                 return Response({"scheduled_job": serializer.data, "job_result": None}, status=status.HTTP_201_CREATED)
 
             schedule.delete()
-            schedule = None
+            del schedule
 
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
             job_queue=job_queue,
-            **job_class.serialize_data(cleaned_data),
+            job_kwargs=job_class.serialize_data(cleaned_data),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
         return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
@@ -1243,7 +1243,7 @@ class ScheduledJobViewSet(
             job_model,
             request.user,
             celery_kwargs=scheduled_job.celery_kwargs or {},
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 
@@ -1359,13 +1359,12 @@ class SecretsViewSet(NautobotModelViewSet):
     @action(methods=["GET"], detail=True)
     def check(self, request, pk):
         """Check that a secret's value is accessible."""
-        result = False
-        message = "Unknown error"
         try:
             self.get_object().get_value()
             result = True
             message = "Passed"
         except SecretError as e:
+            result = False
             message = str(e)
         response = {"result": result, "message": message}
         return Response(response)

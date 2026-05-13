@@ -39,7 +39,7 @@ from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.templatetags import helpers
 from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.templatetags.perms import can_cancel
+from nautobot.core.templatetags.perms import can_cancel, can_change
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
     BaseBreadcrumbItem,
@@ -96,6 +96,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.jobs_revoke import RevokeFactory
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -119,6 +120,7 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    ScheduledJobStateChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
@@ -2534,7 +2536,7 @@ class JobUIViewSet(NautobotUIViewSet):
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
             console_log=console_log,
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
@@ -2589,9 +2591,7 @@ class JobUIViewSet(NautobotUIViewSet):
         htmx_request = self.request.headers.get("HX-Request", False)
         htmx_modal = False
         title = job_model.name
-        run_button_label = "Run Job Now"
         job_result_key = None
-        refresh_on_close_if_done = "false"
         advanced_fields = ()
         if htmx_request:
             if request.method == "POST":
@@ -2616,7 +2616,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": run_button_label,
+                    "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
@@ -2628,8 +2628,8 @@ class JobUIViewSet(NautobotUIViewSet):
                         {
                             "job_form_modal": True,
                             "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
+                            "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
+                            "refresh_on_close_if_done": refresh_on_close_if_done,  # pylint: disable=possibly-used-before-assignment
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
@@ -2773,7 +2773,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     profile=profile,
                     console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
-                    **job_class.serialize_data(job_form.cleaned_data),
+                    job_kwargs=job_class.serialize_data(job_form.cleaned_data),
                 )
                 scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
                 is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
@@ -2785,12 +2785,12 @@ class JobUIViewSet(NautobotUIViewSet):
                         "Modify or remove the approval workflow definition or modify the job to set `has_sensitive_variables` to False.",
                     )
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                 else:
                     if dryrun and not is_scheduled:
                         # Enqueue job for immediate execution when dryrun and (no schedule, no has_sensitive_variables)
                         scheduled_job.delete()
-                        scheduled_job = None
+                        del scheduled_job
                         return self._handle_immediate_execution(
                             request,
                             job_model,
@@ -2812,7 +2812,7 @@ class JobUIViewSet(NautobotUIViewSet):
 
                     # Step 4: Immediate execution (no schedule, no approval)
                     scheduled_job.delete()
-                    scheduled_job = None
+                    del scheduled_job
                     return self._handle_immediate_execution(
                         request,
                         job_model,
@@ -3162,6 +3162,24 @@ class ScheduledJobUIViewSet(
     serializer_class = serializers.ScheduledJobSerializer
     table_class = tables.ScheduledJobTable
     action_buttons = ()
+    extra_detail_view_action_buttons = [
+        object_detail.ExtraDetailViewActionButton(
+            action="assume_ownership",
+            label="Assume Ownership",
+            icon="mdi-account-arrow-right",
+            link_name="extras:scheduledjob_assume_ownership",
+            template_path="components/button/post_extradetailviewactionbutton.html",
+            # Hide the button when the requester is already the owner, lacks change perms,
+            # or doesn't have run permission on the specific Job that this schedule runs.
+            permission_check=lambda user, obj: (
+                obj.user_id != user.id
+                and can_change(user, obj)
+                and obj.job_model is not None
+                and JobModel.objects.restrict(user, "run").filter(pk=obj.job_model_id).exists()
+            ),
+            weight=100,
+        )
+    ]
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -3205,6 +3223,35 @@ class ScheduledJobUIViewSet(
         )
 
         return context
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="assume-ownership",
+        url_name="assume_ownership",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["extras.run_job"],
+    )
+    def assume_ownership(self, request, pk=None):
+        """Reassign this scheduled job's owner to the requesting user and re-enable it."""
+        obj = self.get_object()
+        if obj.user_id == request.user.id:
+            messages.info(request, f"You already own scheduled job '{obj.name}'.")
+            return redirect(obj.get_absolute_url())
+        # Defensively confirm the requester can run this specific Job — the UI hides the
+        # button in this case but a direct POST could still reach here.
+        if (
+            obj.job_model is None
+            or not JobModel.objects.restrict(request.user, "run").filter(pk=obj.job_model_id).exists()
+        ):
+            messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
+            return redirect(obj.get_absolute_url())
+        obj.user = request.user
+        obj.enabled = True
+        obj.state = ScheduledJobStateChoices.ACTIVE
+        obj.validated_save()
+        messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
+        return redirect(obj.get_absolute_url())
 
 
 #
@@ -3286,12 +3333,17 @@ def render_jobresult_status(status):
     """
     mapping = {
         "FAILURE": ("bg-danger", "Failed"),
+        "REVOKED": ("bg-danger", "Revoked"),
+        "IGNORED": ("bg-danger", "Ignored"),
+        "REJECTED": ("bg-danger", "Rejected"),
         "PENDING": ("bg-body-secondary border", "Pending"),
         "STARTED": ("bg-warning", "Running"),
         "SUCCESS": ("bg-success", "Completed"),
+        "RECEIVED": ("bg-warning", "Received"),
+        "RETRY": ("bg-warning", "Retry"),
     }
 
-    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
+    css_class, text = mapping.get(status, ("bg-body-secondary border", f"{status} (unrecognized)"))
     return format_html(
         '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
         css_class,
@@ -3308,6 +3360,8 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
                 return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
         if key == "result" and value is None:
             return helpers.placeholder(value)  # instead of an explicitly rendered `null`
+        if key == "result" and obj.status != JobResultStatusChoices.STATUS_SUCCESS:
+            return helpers.placeholder(None)  # not render Result Data field
         return super().render_value(key, value, context)
 
 
@@ -3340,6 +3394,11 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
             return True
 
         return False
+
+
+class RevocationPanel(object_detail.ObjectFieldsPanel):
+    def should_render(self, context):
+        return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
 
 class JobResultUIViewSet(
@@ -3463,6 +3522,21 @@ class JobResultUIViewSet(
                     "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
+            JobResultButton(
+                weight=140,
+                label="Revoke Job",
+                color=ButtonActionColorChoices.DELETE,
+                icon="mdi-close-circle",
+                required_permissions=["extras.run_job"],
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_revoke_job", kwargs={"pk": ctx["object"].pk})
+                    if (
+                        ctx["object"].is_unready_state
+                        and (ctx["object"].user == ctx["request"].user or ctx["request"].user.is_staff)
+                    )
+                    else None
+                ),
+            ),
         ),
         extra_tabs=[
             JobResultJobConsoleEntriesTab(
@@ -3502,10 +3576,19 @@ class JobResultUIViewSet(
             object_field="celery_kwargs",
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
+        RevocationPanel(
+            label="Revocation",
+            section=SectionChoices.RIGHT_HALF,
+            weight=100,
+            fields=[
+                "date_terminated",
+                "revoked_by_user_name",
+            ],
+        ),
         object_detail.ObjectFieldsPanel(
             label="Worker",
             section=SectionChoices.RIGHT_HALF,
-            weight=110,
+            weight=200,
             fields=[
                 "worker",
                 "queue",
@@ -3516,7 +3599,7 @@ class JobResultUIViewSet(
         object_detail.ObjectTextPanel(
             label="Traceback",
             section=SectionChoices.RIGHT_HALF,
-            weight=200,
+            weight=300,
             object_field="traceback",
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
         ),
@@ -3728,6 +3811,43 @@ class JobResultUIViewSet(
                 **context,
             }
         )
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="revoke-job",
+        url_name="revoke_job",
+        custom_view_base_action="change",
+    )
+    def revoke_job(self, request, pk=None):
+        """Terminate a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+
+        if not job_result.is_unready_state:
+            messages.info(request, "Job is already finished. Nothing to do.")
+            return redirect(job_result.get_absolute_url())
+
+        job_is_running = strategy.is_alive(job_result)
+        if request.method == "GET":
+            return render(
+                request,
+                "extras/job_revoke.html",
+                {
+                    "object": job_result,
+                    "job_is_running": job_is_running,
+                    "timestamp": now(),
+                    "return_url": job_result.get_absolute_url(),
+                },
+            )
+
+        result = strategy.revoke(job_result, user=request.user)
+        if result["error"]:
+            messages.error(request, result["error"])
+        else:
+            messages.success(request, "Job terminated.")
+        return redirect(job_result.get_absolute_url())
 
 
 #

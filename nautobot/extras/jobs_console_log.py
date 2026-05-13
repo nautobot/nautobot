@@ -127,7 +127,7 @@ class JobConsoleLogExecutor:
 
         self.job_result_pk = job_result_pk
         self.job_result = JobResult.objects.get(pk=job_result_pk)
-        self.job_kwargs = job_kwargs or {}
+        self.job_kwargs = job_kwargs
         self.print_output = print_output
 
         store_stdout = functools.partial(store_job_output_line, job_result=self.job_result, output_type="stdout")

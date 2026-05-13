@@ -1,3 +1,5 @@
+from django.db.models.functions import Coalesce
+
 from nautobot.core.apps import HomePageItem, HomePagePanel
 from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobResultStatusChoices
 from nautobot.extras.models import ApprovalWorkflowStage, DynamicGroup, GitRepository, JobResult, ObjectChange
@@ -21,7 +23,8 @@ def get_job_results(request):
         JobResult.objects.filter(status__in=JobResultStatusChoices.READY_STATES)
         .restrict(request.user, "view")
         .only("id", "name", "status", "date_done", "user")
-        .order_by("-date_done")[:10]
+        .alias(effective_done=Coalesce("date_done", "date_created"))
+        .order_by("-effective_done")[:10]
     )
 
 
