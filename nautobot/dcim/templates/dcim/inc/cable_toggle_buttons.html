@@ -9,15 +9,15 @@
     {% if cable.status.name == 'Connected' %}
         <li>
             <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">
-                <span class="mdi mdi-lan-disconnect" aria-hidden="true"></span>
-                Mark planned
+                <span class="mdi mdi-lan-pending" aria-hidden="true"></span>
+                Mark cable as Planned
             </a>
         </li>
     {% else %}
         <li>
             <a href="#" class="dropdown-item text-success cable-toggle" data="{{ cable.pk }}">
                 <span class="mdi mdi-lan-connect" aria-hidden="true"></span>
-                Mark installed
+                Mark cable as Connected
             </a>
         </li>
     {% endif %}
