@@ -1,3 +1,5 @@
+import time
+
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, PowerFeed, PowerPanel
@@ -86,6 +88,7 @@ class HomeTestCase(SeleniumTestCase):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f"//div[@id='draggable-homepage-panels']"
+                        f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group']"
                         f"/div[@class='card nb-draggable']"
                         f"/div[@class='card-header nb-draggable-handle']"
                         f"/strong[contains(text(), '{panel_name}')]"
@@ -102,3 +105,68 @@ class HomeTestCase(SeleniumTestCase):
                     f"//div[@class='card-header nb-draggable-handle']/strong[text()='{panel_name}']"
                 )
                 self.assertEqual(len(panel), 0)
+
+    def test_homepage_layout_panels_drag_and_drop(self):
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("circuits.view_circuit")
+
+        self.browser.visit(self.live_server_url)
+
+        # Assert that panels are laid out by default, in this order: `[[Organization], [Circuits], [], []]`.
+        organization_panel_xpath = "//div[contains(@class, 'nb-panel-group')][1]/div[@id='organization']"
+        circuits_panel_xpath = "//div[contains(@class, 'nb-panel-group')][2]/div[@id='circuits']"
+        self.assertTrue(self.browser.is_element_present_by_xpath(organization_panel_xpath, wait_time=10))
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath, wait_time=10))
+
+        # Move the Circuits panel to the first column above the Organization panel.
+        organization_panel_draggable_handle = self.browser.find_by_xpath(
+            f"{organization_panel_xpath}/div[contains(@class, 'nb-draggable-handle')]"
+        )
+        circuits_panel_draggable_handle = self.browser.find_by_xpath(
+            f"{circuits_panel_xpath}/div[contains(@class, 'nb-draggable-handle')]"
+        )
+        circuits_panel_draggable_handle.drag_and_drop(organization_panel_draggable_handle)
+        time.sleep(1)  # Wait 1 second to make sure that the request with user preferences is sent.
+
+        # Reload the page to make sure that user preferences with panels order were correctly saved.
+        self.browser.reload()
+
+        # Assert that panels are laid out according to user preferences, in this order: `[[Circuits, Organization], [], [], []]`.
+        organization_panel_xpath = (
+            "//div[contains(@class, 'nb-panel-group')][1]/div[@id='organization' and position()=2]"
+        )
+        circuits_panel_xpath = "//div[contains(@class, 'nb-panel-group')][1]/div[@id='circuits' and position()=1]"
+        self.assertTrue(self.browser.is_element_present_by_xpath(organization_panel_xpath, wait_time=10))
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath, wait_time=10))
+
+    def test_homepage_layout_panels_collapse(self):
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("circuits.view_circuit")
+
+        self.browser.visit(self.live_server_url)
+
+        organization_panel_xpath = "//div[contains(@class, 'nb-panel-group')][1]/div[@id='organization']"
+        circuits_panel_xpath = "//div[contains(@class, 'nb-panel-group')][2]/div[@id='circuits']"
+        collapsed_xpath = "/ul[not(contains(@class, 'show'))]"
+        expanded_xpath = "/ul[contains(@class, 'show')]"
+
+        # Assert that all panels are expanded by default.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + expanded_xpath, wait_time=10))
+
+        # Collapse the Circuits panel.
+        circuits_panel_button = self.browser.find_by_xpath(f"{circuits_panel_xpath}//span[@data-bs-toggle='collapse']")
+        circuits_panel_button.click()
+        # Assert that the Circuits panel is now collapsed.
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))
+
+        # Reload the page to make sure that user preferences with panels collapsed state were correctly saved.
+        self.browser.reload()
+
+        # Assert that the Circuits panel stays collapsed.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))

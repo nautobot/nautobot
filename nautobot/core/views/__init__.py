@@ -206,6 +206,8 @@ class HomeView(AccessMixin, TemplateView):
                     user_panels, lambda panel: user_panels.index(panel) // panel_layout_rows
                 )
             ]
+            # Make sure that there always is the exact expected number of columns in the `panel_layout`.
+            panel_layout.extend([[]] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
 
         context.update({"homepage_layout_panels": panel_layout})
 
