@@ -18,6 +18,7 @@ In all cases the `JobResult` ends up with `revoked_by`, `revoked_by_user_name`, 
 ### Reap vs. terminate
 
 The distinction matters because the two paths have very different costs and side effects:
+
 - A terminate sends a kill signal across the network to a live worker process. The worker is mid-task, possibly holding database transactions, possibly partway through writing changes. SIGKILL is a hard stop — there is no chance for the job to clean up. This is what users expect when they click "Revoke Job" but it's the more disruptive of the two.
 - A reap is a database-only operation - no worker involvement. The job is already not running (because no worker has it); the operator is just cleaning up the bookkeeping. This is the quiet, safe path, and it's what runs whenever a worker has gone away without finishing the jobs it was given.
 
