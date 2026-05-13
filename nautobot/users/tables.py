@@ -5,7 +5,7 @@ from nautobot.core.tables import BaseTable, BooleanColumn, ButtonsColumn, Toggle
 from .models import Token
 
 _actions_template = """
-<li><a href="{% url 'users:token' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
+<li><a href="{% url 'user:token' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
 """
 
 
