@@ -2,6 +2,7 @@
 
 import contextlib
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
 import hashlib
 import json
@@ -18,10 +19,11 @@ from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
-from django.template.defaultfilters import truncatechars
+from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
@@ -1746,6 +1748,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # For example, Secret.provider -> Secret.get_provider_display()
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
+
+        if isinstance(value, datetime):
+            if timezone.is_naive(value):
+                value = timezone.make_aware(value, timezone.get_default_timezone())
+            return format_date(timezone.localtime(value), "DATETIME_FORMAT")
+
+        if isinstance(value, date):
+            return format_date(value, "DATE_FORMAT")
 
         return super().render_value(key, value, context)
 

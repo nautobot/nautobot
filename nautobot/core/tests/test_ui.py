@@ -1,12 +1,16 @@
 """Test cases for nautobot.core.ui module."""
 
+from datetime import date, datetime, timezone as datetime_timezone
 import json
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+from zoneinfo import ZoneInfo
 
-from django.db.models import Sum
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import DateField, DateTimeField, Sum
 from django.template import Context
-from django.test import RequestFactory
+from django.test import override_settings, RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 
 from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudServiceTable
@@ -196,6 +200,40 @@ class ObjectFieldsPanelTest(TestCase):
         panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=False)
         with self.assertRaises(AttributeError):
             panel.get_data(context)
+
+    def test_render_value_formats_dates_and_preserves_none_behavior(self):
+        panel = ObjectFieldsPanel(weight=100, fields=["decision_date"])
+
+        def build_context(field_instance):
+            obj = Mock()
+            if field_instance is None:
+                obj._meta.get_field.side_effect = FieldDoesNotExist
+            else:
+                obj._meta.get_field.return_value = field_instance
+            return Context({"object": obj})
+
+        utc_datetime = datetime(2024, 1, 1, 0, 30, tzinfo=datetime_timezone.utc)
+
+        with (
+            override_settings(DATETIME_FORMAT="Y-m-d H:i:s", DATE_FORMAT="Y-m-d"),
+            timezone.override(ZoneInfo("Asia/Tokyo")),
+        ):
+            self.assertEqual(
+                panel.render_value("decision_date", utc_datetime, build_context(DateTimeField())), "2024-01-01 09:30:00"
+            )
+            self.assertEqual(
+                panel.render_value("decision_date", datetime(2024, 1, 1, 0, 30), build_context(DateTimeField())),
+                "2024-01-01 09:30:00",
+            )
+            self.assertEqual(
+                panel.render_value("install_date", date(2024, 1, 1), build_context(DateField())), "2024-01-01"
+            )
+            self.assertEqual(
+                panel.render_value("related__decision_date", utc_datetime, build_context(None)),
+                "2024-01-01 09:30:00",
+            )
+            hidden_panel = ObjectFieldsPanel(weight=100, fields=["decision_date"], hide_if_unset=["decision_date"])
+            self.assertEqual(hidden_panel.render_value("decision_date", None, build_context(DateField())), "")
 
 
 class BaseTextPanelTest(TestCase):
