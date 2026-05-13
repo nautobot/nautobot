@@ -159,18 +159,17 @@ class HomeView(AccessMixin, TemplateView):
                                 )
 
         # Filter panels by user permissions.
-        user_panels = list(
-            filter(
-                lambda kv_pair: has_one_or_more_perms(request.user, kv_pair[1].get("permissions", [])),
-                registry["homepage_layout"]["panels"].items(),
-            )
-        )
+        user_panels = [
+            kv_pair
+            for kv_pair in registry["homepage_layout"]["panels"].items()
+            if has_one_or_more_perms(request.user, kv_pair[1].get("permissions", []))
+        ]
         user_config = request.user.get_config("homepage_layout.panels")
         # Validate that user config is a list of fixed length, containing lists of objects with at least `id` property.
         is_user_config_valid = (
             isinstance(user_config, list)
             and len(user_config) == HOMEPAGE_PANELS_LAYOUT_COLUMNS
-            and all([isinstance(panel.get("id"), str) for panel_column in user_config for panel in panel_column])
+            and all(isinstance(panel.get("id"), str) for panel_column in user_config for panel in panel_column)
         )
 
         if is_user_config_valid:
@@ -181,7 +180,7 @@ class HomeView(AccessMixin, TemplateView):
                 for panel in panel_group:
                     # Find `(panel_name, panel_details)` key-value pair corresponding to the `panel` from user config.
                     try:
-                        kv_pair = next(filter(lambda kv_pair: slugify(kv_pair[0]) == panel.get("id"), user_panels))
+                        kv_pair = next(kv_pair for kv_pair in user_panels if slugify(kv_pair[0]) == panel.get("id"))
                     except StopIteration:
                         kv_pair = None
                     if kv_pair:

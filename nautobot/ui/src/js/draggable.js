@@ -107,8 +107,9 @@ export const initializeDraggable = () => {
               // eslint-disable-next-line id-length
               const distance = { normalized: Math.sqrt(distanceX ** 2 + distanceY ** 2), x: distanceX, y: distanceY };
 
-              return { element, distance };
+              return { distance, element };
             })
+            // eslint-disable-next-line id-length
             .sort((a, b) => {
               const prioritizeAxis = options?.prioritizeAxis;
               return prioritizeAxis && a.distance[prioritizeAxis] !== b.distance[prioritizeAxis]
