@@ -183,6 +183,9 @@ class HomeViewTestCase(TestCase):
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
 
     def test_homepage_layout_panels_empty(self):
+        """
+        Validate that homepage layout panels render empty when user has no required permissions.
+        """
         url = reverse("home")
         response = self.client.get(url)
         self.assertBodyContains(
@@ -196,12 +199,19 @@ class HomeViewTestCase(TestCase):
                     hx-swap="none"
                     hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
                 >
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
                 </div>
             """,
             html=True,
         )
 
     def test_homepage_layout_panels_filtered_by_user_permissions(self):
+        """
+        Validate that homepage layout panels render only those panels which user is permitted to view.
+        """
         self.add_permissions("dcim.view_device", "dcim.view_location", "ipam.view_prefix", "ipam.view_ipaddress")
 
         url = reverse("home")

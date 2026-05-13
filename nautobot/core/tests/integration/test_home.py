@@ -1,5 +1,3 @@
-import time
-
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, PowerFeed, PowerPanel
@@ -107,6 +105,9 @@ class HomeTestCase(SeleniumTestCase):
                 self.assertEqual(len(panel), 0)
 
     def test_homepage_layout_panels_collapse(self):
+        """
+        Confirm that homepage layout panels are collapsible and that their collapsed state is saved in user preferences.
+        """
         self.add_permissions("dcim.view_location")
         self.add_permissions("circuits.view_circuit")
 
