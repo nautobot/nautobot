@@ -1282,17 +1282,17 @@ class CablePathTestCase(TestCase):
 
         trunk_paths = CablePath.objects.filter(
             origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_trunk.pk
-        ).order_by("connector")
+        ).order_by("peer_connector")
         # One CablePath per fan-out lane.
         self.assertEqual(trunk_paths.count(), 4)
 
-        lane1_path = trunk_paths.get(connector=1)
+        lane1_path = trunk_paths.get(peer_connector=1)
         self.assertEqual(lane1_path.destination, if_lane1)
         self.assertFalse(lane1_path.is_split, msg=f"Lane 1 should be complete, got {lane1_path}")
         self.assertTrue(lane1_path.is_active)
 
         for connector in (2, 3, 4):
-            partial = trunk_paths.get(connector=connector)
+            partial = trunk_paths.get(peer_connector=connector)
             self.assertIsNone(
                 partial.destination,
                 msg=f"Lane {connector} should have no destination, got {partial.destination}",
@@ -1693,10 +1693,10 @@ class CablePathTestCase(TestCase):
             origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_trunk.pk
         )
         self.assertEqual(trunk_paths_pre.count(), 4)
-        self.assertEqual(trunk_paths_pre.get(connector=1).destination, if_lane1)
-        self.assertEqual(trunk_paths_pre.get(connector=2).destination, if_lane2)
-        self.assertTrue(trunk_paths_pre.get(connector=3).is_split)
-        self.assertTrue(trunk_paths_pre.get(connector=4).is_split)
+        self.assertEqual(trunk_paths_pre.get(peer_connector=1).destination, if_lane1)
+        self.assertEqual(trunk_paths_pre.get(peer_connector=2).destination, if_lane2)
+        self.assertTrue(trunk_paths_pre.get(peer_connector=3).is_split)
+        self.assertTrue(trunk_paths_pre.get(peer_connector=4).is_split)
 
         # Disconnect lane 1's fan-out port.
         result = disconnect_termination(if_lane1)
@@ -1712,17 +1712,17 @@ class CablePathTestCase(TestCase):
         self.assertEqual(trunk_paths_post.count(), 4)
 
         # Lane 1 is now partial.
-        lane1_trunk = trunk_paths_post.get(connector=1)
+        lane1_trunk = trunk_paths_post.get(peer_connector=1)
         self.assertIsNone(lane1_trunk.destination)
         self.assertTrue(lane1_trunk.is_split)
 
         # Lane 2 SURVIVES — this is the regression-protected assertion.
-        lane2_trunk = trunk_paths_post.get(connector=2)
+        lane2_trunk = trunk_paths_post.get(peer_connector=2)
         self.assertEqual(lane2_trunk.destination, if_lane2, msg="Lane 2 trunk-side path was clobbered by disconnect")
 
         # Lanes 3 and 4 remain partial (unchanged).
-        self.assertTrue(trunk_paths_post.get(connector=3).is_split)
-        self.assertTrue(trunk_paths_post.get(connector=4).is_split)
+        self.assertTrue(trunk_paths_post.get(peer_connector=3).is_split)
+        self.assertTrue(trunk_paths_post.get(peer_connector=4).is_split)
 
         # The disconnected fan-out side has no CablePath at all.
         self.assertEqual(

@@ -43,8 +43,6 @@ def create_cablepath(node, rebuild=True):
 
     rebuild (bool) - Used to refresh paths where this node is not an endpoint.
     """
-    from nautobot.dcim.models import CableToCableTermination
-
     my_endpoint = getattr(node, "cable_termination", None)
     if my_endpoint is None:
         if rebuild:
@@ -53,50 +51,40 @@ def create_cablepath(node, rebuild=True):
 
     cable = my_endpoint.cable
 
-    # Check if this is a breakout cable with multiple far-side lanes
-    if cable.cable_type_id:
-        if my_endpoint.connector is not None:
-            opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
-            origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
-            far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+    # Breakout cable: fan out one CablePath per distinct peer-side connector mapped from this
+    # origin's connector. Multiple mapping entries that share a peer-side connector represent
+    # internal lanes terminating at the same far-end object, so they collapse to one path.
+    if cable.cable_type_id and my_endpoint.connector is not None:
+        origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
+        peer_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
 
-            # Find all distinct far-side connectors mapped from this origin's connector. Each
-            # far-side connector yields one CablePath; multiple mapping entries that share a
-            # far-side connector represent internal lanes that all terminate at the same far-end
-            # object, so they collapse to a single path.
-            seen_far_connectors = set()
-            for mapping_entry in cable.cable_type.mapping:
-                if mapping_entry[origin_side_key] != my_endpoint.connector:
-                    continue
-                far_connector = mapping_entry[far_side_key]
-                if far_connector in seen_far_connectors:
-                    continue
-                seen_far_connectors.add(far_connector)
+        seen_peer_connectors = set()
+        for mapping_entry in cable.cable_type.mapping:
+            if mapping_entry[origin_side_key] != my_endpoint.connector:
+                continue
+            peer_connector = mapping_entry[peer_side_key]
+            if peer_connector in seen_peer_connectors:
+                continue
+            seen_peer_connectors.add(peer_connector)
 
-                # Find the actual far-end termination for this connector
-                far_ep = CableToCableTermination.objects.filter(
-                    cable=cable,
-                    cable_end=opposite_side,
-                    connector=far_connector,
-                ).first()
-                far_term = far_ep.termination if far_ep else None
+            cable_path = CablePath.from_origin(node, peer_connector=peer_connector)
+            if cable_path is None:
+                continue
+            # Guard against re-entry: a parallel signal path (e.g. two `rebuild_paths` calls
+            # landing on the same origin) may have already inserted the row for this
+            # (origin, peer_connector). Check before saving so unrelated save failures still
+            # propagate instead of being swallowed by a catch-all.
+            already_exists = CablePath.objects.filter(
+                origin_type_id=cable_path.origin_type_id,
+                origin_id=cable_path.origin_id,
+                peer_connector=peer_connector,
+            ).exists()
+            if not already_exists:
+                cable_path.save()
 
-                # Trace the path for this specific far-side connector, overriding the first hop's peer
-                cable_path = CablePath.from_origin(node, far_end_override=far_term)
-                if cable_path:
-                    cable_path.connector = far_connector
-                    try:
-                        cable_path.save()
-                    except Exception:
-                        # TODO: swallowing every save error to dedupe (origin, connector) collisions
-                        # is too broad — it hides genuine integrity / validation failures. Replace
-                        # with a targeted check (e.g. IntegrityError on the unique_together, or an
-                        # explicit `exists()` guard before save) so unrelated errors propagate.
-                        pass  # Duplicate path — already exists
-
-            if rebuild:
-                rebuild_paths(node)
-            return
+        if rebuild:
+            rebuild_paths(node)
+        return
 
     # Standard cable or no breakout endpoint found — single path
     cable_path = CablePath.from_origin(node)
@@ -312,7 +300,7 @@ def nullify_connected_endpoints(instance, **kwargs):
     instance.terminations.all().delete()
 
     for cablepath in CablePath.objects.filter(path__contains=instance):
-        cp = CablePath.from_origin(cablepath.origin)
+        cp = CablePath.from_origin(cablepath.origin, peer_connector=cablepath.peer_connector)
         if cp:
             CablePath.objects.filter(pk=cablepath.pk).update(
                 path=cp.path,

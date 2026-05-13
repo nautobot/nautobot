@@ -369,10 +369,24 @@ class CableTermination(models.Model):
                 "CableToCableTermination row directly."
             )
 
-    def get_cable_peer(self):
-        """Return the far-end termination of this cable, or the first peer for breakout/multi-termination cables."""
-        peers = self.get_cable_peers()
-        return peers[0] if peers else None
+    def get_cable_peer(self, peer_connector=None):
+        """Return the far-end termination of this cable.
+
+        For non-breakout cables, returns the single peer (or the first peer if multiple exist).
+
+        For breakout cables, pass `peer_connector` to select the termination on a specific
+        opposite-side connector. The connector number refers to the *peer's* side of the cable
+        — i.e. the side opposite to this termination. Returns None if no termination occupies
+        that connector (disconnected lane) or if `peer_connector` isn't a connector this
+        termination's connector maps to via the cable type's lane mapping.
+        """
+        rows = self._get_cable_peer_rows()
+        if peer_connector is None:
+            return rows[0].termination if rows and rows[0].termination is not None else None
+        for row in rows:
+            if row.connector == peer_connector:
+                return row.termination
+        return None
 
     @property
     def cable_peer(self):
@@ -392,6 +406,17 @@ class CableTermination(models.Model):
         the cable's terminations (with per-type FKs `select_related`'d) to avoid N+1 queries
         when this is called for many rows in a table render. See
         `CableTermination.optimize_queryset_for_cable_columns`.
+        """
+        return [row.termination for row in self._get_cable_peer_rows() if row.termination is not None]
+
+    def _get_cable_peer_rows(self):
+        """Return the opposite-side `CableToCableTermination` rows mapped to this termination's
+        lane(s), sorted by connector. Internal helper shared by `get_cable_peer` (which picks
+        one row by `peer_connector`) and `get_cable_peers` (which extracts terminations).
+
+        For breakout cables, only peer-side rows whose connector is reachable from this
+        termination's connector via the cable type's lane mapping are returned. For non-breakout
+        cables, all opposite-side rows are returned.
         """
         my_endpoint = getattr(self, "cable_termination", None)
         if my_endpoint is None:
@@ -417,7 +442,7 @@ class CableTermination(models.Model):
             opposite_endpoints = [ep for ep in all_rows if ep.cable_end == opposite_side]
 
         opposite_endpoints.sort(key=lambda ep: ep.connector or 0)
-        return [ep.termination for ep in opposite_endpoints if ep.termination is not None]
+        return opposite_endpoints
 
     @classmethod
     def cable_columns_select_related_fields(cls):

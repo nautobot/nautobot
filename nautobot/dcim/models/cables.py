@@ -1159,9 +1159,10 @@ class CablePath(BaseModel):
     path = JSONPathField()
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
-    # Far-side connector that this path emerges on — allows multiple CablePaths per origin
-    # (one per far-side connector on a breakout fan-out). Null for non-breakout paths.
-    connector = models.PositiveSmallIntegerField(blank=True, null=True)
+    # Cable-peer-side connector that this path emerges through on its first hop — allows
+    # multiple CablePaths per origin (one per peer-side connector on a breakout fan-out). Null
+    # for non-breakout paths.
+    peer_connector = models.PositiveSmallIntegerField(blank=True, null=True)
     # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
     # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
     is_metadata_associable_model = False
@@ -1169,8 +1170,8 @@ class CablePath(BaseModel):
     natural_key_field_names = ["pk"]
 
     class Meta:
-        unique_together = ("origin_type", "origin_id", "connector")
-        ordering = [F("connector").asc(nulls_first=True)]
+        unique_together = ("origin_type", "origin_id", "peer_connector")
+        ordering = [F("peer_connector").asc(nulls_first=True)]
 
     def __str__(self):
         status = " (active)" if self.is_active else " (split)" if self.is_split else ""
@@ -1182,15 +1183,17 @@ class CablePath(BaseModel):
         return int(total_length / 3)
 
     @classmethod
-    def from_origin(cls, origin, far_end_override=None):
+    def from_origin(cls, origin, peer_connector=None):
         """
         Create a new CablePath instance as traced from the given path origin.
 
         Args:
             origin: The PathEndpoint to trace from.
-            far_end_override: If provided, use this termination as the first cable hop's
-                far-end instead of calling get_cable_peer(). Used to trace specific lanes
-                of breakout cables.
+            peer_connector: For breakout-origin paths, the cable-peer-side connector to follow on
+                the first hop. Required when `origin` sits on a breakout cable, since without it
+                the trace has no way to pick one fan-out lane over another and bails out as
+                `is_split=True, destination=None`. Stamped onto the returned CablePath so its
+                identity matches the lane it represents.
         """
         if origin is None or origin.cable is None:
             return None
@@ -1226,21 +1229,23 @@ class CablePath(BaseModel):
 
             # Follow the cable to its far-end termination
             path.append(object_to_path_node(node.cable))
-            if first_hop and far_end_override is not None:
-                peer_termination = far_end_override
-            else:
-                peer_termination = node.get_cable_peer()
-                # First-hop on a breakout cable with no far-end override: caller is
-                # `create_cablepath` for a far-side connector that has no termination (e.g.
-                # disconnected or not yet connected). `get_cable_peer` would return some *other*
-                # connector's peer, producing a wrong-direction trace, so mark the path as split
-                # and halt the trace after this cable hop. The CablePath will carry the far-side
-                # connector assigned by the caller, with `destination=None` and `is_split=True`.
-                if first_hop:
-                    node_ct = getattr(node, "cable_termination", None)
-                    if node_ct is not None and node_ct.connector is not None:
+            if first_hop:
+                node_ct = getattr(node, "cable_termination", None)
+                if node_ct is not None and node_ct.connector is not None:
+                    # Origin sits on a breakout cable. Without a peer_connector the trace can't
+                    # pick a lane, so mark the path as split. With one, look up the peer at that
+                    # specific connector — may be None for disconnected lanes (also split).
+                    if peer_connector is None:
                         is_split = True
                         peer_termination = None
+                    else:
+                        peer_termination = node.get_cable_peer(peer_connector=peer_connector)
+                        if peer_termination is None:
+                            is_split = True
+                else:
+                    peer_termination = node.get_cable_peer()
+            else:
+                peer_termination = node.get_cable_peer()
             first_hop = False
 
             # Unconnected lane on a breakout cable, or broken path
@@ -1301,6 +1306,7 @@ class CablePath(BaseModel):
             path=path,
             is_active=is_active,
             is_split=is_split,
+            peer_connector=peer_connector,
         )
 
     def get_path(self):
