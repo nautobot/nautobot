@@ -181,6 +181,7 @@ class JobResultFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        has_celery_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
         # TODO has_scheduled_job? has_meta?
 
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
@@ -229,6 +230,9 @@ class JobResultFactory(BaseModelFactory):
 
     @factory.lazy_attribute
     def celery_kwargs(self):
+        if not self.has_celery_kwargs:
+            return {}
+
         fake = faker.Faker()
         kwargs = {
             "nautobot_job_profile": fake.boolean(),

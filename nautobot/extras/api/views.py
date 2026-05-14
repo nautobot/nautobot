@@ -33,7 +33,11 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.extras import filters
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+)
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.jobs_revoke import RevokeFactory
@@ -1177,6 +1181,18 @@ class JobResultViewSet(
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        methods=["get"],
+        responses={
+            200: serializers.JobResultRevokePreviewSerializer,
+        },
+    )
+    @extend_schema(
+        methods=["post"],
+        responses={
+            200: serializers.JobResultSerializer,
+        },
+    )
     @action(detail=True, methods=["get", "post"], permission_classes=[RevokeJobPermission])
     def revoke(self, request, pk=None):
         """Terminate a running or pending Job, or reap it if its worker is gone."""
@@ -1209,18 +1225,22 @@ class JobResultViewSet(
                 ),
                 "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
                 "irreversible": "This action cannot be undone.",
-                "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": timezone.now().isoformat(),
             }
             return Response(detail, status=status.HTTP_200_OK)
 
         result = strategy.revoke(job_result, user=request.user)
 
         if result["error"]:
-            return Response({"detail": result["error"]}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": result["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        job_result.refresh_from_db()
-        serializer = self.get_serializer(job_result)
+        if not result["revoked"]:
+            return Response(
+                {"detail": "Job finished before it could be revoked. No action was taken."},
+                status=status.HTTP_409_CONFLICT,
+            )
 
+        serializer = self.get_serializer(result["job_result"])
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

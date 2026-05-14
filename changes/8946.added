@@ -1,2 +1,4 @@
 Added `GET` and `POST /api/extras/job-results/{id}/revoke/` API endpoints for revoking a running or pending job.
 Added `celery_kwargs` to `JobResultFactory`.
+Added `UnknownStrategy` for `RevokeFactory`. Jobs whose `queue_type` is not registered in `RevokeFactory.strategies` now fall back to a reap-only strategy that marks the `JobResult` as revoked without sending a backend signal.
+Added `Revoke Job` to `JOB_RESULT_BUTTONS`.

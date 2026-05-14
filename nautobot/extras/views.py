@@ -3854,7 +3854,11 @@ class JobResultUIViewSet(
         if result["error"]:
             messages.error(request, result["error"])
         else:
-            messages.success(request, "Job terminated.")
+            if result["revoked"]:
+                messages.success(request, "Job terminated.")
+            else:
+                messages.info(request, "Job finished before it could be revoked. No action was taken.")
+
         return redirect(job_result.get_absolute_url())
 
 

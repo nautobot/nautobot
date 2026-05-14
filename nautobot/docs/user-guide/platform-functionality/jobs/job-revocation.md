@@ -67,7 +67,7 @@ The `action` field indicates the path the server will take on `TERMINATE` when t
     "action_description": "SIGKILL to worker. Stops immediately, no cleanup.",
     "job_status": "RUNNING",
     "irreversible": "This action cannot be undone.",
-    "timestamp": "2026-05-08 12:34:56"
+    "timestamp": "'2026-05-14T11:00:12.060393+00:00'"
 }
 ```
 
@@ -84,11 +84,9 @@ http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 
 #### Status codes
 
-| Code | Meaning                                                                                       |
-|------|-----------------------------------------------------------------------------------------------|
-| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).                       |
-| 500  | The revoke strategy reported an error or the queue type is unsupported.                       |
-| 403  | The caller lacks `extras.run_job` and is not staff, or is not the job owner and is not staff. |
-| 409  | The `JobResult` is already in a finished state and cannot be revoked.                         |
-
-See [Permissions](#permissions) for the full rules on who can revoke which jobs.
+| Code | Meaning                                                                              |
+|------|--------------------------------------------------------------------------------------|
+| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).              |
+| 500  | The revoke strategy reported an error or the queue type is unsupported.              |
+| 403  | The caller lacks proper permissions. See [Permissions](#permissions) for full rules. |
+| 409  | The `JobResult` is already in a finished state and cannot be revoked.                |

@@ -42,7 +42,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
-from nautobot.extras.jobs_revoke import CeleryStrategy, RevokeFactory
+from nautobot.extras.jobs_revoke import CeleryStrategy, RevokeFactory, UnknownStrategy
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
@@ -2319,10 +2319,71 @@ class JobRevokeTestCase(TransactionTestCase):
         strategy = RevokeFactory.get_strategy(JobQueueTypeChoices.TYPE_CELERY)
         self.assertIsInstance(strategy, CeleryStrategy)
 
-    def test_factory_raises_value_error_for_unknown_queue_type(self):
-        with self.assertRaises(ValueError) as cm:
-            RevokeFactory.get_strategy("not-a-queue-type")
-        self.assertIn("not-a-queue-type", str(cm.exception))
+    def test_factory_returns_unknown_strategy_for_unregistered_queue_type(self):
+        with self.subTest("unknown-queue-type"):
+            strategy = RevokeFactory.get_strategy("not-a-queue-type")
+            self.assertIsInstance(strategy, UnknownStrategy)
+        with self.subTest("none-queue-type"):
+            strategy = RevokeFactory.get_strategy(None)
+            self.assertIsInstance(strategy, UnknownStrategy)
+
+    # ------------------------------------------------------------------ #
+    # UnknownStrategy: fallback for queue types without a registered backend.
+    # ------------------------------------------------------------------ #
+
+    def test_unknown_is_alive_always_returns_false(self):
+        """UnknownStrategy has no backend to query, so is_alive is always False."""
+        strategy = UnknownStrategy()
+        for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.is_alive(job_result))
+
+    def test_unknown_should_reap_true_for_unready_states(self):
+        """Unready jobs are always reapable under UnknownStrategy."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertTrue(strategy.should_reap(job_result))
+
+    def test_unknown_should_reap_false_for_ready_states(self):
+        """Already-terminal jobs must not be reaped."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.READY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.should_reap(job_result))
+
+    def test_unknown_revoke_reaps_unready_job(self):
+        """End-to-end: revoking an unready job through UnknownStrategy reaps it."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = strategy.revoke(job_result, self.user)
+
+                self.assertIsNone(result["error"])
+
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, "REVOKED")
+                self.assertEqual(job_result.revoked_by, self.user)
+                self.assertEqual(job_result.revoked_by_user_name, self.user.username)
+                # No SIGKILL is sent, so date_terminated must remain unset.
+                self.assertIsNone(job_result.date_terminated)
+                self.assertIsNotNone(job_result.date_done)
+
+                self.assertTrue(
+                    any("Reaped dead job" in msg for msg in log_cm.output),
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains="Reaped dead job",
+                    ).exists()
+                )
 
     # ------------------------------------------------------------------ #
     # 1. Reap path: PENDING/STARTED + worker absent -> mark revoked,
