@@ -4665,9 +4665,8 @@ class CableForm(NautobotModelForm):
                 if not termination or termination.pk in seen_termination_pks:
                     continue
                 seen_termination_pks.add(termination.pk)
-                connector = connector_number if info["is_breakout"] else None
-                proposed_keys.add(_row_key(side_label, connector, termination))
-                proposed_rows.append((side_label, connector, termination))
+                proposed_keys.add(_row_key(side_label, connector_number, termination))
+                proposed_rows.append((side_label, connector_number, termination))
 
         if existing_keys == proposed_keys:
             return

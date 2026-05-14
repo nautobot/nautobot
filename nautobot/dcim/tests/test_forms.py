@@ -891,10 +891,8 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         # Bypass form validation to create an invalid cable directly via the join model. This
         # mirrors the situation a user might be in before the create-time validation fix landed.
         invalid_cable = Cable.objects.create(status=self.cable_status)
-        CableToCableTermination.objects.create(
-            cable=invalid_cable, cable_end="A", interface=iface_orphan, connector=None
-        )
-        CableToCableTermination.objects.create(cable=invalid_cable, cable_end="B", console_port=cp, connector=None)
+        CableToCableTermination.objects.create(cable=invalid_cable, cable_end="A", interface=iface_orphan)
+        CableToCableTermination.objects.create(cable=invalid_cable, cable_end="B", console_port=cp)
 
         # Edit the cable, clearing the B-side termination entirely.
         data = {

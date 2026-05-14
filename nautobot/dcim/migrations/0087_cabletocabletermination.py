@@ -1,6 +1,7 @@
 # Cable changes + CableToCableTermination join model.
 import uuid
 
+import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -59,7 +60,16 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("cable_end", models.CharField(max_length=1)),
-                ("connector", models.PositiveSmallIntegerField(blank=True, null=True)),
+                (
+                    "connector",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(16),  # CABLE_BREAKOUT_MAX_CONNECTORS
+                        ],
+                    ),
+                ),
                 (
                     "cable",
                     models.ForeignKey(
@@ -174,17 +184,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="cabletocabletermination",
             constraint=models.UniqueConstraint(
-                fields=("cable", "cable_end"),
-                condition=models.Q(("connector__isnull", True)),
-                name="dcim_cabletocabletermination_unique_nonbreakout_lane",
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="cabletocabletermination",
-            constraint=models.UniqueConstraint(
                 fields=("cable", "cable_end", "connector"),
-                condition=models.Q(("connector__isnull", False)),
-                name="dcim_cabletocabletermination_unique_breakout_lane",
+                name="dcim_cabletocabletermination_unique_connector",
             ),
         ),
         migrations.AddConstraint(

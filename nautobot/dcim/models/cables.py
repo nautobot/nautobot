@@ -443,8 +443,6 @@ class Cable(PrimaryModel):
         a_labels = {}
         b_labels = {}
         for endpoint in self.terminations.all():
-            if endpoint.connector is None:
-                continue
             termination = endpoint.termination
             if termination:
                 parent = getattr(termination, "parent", None)
@@ -479,11 +477,10 @@ class Cable(PrimaryModel):
         connected_a_connectors = set()
         connected_b_connectors = set()
         for endpoint in self.terminations.all():
-            if endpoint.connector is not None:
-                if endpoint.cable_end == "A":
-                    connected_a_connectors.add(endpoint.connector)
-                else:
-                    connected_b_connectors.add(endpoint.connector)
+            if endpoint.cable_end == "A":
+                connected_a_connectors.add(endpoint.connector)
+            else:
+                connected_b_connectors.add(endpoint.connector)
         lane_count = 0
         for entry in self.cable_type.mapping:
             if entry["a_connector"] in connected_a_connectors and entry["b_connector"] in connected_b_connectors:
@@ -504,24 +501,12 @@ class Cable(PrimaryModel):
             return []
 
         # Build lookup: (cable_end, connector) → CableToCableTermination
-        endpoint_lookup = {}
-        # Also collect unassigned endpoints (connector=None) keyed by cable_end
-        unassigned_endpoints = {"A": [], "B": []}
-        for endpoint in self.terminations.all():
-            if endpoint.connector is not None:
-                endpoint_lookup[(endpoint.cable_end, endpoint.connector)] = endpoint
-            else:
-                unassigned_endpoints[endpoint.cable_end].append(endpoint)
+        endpoint_lookup = {(endpoint.cable_end, endpoint.connector): endpoint for endpoint in self.terminations.all()}
 
         lanes = []
         for lane_number, entry in enumerate(self.cable_type.mapping, start=1):
             a_endpoint = endpoint_lookup.get(("A", entry["a_connector"]))
             b_endpoint = endpoint_lookup.get(("B", entry["b_connector"]))
-            # Fall back to unassigned endpoints for lane 1
-            if a_endpoint is None and unassigned_endpoints["A"]:
-                a_endpoint = unassigned_endpoints["A"].pop(0)
-            if b_endpoint is None and unassigned_endpoints["B"]:
-                b_endpoint = unassigned_endpoints["B"].pop(0)
             lanes.append(
                 {
                     "lane": lane_number,
@@ -546,21 +531,14 @@ class Cable(PrimaryModel):
         For 1x4→4x1: 4 rows. A1 has rowspan=4, B1-B4 each rowspan=1.
         For 4x1→1x4: 4 rows. A1-A4 each rowspan=1, B1 has rowspan=4.
         """
-        all_endpoints = list(self.terminations.all())
-        endpoint_by_connector = {}
-        unassigned_endpoints = {"A": [], "B": []}
-        for endpoint in all_endpoints:
-            if endpoint.connector is not None:
-                endpoint_by_connector[(endpoint.cable_end, endpoint.connector)] = endpoint
-            else:
-                unassigned_endpoints[endpoint.cable_end].append(endpoint)
+        endpoint_by_connector = {
+            (endpoint.cable_end, endpoint.connector): endpoint for endpoint in self.terminations.all()
+        }
 
         cable_type = self.cable_type if self.cable_type_id else None
 
         def _build_connector_info(side, connector_number, position_count):
             endpoint = endpoint_by_connector.get((side, connector_number))
-            if endpoint is None and unassigned_endpoints[side]:
-                endpoint = unassigned_endpoints[side].pop(0)
             return {
                 "connector": connector_number,
                 "side": side,
@@ -760,8 +738,9 @@ class Cable(PrimaryModel):
             ct = self._initial_termination_b_type
             term_b = ct.model_class().objects.get(pk=self._initial_termination_b_id)
 
-        # Determine lane 1 connector if this is a breakout cable.
-        a_connector = b_connector = None
+        # Determine lane 1 connector. Defaults to 1 (the only valid connector on each side for a
+        # standard cable); breakout cables read the lane-1 connectors from mapping[0].
+        a_connector = b_connector = 1
         if self.cable_type_id and self.cable_type.mapping:
             entry = self.cable_type.mapping[0]
             a_connector = entry["a_connector"]
@@ -814,7 +793,7 @@ class Cable(PrimaryModel):
         else:
             rebuild_paths(self)
 
-    def add_termination(self, termination, cable_end, connector=None):
+    def add_termination(self, termination, cable_end, connector=1):
         """
         Attach `termination` to this cable, creating the `CableToCableTermination` join row and
         rebuilding any affected `CablePath`s.
@@ -834,7 +813,8 @@ class Cable(PrimaryModel):
             termination: A `CableTermination` subclass instance (Interface, FrontPort, RearPort,
                 CircuitTermination, PowerFeed, etc.).
             cable_end: "A" or "B" — which side of the cable to attach to.
-            connector: Connector number on this cable end for breakout cables; `None` otherwise.
+            connector: Connector number on this cable end. Defaults to 1 (the only valid value for
+                a standard cable). Breakout cables pass 1..a_connectors / 1..b_connectors here.
 
         Returns:
             The newly-created `CableToCableTermination` row.
@@ -1024,11 +1004,12 @@ class CableToCableTermination(BaseModel):
         null=True,
     )
 
-    # Breakout cable connector — null for standard cables.
+    # Connector number on this cable end. Defaults to 1 for standard (non-breakout) cables; for
+    # breakout cables, 1..a_connectors on the A side and 1..b_connectors on the B side.
     connector = models.PositiveSmallIntegerField(
-        blank=True,
-        null=True,
-        help_text="The connector number on this cable end. Null for standard cables.",
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+        help_text="The connector number on this cable end. Always 1 for standard cables.",
     )
 
     # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
@@ -1047,17 +1028,12 @@ class CableToCableTermination(BaseModel):
     class Meta:
         ordering = ["cable", "cable_end", "connector"]
         constraints = [
-            # Non-breakout cables: at most one A and one B per cable.
-            models.UniqueConstraint(
-                fields=["cable", "cable_end"],
-                condition=models.Q(connector__isnull=True),
-                name="dcim_cabletocabletermination_unique_nonbreakout_lane",
-            ),
-            # Breakout cables: at most one row per (cable, cable_end, connector).
+            # At most one row per (cable, cable_end, connector). For standard cables `connector` is
+            # always 1, so this enforces exactly one A and one B per cable; for breakout cables it
+            # enforces a single termination per physical connector on each side.
             models.UniqueConstraint(
                 fields=["cable", "cable_end", "connector"],
-                condition=models.Q(connector__isnull=False),
-                name="dcim_cabletocabletermination_unique_breakout_lane",
+                name="dcim_cabletocabletermination_unique_connector",
             ),
             # Exactly one of the per-type termination foreign keys must be set.
             models.CheckConstraint(
@@ -1110,6 +1086,26 @@ class CableToCableTermination(BaseModel):
                 validate_cable_termination(term, cable_id=self.cable_id)
             except ObjectDoesNotExist:
                 pass
+
+        # `connector` must be in the range defined by the parent cable's CableType. Standard cables
+        # (no CableType) have a single connector on each end, so `connector` must be 1; breakout
+        # cables have `a_connectors`/`b_connectors` valid positions per side.
+        if self.cable is not None:
+            if self.cable.cable_type_id is None:
+                max_connector = 1
+            elif self.cable_end == "A":
+                max_connector = self.cable.cable_type.a_connectors
+            else:
+                max_connector = self.cable.cable_type.b_connectors
+            if not 1 <= self.connector <= max_connector:
+                raise ValidationError(
+                    {
+                        "connector": (
+                            f"Connector {self.connector} is outside the valid range "
+                            f"(1..{max_connector}) for the {self.cable_end}-side of this cable."
+                        )
+                    }
+                )
 
     def save(self, *args, **kwargs):
         # Cache the effective parent device for filtering. See `_termination_device` field comment.

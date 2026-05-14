@@ -3492,6 +3492,50 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):
             cable.clean()
 
+    def test_cabletocabletermination_connector_defaults_to_one(self):
+        """For a standard (non-breakout) cable, the join row's `connector` field defaults to 1."""
+        row = CableToCableTermination.objects.filter(cable=self.cable, cable_end="A").first()
+        self.assertEqual(row.connector, 1)
+        row = CableToCableTermination.objects.filter(cable=self.cable, cable_end="B").first()
+        self.assertEqual(row.connector, 1)
+
+    def test_cabletocabletermination_connector_rejected_for_standard_cable_above_one(self):
+        """For a cable without a CableType, `connector` must be 1 — values above 1 fail validation."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=2)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
+            row.full_clean()
+
+    def test_cabletocabletermination_connector_within_cable_type_range_accepted(self):
+        """For a breakout cable, `connector` may range from 1..a_connectors / 1..b_connectors."""
+        ct = CableType.objects.create(name="Test 1x4 OK", a_connectors=1, b_connectors=4, total_lanes=4)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        for b_connector in (1, 2, 3, 4):
+            row = CableToCableTermination(
+                cable=cable,
+                cable_end="B",
+                interface=Interface.objects.create(
+                    device=self.device2, name=f"breakout-ok-{b_connector}", status=self.interface2.status
+                ),
+                connector=b_connector,
+            )
+            row.full_clean()  # Should not raise
+
+    def test_cabletocabletermination_connector_above_cable_type_range_rejected(self):
+        """For a 1x4 breakout cable, connector=5 on the B side is out of range."""
+        ct = CableType.objects.create(name="Test 1x4 bad", a_connectors=1, b_connectors=4, total_lanes=4)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        row = CableToCableTermination(cable=cable, cable_end="B", interface=self.interface3, connector=5)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..4\\)"):
+            row.full_clean()
+
+    def test_cabletocabletermination_connector_zero_rejected(self):
+        """A connector value of 0 is not a valid 1-indexed connector number."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=0)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
+            row.full_clean()
+
 
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
     model = PowerFeed
