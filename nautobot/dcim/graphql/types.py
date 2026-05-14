@@ -129,14 +129,14 @@ class CableType(OptimizedNautobotObjectType):
     def resolve_termination_a_type(self, args):
         ct = self.termination_a_type
         if ct:
-            model = ct.model_class()
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 
     def resolve_termination_b_type(self, args):
         ct = self.termination_b_type
         if ct:
-            model = ct.model_class()
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 

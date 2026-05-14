@@ -524,7 +524,7 @@ class PathEndpoint(models.Model):
         abstract = True
 
     def trace(self):
-        path_obj = self.cable_paths.first()
+        path_obj = self.cable_paths.first()  # pylint: disable=no-member
         if path_obj is None:
             return []
 
@@ -540,7 +540,7 @@ class PathEndpoint(models.Model):
 
     @property
     def path(self):
-        return self.cable_paths.first()
+        return self.cable_paths.first()  # pylint: disable=no-member
 
     def get_all_paths(self):
         """Return all CablePaths originating from this endpoint (multiple for breakout cables)."""
@@ -551,7 +551,7 @@ class PathEndpoint(models.Model):
         """
         Return the attached CablePath's destination (if any)
         """
-        path_obj = self.cable_paths.first()
+        path_obj = self.cable_paths.first()  # pylint: disable=no-member
         return path_obj.destination if path_obj else None
 
     def get_connected_endpoints(self):
