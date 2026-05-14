@@ -6,6 +6,7 @@ import logging
 import uuid
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
@@ -5607,7 +5608,7 @@ class PathTraceView(generic.ObjectView):
         }
 
 
-class CableCreateView(View):
+class CableCreateView(LoginRequiredMixin, View):
     """
     Redirect shim for the per-termination-type `<port>_connect` URLs (referenced from row-action
     menus across DCIM and Circuits). Forwards the A-side identity (plus an optional B-side type
