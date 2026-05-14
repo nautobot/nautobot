@@ -58,6 +58,10 @@
                         {% include 'dcim/inc/cable_actions.html' with trace_url_name='dcim:powerport_trace' %}
                     </td>
                 </tr>
+                <tr>
+                    <td>Cable Status</td>
+                    <td>{{ object.cable.status|hyperlinked_object_with_color }}</td>
+                </tr>
                 {% if object.connected_endpoint %}
                     <tr>
                         {% if object.connected_endpoint.device %}

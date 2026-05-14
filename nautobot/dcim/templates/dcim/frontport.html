@@ -59,14 +59,8 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Connection Status</td>
-                    <td>
-                        {% if object.cable.status %}
-                            <span class="badge bg-success">{{ object.cable.get_status_display }}</span>
-                        {% else %}
-                            <span class="badge bg-info">{{ object.cable.get_status_display }}</span>
-                        {% endif %}
-                    </td>
+                    <td>Cable Status</td>
+                    <td>{{ object.cable.status|hyperlinked_object_with_color }}</td>
                 </tr>
             </table>
         {% else %}

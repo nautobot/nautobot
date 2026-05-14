@@ -1,5 +1,33 @@
-{# Renders the trace + cable-action dropdown for a connected cable on a CableTermination detail view. #}
-{# Required context: `object` (the CableTermination), `trace_url_name` (e.g. 'dcim:interface_trace'). #}
+{% comment %}
+Renders the trace + cable-action dropdown for a connected cable on a CableTermination detail view.
+Required context: `object` (the CableTermination), `trace_url_name` (e.g. 'dcim:interface_trace').
+
+Detail-view variant of the cable-toggle handler: reload after PATCH so the on-page Status row reflects
+the new value. Table views load `connection_toggles.js` separately and update the row inline instead.
+{% endcomment %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.cable-toggle').forEach(function(elem) {
+            elem.addEventListener('click', function(event) {
+                event.preventDefault();
+                const isConnected = elem.classList.contains('connected');
+                fetch(nautobot_api_path + "dcim/cables/" + elem.getAttribute('data') + "/", {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRFToken': nautobot_csrf_token,
+                    },
+                    body: JSON.stringify({status: isConnected ? 'Planned' : 'Connected'}),
+                }).then(function(response) {
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                });
+            });
+        });
+    });
+</script>
 <span class="float-end">
     <a href="{% url trace_url_name pk=object.pk %}" class="btn btn-primary btn-sm" title="Trace">
         <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
