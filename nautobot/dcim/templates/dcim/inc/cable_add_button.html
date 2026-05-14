@@ -1,0 +1,14 @@
+{% load helpers %}
+{% comment %}
+Renders a "New Cable" button that links to the unified cable_add form with the given termination
+pre-filled as the A side.
+
+Required context: `termination` (a CableTermination instance).
+Optional context:  `return_url` (defaults to termination.get_absolute_url).
+
+Caller is responsible for guarding on `perms.dcim.add_cable`.
+{% endcomment %}
+{% firstof return_url termination.get_absolute_url as cable_return_url %}
+<a href="{% url 'dcim:cable_add' %}?termination_a_type={{ termination|meta:'app_label' }}.{{ termination|meta:'model_name' }}&termination_a_id={{ termination.pk }}&return_url={{ cable_return_url }}" title="New Cable" class="btn btn-primary btn-sm float-end">
+    <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> New Cable
+</a>

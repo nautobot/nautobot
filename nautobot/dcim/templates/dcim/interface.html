@@ -191,20 +191,10 @@
                     Not connected
                     <span class="float-end">
                         {% if perms.dcim.add_cable %}
-                            <span class="dropdown">
-                                <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-popper-config='{"strategy": "fixed"}'>
-                                    <span class="mdi mdi-plus-thick" aria-hidden="true"></span> New Cable
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='interface' %}?return_url={{ object.get_absolute_url }}">Interface</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='front-port' %}?return_url={{ object.get_absolute_url }}">Front Port</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='rear-port' %}?return_url={{ object.get_absolute_url }}">Rear Port</a></li>
-                                    <li><a class="dropdown-item" href="{% url 'dcim:interface_connect' termination_a_id=object.pk termination_b_type='circuit-termination' %}?return_url={{ object.get_absolute_url }}">Circuit Termination</a></li>
-                                </ul>
-                            </span>
+                            {% include 'dcim/inc/cable_add_button.html' with termination=object %}
                         {% endif %}
                         {% if perms.dcim.change_cable %}
-                            <a href="{% url 'dcim:cable_list' %}?location={{ object.parent.location.name }}" class="btn btn-outline-primary btn-sm" title="Connect to an existing cable">
+                            <a href="{% url 'dcim:cable_list' %}?location={{ object.parent.location.name }}" class="btn btn-outline-primary btn-sm float-end" title="Connect to an existing cable">
                                 <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Existing Cable
                             </a>
                         {% endif %}

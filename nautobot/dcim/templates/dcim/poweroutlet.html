@@ -100,9 +100,7 @@
             <div class="card-body text-secondary">
                 Not connected
                 {% if perms.dcim.add_cable %}
-                    <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=object.pk termination_b_type='power-port' %}?return_url={{ object.get_absolute_url }}" title="Connect" class="btn btn-primary btn-sm float-end">
-                        <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect
-                    </a>
+                    {% include 'dcim/inc/cable_add_button.html' with termination=object %}
                 {% endif %}
             </div>
         {% endif %}

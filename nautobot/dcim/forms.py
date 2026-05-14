@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.urls import reverse
+from django.utils.http import urlencode
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -46,6 +47,7 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
+    COMPATIBLE_TERMINATION_TYPES,
     RACK_U_HEIGHT_DEFAULT,
     RACK_U_HEIGHT_MAXIMUM,
 )
@@ -4353,6 +4355,15 @@ class CableForm(NautobotModelForm):
             self._lane_form_url = reverse("dcim:cable_lane_form", kwargs={"pk": self.instance.pk})
         else:
             self._lane_form_url = reverse("dcim:cable_lane_form_new")
+            # Persist URL-prepopulated termination values into the HTMX endpoint URL so they survive
+            # when the user changes `cable_type` and the lane form is regenerated server-side.
+            preserved = {
+                key: self.initial[key]
+                for key in ("termination_a_type", "termination_a_id", "termination_b_type")
+                if self.initial.get(key)
+            }
+            if preserved:
+                self._lane_form_url += "?" + urlencode(preserved)
         self._lane_side_fields_url = reverse("dcim:cable_lane_side_fields")
 
         # Wire up HTMX on the cable_type select: changing it reloads the entire lane form panel.
@@ -4429,6 +4440,23 @@ class CableForm(NautobotModelForm):
             except ValueError:
                 pass
 
+        # Determine the A-side termination type (if known) to drive the B-side default selection
+        # when no explicit B-side type was supplied. This avoids defaulting the B-side dropdown
+        # to "Interface" (the global default in `detect_termination_type`) for cables whose
+        # A-side cannot connect to an interface — e.g. cabling a PowerPort, which should default
+        # the B side to PowerOutlet.
+        a_type_name = None
+        if existing_a.get(1) is not None:
+            a_type_name = existing_a[1]._meta.model_name
+        elif initial_a_type:
+            try:
+                _, a_type_name = str(initial_a_type).split(".")
+            except ValueError:
+                pass
+        default_b_type_name = (
+            COMPATIBLE_TERMINATION_TYPES[a_type_name][0] if a_type_name in COMPATIBLE_TERMINATION_TYPES else None
+        )
+
         # Create form fields using CableTerminationFieldSet
         fieldset = CableTerminationFieldSet()
         self.connection_info = {
@@ -4448,10 +4476,11 @@ class CableForm(NautobotModelForm):
                 term = existing.get(c)
                 submitted_type = self.data.get(f"{prefix}_type") if self.data else None
                 # When the user is creating a cable via the "Connect to X" flow, honor the
-                # URL-supplied b-side type for every B-side connector. Submitted form data
-                # (`submitted_type`) and any existing termination still take precedence.
-                if submitted_type is None and term is None and side == "b" and initial_b_type_name:
-                    submitted_type = initial_b_type_name
+                # URL-supplied b-side type for every B-side connector. Otherwise, fall back to a
+                # type compatible with the A-side. Submitted form data (`submitted_type`) and any
+                # existing termination still take precedence.
+                if submitted_type is None and term is None and side == "b":
+                    submitted_type = initial_b_type_name or default_b_type_name
                 result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type)
                 self.fields.update(result["fields"])
                 self.initial.update(result["initial"])

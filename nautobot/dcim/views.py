@@ -5446,7 +5446,7 @@ class CableUIViewSet(NautobotUIViewSet):
         """Shared: render the lane form partial with an optional cable-type override."""
         cable_type_id = request.GET.get("cable_type")
         initial = {"cable_type": cable_type_id}
-        for key in ("termination_a_type", "termination_a_id"):
+        for key in ("termination_a_type", "termination_a_id", "termination_b_type"):
             if request.GET.get(key):
                 initial[key] = request.GET[key]
 
@@ -6179,15 +6179,13 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         if request.user.has_perm("dcim.add_cable"):
             connect_url = (
-                reverse(
-                    "dcim:powerfeed_connect",
-                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
-                )
-                + f"?return_url={instance.get_absolute_url()}"
+                reverse("dcim:cable_add")
+                + f"?termination_a_type=dcim.powerfeed&termination_a_id={instance.pk}"
+                + f"&return_url={instance.get_absolute_url()}"
             )
             connect_link = format_html(
                 '<a href="{}" class="btn btn-primary btn-sm float-end">'
-                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> New Cable</a>',
                 connect_url,
             )
             return {"Connection": format_html("Not connected {}", connect_link)}

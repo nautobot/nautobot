@@ -78,29 +78,33 @@ CABLE_TERMINATION_MODELS = Q(
     )
 )
 
+# Maps each cable-termination type to the list of types its other end may connect to. List order is
+# significant: the first entry is used as the default B-side type when creating a cable from a given
+# A-side type (see `CableForm._init_lane_fields`), so each list should lead with the most natural /
+# most common peer for that termination type.
 COMPATIBLE_TERMINATION_TYPES = {
     "circuittermination": ["interface", "frontport", "rearport", "circuittermination"],
     "consoleport": ["consoleserverport", "frontport", "rearport"],
     "consoleserverport": ["consoleport", "frontport", "rearport"],
     "interface": ["interface", "circuittermination", "frontport", "rearport"],
     "frontport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
     "powerfeed": ["powerport"],
     "poweroutlet": ["powerport"],
     "powerport": ["poweroutlet", "powerfeed"],
     "rearport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
 }
 
