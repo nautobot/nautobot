@@ -4387,15 +4387,23 @@ class CableForm(NautobotModelForm):
 
         cable_type = None
 
-        # Determine the cable type (saved, or being submitted)
+        # Determine the cable type. Three sources, in order: the saved instance, submitted POST
+        # data (for a freshly submitted new-cable form), and `self.initial` (for URL-prepopulation
+        # or HTMX-driven regenerations of the lane sub-form).
+        cable_type_pk = None
         if self.instance and self.instance.present_in_database and self.instance.cable_type_id:
             cable_type = self.instance.cable_type
-        elif self.initial and self.initial.get("cable_type"):
-            try:
-                # TODO permissions restriction on cable_type lookup?
-                cable_type = CableType.objects.get(pk=self.initial["cable_type"])
-            except (CableType.DoesNotExist, ValueError):
-                pass  # TODO?
+        else:
+            if self.data:
+                cable_type_pk = self.data.get("cable_type")
+            if not cable_type_pk and self.initial:
+                cable_type_pk = self.initial.get("cable_type")
+            if cable_type_pk:
+                try:
+                    # TODO permissions restriction on cable_type lookup?
+                    cable_type = CableType.objects.get(pk=cable_type_pk)
+                except (CableType.DoesNotExist, ValueError):
+                    pass  # TODO?
 
         # Determine connector counts per side
         if cable_type:
