@@ -82,6 +82,16 @@ curl -X POST \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 ```
 
+#### A note on the `status` field after a `TERMINATE`
+
+When the action is `TERMINATE`, the revoke is delivered to the Celery worker asynchronously: Nautobot sends `SIGKILL` and returns immediately, while the worker writes `status = "REVOKED"` back through the result backend a moment later. The `JobResult` returned in the API response is read immediately after the signal is sent, so its `status` field will often still show the prior value (e.g. `STARTED` or `PENDING`) not because the revoke failed, but because the status update hasn't propagated yet.
+
+The authoritative signal that a revoke succeeded is the presence of `revoked_by` and `date_terminated` on the returned `JobResult`. If those fields are set, the revoke was accepted and recorded; the `status` field will catch up on a subsequent read.
+
+For `REAP` (no live worker), the `status` field is updated synchronously and will already read `REVOKED` in the response.
+
+API clients that need the final `status` immediately should poll the `JobResult` detail endpoint until `status` reaches a terminal value, rather than relying on the response body of the `revoke` call.
+
 #### Status codes
 
 | Code | Meaning                                                                              |

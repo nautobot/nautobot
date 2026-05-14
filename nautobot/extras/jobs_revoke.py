@@ -256,30 +256,8 @@ class UnknownStrategy(JobRevokeStrategy):
         return job_result.is_unready_state and not self.is_alive(job_result)
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
-        """Defensive fallback; normally unreachable.
-
-        With `should_reap` always True for unready jobs, the base `revoke()`
-        takes the reap branch and never calls this. If it is somehow reached,
-        mark the job revoked rather than no-op silently.
-        """
-        if not job_result.is_unready_state:
-            logger.info(
-                "Job %s is already in terminated state `%s` no action was taken.", job_result.pk, job_result.status
-            )
-            job_result.log(
-                f"Job {job_result.pk} is already in terminated state `{job_result.status}` no action was taken",
-                grouping="revoking",
-            )
-            return False
-
-        self._mark_revoked(job_result, user)
-        logger.info("Reaped dead job %s by %s", job_result.pk, user)
-        job_result.log(
-            f"Reaped dead job {job_result.pk} by {user}",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
-        )
-        return True
+        """No-op; never reached in normal flow. See class docstring."""
+        return False
 
 
 class RevokeFactory:

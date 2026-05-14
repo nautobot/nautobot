@@ -2355,6 +2355,14 @@ class JobRevokeTestCase(TransactionTestCase):
                 job_result = self._make_job_result(status)
                 self.assertFalse(strategy.should_reap(job_result))
 
+    def test_unknown_perform_terminate_false_always(self):
+        """perform_termination return always False."""
+        strategy = UnknownStrategy()
+        for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.perform_termination(job_result))
+
     def test_unknown_revoke_reaps_unready_job(self):
         """End-to-end: revoking an unready job through UnknownStrategy reaps it."""
         strategy = UnknownStrategy()
