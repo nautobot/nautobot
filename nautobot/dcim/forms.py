@@ -4512,6 +4512,24 @@ class CableForm(NautobotModelForm):
                     }
                 )
 
+        # Cross-lane exclusion: a termination already selected on any other lane (same side or
+        # opposite side) shouldn't be selectable here. Reference each other lane's termination
+        # field as a `$<name>` placeholder in this lane's `id__n` query param, so the value is
+        # resolved at API-call time — exclusion updates live as the user picks values across
+        # lanes (and across breakout connectors). IDs from a different model are harmless since
+        # they can't match anything in this lane's queryset.
+        all_term_fields = [
+            conn["meta"]["term_field"]
+            for side_info in (self.connection_info["a_side"], self.connection_info["b_side"])
+            for conn in side_info
+        ]
+        for side_info in (self.connection_info["a_side"], self.connection_info["b_side"]):
+            for conn in side_info:
+                term_field_name = conn["meta"]["term_field"]
+                other_refs = [f"${name}" for name in all_term_fields if name != term_field_name]
+                if other_refs:
+                    self.fields[term_field_name].widget.add_query_param("id__n", other_refs)
+
     def get_connection_fields(self):
         """Return connection_info with BoundField objects, A-left B-right with rowspan."""
         info = getattr(self, "connection_info", None)
