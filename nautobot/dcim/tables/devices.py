@@ -42,12 +42,10 @@ from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
 from .template_code import (
+    CABLE_TERMINATION_BUTTONS,
     CABLETERMINATION,
-    CONSOLEPORT_BUTTONS,
-    CONSOLESERVERPORT_BUTTONS,
     DEVICE_LINK,
     DEVICEBAY_BUTTONS,
-    FRONTPORT_BUTTONS,
     INTERFACE_BUTTONS,
     INTERFACE_IPADDRESSES,
     INTERFACE_REDUNDANCY_GROUP_INTERFACES,
@@ -58,9 +56,6 @@ from .template_code import (
     MODULEBAY_BUTTONS,
     PARENT_DEVICE,
     PATHENDPOINT,
-    POWEROUTLET_BUTTONS,
-    POWERPORT_BUTTONS,
-    REARPORT_BUTTONS,
     TREE_LINK,
 )
 
@@ -463,7 +458,7 @@ class DeviceModuleConsolePortTable(ConsolePortTable):
     )
     actions = ButtonsColumn(
         model=ConsolePort,
-        prepend_template=CONSOLEPORT_BUTTONS,
+        prepend_template=CABLE_TERMINATION_BUTTONS,
     )
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -526,7 +521,7 @@ class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
     )
     actions = ButtonsColumn(
         model=ConsoleServerPort,
-        prepend_template=CONSOLESERVERPORT_BUTTONS,
+        prepend_template=CABLE_TERMINATION_BUTTONS,
     )
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -600,7 +595,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
         "{{ value }}</a>",
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=PowerPort, prepend_template=POWERPORT_BUTTONS)
+    actions = ButtonsColumn(model=PowerPort, prepend_template=CABLE_TERMINATION_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = PowerPort
@@ -677,7 +672,7 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
     )
     actions = ButtonsColumn(
         model=PowerOutlet,
-        prepend_template=POWEROUTLET_BUTTONS,
+        prepend_template=CABLE_TERMINATION_BUTTONS,
     )
 
     class Meta(ModularDeviceComponentTable.Meta):
@@ -907,7 +902,7 @@ class DeviceModuleFrontPortTable(FrontPortTable):
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=FrontPort, prepend_template=FRONTPORT_BUTTONS)
+    actions = ButtonsColumn(model=FrontPort, prepend_template=CABLE_TERMINATION_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = FrontPort
@@ -968,7 +963,7 @@ class DeviceModuleRearPortTable(RearPortTable):
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=RearPort, prepend_template=REARPORT_BUTTONS)
+    actions = ButtonsColumn(model=RearPort, prepend_template=CABLE_TERMINATION_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = RearPort

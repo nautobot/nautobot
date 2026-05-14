@@ -1,11 +1,5 @@
 {% load helpers %}
 {% if perms.dcim.change_cable %}
-    <li>
-        <a class="dropdown-item" href="{% url 'dcim:cable_edit' pk=cable.pk %}?return_url={{ request.path }}">
-            <span class="mdi mdi-pencil" aria-hidden="true"></span>
-            Edit cable
-        </a>
-    </li>
     {% if cable.status.name == 'Connected' %}
         <li>
             <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">
@@ -21,19 +15,25 @@
             </a>
         </li>
     {% endif %}
-{% endif %}
-{% if termination and perms.dcim.change_cable %}
+    {% if termination %}
+        <li>
+            <a href="{% url 'dcim:cable_disconnect' pk=cable.pk %}?termination_type={{ termination|meta:"app_label" }}.{{ termination|meta:"model_name" }}&termination_id={{ termination.pk }}&return_url={{ request.path }}" class="dropdown-item text-warning">
+                <span class="mdi mdi-lan-disconnect" aria-hidden="true"></span>
+                Detach cable from {{ termination }}
+            </a>
+        </li>
+    {% endif %}
     <li>
-        <a href="{% url 'dcim:cable_disconnect' pk=cable.pk %}?termination_type={{ termination|meta:"app_label" }}.{{ termination|meta:"model_name" }}&termination_id={{ termination.pk }}&return_url={{ request.path }}" class="dropdown-item text-warning">
-            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
-            Disconnect
+        <a class="dropdown-item text-warning" href="{% url 'dcim:cable_edit' pk=cable.pk %}?return_url={{ request.path }}">
+            <span class="mdi mdi-link-edit" aria-hidden="true"></span>
+            Edit cable
         </a>
     </li>
 {% endif %}
 {% if perms.dcim.delete_cable %}
     <li>
         <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
             Delete cable
         </a>
     </li>

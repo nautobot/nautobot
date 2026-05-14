@@ -327,6 +327,10 @@ class CableTermination(models.Model):
     class Meta:
         abstract = True
 
+    # Whether this termination type can have a cable attached. Subclasses (notably Interface) may override
+    # this with a property to make it dependent on per-instance state.
+    is_connectable = True
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if getattr(self, "_pending_cable_disconnect", False):
