@@ -463,7 +463,6 @@ class DeviceModuleConsolePortTable(ConsolePortTable):
     )
     actions = ButtonsColumn(
         model=ConsolePort,
-        buttons=("edit", "delete"),
         prepend_template=CONSOLEPORT_BUTTONS,
     )
 
@@ -527,7 +526,6 @@ class DeviceModuleConsoleServerPortTable(ConsoleServerPortTable):
     )
     actions = ButtonsColumn(
         model=ConsoleServerPort,
-        buttons=("edit", "delete"),
         prepend_template=CONSOLESERVERPORT_BUTTONS,
     )
 
@@ -602,7 +600,7 @@ class DeviceModulePowerPortTable(PowerPortTable):
         "{{ value }}</a>",
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=PowerPort, buttons=("edit", "delete"), prepend_template=POWERPORT_BUTTONS)
+    actions = ButtonsColumn(model=PowerPort, prepend_template=POWERPORT_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = PowerPort
@@ -679,7 +677,6 @@ class DeviceModulePowerOutletTable(PowerOutletTable):
     )
     actions = ButtonsColumn(
         model=PowerOutlet,
-        buttons=("edit", "delete"),
         prepend_template=POWEROUTLET_BUTTONS,
     )
 
@@ -802,7 +799,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
     parent_interface = tables.Column(linkify=True, verbose_name="Parent")
     bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
-    actions = ButtonsColumn(model=Interface, buttons=("edit", "delete"), prepend_template=INTERFACE_BUTTONS)
+    actions = ButtonsColumn(model=Interface, prepend_template=INTERFACE_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
@@ -910,7 +907,7 @@ class DeviceModuleFrontPortTable(FrontPortTable):
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=FrontPort, buttons=("edit", "delete"), prepend_template=FRONTPORT_BUTTONS)
+    actions = ButtonsColumn(model=FrontPort, prepend_template=FRONTPORT_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = FrontPort
@@ -971,7 +968,7 @@ class DeviceModuleRearPortTable(RearPortTable):
         '<a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=RearPort, buttons=("edit", "delete"), prepend_template=REARPORT_BUTTONS)
+    actions = ButtonsColumn(model=RearPort, prepend_template=REARPORT_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = RearPort
@@ -1086,7 +1083,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
         '"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=DeviceBay, buttons=("edit", "delete"), prepend_template=DEVICEBAY_BUTTONS)
+    actions = ButtonsColumn(model=DeviceBay, prepend_template=DEVICEBAY_BUTTONS)
 
     class Meta(DeviceComponentTable.Meta):
         model = DeviceBay
@@ -1121,7 +1118,7 @@ class DeviceModuleBayTable(ModuleBayTable):
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
     installed_module__status = ColoredLabelColumn(verbose_name="Installed Module Status")
     requires_first_party_modules = BooleanColumn(verbose_name="First-Party Only")
-    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+    actions = ButtonsColumn(model=ModuleBay, prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = ModuleBay
@@ -1151,7 +1148,7 @@ class DeviceModuleBayTable(ModuleBayTable):
 
 
 class ModuleModuleBayTable(DeviceModuleBayTable):
-    actions = ButtonsColumn(model=ModuleBay, buttons=("edit", "delete"), prepend_template=MODULEBAY_BUTTONS)
+    actions = ButtonsColumn(model=ModuleBay, prepend_template=MODULEBAY_BUTTONS)
 
     class Meta(DeviceModuleBayTable.Meta):
         pass
@@ -1198,7 +1195,7 @@ class DeviceInventoryItemTable(InventoryItemTable):
         "{{ value }}</a>",
         attrs={"td": {"class": "text-nowrap"}},
     )
-    actions = ButtonsColumn(model=InventoryItem, buttons=("edit", "delete"))
+    actions = ButtonsColumn(model=InventoryItem)
 
     class Meta(DeviceComponentTable.Meta):
         model = InventoryItem
@@ -1346,10 +1343,7 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         orderable=False,
         verbose_name="IP Addresses",
     )
-    actions = ButtonsColumn(
-        model=InterfaceRedundancyGroupAssociation,
-        buttons=("edit", "delete"),
-    )
+    actions = ButtonsColumn(model=InterfaceRedundancyGroupAssociation)
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""

@@ -459,7 +459,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                 <li>
                     <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
                         <span class="mdi mdi-history" aria-hidden="true"></span>
-                        Change Log
+                        View change log
                     </a>
                 </li>
             {{% endif %}}
@@ -468,7 +468,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                     <li>
                         <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
                             <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                            Edit
+                            Edit {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
@@ -476,7 +476,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                     <li>
                         <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
                             <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                            Delete
+                            Delete {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
@@ -504,6 +504,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         template_code = self.template_code.format(
             app_label=app_label,
             model_name=model._meta.model_name,
+            verbose_name=model._meta.verbose_name,
             changelog_route=changelog_route,
             edit_route=edit_route,
             delete_route=delete_route,
