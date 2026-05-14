@@ -32,20 +32,20 @@
                 </td>
             </tr>
             {% if object.cable_type %}
-            <tr>
-                <td>Lanes</td>
-                <td>{{ object.connected_lanes }} / {{ object.total_lanes }} connected</td>
-            </tr>
+                <tr>
+                    <td>Lanes</td>
+                    <td>{{ object.connected_lanes }} / {{ object.total_lanes }} connected</td>
+                </tr>
             {% elif not object.breakout_eligible %}
-            <tr>
-                <td></td>
-                <td>
-                    <small class="text-muted">
-                        <span class="mdi mdi-information-outline"></span>
-                        Breakout not available for this cable's termination types
-                    </small>
-                </td>
-            </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <small class="text-secondary">
+                            <span class="mdi mdi-information-outline"></span>
+                            Breakout not available for this cable's termination types
+                        </small>
+                    </td>
+                </tr>
             {% endif %}
             <tr>
                 <td>Color</td>
@@ -73,59 +73,59 @@
 
 {% block content_right_page %}
     {% with conns=object.get_connections %}
-    <div class="card">
-        <div class="card-header">
-            <strong>Connections</strong>
-            {% if conns.is_breakout %}
-                <span class="badge bg-info float-end">{{ conns.a_connector_count }}A &rarr; {{ conns.b_connector_count }}B</span>
-            {% endif %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Connections</strong>
+                {% if conns.is_breakout %}
+                    <span class="badge bg-info float-end">{{ conns.a_connector_count }}A &rarr; {{ conns.b_connector_count }}B</span>
+                {% endif %}
+            </div>
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Side A</th>
+                        <th>Side B</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in conns.rows %}
+                        <tr>
+                            {% if row.a_rowspan > 0 %}
+                            <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end">
+                                    {% if conns.is_breakout %}
+                                        <strong>A{{ row.a.connector }}</strong>
+                                        {% if row.a.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.a.lanes }} lanes</span>{% endif %}
+                                        <br>
+                                    {% endif %}
+                                    {% include 'dcim/inc/cable_connection_termination.html' with term=row.a.termination %}
+                                </td>
+                            {% endif %}
+                            {% if row.b_rowspan > 0 %}
+                                <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top">
+                                    {% if conns.is_breakout %}
+                                        <strong>B{{ row.b.connector }}</strong>
+                                        {% if row.b.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.b.lanes }} lanes</span>{% endif %}
+                                        <br>
+                                    {% endif %}
+                                    {% include 'dcim/inc/cable_connection_termination.html' with term=row.b.termination %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Side A</th>
-                    <th>Side B</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in conns.rows %}
-                <tr>
-                    {% if row.a_rowspan > 0 %}
-                    <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end" style="width: 45%">
-                        {% if conns.is_breakout %}
-                            <strong>A{{ row.a.connector }}</strong>
-                            {% if row.a.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.a.lanes }} lanes</span>{% endif %}
-                            <br>
-                        {% endif %}
-                        {% include 'dcim/inc/cable_connection_termination.html' with term=row.a.termination %}
-                    </td>
-                    {% endif %}
-                    {% if row.b_rowspan > 0 %}
-                    <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top">
-                        {% if conns.is_breakout %}
-                            <strong>B{{ row.b.connector }}</strong>
-                            {% if row.b.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.b.lanes }} lanes</span>{% endif %}
-                            <br>
-                        {% endif %}
-                        {% include 'dcim/inc/cable_connection_termination.html' with term=row.b.termination %}
-                    </td>
-                    {% endif %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
 
-    {% if conns.is_breakout %}
-    <div class="card mt-3">
-        <div class="card-header">
-            <strong>Lane Mapping</strong>
-            <span class="float-end">{{ object.cable_type|hyperlinked_object }}</span>
-        </div>
-        <div class="card-body">
-            {{ object.get_mapping_diagram_svg }}
-        </div>
-    </div>
-    {% endif %}
+        {% if conns.is_breakout %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <strong>Lane Mapping</strong>
+                    <span class="float-end">{{ object.cable_type|hyperlinked_object }}</span>
+                </div>
+                <div class="card-body">
+                    {{ object.get_mapping_diagram_svg }}
+                </div>
+            </div>
+        {% endif %}
     {% endwith %}
 {% endblock content_right_page %}
