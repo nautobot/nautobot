@@ -1,0 +1,2 @@
+Added "View change log" item to "actions" dropdown in Device component (Interface, etc.) tables.
+Added model verbose name to "Edit" and "Delete" items in table action dropdowns.
