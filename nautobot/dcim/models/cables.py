@@ -1217,29 +1217,23 @@ class CablePath(BaseModel):
             # *through* a mid-path breakout cable (e.g. an MPO trunk between pass-through ports
             # in a cross-connect cabinet) isn't supported, so we mark the path as split and stop
             # at the previous pass-through rather than picking an arbitrary peer.
-            if not first_hop:
-                node_ct = getattr(node, "cable_termination", None)
-                if node_ct is not None and node_ct.connector is not None:
-                    is_split = True
-                    break
+            if not first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
+                is_split = True
+                break
 
             # Follow the cable to its far-end termination
             path.append(object_to_path_node(node.cable))
-            if first_hop:
-                node_ct = getattr(node, "cable_termination", None)
-                if node_ct is not None and node_ct.connector is not None:
-                    # Origin sits on a breakout cable. Without a peer_connector the trace can't
-                    # pick a lane, so mark the path as split. With one, look up the peer at that
-                    # specific connector — may be None for disconnected lanes (also split).
-                    if peer_connector is None:
-                        is_split = True
-                        peer_termination = None
-                    else:
-                        peer_termination = node.get_cable_peer(peer_connector=peer_connector)
-                        if peer_termination is None:
-                            is_split = True
+            if first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
+                # Origin sits on a breakout cable. Without a peer_connector the trace can't
+                # pick a lane, so mark the path as split. With one, look up the peer at that
+                # specific connector — may be None for disconnected lanes (also split).
+                if peer_connector is None:
+                    is_split = True
+                    peer_termination = None
                 else:
-                    peer_termination = node.get_cable_peer()
+                    peer_termination = node.get_cable_peer(peer_connector=peer_connector)
+                    if peer_termination is None:
+                        is_split = True
             else:
                 peer_termination = node.get_cable_peer()
             first_hop = False

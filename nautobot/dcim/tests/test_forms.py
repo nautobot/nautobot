@@ -819,7 +819,6 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
 
     def _form_data_with_swapped_terminations(self):
         """Return POST data for the existing cable with A/B termination assignments swapped."""
-        iface_ct_natural = "dcim.interface"
         return {
             "status": str(self.cable_status.pk),
             "type": "",

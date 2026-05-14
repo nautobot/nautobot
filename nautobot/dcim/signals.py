@@ -54,7 +54,7 @@ def create_cablepath(node, rebuild=True):
     # Breakout cable: fan out one CablePath per distinct peer-side connector mapped from this
     # origin's connector. Multiple mapping entries that share a peer-side connector represent
     # internal lanes terminating at the same far-end object, so they collapse to one path.
-    if cable.cable_type_id and my_endpoint.connector is not None:
+    if cable.cable_type_id and cable.cable_type.is_breakout:
         origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
         peer_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
 
