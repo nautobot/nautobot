@@ -2,7 +2,6 @@ from collections import OrderedDict
 import socket
 
 from django.conf import settings
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.http import HttpResponse, HttpResponseForbidden
@@ -690,8 +689,10 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     """
 
     queryset = CablePath.objects.filter(
-        origin_type=ContentType.objects.get_for_model(Interface),
-        destination_type=ContentType.objects.get_for_model(Interface),
+        origin_type__app_label="dcim",
+        origin_type__model="interface",
+        destination_type__app_label="dcim",
+        destination_type__model="interface",
         # Canonicalize each iface↔iface pair; see InterfaceConnectionsListView for the rationale.
         origin_id__lt=F("destination_id"),
     ).prefetch_related("origin", "destination")

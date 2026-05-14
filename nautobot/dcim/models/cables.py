@@ -1051,7 +1051,7 @@ class CableToCableTermination(BaseModel):
             # Exactly one of the per-type termination foreign keys must be set.
             models.CheckConstraint(
                 name="dcim_cabletocabletermination_exactly_one_termination",
-                check=_exactly_one_termination_q(),
+                condition=_exactly_one_termination_q(),
             ),
         ]
 

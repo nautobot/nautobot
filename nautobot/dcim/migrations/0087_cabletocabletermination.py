@@ -191,7 +191,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="cabletocabletermination",
             constraint=models.CheckConstraint(
-                check=_exactly_one_termination_check(),
+                condition=_exactly_one_termination_check(),
                 name="dcim_cabletocabletermination_exactly_one_termination",
             ),
         ),
