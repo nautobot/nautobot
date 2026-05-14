@@ -189,16 +189,9 @@
             {% else %}
                 <div class="card-body text-secondary">
                     Not connected
-                    <span class="float-end">
-                        {% if perms.dcim.add_cable %}
-                            {% include 'dcim/inc/cable_add_button.html' with termination=object %}
-                        {% endif %}
-                        {% if perms.dcim.change_cable %}
-                            <a href="{% url 'dcim:cable_list' %}?location={{ object.parent.location.name }}" class="btn btn-outline-primary btn-sm float-end" title="Connect to an existing cable">
-                                <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Existing Cable
-                            </a>
-                        {% endif %}
-                    </span>
+                    {% if perms.dcim.add_cable %}
+                        {% include 'dcim/inc/cable_add_button.html' with termination=object %}
+                    {% endif %}
                 </div>
             {% endif %}
         </div>

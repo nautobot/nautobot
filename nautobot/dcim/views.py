@@ -6185,7 +6185,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             )
             connect_link = format_html(
                 '<a href="{}" class="btn btn-primary btn-sm float-end">'
-                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> New Cable</a>',
+                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Add Cable</a>',
                 connect_url,
             )
             return {"Connection": format_html("Not connected {}", connect_link)}
