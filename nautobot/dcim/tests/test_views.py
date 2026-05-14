@@ -3257,6 +3257,19 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects = console_ports
         cls.selected_objects_parent_name = device.name
 
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cabled_a = ConsolePort.objects.create(device=device, name="Console Port Cabled A")
+        cabled_b = ConsolePort.objects.create(device=device, name="Console Port Cabled B")
+        peer_a = ConsoleServerPort.objects.create(device=device, name="CSP Peer A")
+        peer_b = ConsoleServerPort.objects.create(device=device, name="CSP Peer B")
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = console_ports[0]
+
         cls.form_data = {
             "device": device.pk,
             "name": "Console Port X",
@@ -3288,6 +3301,13 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    def test_get_selected_objects_parents_name_empty(self):
+        """Covers the empty-queryset branch (`return ""`) in get_selected_objects_parents_name."""
+        from nautobot.dcim.views import ConsolePortUIViewSet
+
+        viewset = ConsolePortUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(ConsolePort.objects.none()), "")
 
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):

@@ -2219,6 +2219,116 @@ class ViewTestCases:
             objects[0].refresh_from_db()
             self.assertEqual(objects[0].name, original_name)
 
+    class BulkDisconnectObjectsViewTestCase(ModelViewTestCase):
+        """
+        Bulk disconnect cables from selected cabled components.
+
+        Required class attributes on the consuming TestCase:
+            cabled_objects: list of >=2 instances of self.model whose `.cable` is set.
+            uncabled_object: optional instance with `.cable is None` for skip-path coverage.
+        """
+
+        cabled_objects: list = []
+        uncabled_object = None
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_disconnect_objects_without_permission(self):
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects:
+                self.skipTest("This test requires self.cabled_objects")
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            with utils.disable_warnings("django.request"):
+                self.assertHttpStatus(self.client.post(self._get_url("bulk_disconnect"), data), 403)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_confirmation_page_renders(self):
+            """First POST (no _confirm) renders the confirmation page listing the selected components."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects:
+                self.skipTest("This test requires self.cabled_objects")
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            response = self.client.post(self._get_url("bulk_disconnect"), {"pk": pk_list})
+            self.assertHttpStatus(response, 200)
+            body = utils.extract_page_body(response.content.decode(response.charset))
+            for obj in self.cabled_objects:
+                self.assertIn(str(obj.pk), body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_objects_with_permission(self):
+            """_confirm + valid form -> cables deleted, components remain, redirect to return_url."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects:
+                self.skipTest("This test requires self.cabled_objects")
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            cable_pks = [obj.cable_id for obj in self.cabled_objects]
+
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            # Components still exist
+            self.assertEqual(self._get_queryset().filter(pk__in=pk_list).count(), len(pk_list))
+            # Their cables are gone
+            self.assertEqual(Cable.objects.filter(pk__in=cable_pks).count(), 0)
+            # And the components' cable FK is now None
+            for obj in self._get_queryset().filter(pk__in=pk_list):
+                self.assertIsNone(obj.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_skips_uncabled_selections(self):
+            """Selecting one cabled + one uncabled disconnects only the cabled one (silent skip)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects or self.uncabled_object is None:
+                self.skipTest("This test requires self.cabled_objects and self.uncabled_object")
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            cabled = self.cabled_objects[0]
+            cable_pk = cabled.cable_id
+
+            data = {
+                "pk": [cabled.pk, self.uncabled_object.pk],
+                "_confirm": True,
+                "confirm": True,
+            }
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            self.assertFalse(Cable.objects.filter(pk=cable_pk).exists())
+            # Uncabled object is untouched and still uncabled
+            self.uncabled_object.refresh_from_db()
+            self.assertIsNone(self.uncabled_object.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_invalid_form_rerenders(self):
+            """_confirm with no pks -> form_invalid path."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            data = {"_confirm": True, "confirm": True}  # no pk
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # form_invalid returns a Response that NautobotHTMLRenderer turns into 200 with form errors
+            self.assertHttpStatus(response, 200)
+
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
@@ -2279,6 +2389,7 @@ class ViewTestCases:
         BulkEditObjectsViewTestCase,
         BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
+        BulkDisconnectObjectsViewTestCase,
     ):
         """
         TestCase suitable for testing device component models (ConsolePorts, Interfaces, etc.)

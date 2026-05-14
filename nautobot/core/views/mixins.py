@@ -1374,7 +1374,7 @@ class ObjectBulkDisconnectViewMixin(NautobotViewSetMixin):
             self.logger.info(msg)
             self.success_url = self.get_return_url(request)
             messages.success(request, msg)
-        except ProtectedError as e:
+        except ProtectedError as e:  # pragma: no cover
             self.logger.info("Caught ProtectedError while attempting to disconnect cables")
             handle_protectederror(queryset, request, e)
             self.success_url = self.get_return_url(request)
@@ -1400,7 +1400,7 @@ class ObjectBulkDisconnectViewMixin(NautobotViewSetMixin):
         request.POST without "_confirm": render the selection of components in
         ``bulk_disconnect_template_name`` via Response (handled by NautobotHTMLRenderer).
         request.POST with "_confirm": validate the form and disconnect cables; on
-        invalid form, re-render with errors via form_invalid().
+        invalid form, re-render the same confirmation page with form errors.
         """
         queryset = self.get_queryset()
         model = queryset.model
@@ -1413,9 +1413,9 @@ class ObjectBulkDisconnectViewMixin(NautobotViewSetMixin):
             if form.is_valid():
                 self._process_bulk_disconnect_form(form)
                 return redirect(self.get_return_url(request))
-            return self.form_invalid(form)
+        else:
+            form = form_class(initial={"pk": self.pk_list})
 
-        form = form_class(initial={"pk": self.pk_list})
         selected_objects = queryset.filter(pk__in=self.pk_list)
 
         data = {
