@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import ClassVar, Optional, Type, Union
 
 from django.contrib import messages
@@ -27,6 +26,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.edit import FormView
 from django_filters import FilterSet
 from drf_spectacular.utils import extend_schema
+import regex
 from rest_framework import exceptions, mixins
 from rest_framework.decorators import action as drf_action
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -63,16 +63,6 @@ from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
-
-# Matches a group containing a quantifier, followed by another quantifier
-# e.g. (a+)+, (a*)+, (a+)*, ([a-z]+){2,}, etc.
-_NESTED_QUANTIFIER_RE = re.compile(r"\([^)]*[+*][^)]*\)[+*{]")
-
-
-def is_safe_regex(pattern_str):
-    """Check that a regex pattern does not contain nested quantifiers that could cause catastrophic backtracking."""
-    return not _NESTED_QUANTIFIER_RE.search(pattern_str)
-
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -1719,6 +1709,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     logger = logging.getLogger(__name__)
     queryset: QuerySet
     bulk_rename_template_name = "generic/object_bulk_rename.html"
+    bulk_rename_regex_timeout = 1.0
 
     @classmethod
     def get_extra_actions(cls):
@@ -1771,27 +1762,28 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
                 replace = form.cleaned_data["replace"]
                 use_regex = form.cleaned_data["use_regex"]
 
+                renamed_pks = []
                 if use_regex:
-                    if not self._is_safe_regex(find):
-                        form.add_error(
-                            "find",
-                            "Regex pattern contains nested quantifiers which could cause performance issues. "
-                            "Please simplify the expression.",
-                        )
-                        return self._render_form_response(request, form, selected_objects)
                     try:
-                        pattern = re.compile(find)
-                    except re.error as e:
+                        pattern = regex.compile(find)
+                    except regex.error as e:
                         form.add_error("find", f"Invalid regex: {e}")
                         return self._render_form_response(request, form, selected_objects)
-
-                renamed_pks = []
-                for obj in selected_objects:
-                    if use_regex:
-                        obj.new_name = pattern.sub(replace, obj.name)
-                    else:
+                    try:
+                        for obj in selected_objects:
+                            obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                            renamed_pks.append(obj.pk)
+                    except TimeoutError:
+                        form.add_error(
+                            "find",
+                            f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                            "the pattern may have catastrophic backtracking. Please simplify the expression.",
+                        )
+                        return self._render_form_response(request, form, selected_objects)
+                else:
+                    for obj in selected_objects:
                         obj.new_name = obj.name.replace(find, replace)
-                    renamed_pks.append(obj.pk)
+                        renamed_pks.append(obj.pk)
 
                 if action == "_apply":
                     for obj in selected_objects:
@@ -1820,10 +1812,6 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
 
         return self._render_form_response(request, form, selected_objects)
 
-    @staticmethod
-    def _is_safe_regex(pattern_str):
-        return is_safe_regex(pattern_str)
-
     def _create_bulk_rename_form_class(self):
         class _Form(BulkRenameForm):
             pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
@@ -1848,7 +1836,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     def _render_form_response(self, request, form, selected_objects):
         return Response(
             {
-                "template": self.bulk_rename_template_name,
+                "template": self.get_template_name(),
                 "form": form,
                 "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,
