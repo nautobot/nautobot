@@ -27,3 +27,76 @@ Both paths converge on the same final state: a `REVOKED` `JobResult` with all at
 ### Worker restart recovery
 
 There's one edge case worth knowing about: a job can be marked `REVOKED` in the database while its Celery message is still sitting in the broker queue. If the worker that was supposed to run it has been down, the message has not been consumed yet. When the worker comes back online, it would normally pick the message up and run the job, ignoring the database state. To prevent this, a `worker_ready` signal handler runs once at worker startup. It reads every queue the worker is consuming, finds messages whose `JobResult` is already `REVOKED` in the database, and adds those task IDs to Celery's in-memory revoked set. When the worker dequeues those messages it sees them in the revoked set and discards them. This closes the gap between "operator clicked Revoke Job" and "worker comes back online" — the kill survives a restart.
+
+### Permissions
+
+Revoking requires `extras.run_job` and `extras.view_jobresult`. Users can revoke jobs they submitted. Staff can additionally revoke jobs submitted by other users. Staff without `run_job` cannot revoke anything.
+
+### Revocation via the UI
+
+A running or pending job can be revoked from its `JobResult` detail view. Click the **Revoke Job** button to open the confirmation page, which indicates whether the job is currently running (and will be terminated) or whether its worker is gone (and the record will be reaped). Confirming the action moves the `JobResult` to `REVOKED` state and records the operator who initiated it.
+
+The button is shown only when the job is in an unfinished state and the current user is permitted to revoke it. See [Permissions](#permissions) for details.
+
+### Revocation via the API
+
+Job revocation can also be triggered via the REST API. The endpoint is exposed on the `JobResult` viewset under `revoke`.
+
+The API supports a two-step workflow:
+
+- `GET` returns a preview of the revoke operation and what action will be taken.
+- `POST` performs the actual revoke operation.
+
+#### Preview a revocation
+
+A `GET` request returns details about the job and the action that would be taken. No worker is signaled and no `JobResult` is modified.
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
+```
+
+The `action` field indicates the path the server will take on `TERMINATE` when the worker is alive, `REAP` when it has gone away.
+
+```json
+{
+    "message": "Are you sure you want to revoke '<jobresult_name>'?",
+    "action": "TERMINATE",
+    "action_description": "SIGKILL to worker. Stops immediately, no cleanup.",
+    "job_status": "RUNNING",
+    "irreversible": "This action cannot be undone.",
+    "timestamp": "'2026-05-14T11:00:12.060393+00:00'"
+}
+```
+
+#### Perform a revocation
+
+A `POST` request performs the revoke. On success the response is the updated `JobResult` (now in `REVOKED` state, with `revoked_by` and `date_done` set):
+
+```no-highlight
+curl -X POST \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=1.3; indent=4" \
+http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
+```
+
+#### A note on the `status` field after a `TERMINATE`
+
+When the action is `TERMINATE`, the revoke is delivered to the Celery worker asynchronously: Nautobot sends `SIGKILL` and returns immediately, while the worker writes `status = "REVOKED"` back through the result backend a moment later. The `JobResult` returned in the API response is read immediately after the signal is sent, so its `status` field will often still show the prior value (e.g. `STARTED` or `PENDING`) not because the revoke failed, but because the status update hasn't propagated yet.
+
+The authoritative signal that a revoke succeeded is the presence of `revoked_by` and `date_terminated` on the returned `JobResult`. If those fields are set, the revoke was accepted and recorded; the `status` field will catch up on a subsequent read.
+
+For `REAP` (no live worker), the `status` field is updated synchronously and will already read `REVOKED` in the response.
+
+API clients that need the final `status` immediately should poll the `JobResult` detail endpoint until `status` reaches a terminal value, rather than relying on the response body of the `revoke` call.
+
+#### Status codes
+
+| Code | Meaning                                                                              |
+|------|--------------------------------------------------------------------------------------|
+| 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).              |
+| 500  | The revoke strategy reported an error or the queue type is unsupported.              |
+| 403  | The caller lacks proper permissions. See [Permissions](#permissions) for full rules. |
+| 409  | The `JobResult` is already in a finished state and cannot be revoked.                |

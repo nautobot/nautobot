@@ -33,9 +33,14 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.extras import filters
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+)
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_revoke import RevokeFactory
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1147,12 +1152,96 @@ class JobResultViewSet(
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
+    class RevokeJobPermission(TokenPermissions):
+        """
+        Enforce `view_jobresult` permission (instead of default `add_jobresult` for POST).
+        """
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_jobresult"],
+            "POST": ["%(app_label)s.view_jobresult"],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /revoke/ endpoint.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"revoke": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+    @extend_schema(
+        methods=["get"],
+        responses={
+            200: serializers.JobResultRevokePreviewSerializer,
+        },
+    )
+    @extend_schema(
+        methods=["post"],
+        responses={
+            200: serializers.JobResultSerializer,
+        },
+    )
+    @action(detail=True, methods=["get", "post"], permission_classes=[RevokeJobPermission])
+    def revoke(self, request, pk=None):
+        """Terminate a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        if not request.user.has_perm("extras.run_job"):
+            raise PermissionDenied("Job can not be revoked by user without permission to run jobs.")
+
+        if job_result.user != request.user and not request.user.is_staff:
+            raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
+
+        if request.method == "POST" and not job_result.is_unready_state:
+            return Response(
+                {"detail": "Job is already finished. Nothing to do."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+
+        job_is_running = strategy.is_alive(job_result)
+
+        if request.method == "GET":
+            detail = {
+                "message": f"Are you sure you want to revoke '{job_result.name}'?",
+                "action": "TERMINATE" if job_is_running else "REAP",
+                "action_description": (
+                    "SIGKILL to worker. Stops immediately, no cleanup."
+                    if job_is_running
+                    else "No worker running. Marks JobResult as revoked without signal."
+                ),
+                "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
+                "irreversible": "This action cannot be undone.",
+                "timestamp": timezone.now().isoformat(),
+            }
+            return Response(detail, status=status.HTTP_200_OK)
+
+        result = strategy.revoke(job_result, user=request.user)
+
+        if result["error"]:
+            return Response({"detail": result["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if not result["revoked"]:
+            return Response(
+                {"detail": "Job finished before it could be revoked. No action was taken."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = self.get_serializer(result["job_result"])
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 #
