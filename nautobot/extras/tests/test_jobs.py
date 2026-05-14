@@ -2361,7 +2361,7 @@ class JobRevokeTestCase(TransactionTestCase):
         for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
-                self.assertFalse(strategy.perform_termination(job_result))
+                self.assertFalse(strategy.perform_termination(job_result, self.user))
 
     def test_unknown_revoke_reaps_unready_job(self):
         """End-to-end: revoking an unready job through UnknownStrategy reaps it."""
