@@ -1,1 +1,6 @@
-Enhanced `ConsoleConnectionFilterSet`, `InterfaceConnectionFilterSet`, and `PowerConnectionFilterSet` to support `q` search filtering.
+Added `q` search filter support to `ConsoleConnectionFilterSet`, `InterfaceConnectionFilterSet`, and `PowerConnectionFilterSet`.
+Added `Cable.add_termination(termination, cable_end, connector=None)` for attaching a `CableTermination` to a saved `Cable` after creation (e.g. for additional breakout connectors that the single A/B `Cable.__init__` kwargs can't express).
+Added typed `ManyToManyField` reverse accessors to `Cable` (`cable.interfaces`, `cable.front_ports`, `cable.power_ports`, etc.), and a singular `cable_termination` reverse accessor on each `CableTermination` instance (e.g. `interface.cable_termination`) returning the connected join row.
+Added `PathEndpoint.get_connected_endpoints()`, returning the resolved destinations of all `CablePath` rows originating from the endpoint (one per breakout lane).
+Added a "Cable Status" row to the "Connection" panel on device-component detail views, and extended the "Edit cable / Detach / Delete cable / Mark connected/planned" dropdown (previously only on `Interface`) to the `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `FrontPort`, and `RearPort` detail views.
+Added row-action dropdowns to the standalone list views for `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `Interface`, `FrontPort`, `RearPort`, `DeviceBay`, and `ModuleBay` (previously only the per-device/per-module embedded tables exposed these actions).
