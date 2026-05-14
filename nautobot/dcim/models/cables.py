@@ -165,6 +165,20 @@ class CableType(PrimaryModel):
         diagram = BreakoutDiagramSVG(self.mapping, show_status=False)
         return diagram.render()
 
+    def _autogenerate_mapping(self):
+        """Populate `self.mapping` from the connector/lane dimensions if unset and the dimensions are usable."""
+        if self.mapping or not (self.a_connectors and self.b_connectors and self.total_lanes):
+            return
+        if self.total_lanes % self.a_connectors or self.total_lanes % self.b_connectors:
+            return
+        self.mapping = generate_cable_breakout_mapping(self.a_connectors, self.b_connectors, self.total_lanes)
+
+    def save(self, *args, **kwargs):
+        # Auto-generate the mapping here (not only in `clean()`) so callers using `objects.create()`
+        # or bare `.save()` get a working breakout cable type, not just `validated_save()` callers.
+        self._autogenerate_mapping()
+        super().save(*args, **kwargs)
+
     def clean(self):
         super().clean()
 
@@ -182,8 +196,7 @@ class CableType(PrimaryModel):
                 {"total_lanes": f"total_lanes must be evenly divisible by b_connectors ({self.b_connectors})."}
             )
 
-        if not self.mapping:
-            self.mapping = generate_cable_breakout_mapping(self.a_connectors, self.b_connectors, self.total_lanes)
+        self._autogenerate_mapping()
         validate_cable_breakout_mapping(self.mapping, self.a_connectors, self.b_connectors, self.total_lanes)
 
 

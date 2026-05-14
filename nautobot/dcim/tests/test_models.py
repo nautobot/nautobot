@@ -1,6 +1,7 @@
 from decimal import Decimal
 from unittest import expectedFailure
 from unittest.mock import MagicMock, patch, PropertyMock
+import warnings
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -36,6 +37,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -3535,6 +3537,143 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=0)
         with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
             row.full_clean()
+
+    # Backward-compatibility query translation for `cable=`/`select_related("cable")` patterns.
+    # The `cable` FK was replaced by the `CableToCableTermination` join; old queries are
+    # translated with a `DeprecationWarning` to the new `cable_termination__cable[...]` form.
+
+    def _expected_interfaces_on_cable(self):
+        return set(
+            Interface.objects.filter(cable_termination__cable=self.cable).values_list("pk", flat=True),
+        )
+
+    def test_filter_cable_deprecation_warns_and_translates(self):
+        """`Interface.objects.filter(cable=cable)` warns and returns same results as the new path."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable=self.cable).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_id_deprecation_warns_and_translates(self):
+        """`filter(cable_id=<pk>)` warns and translates to `cable_termination__cable_id=<pk>`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id=self.cable.pk).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_isnull_deprecation_warns_and_translates(self):
+        """`filter(cable__isnull=False)` warns and matches `cable_termination__isnull=False`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable__isnull=False).values_list("pk", flat=True))
+        expected = set(
+            Interface.objects.filter(cable_termination__isnull=False).values_list("pk", flat=True),
+        )
+        self.assertEqual(actual, expected)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_double_underscore_lookup_deprecation_warns_and_translates(self):
+        """`filter(cable__status=...)` warns and translates to `cable_termination__cable__status=...`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable__status=self.status).values_list("pk", flat=True))
+        expected = set(
+            Interface.objects.filter(cable_termination__cable__status=self.status).values_list("pk", flat=True),
+        )
+        self.assertEqual(actual, expected)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_exclude_cable_deprecation_warns_and_translates(self):
+        """`exclude(cable=cable)` warns and produces the inverse of `filter(cable=cable)`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.exclude(cable=self.cable).values_list("pk", flat=True))
+        on_cable = self._expected_interfaces_on_cable()
+        all_interfaces = set(Interface.objects.values_list("pk", flat=True))
+        self.assertEqual(actual, all_interfaces - on_cable)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_select_related_cable_deprecation_warns_and_translates(self):
+        """`select_related("cable")` warns; iterating the queryset succeeds (no FieldError)."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("cable")
+            list(qs[:1])  # force evaluation
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_select_related_cable_double_underscore_deprecation_warns_and_translates(self):
+        """`select_related("cable__status")` warns; the query compiles."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("cable__status")
+            list(qs[:1])
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    # `Cable.add_termination()` — public helper for attaching a CableTermination to a saved cable.
+
+    def test_add_termination_creates_join_row_and_returns_it(self):
+        """`add_termination` creates a `CableToCableTermination` row and returns it."""
+        breakout_type = CableType.objects.create(
+            name="add_termination 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        cable = Cable.objects.create(status=self.status, cable_type=breakout_type)
+        row = cable.add_termination(self.interface3, "B", connector=2)
+        self.assertIsInstance(row, CableToCableTermination)
+        self.assertEqual(row.cable, cable)
+        self.assertEqual(row.cable_end, "B")
+        self.assertEqual(row.connector, 2)
+        self.assertEqual(row.termination, self.interface3)
+        self.assertTrue(
+            CableToCableTermination.objects.filter(
+                cable=cable, cable_end="B", connector=2, interface=self.interface3
+            ).exists()
+        )
+
+    def test_add_termination_defaults_connector_to_one(self):
+        """`connector` defaults to 1 — the only valid value on a standard (non-breakout) cable."""
+        new_interface = Interface.objects.create(
+            device=self.device1, name="addterm-default", status=self.interface1.status
+        )
+        cable = Cable.objects.create(status=self.status)
+        row = cable.add_termination(new_interface, "A")
+        self.assertEqual(row.connector, 1)
+
+    def test_add_termination_triggers_rebuild_paths(self):
+        """Adding a new lane termination to a breakout cable should make a CablePath traceable for that lane."""
+        breakout_type = CableType.objects.create(
+            name="add_termination rebuild 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        trunk = Interface.objects.create(device=self.device1, name="addterm-trunk", status=self.interface1.status)
+        lane2 = Interface.objects.create(device=self.device2, name="addterm-lane2", status=self.interface2.status)
+        # Build the cable with only connector 1 wired (trunk → some interface), then add lane 2.
+        cable = Cable(
+            termination_a=trunk,
+            termination_b=self.interface3,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable.save()
+
+        trunk_paths_pre = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        # Lane 2 has no termination on the fanout side yet, so its path is partial.
+        self.assertTrue(trunk_paths_pre.get(peer_connector=2).is_split)
+
+        cable.add_termination(lane2, "B", connector=2)
+
+        trunk_paths_post = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        self.assertEqual(trunk_paths_post.get(peer_connector=2).destination, lane2)
+
+    def test_add_termination_rejects_invalid_termination_type(self):
+        """Passing something that isn't a recognized cable-termination type raises `ValueError`."""
+        cable = Cable.objects.create(status=self.status)
+        with self.assertRaisesRegex(ValueError, "not a valid cable termination type"):
+            cable.add_termination(self.device1, "A")  # Device is not a CableTermination
 
 
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):

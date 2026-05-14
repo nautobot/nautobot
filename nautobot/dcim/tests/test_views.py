@@ -4218,6 +4218,40 @@ class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["mapping"])
 
+    def test_cabletype_cables_tab_renders(self):
+        """The `cabletype_cables` detail tab returns 200 and lists cables of that CableType."""
+        self.add_permissions("dcim.view_cabletype", "dcim.view_cable")
+        cable_type = CableType.objects.create(name="cables-tab-test", a_connectors=1, b_connectors=1, total_lanes=1)
+        device = create_test_device("cables-tab-device")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        if_a = Interface.objects.create(device=device, name="ct-a", status=interface_status)
+        if_b = Interface.objects.create(device=device, name="ct-b", status=interface_status)
+        cable = Cable(
+            termination_a=if_a,
+            termination_b=if_b,
+            cable_type=cable_type,
+            status=Status.objects.get_for_model(Cable).first(),
+            label="cables-tab-label",
+        )
+        cable.save()
+        # A cable of a different type shouldn't appear in this tab.
+        other_type = CableType.objects.create(name="cables-tab-other", a_connectors=1, b_connectors=1, total_lanes=1)
+        other_device = create_test_device("cables-tab-other-device")
+        other_a = Interface.objects.create(device=other_device, name="other-a", status=interface_status)
+        other_b = Interface.objects.create(device=other_device, name="other-b", status=interface_status)
+        Cable(
+            termination_a=other_a,
+            termination_b=other_b,
+            cable_type=other_type,
+            status=Status.objects.get_for_model(Cable).first(),
+            label="other-type-label",
+        ).save()
+
+        response = self.client.get(reverse("dcim:cabletype_cables", kwargs={"pk": cable_type.pk}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cables-tab-label")
+        self.assertNotContains(response, "other-type-label")
+
 
 # TODO: Change base class to PrimaryObjectViewTestCase
 # Blocked by lack of common creation view for cables (termination A must be initialized)
@@ -4483,6 +4517,51 @@ class CableTestCase(
         )
         # pylint: enable=unsupported-binary-operation
         self.assertTrue(cable_path_2.exists())
+
+    def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
+        """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""
+        self.add_permissions("dcim.view_cable")
+        location = Location.objects.first()
+        manufacturer = Manufacturer.objects.first()
+        devicetype = DeviceType.objects.create(model="multi-term-device-type", manufacturer=manufacturer)
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+
+        device = Device.objects.create(
+            name="multi-term-device",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+        )
+        trunk = Interface.objects.create(device=device, name="multitrunk-iface", status=interface_status)
+        lane1 = Interface.objects.create(device=device, name="multilane-1-iface", status=interface_status)
+        lane2 = Interface.objects.create(device=device, name="multilane-2-iface", status=interface_status)
+
+        breakout_type = CableType.objects.create(
+            name="multi-term breakout 1x4", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        cable = Cable(
+            termination_a=trunk,
+            termination_b=lane1,
+            cable_type=breakout_type,
+            status=cable_status,
+        )
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # The list view defers table rendering to a follow-up HTMX request (`hx-trigger="load"`);
+        # the initial response contains just the shell. Fetch the HTMX-table partial directly.
+        response = self.client.get(reverse("dcim:cable_list"), headers={"HX-Request": "true"})
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode()
+        # Trunk side renders the (single) A-side termination.
+        self.assertIn("multitrunk-iface", body)
+        # Both fan-out lane interfaces render in the B-side multi-termination column.
+        self.assertIn("multilane-1-iface", body)
+        self.assertIn("multilane-2-iface", body)
 
 
 class CableConnectURLTestCase(ModelViewTestCase):

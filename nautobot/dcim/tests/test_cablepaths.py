@@ -1736,3 +1736,40 @@ class CablePathTestCase(TestCase):
             origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_lane2.pk
         )
         self.assertEqual(lane2_reverse.destination, if_trunk)
+
+    def test_get_connected_endpoints_unconnected_endpoint(self):
+        """An endpoint with no cable returns an empty list."""
+        lonely = Interface.objects.create(device=self.device, name="lonely", status=self.interface_status)
+        self.assertEqual(lonely.get_connected_endpoints(), [])
+
+    def test_get_connected_endpoints_simple_cable(self):
+        """A simple cable: each endpoint resolves to a one-element list containing the peer."""
+        if1 = Interface.objects.create(device=self.device, name="gce-simple-1", status=self.interface_status)
+        if2 = Interface.objects.create(device=self.device, name="gce-simple-2", status=self.interface_status)
+        Cable(termination_a=if1, termination_b=if2, status=self.status).save()
+        self.assertEqual(if1.get_connected_endpoints(), [if2])
+        self.assertEqual(if2.get_connected_endpoints(), [if1])
+
+    def test_get_connected_endpoints_breakout_cable(self):
+        """A breakout cable: the trunk side resolves to one destination per fanned-out lane."""
+        breakout_type = CableType(
+            name="get_connected_endpoints 1x4",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()
+
+        trunk = Interface.objects.create(device=self.device, name="gce-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name="gce-lane1", status=self.interface_status)
+        lane2 = Interface.objects.create(device=self.device, name="gce-lane2", status=self.interface_status)
+
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout_type, status=self.status)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # Trunk side: one destination per resolved lane (lanes 3-4 unconnected → not included).
+        self.assertEqual(set(trunk.get_connected_endpoints()), {lane1, lane2})
+        # Each fan-out side resolves back to the trunk.
+        self.assertEqual(lane1.get_connected_endpoints(), [trunk])
+        self.assertEqual(lane2.get_connected_endpoints(), [trunk])
