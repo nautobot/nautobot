@@ -168,7 +168,7 @@ class HomeView(AccessMixin, TemplateView):
         is_user_config_valid = (
             isinstance(user_config, list)
             and len(user_config) == HOMEPAGE_PANELS_LAYOUT_COLUMNS
-            and all(isinstance(panel.get("id"), str) for panel_column in user_config for panel in panel_column)
+            and all(isinstance(panel.get("id"), str) for panel_group in user_config for panel in panel_group)
         )
 
         if is_user_config_valid:
@@ -193,7 +193,7 @@ class HomeView(AccessMixin, TemplateView):
             missing_panels = [kv_pair for kv_pair in user_panels if kv_pair[0] not in used_panel_names]
             panel_layout[-1] += missing_panels
             # Convert panel key-value pairs to `dict`.
-            panel_layout = [dict(panel_column) for panel_column in panel_layout]
+            panel_layout = [dict(panel_group) for panel_group in panel_layout]
         else:
             # If `user_config` is not found or is invalid, create a default panel layout.
             # Using an upside-down floor division here. Source: from https://stackoverflow.com/a/17511341.
@@ -206,7 +206,7 @@ class HomeView(AccessMixin, TemplateView):
                 )
             ]
             # Make sure that there always is the exact expected number of columns in the `panel_layout`.
-            panel_layout.extend([[]] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
+            panel_layout.extend([{}] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
 
         # Update user config to always keep it up to date with the latest homepage panel layout structure.
         request.user.set_config(
