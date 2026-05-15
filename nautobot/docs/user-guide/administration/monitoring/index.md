@@ -62,6 +62,7 @@ For guidance on emitting good Job log entries from Job code, see [Job Logging](.
 |---|---|
 | Understand the log streams and what to alert on | [Logging](./logging.md) |
 | Build a low-noise alert ruleset (Prometheus + log-based) | [Alerting](./alerting.md) |
+| Define Service Level Indicators and Objectives, and alert on error-budget burn | [SLAs and SLOs](./slas-and-slos.md) |
 | Tune Celery for long-running Jobs and avoid the visibility-timeout pitfall | [Celery and Jobs](./celery-jobs.md) |
 | Monitor Redis and PostgreSQL the way Nautobot uses them | [Backing Stores](./backing-stores.md) |
 | Wire health probes into Kubernetes / Compose / systemd | [Health Checks](./health-checks.md) |

@@ -151,15 +151,9 @@ A practical convention is to tag every scheduled maintenance Nautobot Job with a
 
 ## SLO-Based Alerts
 
-Threshold-based alerts page when a single observation crosses a line. SLO-based alerts page when the rate of failure consumes an error budget faster than expected — a fundamentally different framing.
+Threshold-based alerts fire on a single observation crossing a line; SLO-based alerts fire on the *rate* of error-budget consumption. They produce fewer pages overall and correlate better with user-perceived outages, at the cost of more setup and ongoing budget-management discipline.
 
-For example, instead of paging on every Tier 1 Job failure:
-
-- **Define an availability objective**: 99.9% of Job runs in any 30-day window succeed.
-- **Translate to an error budget**: 0.1% of Job runs may fail. For a 100,000-run-per-month deployment, that's 100 allowed failures.
-- **Alert on burn rate**: if the failure rate over the last hour, projected forward, would consume the 30-day budget in under 6 hours, page.
-
-The PromQL recipe is documented in the [Prometheus SRE workbook](https://sre.google/workbook/alerting-on-slos/) — substitute `nautobot_worker_finished_jobs{status="FAILURE"}` for the failure counter and the corresponding total counter. SLO-based alerts produce fewer pages overall and correlate better with user-perceived outages, at the cost of more setup and ongoing budget-management discipline.
+For a fuller treatment — candidate Service Level Indicators for Nautobot, suggested starting SLO values, the burn-rate alerting math with PromQL recipes against Nautobot's exposed metrics, and how SLO alerts coexist with the threshold-based tiers above — see [SLAs and SLOs](./slas-and-slos.md).
 
 ## Multi-Tenant Deployments
 

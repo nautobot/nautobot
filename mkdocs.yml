@@ -384,6 +384,7 @@ nav:
               - Logging: "user-guide/administration/monitoring/logging.md"
               - Prometheus Metrics: "user-guide/administration/monitoring/prometheus-metrics.md"
               - Health Checks: "user-guide/administration/monitoring/health-checks.md"
+              - SLAs and SLOs: "user-guide/administration/monitoring/slas-and-slos.md"
               - Alerting: "user-guide/administration/monitoring/alerting.md"
               - Celery and Jobs: "user-guide/administration/monitoring/celery-jobs.md"
               - Backing Stores: "user-guide/administration/monitoring/backing-stores.md"
