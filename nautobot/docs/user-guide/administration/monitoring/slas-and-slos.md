@@ -97,7 +97,7 @@ The discipline behind SLOs is not only the alerts. It is the recurring review of
 - **How much of the error budget did we consume?** What incidents drove the consumption?
 - **Is the SLO still right?** If you have never broken it, it might be too loose. If you break it every month, it might be too tight — or you might have a real reliability problem to invest in.
 
-A monthly SLO review with the team, alongside the Tier 1 / Tier 2 incident retrospectives, closes the loop. A dedicated Grafana panel showing the current SLI value over the rolling window, the error-budget consumption percentage, and the burn rate over the last 1h and 6h makes the review concrete.
+A monthly SLO review with the team, alongside the Tier 1 / Tier 2 incident retrospectives, closes the loop. A dedicated Grafana panel showing the current SLI value over the rolling window, the error-budget consumption percentage, and the burn rate over the last 1h and 6h makes the review concrete — see [Visualization — SLO Performance](./visualization.md#5-slo-performance) for the panel structure.
 
 When an SLO is consistently missed, the response is rarely "make the SLO looser." More often it is one of:
 
