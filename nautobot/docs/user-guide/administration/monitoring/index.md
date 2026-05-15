@@ -46,9 +46,11 @@ Binary up/down. Use `/health/` for web readiness, `nautobot-server health_check`
 
 ## Job logs are a fourth, in-product surface
 
-In addition to the three operator channels above, Nautobot persists per-Job structured log entries to the database as [`JobLogEntry`](../../platform-functionality/jobs/models.md#job-log-entry) rows, surfaced in the Job Result UI and the REST API. These are intended for end-users debugging a specific Job run and should generally **not** be shipped to your SIEM — the operator channels above already capture the same information at the worker stdout level.
+In addition to the three operator channels above, Nautobot persists per-Job structured log entries to the database as [`JobLogEntry`](../../platform-functionality/jobs/models.md#job-log-entry) rows, surfaced in the Job Result UI and the REST API. These rows are intended for end-users debugging a specific Job run — they are **not** a separate log stream from the operator's perspective.
 
-For guidance on emitting good Job log entries from Job code, see [Job Logging](../../../development/jobs/job-logging.md).
+The same lines that land in `JobLogEntry` also reach the worker's `stdout` via the `nautobot.jobs.<module>` logger, so your aggregator is already capturing them from the operator channel. Do not additionally mirror the `JobLogEntry` table to your SIEM — you'll get every Job log line twice.
+
+For guidance on emitting good Job log entries from Job code, see [Job Logging](../../../development/jobs/job-logging.md) and [Celery and Jobs — Logging from inside Jobs](./celery-jobs.md#logging-from-inside-jobs).
 
 ## Where to start
 
@@ -65,3 +67,15 @@ For guidance on emitting good Job log entries from Job code, see [Job Logging](.
 
 !!! tip
     A good production deployment turns on metrics (`NAUTOBOT_METRICS_ENABLED=True`), wires `/health/` and the file-based Celery heartbeat probes into the orchestrator, and ships container `stdout` to a log aggregator with the logger name parsed as a structured field. Everything else in this section builds on that foundation.
+
+## Production deployment checklist
+
+A minimal monitored Nautobot deployment combines all three collectors with a few opinionated defaults. The list below is a starting point; each item links to its dedicated page for the full recipe.
+
+1. **Enable Prometheus metrics.** Set `NAUTOBOT_METRICS_ENABLED=True` and confirm `/metrics` returns data. In Kubernetes, configure a `PodMonitor` so each worker pod is scraped individually — see [Alerting — Scrape-target gotcha](./alerting.md#scrape-target-gotcha-kubernetes). Reference: [Prometheus Metrics](./prometheus-metrics.md).
+2. **Wire health probes into the orchestrator.** HTTP `/health/` for web readiness/startup, `nautobot-server health_check` for web liveness, file-based heartbeat probes for Celery worker and Beat. Reference: [Health Checks](./health-checks.md).
+3. **Ship JSON-formatted logs.** Override `LOGGING` in `nautobot_config.py` so each line is one JSON object, then confirm your aggregator parses `name` (logger), `levelname`, and `message` as queryable fields. Reference: [Logging — Switching to JSON output](./logging.md#switching-to-json-output).
+4. **Schedule retention cleanup.** Run the bundled `Cleanup System Records` Job as a periodic `ScheduledJob` with explicit `cutoff` values for `extras.ObjectChange` and `extras.JobResult`. Tune `CHANGELOG_RETENTION` to match your audit requirements. Reference: [Backing Stores — High-churn tables](./backing-stores.md#high-churn-tables).
+5. **Raise the Celery broker visibility timeout.** Set `CELERY_BROKER_TRANSPORT_OPTIONS["visibility_timeout"]` above your slowest Job's wall-clock runtime to avoid double-execution of long Jobs. Reference: [Celery and Jobs — Visibility timeout](./celery-jobs.md#the-redis-visibility_timeout-foot-gun).
+6. **Deploy backing-store exporters.** Run `redis_exporter` and `postgres_exporter` alongside your Redis and PostgreSQL instances; add `pgbouncer_exporter` if you front PostgreSQL with PgBouncer. Reference: [Backing Stores](./backing-stores.md).
+7. **Pick a Tier-1 alert ruleset and tune it.** Start from the sample rules and walk them against your baseline before committing. Reference: [Alerting](./alerting.md).

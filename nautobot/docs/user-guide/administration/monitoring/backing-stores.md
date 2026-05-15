@@ -6,41 +6,6 @@ For the basic liveness probes (`pg_isready`, `redis-cli ping`), see [Health Chec
 
 ## Redis
 
-### What Nautobot uses Redis for
-
-A single Redis deployment typically serves multiple roles for Nautobot:
-
-| Role | Redis DB | What lives there | Lifetime |
-|---|---|---|---|
-| Celery broker | `0` | Pending tasks, in-flight tasks under visibility timeout | Seconds to hours |
-| Celery result backend | `0` or `1` | `AsyncResult` payloads | Until `result_expires` (default 24 h) |
-| Django cache | `1` or `2` | Session data (if cache-backed), cached querysets, custom App caches | TTL-bound |
-
-The exact DB numbers depend on `CACHES` and `CELERY_*` settings in `nautobot_config.py`. The point is that **a single Redis instance carries multiple workloads with different durability and eviction needs**, and that asymmetry is the source of most Redis-related Nautobot incidents.
-
-### Recommended deployment shape
-
-**Small to medium deployments.** One Redis instance, multiple DBs. Set `maxmemory-policy noeviction` so the broker DB never silently drops tasks. The trade-off: cache DBs also can't evict, so a runaway cache fills memory and the broker hangs.
-
-**Large deployments.** Two Redis instances:
-
-- **Broker Redis** — `noeviction`, persistence on (AOF every-second), small dataset.
-- **Cache Redis** — `allkeys-lru`, persistence off, large dataset.
-
-```python
-# nautobot_config.py
-CELERY_BROKER_URL = "redis://broker-redis:6379/0"
-CELERY_RESULT_BACKEND = "redis://broker-redis:6379/0"
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://cache-redis:6379/0",
-    },
-}
-```
-
-This isolates failure domains: a cache stampede from a misbehaving App will not take down Job processing.
-
 ### Key Redis metrics
 
 Deploy [`redis_exporter`](https://github.com/oliver006/redis_exporter) alongside each Redis instance. Metrics worth alerting on:
@@ -171,34 +136,6 @@ ORDER BY xact_start;
 ```
 
 The fix is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
-
-### Autovacuum tuning for high-churn tables
-
-Default autovacuum thresholds are tuned for tables under steady churn — they can be too lazy for `extras_joblogentry` and `extras_objectchange`. Per-table tuning:
-
-```sql
-ALTER TABLE extras_joblogentry SET (
-    autovacuum_vacuum_scale_factor = 0.05,
-    autovacuum_analyze_scale_factor = 0.02
-);
-ALTER TABLE extras_objectchange SET (
-    autovacuum_vacuum_scale_factor = 0.05,
-    autovacuum_analyze_scale_factor = 0.02
-);
-```
-
-A `dead_ratio > 0.2` on a high-churn table is the lead indicator that vacuum is falling behind:
-
-```sql
-SELECT relname,
-       n_live_tup,
-       n_dead_tup,
-       ROUND(n_dead_tup::numeric / NULLIF(n_live_tup, 0), 2) AS dead_ratio,
-       last_autovacuum
-FROM pg_stat_user_tables
-WHERE schemaname = 'public' AND n_live_tup > 1000
-ORDER BY n_dead_tup DESC LIMIT 20;
-```
 
 ### HA-specific signals
 

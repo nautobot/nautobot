@@ -26,6 +26,8 @@ Once a user enables request profiling, all subsequent HTTP requests made by that
 
 - *Warning!* Enabling request profiling on a user will impact the overall performance of Nautobot greatly! It is recommended to disable request profiling for the user when not actively being used.
 
+- `django-silk` persists each profiled request — including SQL queries, the cProfile trace, and downloadable `.prof` binaries — to its own database tables and on-disk media. A long-running profiling session can accumulate substantial data; bound it with `SILKY_MAX_RECORDED_REQUESTS` and / or periodically run silk's `silk_clear_request_log` management command. See the [`django-silk` configuration reference](https://github.com/jazzband/django-silk#configuration) for the full list of retention knobs.
+
 ## Silk UI
 
 Nautobot administrators with super-user permissions can access the `django-silk` UI at the `/silk/` URL.

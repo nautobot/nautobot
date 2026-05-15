@@ -112,6 +112,8 @@ For environments where it's not enough to rely on cleanups based on worker resta
     import re
     import shutil
     import time
+    from contextlib import suppress
+
     import uwsgi
     from prometheus_client import multiprocess
 

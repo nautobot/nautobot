@@ -38,6 +38,8 @@ logging.config.dictConfig(LOGGING)
 
 Add `python-json-logger` to your image. Output then carries `name` (logger), `levelname`, `message`, and other fields that your aggregator parses automatically.
 
+The handler reassignment on the last line *replaces* the default `console` handler with `json_console` rather than appending — by design, since you almost always want one canonical format reaching your aggregator. If you also configure a [remote-syslog handler](#forwarding-to-remote-collectors) further on, that example uses `.append()` so both handlers fire.
+
 ### Reading the logger name in your aggregator
 
 Nautobot **always emits the logger name** — both formatters above include `%(name)s` (or the JSON `name` field). The question is just whether your aggregator sees it as a structured field it can pivot on, or as plain text inside the line body.
@@ -116,15 +118,22 @@ Other event-stream targets — Kafka, NATS, RabbitMQ — are reachable through t
 
 ## Log streams
 
-| Stream | Source process | Where it lands by default | What it carries |
-|---|---|---|---|
-| Web | `nautobot-server` (uWSGI / gunicorn) | `stdout`/`stderr` of the web container | Django request handling, REST API, GraphQL, authentication, ORM warnings |
-| Celery worker | `nautobot-server celery worker` | `stdout`/`stderr` of the worker container | Celery task lifecycle, broker connect/reconnect, Job log records (also persisted to the database) |
-| Celery Beat | `nautobot-server celery beat` | `stdout`/`stderr` of the Beat container | Scheduler startup, scheduled-Job firing, schedule disable events |
-| `JobLogEntry` (database) | `NautobotDatabaseHandler` | `extras_joblogentry` table → Job Result UI | Per-Job structured records: level, message, grouping, associated object |
-| `ObjectChange` (database) | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
+Three operator-facing streams reach your aggregator via the container's `stdout` — these are the streams you ship:
 
-Ship the **container `stdout`** of the web, worker, and Beat processes to your aggregator. The database-backed Job log and Change Log are intended for end-users; do not mirror them to your SIEM unless you have a specific reason.
+| Stream | Source process | What it carries |
+|---|---|---|
+| Web | `nautobot-server` (uWSGI / gunicorn) | Django request handling, REST API, GraphQL, authentication, ORM warnings |
+| Celery worker | `nautobot-server celery worker` | Celery task lifecycle, broker connect/reconnect, **Job log records emitted via `self.logger`** |
+| Celery Beat | `nautobot-server celery beat` | Scheduler startup, scheduled-Job firing, schedule disable events |
+
+Two additional in-database log surfaces exist for end-user UI access and the REST API — these are not separate streams:
+
+| Surface | Source | Where | What it carries |
+|---|---|---|---|
+| `JobLogEntry` | `NautobotDatabaseHandler` | `extras_joblogentry` table → Job Result UI | Per-Job structured records (level, message, grouping, associated object). **The same log lines also reach worker `stdout` via the `nautobot.jobs.<module>` logger** — your aggregator already captures them from there. |
+| `ObjectChange` | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
+
+Do not mirror the in-database surfaces to your SIEM. The operational signal in `JobLogEntry` is already covered by the worker `stdout` stream above; mirroring duplicates events and is the most common source of "every Job log line shows up twice" confusion.
 
 ### Streaming event notifications to logs
 
@@ -172,7 +181,19 @@ Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalE
 
 ### Job execution failures
 
-Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model. The Celery statuses are `PENDING`, `RECEIVED`, `STARTED`, `SUCCESS`, `FAILURE`, `RETRY`, `REVOKED`, `IGNORED`, `REJECTED`.
+Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model. The Celery statuses an operator is likely to encounter:
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Task is queued but no worker has picked it up yet. Long-pending tasks indicate worker shortage or queue routing issues. |
+| `RECEIVED` | A worker has picked up the task but has not started running it. |
+| `STARTED` | The task is currently executing on a worker. Visible only when `task_track_started=True` is configured. |
+| `SUCCESS` | Task finished without raising an exception. |
+| `FAILURE` | Task raised an exception. Inspect `JobResult.traceback` and `nautobot_worker_exception_jobs{exception=...}` to identify the class. |
+| `RETRY` | Task is being retried by Celery. Frequent retries on the same Job name suggest a transient downstream dependency is failing. |
+| `REVOKED` | Task was canceled before completion — typically because an operator hit "Revoke" in the UI or singleton-conflict resolution killed a duplicate. |
+| `IGNORED` | Task ran but its result was discarded (`ignore_result=True`). Rare in Nautobot Jobs, since results back the Job Result UI. |
+| `REJECTED` | Task was rejected by the worker (commonly via `task_reject_on_worker_lost`) and either requeued or discarded depending on broker policy. |
 
 Representative log lines from `nautobot.extras.jobs`:
 

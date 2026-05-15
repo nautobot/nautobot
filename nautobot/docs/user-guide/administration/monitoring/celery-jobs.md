@@ -39,24 +39,6 @@ CELERY_HEALTH_PROBES_AS_FILES = True
 
 See [Health Checks — Nautobot Celery Worker](./health-checks.md#nautobot-celery-worker) for the full probe configuration (shell check, Kubernetes YAML, Docker Compose), and [Health Checks — Celery Worker Container in k8s](./health-checks.md#celery-worker-container-in-k8s) for an important caveat about Celery 5.6.1 affecting Nautobot 3.0.4 and 3.0.5.
 
-## Celery configuration tuning
-
-Nautobot exposes Celery's full configuration surface through `nautobot_config.py` — any `CELERY_*` setting Celery accepts can be overridden. The defaults that ship with Celery target short-lived web background tasks; for Nautobot's typical long-running network-automation workload, the following overrides are usually appropriate:
-
-| Setting | Default | Recommended for Nautobot | Why |
-|---|---|---|---|
-| `worker_prefetch_multiplier` | `4` | `1` | Long-running Jobs cause head-of-line blocking when a worker reserves multiple tasks ahead. With `1`, each worker pulls one task at a time. See [Task Queues](../guides/celery-queues.md#queuing-optimizations). |
-| `task_acks_late` | `False` | `True` *for idempotent Jobs only* | Task is acked **after** completion; if the worker crashes mid-task, the broker redelivers. Safer against worker death — but the Job runs again, so it must be idempotent. |
-| `task_reject_on_worker_lost` | `False` | `True` (paired with above) | Required companion to `acks_late`; ensures the lost task is rejected back to the queue rather than vanishing. |
-| `worker_max_tasks_per_child` | unset | `1000` | Recycles the worker process every N tasks. Bounds memory growth from leaks. |
-| `worker_max_memory_per_child` | unset | `200000` (200 MB) | Recycles worker if RSS exceeds threshold. Catches the same class of bug on a memory rather than count basis. |
-| `task_soft_time_limit` / `task_time_limit` | unset | site-specific (e.g. `1800` / `2100`) | Global ceiling that catches runaway tasks. Per-Job overrides are still set on the Job class. |
-
-!!! warning
-    `task_acks_late=True` is a foot-gun if your Jobs are not idempotent. A Nautobot Job that calls `Device.objects.create(...)` will create a duplicate device on retry. Audit Jobs for `get_or_create` / unique-constraint patterns before enabling, or scope `acks_late` to a specific queue and route only safe Jobs to it.
-
-See the [Celery optimizing guide](https://docs.celeryq.dev/en/stable/userguide/optimizing.html) for the full configuration reference.
-
 ## Queue depth — the silent backlog signal
 
 The Tier-1 alerts in [Alerting](./alerting.md) catch *failures*. They do not catch a slow-but-functional pipeline where producers outpace consumers. The only direct signal for that is queue depth.
