@@ -113,6 +113,8 @@ ORDER BY total_exec_time DESC
 LIMIT 20;
 ```
 
+The query above can be run from `psql` directly, or — for environments where operators don't have direct database access — through `nautobot-server dbshell`, which opens a `psql`/`mysql` session using Nautobot's own database credentials.
+
 The biggest offenders are usually filter combinations on large tables without a supporting index, or N+1 query loops in Job code.
 
 `pg_stat_statements` aggregates across the whole database. To trace a slow query back to the specific *Nautobot view or Job* that issued it, also enable [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
@@ -135,7 +137,28 @@ WHERE state = 'active'
 ORDER BY xact_start;
 ```
 
-The fix is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
+For continuous monitoring rather than one-off `psql` checks, wrap the same query in a periodic Nautobot Job using Django's database cursor — that way the alerting flows through the standard `JobLogEntry` and worker-`stdout` channels:
+
+```python
+from django.db import connection
+
+with connection.cursor() as cursor:
+    cursor.execute(
+        """
+        SELECT pid, NOW() - xact_start AS xact_duration, state, LEFT(query, 100)
+        FROM pg_stat_activity
+        WHERE state = 'active' AND xact_start < NOW() - INTERVAL '10 minutes'
+        ORDER BY xact_start
+        """
+    )
+    for pid, duration, state, query in cursor.fetchall():
+        self.logger.warning(
+            "Long-running transaction: pid=%s duration=%s state=%s query=%s",
+            pid, duration, state, query,
+        )
+```
+
+The fix on the application side is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
 
 ### HA-Specific Signals
 

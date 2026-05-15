@@ -72,16 +72,27 @@ Nautobot's Celery Beat scheduler ([`NautobotDatabaseScheduler`](https://github.c
 Two complementary detections:
 
 1. **Heartbeat file** — already covered by the Tier-1 alert in [Alerting](./alerting.md). Fires if Beat stops entirely.
-2. **Per-schedule liveness** — query the database for schedules whose window has passed without a run:
+2. **Per-schedule liveness** — query the [`ScheduledJob`](../../platform-functionality/jobs/job-scheduling-and-approvals.md) model for entries whose firing window has passed without a run. The natural place to do this is from inside a Nautobot Job, using the ORM:
 
-    ```sql
-    SELECT name, last_run_at, next_run_at, total_run_count
-    FROM extras_scheduledjob
-    WHERE enabled = true
-      AND next_run_at < NOW() - INTERVAL '5 minutes';
+    ```python
+    from datetime import timedelta
+    from django.utils import timezone
+    from nautobot.extras.models import ScheduledJob
+
+    threshold = timezone.now() - timedelta(minutes=5)
+    stale = ScheduledJob.objects.filter(
+        enabled=True,
+        next_run_at__lt=threshold,
+    ).values_list("name", "last_run_at", "next_run_at", "total_run_count")
+
+    for name, last_run_at, next_run_at, total_run_count in stale:
+        self.logger.warning(
+            "Schedule %s missed its window (next_run_at=%s, last_run_at=%s, total_run_count=%d)",
+            name, next_run_at, last_run_at, total_run_count,
+        )
     ```
 
-    Wrap as a Nautobot Job that emits a `WARNING` and you have a self-monitoring scheduler.
+    Wrap that in a periodic Nautobot Job and the scheduler reports its own drift through the standard Job-result and aggregator channels.
 
 ## Operator UIs
 
