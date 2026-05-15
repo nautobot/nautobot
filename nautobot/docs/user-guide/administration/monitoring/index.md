@@ -5,7 +5,15 @@ Organizations that have matured in their automation journey often find Nautobot 
 This guide aims to give administrators direction on how to implement monitoring for their Nautobot deployments. It is not a definitive playbook — every environment has its own constraints, tooling, and baseline noise — but it covers the signals, configuration knobs, and integration patterns we have seen work across production deployments.
 
 !!! info "Prerequisite Knowledge"
-    This guide assumes working familiarity with the surrounding stack: Django and Celery, Prometheus and PromQL, your team's log aggregator (Loki / Splunk / Elastic), container orchestration probes (Kubernetes / Compose / systemd), and the operational basics of PostgreSQL and Redis. The Visualization page additionally leans on Grafana fundamentals, and the SLAs and SLOs page on SRE concepts like error budgets and burn-rate alerts. Where any of that is unfamiliar, the linked external resources in each section are good entry points.
+    This guide assumes working familiarity with the surrounding stack:
+
+    - Django and Celery
+    - Prometheus and PromQL
+    - Your team's log aggregator (Loki / Splunk / Elastic)
+    - Container orchestration probes (Kubernetes / Compose / systemd)
+    - PostgreSQL and Redis operational basics
+
+    The Visualization page additionally leans on Grafana fundamentals, and the SLAs and SLOs page on SRE concepts like error budgets and burn-rate alerts. Where any of that is unfamiliar, the linked external resources in each section are good entry points.
 
 Nautobot is a Django + Celery application backed by PostgreSQL and Redis. It does not produce a proprietary log file or expose a vendor-specific monitoring agent — it surfaces signals through three independent operator-facing channels:
 
