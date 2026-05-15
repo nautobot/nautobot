@@ -24,7 +24,16 @@ CELERY_BROKER_TRANSPORT_OPTIONS = {
 
 Pick a value that comfortably exceeds your slowest Job's wall-clock runtime. Real-world Nautobot deployments running fleet-wide compliance Jobs against thousands of devices have seen 4+ hour runtimes.
 
-You can detect this in production *before* it bites by alerting on [`nautobot_worker_started_jobs`](./prometheus-metrics.md#metric-types) going up without a corresponding [`nautobot_worker_finished_jobs`](./prometheus-metrics.md#metric-types) increase for a given task name over a long window — that's a Job that has been redelivered or is stuck.
+You can detect this in production before it bites by alerting on [`nautobot_worker_started_jobs`](./prometheus-metrics.md#metric-types) going up without a corresponding [`nautobot_worker_finished_jobs`](./prometheus-metrics.md#metric-types) increase for a given task name over a long window — that's a Job that has been redelivered or is stuck. In PromQL:
+
+```promql
+# Started but never finished for the same task name over the last 2 hours.
+# Tune the window and threshold to fit your slowest Job.
+sum by (name) (increase(nautobot_worker_started_jobs[2h]))
+  - sum by (name) (increase(nautobot_worker_finished_jobs[2h])) > 1
+```
+
+A persistent non-zero gap indicates either a stuck Job, a worker that died mid-task, or a Job that has exceeded the visibility timeout and is being redelivered.
 
 ## Worker Silent Death
 
@@ -38,6 +47,8 @@ CELERY_HEALTH_PROBES_AS_FILES = True
 ```
 
 See [Health Checks — Nautobot Celery Worker](./health-checks.md#nautobot-celery-worker) for the full probe configuration (shell check, Kubernetes YAML, Docker Compose), and [Health Checks — Celery Worker Container in k8s](./health-checks.md#celery-worker-container-in-k8s) for an important caveat about Celery 5.6.1 affecting Nautobot 3.0.4 and 3.0.5.
+
+For complementary log-side detection — worker crashes that the probe restart hasn't yet caught — alert on `WorkerLostError: Worker exited prematurely` lines from the Celery worker `stdout` (see [Logging — Celery Worker and Broker](./logging.md#celery-worker-and-broker)).
 
 ## Queue Depth
 

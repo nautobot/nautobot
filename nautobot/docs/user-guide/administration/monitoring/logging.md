@@ -167,6 +167,8 @@ Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). 
 
 The exact text of any individual log line is not part of Nautobot's API and may shift between releases. Treat the patterns below as alerting starting points — and prefer the metric-based or probe-based equivalents listed in [Alerting](./alerting.md) where one exists.
 
+For each pattern, the recommended way to detect it is to combine the named logger (from the [Logger Namespace Map](#logger-namespace-map) above) with a level filter inside your aggregator — see [Reading the Logger Name in Your Aggregator](#reading-the-logger-name-in-your-aggregator) for the LogQL / SPL / KQL shape. Free-text grep over `stdout` works for ad-hoc investigation but is too coarse for production alert rules.
+
 ### Database Connectivity and Capacity
 
 Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalError`/`ProgrammingError` propagation. Note that Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign of a database problem is usually a 500 traceback from a request, not a friendly message.
