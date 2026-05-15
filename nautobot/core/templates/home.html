@@ -244,6 +244,7 @@
                     subtree: true,
                 });
 
+                // This is a callback for HTMX `hx-vals` to populate the `PATCH` `/api/users/config/` request body.
                 const serializePanels = () =>
                 columns.map((column) =>
                     [...column.children].map((child) => ({
