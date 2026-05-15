@@ -1737,7 +1737,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     def _render_form_response(self, request, form, selected_objects):
         return Response(
             {
-                "template": self.bulk_rename_template_name,
+                "template": self.get_template_name(),
                 "form": form,
                 "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,

@@ -175,6 +175,16 @@ JOB_RESULT_BUTTONS = """
             </a>
         </li>
     {% endif %}
+    {% if record.is_unready_state %}
+        {% if record.user == request.user or request.user.is_staff %}
+            <li>
+                <a href="{% url 'extras:jobresult_revoke_job' pk=record.pk %}" class="dropdown-item text-danger">
+                    <span class="mdi mdi-close-circle" aria-hidden="true"></span>
+                    Revoke Job
+                </a>
+            </li>
+        {% endif %}
+    {% endif %}
 {% endif %}
 {% if perms.extras.view_joblogentry %}
     <li>

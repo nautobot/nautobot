@@ -114,11 +114,11 @@ class JobRevokeStrategy(ABC):
                 level_choice=LogLevelChoices.LOG_FAILURE,
                 grouping="revoking",
             )
-            return {"job_result": self._mark_revoked(job_result, user), "error": None}
+            return {"job_result": self._mark_revoked(job_result, user), "error": None, "revoked": True}
 
         # TERMINATE
         try:
-            self.perform_termination(job_result, user)
+            revoked = self.perform_termination(job_result, user)
         except Exception as e:
             logger.error("Termination failed for %s: %s", job_result.pk, e)
             job_result.log(
@@ -126,9 +126,9 @@ class JobRevokeStrategy(ABC):
                 level_choice=LogLevelChoices.LOG_ERROR,
                 grouping="revoking",
             )
-            return {"job_result": job_result, "error": f"Termination failed: {e}"}
+            return {"job_result": job_result, "error": f"Termination failed: {e}", "revoked": False}
 
-        return {"job_result": job_result, "error": None}
+        return {"job_result": job_result, "error": None, "revoked": revoked}
 
 
 class CeleryStrategy(JobRevokeStrategy):
@@ -208,7 +208,7 @@ class CeleryStrategy(JobRevokeStrategy):
                 f"Job {job_result.pk} is already in terminated state `{job_result.status}` no action was taken",
                 grouping="revoking",
             )
-            return
+            return False
 
         task_id = str(job_result.pk)
         with transaction.atomic():
@@ -227,10 +227,37 @@ class CeleryStrategy(JobRevokeStrategy):
         job_result.log(
             f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
         )
+        return True
 
 
 class K8sStrategy(JobRevokeStrategy):
     """Placeholder for now"""
+
+
+class UnknownStrategy(JobRevokeStrategy):
+    """Fallback strategy for queue types without a registered backend.
+
+    Has no way to reach a worker, so it always reports the job as not alive
+    and reaps it. Marks the JobResult revoked without sending any kill signal.
+    """
+
+    def is_alive(self, job_result) -> bool:
+        """Always return False. There is no backend to query for liveness."""
+        return False
+
+    def should_reap(self, job_result) -> bool:
+        """Always reap when the job is still in an unready state.
+
+        The is_unready_state check prevents a task that
+        has already been completed from being overwritten.
+        """
+        # TBD: maybe this method shouldn't be abstract and should be defined in ABC class
+        # Review after implementing K8sStrategy
+        return job_result.is_unready_state and not self.is_alive(job_result)
+
+    def perform_termination(self, job_result: JobResult, user: User) -> bool:
+        """No-op; never reached in normal flow. See class docstring."""
+        return False
 
 
 class RevokeFactory:
@@ -242,16 +269,8 @@ class RevokeFactory:
     def get_strategy(cls, queue_type: str):
         """Return a strategy instance for `queue_type`.
 
-        Args:
-            queue_type: A `JobQueueTypeChoices` value identifying the backend.
-
-        Returns:
-            A `JobRevokeStrategy` subclass instance for `queue_type`.
-
-        Raises:
-            ValueError: If `queue_type` is not registered in `strategies`.
+        Unknown queue types fall back to `UnknownStrategy`, which reaps the
+        job (marks it revoked) without attempting any backend-specific signal.
         """
-        strategy_class = cls.strategies.get(queue_type)
-        if not strategy_class:
-            raise ValueError(f"Undefined queue type: {queue_type}")
+        strategy_class = cls.strategies.get(queue_type, UnknownStrategy)
         return strategy_class()
