@@ -70,6 +70,50 @@ pipeline_stages:
 
 The same approach works in Vector and Fluent Bit — the regex is the load-bearing part.
 
+## Forwarding to remote collectors
+
+The default path — write to stdout, let your platform's log-collector sidecar ship the lines — is the recommended one and is orthogonal to Nautobot configuration. The recipes below cover the cases where Nautobot itself has to push logs to a remote endpoint: no sidecar is available, or you want a specific subset of records (auth, job lifecycle) on a dedicated channel.
+
+### Remote syslog from `LOGGING`
+
+Add a `SysLogHandler` to `nautobot_config.py` and route the loggers you care about to it. The example below ships everything Nautobot and Django log to a remote syslog receiver on UDP 514; swap `socktype` for `socket.SOCK_STREAM` to use TCP.
+
+```python
+import logging.config
+import socket
+from logging.handlers import SysLogHandler
+
+LOGGING["handlers"]["remote_syslog"] = {
+    "class": "logging.handlers.SysLogHandler",
+    "address": ("logs.example.com", 514),
+    "socktype": socket.SOCK_DGRAM,
+    "facility": SysLogHandler.LOG_LOCAL0,
+    "formatter": "normal",   # or "json" if you defined one above
+}
+for logger_name in ("django", "nautobot"):
+    LOGGING["loggers"][logger_name]["handlers"].append("remote_syslog")
+
+logging.config.dictConfig(LOGGING)
+```
+
+Keep the existing `console` handler alongside so container stdout is still captured — `SysLogHandler` is best-effort, and a temporary network blip will silently drop records.
+
+### Splunk
+
+Splunk accepts syslog directly on a configured input — point the handler above at that receiver, or at an intermediary that re-emits to Splunk. **HEC (HTTP Event Collector) is not configured inside Nautobot**: it terminates on a Splunk forwarder or load balancer in front of the indexer, not on a Python logging handler. If your platform team requires HEC end-to-end, that intermediary is a deployment concern outside the scope of this page.
+
+### Redis and other event streams
+
+For shipping **structured business or security events** (record changes, user events, job lifecycle) rather than raw log lines, use the [Event Notifications](../../platform-functionality/events.md) system instead of `LOGGING`. The bundled `RedisEventBroker` publishes each event to Redis Pub/Sub under its topic name — register it in `nautobot_config.py` the same way as `SyslogEventBroker`:
+
+```python
+from nautobot.core.events import register_event_broker, RedisEventBroker
+
+register_event_broker(RedisEventBroker(url="redis://events.example.com:6379/0"))
+```
+
+Other event-stream targets — Kafka, NATS, RabbitMQ — are reachable through the same extension point: subclass `nautobot.core.events.EventBroker` and register your implementation. The topics and payload shapes are stable across brokers; only the publish mechanics change. Prefer this path over piping log lines into an event bus, since log text is line-oriented and unstructured while event payloads carry typed JSON.
+
 ## Log streams
 
 | Stream | Source process | Where it lands by default | What it carries |
@@ -81,6 +125,15 @@ The same approach works in Vector and Fluent Bit — the regex is the load-beari
 | `ObjectChange` (database) | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
 
 Ship the **container `stdout`** of the web, worker, and Beat processes to your aggregator. The database-backed Job log and Change Log are intended for end-users; do not mirror them to your SIEM unless you have a specific reason.
+
+### Streaming event notifications to logs
+
+Nautobot's [Event Notifications](../../platform-functionality/events.md) system publishes record-change and Job lifecycle topics to pluggable brokers. Registering `SyslogEventBroker` in `nautobot_config.py` emits each event through Python logging under `nautobot.events.<topic>` with a JSON payload — the same pipeline that already ships your operational logs will pick it up. Use this when you want structured Nautobot events in the same aggregator as everything else, without standing up a separate Redis Pub/Sub consumer.
+
+The two topic groups that most deployments will care about:
+
+- **[User Events](../../platform-functionality/events.md#user-events)** (`nautobot.users.user.login`, `…logout`, `…change_password`, `nautobot.admin.user.change_password`) — the audit signal your SIEM or compliance team needs. Payloads carry the affected user record; emit these to satisfy login/logout and password-change tracking requirements that text-grepping `nautobot.auth.*` would otherwise have to approximate.
+- **[Job Events](../../platform-functionality/events.md#job-events)** (`nautobot.jobs.job.started`, `…completed`) — a structured "did automation actually run" signal. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` (stacktrace on failure). Prefer this over scraping `nautobot.extras.jobs` log lines when an external system needs to react to job lifecycle.
 
 ## Logger namespace map
 

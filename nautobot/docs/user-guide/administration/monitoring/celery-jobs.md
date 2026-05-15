@@ -109,3 +109,87 @@ Two complementary detections:
 | [Flower](https://github.com/mher/flower) | Open-source Celery monitoring UI. Exposes Prometheus metrics that Nautobot's `/metrics` does not — runtime histograms, per-worker load, prefetch wait times. Run as a sidecar against the same Redis broker, behind your auth proxy, with `--purge_offline_workers=60` for autoscaled environments. |
 
 Flower is not a replacement for the Nautobot UI — the UI knows about [`JobResult`](../../platform-functionality/jobs/models.md#job-results) rows and ties to model permissions. Flower is for the operator/observability tier and complements (rather than replaces) Nautobot's own [`/metrics`](./prometheus-metrics.md) endpoint — Flower exposes per-task histograms that Nautobot's worker metrics do not.
+
+## Streaming Job lifecycle events
+
+When an external system needs to react to Job start or completion — ticket updates, notification fan-out, downstream automation — prefer the [Job Events](../../platform-functionality/events.md#job-events) topics (`nautobot.jobs.job.started`, `nautobot.jobs.job.completed`) over polling the Job Result UI or scraping `nautobot.extras.jobs` log lines. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` for failure tracebacks. Register `SyslogEventBroker` to fold them into your log pipeline (see [Streaming event notifications to logs](./logging.md#streaming-event-notifications-to-logs)) or `RedisEventBroker` for a dedicated Pub/Sub channel.
+
+## Logging from inside Jobs
+
+How a Job author writes log lines determines what an operator can alert on. The choices below have outsized impact on whether Job logs land in your aggregator as queryable signal or as undifferentiated noise. For the full Job-logging API surface, see [Job Logging](../../../development/jobs/job-logging.md); this section focuses on the choices that affect ingestion and alerting.
+
+### Prefer `self.logger` over `logging.getLogger()`
+
+`self.logger` (provided by the `Job` base class) writes to **both** the `JobLogEntry` database table — visible in the Job Result UI — and the worker's `nautobot.jobs.<module>` Python logger that your aggregator already collects. A module-level `logging.getLogger(__name__)` reaches only the worker stdout, so log lines emitted that way are invisible in the Job Result UI. Default to `self.logger` and reach for the module-level logger only outside of Job methods (e.g. helper modules that may be called from non-Job code paths).
+
+### Make each line pivotable in the aggregator
+
+Three knobs determine how filterable a Job log line is downstream:
+
+| Knob | Where it lands | Notes |
+|---|---|---|
+| `extra={"key": "value", ...}` | Worker stdout (and `JobLogEntry` message in serialized form) | The only mechanism that produces queryable fields in an aggregator. Include `job_result_id`, a short `stage` label, and any object identifier the operator would want to pivot on. |
+| `extra={"object": instance}` | `JobLogEntry.obj` — clickable link in Job Result UI | UI-only — does not appear as a field in worker stdout. |
+| `extra={"grouping": "validate"}` | `JobLogEntry.grouping` — collapses related entries in UI | UI-only. Defaults to the calling function name if omitted. |
+
+Example:
+
+```python
+self.logger.info(
+    "Updated interface %s on %s",
+    interface.name,
+    device.name,
+    extra={
+        "object": device,
+        "grouping": "interface-sync",
+        "job_result_id": str(self.job_result.pk),
+        "stage": "apply",
+    },
+)
+```
+
+When the worker is configured for JSON output (see [Switching to JSON output](./logging.md#switching-to-json-output)), `job_result_id` and `stage` arrive at your aggregator as first-class fields you can filter and group on — no regex parsing required.
+
+### Choose levels for alerting, not narration
+
+Aggregator alert rules typically anchor on logger name plus level. If every step of a Job emits at `INFO`, the operator has to fall back to text matching to find anything actionable.
+
+| Level | Use for | Operator default |
+|---|---|---|
+| `DEBUG` | Detailed diagnostics; off in production | Ignored |
+| `INFO` | Successful milestones (start, finish, key transitions) | Not alerted |
+| `WARNING` | Expected-but-noteworthy condition the operator should see (record skipped, retry needed, deprecated input) | Aggregated dashboard signal |
+| `ERROR` | Operator action required; Job continues with reduced scope | Alert routed to ops queue |
+| `CRITICAL` | Job cannot continue; aborting | Page on-call |
+
+Inside `except` blocks, use `self.logger.exception("...")` — it emits at `ERROR` and attaches the traceback automatically. Do not manually `str(exc)` and log at `INFO`; that strips the traceback and downgrades the severity.
+
+### Aggregate per-record loops
+
+A Job that emits one `INFO` line per device in a 10,000-device loop produces 10,000 rows in `JobLogEntry` and 10,000 lines in worker stdout. The legitimate `ERROR` lines for the 4 failures are buried, the database table grows for nothing, and the UI is unusable. Prefer one summary line per phase plus per-record lines only at `WARNING` or above:
+
+```python
+self.logger.info("Sync complete: %d processed, %d updated, %d skipped, %d failed",
+                 total, updated, skipped, failed,
+                 extra={"job_result_id": str(self.job_result.pk), "stage": "summary"})
+```
+
+This makes "did this run go well" answerable from a single log line per Job run, rather than requiring a count query in your aggregator.
+
+### Never `print()`
+
+`print()` output is captured by Celery into the worker's stdout, but the resulting line has no level, no logger name, and no `extra` fields. Your aggregator can't distinguish it from third-party library noise, and it never reaches `JobLogEntry`. Treat it as a code-review smell.
+
+### `SANITIZER_PATTERNS` does not protect worker stdout
+
+[`SANITIZER_PATTERNS`](../configuration/settings.md#sanitizer_patterns) is applied inside `JobResult.log()` — that is, only on the path into `JobLogEntry` (and on `JobResult.result` / `traceback` / `exc_message`). It does **not** run inside the Python logging handler chain, which means a credential interpolated into a log message reaches the worker stdout — and therefore your aggregator — unredacted, regardless of whether you used `self.logger`, a module-level logger, or `print()`. Redact secrets in the Job before logging; treat the sanitizer as a UI-side safety net, not a perimeter.
+
+### What this unlocks for the operator
+
+When Job authors follow the above, the operator side becomes:
+
+- **Aggregator alert rule**: `logger:nautobot.jobs.<module> AND level:ERROR` — anchored on logger name and level, no text matching required. Pivot on `extra.stage` and `extra.job_result_id` to scope incidents.
+- **Lifecycle signal**: subscribe to [`nautobot.jobs.job.completed`](../../platform-functionality/events.md#job-events) and alert on non-null `einfo`. See [Streaming Job lifecycle events](#streaming-job-lifecycle-events) above.
+- **Metric signal**: `nautobot_worker_finished_jobs{status="FAILURE"}` from [Prometheus Metrics](./prometheus-metrics.md) — for SLO dashboards rather than per-incident routing.
+
+The three signals are complementary: the metric tells you *how many*, the event tells you *which run*, and the logs tell you *why*.
