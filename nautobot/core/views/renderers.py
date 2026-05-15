@@ -50,14 +50,14 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         Helper function to obtain the filter_form_class,
         and then initialize and return the filter_form used in the ObjectListView UI.
         """
+        if not filterset_class:
+            return None
         factory_formset_params = {}
-        filterset = None
-        if filterset_class:
-            filterset = filterset_class()
-            factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
-                view.filter_params if view.filter_params is not None else request.GET, filterset
-            )
-            return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
+        filterset = filterset_class()
+        factory_formset_params = convert_querydict_to_factory_formset_acceptable_querydict(
+            view.filter_params if view.filter_params is not None else request.GET, filterset
+        )
+        return DynamicFilterFormSet(filterset=filterset, data=factory_formset_params)
 
     def construct_user_permissions(self, request, model):
         """
