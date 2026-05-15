@@ -1,0 +1,1 @@
+Fixed an issue where form auto-population logic in `forms.js` would crash when a form contained an `id_slug` or `id_key` field without a `slug-source` attribute, silently breaking downstream form initialization (including Flatpickr date/time pickers) on affected pages such as the API Token create form.
