@@ -41,8 +41,7 @@
                     <td></td>
                     <td>
                         <small class="text-secondary">
-                            <span class="mdi mdi-information-outline"></span>
-                            Breakout not available for this cable's termination types
+                            <span class="mdi mdi-information-outline me-4"></span>Breakout not available for this cable's termination types
                         </small>
                     </td>
                 </tr>
@@ -91,7 +90,7 @@
                     {% for row in conns.rows %}
                         <tr>
                             {% if row.a_rowspan > 0 %}
-                            <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end">
+                                <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end">
                                     {% if conns.is_breakout %}
                                         <strong>A{{ row.a.connector }}</strong>
                                         {% if row.a.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.a.lanes }} lanes</span>{% endif %}

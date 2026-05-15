@@ -6157,7 +6157,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
             cable_html = format_html(
                 '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
-                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                '<span class="mdi mdi-transit-connection-variant"></span></a>',
                 helpers.hyperlinked_object(instance.cable),
                 trace_url,
             )
@@ -6189,7 +6189,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             )
             connect_link = format_html(
                 '<a href="{}" class="btn btn-primary btn-sm float-end">'
-                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Add Cable</a>',
+                '<span class="mdi mdi-ethernet-cable me-4" aria-hidden="true"></span>Add Cable</a>',
                 connect_url,
             )
             return {"Connection": format_html("Not connected {}", connect_link)}

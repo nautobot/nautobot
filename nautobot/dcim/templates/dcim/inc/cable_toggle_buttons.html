@@ -3,38 +3,33 @@
     {% if cable.status.name == 'Connected' %}
         <li>
             <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">
-                <span class="mdi mdi-lan-pending" aria-hidden="true"></span>
-                Mark cable as Planned
+                <span class="mdi mdi-lan-pending me-4" aria-hidden="true"></span>Mark cable as Planned
             </a>
         </li>
     {% else %}
         <li>
             <a href="#" class="dropdown-item text-success cable-toggle" data="{{ cable.pk }}">
-                <span class="mdi mdi-lan-connect" aria-hidden="true"></span>
-                Mark cable as Connected
+                <span class="mdi mdi-lan-connect me-4" aria-hidden="true"></span>Mark cable as Connected
             </a>
         </li>
     {% endif %}
     {% if termination %}
         <li>
             <a href="{% url 'dcim:cable_disconnect' pk=cable.pk %}?termination_type={{ termination|meta:"app_label" }}.{{ termination|meta:"model_name" }}&termination_id={{ termination.pk }}&return_url={{ request.path }}" class="dropdown-item text-warning">
-                <span class="mdi mdi-lan-disconnect" aria-hidden="true"></span>
-                Detach cable from {{ termination }}
+                <span class="mdi mdi-lan-disconnect me-4" aria-hidden="true"></span>Detach cable from {{ termination }}
             </a>
         </li>
     {% endif %}
     <li>
         <a class="dropdown-item text-warning" href="{% url 'dcim:cable_edit' pk=cable.pk %}?return_url={{ request.path }}">
-            <span class="mdi mdi-link-edit" aria-hidden="true"></span>
-            Edit cable
+            <span class="mdi mdi-link-edit me-4" aria-hidden="true"></span>Edit cable
         </a>
     </li>
 {% endif %}
 {% if perms.dcim.delete_cable %}
     <li>
         <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-            <span class="mdi mdi-ethernet-cable-off" aria-hidden="true"></span>
-            Delete cable
+            <span class="mdi mdi-ethernet-cable-off me-4" aria-hidden="true"></span>Delete cable
         </a>
     </li>
 {% endif %}
