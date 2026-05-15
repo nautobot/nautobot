@@ -5628,19 +5628,22 @@ class CableCreateView(LoginRequiredMixin, View):
         return_url = request.GET.get("return_url", "")
 
         add_url = reverse("dcim:cable_add")
-        params = f"?termination_a_type={ct_a.app_label}.{ct_a.model}&termination_a_id={termination_a_id}"
+        params = {
+            "termination_a_type": f"{ct_a.app_label}.{ct_a.model}",
+            "termination_a_id": termination_a_id,
+        }
         if termination_b_type_name:
             # The URL path captures the type in hyphenated form (e.g. "console-server-port");
             # `ContentType.objects.get(model=...)` expects the model name (no hyphens).
             try:
                 ct_b = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
-                params += f"&termination_b_type={ct_b.app_label}.{ct_b.model}"
+                params["termination_b_type"] = f"{ct_b.app_label}.{ct_b.model}"
             except ContentType.DoesNotExist:
                 pass  # Unknown b_type; fall through and let the form default it.
-        if return_url:
-            params += f"&return_url={return_url}"
+        if return_url and url_has_allowed_host_and_scheme(return_url, allowed_hosts=request.get_host()):
+            params["return_url"] = iri_to_uri(return_url)
 
-        return redirect(f"{add_url}{params}")
+        return redirect(f"{add_url}?{urlencode(params)}")
 
 
 #
