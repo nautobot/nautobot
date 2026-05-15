@@ -735,6 +735,23 @@ class JobRunResponseSerializer(serializers.Serializer):
     job_result = JobResultSerializer(read_only=True, required=False)
 
 
+class JobResultRevokePreviewSerializer(serializers.Serializer):
+    """Describes what a revoke action would do, returned by GET on the revoke endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    action = serializers.ChoiceField(
+        choices=["TERMINATE", "REAP"],
+        help_text="TERMINATE if a worker is alive (SIGKILL); REAP if no worker is running.",
+    )
+    action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING"],
+        help_text="Current runtime status of the job's worker.",
+    )
+    irreversible = serializers.CharField(help_text="Warning that the action cannot be undone.")
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
+
+
 #
 # Job classes (fka Custom Scripts, Reports)
 # 2.0 TODO: remove these if no longer needed
