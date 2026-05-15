@@ -208,6 +208,19 @@ class HomeView(AccessMixin, TemplateView):
             # Make sure that there always is the exact expected number of columns in the `panel_layout`.
             panel_layout.extend([[]] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
 
+        # Update user config to always keep it up to date with the latest homepage panel layout structure.
+        request.user.set_config(
+            "homepage_layout.panels",
+            [
+                [
+                    {"id": slugify(kv_pair[0]), "collapsed": kv_pair[1].get("collapsed", False)}
+                    for kv_pair in panel_group.items()
+                ]
+                for panel_group in panel_layout
+            ],
+            commit=True,
+        )
+
         context.update({"homepage_layout_panels": panel_layout})
 
         return self.render_to_response(context)
