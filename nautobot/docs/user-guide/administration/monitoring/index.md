@@ -10,8 +10,6 @@ Each collector answers a different question. Use all three together for complete
 
 ## The three collectors
 
-A monitored Nautobot deployment has three independent collectors, each consuming a different signal from the same set of processes.
-
 **Logs → log aggregator** — *what happened*
 
 ```mermaid

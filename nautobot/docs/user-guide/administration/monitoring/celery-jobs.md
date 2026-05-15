@@ -1,4 +1,4 @@
-# Monitoring Celery and Jobs
+# Celery and Jobs
 
 Nautobot Jobs run as Celery tasks. Most production surprises with Nautobot at scale come from Celery defaults that work for short-lived web background tasks but bite under Nautobot's typical workload of long-running network-automation Jobs. This page covers the configuration knobs, the visibility-timeout pitfall, and the signals you need beyond the basic Tier-1 alerts in [Alerting](./alerting.md).
 

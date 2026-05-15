@@ -1,4 +1,4 @@
-# Monitoring Backing Stores
+# Backing Stores
 
 Nautobot's two backing stores — Redis and PostgreSQL — carry production-critical workloads but are not surfaced through Nautobot's own `/metrics`. This page covers the Nautobot-specific behaviors that drive their load and the metrics, queries, and probes you should add for each.
 
@@ -100,12 +100,12 @@ Three observations drive Nautobot-specific PostgreSQL load:
 
 These tables bloat fastest in a typical Nautobot deployment:
 
-- `extras_joblogentry` — every Job emits dozens to thousands of rows. Retention via `JOB_LOGS_RETENTION_DAYS`.
-- `extras_objectchange` — every model write emits a row. Retention via [`CHANGELOG_RETENTION`](../configuration/settings.md#changelog_retention).
-- `extras_jobresult` — one row per Job invocation. Retention via `JOB_RESULT_RETENTION_DAYS`.
+- `extras_objectchange` — every model write emits a row. Retention controlled by [`CHANGELOG_RETENTION`](../configuration/settings.md#changelog_retention) (days; default 90, `0` disables retention enforcement).
+- `extras_jobresult` — one row per Job invocation. No standalone retention setting; trimmed by the bundled `Cleanup System Records` Job.
+- `extras_joblogentry` — every Job emits dozens to thousands of rows. Deleted automatically when the parent `JobResult` is deleted via the cleanup Job above.
 - `django_session` if not cache-backed.
 
-Tune retention settings explicitly; the defaults err on the side of "keep everything," which is fine until disk fills. Run `nautobot-server cleanup` regularly — a periodic ScheduledJob is a clean way to do it.
+Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Cleanup System Records` Job to run periodically with explicit `cutoff` arguments for `extras.ObjectChange` and `extras.JobResult`. The defaults err on the side of "keep everything," which is fine until disk fills.
 
 ### Key PostgreSQL metrics
 

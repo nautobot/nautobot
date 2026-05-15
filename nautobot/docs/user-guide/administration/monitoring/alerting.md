@@ -8,6 +8,9 @@ This page describes a low-noise alert ruleset for production Nautobot. The recom
 
 Alert primarily on health-checks and metrics. Use log keywords as a *secondary* signal, scoped to specific logger names.
 
+!!! note "Living section"
+    The rules and thresholds below are the starting points we currently recommend based on production deployments we've seen — they're not exhaustive and they're not deployment-tuned. Walk through your steady-state baseline before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
+
 ## Tier 1 — page someone
 
 | Signal | Source | Threshold |

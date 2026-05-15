@@ -38,7 +38,9 @@ For more information see the [`django-prometheus`](https://github.com/korfuri/dj
 
 Metrics by default do not require authentication to view. Authentication can be toggled with the [`METRICS_AUTHENTICATED`](../configuration/settings.md#metrics_authenticated) configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
-### Sample Telegraf configuration
+## Scraping the endpoint
+
+Any Prometheus-compatible scraper can pull `/metrics`. The example below uses Telegraf with the `inputs.prometheus` plugin; the same pattern applies to Prometheus itself, the OpenTelemetry Collector, Grafana Alloy, or Datadog's OpenMetrics check. For unauthenticated endpoints, drop the `http_headers` line.
 
 ```toml
 [[inputs.prometheus]]
@@ -46,6 +48,8 @@ urls = ["http://localhost/metrics"]
 metric_version=2
 http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef01234567"}
 ```
+
+For Kubernetes deployments, see [Alerting — Scrape-target gotcha](./alerting.md#scrape-target-gotcha-kubernetes) — worker Pods must be scraped individually, not via the Nautobot `Service` VIP.
 
 ## Metric Types
 

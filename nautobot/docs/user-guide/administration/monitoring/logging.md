@@ -153,6 +153,9 @@ Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). 
 
 ## Common failure patterns
 
+!!! note "Living section"
+    The patterns below are the ones we currently see most often in production deployments — they're a useful starting point, not an exhaustive catalogue, and we expect the list to grow as more operators share their experience. If you've hit a recurring pattern that isn't covered here, a docs contribution is very welcome.
+
 The exact text of any individual log line is not part of Nautobot's API and may shift between releases. Treat the patterns below as alerting starting points — and prefer the metric-based or probe-based equivalents listed in [Alerting](./alerting.md) where one exists.
 
 ### Database connectivity and capacity
@@ -223,6 +226,9 @@ Branch <name> does not exist at <url>. <git_error>
 ```
 
 ## Known noise — do not alert on these
+
+!!! note "Living section"
+    This list captures the routine messages we've observed in healthy deployments so far. It will grow over time as more deployments report back; if a message keeps showing up in your environment without a real underlying issue, it's a good candidate to add here.
 
 Some messages appear routinely in healthy deployments and should be excluded from alert rules:
 
