@@ -4,7 +4,7 @@ Production deployments of Nautobot should expose health-check endpoints for each
 
 For the alert rules that fire on probe failure or staleness, see [Alerting](./alerting.md). For the *why* behind file-based worker probes — and the broader Celery reliability picture — see [Celery and Jobs](./celery-jobs.md). For backing-store HA caveats that go beyond a basic liveness probe, see [Backing Stores](./backing-stores.md).
 
-## Health-check approaches
+## Health-Check Approaches
 
 The commands and HTTP requests below can serve as health checks for the various components of a Nautobot system.
 
@@ -41,7 +41,7 @@ In addition to monitoring the existence of a given Celery worker process ID, you
     A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
 
 !!! warning
-    `inspect ping` has a default timeout of **1 second**. On a busy worker — or a worker wedged on a syscall — the ping can fail to return in time and the probe will report the worker as unhealthy when it isn't. For most production deployments the file-based probe described below is more reliable. See [Celery and Jobs — Worker silent-death](./celery-jobs.md#worker-silent-death) for the rationale.
+    `inspect ping` has a default timeout of **1 second**. On a busy worker — or a worker wedged on a syscall — the ping can fail to return in time and the probe will report the worker as unhealthy when it isn't. For most production deployments the file-based probe described below is more reliable. See [Celery and Jobs — Worker Silent Death](./celery-jobs.md#worker-silent-death) for the rationale.
 
 Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the (optional)  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) settings in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
 
@@ -58,7 +58,7 @@ In addition to monitoring the Celery Beat process ID, you can use the fact that 
 ```
 
 !!! info
-    The heartbeat file confirms that Beat is *running*. It does not confirm that any individual scheduled Job is *firing on time* — Beat does not backfill missed runs. For a per-schedule liveness check that detects silent schedule drift, see [Celery and Jobs — Beat schedule drift](./celery-jobs.md#beat-schedule-drift).
+    The heartbeat file confirms that Beat is *running*. It does not confirm that any individual scheduled Job is *firing on time* — Beat does not backfill missed runs. For a per-schedule liveness check that detects silent schedule drift, see [Celery and Jobs — Beat Schedule Drift](./celery-jobs.md#beat-schedule-drift).
 
 ### Databases
 
@@ -113,7 +113,7 @@ class MyCustomRedisHealthCheck(BaseHealthCheckBackend):
 
 The result will now show up in `/health/` and via `nautobot-server health_check`.
 
-## Deployments with systemd
+## Deployments with Systemd
 
 For systemd deployments, the underlying services of PostgreSQL/MySQL and Redis integrate natively with systemd's `sd_notify` API to provide additional status information to the system, and `uwsgi` does as well. We recommend following the standard deployment patterns provided by your OS for PostgreSQL/MySQL and Redis. For the Nautobot service and Celery/Beat services, follow the Nautobot installation documentation at [Setup systemd](../installation/services.md#setup-systemd).
 

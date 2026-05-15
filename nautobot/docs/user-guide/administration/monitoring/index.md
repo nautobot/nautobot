@@ -46,7 +46,7 @@ flowchart LR
     B[Celery Beat] -. heartbeat file .-> PROBE
 ```
 
-Binary up/down. Use `/health/` for web readiness, `nautobot-server health_check` for liveness, file-based heartbeat for workers and Beat — see [Health Checks](./health-checks.md) for full probe configurations. The Nautobot-specific rationale for file-based worker probes lives in [Celery and Jobs — Worker silent-death](./celery-jobs.md#worker-silent-death).
+Binary up/down. Use `/health/` for web readiness, `nautobot-server health_check` for liveness, file-based heartbeat for workers and Beat — see [Health Checks](./health-checks.md) for full probe configurations. The Nautobot-specific rationale for file-based worker probes lives in [Celery and Jobs — Worker Silent Death](./celery-jobs.md#worker-silent-death).
 
 ## In-Product Job Logs
 

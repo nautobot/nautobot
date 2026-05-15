@@ -83,7 +83,7 @@ For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautob
 !!! note
     Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.
 
-These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to do perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
+These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
 
 For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance. For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
 
@@ -93,7 +93,8 @@ When deploying Nautobot in a multi-process manner (e.g. running multiple uWSGI w
 
 Since the files stored in the designated directory are not meant to be long-lived, it is recommended to use a temporary directory such as `/tmp/nautobot_prometheus` or an `emptyDir` in Kubernetes environments for this purpose. Additionally, in order to avoid scraping delays induced by the processing of orphaned files, this directory must be wiped on a regular basis. In order to avoid removal of files that are still in use, it is recommended to do this before the uWSGI process starts.
 
-> Note: the below code snippets are meant to be examples of how to perform the necessary cleanup. The exact implementation may vary based on your specific deployment and operational needs.
+!!! note
+    The code snippets below are meant to be examples of how to perform the necessary cleanup. The exact implementation may vary based on your specific deployment and operational needs.
 
 Indicatively, you could use the `hook-accepting1` uWSGI hook to perform this:
 

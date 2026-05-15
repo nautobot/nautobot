@@ -116,7 +116,7 @@ Flower is not a replacement for the Nautobot UI — the UI knows about [`JobResu
 
 ## Streaming Job Lifecycle Events
 
-When an external system needs to react to Job start or completion — ticket updates, notification fan-out, downstream automation — prefer the [Job Events](../../platform-functionality/events.md#job-events) topics (`nautobot.jobs.job.started`, `nautobot.jobs.job.completed`) over polling the Job Result UI or scraping `nautobot.extras.jobs` log lines. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` for failure tracebacks. Register `SyslogEventBroker` to fold them into your log pipeline (see [Streaming event notifications to logs](./logging.md#streaming-event-notifications-to-logs)) or `RedisEventBroker` for a dedicated Pub/Sub channel.
+When an external system needs to react to Job start or completion — ticket updates, notification fan-out, downstream automation — prefer the [Job Events](../../platform-functionality/events.md#job-events) topics (`nautobot.jobs.job.started`, `nautobot.jobs.job.completed`) over polling the Job Result UI or scraping `nautobot.extras.jobs` log lines. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` for failure tracebacks. Register `SyslogEventBroker` to fold them into your log pipeline (see [Streaming Event Notifications to Logs](./logging.md#streaming-event-notifications-to-logs)) or `RedisEventBroker` for a dedicated Pub/Sub channel.
 
 ## Logging from Inside Jobs
 
@@ -152,7 +152,7 @@ self.logger.info(
 )
 ```
 
-When the worker is configured for JSON output (see [Switching to JSON output](./logging.md#switching-to-json-output)), `job_result_id` and `stage` arrive at your aggregator as first-class fields you can filter and group on — no regex parsing required.
+When the worker is configured for JSON output (see [Switching to JSON Output](./logging.md#switching-to-json-output)), `job_result_id` and `stage` arrive at your aggregator as first-class fields you can filter and group on — no regex parsing required.
 
 ### Choose Levels for Alerting, Not Narration
 

@@ -115,7 +115,7 @@ groups:
 
 ## Log-Based Alerts
 
-When a metric isn't available, anchor log-based queries on logger name plus level. The full set of Nautobot logger names is documented in [Logging — Logger namespace map](./logging.md#logger-namespace-map). The pattern is consistent across aggregators; the syntax below uses [LogQL](https://grafana.com/docs/loki/latest/query/) but Splunk SPL, Elastic KQL, etc. translate directly.
+When a metric isn't available, anchor log-based queries on logger name plus level. The full set of Nautobot logger names is documented in [Logging — Logger Namespace Map](./logging.md#logger-namespace-map). The pattern is consistent across aggregators; the syntax below uses [LogQL](https://grafana.com/docs/loki/latest/query/) but Splunk SPL, Elastic KQL, etc. translate directly.
 
 ```logql
 # Database OperationalErrors from the web tier

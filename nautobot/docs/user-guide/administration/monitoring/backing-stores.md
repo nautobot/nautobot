@@ -72,7 +72,7 @@ These tables bloat fastest in a typical Nautobot deployment:
 
 Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Cleanup System Records` Job to run periodically with explicit `cutoff` arguments for `extras.ObjectChange` and `extras.JobResult`. The defaults err on the side of "keep everything," which is fine until disk fills.
 
-The two signals that tell you bloat or growth on these tables is getting away from you:
+The two signals that tell you when bloat or growth on these tables is getting away from you:
 
 - **`pg_stat_user_tables_n_dead_tup / n_live_tup` per relation** — the bloat ratio (see [Key PostgreSQL Metrics](#key-postgresql-metrics) below). A sustained value above `0.2` on `extras_joblogentry` or `extras_objectchange` is the first sign that autovacuum is falling behind retention churn.
 - **Disk-fill trajectory** — `predict_linear` on the PostgreSQL data volume (see [Disk-Trajectory Monitoring](#disk-trajectory-monitoring) below). The growth is almost always attributable to one of the tables listed above outpacing your cleanup schedule.
@@ -177,7 +177,7 @@ Disk-fill is the slowest-developing PostgreSQL outage and the most catastrophic.
 predict_linear(node_filesystem_avail_bytes{mountpoint=~".*postgres.*"}[7d], 30 * 24 * 3600) < 0
 ```
 
-The growth is almost always traceable to `extras_joblogentry` or `extras_objectchange` outpacing your retention settings — see "High-churn tables" above.
+The growth is almost always traceable to `extras_joblogentry` or `extras_objectchange` outpacing your retention settings — see "High-Churn Tables" above.
 
 !!! tip
     Pair the disk-trajectory alert with periodic table-size queries against `pg_total_relation_size()` to attribute the growth to a specific table. The fix is usually tighter retention, not more disk.
