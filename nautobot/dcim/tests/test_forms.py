@@ -976,3 +976,13 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         # Same set of CableToCableTermination row PKs as before — no delete/recreate happened.
         new_pks = set(CableToCableTermination.objects.filter(cable=self.cable).values_list("pk", flat=True))
         self.assertSetEqual(new_pks, original_pks)
+
+    def test_edit_form_prepopulates_lane_fields(self):
+        """Editing an existing non-breakout cable should prepopulate the lane termination fields."""
+        form = CableForm(instance=self.cable)
+        self.assertEqual(form.initial.get("a_conn_1_type"), "interface")
+        self.assertEqual(form.initial.get("a_conn_1_parent"), self.device.pk)
+        self.assertEqual(form.initial.get("a_conn_1_termination"), self.iface_a.pk)
+        self.assertEqual(form.initial.get("b_conn_1_type"), "interface")
+        self.assertEqual(form.initial.get("b_conn_1_parent"), self.device.pk)
+        self.assertEqual(form.initial.get("b_conn_1_termination"), self.iface_b.pk)

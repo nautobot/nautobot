@@ -29,7 +29,7 @@
             if (!m) return;
             const term = document.querySelector(`select[name="${m[1]}_termination"]`);
             if (term) {
-                $(term).val(null).trigger("change");
+                window.nb.select2.setSelect2Value(term, null);
             }
         });
 
