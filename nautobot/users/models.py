@@ -69,6 +69,7 @@ class User(BaseModel, AbstractUser):
     documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
     is_metadata_associable_model = False
+    is_staff_only_changelog_model = True
 
     class Meta:
         db_table = "auth_user"
@@ -248,6 +249,7 @@ class Token(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    is_staff_only_changelog_model = True
 
     class Meta:
         ordering = ["created"]
@@ -324,6 +326,7 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
     is_metadata_associable_model = False
+    is_staff_only_changelog_model = True
 
     class Meta:
         ordering = ["name"]

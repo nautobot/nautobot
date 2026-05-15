@@ -16,6 +16,7 @@ EXTRAS_FEATURES = [
     "job_results",  # No longer used
     "locations",
     "relationships",  # Deprecated - see nautobot.extras.utils.populate_model_features_registry
+    "staff_only_changelog",  # see nautobot.extras.utils.populate_model_features_registry (is_staff_only_changelog_model)
     "statuses",
     "webhooks",
 ]

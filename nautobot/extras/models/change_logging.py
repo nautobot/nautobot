@@ -28,6 +28,10 @@ class ChangeLoggedModel(models.Model):
     created = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
+    # When True, ObjectChange records for this model are hidden from non-staff / non-superuser viewers.
+    # Picked up by populate_model_features_registry() under the "staff_only_changelog" feature.
+    is_staff_only_changelog_model = False
+
     class Meta:
         abstract = True
 

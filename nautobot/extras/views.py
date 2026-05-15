@@ -97,6 +97,7 @@ from nautobot.dcim.tables import (
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
+    FeatureQuery,
     fixup_filterset_query_params,
     get_base_template,
     get_pending_approval_workflow_stages,
@@ -3162,8 +3163,13 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         # Note: restrict() in super().get_queryset() already returns queryset.none() for anonymous users.
         queryset = super().get_queryset()
 
-        if not self.request.user.is_staff:
-            queryset = queryset.exclude(user__is_staff=True).exclude(user__is_superuser=True)
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            # Hide changelog records for staff-only content types (User, Group, Token, ObjectPermission, ...)
+            # from non-privileged viewers. Filtering by changed_object_type, rather than the record's author,
+            # is robust against ObjectChange.user being SET_NULL when the author is deleted.
+            restricted_content_types = ContentType.objects.filter(FeatureQuery("staff_only_changelog").get_query())
+            queryset = queryset.exclude(changed_object_type__in=restricted_content_types)
 
         return queryset
 

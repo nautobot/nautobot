@@ -369,6 +369,11 @@ def populate_model_features_registry(refresh=False):
             "field_names": [],
             "additional_constraints": {"is_approval_workflow_model": True},
         },
+        {
+            "feature_name": "staff_only_changelog",
+            "field_names": [],
+            "additional_constraints": {"is_staff_only_changelog_model": True},
+        },
     ]
 
     app_models = apps.get_models()
@@ -381,6 +386,10 @@ def populate_model_features_registry(refresh=False):
         )
         feature_name = lookup_conf["feature_name"]
         registry["model_features"][feature_name] = registry_items
+
+    # auth.Group is a Django built-in, so we can't set is_staff_only_changelog_model on it directly;
+    # inject it into the staff_only_changelog feature manually.
+    registry["model_features"]["staff_only_changelog"].setdefault("auth", []).append("group")
 
     if not registry.get("populate_model_features_registry_called", False):
         registry["populate_model_features_registry_called"] = True
