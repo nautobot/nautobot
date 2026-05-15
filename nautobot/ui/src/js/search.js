@@ -402,7 +402,9 @@ export const initializeSearch = () => {
         timeoutRef.current = setTimeout(() => {
           links.forEach((link) => {
             const source = '#search_popup form input'; // Trigger HTMX GET as it would be fired from search `input`.
-            htmx.ajax('get', `/live-search${link}`, { source });
+            // Get live search URL path and replace its trailing slash with an actual list view `link`.
+            const url = headerSearch.getAttribute('data-nb-live-search-path').replace(/\/+$/, link);
+            htmx.ajax('get', url, { source });
           });
         }, CONTENT_TYPE_LIVE_SEARCH_DEBOUNCE_DELAY);
       } else {

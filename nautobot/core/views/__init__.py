@@ -477,6 +477,9 @@ class LiveSearchView(AccessMixin, View):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
 
+        if path is None:
+            return HttpResponseBadRequest("List view `path` is missing in the requested URL.")
+
         if request.headers.get("HX-Request", False):
             restricted_queryset = None
             table = None
