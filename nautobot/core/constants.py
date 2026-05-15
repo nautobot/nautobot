@@ -2,6 +2,8 @@ from copy import deepcopy
 
 import nh3
 
+LIVE_SEARCH_MAX_RESULTS = 10
+
 SEARCH_MAX_RESULTS = 15
 
 #
