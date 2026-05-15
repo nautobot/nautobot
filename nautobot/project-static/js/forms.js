@@ -271,37 +271,6 @@ function initializeVLANModeSelection(context) {
     });
 }
 
-function initializeSortableList(context){
-    this_context = $(context);
-    // Rearrange options within a <select> list
-    this_context.find('#move-option-up').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) - 1;
-            if (newPos > -1) {
-                $(select_id + ' option').eq(newPos).before("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
-            }
-        });
-    });
-    this_context.find('#move-option-down').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        var countOptions = $(select_id + ' option').length;
-        var countSelectedOptions = $(select_id + ' option:selected').length;
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) + countSelectedOptions;
-            if (newPos < countOptions) {
-                $(select_id + ' option').eq(newPos).after("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
-            }
-        });
-    });
-    this_context.find('#select-all-options').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option').prop('selected',true);
-    });
-}
-
 function initializeImagePreview(context){
     this_context = $(context);
     // Offset between the preview window and the window edges
@@ -358,7 +327,6 @@ function initializeInputs(context) {
     initializeBulkEditNullification(this_context)
     initializeDateTimePicker(this_context)
     initializeVLANModeSelection(this_context)
-    initializeSortableList(this_context)
     initializeImagePreview(this_context)
 
     window.nb.checkbox.initializeCheckboxes()
