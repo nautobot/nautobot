@@ -176,7 +176,9 @@
                     // Force wait for the `marginBlockStart` style set above to take effect.
                     columns.forEach((column) => window.getComputedStyle(column).marginBlockStart);
 
-                    (function moveWrappedColumnsUp() {
+                    (function moveWrappedColumnsUp(iteration) {
+                        const MAX_ITERATIONS = 5;
+
                         const columnOffsetTopTargets = columns.map((column, index) => {
                             /*
                              * `column` must be wrapped in case it is rendered after the first rightmost column
@@ -221,10 +223,10 @@
                         const areAllColumnsAtTheirTargets = columns.every(
                             (column, index) => column.offsetTop <= columnOffsetTopTargets[index],
                         );
-                        if (!areAllColumnsAtTheirTargets) {
-                            moveWrappedColumnsUp();
+                        if (!areAllColumnsAtTheirTargets && iteration < MAX_ITERATIONS) {
+                            moveWrappedColumnsUp(iteration + 1);
                         }
-                    })();
+                    })(0);
                 };
 
                 const resizeObserver = new ResizeObserver(() => collapseVerticalWhitespace());
