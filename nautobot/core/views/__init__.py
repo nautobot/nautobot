@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import contextlib
 import datetime
 from importlib import resources
@@ -193,15 +192,15 @@ class HomeView(AccessMixin, TemplateView):
             used_panel_names = [kv_pair[0] for panel_group in panel_layout for kv_pair in panel_group]
             missing_panels = [kv_pair for kv_pair in user_panels if kv_pair[0] not in used_panel_names]
             panel_layout[-1] += missing_panels
-            ## Convert panel key-value pairs to `OrderedDict`.
-            panel_layout = [OrderedDict(panel_column) for panel_column in panel_layout]
+            # Convert panel key-value pairs to `dict`.
+            panel_layout = [dict(panel_column) for panel_column in panel_layout]
         else:
             # If `user_config` is not found or is invalid, create a default panel layout.
             # Using an upside-down floor division here. Source: from https://stackoverflow.com/a/17511341.
             panel_layout_rows = -(len(user_panels) // -HOMEPAGE_PANELS_LAYOUT_COLUMNS)
             # Lambda key function is responsible by grouping the panels into equal chunks representing rows per column.
             panel_layout = [
-                OrderedDict(panel_group)
+                dict(panel_group)
                 for key, panel_group in groupby(
                     user_panels, lambda panel: user_panels.index(panel) // panel_layout_rows
                 )
