@@ -32,7 +32,7 @@ The "is Nautobot OK right now?" dashboard. Designed to load in under a second an
 | Web pods up | Stat | `count(up{job="nautobot-web"} == 1)` |
 | Worker pods up | Stat | `count(up{job="nautobot-worker"} == 1)` |
 | HTTP 5xx rate (5 min) | Time series | `sum(rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]))` |
-| Job failure rate (5 min) | Time series | `sum by (name) (rate(nautobot_worker_finished_jobs{status="FAILURE"}[5m]))` |
+| Job failure rate (5 min) | Time series | `sum by (job_class_name) (rate(nautobot_worker_finished_jobs{status="FAILURE"}[5m]))` |
 
 ### 2. Job Execution
 
@@ -40,11 +40,11 @@ For diagnosing Job-side failures. Surfaces what Jobs are running, how fast they 
 
 | Panel | Type | Query |
 |---|---|---|
-| Started vs finished by name | Time series | `sum by (name) (increase(nautobot_worker_started_jobs[$__rate_interval]))` overlaid with `sum by (name) (increase(nautobot_worker_finished_jobs[$__rate_interval]))` |
-| Exception class distribution | Stacked bar | `sum by (exception) (increase(nautobot_worker_exception_jobs[1h]))` |
+| Started vs finished, per Job class | Time series | `sum by (job_class_name) (increase(nautobot_worker_started_jobs[$__rate_interval]))` overlaid with `sum by (job_class_name) (increase(nautobot_worker_finished_jobs[$__rate_interval]))` |
+| Exception class distribution | Stacked bar | `sum by (exception_type) (increase(nautobot_worker_exception_jobs[1h]))` |
 | Singleton conflict rate | Time series | `sum(rate(nautobot_worker_singleton_conflict[5m]))` |
 | Queue depth (per queue) | Time series | `celery_queue_length` (from `celery-exporter`) |
-| Failure heatmap | Heatmap | `sum by (name) (rate(nautobot_worker_finished_jobs{status="FAILURE"}[$__rate_interval]))` |
+| Failure heatmap | Heatmap | `sum by (job_class_name) (rate(nautobot_worker_finished_jobs{status="FAILURE"}[$__rate_interval]))` |
 
 ### 3. Backing Stores
 
@@ -103,6 +103,9 @@ Treat dashboards as code:
 - Parameterize environment-specific values with Grafana template variables (`$cluster`, `$tenant`, `$namespace`) so the same dashboard works across dev, staging, and production.
 
 Avoid building everything from scratch — community Grafana dashboards for Prometheus, Redis, PostgreSQL, and Celery already exist in the [Grafana dashboard library](https://grafana.com/grafana/dashboards/). Nautobot-specific panels are most valuable when they sit alongside those existing dashboards rather than re-implementing what they already do well.
+
+!!! info "On Our Radar"
+    A maintained Grafana dashboard for Nautobot is on our radar. If and when one is published, this page will link to it as a vetted starting point — until then, the panel descriptions and queries above are the recommended foundation for building your own.
 
 ## Worked Example: A Compact Health View
 
