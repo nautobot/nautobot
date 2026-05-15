@@ -64,7 +64,7 @@ For Redis and PostgreSQL alerting in detail, see [Backing Stores](./backing-stor
 Nautobot's `/metrics` endpoint exposes Job and health-check counters; see [Prometheus Metrics](./prometheus-metrics.md) for the full catalogue. The metrics most useful for alerting:
 
 - `nautobot_worker_finished_jobs{status="..."}` — Job outcomes by status label.
-- `nautobot_worker_exception_jobs{exception="..."}` — Job failures broken out by exception class. A previously-zero exception class going non-zero is almost always alert-worthy and is the single best signal for catching new failure modes.
+- `nautobot_worker_exception_jobs{exception_type="..."}` — Job failures broken out by exception class. A previously-zero exception class going non-zero is almost always alert-worthy and is the single best signal for catching new failure modes.
 - `nautobot_worker_singleton_conflict` — singleton Jobs blocked by a still-running invocation.
 - `health_check_database_info`, `health_check_redis_backend_info` — last health-check result.
 - `django_http_responses_total_by_status_total{status=~"5.."}` — server-error rate.
@@ -77,26 +77,28 @@ groups:
   - name: nautobot.tier1
     rules:
       - alert: NautobotDatabaseUnavailable
-        expr: health_check_database_info{status="unavailable"} == 1
+        # health_check_database_info is a label-less Gauge: -1 unknown, 0 down, 1 up.
+        # `<= 0` catches both "down" and "unknown" (a worker that has not yet run the check).
+        expr: health_check_database_info <= 0
         for: 1m
         labels: {severity: page}
 
       - alert: NautobotRedisUnavailable
-        expr: health_check_redis_backend_info{status="unavailable"} == 1
+        expr: health_check_redis_backend_info <= 0
         for: 1m
         labels: {severity: page}
 
       - alert: NautobotJobFailures
-        expr: sum by (name) (increase(nautobot_worker_finished_jobs{status="FAILURE"}[5m])) > 0
+        expr: sum by (job_class_name) (increase(nautobot_worker_finished_jobs{status="FAILURE"}[5m])) > 0
         labels: {severity: page}
         annotations:
-          summary: "Nautobot Job {{ $labels.name }} is failing"
+          summary: "Nautobot Job {{ $labels.job_class_name }} is failing"
 
       - alert: NautobotJobExceptionsByType
-        expr: sum by (exception) (increase(nautobot_worker_exception_jobs[10m])) > 0
+        expr: sum by (exception_type) (increase(nautobot_worker_exception_jobs[10m])) > 0
         labels: {severity: page}
         annotations:
-          summary: "New Job exception class: {{ $labels.exception }}"
+          summary: "New Job exception class: {{ $labels.exception_type }}"
 
       - alert: NautobotHTTP5xx
         expr: |
@@ -147,7 +149,7 @@ Scheduled cleanup Jobs, database maintenance, and deploy windows produce log lin
 - **Alertmanager**: define silences via the [Alertmanager web UI](https://prometheus.io/docs/alerting/latest/management_api/) or the API, scoped by label selector (`job="nautobot-worker"`, `severity="page"`, or a custom `maintenance="db"` label).
 - **Datadog / New Relic / Opsgenie**: equivalent downtime / muted-window primitives that take a label or tag selector and a time range.
 
-A practical convention is to tag every scheduled maintenance Nautobot Job with a recognizable name (e.g. `Cleanup System Records`) and silence on `job_name="Cleanup System Records"` during its expected run window plus a small buffer. Avoid silencing entire severity tiers — you lose visibility into actual incidents that happen to coincide with the maintenance window.
+A practical convention is to tag every scheduled maintenance Nautobot Job with a recognizable name (e.g. the bundled `Logs Cleanup` Job) and silence on `job_name="Logs Cleanup"` during its expected run window plus a small buffer. Avoid silencing entire severity tiers — you lose visibility into actual incidents that happen to coincide with the maintenance window.
 
 ## SLO-Based Alerts
 
@@ -170,11 +172,11 @@ The same approach applies to log aggregators — promote the tenant label to a L
 
 Walking through a typical paging incident clarifies how the signals on this page fit together. The scenario: at 3 a.m., the on-call engineer is paged for `NautobotJobFailures` on a production deployment.
 
-1. **Read the alert annotation.** The `summary` line names the Job: `Network Sync` is failing.
-2. **Open the metrics dashboard.** Confirm `nautobot_worker_finished_jobs{name="Network Sync", status="FAILURE"}` is increasing. Cross-check `nautobot_worker_started_jobs` to see whether new runs are still being kicked off (Beat is working) or whether the failures are stuck retries.
-3. **Look at `nautobot_worker_exception_jobs{exception=...}`** for the same Job. The label tells you the exception class: `OperationalError` (database) vs `ConnectionError` (downstream device) vs `TimeoutError` (the Job itself running long).
+1. **Read the alert annotation.** The `summary` line names the Job: `Nautobot Job NetworkSync is failing` — the label value is the Python class name, which the Job's `Meta.name` would surface in the UI as `Network Sync`.
+2. **Open the metrics dashboard.** Confirm `nautobot_worker_finished_jobs{job_class_name="NetworkSync", status="FAILURE"}` is increasing. Cross-check `nautobot_worker_started_jobs` to see whether new runs are still being kicked off (Beat is working) or whether the failures are stuck retries.
+3. **Look at `nautobot_worker_exception_jobs{exception_type=...}`** for the same Job. The label tells you the exception class: `OperationalError` (database) vs `ConnectionError` (downstream device) vs `TimeoutError` (the Job itself running long).
 4. **Jump to the aggregator.** Search `name="nautobot.jobs.network_sync"` with `levelname="ERROR"` over the last hour. Read the tracebacks to confirm the root cause.
-5. **Cross-check the Job Result UI** when you need to coordinate with the Job author — `/extras/job-results/?status=failure&name=Network+Sync` shows the user-facing failure summary and the structured `JobLogEntry` rows.
+5. **Cross-check the Job Result UI** when you need to coordinate with the Job author — `/extras/job-results/?status=failure&name=Network+Sync` (the UI filters on the human `Meta.name`) shows the user-facing failure summary and the structured `JobLogEntry` rows.
 6. **Decide remediation.** Database error: page the DB team or check `health_check_database_info`. Device error: page the network team. Timeout: temporarily disable the Job via the Job admin page (`/extras/jobs/`) and file a ticket for follow-up.
 
 The progression — metric → exception class → log traceback → Job Result UI — is the standard investigative flow for any Nautobot-level alert. Going in the opposite order (starting from `/extras/job-results/` and clicking through) works but is slower, and is harder to scope when the failure spans multiple Job runs or originates outside Nautobot itself.

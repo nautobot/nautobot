@@ -66,11 +66,11 @@ Three observations drive Nautobot-specific PostgreSQL load:
 These tables bloat fastest in a typical Nautobot deployment:
 
 - `extras_objectchange` — every model write emits a row. Retention controlled by [`CHANGELOG_RETENTION`](../configuration/settings.md#changelog_retention) (days; default 90, `0` disables retention enforcement).
-- `extras_jobresult` — one row per Job invocation. No standalone retention setting; trimmed by the bundled `Cleanup System Records` Job.
+- `extras_jobresult` — one row per Job invocation. No standalone retention setting; trimmed by the bundled `Logs Cleanup` Job.
 - `extras_joblogentry` — every Job emits dozens to thousands of rows. Deleted automatically when the parent `JobResult` is deleted via the cleanup Job above.
 - `django_session` if not cache-backed.
 
-Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Cleanup System Records` Job to run periodically with explicit `cutoff` arguments for `extras.ObjectChange` and `extras.JobResult`. The defaults err on the side of "keep everything," which is fine until disk fills.
+Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Logs Cleanup` Job (under the `System Jobs` group) to run periodically. Its `cleanup_types` argument selects which records to trim (`extras.ObjectChange`, `extras.JobResult`, or both) and `max_age` overrides the default cutoff in days (which falls back to `CHANGELOG_RETENTION`). The defaults err on the side of "keep everything," which is fine until disk fills.
 
 The two signals that tell you when bloat or growth on these tables is getting away from you:
 

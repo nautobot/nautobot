@@ -68,15 +68,18 @@ Nautobot makes use of the [`django-prometheus`](https://github.com/korfuri/djang
 
 Additionally, there are a number of metrics custom to Nautobot specifically:
 
-| Name                                 | Description                                                                | Type    | Exposed By |
-|--------------------------------------|----------------------------------------------------------------------------|---------|------------|
-| `health_check_database_info`         | Result of the last database health check                                   | Gauge   | Web Server |
-| `health_check_redis_backend_info`    | Result of the last redis health check                                      | Gauge   | Web Server |
-| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps. Useful for detecting an App with a slow custom-metric collector — a sustained increase points at the App, not Nautobot core. | Gauge   | Web Server |
-| `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | Worker     |
-| `nautobot_worker_finished_jobs`      | The amount of jobs that were finished (incl. status label)                 | Counter | Worker     |
-| `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
-| `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
+| Name                                 | Description                                                                | Type    | Labels | Exposed By |
+|--------------------------------------|----------------------------------------------------------------------------|---------|--------|------------|
+| `health_check_database_info`         | Result of the last database health check. Value is `1` (up), `0` (down), or `-1` (unknown — check has not run yet on this process). | Gauge   | *(none)* | Web Server |
+| `health_check_redis_backend_info`    | Result of the last Redis health check. Same value semantics as the database check above. | Gauge   | *(none)* | Web Server |
+| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps. Useful for detecting an App with a slow custom-metric collector — a sustained increase points at the App, not Nautobot core. | Gauge   | *(none)* | Web Server |
+| `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | `job_class_name`, `module_name` | Worker |
+| `nautobot_worker_finished_jobs`      | The amount of jobs that were finished                                      | Counter | `job_class_name`, `module_name`, `status` | Worker |
+| `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception                              | Counter | `job_class_name`, `module_name`, `exception_type` | Worker |
+| `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | `job_class_name`, `module_name` | Worker |
+
+!!! note
+    `job_class_name` is the Python class name (e.g. `MyDeviceSync`), not the human-readable `Meta.name` (e.g. `My Device Sync`). `status` values match Celery's task-state strings (`SUCCESS`, `FAILURE`, `REJECTED`, `IGNORED`). `exception_type` is the short class name of the raised exception (e.g. `OperationalError`). Use these labels in `sum by (...)` aggregations and in alert annotations.
 
 For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample PromQL Rules](./alerting.md#sample-promql-rules). For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
 

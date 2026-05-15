@@ -263,7 +263,7 @@ Job results carry both a Celery task status and an application log level — see
 | `RECEIVED` | A worker has picked up the task but has not started running it. |
 | `STARTED` | The task is currently executing on a worker. Visible only when `task_track_started=True` is configured. |
 | `SUCCESS` | Task finished without raising an exception. |
-| `FAILURE` | Task raised an exception. Inspect `JobResult.traceback` and `nautobot_worker_exception_jobs{exception=...}` to identify the class. |
+| `FAILURE` | Task raised an exception. Inspect `JobResult.traceback` and `nautobot_worker_exception_jobs{exception_type=...}` to identify the class. |
 | `RETRY` | Task is being retried by Celery. Frequent retries on the same Job name suggest a transient downstream dependency is failing. |
 | `REVOKED` | Task was canceled before completion — typically because an operator hit "Revoke" in the UI or singleton-conflict resolution killed a duplicate. |
 | `IGNORED` | Task ran but its result was discarded (`ignore_result=True`). Rare in Nautobot Jobs, since results back the Job Result UI. |
@@ -286,7 +286,7 @@ Disabling schedule <name> that was removed from database
 Disabling schedule <name> with missing user
 ```
 
-Prefer the metric `nautobot_worker_finished_jobs{status="FAILURE"}` (and `nautobot_worker_exception_jobs{exception=...}`) over text matching — see [Prometheus Metrics](./prometheus-metrics.md).
+Prefer the metric `nautobot_worker_finished_jobs{status="FAILURE"}` (and `nautobot_worker_exception_jobs{exception_type=...}`) over text matching — see [Prometheus Metrics](./prometheus-metrics.md).
 
 ### Celery Worker and Broker
 

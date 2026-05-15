@@ -27,10 +27,10 @@ Pick a value that comfortably exceeds your slowest Job's wall-clock runtime. Rea
 You can detect this in production before it bites by alerting on [`nautobot_worker_started_jobs`](./prometheus-metrics.md#metric-types) going up without a corresponding [`nautobot_worker_finished_jobs`](./prometheus-metrics.md#metric-types) increase for a given task name over a long window — that's a Job that has been redelivered or is stuck. In PromQL:
 
 ```promql
-# Started but never finished for the same task name over the last 2 hours.
+# Started but never finished for the same Job class over the last 2 hours.
 # Tune the window and threshold to fit your slowest Job.
-sum by (name) (increase(nautobot_worker_started_jobs[2h]))
-  - sum by (name) (increase(nautobot_worker_finished_jobs[2h])) > 1
+sum by (job_class_name) (increase(nautobot_worker_started_jobs[2h]))
+  - sum by (job_class_name) (increase(nautobot_worker_finished_jobs[2h])) > 1
 ```
 
 A persistent non-zero gap indicates either a stuck Job, a worker that died mid-task, or a Job that has exceeded the visibility timeout and is being redelivered.
