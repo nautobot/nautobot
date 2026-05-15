@@ -6,7 +6,7 @@ For the basic liveness probes (`pg_isready`, `redis-cli ping`), see [Health Chec
 
 ## Redis
 
-### Key Redis metrics
+### Key Redis Metrics
 
 Deploy [`redis_exporter`](https://github.com/oliver006/redis_exporter) alongside each Redis instance. Metrics worth alerting on:
 
@@ -24,9 +24,9 @@ Deploy [`redis_exporter`](https://github.com/oliver006/redis_exporter) alongside
 !!! info "Why Redis memory matters for Nautobot"
     With the default `noeviction` policy, hitting `maxmemory` causes Celery producers to hang on `BRPOPLPUSH` rather than raising an exception. The symptom is "the UI works but Jobs don't run" — there is no log line. Alert on memory headroom *before* it bites.
 
-### Slowlog — the "why is the cache slow" answer
+### Redis Slowlog
 
-`redis_exporter` counts slow commands but does not surface their content. To investigate latency, query Redis directly:
+`redis_exporter` counts slow commands but does not surface their content. To investigate which commands are slow, query Redis directly:
 
 ```bash
 redis-cli SLOWLOG GET 20            # last 20 slow commands with timing
@@ -36,13 +36,13 @@ redis-cli CONFIG GET slowlog-log-slower-than    # default 10000 µs (10 ms)
 
 The most common offender is an App that uses Django cache for an unbounded queryset. To attribute Redis latency back to the *Nautobot request* that caused it, pair this with [Request Profiling](./request-profiling.md) — `django-silk` records cache calls per request alongside SQL queries.
 
-### HA considerations
+### HA Considerations
 
 `redis-cli ping` returns `PONG` whether the node is master or replica. In a Sentinel topology, add `redis-cli INFO replication | grep role:master` as a secondary probe so a replica that just got demoted does not pass the liveness check — see [Health Checks](./health-checks.md).
 
 ## PostgreSQL
 
-### Connection topology
+### Connection Topology
 
 ```mermaid
 flowchart LR
@@ -61,7 +61,7 @@ Three observations drive Nautobot-specific PostgreSQL load:
 2. **Workers and Beat connect too.** A common mistake is to size PgBouncer for web traffic only, then starve Celery during sync windows.
 3. **Long-running Jobs hold connections open.** A Job that loops over devices for an hour holds a transaction (and a connection) for an hour. Combined with PgBouncer in `transaction` mode, this can pin a backend slot.
 
-### High-churn tables
+### High-Churn Tables
 
 These tables bloat fastest in a typical Nautobot deployment:
 
@@ -72,7 +72,7 @@ These tables bloat fastest in a typical Nautobot deployment:
 
 Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Cleanup System Records` Job to run periodically with explicit `cutoff` arguments for `extras.ObjectChange` and `extras.JobResult`. The defaults err on the side of "keep everything," which is fine until disk fills.
 
-### Key PostgreSQL metrics
+### Key PostgreSQL Metrics
 
 Deploy [`postgres_exporter`](https://github.com/prometheus-community/postgres_exporter) (and [`pgbouncer_exporter`](https://github.com/prometheus-community/pgbouncer_exporter) if you have PgBouncer):
 
@@ -86,9 +86,9 @@ Deploy [`postgres_exporter`](https://github.com/prometheus-community/postgres_ex
 | `pg_stat_database_blks_hit / (blks_hit + blks_read)` | Buffer cache hit ratio | `< 0.99` on a warm DB suggests undersized `shared_buffers` |
 | `pgbouncer_pools_server_active_connections / max_server_connections` | Pool saturation | `> 0.9` for 5 minutes |
 
-### `pg_stat_statements` — the slow-query investigator
+### `pg_stat_statements`
 
-Enable on the primary:
+The `pg_stat_statements` extension is the standard tool for investigating slow queries on a PostgreSQL instance. Enable on the primary:
 
 ```sql
 -- in postgresql.conf
@@ -117,7 +117,7 @@ The biggest offenders are usually filter combinations on large tables without a 
 
 `pg_stat_statements` aggregates across the whole database. To trace a slow query back to the specific *Nautobot view or Job* that issued it, also enable [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
 
-### Long-running transactions
+### Long-Running Transactions
 
 Nautobot Jobs that wrap a multi-thousand-row update in `with transaction.atomic():` keep a transaction open for the duration of the loop. That's fine in isolation, but it (a) holds row locks, (b) prevents `VACUUM` from reclaiming dead tuples, and (c) consumes a PgBouncer slot in `transaction` mode.
 
@@ -137,11 +137,11 @@ ORDER BY xact_start;
 
 The fix is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
 
-### HA-specific signals
+### HA-Specific Signals
 
 `pg_isready` confirms the server is accepting TCP connections; it does **not** check whether the node is in recovery (read-only). In a Patroni / repmgr / RDS multi-AZ topology, a connection probe will pass against a follower that Nautobot cannot write to. Add `psql -c "SELECT NOT pg_is_in_recovery();"` as a secondary probe — it returns `t` only on the primary, so a failed promotion gets caught at the probe layer instead of as a flood of 5xx after the first write. See [Health Checks — PostgreSQL](./health-checks.md#postgresql).
 
-### Disk-trajectory monitoring
+### Disk-Trajectory Monitoring
 
 Disk-fill is the slowest-developing PostgreSQL outage and the most catastrophic. A 30-day forecast catches the trajectory before the 3 AM page:
 

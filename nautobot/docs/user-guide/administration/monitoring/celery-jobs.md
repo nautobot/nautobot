@@ -4,9 +4,9 @@ Nautobot Jobs run as Celery tasks. Most production surprises with Nautobot at sc
 
 For multi-queue worker deployments, see [Task Queues](../guides/celery-queues.md). For per-Job logging from inside Job code, see [Job Logging](../../../development/jobs/job-logging.md).
 
-## The Redis `visibility_timeout` foot-gun
+## Visibility Timeout for Long-Running Jobs
 
-When the broker is Redis (Nautobot's default), Celery does not delete a task from the queue when a worker picks it up. The broker holds the task under a **visibility timeout** and only deletes it after the worker acks. If the task runs longer than the visibility timeout (**default: 3600 seconds / 1 hour**), the broker concludes the worker died and **redelivers the task to another worker**.
+When the broker is Redis (Nautobot's default), Celery does not delete a task from the queue when a worker picks it up. The broker holds the task under a visibility timeout and only deletes it after the worker acks. If the task runs longer than the visibility timeout (default: 3600 seconds, or 1 hour), the broker concludes the worker died and redelivers the task to another worker.
 
 The result is a long-running Nautobot Job running twice in parallel, on different workers, racing to write the same database. Symptoms include duplicate `JobLogEntry` rows, `IntegrityError` tracebacks, and half-applied changes.
 
@@ -26,11 +26,11 @@ Pick a value that comfortably exceeds your slowest Job's wall-clock runtime. Rea
 
 You can detect this in production *before* it bites by alerting on [`nautobot_worker_started_jobs`](./prometheus-metrics.md#metric-types) going up without a corresponding [`nautobot_worker_finished_jobs`](./prometheus-metrics.md#metric-types) increase for a given task name over a long window — that's a Job that has been redelivered or is stuck.
 
-## Worker silent-death
+## Worker Silent Death
 
-A Celery worker that hits an OOM kill, a C-extension segfault, or wedges on a syscall can leave the process technically *alive* (zombie or stuck in a kernel wait) while no longer pulling tasks off the queue. A bare process-existence check passes; `nautobot-server celery inspect ping` may stall and time out depending on which thread is wedged.
+A Celery worker that hits an OOM kill, a C-extension segfault, or wedges on a syscall can leave the process technically alive (zombie or stuck in a kernel wait) while no longer pulling tasks off the queue. A bare process-existence check passes; `nautobot-server celery inspect ping` may stall and time out depending on which thread is wedged.
 
-The **file-based heartbeat probe is the only check that proves the Python interpreter is still executing the worker loop** — it requires the worker to actively `touch` `$CELERY_WORKER_HEARTBEAT_FILE` every cycle. In Kubernetes, wire it as the **liveness** probe so the kubelet restarts a stuck worker.
+The file-based heartbeat probe is the only check that proves the Python interpreter is still executing the worker loop — it requires the worker to actively `touch` `$CELERY_WORKER_HEARTBEAT_FILE` every cycle. In Kubernetes, wire it as the liveness probe so the kubelet restarts a stuck worker.
 
 ```python
 # nautobot_config.py
@@ -39,9 +39,9 @@ CELERY_HEALTH_PROBES_AS_FILES = True
 
 See [Health Checks — Nautobot Celery Worker](./health-checks.md#nautobot-celery-worker) for the full probe configuration (shell check, Kubernetes YAML, Docker Compose), and [Health Checks — Celery Worker Container in k8s](./health-checks.md#celery-worker-container-in-k8s) for an important caveat about Celery 5.6.1 affecting Nautobot 3.0.4 and 3.0.5.
 
-## Queue depth — the silent backlog signal
+## Queue Depth
 
-The Tier-1 alerts in [Alerting](./alerting.md) catch *failures*. They do not catch a slow-but-functional pipeline where producers outpace consumers. The only direct signal for that is queue depth.
+The Tier-1 alerts in [Alerting](./alerting.md) catch failures. They do not catch a slow-but-functional pipeline where producers outpace consumers. The only direct signal for that is queue depth — the silent backlog.
 
 Two ways to measure on a Redis-backed Nautobot:
 
@@ -65,9 +65,9 @@ For Prometheus, deploy a `celery-exporter` — it exports `celery_queue_length{q
 
 The threshold is site-specific — tune to your steady state. Pair with a counter-rate alert (`rate(nautobot_worker_started_jobs[10m])` falling to zero while queue length is non-zero) to catch the case where workers have stopped consuming entirely.
 
-## Beat schedule drift
+## Beat Schedule Drift
 
-Nautobot's Celery Beat scheduler ([`NautobotDatabaseScheduler`](https://github.com/nautobot/nautobot/blob/develop/nautobot/core/celery/schedulers.py)) ticks every few seconds and fires `ScheduledJob` rows whose cron expression matches. If the scheduler process is killed mid-tick, blocked on the database, or generally slow, **scheduled runs are missed and not backfilled** — Beat does not have a "make-up runs" feature.
+Nautobot's Celery Beat scheduler ([`NautobotDatabaseScheduler`](https://github.com/nautobot/nautobot/blob/develop/nautobot/core/celery/schedulers.py)) ticks every few seconds and fires `ScheduledJob` rows whose cron expression matches. If the scheduler process is killed mid-tick, blocked on the database, or generally slow, scheduled runs are missed and not backfilled — Beat does not have a "make-up runs" feature.
 
 Two complementary detections:
 
@@ -92,19 +92,19 @@ Two complementary detections:
 
 Flower is not a replacement for the Nautobot UI — the UI knows about [`JobResult`](../../platform-functionality/jobs/models.md#job-results) rows and ties to model permissions. Flower is for the operator/observability tier and complements (rather than replaces) Nautobot's own [`/metrics`](./prometheus-metrics.md) endpoint — Flower exposes per-task histograms that Nautobot's worker metrics do not.
 
-## Streaming Job lifecycle events
+## Streaming Job Lifecycle Events
 
 When an external system needs to react to Job start or completion — ticket updates, notification fan-out, downstream automation — prefer the [Job Events](../../platform-functionality/events.md#job-events) topics (`nautobot.jobs.job.started`, `nautobot.jobs.job.completed`) over polling the Job Result UI or scraping `nautobot.extras.jobs` log lines. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` for failure tracebacks. Register `SyslogEventBroker` to fold them into your log pipeline (see [Streaming event notifications to logs](./logging.md#streaming-event-notifications-to-logs)) or `RedisEventBroker` for a dedicated Pub/Sub channel.
 
-## Logging from inside Jobs
+## Logging from Inside Jobs
 
 How a Job author writes log lines determines what an operator can alert on. The choices below have outsized impact on whether Job logs land in your aggregator as queryable signal or as undifferentiated noise. For the full Job-logging API surface, see [Job Logging](../../../development/jobs/job-logging.md); this section focuses on the choices that affect ingestion and alerting.
 
-### Prefer `self.logger` over `logging.getLogger()`
+### Prefer `self.logger` Over `logging.getLogger()`
 
-`self.logger` (provided by the `Job` base class) writes to **both** the `JobLogEntry` database table — visible in the Job Result UI — and the worker's `nautobot.jobs.<module>` Python logger that your aggregator already collects. A module-level `logging.getLogger(__name__)` reaches only the worker stdout, so log lines emitted that way are invisible in the Job Result UI. Default to `self.logger` and reach for the module-level logger only outside of Job methods (e.g. helper modules that may be called from non-Job code paths).
+`self.logger` (provided by the `Job` base class) writes to both the `JobLogEntry` database table — visible in the Job Result UI — and the worker's `nautobot.jobs.<module>` Python logger that your aggregator already collects. A module-level `logging.getLogger(__name__)` reaches only the worker stdout, so log lines emitted that way are invisible in the Job Result UI. Default to `self.logger` and reach for the module-level logger only outside of Job methods (e.g. helper modules that may be called from non-Job code paths).
 
-### Make each line pivotable in the aggregator
+### Make Each Line Pivotable in the Aggregator
 
 Three knobs determine how filterable a Job log line is downstream:
 
@@ -132,7 +132,7 @@ self.logger.info(
 
 When the worker is configured for JSON output (see [Switching to JSON output](./logging.md#switching-to-json-output)), `job_result_id` and `stage` arrive at your aggregator as first-class fields you can filter and group on — no regex parsing required.
 
-### Choose levels for alerting, not narration
+### Choose Levels for Alerting, Not Narration
 
 Aggregator alert rules typically anchor on logger name plus level. If every step of a Job emits at `INFO`, the operator has to fall back to text matching to find anything actionable.
 
@@ -146,7 +146,7 @@ Aggregator alert rules typically anchor on logger name plus level. If every step
 
 Inside `except` blocks, use `self.logger.exception("...")` — it emits at `ERROR` and attaches the traceback automatically. Do not manually `str(exc)` and log at `INFO`; that strips the traceback and downgrades the severity.
 
-### Aggregate per-record loops
+### Aggregate Per-Record Loops
 
 A Job that emits one `INFO` line per device in a 10,000-device loop produces 10,000 rows in `JobLogEntry` and 10,000 lines in worker stdout. The legitimate `ERROR` lines for the 4 failures are buried, the database table grows for nothing, and the UI is unusable. Prefer one summary line per phase plus per-record lines only at `WARNING` or above:
 
@@ -162,16 +162,16 @@ This makes "did this run go well" answerable from a single log line per Job run,
 
 `print()` output is captured by Celery into the worker's stdout, but the resulting line has no level, no logger name, and no `extra` fields. Your aggregator can't distinguish it from third-party library noise, and it never reaches `JobLogEntry`. Treat it as a code-review smell.
 
-### `SANITIZER_PATTERNS` does not protect worker stdout
+### `SANITIZER_PATTERNS` Does Not Protect Worker stdout
 
-[`SANITIZER_PATTERNS`](../configuration/settings.md#sanitizer_patterns) is applied inside `JobResult.log()` — that is, only on the path into `JobLogEntry` (and on `JobResult.result` / `traceback` / `exc_message`). It does **not** run inside the Python logging handler chain, which means a credential interpolated into a log message reaches the worker stdout — and therefore your aggregator — unredacted, regardless of whether you used `self.logger`, a module-level logger, or `print()`. Redact secrets in the Job before logging; treat the sanitizer as a UI-side safety net, not a perimeter.
+[`SANITIZER_PATTERNS`](../configuration/settings.md#sanitizer_patterns) is applied inside `JobResult.log()` — that is, only on the path into `JobLogEntry` (and on `JobResult.result` / `traceback` / `exc_message`). It does not run inside the Python logging handler chain, which means a credential interpolated into a log message reaches the worker stdout — and therefore your aggregator — unredacted, regardless of whether you used `self.logger`, a module-level logger, or `print()`. Redact secrets in the Job before logging; treat the sanitizer as a UI-side safety net, not a perimeter.
 
-### What this unlocks for the operator
+### What This Unlocks for the Operator
 
 When Job authors follow the above, the operator side becomes:
 
 - **Aggregator alert rule**: `logger:nautobot.jobs.<module> AND level:ERROR` — anchored on logger name and level, no text matching required. Pivot on `extra.stage` and `extra.job_result_id` to scope incidents.
-- **Lifecycle signal**: subscribe to [`nautobot.jobs.job.completed`](../../platform-functionality/events.md#job-events) and alert on non-null `einfo`. See [Streaming Job lifecycle events](#streaming-job-lifecycle-events) above.
+- **Lifecycle signal**: subscribe to [`nautobot.jobs.job.completed`](../../platform-functionality/events.md#job-events) and alert on non-null `einfo`. See [Streaming Job Lifecycle Events](#streaming-job-lifecycle-events) above.
 - **Metric signal**: `nautobot_worker_finished_jobs{status="FAILURE"}` from [Prometheus Metrics](./prometheus-metrics.md) — for SLO dashboards rather than per-incident routing.
 
 The three signals are complementary: the metric tells you *how many*, the event tells you *which run*, and the logs tell you *why*.

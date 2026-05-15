@@ -11,7 +11,7 @@ Alert primarily on health-checks and metrics. Use log keywords as a *secondary* 
 !!! note "Living section"
     The rules and thresholds below are the starting points we currently recommend based on production deployments we've seen — they're not exhaustive and they're not deployment-tuned. Walk through your steady-state baseline before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
 
-## Tier 1 — page someone
+## Tier 1: Page
 
 | Signal | Source | Threshold |
 |---|---|---|
@@ -22,9 +22,9 @@ Alert primarily on health-checks and metrics. Use log keywords as a *secondary* 
 | `nautobot_worker_finished_jobs{status="FAILURE"}` | Prometheus | rate > 0 for any production Job class for 5 minutes |
 | `health_check_database_info` | Prometheus | unavailable for 1 minute |
 | `health_check_redis_backend_info` | Prometheus | unavailable for 1 minute |
-| Web 5xx rate | log search | `level=ERROR AND logger:django.request AND status_code:5*` rate ≥ 1/min — see [Logging — Reading the logger name in your aggregator](./logging.md#reading-the-logger-name-in-your-aggregator) for how to extract `logger` as a queryable field |
+| Web 5xx rate | log search | `level=ERROR AND logger:django.request AND status_code:5*` rate ≥ 1/min — see [Logging — Reading the Logger Name in Your Aggregator](./logging.md#reading-the-logger-name-in-your-aggregator) for how to extract `logger` as a queryable field |
 
-## Tier 2 — ticket / dashboard
+## Tier 2: Ticket or Dashboard
 
 | Signal | Threshold |
 |---|---|
@@ -40,18 +40,18 @@ Alert primarily on health-checks and metrics. Use log keywords as a *secondary* 
 
 For Redis and PostgreSQL alerting in detail, see [Backing Stores](./backing-stores.md). For Celery-specific signals (queue depth, Beat drift), see [Celery and Jobs](./celery-jobs.md).
 
-## Prometheus metrics
+## Metrics-Based Alerts
 
 Nautobot's `/metrics` endpoint exposes Job and health-check counters; see [Prometheus Metrics](./prometheus-metrics.md) for the full catalogue. The metrics most useful for alerting:
 
 - `nautobot_worker_finished_jobs{status="..."}` — Job outcomes by status label.
-- `nautobot_worker_exception_jobs{exception="..."}` — Job failures broken out by exception class. **The single best signal for catching new failure modes** — a previously-zero exception class going non-zero is almost always alert-worthy.
+- `nautobot_worker_exception_jobs{exception="..."}` — Job failures broken out by exception class. A previously-zero exception class going non-zero is almost always alert-worthy and is the single best signal for catching new failure modes.
 - `nautobot_worker_singleton_conflict` — singleton Jobs blocked by a still-running invocation.
 - `health_check_database_info`, `health_check_redis_backend_info` — last health-check result.
 - `django_http_responses_total_by_status_total{status=~"5.."}` — server-error rate.
 - `django_db_errors_total` — ORM error rate.
 
-### Sample alert rules
+### Sample PromQL Rules
 
 ```yaml
 groups:
@@ -94,7 +94,7 @@ groups:
         labels: {severity: page}
 ```
 
-## Sample log-based alerts
+## Log-Based Alerts
 
 When a metric isn't available, anchor log-based queries on logger name plus level. The full set of Nautobot logger names is documented in [Logging — Logger namespace map](./logging.md#logger-namespace-map). The pattern is consistent across aggregators; the syntax below uses [LogQL](https://grafana.com/docs/loki/latest/query/) but Splunk SPL, Elastic KQL, etc. translate directly.
 
@@ -119,9 +119,9 @@ sum(rate(
 [5m])) > 5
 ```
 
-The pattern is the same in any aggregator: **anchor on `logger` (or `name`) plus `level`**. Free-text grep across stdout will surface the routine warnings listed in [Logging — Known Noise](./logging.md#known-noise-do-not-alert-on-these) and bury real failures.
+The pattern is the same in any aggregator: anchor on `logger` (or `name`) plus `level`. Free-text grep across stdout will surface the routine warnings listed in [Logging — Known Noise](./logging.md#known-noise) and bury real failures.
 
-## Scrape-target gotcha — Kubernetes
+## Kubernetes Scrape-Target Pitfall
 
 This section assumes you've already wired the per-component Kubernetes probes from [Health Checks — Kubernetes Deployments](./health-checks.md#kubernetes-deployments). The probes and the scrape-target configuration below are complementary: probes tell the kubelet when to restart, scrape configuration tells Prometheus where to fetch metrics from.
 

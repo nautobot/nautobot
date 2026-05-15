@@ -38,7 +38,7 @@ For more information see the [`django-prometheus`](https://github.com/korfuri/dj
 
 Metrics by default do not require authentication to view. Authentication can be toggled with the [`METRICS_AUTHENTICATED`](../configuration/settings.md#metrics_authenticated) configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
-## Scraping the endpoint
+## Scraping the Endpoint
 
 Any Prometheus-compatible scraper can pull `/metrics`. The example below uses Telegraf with the `inputs.prometheus` plugin; the same pattern applies to Prometheus itself, the OpenTelemetry Collector, Grafana Alloy, or Datadog's OpenMetrics check. For unauthenticated endpoints, drop the `http_headers` line.
 
@@ -49,7 +49,7 @@ metric_version=2
 http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef01234567"}
 ```
 
-For Kubernetes deployments, see [Alerting — Scrape-target gotcha](./alerting.md#scrape-target-gotcha-kubernetes) — worker Pods must be scraped individually, not via the Nautobot `Service` VIP.
+For Kubernetes deployments, see [Alerting — Kubernetes Scrape-Target Pitfall](./alerting.md#kubernetes-scrape-target-pitfall) — worker Pods must be scraped individually, not via the Nautobot `Service` VIP.
 
 ## Metric Types
 
@@ -78,7 +78,7 @@ Additionally, there are a number of metrics custom to Nautobot specifically:
 | `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception (incl. exception type label) | Counter | Worker     |
 | `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | Worker     |
 
-For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample alert rules](./alerting.md#sample-alert-rules). For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
+For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample PromQL Rules](./alerting.md#sample-promql-rules). For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
 
 !!! note
     Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.

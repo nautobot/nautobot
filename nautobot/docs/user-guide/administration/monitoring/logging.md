@@ -15,7 +15,7 @@ The defaults are defined in [`nautobot/core/settings.py`](https://github.com/nau
 
 For full configuration options, including [`SANITIZER_PATTERNS`](../configuration/settings.md#sanitizer_patterns) for redaction of credentials in Job log entries, see [Configuration Settings](../configuration/settings.md).
 
-### Switching to JSON output
+### Switching to JSON Output
 
 Most modern log aggregators prefer JSON. Override `LOGGING` in `nautobot_config.py` after Nautobot's defaults are loaded:
 
@@ -40,9 +40,9 @@ Add `python-json-logger` to your image. Output then carries `name` (logger), `le
 
 The handler reassignment on the last line *replaces* the default `console` handler with `json_console` rather than appending — by design, since you almost always want one canonical format reaching your aggregator. If you also configure a [remote-syslog handler](#forwarding-to-remote-collectors) further on, that example uses `.append()` so both handlers fire.
 
-### Reading the logger name in your aggregator
+### Reading the Logger Name in Your Aggregator
 
-Nautobot **always emits the logger name** — both formatters above include `%(name)s` (or the JSON `name` field). The question is just whether your aggregator sees it as a structured field it can pivot on, or as plain text inside the line body.
+Nautobot always emits the logger name — both formatters above include `%(name)s` (or the JSON `name` field). The question is just whether your aggregator sees it as a structured field it can pivot on, or as plain text inside the line body.
 
 In the default text format, the logger name is right there in the line (`14:32:15.123 INFO    nautobot.extras.jobs : ...`) — searchable with `grep`, but not directly filterable as `logger="..."`. To make it a queryable field, pick one of the two approaches below.
 
@@ -72,11 +72,39 @@ pipeline_stages:
 
 The same approach works in Vector and Fluent Bit — the regex is the load-bearing part.
 
-## Forwarding to remote collectors
+## Log Streams
+
+Three operator-facing streams reach your aggregator via the container's `stdout` — these are the streams you ship:
+
+| Stream | Source process | What it carries |
+|---|---|---|
+| Web | `nautobot-server` (uWSGI / gunicorn) | Django request handling, REST API, GraphQL, authentication, ORM warnings |
+| Celery worker | `nautobot-server celery worker` | Celery task lifecycle, broker connect/reconnect, **Job log records emitted via `self.logger`** |
+| Celery Beat | `nautobot-server celery beat` | Scheduler startup, scheduled-Job firing, schedule disable events |
+
+Two additional in-database log surfaces exist for end-user UI access and the REST API — these are not separate streams:
+
+| Surface | Source | Where | What it carries |
+|---|---|---|---|
+| `JobLogEntry` | `NautobotDatabaseHandler` | `extras_joblogentry` table → Job Result UI | Per-Job structured records (level, message, grouping, associated object). **The same log lines also reach worker `stdout` via the `nautobot.jobs.<module>` logger** — your aggregator already captures them from there. |
+| `ObjectChange` | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
+
+Do not mirror the in-database surfaces to your SIEM. The operational signal in `JobLogEntry` is already covered by the worker `stdout` stream above; mirroring duplicates events and is the most common source of "every Job log line shows up twice" confusion.
+
+### Streaming Event Notifications to Logs
+
+Nautobot's [Event Notifications](../../platform-functionality/events.md) system publishes record-change and Job lifecycle topics to pluggable brokers. Registering `SyslogEventBroker` in `nautobot_config.py` emits each event through Python logging under `nautobot.events.<topic>` with a JSON payload — the same pipeline that already ships your operational logs will pick it up. Use this when you want structured Nautobot events in the same aggregator as everything else, without standing up a separate Redis Pub/Sub consumer.
+
+The two topic groups that most deployments will care about:
+
+- [User Events](../../platform-functionality/events.md#user-events) (`nautobot.users.user.login`, `…logout`, `…change_password`, `nautobot.admin.user.change_password`) — the audit signal your SIEM or compliance team needs. Payloads carry the affected user record; emit these to satisfy login/logout and password-change tracking requirements that text-grepping `nautobot.auth.*` would otherwise have to approximate.
+- [Job Events](../../platform-functionality/events.md#job-events) (`nautobot.jobs.job.started`, `…completed`) — a structured signal for whether automation actually ran. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` (stacktrace on failure). Prefer this over scraping `nautobot.extras.jobs` log lines when an external system needs to react to job lifecycle.
+
+## Forwarding to Remote Collectors
 
 The default path — write to stdout, let your platform's log-collector sidecar ship the lines — is the recommended one and is orthogonal to Nautobot configuration. The recipes below cover the cases where Nautobot itself has to push logs to a remote endpoint: no sidecar is available, or you want a specific subset of records (auth, job lifecycle) on a dedicated channel.
 
-### Remote syslog from `LOGGING`
+### Remote Syslog from `LOGGING`
 
 Add a `SysLogHandler` to `nautobot_config.py` and route the loggers you care about to it. The example below ships everything Nautobot and Django log to a remote syslog receiver on UDP 514; swap `socktype` for `socket.SOCK_STREAM` to use TCP.
 
@@ -102,11 +130,11 @@ Keep the existing `console` handler alongside so container stdout is still captu
 
 ### Splunk
 
-Splunk accepts syslog directly on a configured input — point the handler above at that receiver, or at an intermediary that re-emits to Splunk. **HEC (HTTP Event Collector) is not configured inside Nautobot**: it terminates on a Splunk forwarder or load balancer in front of the indexer, not on a Python logging handler. If your platform team requires HEC end-to-end, that intermediary is a deployment concern outside the scope of this page.
+Splunk accepts syslog directly on a configured input — point the handler above at that receiver, or at an intermediary that re-emits to Splunk. HEC (HTTP Event Collector) is not configured inside Nautobot — it terminates on a Splunk forwarder or load balancer in front of the indexer, not on a Python logging handler. If your platform team requires HEC end-to-end, that intermediary is a deployment concern outside the scope of this page.
 
-### Redis and other event streams
+### Redis and Other Event Streams
 
-For shipping **structured business or security events** (record changes, user events, job lifecycle) rather than raw log lines, use the [Event Notifications](../../platform-functionality/events.md) system instead of `LOGGING`. The bundled `RedisEventBroker` publishes each event to Redis Pub/Sub under its topic name — register it in `nautobot_config.py` the same way as `SyslogEventBroker`:
+For shipping structured business or security events (record changes, user events, job lifecycle) rather than raw log lines, use the [Event Notifications](../../platform-functionality/events.md) system instead of `LOGGING`. The bundled `RedisEventBroker` publishes each event to Redis Pub/Sub under its topic name — register it in `nautobot_config.py` the same way as `SyslogEventBroker`:
 
 ```python
 from nautobot.core.events import register_event_broker, RedisEventBroker
@@ -116,37 +144,9 @@ register_event_broker(RedisEventBroker(url="redis://events.example.com:6379/0"))
 
 Other event-stream targets — Kafka, NATS, RabbitMQ — are reachable through the same extension point: subclass `nautobot.core.events.EventBroker` and register your implementation. The topics and payload shapes are stable across brokers; only the publish mechanics change. Prefer this path over piping log lines into an event bus, since log text is line-oriented and unstructured while event payloads carry typed JSON.
 
-## Log streams
+## Logger Namespace Map
 
-Three operator-facing streams reach your aggregator via the container's `stdout` — these are the streams you ship:
-
-| Stream | Source process | What it carries |
-|---|---|---|
-| Web | `nautobot-server` (uWSGI / gunicorn) | Django request handling, REST API, GraphQL, authentication, ORM warnings |
-| Celery worker | `nautobot-server celery worker` | Celery task lifecycle, broker connect/reconnect, **Job log records emitted via `self.logger`** |
-| Celery Beat | `nautobot-server celery beat` | Scheduler startup, scheduled-Job firing, schedule disable events |
-
-Two additional in-database log surfaces exist for end-user UI access and the REST API — these are not separate streams:
-
-| Surface | Source | Where | What it carries |
-|---|---|---|---|
-| `JobLogEntry` | `NautobotDatabaseHandler` | `extras_joblogentry` table → Job Result UI | Per-Job structured records (level, message, grouping, associated object). **The same log lines also reach worker `stdout` via the `nautobot.jobs.<module>` logger** — your aggregator already captures them from there. |
-| `ObjectChange` | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
-
-Do not mirror the in-database surfaces to your SIEM. The operational signal in `JobLogEntry` is already covered by the worker `stdout` stream above; mirroring duplicates events and is the most common source of "every Job log line shows up twice" confusion.
-
-### Streaming event notifications to logs
-
-Nautobot's [Event Notifications](../../platform-functionality/events.md) system publishes record-change and Job lifecycle topics to pluggable brokers. Registering `SyslogEventBroker` in `nautobot_config.py` emits each event through Python logging under `nautobot.events.<topic>` with a JSON payload — the same pipeline that already ships your operational logs will pick it up. Use this when you want structured Nautobot events in the same aggregator as everything else, without standing up a separate Redis Pub/Sub consumer.
-
-The two topic groups that most deployments will care about:
-
-- **[User Events](../../platform-functionality/events.md#user-events)** (`nautobot.users.user.login`, `…logout`, `…change_password`, `nautobot.admin.user.change_password`) — the audit signal your SIEM or compliance team needs. Payloads carry the affected user record; emit these to satisfy login/logout and password-change tracking requirements that text-grepping `nautobot.auth.*` would otherwise have to approximate.
-- **[Job Events](../../platform-functionality/events.md#job-events)** (`nautobot.jobs.job.started`, `…completed`) — a structured "did automation actually run" signal. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` (stacktrace on failure). Prefer this over scraping `nautobot.extras.jobs` log lines when an external system needs to react to job lifecycle.
-
-## Logger namespace map
-
-Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). When building alert rules in your aggregator, **filter on logger name plus level** rather than free-text grep — it eliminates routine warnings that would otherwise bury real failures.
+Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). When building alert rules in your aggregator, filter on logger name plus level rather than free-text grep — that combination eliminates routine warnings that would otherwise bury real failures.
 
 | Subsystem | Logger name(s) |
 |---|---|
@@ -160,14 +160,14 @@ Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). 
 | Deprecations | `nautobot.core.utils.deprecation` |
 | Job code (per Job) | `nautobot.jobs.<module>` (set by `get_task_logger(self.__module__)`) |
 
-## Common failure patterns
+## Common Failure Patterns
 
 !!! note "Living section"
     The patterns below are the ones we currently see most often in production deployments — they're a useful starting point, not an exhaustive catalogue, and we expect the list to grow as more operators share their experience. If you've hit a recurring pattern that isn't covered here, a docs contribution is very welcome.
 
 The exact text of any individual log line is not part of Nautobot's API and may shift between releases. Treat the patterns below as alerting starting points — and prefer the metric-based or probe-based equivalents listed in [Alerting](./alerting.md) where one exists.
 
-### Database connectivity and capacity
+### Database Connectivity and Capacity
 
 Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalError`/`ProgrammingError` propagation. Note that Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign of a database problem is usually a 500 traceback from a request, not a friendly message.
 
@@ -179,7 +179,7 @@ Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalE
 !!! tip
     If you see `too many connections`, check the connection pooler before Nautobot — see [Backing Stores — PostgreSQL connection topology](./backing-stores.md#connection-topology).
 
-### Job execution failures
+### Job Execution Failures
 
 Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model. The Celery statuses an operator is likely to encounter:
 
@@ -214,7 +214,7 @@ Disabling schedule <name> with missing user
 
 Prefer the metric `nautobot_worker_finished_jobs{status="FAILURE"}` (and `nautobot_worker_exception_jobs{exception=...}`) over text matching — see [Prometheus Metrics](./prometheus-metrics.md).
 
-### Celery worker and broker
+### Celery Worker and Broker
 
 ```text
 consumer: Cannot connect to redis://...: Connection refused.
@@ -226,7 +226,7 @@ No celery workers running on queue <name>          # web logs this when inspect-
 
 For Celery-specific reliability tuning and the visibility-timeout pitfall, see [Celery and Jobs](./celery-jobs.md).
 
-### App initialization (plugins)
+### App Initialization (Plugins)
 
 Apps register at startup. Hard failures crash the process loudly (Django dies on import); soft failures are logged from `nautobot.extras.plugins`:
 
@@ -238,7 +238,7 @@ WARN   - <plugin> table extension is missing default_columns attribute
 
 Scope app-startup alerts to `logger:nautobot.extras.plugins AND level:ERROR` to avoid the cosmetic `default_columns` warning.
 
-### Git repository sync
+### Git Repository Sync
 
 Triggered by the **Git Repositories** sync action — runs as a Job, so most output flows through `JobLogEntry`. The underlying utility logs to `nautobot.core.utils.git`:
 
@@ -246,7 +246,7 @@ Triggered by the **Git Repositories** sync action — runs as a Job, so most out
 Branch <name> does not exist at <url>. <git_error>
 ```
 
-## Known noise — do not alert on these
+## Known Noise
 
 !!! note "Living section"
     This list captures the routine messages we've observed in healthy deployments so far. It will grow over time as more deployments report back; if a message keeps showing up in your environment without a real underlying issue, it's a good candidate to add here.
