@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 from importlib import resources
+from itertools import groupby
 import logging
 import mimetypes
 import os
@@ -53,8 +54,9 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
+from nautobot.core.constants import HOMEPAGE_PANELS_LAYOUT_COLUMNS, LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
+from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
@@ -156,6 +158,72 @@ class HomeView(AccessMixin, TemplateView):
                                 group_item_details["count"] = (
                                     group_item_details["model"].objects.restrict(request.user, "view").count()
                                 )
+
+        # Filter panels by user permissions.
+        user_panels = [
+            kv_pair
+            for kv_pair in registry["homepage_layout"]["panels"].items()
+            if has_one_or_more_perms(request.user, kv_pair[1].get("permissions", []))
+        ]
+        user_config = request.user.get_config("homepage_layout.panels")
+        # Validate that user config is a list of fixed length, containing lists of objects with at least `id` property.
+        is_user_config_valid = (
+            isinstance(user_config, list)
+            and len(user_config) == HOMEPAGE_PANELS_LAYOUT_COLUMNS
+            and all(isinstance(panel.get("id"), str) for panel_group in user_config for panel in panel_group)
+        )
+
+        if is_user_config_valid:
+            # If `user_config` is found and valid, use it to group and order the panels according to user preferences.
+            # Create a list of nested empty lists representing panel layout columns.
+            panel_layout = [[] for i in range(0, HOMEPAGE_PANELS_LAYOUT_COLUMNS)]
+            for panel_group_index, panel_group in enumerate(user_config):
+                for panel in panel_group:
+                    # Find `(panel_name, panel_details)` key-value pair corresponding to the `panel` from user config.
+                    try:
+                        kv_pair = next(kv_pair for kv_pair in user_panels if slugify(kv_pair[0]) == panel.get("id"))
+                    except StopIteration:
+                        kv_pair = None
+                    if kv_pair:
+                        # If panel with given `id` exists and is available, append it to the current column layout and
+                        # enrich it with `collapsed` property from user config.
+                        panel_layout[panel_group_index].append(
+                            (kv_pair[0], {**kv_pair[1], "collapsed": panel.get("collapsed", False)})
+                        )
+            # Identify panels that should be displayed but are missing from `user_config`, and add them at the end.
+            used_panel_names = [kv_pair[0] for panel_group in panel_layout for kv_pair in panel_group]
+            missing_panels = [kv_pair for kv_pair in user_panels if kv_pair[0] not in used_panel_names]
+            panel_layout[-1] += missing_panels
+            # Convert panel key-value pairs to `dict`.
+            panel_layout = [dict(panel_group) for panel_group in panel_layout]
+            # Update user config to always keep it up to date with the latest homepage panel layout structure.
+            request.user.set_config(
+                "homepage_layout.panels",
+                [
+                    [
+                        {"id": slugify(kv_pair[0]), "collapsed": kv_pair[1].get("collapsed", False)}
+                        for kv_pair in panel_group.items()
+                    ]
+                    for panel_group in panel_layout
+                ],
+                commit=True,
+            )
+        else:
+            # If `user_config` is not found or is invalid, create a default panel layout.
+            request.user.clear_config("homepage_layout.panels", commit=True)
+            # Using an upside-down floor division here. Source: from https://stackoverflow.com/a/17511341.
+            panel_layout_rows = -(len(user_panels) // -HOMEPAGE_PANELS_LAYOUT_COLUMNS)
+            # Lambda key function is responsible by grouping the panels into equal chunks representing rows per column.
+            panel_layout = [
+                dict(panel_group)
+                for key, panel_group in groupby(
+                    user_panels, lambda panel: user_panels.index(panel) // panel_layout_rows
+                )
+            ]
+            # Make sure that there always is the exact expected number of columns in the `panel_layout`.
+            panel_layout.extend([{}] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
+
+        context.update({"homepage_layout_panels": panel_layout})
 
         return self.render_to_response(context)
 
