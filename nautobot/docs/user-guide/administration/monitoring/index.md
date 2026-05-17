@@ -57,7 +57,7 @@ flowchart LR
     B[Celery Beat] -. heartbeat file .-> PROBE
 ```
 
-Binary up/down. Use `/health/` for web readiness, `nautobot-server health_check` for liveness, file-based heartbeat for workers and Beat — see [Health Checks](./health-checks.md) for full probe configurations. The Nautobot-specific rationale for file-based worker probes lives in [Celery and Jobs — Worker Silent Death](./celery-jobs.md#worker-silent-death).
+Binary up/down. Use `/health/` for web readiness, `nautobot-server health_check` for liveness, file-based heartbeat for workers and Beat — see [Health Checks](./health-checks.md) for full probe configurations.
 
 ## In-Product Job Logs
 
@@ -89,7 +89,7 @@ For guidance on emitting good Job log entries from Job code, see [Job Logging](.
 A minimal monitored Nautobot deployment combines all three collectors with a few opinionated defaults. The list below is a starting point; each item links to its dedicated page for the full recipe.
 
 1. **Ship JSON-formatted logs.** Override `LOGGING` in `nautobot_config.py` so each line is one JSON object, then confirm your aggregator parses `name` (logger), `levelname`, and `message` as queryable fields. Reference: [Logging — Switching to JSON Output](./logging.md#switching-to-json-output).
-2. **Enable Prometheus metrics.** Set `NAUTOBOT_METRICS_ENABLED=True` in the environment (or `METRICS_ENABLED = True` directly in `nautobot_config.py` — same setting, two surfaces) and confirm `/metrics` returns data. In Kubernetes, configure a `PodMonitor` so each worker pod is scraped individually — see [Alerting — Kubernetes Scrape-Target Pitfall](./alerting.md#kubernetes-scrape-target-pitfall). Reference: [Prometheus Metrics](./prometheus-metrics.md).
+2. **Enable Prometheus metrics.** Set `NAUTOBOT_METRICS_ENABLED=True` in the environment (or `METRICS_ENABLED = True` directly in `nautobot_config.py` — same setting, two surfaces) and confirm `/metrics` returns data. In Kubernetes, configure a `PodMonitor` so each worker pod is scraped individually — see [Prometheus Metrics — Kubernetes Scrape-Target Pitfall](./prometheus-metrics.md#kubernetes-scrape-target-pitfall). Reference: [Prometheus Metrics](./prometheus-metrics.md).
 3. **Wire health probes into the orchestrator.** HTTP `/health/` for web readiness/startup, `nautobot-server health_check` for web liveness, file-based heartbeat probes for Celery worker and Beat. Reference: [Health Checks](./health-checks.md).
 4. **Deploy backing-store exporters.** Run `redis_exporter` and `postgres_exporter` alongside your Redis and PostgreSQL instances; add `pgbouncer_exporter` if you front PostgreSQL with PgBouncer. Reference: [Backing Stores](./backing-stores.md).
 5. **Build dashboards.** Use Grafana (or your tool of choice) to visualize the signals from steps 1-4, so you understand what normal looks like before defining alert rules. Reference: [Visualization](./visualization.md).
