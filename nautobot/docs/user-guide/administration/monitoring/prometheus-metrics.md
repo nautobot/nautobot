@@ -1,8 +1,14 @@
 # Prometheus Metrics
 
-Nautobot supports optionally exposing native Prometheus metrics from the application. [Prometheus](https://prometheus.io/) is a popular time series metric platform used for monitoring.
+[Prometheus](https://prometheus.io/) is a popular time series metric platform used for monitoring. Nautobot supports optionally exposing native Prometheus metrics from the application and additionally, Nautobot App developers can also expose [custom metrics](../../../development/apps/api/prometheus.md) from their apps.
 
-This page describes the metrics Nautobot exposes and how to enable them. For example alert rules built on top of these metrics, see [Alerting](./alerting.md). For backing-store metrics that complement Nautobot's own — exposed via `redis_exporter` and `postgres_exporter` — see [Backing Stores](./backing-stores.md). For the broader monitoring picture, see the [Monitoring overview](./index.md).
+!!! note
+    This page describes the system metrics Nautobot exposes and how to enable them.
+
+    - For example alert rules built on top of these metrics, see [Alerting](./alerting.md).
+    - For backing-store metrics that complement Nautobot's own — exposed via `redis_exporter` and `postgres_exporter` — see [Backing Stores](./backing-stores.md).
+    - For the broader monitoring picture, see the [Monitoring overview](./index.md).
+    - For application metrics (e.g. model counts), see [Capacity Metrics App](https://docs.nautobot.com/projects/capacity-metrics/en/stable/).
 
 ## Configuration
 
@@ -38,6 +44,30 @@ For more information see the [`django-prometheus`](https://github.com/korfuri/dj
 
 Metrics by default do not require authentication to view. Authentication can be toggled with the [`METRICS_AUTHENTICATED`](../configuration/settings.md#metrics_authenticated) configuration setting. If set to `True`, this will require the user to be logged in or to use an API token. See [REST API Authentication](../../platform-functionality/rest-api/authentication.md) for more details on API authentication.
 
+## Enabling Worker Metrics
+
+The `nautobot_worker_*` counters listed further below are incremented from inside Job execution code, which runs on the Celery worker process, not the web server. Worker metric exposition is disabled by default: the worker does not stand up an HTTP endpoint for Prometheus scraping unless you opt in explicitly. As a result, those counters never appear on the web tier's `/metrics` and have no endpoint of their own until configured.
+
+Set [`CELERY_WORKER_PROMETHEUS_PORTS`](../configuration/settings.md#celery_worker_prometheus_ports) in `nautobot_config.py`, or its environment-variable form `NAUTOBOT_CELERY_WORKER_PROMETHEUS_PORTS` (a comma-separated list of port numbers):
+
+```python
+# nautobot_config.py
+CELERY_WORKER_PROMETHEUS_PORTS = [9876, 9877, 9878]
+```
+
+The list defines a port walk: each worker process tries the ports in order and binds the first one that is free. This handles the case of multiple worker processes on the same host as each takes a different port from the list. If every listed port is already taken, the worker logs `Cannot export Prometheus metrics from worker, no available ports in range.` and continues running without metric exposition.
+
+!!! warning
+    The endpoint lives at the root path (`/`) of the chosen port, not at `/metrics` as on the web tier. The worker uses `prometheus_client.start_http_server()`, which serves the entire response from `/`. To verify a worker is exposing metrics:
+
+    ```bash
+    curl http://<worker-host>:<port>/ | grep nautobot_worker
+    ```
+
+The counters only show non-zero values after at least one Job has actually run on that specific worker.
+
+For the broader Kubernetes scrape-target story and the common pitfall of pointing Prometheus at the Nautobot `Service` VIP instead of individual worker Pods, see [Kubernetes Scrape-Target Pitfall](#kubernetes-scrape-target-pitfall) below.
+
 ## Scraping the Endpoint
 
 Any Prometheus-compatible scraper can pull `/metrics`. The example below uses Telegraf with the `inputs.prometheus` plugin; the same pattern applies to Prometheus itself, the OpenTelemetry Collector, Grafana Alloy, or Datadog's OpenMetrics check. For unauthenticated endpoints, drop the `http_headers` line.
@@ -49,7 +79,30 @@ metric_version=2
 http_headers = {"Authorization" = "Token 0123456789abcdef0123456789abcdef01234567"}
 ```
 
-For Kubernetes deployments, see [Alerting — Kubernetes Scrape-Target Pitfall](./alerting.md#kubernetes-scrape-target-pitfall) — worker Pods must be scraped individually, not via the Nautobot `Service` VIP.
+### Kubernetes Scrape-Target Pitfall
+
+!!! warning
+    A common pitfall is to scrape the Nautobot `Service` only and assume workers are covered - they are not. Every Celery worker Pod exposes its own `/metrics` endpoint with its own counters. The Nautobot `Service` VIP load-balances to web pods only and does not surface worker counters at all.
+
+Use Pod-level service discovery so each worker becomes its own scrape target:
+
+```yaml
+# Prometheus Operator example
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: nautobot-workers
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+```
+
+Without this, `nautobot_worker_*` series stay flat and Job-failure alerts never fire. Web-tier metrics are the canonical source for `health_check_*` and HTTP series, but worker counters live exclusively on workers.
 
 ## Metric Types
 
@@ -66,29 +119,65 @@ Nautobot makes use of the [`django-prometheus`](https://github.com/korfuri/djang
 - Django middleware latency histograms
 - Other Django related metadata metrics
 
+### View Latency Histograms
+
+Two of the histograms in the list above are the load-bearing series for the "is Nautobot fast enough?" question that drives most operator-side performance work:
+
+| Series | Scope | Labels |
+|---|---|---|
+| `django_http_requests_latency_including_middlewares_seconds` | Full round-trip time (middleware + view + response rendering) | (none) |
+| `django_http_requests_latency_seconds_by_view_method` | View-only processing time | `view`, `method` |
+
+!!! info
+    - For headline numbers (a single "Nautobot p99"), use the global histogram.
+    - For the per-view question that drives most investigation — "which page is slow?" — use the `_by_view_method` histogram with `histogram_quantile`:
+
+```promql
+# p99 latency, per Nautobot view, over the last 5 minutes
+histogram_quantile(
+  0.99,
+  sum by (le, view) (
+    rate(django_http_requests_latency_seconds_by_view_method_bucket{view!=""}[5m])
+  )
+)
+```
+
+The `view` label uses Django's view-name format — `dcim:device_list`, `dcim:device`, `extras:jobresult`, and so on. Filter out `view=""` (unmatched URLs, typically 404s) from aggregations to keep results interpretable.
+
+Middleware time is small relative to view time for Nautobot — the ORM and database dominate — so dashboards and SLOs framed around `_by_view_method` are reasonable proxies for user-perceived latency. Reach for the `_including_middlewares` histogram only when you specifically need to attribute time to middleware (e.g., a regression after adding an auth backend).
+
+!!! info
+    - For dashboards built on these histograms, see [Visualization — View Latency](./visualization.md#6-view-latency).
+    - For per-view SLOs and burn-rate alerts, see [SLAs and SLOs — Worked Example: Device List Page SLO](./slas-and-slos.md#worked-example-device-list-page-slo) and [Alerting — View Latency Alerts](./alerting.md#view-latency-alerts).
+
 Additionally, there are a number of metrics custom to Nautobot specifically:
 
 | Name                                 | Description                                                                | Type    | Labels | Exposed By |
 |--------------------------------------|----------------------------------------------------------------------------|---------|--------|------------|
-| `health_check_database_info`         | Result of the last database health check. Value is `1` (up), `0` (down), or `-1` (unknown — check has not run yet on this process). | Gauge   | *(none)* | Web Server |
-| `health_check_redis_backend_info`    | Result of the last Redis health check. Same value semantics as the database check above. | Gauge   | *(none)* | Web Server |
-| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps. Useful for detecting an App with a slow custom-metric collector — a sustained increase points at the App, not Nautobot core. | Gauge   | *(none)* | Web Server |
+| `health_check_database_info`         | Result of the last database health check. Value is `1` (up), `0` (down), or `-1` (unknown — check has not run yet on this process). | Gauge   | (none) | Web Server |
+| `health_check_redis_backend_info`    | Result of the last Redis health check. Same value semantics as the database check above. | Gauge   | (none) | Web Server |
+| `nautobot_app_metrics_processing_ms` | The time it took to collect custom app metrics from all installed apps. Useful for detecting an App with a slow custom-metric collector — a sustained increase points at the App, not Nautobot core. | Gauge   | (none) | Web Server |
 | `nautobot_worker_started_jobs`       | The amount of jobs that were started                                       | Counter | `job_class_name`, `module_name` | Worker |
 | `nautobot_worker_finished_jobs`      | The amount of jobs that were finished                                      | Counter | `job_class_name`, `module_name`, `status` | Worker |
 | `nautobot_worker_exception_jobs`     | The amount of jobs that ran into an exception                              | Counter | `job_class_name`, `module_name`, `exception_type` | Worker |
 | `nautobot_worker_singleton_conflict` | The amount of jobs that encountered a closed singleton lock                | Counter | `job_class_name`, `module_name` | Worker |
 
-!!! note
-    `job_class_name` is the Python class name (e.g. `MyDeviceSync`), not the human-readable `Meta.name` (e.g. `My Device Sync`). `status` values match Celery's task-state strings (`SUCCESS`, `FAILURE`, `REJECTED`, `IGNORED`). `exception_type` is the short class name of the raised exception (e.g. `OperationalError`). Use these labels in `sum by (...)` aggregations and in alert annotations.
+!!! info "Label semantics"
+    Use these labels in `sum by (...)` aggregations and in alert annotations.
 
-For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample PromQL Rules](./alerting.md#sample-promql-rules). For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
+    - `job_class_name` is the Python class name (e.g. `MyDeviceSync`), not the human-readable `Meta.name` (e.g. `My Device Sync`).
+    - `status` values match Celery's task-state strings (`SUCCESS`, `FAILURE`, `REJECTED`, `IGNORED`).
+    - `exception_type` is the short class name of the raised exception (e.g. `OperationalError`).
 
-!!! note
-    Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.
+Due to the multitude of possible deployment scenarios (web server and worker co-hosted on the same machine or not, different possible entrypoint commands for both contexts) some of the metrics exposed for specific components may also be present on the other component. It is up to the operator to account for this when working with the resulting metrics.
 
 These for example give you the option to identify the individual failure/exception rates of specific jobs. Note that all of these metrics are per instance. Thus, you need to perform aggregations in your visualizations in order to get a complete picture if you are using multiple web servers and/or workers.
 
-For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance. For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
+!!! note
+    - For example PromQL alert rules built on `nautobot_worker_finished_jobs`, `nautobot_worker_exception_jobs`, and the health-check gauges, see [Alerting — Sample PromQL Rules](./alerting.md#sample-promql-rules).
+    - For Celery-specific reliability tuning that drives several of these counters, see [Celery and Jobs](./celery-jobs.md).
+    - For the exhaustive list of exposed metrics, visit the `/metrics` endpoint on your Nautobot instance.
+    - For further information about the different metrics types, see the [relevant Prometheus documentation](https://prometheus.io/docs/concepts/metric_types/).
 
 ## Multi Processing Notes
 

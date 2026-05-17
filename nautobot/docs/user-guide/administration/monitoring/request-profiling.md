@@ -4,7 +4,8 @@ Nautobot offers advanced request profiling through [`django-silk`](https://githu
 
 Request Profiling captures the **per-request** picture: SQL queries issued, cache calls made, and a Python cProfile trace of the call stack. It is complementary to the aggregate views in the rest of this section:
 
-- [Prometheus Metrics](./prometheus-metrics.md) — Django request-latency histograms across all traffic.
+- [Prometheus Metrics — View Latency Histograms](./prometheus-metrics.md#view-latency-histograms) — Django request-latency histograms across all traffic, per view.
+- [Visualization — View Latency](./visualization.md#6-view-latency) — the Grafana dashboard that surfaces top-N slowest views and p99 trends from those histograms.
 - [Backing Stores — `pg_stat_statements`](./backing-stores.md#pg_stat_statements) — aggregate slow-query stats across the whole database, independent of which view issued them.
 - [Backing Stores — Redis Slowlog](./backing-stores.md#redis-slowlog) — slow Redis commands, also without per-request attribution.
 

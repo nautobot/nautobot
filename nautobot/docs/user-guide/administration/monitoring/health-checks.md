@@ -1,8 +1,11 @@
 # Health Checks
 
-Production deployments of Nautobot should expose health-check endpoints for each distinct component (web server, Celery worker, Celery Beat, PostgreSQL, Redis) so that the orchestrator can detect failures and recover automatically. This page covers the probes Nautobot exposes and how to wire them into Kubernetes, Docker Compose, and systemd.
+Production deployments of Nautobot expose health-check endpoints for each distinct component (web server, Celery worker, Celery Beat, PostgreSQL, Redis) so that the orchestrator can detect failures and recover automatically. This page covers the probes Nautobot exposes and how to wire them into Kubernetes, Docker Compose, and systemd.
 
-For the alert rules that fire on probe failure or staleness, see [Alerting](./alerting.md). For the *why* behind file-based worker probes — and the broader Celery reliability picture — see [Celery and Jobs](./celery-jobs.md). For backing-store HA caveats that go beyond a basic liveness probe, see [Backing Stores](./backing-stores.md).
+!!! note
+    - For the alert rules that fire on probe failure or staleness, see [Alerting](./alerting.md).
+    - For the *why* behind file-based worker probes — and the broader Celery reliability picture — see [Celery and Jobs](./celery-jobs.md).
+    - For backing-store HA caveats that go beyond a basic liveness probe, see [Backing Stores](./backing-stores.md).
 
 ## Health-Check Approaches
 
@@ -51,7 +54,7 @@ Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuratio
 
 ### Nautobot Celery Beat
 
-In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
+In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touched`](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
 
 ```shell
 [ $(find $NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE -mmin -0.1 | wc -l) -eq 1 ] || false
@@ -378,3 +381,49 @@ healthcheck:
   retries: 3
   test: 'mysql -h localhost -u $$MYSQL_USER --password=$$MYSQL_PASSWORD --execute "SHOW DATABASES;"'
 ```
+
+## Reading Probe Results in Your Monitoring Platform
+
+Wiring probes into the orchestrator is only half the picture — operators still need to see and act on the results. Probe state lives on three different surfaces, and each answers a different question:
+
+| Surface | What it shows | When to look |
+|---|---|---|
+| Orchestrator-native views (`kubectl` / `docker compose` / `systemctl`) | Live probe state, restart counts | Triage — "is this pod healthy right now?" |
+| Prometheus | Probe pass/fail history, restart deltas, the underlying check results | Dashboards, alerts, trend analysis |
+| Log aggregator | Probe-failure events with their reason | Forensics — "why did it restart at 3 a.m.?" |
+
+### Orchestrator-Native Views
+
+In Kubernetes, `kubectl get pods -l app=nautobot` shows the `READY` column derived from the readiness probe, and `kubectl describe pod <name>` surfaces the actual probe-failure messages in its Events section. When a pod has already been restarted, `kubectl logs <pod> --previous` retrieves the last output from the crashed container — typically the most informative line is the one right before the restart.
+
+For Docker Compose, `docker compose ps` shows each container's healthcheck state, and `docker inspect --format '{{json .State.Health}}' <container>` returns the last few healthcheck results with timestamps and exit codes. For systemd, `systemctl status nautobot` reports the unit's current state and recent restart count, and `journalctl -u nautobot -n 200` shows the lines around any failed start.
+
+These views are immediate but ephemeral — they answer "what's happening now" rather than "what's been happening." For the historical view, use Prometheus and the aggregator.
+
+### Prometheus Surfaces
+
+Two layers of Prometheus metrics carry probe state, and they answer different questions.
+
+**Orchestrator-level**, via [`kube-state-metrics`](https://github.com/kubernetes/kube-state-metrics) in Kubernetes, exposes the probe outcomes themselves:
+
+```promql
+# A container that is not currently passing its readiness probe.
+kube_pod_container_status_ready{pod=~"nautobot-.*"} == 0
+
+# Probe-driven restart in the last 5 minutes.
+increase(kube_pod_container_status_restarts_total{pod=~"nautobot-.*"}[5m]) > 0
+```
+
+**Application-level**, via Nautobot's own `/metrics` endpoint, exposes the underlying check results — `health_check_database_info`, `health_check_redis_backend_info`, and friends (see [Prometheus Metrics](./prometheus-metrics.md)). These gauges carry `1` (up), `0` (down), or `-1` (unknown). Critically, they are scraped *while the web pod is up and serving* — so a failure on `health_check_database_info` means **"the web pod is alive, but its database check failed,"** which is a different signal from the orchestrator-level readiness probe going red.
+
+The two layers complement each other: orchestrator-level metrics tell you when a pod has been removed from rotation or restarted; application-level metrics tell you when the underlying dependency is degrading even though the pod is technically up. Alert on both.
+
+### Log Aggregator
+
+The kubelet writes one log line per probe failure with the failure reason; systemd does the same via `journald`. Both flow into your aggregator already through the standard container-stdout / journald pipeline described in [Logging](./logging.md). Filter on the kubelet logger (or your platform's native probe-event field) plus `level=WARNING` to surface probe failures without grepping free-text.
+
+This is the surface to use when the orchestrator has already restarted a pod and `kubectl describe pod` no longer shows the triggering event in its Events section — the aggregator retains the original failure line indefinitely.
+
+!!! info
+    - For alert rules built on top of these surfaces, see [Alerting](./alerting.md).
+    - For the dashboard panels that visualize them, see [Visualization — Health Overview](./visualization.md#1-health-overview).

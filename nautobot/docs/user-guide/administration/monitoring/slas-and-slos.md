@@ -1,6 +1,6 @@
 # SLAs and SLOs
 
-Threshold-based alerts page when a single observation crosses a line. SLO-based alerts page when the rate of failure consumes an error budget faster than expected — a fundamentally different framing that correlates better with user-perceived service quality. This page covers when to reach for that framing in a Nautobot deployment, which signals make good Service Level Indicators, how to set starting values, and how to write burn-rate alerts against Nautobot's exposed metrics.
+Threshold-based alerts fire when a single observation crosses a line. SLO-based alerts fire when the rate of failure consumes an error budget faster than expected — a fundamentally different framing that correlates better with user-perceived service quality. This page covers when to reach for that framing in a Nautobot deployment, which signals make good Service Level Indicators, how to set starting values, and how to write burn-rate alerts against Nautobot's exposed metrics.
 
 !!! note "Living section"
     The starting SLO values, candidate SLIs, and burn-rate recipes here are recommendations based on production deployments we have seen — refine them against your own baseline and operational tolerances. Contributions from your environment are welcome.
@@ -47,6 +47,46 @@ Starting values that have worked well for typical mid-size Nautobot deployments:
 | Beat schedule freshness | 99% of scheduled fires within 5 minutes of `next_run_at` |
 
 Calibrate against your own baseline before committing — see [Alerting — Calibrating Thresholds](./alerting.md#calibrating-thresholds) for the 7-day baseline recipe. The same procedure applies here, but you take the 5th percentile of your SLI (the floor of healthy operation), not the 95th percentile of a noise signal.
+
+### Worked Example: Device List Page SLO
+
+"The device list page is slow" is the single most common Nautobot performance complaint. A per-view SLO turns the complaint into a measurable target. The pattern below uses the histogram's bucket counters directly rather than `histogram_quantile` — that form is cheaper, avoids recording-rule overhead, and is the canonical shape for latency SLOs.
+
+**SLI** — fraction of `dcim:device_list` GET requests that completed in under 2.5 seconds (the nearest default histogram bucket boundary; tune [`PROMETHEUS_LATENCY_BUCKETS`](https://github.com/django-commons/django-prometheus#exporting-metrics) if you need a different cutoff):
+
+```promql
+sum(rate(django_http_requests_latency_seconds_by_view_method_bucket{
+    view="dcim:device_list", method="GET", le="2.5"
+}[30d]))
+/
+sum(rate(django_http_requests_latency_seconds_by_view_method_count{
+    view="dcim:device_list", method="GET"
+}[30d]))
+```
+
+**SLO** — that fraction is ≥ 0.99 over a rolling 30-day window.
+
+**Error budget** — 1% of `dcim:device_list` GET requests may exceed 2.5 seconds. For a deployment serving one million such GETs per month the budget is 10,000 slow requests; for a quieter deployment serving 100,000 GETs the budget is 1,000.
+
+**Fast-burn alert** — same multi-window form as the Job-success example above, applied to the latency SLI:
+
+```promql
+(
+  1 - (
+    sum(rate(django_http_requests_latency_seconds_by_view_method_bucket{view="dcim:device_list",method="GET",le="2.5"}[1h]))
+    / sum(rate(django_http_requests_latency_seconds_by_view_method_count{view="dcim:device_list",method="GET"}[1h]))
+  )
+) > (14.4 * 0.01)
+and
+(
+  1 - (
+    sum(rate(django_http_requests_latency_seconds_by_view_method_bucket{view="dcim:device_list",method="GET",le="2.5"}[5m]))
+    / sum(rate(django_http_requests_latency_seconds_by_view_method_count{view="dcim:device_list",method="GET"}[5m]))
+  )
+) > (14.4 * 0.01)
+```
+
+Substitute `dcim:device_list` with whichever view your users complain about most — the structure is identical for `ipam:prefix_list`, `extras:jobresult`, REST API list endpoints, or any other Nautobot view. For threshold-shaped latency alerts without the SLO framing, see [Alerting — View Latency Alerts](./alerting.md#view-latency-alerts).
 
 ## Error Budget Alerting
 

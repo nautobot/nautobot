@@ -2,14 +2,15 @@
 
 This page describes a low-noise alert ruleset for production Nautobot. The recommendations assume that:
 
+- Container `stdout` is shipped to a log aggregator with the logger name parsed as a structured field; see [Logging](./logging.md).
 - Prometheus metrics are enabled (`NAUTOBOT_METRICS_ENABLED=True`); see [Prometheus Metrics](./prometheus-metrics.md).
 - Health probes are wired into the orchestrator; see [Health Checks](./health-checks.md).
-- Container `stdout` is shipped to a log aggregator with the logger name parsed as a structured field; see [Logging](./logging.md).
 
 Alert primarily on health-checks and metrics. Use log keywords as a *secondary* signal, scoped to specific logger names.
 
 !!! note "Living section"
-    The rules and thresholds below are the starting points we currently recommend based on production deployments we've seen — they're not exhaustive and they're not deployment-tuned. Walk through your steady-state baseline before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
+    The rules and thresholds below are the starting points we currently recommend based on production deployments we've seen — they're not exhaustive and they're not deployment-tuned.
+    Walk through your steady-state baseline before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
 
 ## Calibrating Thresholds
 
@@ -22,7 +23,34 @@ A practical recipe before committing any threshold below to production:
 3. **Apply a headroom multiplier.** For Tier 1 (paging) start at 2× the observed p95; for Tier 2 (dashboard) start at 1.5×. Tighten over time as the alert proves accurate.
 4. **Skip the alert entirely if the p95 already exceeds what you'd want to alert on.** That means the signal is fundamentally noisy in your environment and needs further scoping (per-Job-class, per-tenant, per-queue) before becoming a rule.
 
-The thresholds in the tier tables below are starting points sized for a typical mid-size deployment; nothing replaces measuring against your own baseline.
+### Worked Example: Queue-Depth Threshold
+
+Suppose you want a Tier-2 alert for the `celery` queue backlog (`celery_queue_length{queue="celery"}` from `celery-exporter` — see [Celery and Jobs — Queue Depth](./celery-jobs.md#queue-depth)).
+
+1. **Observe.** Let the metric run for seven days against a deployment that is operating normally.
+2. **Take the p95.** In the Prometheus expression browser:
+
+    ```promql
+    quantile_over_time(0.95, celery_queue_length{queue="celery"}[7d])
+    ```
+
+    Assume the result is `28` — for 95% of the week, the queue had 28 or fewer pending tasks.
+
+3. **Apply the headroom multiplier.** This is a Tier-2 alert (ticket, not page), so `1.5 × 28 = 42`. Round to a clean number — `50` — to avoid the appearance of false precision.
+4. **Sanity-check against step 4.** A p95 of 28 is well below "obviously bad" for queue depth, so the alert is meaningful. If p95 had come back as `2,000` — i.e. the queue is routinely deep — the threshold would need to be per-queue or paired with a duration filter, not a flat number.
+
+The resulting rule:
+
+```yaml
+- alert: NautobotQueueBacklog
+  expr: celery_queue_length{queue="celery"} > 50
+  for: 10m
+  labels: {severity: ticket}
+  annotations:
+    summary: "Queue 'celery' backlogged ({{ $value }} pending)"
+```
+
+The same recipe applies to any threshold-shaped metric — Redis memory utilization, PgBouncer pool saturation, web 5xx rate. The constants in the tier tables below are the values that have worked for typical mid-size deployments; replace them with your own baseline-derived numbers before committing to production.
 
 ## Routing and Severity
 
@@ -61,7 +89,7 @@ For Redis and PostgreSQL alerting in detail, see [Backing Stores](./backing-stor
 
 ## Metrics-Based Alerts
 
-Nautobot's `/metrics` endpoint exposes Job and health-check counters; see [Prometheus Metrics](./prometheus-metrics.md) for the full catalogue. The metrics most useful for alerting:
+Nautobot's `/metrics` endpoint exposes Job and health-check counters; see [Prometheus Metrics](./prometheus-metrics.md) for the full catalogue. The `nautobot_worker_*` counters below live on the **worker** process and require an explicit opt-in — see [Enabling Worker Metrics](./prometheus-metrics.md#enabling-worker-metrics) — without which these alert rules will never fire because the series do not exist. The metrics most useful for alerting:
 
 - `nautobot_worker_finished_jobs{status="..."}` — Job outcomes by status label.
 - `nautobot_worker_exception_jobs{exception_type="..."}` — Job failures broken out by exception class. A previously-zero exception class going non-zero is almost always alert-worthy and is the single best signal for catching new failure modes.
@@ -142,6 +170,45 @@ sum(rate(
 
 The pattern is the same in any aggregator: anchor on `logger` (or `name`) plus `level`. Free-text grep across stdout will surface the routine warnings listed in [Logging — Known Noise](./logging.md#known-noise) and bury real failures.
 
+## View Latency Alerts
+
+Operator complaints about Nautobot being slow are typically about a specific view, not the whole service. The histogram exposed by [`django-prometheus`](./prometheus-metrics.md#view-latency-histograms) supports two complementary alert shapes:
+
+**Fixed-threshold (Tier 2)** — p99 of a named critical view exceeds your target for 10 minutes. Use when you have an absolute target for that view.
+
+```yaml
+- alert: NautobotDeviceListSlow
+  expr: |
+    histogram_quantile(
+      0.99,
+      sum by (le) (
+        rate(django_http_requests_latency_seconds_by_view_method_bucket{view="dcim:device_list",method="GET"}[5m])
+      )
+    ) > 2
+  for: 10m
+  labels: {severity: ticket}
+  annotations:
+    summary: "Device list p99 > 2s for 10 minutes (current: {{ $value }}s)"
+```
+
+**Regression (Tier 2)** — a view's p99 over the last 5 minutes is more than 2× its own p99 over the prior 24 hours. Catches "this view got slower" without committing to an absolute number, useful for views without an agreed-upon target.
+
+```yaml
+- alert: NautobotViewLatencyRegression
+  expr: |
+    (
+      histogram_quantile(0.99, sum by (le, view) (rate(django_http_requests_latency_seconds_by_view_method_bucket{view!=""}[5m])))
+      / histogram_quantile(0.99, sum by (le, view) (rate(django_http_requests_latency_seconds_by_view_method_bucket{view!=""}[24h])))
+    ) > 2
+  for: 15m
+  labels: {severity: ticket}
+  annotations:
+    summary: "View {{ $labels.view }} is 2x slower than its 24h baseline"
+```
+
+!!! tip
+    Threshold latency alerts are inherently noisier than counter-based alerts — they fire on transient slowness that does not always justify a ticket. For deployments running an SLO-based pipeline, the burn-rate form in [SLAs and SLOs — Worked Example: Device List Page SLO](./slas-and-slos.md#worked-example-device-list-page-slo) is the more disciplined choice. Use the rules in this section as starting points until the SLO pipeline is in place.
+
 ## Maintenance Windows
 
 Scheduled cleanup Jobs, database maintenance, and deploy windows produce log lines and metric spikes that look like outages but are not — they need to be suppressed rather than alerted on. The mechanism depends on your alerting stack:
@@ -157,17 +224,6 @@ Threshold-based alerts fire on a single observation crossing a line; SLO-based a
 
 For a fuller treatment — candidate Service Level Indicators for Nautobot, suggested starting SLO values, the burn-rate alerting math with PromQL recipes against Nautobot's exposed metrics, and how SLO alerts coexist with the threshold-based tiers above — see [SLAs and SLOs](./slas-and-slos.md).
 
-## Multi-Tenant Deployments
-
-When one Nautobot serves multiple customer tenants, or when a managed-services team operates many independent deployments behind a shared Prometheus and Alertmanager, alert rules need a tenant label to route correctly.
-
-Typical patterns:
-
-- **At scrape time**: add a `customer="..."` or `tenant="..."` label to each Nautobot's scrape target (Prometheus `relabel_configs`) so every series carries the identifier.
-- **At rule time**: include the tenant label in the alert's `labels` block, then map labels to receivers in the Alertmanager `route` tree.
-
-The same approach applies to log aggregators — promote the tenant label to a Loki label or an Elastic field, then build dashboards and queries per-tenant rather than pivoting the union after the fact.
-
 ## Worked Example: 3 a.m. Page
 
 Walking through a typical paging incident clarifies how the signals on this page fit together. The scenario: at 3 a.m., the on-call engineer is paged for `NautobotJobFailures` on a production deployment.
@@ -179,33 +235,4 @@ Walking through a typical paging incident clarifies how the signals on this page
 5. **Cross-check the Job Result UI** when you need to coordinate with the Job author — `/extras/job-results/?status=failure&name=Network+Sync` (the UI filters on the human `Meta.name`) shows the user-facing failure summary and the structured `JobLogEntry` rows.
 6. **Decide remediation.** Database error: page the DB team or check `health_check_database_info`. Device error: page the network team. Timeout: temporarily disable the Job via the Job admin page (`/extras/jobs/`) and file a ticket for follow-up.
 
-The progression — metric → exception class → log traceback → Job Result UI — is the standard investigative flow for any Nautobot-level alert. Going in the opposite order (starting from `/extras/job-results/` and clicking through) works but is slower, and is harder to scope when the failure spans multiple Job runs or originates outside Nautobot itself.
-
-## Kubernetes Scrape-Target Pitfall
-
-This section assumes you've already wired the per-component Kubernetes probes from [Health Checks — Kubernetes Deployments](./health-checks.md#kubernetes-deployments). The probes and the scrape-target configuration below are complementary: probes tell the kubelet when to restart, scrape configuration tells Prometheus where to fetch metrics from.
-
-Every Celery worker Pod exposes its **own** `/metrics` endpoint with its own counters. The Nautobot `Service` VIP load-balances to web pods only and **does not** surface worker counters at all.
-
-Use Pod-level service discovery so each worker becomes its own scrape target:
-
-```yaml
-# Prometheus Operator example
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: nautobot-workers
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/component: worker
-  podMetricsEndpoints:
-    - port: metrics
-      path: /metrics
-      interval: 30s
-```
-
-Without this, `nautobot_worker_*` series stay flat and Job-failure alerts never fire. Web-tier metrics are the canonical source for `health_check_*` and HTTP series, but **worker counters live exclusively on workers.**
-
-!!! warning
-    A common pitfall is to scrape the Nautobot `Service` only and assume workers are covered. They are not. Verify with `curl -s http://<worker-pod>:8001/metrics | grep nautobot_worker` against an individual worker Pod before trusting your dashboards.
+The progression `metric → exception class → log traceback → Job Result UI` is the standard investigative flow for any Nautobot-level alert. Going in the opposite order (starting from `/extras/job-results/` and clicking through) works but is slower, and is harder to scope when the failure spans multiple Job runs or originates outside Nautobot itself.

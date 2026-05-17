@@ -186,7 +186,7 @@ Migration failures are typically deploy-time issues — code rolled forward with
 
 ### Database Connectivity and Capacity
 
-Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalError`/`ProgrammingError` propagation. Note that Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign of a database problem is usually a 500 traceback from a request, not a friendly message.
+Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalError`/`ProgrammingError` propagation. Note that Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign of a database problem is usually a 500 traceback from a request.
 
 - `OperationalError: could not connect to server` — PostgreSQL unreachable
 - `OperationalError: FATAL: too many connections for role` — pool exhausted
@@ -298,7 +298,7 @@ MissingHeartbeatException
 No celery workers running on queue <name>          # web logs this when inspect-ping fails (1 s timeout)
 ```
 
-For Celery-specific reliability tuning and the visibility-timeout pitfall, see [Celery and Jobs](./celery-jobs.md).
+For Celery-specific reliability tuning, see [Celery and Jobs](./celery-jobs.md).
 
 ### App Initialization (Plugins)
 
@@ -343,7 +343,7 @@ Some messages appear routinely in healthy deployments and should be excluded fro
 
 | Message / pattern | Why it's benign |
 |---|---|
-| `Cannot export Prometheus metrics from worker, no available ports in range.` | Worker-level metrics export is best-effort; web `/metrics` is unaffected. |
+| `Cannot export Prometheus metrics from worker, no available ports in range.` | Every port in [`CELERY_WORKER_PROMETHEUS_PORTS`](./prometheus-metrics.md#enabling-worker-metrics) is taken by another process on this host. Worker-level metric export is best-effort; the web `/metrics` is unaffected. Expand the configured port range if you actually need worker counters from this host. |
 | `Deleting unmanaged (leftover?) Git repository clone at ...` | Cleanup of stale `GIT_ROOT` clones; expected after repository removal. |
 | `Substantial drift from celery@...` (Celery library) | Single occurrences during worker restart. Alert only on sustained drift. |
 | Deprecation warnings (when `LOG_DEPRECATION_WARNINGS=True`) | Pre-upgrade signal only — leave **off** in steady-state production. |

@@ -72,15 +72,14 @@ For guidance on emitting good Job log entries from Job code, see [Job Logging](.
 | You want to… | Read |
 |---|---|
 | Understand the log streams and what to alert on | [Logging](./logging.md) |
-| Build Grafana dashboards that show what "normal" looks like | [Visualization](./visualization.md) |
-| Build a low-noise alert ruleset (Prometheus + log-based) | [Alerting](./alerting.md) |
-| Define Service Level Indicators and Objectives, and alert on error-budget burn | [SLAs and SLOs](./slas-and-slos.md) |
-| Tune Celery for long-running Jobs and avoid the visibility-timeout pitfall | [Celery and Jobs](./celery-jobs.md) |
-| Monitor Redis and PostgreSQL the way Nautobot uses them | [Backing Stores](./backing-stores.md) |
-| Wire health probes into Kubernetes / Compose / systemd | [Health Checks](./health-checks.md) |
 | Enable and scrape Prometheus metrics | [Prometheus Metrics](./prometheus-metrics.md) |
+| Wire health probes into Kubernetes / Compose / systemd | [Health Checks](./health-checks.md) |
+| Tune Celery for long-running Jobs | [Celery and Jobs](./celery-jobs.md) |
+| Monitor Redis and PostgreSQL the way Nautobot uses them | [Backing Stores](./backing-stores.md) |
+| Build Grafana dashboards that show what "normal" looks like | [Visualization](./visualization.md) |
+| Define Service Level Indicators and Objectives, and alert on error-budget burn | [SLAs and SLOs](./slas-and-slos.md) |
+| Build a low-noise alert ruleset (Prometheus + log-based) | [Alerting](./alerting.md) |
 | Investigate a slow request, page, or Job (per-request SQL / cProfile) | [Request Profiling](./request-profiling.md) |
-| Run multiple Celery queues with different worker pools | [Task Queues](../guides/celery-queues.md) |
 
 !!! tip
     A good production deployment turns on metrics (`NAUTOBOT_METRICS_ENABLED=True`), wires `/health/` and the file-based Celery heartbeat probes into the orchestrator, and ships container `stdout` to a log aggregator with the logger name parsed as a structured field. Everything else in this section builds on that foundation.
@@ -89,10 +88,9 @@ For guidance on emitting good Job log entries from Job code, see [Job Logging](.
 
 A minimal monitored Nautobot deployment combines all three collectors with a few opinionated defaults. The list below is a starting point; each item links to its dedicated page for the full recipe.
 
-1. **Enable Prometheus metrics.** Set `NAUTOBOT_METRICS_ENABLED=True` in the environment (or `METRICS_ENABLED = True` directly in `nautobot_config.py` — same setting, two surfaces) and confirm `/metrics` returns data. In Kubernetes, configure a `PodMonitor` so each worker pod is scraped individually — see [Alerting — Kubernetes Scrape-Target Pitfall](./alerting.md#kubernetes-scrape-target-pitfall). Reference: [Prometheus Metrics](./prometheus-metrics.md).
-2. **Wire health probes into the orchestrator.** HTTP `/health/` for web readiness/startup, `nautobot-server health_check` for web liveness, file-based heartbeat probes for Celery worker and Beat. Reference: [Health Checks](./health-checks.md).
-3. **Ship JSON-formatted logs.** Override `LOGGING` in `nautobot_config.py` so each line is one JSON object, then confirm your aggregator parses `name` (logger), `levelname`, and `message` as queryable fields. Reference: [Logging — Switching to JSON Output](./logging.md#switching-to-json-output).
-4. **Schedule retention cleanup.** Run the bundled `Logs Cleanup` Job (under the `System Jobs` group) as a periodic `ScheduledJob` with `cleanup_types` selecting `extras.ObjectChange` and/or `extras.JobResult` and an explicit `max_age` in days (defaults to `CHANGELOG_RETENTION`). Tune `CHANGELOG_RETENTION` to match your audit requirements. Reference: [Backing Stores — High-Churn Tables](./backing-stores.md#high-churn-tables).
-5. **Raise the Celery broker visibility timeout.** Set `CELERY_BROKER_TRANSPORT_OPTIONS["visibility_timeout"]` above your slowest Job's wall-clock runtime to avoid double-execution of long Jobs. Reference: [Celery and Jobs — Visibility Timeout for Long-Running Jobs](./celery-jobs.md#visibility-timeout-for-long-running-jobs).
-6. **Deploy backing-store exporters.** Run `redis_exporter` and `postgres_exporter` alongside your Redis and PostgreSQL instances; add `pgbouncer_exporter` if you front PostgreSQL with PgBouncer. Reference: [Backing Stores](./backing-stores.md).
-7. **Pick a Tier-1 alert ruleset and tune it.** Start from the sample rules and walk them against your baseline before committing. Reference: [Alerting](./alerting.md).
+1. **Ship JSON-formatted logs.** Override `LOGGING` in `nautobot_config.py` so each line is one JSON object, then confirm your aggregator parses `name` (logger), `levelname`, and `message` as queryable fields. Reference: [Logging — Switching to JSON Output](./logging.md#switching-to-json-output).
+2. **Enable Prometheus metrics.** Set `NAUTOBOT_METRICS_ENABLED=True` in the environment (or `METRICS_ENABLED = True` directly in `nautobot_config.py` — same setting, two surfaces) and confirm `/metrics` returns data. In Kubernetes, configure a `PodMonitor` so each worker pod is scraped individually — see [Alerting — Kubernetes Scrape-Target Pitfall](./alerting.md#kubernetes-scrape-target-pitfall). Reference: [Prometheus Metrics](./prometheus-metrics.md).
+3. **Wire health probes into the orchestrator.** HTTP `/health/` for web readiness/startup, `nautobot-server health_check` for web liveness, file-based heartbeat probes for Celery worker and Beat. Reference: [Health Checks](./health-checks.md).
+4. **Deploy backing-store exporters.** Run `redis_exporter` and `postgres_exporter` alongside your Redis and PostgreSQL instances; add `pgbouncer_exporter` if you front PostgreSQL with PgBouncer. Reference: [Backing Stores](./backing-stores.md).
+5. **Build dashboards.** Use Grafana (or your tool of choice) to visualize the signals from steps 1-4, so you understand what normal looks like before defining alert rules. Reference: [Visualization](./visualization.md).
+6. **Pick a Tier-1 alert ruleset and tune it.** Start from the sample rules and walk them against your baseline before committing. Reference: [Alerting](./alerting.md).

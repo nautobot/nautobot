@@ -2,7 +2,9 @@
 
 Nautobot's two backing stores — Redis and PostgreSQL — carry production-critical workloads but are not surfaced through Nautobot's own `/metrics`. This page covers the Nautobot-specific behaviors that drive their load and the metrics, queries, and probes you should add for each.
 
-For the basic liveness probes (`pg_isready`, `redis-cli ping`), see [Health Checks](./health-checks.md). For Redis configuration options (broker URL, cache backends), see [Configuration — Redis](../configuration/redis.md).
+!!! note
+    - For the basic liveness probes (`pg_isready`, `redis-cli ping`), see [Health Checks](./health-checks.md).
+    - For Redis configuration options (broker URL, cache backends), see [Configuration — Redis](../configuration/redis.md).
 
 ## Redis
 
@@ -93,7 +95,7 @@ Deploy [`postgres_exporter`](https://github.com/prometheus-community/postgres_ex
 
 ### `pg_stat_statements`
 
-The `pg_stat_statements` extension is the standard tool for investigating slow queries on a PostgreSQL instance. Enable on the primary:
+The `pg_stat_statements` extension is the standard tool for investigating slow queries on a PostgreSQL instance. As a SQL artifact, it can be directly queried from [Grafana](./visualization.md#3-backing-stores). Enable on the primary:
 
 ```sql
 -- in postgresql.conf
@@ -122,7 +124,7 @@ The query above can be run from `psql` directly, or — for environments where o
 
 The biggest offenders are usually filter combinations on large tables without a supporting index, or N+1 query loops in Job code.
 
-`pg_stat_statements` aggregates across the whole database. To trace a slow query back to the specific *Nautobot view or Job* that issued it, also enable [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
+`pg_stat_statements` aggregates across the whole database. When you have not yet identified *which* view is slow, start with the [Visualization — View Latency](./visualization.md#6-view-latency) dashboard — its Top-N panel surfaces the slowest Nautobot views in Grafana, after which the offending queries can be tracked down here. To trace a slow query back to the specific *Nautobot view or Job* that issued it, also enable [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
 
 ### Long-Running Transactions
 
