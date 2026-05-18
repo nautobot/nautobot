@@ -3754,6 +3754,31 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValueError, "not a valid cable termination type"):
             cable.add_termination(self.device1, "A")  # Device is not a CableTermination
 
+    def test_add_termination_rejects_out_of_range_connector(self):
+        """`add_termination` validates `connector` against the parent cable's CableType, rejecting
+        values outside the per-side range and the field's MinValueValidator/MaxValueValidator."""
+        # Standard (non-breakout) cable: only connector=1 is valid.
+        standard_cable = Cable.objects.create(status=self.status)
+        with self.assertRaises(ValidationError):
+            standard_cable.add_termination(self.interface3, "A", connector=2)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=standard_cable).exists())
+
+        # Breakout cable: connector must be in 1..a_connectors on the A side and 1..b_connectors
+        # on the B side. A 1×2 cable accepts B-side connector 1 or 2, but not 3.
+        breakout_type = CableType.objects.create(
+            name="add_termination range 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(status=self.status, cable_type=breakout_type)
+        with self.assertRaises(ValidationError):
+            breakout_cable.add_termination(self.interface3, "B", connector=3)
+        # And the A side only has one connector on this CableType.
+        with self.assertRaises(ValidationError):
+            breakout_cable.add_termination(self.interface3, "A", connector=2)
+
+        # Connector below the field minimum is rejected by the field-level validator.
+        with self.assertRaises(ValidationError):
+            standard_cable.add_termination(self.interface3, "A", connector=0)
+
 
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
     model = PowerFeed

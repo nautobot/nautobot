@@ -837,12 +837,15 @@ class Cable(PrimaryModel):
         fk_field = termination_fk_field(termination)
         if fk_field is None:
             raise ValueError(f"{type(termination).__name__} is not a valid cable termination type")
-        row = CableToCableTermination.objects.create(
+        row = CableToCableTermination(
             cable=self,
             cable_end=cable_end,
             connector=connector,
             **{fk_field: termination},
         )
+        # `validated_save` runs `full_clean` so the connector-range check in `clean()` and the
+        # field-level MinValueValidator/MaxValueValidator on `connector` are enforced.
+        row.validated_save()
         rebuild_paths(self)
         return row
 
