@@ -1,11 +1,11 @@
 """Backend-agnostic task execution interface for Nautobot Jobs.
 
-Two implementations live under this package:
-    - nautobot.core.tasks.celery_backend.CeleryBackend
-    - nautobot.core.tasks.procrastinate_backend.ProcrastinateBackend  (planned)
+One built-in implementation lives under this package:
+    - nautobot.core.task_backends.celery_backend.CeleryBackend
 
-The active backend is selected by the NAUTOBOT_TASK_BACKEND env var / Django
-``TASK_BACKEND`` setting and resolved via ``nautobot.core.tasks.get_task_backend()``.
+Additional backends can be plugged in by setting NAUTOBOT_TASK_BACKEND to a
+dotted import path of a ``TaskBackend`` subclass. The active backend is
+resolved via ``nautobot.core.task_backends.get_task_backend()``.
 """
 from __future__ import annotations
 

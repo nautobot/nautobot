@@ -2,14 +2,14 @@
 
 Public API::
 
-    from nautobot.core.tasks import get_task_backend, EnqueueOptions
+    from nautobot.core.task_backends import get_task_backend, EnqueueOptions
 
     backend = get_task_backend()
     backend.enqueue(...)
 
 Backend selection is controlled by the Django ``TASK_BACKEND`` setting
-(env var: ``NAUTOBOT_TASK_BACKEND``). Built-in values: ``"celery"``,
-``"procrastinate"``. Any other string is treated as a dotted import path to a
+(env var: ``NAUTOBOT_TASK_BACKEND``). The only built-in value is
+``"celery"``; any other string is treated as a dotted import path to a
 ``TaskBackend`` subclass.
 """
 from __future__ import annotations
@@ -27,8 +27,7 @@ from .base import (
 )
 
 _BUILTIN_BACKENDS = {
-    "celery": "nautobot.core.tasks.celery_backend.CeleryBackend",
-    "procrastinate": "nautobot.core.tasks.procrastinate_backend.ProcrastinateBackend",
+    "celery": "nautobot.core.task_backends.celery_backend.CeleryBackend",
 }
 
 

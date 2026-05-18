@@ -1,4 +1,4 @@
-"""Tests for the TaskBackend abstraction in nautobot.core.tasks.
+"""Tests for the TaskBackend abstraction in nautobot.core.task_backends.
 
 These tests cover the backend-agnostic interface introduced to enable
 Procrastinate as an alternative to Celery. They do not require a running
@@ -14,14 +14,14 @@ from uuid import UUID, uuid4
 
 from django.test import SimpleTestCase, override_settings
 
-from nautobot.core.tasks import (
+from nautobot.core.task_backends import (
     DispatchResult,
     EnqueueOptions,
     PeriodicRunner,
     TaskBackend,
     get_task_backend,
 )
-from nautobot.core.tasks.celery_backend import (
+from nautobot.core.task_backends.celery_backend import (
     CeleryBackend,
     _build_celery_kwargs_dict,
 )
@@ -129,7 +129,7 @@ class GetTaskBackendFactoryTests(SimpleTestCase):
 
     def test_custom_dotted_path_resolves(self):
         # Use a stub backend defined in this test module via a real dotted path.
-        with override_settings(TASK_BACKEND="nautobot.core.tasks.celery_backend.CeleryBackend"):
+        with override_settings(TASK_BACKEND="nautobot.core.task_backends.celery_backend.CeleryBackend"):
             get_task_backend.cache_clear()
             backend = get_task_backend()
             self.assertIsInstance(backend, CeleryBackend)

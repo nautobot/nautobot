@@ -1038,8 +1038,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         # Dispatch via the configured TaskBackend. Celery is the default (and historical)
         # backend; Procrastinate is opt-in via NAUTOBOT_TASK_BACKEND=procrastinate.
         # The CeleryBackend wrapper preserves prior dispatch behavior exactly; see
-        # nautobot.core.tasks.celery_backend for the lifted logic.
-        from nautobot.core.tasks import EnqueueOptions, get_task_backend
+        # nautobot.core.task_backends.celery_backend for the lifted logic.
+        from nautobot.core.task_backends import EnqueueOptions, get_task_backend
 
         options = EnqueueOptions(
             queue=task_queue,
