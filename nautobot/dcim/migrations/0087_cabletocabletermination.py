@@ -5,8 +5,8 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 
-# The CheckConstraint expression below is built programmatically because the 9-clause OR is too
-# verbose to maintain by hand. It mirrors `_exactly_one_termination_q` in nautobot/dcim/models/cables.py.
+# The CheckConstraint expression below is built programmatically because the 10-clause OR is too
+# verbose to maintain by hand. It mirrors `_at_most_one_termination_q` in nautobot/dcim/models/cables.py.
 _TERMINATION_FK_FIELDS = (
     "circuit_termination",
     "console_port",
@@ -20,8 +20,8 @@ _TERMINATION_FK_FIELDS = (
 )
 
 
-def _exactly_one_termination_check():
-    expr = models.Q()
+def _at_most_one_termination_check():
+    expr = models.Q(**{f"{field}__isnull": True for field in _TERMINATION_FK_FIELDS})
     for field in _TERMINATION_FK_FIELDS:
         clause = models.Q(**{f"{field}__isnull": False})
         for other in _TERMINATION_FK_FIELDS:
@@ -191,8 +191,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="cabletocabletermination",
             constraint=models.CheckConstraint(
-                condition=_exactly_one_termination_check(),
-                name="dcim_cabletocabletermination_exactly_one_termination",
+                condition=_at_most_one_termination_check(),
+                name="dcim_cabletocabletermination_at_most_one_termination",
             ),
         ),
         # Typed many-to-many accessors on Cable that resolve through CableToCableTermination.

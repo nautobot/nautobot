@@ -867,8 +867,11 @@ CABLE_END_CHOICES = (
 
 # Per-type one-to-one FK field name → (app_label, model) natural key for its target model.
 # The dict is the source of truth; `TERMINATION_FK_FIELDS` is derived for ordered iteration.
-# Exactly one of these FKs must be non-null on each CableToCableTermination row; enforced by a
-# CheckConstraint below.
+# At most one of these FKs may be non-null on each CableToCableTermination row; enforced by a
+# CheckConstraint below. The stricter "exactly one" requirement is enforced in `clean()` — at the
+# DB level we allow the all-null state because Django's cascade-delete machinery temporarily nulls
+# the nullable FK before deleting the row, and a CHECK constraint would block that intermediate
+# step on MySQL.
 _TERMINATION_FK_TO_NATURAL_KEY = {
     "circuit_termination": ("circuits", "circuittermination"),
     "console_port": ("dcim", "consoleport"),
@@ -916,9 +919,16 @@ def _resolve_termination_device(termination):
     return None
 
 
-def _exactly_one_termination_q():
-    """Build a Q expression that's true iff exactly one of the TERMINATION_FK_FIELDS is non-null."""
-    expr = models.Q()
+def _at_most_one_termination_q():
+    """Build a Q expression that's true iff at most one of the TERMINATION_FK_FIELDS is non-null.
+
+    The all-null state is permitted at the DB level so that Django's cascade-delete machinery can
+    null out the relevant FK on MySQL before deleting the row. The stricter "exactly one" rule is
+    enforced in `CableToCableTermination.clean()`.
+    """
+    # All-null is permitted (cascade-delete intermediate state).
+    expr = models.Q(**{f"{field}__isnull": True for field in TERMINATION_FK_FIELDS})
+    # Plus the nine "this one is set, all others are null" disjuncts.
     for field in TERMINATION_FK_FIELDS:
         clause = models.Q(**{f"{field}__isnull": False})
         for other in TERMINATION_FK_FIELDS:
@@ -1048,10 +1058,12 @@ class CableToCableTermination(BaseModel):
                 fields=["cable", "cable_end", "connector"],
                 name="dcim_cabletocabletermination_unique_connector",
             ),
-            # Exactly one of the per-type termination foreign keys must be set.
+            # At most one of the per-type termination foreign keys may be set; `clean()` further
+            # requires that exactly one be set on save. See `_at_most_one_termination_q` for why
+            # the DB constraint is the looser of the two.
             models.CheckConstraint(
-                name="dcim_cabletocabletermination_exactly_one_termination",
-                condition=_exactly_one_termination_q(),
+                name="dcim_cabletocabletermination_at_most_one_termination",
+                condition=_at_most_one_termination_q(),
             ),
         ]
 
@@ -1093,6 +1105,16 @@ class CableToCableTermination(BaseModel):
 
     def clean(self):
         super().clean()
+        # Exactly one termination FK must be set. The DB-level CheckConstraint only enforces
+        # "at most one" so that cascade deletion (which transiently nulls the FK) doesn't trip it.
+        set_fields = [field for field in TERMINATION_FK_FIELDS if getattr(self, f"{field}_id", None) is not None]
+        if len(set_fields) == 0:
+            raise ValidationError("Exactly one termination foreign key must be set; none are.")
+        if len(set_fields) > 1:
+            raise ValidationError(
+                f"Exactly one termination foreign key must be set; {len(set_fields)} are: {', '.join(set_fields)}."
+            )
+
         term = self.termination
         if term is not None:
             try:
