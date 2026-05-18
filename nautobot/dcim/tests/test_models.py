@@ -3764,7 +3764,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertFalse(CableToCableTermination.objects.filter(cable=standard_cable).exists())
 
         # Breakout cable: connector must be in 1..a_connectors on the A side and 1..b_connectors
-        # on the B side. A 1×2 cable accepts B-side connector 1 or 2, but not 3.
+        # on the B side. A 1x2 cable accepts B-side connector 1 or 2, but not 3.
         breakout_type = CableType.objects.create(
             name="add_termination range 1x2", a_connectors=1, b_connectors=2, total_lanes=2
         )
