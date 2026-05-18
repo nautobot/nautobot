@@ -6,13 +6,14 @@ from django.db import models
 from django.urls import NoReverseMatch, reverse
 
 from nautobot.core.celery import NautobotKombuJSONEncoder
-from nautobot.core.models import BaseModel
+from nautobot.core.models import BaseManager, BaseModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import shallow_compare_dict
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
-from nautobot.extras.utils import extras_features
+from nautobot.extras.utils import extras_features, FeatureQuery
 
 #
 # Change logging
@@ -68,6 +69,23 @@ class ChangeLoggedModel(models.Model):
         return None
 
 
+class ObjectChangeQuerySet(RestrictedQuerySet):
+    """
+    QuerySet for `ObjectChange` records that, in addition to the standard `RestrictedQuerySet` permission filtering,
+    hides records whose `changed_object_type` belongs to a model marked `is_staff_only_changelog_model = True`
+    (see populate_model_features_registry()) when the requesting user is not staff or superuser.
+
+    Applies to every caller of `ObjectChange.objects.restrict(user, ...)` - UI views, REST API, GraphQL, etc.
+    """
+
+    def restrict(self, user, action="view"):
+        queryset = super().restrict(user, action)
+        if user.is_authenticated and not (user.is_staff or user.is_superuser):
+            restricted_content_types = ContentType.objects.filter(FeatureQuery("staff_only_changelog").get_query())
+            queryset = queryset.exclude(changed_object_type__in=restricted_content_types)
+        return queryset
+
+
 @extras_features("graphql")
 class ObjectChange(BaseModel):
     """
@@ -110,6 +128,8 @@ class ObjectChange(BaseModel):
     object_repr = models.CharField(max_length=CHANGELOG_MAX_OBJECT_REPR, editable=False)
     object_data = models.JSONField(encoder=DjangoJSONEncoder, editable=False)
     object_data_v2 = models.JSONField(encoder=NautobotKombuJSONEncoder, editable=False, null=True, blank=True)
+
+    objects = BaseManager.from_queryset(ObjectChangeQuerySet)()
 
     documentation_static_path = "docs/user-guide/platform-functionality/change-logging.html"
     natural_key_field_names = ["pk"]
