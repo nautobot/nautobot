@@ -169,6 +169,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "SPECTACULAR_SETTINGS",
             "STATIC_URL",
             "STATICFILES_DIRS",
+            "TASK_BACKEND",
             "TEMPLATES",
             "TESTING",
             "TEST_RUNNER",

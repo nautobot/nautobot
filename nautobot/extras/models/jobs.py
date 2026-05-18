@@ -1,15 +1,11 @@
 # Data models relating to Jobs
 
-import contextlib
 from datetime import datetime, timedelta
 import logging
 import os
-import signal
 from typing import Optional, TYPE_CHECKING, Union
 
-from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
-from celery.utils.log import get_logger, LoggingProxy
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -24,11 +20,7 @@ from django_celery_beat.tzcrontab import TzAwareCrontab
 from prometheus_client import Histogram
 from timezone_field import TimeZoneField
 
-from nautobot.core.celery import (
-    app,
-    NautobotKombuJSONEncoder,
-    setup_nautobot_job_logging,
-)
+from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
 from nautobot.core.models import BaseManager, BaseModel
@@ -986,8 +978,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        from nautobot.extras.jobs import run_console_log_job_and_return_job_result, run_job  # TODO circular import
-
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
 
@@ -1045,60 +1035,44 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
+        # Dispatch via the configured TaskBackend. Celery is the default (and historical)
+        # backend; Procrastinate is opt-in via NAUTOBOT_TASK_BACKEND=procrastinate.
+        # The CeleryBackend wrapper preserves prior dispatch behavior exactly; see
+        # nautobot.core.tasks.celery_backend for the lifted logic.
+        from nautobot.core.tasks import EnqueueOptions, get_task_backend
+
+        options = EnqueueOptions(
+            queue=task_queue,
+            soft_time_limit=job_model.soft_time_limit if job_model.soft_time_limit > 0 else None,
+            time_limit=job_model.time_limit if job_model.time_limit > 0 else None,
+            profile=profile,
+            console_log=console_log,
+            ignore_singleton_lock=ignore_singleton_lock,
+            user_id=user.id,
+            job_model_id=job_model.id,
+            schedule_id=schedule.id if schedule else None,
+            extra=celery_kwargs or {},
+        )
+        backend = get_task_backend()
+
         if synchronous:
-            # synchronous tasks are run before the JobResult is saved, so any fields required by
-            # the job must be added before calling `apply()`
-            job_result.date_started = timezone.now()
-            job_result.status = JobResultStatusChoices.STATUS_STARTED
-            job_result.save()
-
-            # setup synchronous task logging
-            setup_nautobot_job_logging(None, None, app.conf)
-
-            def alarm_handler(*args, **kwargs):
-                raise SoftTimeLimitExceeded()
-
-            # Set alarm_handler to be called on a SIGALRM, and schedule a SIGALRM based on the soft time limit
-            signal.signal(signal.SIGALRM, alarm_handler)
-            signal.alarm(int(job_model.soft_time_limit) or settings.CELERY_TASK_SOFT_TIME_LIMIT)
-
-            try:
-                redirect_logger = get_logger("celery.redirected")
-                proxy = LoggingProxy(redirect_logger, app.conf.worker_redirect_stdouts_level)
-                with contextlib.redirect_stdout(proxy), contextlib.redirect_stderr(proxy):
-                    eager_result = run_job.apply(
-                        args=[job_model.class_path, *job_args],
-                        kwargs=job_kwargs,
-                        task_id=str(job_result.id),
-                        **job_celery_kwargs,
-                    )
-            finally:
-                # Cancel the scheduled SIGALRM if it hasn't fired already
-                signal.alarm(0)
-
-            job_result.refresh_from_db()
-            cls._sync_eager_result_to_job_result(job_result, eager_result)
-
+            backend.enqueue_sync(
+                job_result_id=job_result.id,
+                job_class_path=job_model.class_path,
+                args=job_args,
+                kwargs=job_kwargs,
+                options=options,
+            )
         else:
-            if console_log:
-                transaction.on_commit(
-                    lambda: run_console_log_job_and_return_job_result.apply_async(
-                        args=[job_model.class_path, *job_args],
-                        kwargs=job_kwargs,
-                        task_id=str(job_result.id),
-                        **job_celery_kwargs,
-                    )
+            transaction.on_commit(
+                lambda: backend.enqueue(
+                    job_result_id=job_result.id,
+                    job_class_path=job_model.class_path,
+                    args=job_args,
+                    kwargs=job_kwargs,
+                    options=options,
                 )
-            else:
-                # Jobs queued inside of a transaction need to run after the transaction completes and the JobResult is saved to the database
-                transaction.on_commit(
-                    lambda: run_job.apply_async(
-                        args=[job_model.class_path, *job_args],
-                        kwargs=job_kwargs,
-                        task_id=str(job_result.id),
-                        **job_celery_kwargs,
-                    )
-                )
+            )
 
         return job_result
 
