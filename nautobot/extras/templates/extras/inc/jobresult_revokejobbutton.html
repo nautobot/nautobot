@@ -1,11 +1,11 @@
 {% if object.status != "FAILURE" and object.status != "SUCCESS" and object.status != "REVOKED" %}
     <div id="wrapper-component-{{ component.component_id }}"
-        hx-get=""
-        hx-select="#wrapper-component-{{ component.component_id }}"
-        hx-target="#wrapper-component-{{ component.component_id }}"
-        hx-swap="outerHTML"
-        hx-trigger="every 3s"
-        hx-vals='{"component_id": "{{ component.component_id }}"}'
+         hx-get=""
+         hx-select="#wrapper-component-{{ component.component_id }}"
+         hx-target="#wrapper-component-{{ component.component_id }}"
+         hx-swap="outerHTML"
+         hx-trigger="every 3s"
+         hx-vals='{"component_id": "{{ component.component_id }}"}'
     >
 {% else %}
     <div id="wrapper-component-{{ component.component_id }}">
