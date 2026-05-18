@@ -3170,6 +3170,85 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(interface2.get_cable_peer(), interface1)
         self.assertEqual(interface2.get_cable_peers(), [interface1])
 
+    def test_termination_backward_compat_properties(self):
+        """
+        Test property getters/setters for `termination_[ab]`, `termination_[ab]_type`, and `termination_[ab]_id`.
+
+        These resolve through the CableToCableTermination join table once endpoints exist, and fall back to the
+        `_initial_*` cache before save.
+        """
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        power_port_ct = ContentType.objects.get_for_model(PowerPort)
+
+        # Getters on a saved cable resolve through the first endpoint on each side.
+        self.assertEqual(self.cable.termination_a_type, interface_ct)
+        self.assertEqual(self.cable.termination_a_id, self.interface1.pk)
+        self.assertEqual(self.cable.termination_b_type, interface_ct)
+        self.assertEqual(self.cable.termination_b_id, self.interface2.pk)
+
+        def assert_round_trip(cable):
+            """Save `cable` and confirm join rows + post-save getter resolution; then tear down."""
+            cable.save()
+            try:
+                rows = list(CableToCableTermination.objects.filter(cable=cable).order_by("cable_end"))
+                self.assertEqual(len(rows), 2)
+                self.assertEqual(rows[0].cable_end, "A")
+                self.assertEqual(rows[0].termination, self.interface3)
+                self.assertEqual(rows[1].cable_end, "B")
+                self.assertEqual(rows[1].termination, self.power_port1)
+                # Re-fetch so we're reading through the join table, not any cached `_initial_*`.
+                refetched = Cable.objects.get(pk=cable.pk)
+                self.assertEqual(refetched.termination_a, self.interface3)
+                self.assertEqual(refetched.termination_a_type, interface_ct)
+                self.assertEqual(refetched.termination_a_id, self.interface3.pk)
+                self.assertEqual(refetched.termination_b, self.power_port1)
+                self.assertEqual(refetched.termination_b_type, power_port_ct)
+                self.assertEqual(refetched.termination_b_id, self.power_port1.pk)
+            finally:
+                # `interface3` + `power_port1` are reused across variants; clear the cable so the
+                # next save can claim them again.
+                cable.delete()
+
+        # Variant 1: legacy object-form kwargs flowing into `_initial_termination_[ab]`.
+        via_objects = Cable(termination_a=self.interface3, termination_b=self.power_port1, status=self.status)
+        self.assertEqual(via_objects.termination_a, self.interface3)
+        self.assertEqual(via_objects.termination_b, self.power_port1)
+        assert_round_trip(via_objects)
+
+        # Variant 2: serializer-style type/id kwargs flowing into `_initial_termination_[ab]_[type|id]`.
+        via_type_id = Cable(
+            termination_a_type=interface_ct,
+            termination_a_id=self.interface3.pk,
+            termination_b_type=power_port_ct,
+            termination_b_id=self.power_port1.pk,
+            status=self.status,
+        )
+        self.assertEqual(via_type_id.termination_a_type, interface_ct)
+        self.assertEqual(via_type_id.termination_a_id, self.interface3.pk)
+        self.assertEqual(via_type_id.termination_b_type, power_port_ct)
+        self.assertEqual(via_type_id.termination_b_id, self.power_port1.pk)
+        assert_round_trip(via_type_id)
+
+        # Variant 3a: direct attribute assignment via the object-form `@*.setter` decorators.
+        via_object_setters = Cable(status=self.status)
+        via_object_setters.termination_a = self.interface3
+        via_object_setters.termination_b = self.power_port1
+        self.assertEqual(via_object_setters.termination_a, self.interface3)
+        self.assertEqual(via_object_setters.termination_b, self.power_port1)
+        assert_round_trip(via_object_setters)
+
+        # Variant 3b: direct attribute assignment via the type/id `@*.setter` decorators.
+        via_type_id_setters = Cable(status=self.status)
+        via_type_id_setters.termination_a_type = interface_ct
+        via_type_id_setters.termination_a_id = self.interface3.pk
+        via_type_id_setters.termination_b_type = power_port_ct
+        via_type_id_setters.termination_b_id = self.power_port1.pk
+        self.assertEqual(via_type_id_setters.termination_a_type, interface_ct)
+        self.assertEqual(via_type_id_setters.termination_a_id, self.interface3.pk)
+        self.assertEqual(via_type_id_setters.termination_b_type, power_port_ct)
+        self.assertEqual(via_type_id_setters.termination_b_id, self.power_port1.pk)
+        assert_round_trip(via_type_id_setters)
+
     def test_cable_deletion(self):
         """
         When a Cable is deleted, the `cable` field on its termination points must be nullified. The str() method
