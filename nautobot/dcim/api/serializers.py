@@ -834,6 +834,12 @@ class CableTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         fields = "__all__"
 
 
+class CableToCableTerminationSerializer(ValidatedModelSerializer):
+    class Meta:
+        model = CableToCableTermination
+        fields = "__all__"
+
+
 class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     termination_a_type = ContentTypeField(
         queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS), required=False, allow_null=True
@@ -847,8 +853,9 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     termination_b_id = serializers.UUIDField(required=False, allow_null=True)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)
     type = ChoiceField(choices=CableTypeChoices, allow_blank=True, required=False)
-    total_lanes = serializers.SerializerMethodField(read_only=True)
-    connected_lanes = serializers.SerializerMethodField(read_only=True)
+    # TODO: disabled for now, to re-enable and fix OpenAPI schema in a future PR.
+    # total_lanes = serializers.SerializerMethodField(read_only=True)
+    # connected_lanes = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Cable
