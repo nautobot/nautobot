@@ -1,7 +1,43 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.utils import generate_cable_breakout_mapping, validate_cable_breakout_mapping
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.utils import (
+    disconnect_termination,
+    generate_cable_breakout_mapping,
+    validate_cable_breakout_mapping,
+)
+from nautobot.extras.models import Role, Status
+
+
+class DisconnectTerminationTestCase(TestCase):
+    """Additional coverage of `disconnect_termination()` — also covered in test_cablepaths.py for common flows."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Disconnect Test DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            name="DisconnectTestDevice",
+            device_type=device_type,
+            role=device_role,
+            location=location,
+            status=device_status,
+        )
+        cls.uncabled_interface = Interface.objects.create(
+            device=cls.device, name="eth0", status=Status.objects.get_for_model(Interface).first()
+        )
+
+    def test_disconnect_termination_with_none_returns_none(self):
+        """Passing `None` (e.g. from a caller that already cleared its reference) is a no-op."""
+        self.assertIsNone(disconnect_termination(None))
+
+    def test_disconnect_termination_on_uncabled_termination_returns_none(self):
+        """A termination that has no `CableToCableTermination` row is also a no-op."""
+        self.assertIsNone(disconnect_termination(self.uncabled_interface))
 
 
 class GenerateCableBreakoutMappingTestCase(TestCase):
