@@ -176,6 +176,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .models.cables import termination_fk_field
 
 logger = logging.getLogger(__name__)
 
@@ -4576,9 +4577,7 @@ class CableForm(NautobotModelForm):
 
     def get_connection_fields(self):
         """Return connection_info with BoundField objects, A-left B-right with rowspan."""
-        info = getattr(self, "connection_info", None)
-        if not info:
-            return None
+        info = self.connection_info
 
         def _enrich(conn):
             meta = conn["meta"]
@@ -4663,9 +4662,7 @@ class CableForm(NautobotModelForm):
         for field, message in warnings:
             self.add_error(field, message)
 
-        info = getattr(self, "connection_info", None)
-        if not info:
-            return cleaned_data
+        info = self.connection_info
 
         # Stash the cleaned first-A and first-B terminations onto the instance so that
         # `Cable.clean()` (which runs in `_post_clean`) validates the *new* termination pair we're
@@ -4704,11 +4701,7 @@ class CableForm(NautobotModelForm):
         rows untouched. This keeps row PKs, change-log entries, and CablePath rows stable across
         edits that don't actually touch terminations (e.g. changing only length or status).
         """
-        from nautobot.dcim.models.cables import termination_fk_field
-
-        info = getattr(self, "connection_info", None)
-        if not info:
-            return
+        info = self.connection_info
 
         def _row_key(cable_end, connector, termination):
             return (

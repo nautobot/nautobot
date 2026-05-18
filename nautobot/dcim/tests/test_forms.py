@@ -1130,3 +1130,55 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         form.is_valid()
         self.assertIn("b_conn_1_type", form.errors)
         self.assertTrue(any("Invalid termination_b_type" in msg for msg in form.errors["b_conn_1_type"]))
+
+    # ── `CableForm.get_connection_fields()` — the per-lane row table the template renders. ────
+
+    def test_get_connection_fields_single_row_for_non_breakout(self):
+        """A non-breakout cable renders as one row connecting A connector 1 to B connector 1."""
+        form = CableForm(instance=self.cable)
+        result = form.get_connection_fields()
+        self.assertFalse(result["is_breakout"])
+        self.assertEqual(len(result["rows"]), 1)
+        row = result["rows"][0]
+        self.assertEqual((row["_ac"], row["_bc"]), (1, 1))
+        self.assertEqual(row["a_rowspan"], 1)
+        self.assertEqual(row["b_rowspan"], 1)
+        # Each side carries the bound termination fields for that connector.
+        self.assertIn("type_field", row["a"])
+        self.assertIn("term_field", row["b"])
+
+    def test_get_connection_fields_uses_instance_cable_type_for_breakout(self):
+        """For a saved cable whose `cable_type` is a breakout, rows come from `cable_type.mapping`."""
+        breakout = self._breakout_cable_type()
+        cable = Cable.objects.create(status=self.cable_status, cable_type=breakout)
+        result = CableForm(instance=cable).get_connection_fields()
+        self.assertTrue(result["is_breakout"])
+        # 1x4 → 4 lanes, each (1, bc) for bc in 1..4.
+        self.assertEqual(len(result["rows"]), 4)
+        self.assertEqual([(row["_ac"], row["_bc"]) for row in result["rows"]], [(1, 1), (1, 2), (1, 3), (1, 4)])
+
+    def test_get_connection_fields_uses_initial_cable_type_for_breakout(self):
+        """For an unsaved form whose `initial['cable_type']` is a breakout, rows come from `cable_type.mapping`."""
+        breakout = self._breakout_cable_type()
+        form = CableForm(initial={"cable_type": str(breakout.pk)})
+        result = form.get_connection_fields()
+        self.assertTrue(result["is_breakout"])
+        self.assertEqual(len(result["rows"]), 4)
+
+    def test_get_connection_fields_falls_back_when_initial_cable_type_unknown(self):
+        """A bad `initial['cable_type']` makes get_connection_fields` renders a single row."""
+        form = CableForm(initial={"cable_type": str(uuid.uuid4())})
+        result = form.get_connection_fields()
+        self.assertFalse(result["is_breakout"])
+        self.assertEqual(len(result["rows"]), 1)
+
+    def test_get_connection_fields_rowspans_for_1x4(self):
+        """1x4 layout: the single A-side row spans all four B-side rows."""
+        breakout = self._breakout_cable_type()
+        cable = Cable.objects.create(status=self.cable_status, cable_type=breakout)
+        rows = CableForm(instance=cable).get_connection_fields()["rows"]
+        self.assertEqual(rows[0]["a_rowspan"], 4)
+        self.assertEqual(rows[0]["b_rowspan"], 1)
+        for row in rows[1:]:
+            self.assertEqual(row["a_rowspan"], 0)  # Continuation of the merged A cell.
+            self.assertEqual(row["b_rowspan"], 1)
