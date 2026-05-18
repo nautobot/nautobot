@@ -1,0 +1,3 @@
+Job revocation (both UI and API) now requires the `extras.run_job` permission.
+All users must have the `extras.run_job` permission to revoke a job. Non-staff users can only revoke jobs they themselves submitted. Staff users can additionally revoke jobs submitted by other users.
+`RevokeFactory.get_strategy()` no longer raises `ValueError` for unknown queue types. It returns an `UnknownStrategy` instance instead.

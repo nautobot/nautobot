@@ -2,6 +2,8 @@ from copy import deepcopy
 
 import nh3
 
+LIVE_SEARCH_MAX_RESULTS = 10
+
 SEARCH_MAX_RESULTS = 15
 
 #
@@ -213,3 +215,6 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
 
 # M2M fields that are included by default in API responses if exclude_m2m is not provided
 DEFAULT_M2M_FIELDS = ["tags", "content_types", "object_types"]
+
+# Maximum number of homepage panels layout columns, for narrower device viewports columns will be wrapped.
+HOMEPAGE_PANELS_LAYOUT_COLUMNS = 4

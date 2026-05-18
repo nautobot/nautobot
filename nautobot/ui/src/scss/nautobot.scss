@@ -2699,6 +2699,14 @@ pre.version, pre.version-stamp {
   }
 }
 
+/*
+ * Default `.htmx-indicator` style just fades out the indicator while still occupying space in the user interface.
+ * In this particular case, it is desirable to completely remove the element from the interface, hence `display: none;`.
+ */
+#search_popup .htmx-indicator:not(.htmx-request) {
+  display: none;
+}
+
 .nb-search-list-group {
   @extend .list-group;
 
@@ -2708,8 +2716,13 @@ pre.version, pre.version-stamp {
 .nb-search-list-group-item {
   @extend .list-group-item;
 
+  --#{$prefix}list-group-active-color: currentcolor; /* Remove the default text coloring on focus and on hover. */
+
+  @include transition($btn-transition);
   border: none;
   cursor: pointer;
+  overflow: hidden;
+  text-decoration: none !important; /* Override default `<a>` anchor link `text-decoration: underline;` hover style. */
   /* `text-align` and `width` are cloned from `.list-group-item-action`, but this entire class must not be extended! */
   text-align: inherit;
   width: 100%;
@@ -2717,6 +2730,45 @@ pre.version, pre.version-stamp {
   span.mdi::before { /* It is required to bump selector specificity here with `span`. */
     font-size: $font-size-lg;
     top: map.get($spacers, 2);
+  }
+}
+
+.nb-live-search-results {
+  @extend .nb-embedded-search-results;
+
+  overflow: clip;
+  padding: 0;
+  position: relative;
+  white-space: nowrap;
+
+  /* Required to properly handle row highlight and selection via `search.js` script. */
+  > .table > tbody > tr {
+    > * {
+      @include transition($btn-transition);
+    }
+
+    &.active > * {
+      --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
+      --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
+    }
+  }
+
+  &::after {
+    background-image: linear-gradient(to left, var(--#{$prefix}body-bg) 25%, transparent 100%);
+    bottom: 0;
+    content: "";
+    display: none;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 3.75rem; /* 60px */
+  }
+
+  &.nb-live-search-results-fade-out {
+    &::after {
+      display: block;
+    }
   }
 }
 

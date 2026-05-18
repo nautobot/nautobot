@@ -1,0 +1,7 @@
+{% load render_table from django_tables2 %}
+
+{% if table %}
+    <div class="nb-live-search-results" data-nb-results-type="live-search">
+        {% render_table table table_inc_template|default:'inc/table.html' %}
+    </div>
+{% endif %}

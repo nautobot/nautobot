@@ -13,6 +13,7 @@ from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    Form,
     modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
@@ -2205,42 +2206,160 @@ class ModuleTypeUIViewSet(
         )
 
 
+class ComponentCreateViewMixin(ObjectEditViewMixin):
+    """
+    UI mixin to bulk-create device/module component template instances from a single
+    parent form using `name_pattern`/`label_pattern` expansion.
+
+    Specializes `ObjectEditViewMixin` by overriding `create()` with the bulk-component
+    flow; update/edit behavior (`update()`, `perform_update()`, `_process_create_or_update_form`,
+    etc.) is inherited unchanged.
+    """
+
+    create_form_class: type[Form]
+    form_class: type[Form]
+    create_template_name = "dcim/device_component_add.html"
+
+    def get_component_create_form(self, request, data=None):
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
+        return self.create_form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """Return the display name of the device_type/module_type that owns the selected component templates."""
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
+            if parent:
+                return parent.display
+        return ""
+
+    def get_component_model_form(self, request, data=None):
+        """Return the per-instance component model form used to validate/save each expanded child."""
+        return self.form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
+
+    def create(self, request, *args, **kwargs):
+        """
+        Component bulk-create entry point. Overrides the inherited single-object create
+        flow so that GET renders the bulk-create form and POST expands `name_pattern`/
+        `label_pattern` into individual component instances via
+        `process_component_create_form()`.
+        """
+        if request.method == "POST":
+            return self.process_component_create_form(request, *args, **kwargs)
+
+        return self.render_component_create_response(request)
+
+    def process_component_create_form(self, request, *args, **kwargs):
+        """
+        Validate the parent bulk-create form, expand the patterns into individual child
+        component forms, and save them atomically. Errors on any expanded child form are
+        re-raised on the parent form's `name_pattern`/`label_pattern` fields.
+        """
+        create_form = self.get_component_create_form(request, data=request.POST)
+
+        if not create_form.is_valid():
+            return self.render_component_create_response(request, create_form)
+
+        new_components = []
+        data = deepcopy(request.POST)
+
+        # Support for bulk creation using name_pattern and label_pattern
+        names = create_form.cleaned_data["name_pattern"]
+        labels = create_form.cleaned_data.get("label_pattern")
+
+        # Create multiple objects based on the name_pattern
+        for i, name in enumerate(names):
+            label = labels[i] if labels else None
+            # Initialize the individual component form
+            data["name"] = name
+            data["label"] = label
+            if hasattr(create_form, "get_iterative_data"):
+                data.update(create_form.get_iterative_data(i))
+
+            # Recreate the form for each iteration with updated data
+            component_form = self.get_component_model_form(request, data=data)
+            if component_form.is_valid():
+                new_components.append(component_form)
+            else:
+                for field, errors in component_form.errors.as_data().items():
+                    # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                    parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
+                    for e in errors:
+                        err_str = ", ".join(e)
+                        create_form.add_error(parent_field, f"{name}: {err_str}")
+
+        if create_form.errors:
+            return self.render_component_create_response(request, create_form)
+
+        try:
+            with transaction.atomic():
+                # Create the new components
+                new_objs = [component_form.save() for component_form in new_components]
+
+                # Enforce object-level permissions
+                if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                    raise ObjectDoesNotExist
+
+            messages.success(
+                request,
+                f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+            )
+
+            if "_addanother" in request.POST:
+                next_url = request.get_full_path()
+                if url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                    return redirect(iri_to_uri(next_url))
+            return redirect(self.get_return_url(request))
+
+        except ObjectDoesNotExist:
+            create_form.add_error(None, "Component creation failed due to object-level permissions violation")
+        return self.render_component_create_response(request, create_form)
+
+    def render_component_create_response(self, request, create_form=None):
+        """Render the component bulk-create template with the parent and per-instance forms."""
+        if create_form is None:
+            create_form = self.get_component_create_form(
+                request, data=request.POST if request.method == "POST" else None
+            )
+
+        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": create_form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
 #
 # Console port templates
 #
 
 
-class ConsolePortTemplateCreateView(generic.ComponentCreateView):
+class ConsolePortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.ConsolePortTemplateBulkEditForm
+    filterset_class = filters.ConsolePortTemplateFilterSet
+    form_class = forms.ConsolePortTemplateForm
+    serializer_class = serializers.ConsolePortTemplateSerializer
+    table_class = tables.ConsolePortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
-    form = forms.ConsolePortTemplateCreateForm
-    model_form = forms.ConsolePortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class ConsolePortTemplateEditView(generic.ObjectEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    model_form = forms.ConsolePortTemplateForm
-
-
-class ConsolePortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkEditView(generic.BulkEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    form = forms.ConsolePortTemplateBulkEditForm
-    filterset = filters.ConsolePortTemplateFilterSet
-
-
-class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    filterset = filters.ConsolePortTemplateFilterSet
+    create_form_class = forms.ConsolePortTemplateCreateForm
 
 
 #
@@ -2562,12 +2681,14 @@ class ModuleBayCommonViewSetMixin:
                     new_components.append(component_form)
                 else:
                     for field, errors in component_form.errors.as_data().items():
-                        # Assign errors on the child form's name/position/label field to *_pattern fields on the parent form
-                        if field.endswith("_pattern"):
-                            field = field[:-8]
+                        parent_field = {
+                            "name": "name_pattern",
+                            "label": "label_pattern",
+                            "position": "position_pattern",
+                        }.get(field, field)
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            form.add_error(parent_field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
