@@ -27,6 +27,42 @@ Nautobot supports standard logging levels, with additional custom levels for suc
 !!! note
     `logger.success()` and `logger.failure()` were introduced in versions 2.4.0 and 2.4.5, respectively.
 
+## Configuring Log Levels
+
+You can configure the minimum log level by using `self.logger.setLevel(LOG_LEVEL)` where `LOG_LEVEL` is a string representing the desired value (e.g., "DEBUG", "INFO", "WARNING", etc.). Unfortunately, since loggers in Nautobot share the same configuration, changing the log level for one Job will affect all other Jobs that use the same logger instance.
+
+Instead, the pattern in the following example allows you to control the verbosity of logs only for that specific Job, taking into account the (optional) `debug` parameter passed to it. After setting the log level, only messages at that level or higher will be logged for the Job. Finally, once the Job completes, the log level should be reset to the original level for any subsequent Jobs that use the same logger instance.
+
+<!-- pyml disable-num-lines 10 proper-names -->
+!!! example
+    ```py
+    from nautobot.apps.jobs import BooleanVar, Job
+
+    class MyJob(Job):
+        """Example Job demonstrating log level configuration."""
+
+        debug = BooleanVar(default=False, description="Whether to print debug messages")
+
+        def before_start(self, task_id, args, kwargs):
+            """Set the logging level before Job starts, based on the debug parameter."""
+            super().before_start(task_id, args, kwargs)
+            if kwargs.get("debug"):
+                self._original_log_level = self.logger.level
+                self.logger.setLevel("DEBUG")
+
+        def run(self, **args, **kwargs):
+            """Only messages at the configured log level or higher will be logged."""
+                self.logger.info("This is an info message.")
+                self.logger.debug("This is a debug message.")
+                ...
+
+        def after_return(self, status, retval, task_id, args, kwargs, einfo):
+            """Return the logger to the default log level after the Job finishes."""
+            if kwargs.get("debug"):
+                self.logger.setLevel(self._original_log_level)
+            return super().after_return(status, retval, task_id, args, kwargs, einfo)
+    ```
+
 ## Writing Log Messages
 
 <!-- pyml disable-num-lines 10 proper-names -->
@@ -184,6 +220,29 @@ When `console_log=True` and the job is executed asynchronously:
 
     and streams stdout/stderr into the `JobConsoleEntry` table in real time.
     - **`console_log=False`** — calls `JobResult.execute_job()` directly without console log capturing.
+
+### Exporting Console Logs
+
+**Export Console Logs** button is available on the *Console Log* tab of the Job Result detail view.
+
+Clicking the button downloads a plain-text file containing all `JobConsoleEntry` records associated with that Job Result, sorted chronologically. Each line follows the format:
+
+```no-highlight
+[HH:MM:SS.mmm] <message>
+```
+
+For example:
+
+```no-highlight
+[10:23:41.004] Starting job execution
+[10:23:41.512] Connected to device 192.0.2.1
+[10:23:44.210] Job completed successfully
+```
+
+The downloaded file is named `nautobot_job_console_entries_<job_result_pk>.txt`.
+
+!!! note
+    The **Export Console Logs** button requires the `extras.view_jobconsoleentry` permission.
 
 ### Use cases
 

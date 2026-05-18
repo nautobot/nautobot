@@ -48,16 +48,19 @@ def random_route_distinguisher():
     - "<2-byte ASN>:<4-byte integer>"
     - "<IPv4 address>:<2-byte integer>"
     - "<4-byte ASN>:<2-byte integer>"
+
+    Note that we limit the generated RD to 20 characters max so as to avoid issues with the `bulk_rename` test cases,
+    which need to be able to append a character to the name without hitting max-length problems.
     """
     fake = faker.Faker()
     branch = fake.pyint(0, 2)
     if branch == 0:
         # 16-bit ASNs 64496-64511 are reserved for documentation and sample code
-        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
+        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"[:20]
     if branch == 1:
-        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
+        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"[:20]
     # 32-bit ASNs 4200000000-4294967294 are reserved for private use
-    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"
+    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"[:20]
 
 
 class RouteTargetFactory(PrimaryModelFactory):

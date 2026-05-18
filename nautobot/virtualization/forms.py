@@ -9,6 +9,7 @@ from nautobot.core.forms import (
     CommentField,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    EmbeddedActionsFormMixin,
     ExpandableNameField,
     form_from_model,
     SmallTextarea,
@@ -476,6 +477,8 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+        # Disable embedded object create for `parent_interface` and `bridge` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -501,6 +504,7 @@ class VMInterfaceForm(NautobotModelForm, InterfaceCommonForm):
 class VMInterfaceCreateForm(
     form_from_model(VMInterface, ["tags"]),
     BootstrapMixin,
+    EmbeddedActionsFormMixin,
     InterfaceCommonForm,
     RoleNotRequiredModelFormMixin,
 ):
@@ -565,6 +569,10 @@ class VMInterfaceCreateForm(
             "virtual_machines": "$virtual_machine",
         },
     )
+
+    class Meta:
+        # Disable embedded object create for `parent_interface` and `bridge` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

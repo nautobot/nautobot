@@ -116,7 +116,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     Args:
         filter_params (QueryDict): Filter param querydict
         non_filter_params (list): Non queryset filterable params
-        filterset (FilterSet): The FilterSet class
+        filterset (FilterSet): FilterSet class instance
 
     Returns:
         (QueryDict): Filter param querydict with only queryset filterable params

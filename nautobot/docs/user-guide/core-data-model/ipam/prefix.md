@@ -66,7 +66,7 @@ There are a small set of filters which, when applied individually or in combinat
 
 To improve performance of the initial rendering of the Prefix list view when a large number of records and/or a deep hierarchy of records are present, an administrator can configure the settings [`PREFIX_LIST_DEFAULT_CONTAINER_ONLY`](../../administration/configuration/settings.md#prefix_list_default_container_only) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../../administration/configuration/settings.md#prefix_list_default_max_depth). When enabled, these settings effectively apply a default filter (similar to a default [saved view](../../platform-functionality/user-interface/savedview.md)) for all users when initially accessing the Prefix list view, such as from the navigation menu.
 
-In both cases, these default filters will only apply when viewing the hierarchical Prefix list view (unsorted and either unfiltered or filtered only by the specific filters that preserve hierarchy, as described in the previous section); applying non-hierarchy-preserving filters to the view will bypass these default filters and display the full set of records as selected by the user-specified filter.
+In both cases, these default filters will only apply when initially accessing the Prefix list view with no explicit filters or sorting applied; adding sorting or specifying other filters to the view will bypass these default filters and display the full set of records as selected by the user-specified filter.
 
 #### `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`
 

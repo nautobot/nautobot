@@ -9,11 +9,14 @@ Performs Nautobot common server upgrade operations using a single entrypoint.
 This will run the following management commands with default settings, in order:
 
 - migrate
+- clear_cache
 - trace_paths
 - collectstatic
 - remove_stale_contenttypes
 - clearsessions
 - send_installation_metrics
+- refresh_content_type_cache
+- refresh_dynamic_group_member_caches
 """
 
 
@@ -27,6 +30,13 @@ class Command(BaseCommand):
         return parser
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            "--no-clear-cache",
+            action="store_false",
+            dest="clear_cache",
+            default=True,
+            help="Do not automatically clear the cache.",
+        )
         parser.add_argument(
             "--no-clearsessions",
             action="store_false",
@@ -95,6 +105,12 @@ class Command(BaseCommand):
                 traceback=options["traceback"],
                 verbosity=options["verbosity"],
             )
+            self.stdout.write()
+
+        # Run clear_cache
+        if options.get("clear_cache"):
+            self.stdout.write("Clearing cache...")
+            call_command("clear_cache")
             self.stdout.write()
 
         # Run trace_paths

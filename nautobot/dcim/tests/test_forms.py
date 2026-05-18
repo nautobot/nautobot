@@ -11,6 +11,7 @@ from nautobot.dcim.choices import (
     InterfaceTypeChoices,
     PortTypeChoices,
     RackWidthChoices,
+    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
@@ -19,10 +20,12 @@ from nautobot.dcim.forms import (
     InterfaceBulkEditForm,
     InterfaceCreateForm,
     InterfaceForm,
+    PopulateDeviceBayForm,
     RackForm,
 )
 from nautobot.dcim.models import (
     Device,
+    DeviceBay,
     DeviceType,
     Interface,
     Location,
@@ -274,6 +277,107 @@ class LabelTestCase(TestCase):
         self.assertIn("label_pattern", form.errors)
 
 
+class PopulateDeviceBayFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.status = Status.objects.get_for_model(Device).first()
+        cls.role = Role.objects.get_for_model(Device).first()
+        cls.manufacturer = Manufacturer.objects.first() or Manufacturer.objects.create(name="Form Manufacturer")
+        rack_status = Status.objects.get_for_model(Rack).first()
+        cls.rack = Rack.objects.create(name="Form Rack 1", location=cls.location, status=rack_status)
+        cls.alt_location = Location.objects.exclude(pk=cls.location.pk).first()
+        if cls.alt_location is None:
+            location_status = Status.objects.get_for_model(Location).first()
+            cls.alt_location = Location.objects.create(
+                name="Form Location 2",
+                location_type=cls.location.location_type,
+                status=location_status,
+            )
+
+        cls.parent_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form Parent DeviceType",
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
+        )
+        cls.child_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form Child DeviceType",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        cls.parent_child_device_type = DeviceType.objects.create(
+            manufacturer=cls.manufacturer,
+            model="Form ParentChild DeviceType",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
+
+        cls.parent_device = Device.objects.create(
+            name="Form Parent Device",
+            device_type=cls.parent_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            position=1,
+            status=cls.status,
+        )
+        cls.device_bay = DeviceBay.objects.create(device=cls.parent_device, name="Form Bay 1")
+
+        cls.child_device = Device.objects.create(
+            name="Form Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        cls.parent_child_device = Device.objects.create(
+            name="Form ParentChild Device",
+            device_type=cls.parent_child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+
+        cls.assigned_child = Device.objects.create(
+            name="Form Assigned Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+        DeviceBay.objects.create(device=cls.parent_device, name="Form Bay 2", installed_device=cls.assigned_child)
+
+        cls.offsite_child = Device.objects.create(
+            name="Form Offsite Child Device",
+            device_type=cls.child_device_type,
+            role=cls.role,
+            location=cls.alt_location,
+            status=cls.status,
+        )
+
+        cls.parent_only_device = Device.objects.create(
+            name="Form Parent Device Only",
+            device_type=cls.parent_device_type,
+            role=cls.role,
+            location=cls.location,
+            rack=cls.rack,
+            status=cls.status,
+        )
+
+    def test_installed_device_queryset_includes_parent_child_role(self):
+        form = PopulateDeviceBayForm(self.device_bay)
+        queryset = form.fields["installed_device"].queryset
+
+        actual_pks = set(queryset.values_list("pk", flat=True))
+        expected_pks = {self.child_device.pk, self.parent_child_device.pk}
+
+        self.assertSetEqual(actual_pks, expected_pks)
+
+
 class RackTestCase(TestCase):
     def test_update_rack_location(self):
         """Asset updating duplicate device caused by update to rack location is caught by rack clean"""
@@ -473,6 +577,38 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             edit_form.fields["untagged_vlan"].queryset,
             bulk_edit_form.fields["untagged_vlan"].queryset,
         )
+
+    def test_bulk_interface_form_clean_tagged_vlan_fail(self):
+        """Assert that form validation fails when adding a tagged VLAN and mode is not tagged to an interface in bulk edit form."""
+        # Create an interface that is NOT in tagged mode.
+        interface = Interface.objects.create(
+            device=self.device,
+            name="Non-Tagged Interface",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_ACCESS,
+            status=self.status,
+        )
+        form = InterfaceBulkEditForm(
+            model=Interface,
+            data={
+                "pk": [interface.pk],
+                "add_tagged_vlans": [self.vlan.pk],
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Attempting to update VLAN when not all of the interfaces were in tagged mode including",
+            form.errors["mode"][0],
+        )
+        form = InterfaceBulkEditForm(
+            model=Interface,
+            data={
+                "pk": [interface.pk],
+                "add_tagged_vlans": [self.vlan.pk],
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+            },
+        )
+        self.assertTrue(form.is_valid())
 
     def test_interface_mode_tagged_vlans_interaction(self):
         """Assert that form validation correctly handles various combinations of mode and tagged_vlans."""

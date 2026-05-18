@@ -1,5 +1,22 @@
-{% if widget.is_initial %}{{ widget.initial_text }}: <a href="{{ widget.value.url }}">{{ widget.value }}</a>{% if not widget.required %}
-    <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"{% if widget.attrs.disabled %} disabled{% endif %}{% if widget.attrs.checked %} checked{% endif %}>
-    <label for="{{ widget.checkbox_id }}">{{ widget.clear_checkbox_label }}</label>{% endif %}<br>
-    {{ widget.input_text }}:{% endif %}
-<input type="{{ widget.type }}" name="{{ widget.name }}" class="filestyle" data-placeholder="No file selected" {% include "django/forms/widgets/attrs.html" %}>
+<div class="vstack gap-8">
+    {% if widget.is_initial %}
+        <div class="d-flex gap-8 mt-6">
+            {{ widget.initial_text }}:
+            <a href="{{ widget.value.url }}">{{ widget.value }}</a>
+            {% if not widget.required %}
+                <div class="form-check ms-12">
+                    <input class="form-check-input" type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}"{% if widget.attrs.disabled %} disabled{% endif %}{% if widget.attrs.checked %} checked{% endif %}>
+                    <label class="form-check-label" for="{{ widget.checkbox_id }}">{{ widget.clear_checkbox_label }}</label>
+                </div>
+            {% endif %}
+        </div>
+        {{ widget.input_text }}:
+    {% endif %}
+    <div class="input-group">
+        <input type="{{ widget.type }}" name="{{ widget.name }}" class="form-control" {% include "django/forms/widgets/attrs.html" %}>
+        <button class="btn btn-secondary btn-sm" type="button" onclick="document.querySelector('input#{{ widget.attrs.id }}').value = '';">
+            <span aria-hidden="true" class="mdi mdi-close"></span>
+            <span class="visually-hidden">Clear</span>
+        </button>
+    </div>
+</div>

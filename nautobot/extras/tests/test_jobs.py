@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
+import time
 from unittest import mock
 import uuid
 
@@ -16,11 +17,14 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import connections
+from django.db.utils import InterfaceError, OperationalError
 from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.utils import timezone
 
 from nautobot.core.testing import (
+    CelerySubprocessTestCase,
     create_job_result_and_run_job,
     get_job_class_and_model,
     TestCase,
@@ -38,8 +42,9 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.jobs_revoke import CeleryStrategy, RevokeFactory, UnknownStrategy
 from nautobot.extras.models import Job, JobQueue, JobResult
-from nautobot.extras.models.jobs import JobLogEntry
+from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
 
 class JobTest(TestCase):
@@ -303,6 +308,56 @@ register_jobs(BadJob)
                     self.assertIsNone(get_job("traceback.BadJob"))
 
                     # TODO: testing with subdirectories/submodules under JOBS_ROOT...
+        finally:
+            # Clean up back to normal behavior
+            get_jobs(reload=True)
+
+    def test_concurrent_import_jobs(self):
+        """
+        Test that concurrent calls to import_jobs() don't raise KeyError.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/8614
+        """
+        import threading
+
+        from nautobot.core.celery import import_jobs
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with override_settings(JOBS_ROOT=temp_dir):
+                    # Create a job file so there's something to flush/reload
+                    with open(os.path.join(temp_dir, "concurrent_test_jobs.py"), "w") as fd:
+                        fd.write(
+                            """\
+from nautobot.apps.jobs import Job, register_jobs
+class ConcurrentTestJob(Job):
+    def run(self):
+        pass
+register_jobs(ConcurrentTestJob)
+"""
+                        )
+                    # Initial load
+                    get_jobs(reload=True)
+                    self.assertIn("concurrent_test_jobs.ConcurrentTestJob", get_jobs().keys())
+
+                    errors = []
+                    num_threads = 4
+                    barrier = threading.Barrier(num_threads)
+
+                    def call_import_jobs():
+                        try:
+                            barrier.wait(timeout=5)
+                            import_jobs()
+                        except Exception as e:
+                            errors.append(e)
+
+                    threads = [threading.Thread(target=call_import_jobs) for _ in range(num_threads)]
+                    for t in threads:
+                        t.start()
+                    for t in threads:
+                        t.join(timeout=30)
+
+                    self.assertEqual(errors, [], f"Concurrent import_jobs() raised exceptions: {errors}")
         finally:
             # Clean up back to normal behavior
             get_jobs(reload=True)
@@ -636,6 +691,36 @@ class JobTransactionTest(TransactionTestCase):
             print(job_result.traceback)
             raise
 
+    def test_synchronous_enqueue_job_sets_started_before_run(self):
+        """
+        When enqueue_job is called with synchronous=True (e.g. runjob --local or Kubernetes job pod),
+        JobResult status and date_started must be set to STARTED before run_job.apply() executes,
+        so the UI shows "Running" instead of "Pending" until the job completes.
+        """
+        import nautobot.extras.jobs as jobs_module
+
+        real_run_job = jobs_module.run_job
+        with mock.patch("nautobot.extras.jobs.run_job") as mock_run_job:
+
+            def apply_wrapper(*args, **kwargs):
+                task_id = kwargs.get("task_id")
+                if task_id is not None:
+                    job_result = models.JobResult.objects.get(pk=task_id)
+                    self.assertEqual(
+                        job_result.status,
+                        JobResultStatusChoices.STATUS_STARTED,
+                        "JobResult should be STARTED before run_job.apply() when running synchronously",
+                    )
+                    self.assertIsNotNone(
+                        job_result.date_started,
+                        "date_started should be set before run_job.apply() when running synchronously",
+                    )
+                return real_run_job.apply(*args, **kwargs)
+
+            mock_run_job.apply = apply_wrapper
+            job_result = create_job_result_and_run_job("pass_job", "TestPassJob")
+            self.assertJobResultStatus(job_result)
+
     def test_job_result_manager_censor_sensitive_variables(self):
         """
         Job test with JobResult Censored Sensitive Variables.
@@ -702,6 +787,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_decorator_job_pass_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_pass(self):
         """
         Job with `with transaction.atomic()` context manager test with pass result.
@@ -720,6 +823,24 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
 
+    def test_atomic_transaction_context_manager_job_pass_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with pass result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+        self.assertJobResultStatus(job_result)
+        # Ensure DB transaction was not aborted
+        self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 3)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job succeeded.", job_console_logs)
+        self.assertIn("Job completed", job_console_logs)
+        self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
+
     def test_atomic_transaction_decorator_job_fail(self):
         """
         Job with @transaction.atomic decorator test with fail result.
@@ -737,6 +858,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
+    def test_atomic_transaction_decorator_job_fail_with_console_log(self):
+        """
+        Job with @transaction.atomic decorator test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicDecorator"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
+
     def test_atomic_transaction_context_manager_job_fail(self):
         """
         Job with `with transaction.atomic()` context manager test with fail result.
@@ -753,6 +891,23 @@ class JobTransactionTest(TransactionTestCase):
         self.assertIn("Running job", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
+
+    def test_atomic_transaction_context_manager_job_fail_with_console_log(self):
+        """
+        Job with `with transaction.atomic()` context manager test with fail result and console log enabled.
+        """
+        module = "atomic_transaction"
+        name = "TestAtomicContextManager"
+        job_result = create_job_result_and_run_job(module, name, should_fail=True, console_log=True)
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        # Ensure DB transaction was aborted
+        self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
+        # Ensure the correct job console text were saved
+        job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
+        self.assertEqual(len(job_console_logs), 2)
+        self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
+        self.assertNotIn("Job succeeded.", job_console_logs)
 
     def test_ip_address_vars(self):
         """
@@ -811,6 +966,22 @@ class JobTransactionTest(TransactionTestCase):
         for log in logs:
             if log.message != "Job completed":
                 self.assertEqual(log.message, "The secret is (redacted)")
+
+    @override_settings(
+        SANITIZER_PATTERNS=((re.compile(r"(secret is )\S+"), r"\1{replacement}"),),
+    )
+    def test_console_log_redaction(self):
+        """
+        Test that an attempt is made at console log redaction.
+        """
+        module = "log_redaction"
+        name = "TestLogRedaction"
+        job_result = create_job_result_and_run_job(module, name, console_log=True)
+
+        console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result)
+        for console_log in console_logs:
+            if "The secret is" in console_log.text:
+                self.assertEqual(console_log.text, "The secret is (redacted)")
 
     def test_log_skip_db_logging(self):
         """
@@ -923,14 +1094,16 @@ class JobTransactionTest(TransactionTestCase):
         module = "profiling"
         name = "TestProfilingJob"
 
-        # The job itself contains the 'assert' by loading the resulting profiling file from the workers filesystem
         job_result = create_job_result_and_run_job(module, name, profile=True)
 
         self.assertJobResultStatus(job_result)
 
-        profiling_result = Path(f"{tempfile.gettempdir()}/nautobot-jobresult-{job_result.id}.pstats")
-        self.assertTrue(profiling_result.exists())
-        profiling_result.unlink()
+        # Profiling data is available as a downloadable FileProxy linked to the JobResult
+        job_result.refresh_from_db()
+        self.assertEqual(job_result.files.count(), 1)
+        file_proxy = job_result.files.first()
+        self.assertEqual(file_proxy.name, f"nautobot-jobresult-{job_result.id}.pstats")
+        self.assertGreater(len(file_proxy.file.read()), 0)
 
     def test_job_singleton(self):
         module = "singleton"
@@ -1150,12 +1323,7 @@ class RunJobManagementCommandTest(TransactionTestCase):
     def run_command(self, *args):
         out = StringIO()
         err = StringIO()
-        call_command(
-            "runjob",
-            *args,
-            stdout=out,
-            stderr=err,
-        )
+        call_command("runjob", *args, stdout=out, stderr=err, data={})
 
         return (out.getvalue(), err.getvalue())
 
@@ -1201,6 +1369,36 @@ class RunJobManagementCommandTest(TransactionTestCase):
 
         status = models.Status.objects.get(name="Test Status")
         self.assertEqual(status.name, "Test Status")
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_runjob_enqueue_called(self, mock_enqueue):
+        """Ensure enqueue_job is called with correct arguments when --local is NOT used."""
+        module = "pass_job"
+        name = "TestPassJob"
+        _job_class, job_model = get_job_class_and_model(module, name)
+
+        job_result = models.JobResult.objects.create(
+            name=job_model.name,
+            job_model=job_model,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+
+        mock_enqueue.return_value = job_result
+
+        self.run_command(
+            "--no-color",
+            "--username",
+            self.user.username,
+            job_model.class_path,
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            profile=False,
+            job_kwargs={},  # because default "--data" = "{}"
+        )
 
 
 class JobLocationCustomFieldTest(TransactionTestCase):
@@ -1641,26 +1839,92 @@ class JobResultEnqueueJobCase(TransactionTestCase):
                 self.assertEqual(actual_job_result_arg.celery_kwargs.get("nautobot_job_console_log"), console_log)
 
 
-class RunConsoleLogJobTestCase(TestCase):
-    """Test run_console_log_job_and_return_job_result"""
+class RunConsoleLogJobTestCase(CelerySubprocessTestCase):
+    """Test run_console_log_job_and_return_job_result E2E"""
 
-    @mock.patch("nautobot.extras.jobs.JobConsoleLogExecutor.execute")
-    def test_task_runs_job_console_log_execute(self, mock_job_console_log_execute):
-        job = Job.objects.first()
+    def setUp(self):
+        super().setUp()
+        self.user.is_superuser = True
+        self.user.save()
+
+        self.job_queue = JobQueue.objects.create(name="uniquequeue", queue_type=JobQueueTypeChoices.TYPE_CELERY)
+
+    def _prepare_job_result(self, class_path: str) -> JobResult:
+        """Helper method to prepare Job and JobResult."""
+        job = Job.objects.get_for_class_path(class_path)
+        job.enabled = True
+        job.save()
+
         job_result = JobResult.objects.create(
             job_model=job,
+            user=self.user,
             name=job.class_path,
-            date_done=timezone.now(),
-            status=JobResultStatusChoices.STATUS_SUCCESS,
+            status=JobResultStatusChoices.STATUS_PENDING,
         )
-        # Simulate a Celery request context so self.request.id is available inside the task,
-        # as it would be when dispatched via .delay() or .apply_async() in production.
-        run_console_log_job_and_return_job_result.push_request(id=str(job_result.pk))
-        try:
-            run_console_log_job_and_return_job_result.run()
-        finally:
-            run_console_log_job_and_return_job_result.pop_request()
-        mock_job_console_log_execute.assert_called_once()
+
+        job_result.celery_kwargs = JobResult._build_celery_kwargs(
+            job_model=job,
+            user=self.user,
+            task_queue=self.job_queue.name,
+            console_log=True,
+        )
+        job_result.save()
+        return job_result
+
+    def test_task_runs_job_console_log_execute_e2e(self):
+        job_result = self._prepare_job_result("pass_job.TestPassJob")
+        with self.celery_subprocess_env():
+            run_console_log_job_and_return_job_result.apply(task_id=str(job_result.pk))
+
+        # subprocess finish task, so we have to refresh database to have new result
+        job_result.refresh_from_db()
+
+        # check job_result
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertIsNone(job_result.traceback)
+
+        # Check console entries
+        job_console_entries = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list(
+            "text", flat=True
+        )
+        expected_logs = [
+            "Running job",  # from _prepare_job
+            "before_start() was called as expected",  # from TestPassJob
+            "Success",  # from TestPassJob
+            "on_success() was called as expected",  # from TestPassJob
+            "after_return() was called as expected",  # from TestPassJob
+            "Job completed",  # from _cleanup_job
+        ]
+        for log in expected_logs:
+            self.assertIn(log, job_console_entries)
+
+    def test_fail_task_runs_job_console_log_execute_e2e(self):
+        job_result = self._prepare_job_result("fail.TestFailJob")
+        with self.celery_subprocess_env():
+            run_console_log_job_and_return_job_result.apply(task_id=str(job_result.pk))
+
+        # subprocess finish task, so we have to refresh database to have new result
+        job_result.refresh_from_db()
+
+        # check job_result
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIsNotNone(job_result.traceback)
+        self.assertIn("Test failure", job_result.traceback)
+
+        # Check console entries
+        job_console_entries = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list(
+            "text", flat=True
+        )
+
+        expected_logs = [
+            "Running job",  # from _prepare_job
+            "before_start() was called as expected",  # from TestFailJob
+            "I'm a test job that fails!",  # from TestFailJob
+            "on_failure() was called as expected",  # from TestFailJob
+            "after_return() was called as expected",  # from TestFailJob
+        ]
+        for log in expected_logs:
+            self.assertIn(log, job_console_entries)
 
 
 class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
@@ -1690,16 +1954,33 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         mock_executor_console_log,
     ):
         """Command should use JobConsoleLogExecutor when console logging is enabled."""
-
+        data = '{"foo": "bar"}'
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),
+            "--data",
+            data,
         )
 
-        mock_executor_console_log.assert_called_once_with(str(self.job_result.pk))
+        mock_executor_console_log.assert_called_once_with(
+            job_result_pk=str(self.job_result.pk), job_kwargs=json.loads(data)
+        )
         mock_executor_console_log.return_value.execute.assert_called_once()
+        mock_report_job_status.assert_called_once()
         mock_execute_job.assert_not_called()
-        mock_report_job_status.assert_not_called()
+
+    def test_console_log_executor_is_used_without_data_options(
+        self,
+    ):
+        """Command should raise an error when data is not defined"""
+
+        with self.assertRaises(CommandError) as err:
+            call_command(
+                "runjob_with_job_result",
+                str(self.job_result.pk),
+            )
+
+        self.assertEqual(str(err.exception), "Invalid job data: None. Job data has to be defined.")
 
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.JobConsoleLogExecutor")
     @mock.patch("nautobot.extras.management.commands.runjob_with_job_result.call_command")
@@ -1714,13 +1995,16 @@ class RunJobWithJobResultManagementCommandTestCase(TransactionTestCase):
         self.job_result.celery_kwargs = {}
         self.job_result.save()
 
+        data = '{"foo": "bar"}'
         call_command(
             "runjob_with_job_result",
             str(self.job_result.pk),
+            "--data",
+            data,
         )
 
         mock_call_command.assert_called_once_with(
-            "execute_job_result", str(self.job_result.pk), profile=False, stdout=mock.ANY
+            "execute_job_result", str(self.job_result.pk), profile=False, data=data, stdout=mock.ANY
         )
         mock_executor_console_log.assert_not_called()
         mock_report_job_status.assert_called_once()
@@ -1769,23 +2053,22 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
     @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
-    def test_data_option_skips_validate_job_and_job_data(
+    def test_data_option_no_skip_validate_job_and_job_data(
         self,
         mock_sync,
         mock_run_job,
         mock_validate,
     ):
-        """Command should use --data directly and skip validate_job_and_job_data when --data is provided."""
+        """Command should use --data and check it using validate_job_and_job_data when --data is provided."""
+        data = '{"foo": "bar"}'
         call_command(
             "execute_job_result",
             str(self.job_result.pk),
-            data='{"foo": "bar"}',
+            data=data,
         )
 
-        mock_validate.assert_not_called()
+        mock_validate.assert_called_once_with(mock.ANY, self.user, self.job_model.class_path, data)
         mock_run_job.apply.assert_called_once()
-        call_kwargs = mock_run_job.apply.call_args[1]["kwargs"]
-        self.assertEqual(call_kwargs.get("foo"), "bar")
 
     @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data")
     @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
@@ -1831,3 +2114,424 @@ class ExecuteJobResultManagementCommandTestCase(TransactionTestCase):
         mock_sync.assert_called_once()
         first_arg = mock_sync.call_args[0][0]
         self.assertEqual(first_arg.pk, self.job_result.pk)
+
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.handle_eager_result_failure")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.run_job")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.JobResult._sync_eager_result_to_job_result")
+    @mock.patch("nautobot.extras.management.commands.execute_job_result.validate_job_and_job_data", return_value={})
+    def test_handle_eager_result_failure_called_only_when_failed_and_console_log_enabled(
+        self, mock_validate, mock_sync, mock_run_job, mock_handle_failure
+    ):
+        """handle_eager_result_failure should only be called when both eager result failed and nautobot_job_console_log is True."""
+        cases = [
+            {"failed": True, "nautobot_job_console_log": True, "expected_called": True},
+            {"failed": True, "nautobot_job_console_log": False, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": True, "expected_called": False},
+            {"failed": False, "nautobot_job_console_log": False, "expected_called": False},
+        ]
+
+        for case in cases:
+            with self.subTest(**case):
+                mock_handle_failure.reset_mock()
+
+                self.job_result.celery_kwargs = {
+                    "nautobot_job_profile": False,
+                    "nautobot_job_console_log": case["nautobot_job_console_log"],
+                }
+                self.job_result.save()
+
+                eager_result = mock.MagicMock()
+                eager_result.failed.return_value = case["failed"]
+                mock_run_job.apply.return_value = eager_result
+
+                call_command("execute_job_result", str(self.job_result.pk))
+
+                if case["expected_called"]:
+                    mock_handle_failure.assert_called_once()
+                else:
+                    mock_handle_failure.assert_not_called()
+
+
+class JobLogsDBConnectionTest(TransactionTestCase):
+    databases = {"default", JOB_LOGS}
+
+    def test_closed_connection_recovery(self):
+        """Test the job logs DB connection is recovered from the errors at the driver layer."""
+        conn = connections[JOB_LOGS]
+
+        # Ensure a job logs connection is open
+        conn.ensure_connection()
+        self.assertTrue(conn.is_usable())
+
+        jobs = Job.objects.all()[:2]
+        job_result = JobResult.objects.create(
+            name="irrelevant",
+            job_model=jobs[0],
+            date_done=timezone.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            task_kwargs={},
+            scheduled_job=None,
+        )
+
+        # Forcefully close the connection through the underlying driver.
+        conn.connection.close()
+        self.assertFalse(conn.is_usable())
+
+        # Attempt a log message write. The connection should automatically recover.
+        try:
+            job_result.log("Hello")
+        except (InterfaceError, OperationalError) as ex:
+            self.fail(f"Job Logs DB Connection regression error. Caused by exception: {ex}")
+
+        # Confirm the log entry was created
+        log = JobLogEntry.objects.get(job_result=job_result)
+        self.assertEqual("Hello", log.message)
+        self.assertEqual(LogLevelChoices.LOG_INFO, log.log_level)
+        self.assertEqual("main", log.grouping)
+        self.assertEqual("", log.log_object)
+        self.assertEqual("", log.absolute_url)
+
+        # Set connection close_at time to 30s from now to make sure CONN_MAX_AGE time is not getting in the way
+        conn.close_at = time.monotonic() + 30
+        # This closes connections that had reported errors. Here, we're validating that the connection is NOT closed.
+        conn.close_if_unusable_or_obsolete()
+        self.assertTrue(conn.is_usable())
+
+    def test_close_if_unusable_or_obsolete(self):
+        """Test the job logs DB connection is refreshed when the connection's CONN_MAX_AGE is exceeded."""
+        conn = connections[JOB_LOGS]
+
+        # Ensure the DB connection is open
+        conn.ensure_connection()
+        self.assertTrue(conn.is_usable())
+
+        # Set close at_time to now, combined with time.sleep this will force the connection expiration.
+        conn.close_at = time.monotonic() - 1
+        original_conn_close_at = conn.close_at
+
+        jobs = Job.objects.all()[:2]
+        job_result = JobResult.objects.create(
+            name="irrelevant",
+            job_model=jobs[0],
+            date_done=timezone.now(),
+            user=None,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            task_kwargs={},
+            scheduled_job=None,
+        )
+
+        # Confirm the log entry was created. This should also trigger the connection refresh confirming CONN_MAX_AGE is honored.
+        job_result.log("Hello")
+        log = JobLogEntry.objects.get(job_result=job_result)
+        self.assertEqual("Hello", log.message)
+        self.assertEqual(LogLevelChoices.LOG_INFO, log.log_level)
+        self.assertEqual("main", log.grouping)
+        self.assertEqual("", log.log_object)
+        self.assertEqual("", log.absolute_url)
+
+        # If the connection was reopened, a new close at value should be present.
+        new_conn_close_at = conn.close_at
+        self.assertGreater(new_conn_close_at, original_conn_close_at)
+
+
+class JobRevokeTestCase(TransactionTestCase):
+    """End-to-end tests for `CeleryStrategy.revoke`."""
+
+    def setUp(self):
+        super().setUp()
+        self.strategy = CeleryStrategy()
+
+    def _make_job_result(self, status):
+        self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        return JobResult.objects.create(
+            job_model=self.job_model,
+            user=self.user,
+            name=self.job_model.class_path,
+            status=status,
+        )
+
+    @mock.patch("nautobot.core.celery.app.control.inspect")
+    def test_is_alive_returns_true_when_worker_reports_task(self, mock_inspect):
+        """Worker replies with the task ID -> True."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        task_id = str(job_result.pk)
+        mock_inspect.return_value.query_task.return_value = {
+            "worker-1@host": {task_id: ["active", {}]},
+        }
+
+        self.assertTrue(self.strategy.is_alive(job_result))
+        # Regression guard: must pass the PK as a string in a list, not the model.
+        mock_inspect.return_value.query_task.assert_called_once_with([task_id])
+
+    @mock.patch("nautobot.core.celery.app.control.inspect")
+    def test_is_alive_returns_false_when_workers_reply_without_task(self, mock_inspect):
+        """Workers replied, none has the task -> False."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_inspect.return_value.query_task.return_value = {
+            "worker-1@host": {},
+            "worker-2@host": {},
+        }
+
+        self.assertFalse(self.strategy.is_alive(job_result))
+
+    @mock.patch("nautobot.core.celery.app.control.inspect")
+    def test_is_alive_returns_false_when_query_task_returns_none(self, mock_inspect):
+        """Return False when no Celery workers respond to the query."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_inspect.return_value.query_task.return_value = None
+
+        self.assertFalse(self.strategy.is_alive(job_result))
+
+    @mock.patch("nautobot.core.celery.app.control.inspect")
+    def test_is_alive_returns_false_when_query_task_raises(self, mock_inspect):
+        """Broker down / inspect timeout -> exception -> logged warning, None."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_inspect.return_value.query_task.side_effect = ConnectionError("broker down")
+
+        with self.assertLogs("nautobot.extras.jobs_revoke", level="WARNING") as log_cm:
+            self.assertFalse(self.strategy.is_alive(job_result))
+
+        self.assertTrue(
+            any("Failed to query Celery workers" in msg for msg in log_cm.output),
+            f"Expected a warning log about the inspection failure, got: {log_cm.output}",
+        )
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                message__contains="Failed to query Celery workers",
+            ).exists()
+        )
+
+    def test_terminate_test_should_reap_True(self):
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertTrue(self.strategy.should_reap(job_result))
+
+    def test_terminate_test_should_reap_False(self):
+        for status in JobResultStatusChoices.READY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(self.strategy.should_reap(job_result))
+
+    def test_factory_returns_celery_strategy_for_celery_queue(self):
+        strategy = RevokeFactory.get_strategy(JobQueueTypeChoices.TYPE_CELERY)
+        self.assertIsInstance(strategy, CeleryStrategy)
+
+    def test_factory_returns_unknown_strategy_for_unregistered_queue_type(self):
+        with self.subTest("unknown-queue-type"):
+            strategy = RevokeFactory.get_strategy("not-a-queue-type")
+            self.assertIsInstance(strategy, UnknownStrategy)
+        with self.subTest("none-queue-type"):
+            strategy = RevokeFactory.get_strategy(None)
+            self.assertIsInstance(strategy, UnknownStrategy)
+
+    # ------------------------------------------------------------------ #
+    # UnknownStrategy: fallback for queue types without a registered backend.
+    # ------------------------------------------------------------------ #
+
+    def test_unknown_is_alive_always_returns_false(self):
+        """UnknownStrategy has no backend to query, so is_alive is always False."""
+        strategy = UnknownStrategy()
+        for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.is_alive(job_result))
+
+    def test_unknown_should_reap_true_for_unready_states(self):
+        """Unready jobs are always reapable under UnknownStrategy."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertTrue(strategy.should_reap(job_result))
+
+    def test_unknown_should_reap_false_for_ready_states(self):
+        """Already-terminal jobs must not be reaped."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.READY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.should_reap(job_result))
+
+    def test_unknown_perform_terminate_false_always(self):
+        """perform_termination return always False."""
+        strategy = UnknownStrategy()
+        for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(strategy.perform_termination(job_result, self.user))
+
+    def test_unknown_revoke_reaps_unready_job(self):
+        """End-to-end: revoking an unready job through UnknownStrategy reaps it."""
+        strategy = UnknownStrategy()
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = strategy.revoke(job_result, self.user)
+
+                self.assertIsNone(result["error"])
+
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, "REVOKED")
+                self.assertEqual(job_result.revoked_by, self.user)
+                self.assertEqual(job_result.revoked_by_user_name, self.user.username)
+                # No SIGKILL is sent, so date_terminated must remain unset.
+                self.assertIsNone(job_result.date_terminated)
+                self.assertIsNotNone(job_result.date_done)
+
+                self.assertTrue(
+                    any("Reaped dead job" in msg for msg in log_cm.output),
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains="Reaped dead job",
+                    ).exists()
+                )
+
+    # ------------------------------------------------------------------ #
+    # 1. Reap path: PENDING/STARTED + worker absent -> mark revoked,
+    #    no SIGKILL sent.
+    # ------------------------------------------------------------------ #
+
+    def test_terminate_reaps_when_worker_not_alive(self):
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                self.assertTrue(
+                    any("Reaped dead job" in msg for msg in log_cm.output),
+                    f"Expected an info log about 'Reaped dead job', got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains="Reaped dead job",
+                    ).exists()
+                )
+                self.assertIsNone(result["error"])
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, "REVOKED")
+                self.assertEqual(job_result.revoked_by, self.user)
+                # date_terminated should be only set when action is terminate
+                self.assertIsNone(job_result.date_terminated)
+
+    # ------------------------------------------------------------------ #
+    # Kill path: PENDING/STARTED + worker present -> SIGKILL sent.
+    # ------------------------------------------------------------------ #
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
+    def test_terminate_perform_termination_when_worker_alive(self, mock_should_reap):
+        # Reap path is taken naturally (no real workers in tests with
+        # ALWAYS_EAGER, so is_alive() returns None -> should_reap is True).
+        # Therefore we have to mock should_reap to return False
+        mock_should_reap.return_value = False
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                self.assertIsNone(result["error"])
+                job_result.refresh_from_db()
+                # The status flip to REVOKED
+                # happens later, when the live worker receives the signal, kills the task,
+                # and writes the new state back through the result backend. Tests run
+                # without a real worker, so we can verify the metadata was stamped but
+                # not the eventual status transition.
+                self.assertEqual(job_result.revoked_by, self.user)
+                self.assertIsNotNone(job_result.date_terminated)
+                self.assertTrue(
+                    any(f"Job {job_result.pk} terminated by {self.user}" in msg for msg in log_cm.output),
+                    f"Expected an info log about the termination succeced, got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Job {job_result.pk} terminated by {self.user}",
+                    ).exists()
+                )
+
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.perform_termination")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
+    def test_terminate_returns_error_when_perform_termination_raises(self, mock_should_reap, mock_perform_termination):
+        mock_should_reap.return_value = False
+        mock_perform_termination.side_effect = RuntimeError("revoke blew up")
+
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="ERROR") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                # Returned dict carries the error string.
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNotNone(result["error"])
+                self.assertIn("Termination failed", result["error"])
+                self.assertIn("revoke blew up", result["error"])
+
+                # JobResult should not changed
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, status)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertIsNone(job_result.date_terminated)
+
+                self.assertTrue(
+                    any(f"Termination failed for {job_result.pk}" in msg for msg in log_cm.output),
+                    f"Expected an error log about the termination failure, got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Termination failed for {job_result.pk}",
+                    ).exists()
+                )
+
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.should_reap")
+    @mock.patch("nautobot.extras.jobs_revoke.celery_app.control.revoke")
+    def test_perform_termination_skips_when_job_in_ready_state(self, mock_celery_revoke, mock_should_reap):
+        """When the job is already terminal, perform_termination must not
+        send a revoke or touch the JobResult fields."""
+        mock_should_reap.return_value = False  # force the kill path
+
+        for status in JobResultStatusChoices.READY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+
+                with (
+                    self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
+                ):
+                    result = self.strategy.revoke(job_result, self.user)
+
+                # No celery app should have been fetched.
+                mock_celery_revoke.assert_not_called()
+
+                # Returned dict reports success with no error.
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+
+                # JobResult should be untouched.
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, status)
+                self.assertIsNone(job_result.date_done)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertFalse(job_result.revoked_by_user_name)
+                self.assertIsNone(job_result.date_terminated)
+
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Job {job_result.pk} is already in terminated state",
+                    ).exists()
+                )

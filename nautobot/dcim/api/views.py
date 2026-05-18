@@ -30,6 +30,7 @@ from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -681,6 +682,12 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 #
 # Cables
 #
+
+
+class CableTypeViewSet(NautobotModelViewSet):
+    queryset = CableType.objects.all()
+    serializer_class = serializers.CableTypeSerializer
+    filterset_class = filters.CableTypeFilterSet
 
 
 class CableViewSet(NautobotModelViewSet):

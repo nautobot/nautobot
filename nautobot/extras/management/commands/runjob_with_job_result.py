@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
-from nautobot.extras.management.utils import report_job_status
+from nautobot.extras.management.utils import report_job_status, validate_job_and_job_data
 from nautobot.extras.models import JobResult
 
 
@@ -20,6 +20,7 @@ class Command(BaseCommand):
             "job_result",
             help="Pass in an existing job result id from the database to continue executing the job on a local system",
         )
+        parser.add_argument("-d", "--data", type=str, help="JSON string that populates the `data` variable of the job.")
         parser.add_argument(
             "--profile",
             action="store_true",
@@ -54,10 +55,21 @@ class Command(BaseCommand):
                 f"Job result has an invalid status {job_result.status} for this command."
                 f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
             )
+        job_user = job_result.user
+        job_model = job_result.job_model
+        job_class_path = job_model.class_path
+        job_kwargs = validate_job_and_job_data(self, job_user, job_class_path, options.get("data"))
+
         if job_result.celery_kwargs.get("nautobot_job_console_log", False):
-            executor = JobConsoleLogExecutor(job_result_id)
+            executor = JobConsoleLogExecutor(job_result_pk=job_result_id, job_kwargs=job_kwargs)
             executor.execute()
         else:
-            call_command("execute_job_result", f"{job_result_id}", profile=options["profile"], stdout=self.stdout)
-            job_result.refresh_from_db
-            report_job_status(self, job_result)
+            call_command(
+                "execute_job_result",
+                f"{job_result_id}",
+                profile=options["profile"],
+                data=options["data"],
+                stdout=self.stdout,
+            )
+            job_result.refresh_from_db()
+        report_job_status(self, job_result)

@@ -1,3 +1,5 @@
+from drf_spectacular.utils import extend_schema_field
+from rest_framework import serializers
 from rest_framework.serializers import ChoiceField, ListField
 
 from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixin
@@ -111,3 +113,17 @@ class VPNTunnelEndpointSerializer(TaggedModelSerializerMixin, NautobotModelSeria
 
         model = models.VPNTunnelEndpoint
         fields = "__all__"
+
+
+class VPNTerminationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):  # pylint: disable=too-many-ancestors
+    """Serializer for VPNTermination."""
+
+    assigned_object_type = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = models.VPNTermination
+        fields = "__all__"
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_assigned_object_type(self, obj: models.VPNTermination) -> str | None:
+        return obj.assigned_object_type

@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 from importlib import resources
+from itertools import groupby
 import logging
 import mimetypes
 import os
@@ -27,7 +28,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import NoReverseMatch, resolve, reverse
+from django.urls import NoReverseMatch, resolve, Resolver404, reverse
 from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
@@ -53,16 +54,19 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import SEARCH_MAX_RESULTS
+from nautobot.core.constants import HOMEPAGE_PANELS_LAYOUT_COLUMNS, LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
+from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
+    get_model_for_view_name,
     get_model_from_name,
     get_related_class_for_model,
     get_route_for_model,
+    get_table_for_model,
 )
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -154,6 +158,72 @@ class HomeView(AccessMixin, TemplateView):
                                 group_item_details["count"] = (
                                     group_item_details["model"].objects.restrict(request.user, "view").count()
                                 )
+
+        # Filter panels by user permissions.
+        user_panels = [
+            kv_pair
+            for kv_pair in registry["homepage_layout"]["panels"].items()
+            if has_one_or_more_perms(request.user, kv_pair[1].get("permissions", []))
+        ]
+        user_config = request.user.get_config("homepage_layout.panels")
+        # Validate that user config is a list of fixed length, containing lists of objects with at least `id` property.
+        is_user_config_valid = (
+            isinstance(user_config, list)
+            and len(user_config) == HOMEPAGE_PANELS_LAYOUT_COLUMNS
+            and all(isinstance(panel.get("id"), str) for panel_group in user_config for panel in panel_group)
+        )
+
+        if is_user_config_valid:
+            # If `user_config` is found and valid, use it to group and order the panels according to user preferences.
+            # Create a list of nested empty lists representing panel layout columns.
+            panel_layout = [[] for i in range(0, HOMEPAGE_PANELS_LAYOUT_COLUMNS)]
+            for panel_group_index, panel_group in enumerate(user_config):
+                for panel in panel_group:
+                    # Find `(panel_name, panel_details)` key-value pair corresponding to the `panel` from user config.
+                    try:
+                        kv_pair = next(kv_pair for kv_pair in user_panels if slugify(kv_pair[0]) == panel.get("id"))
+                    except StopIteration:
+                        kv_pair = None
+                    if kv_pair:
+                        # If panel with given `id` exists and is available, append it to the current column layout and
+                        # enrich it with `collapsed` property from user config.
+                        panel_layout[panel_group_index].append(
+                            (kv_pair[0], {**kv_pair[1], "collapsed": panel.get("collapsed", False)})
+                        )
+            # Identify panels that should be displayed but are missing from `user_config`, and add them at the end.
+            used_panel_names = [kv_pair[0] for panel_group in panel_layout for kv_pair in panel_group]
+            missing_panels = [kv_pair for kv_pair in user_panels if kv_pair[0] not in used_panel_names]
+            panel_layout[-1] += missing_panels
+            # Convert panel key-value pairs to `dict`.
+            panel_layout = [dict(panel_group) for panel_group in panel_layout]
+            # Update user config to always keep it up to date with the latest homepage panel layout structure.
+            request.user.set_config(
+                "homepage_layout.panels",
+                [
+                    [
+                        {"id": slugify(kv_pair[0]), "collapsed": kv_pair[1].get("collapsed", False)}
+                        for kv_pair in panel_group.items()
+                    ]
+                    for panel_group in panel_layout
+                ],
+                commit=True,
+            )
+        else:
+            # If `user_config` is not found or is invalid, create a default panel layout.
+            request.user.clear_config("homepage_layout.panels", commit=True)
+            # Using an upside-down floor division here. Source: from https://stackoverflow.com/a/17511341.
+            panel_layout_rows = -(len(user_panels) // -HOMEPAGE_PANELS_LAYOUT_COLUMNS)
+            # Lambda key function is responsible by grouping the panels into equal chunks representing rows per column.
+            panel_layout = [
+                dict(panel_group)
+                for key, panel_group in groupby(
+                    user_panels, lambda panel: user_panels.index(panel) // panel_layout_rows
+                )
+            ]
+            # Make sure that there always is the exact expected number of columns in the `panel_layout`.
+            panel_layout.extend([{}] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
+
+        context.update({"homepage_layout_panels": panel_layout})
 
         return self.render_to_response(context)
 
@@ -367,14 +437,35 @@ class SearchView(AccessMixin, View):
         if "q" not in request.GET:
             return render(request, "search.html", {})
 
-        # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
+        # Build the set of "app_label.modelname" strings, representing all models included in the global search,
         # based on the `app_config.searchable_models` list (if any) defined by each app
-        searchable_models = []
+        searchable_models_set = set()
         for app_config in apps.get_app_configs():
             if hasattr(app_config, "searchable_models"):
-                searchable_models += [
+                searchable_models_set.update(
                     f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
-                ]
+                )
+
+        # Sort the searchable_models set into the below "logical" order:
+        # - Device
+        # - Location
+        # - Prefix
+        # - IPAddress
+        # - core models in alphabetical order by app_label.modelname
+        # - app models in alphabetical order by app_label.modelname
+        searchable_models = []
+        for initial_entry in ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"]:
+            if initial_entry in searchable_models_set:  # should always be true, but just in case
+                searchable_models.append(initial_entry)
+                searchable_models_set.remove(initial_entry)
+        # Remaining core models
+        for remaining_entry in sorted(searchable_models_set):
+            if remaining_entry.split(".", 1)[0] in settings.PLUGINS:
+                continue
+            searchable_models.append(remaining_entry)
+            searchable_models_set.remove(remaining_entry)
+        # Remaining app models
+        searchable_models += sorted(searchable_models_set)
 
         if not request.headers.get("HX-Request", False):
             # Initial page-load request
@@ -443,6 +534,79 @@ class SearchContentTypeView(AccessMixin, View):
                 "components/htmx/object_embedded_search.html",
                 {"filter_form": filter_form, "model": model},
             )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class LiveSearchView(AccessMixin, View):
+    def get(self, request, path):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if path is None:
+            return HttpResponseBadRequest("List view `path` is missing in the requested URL.")
+
+        if request.headers.get("HX-Request", False):
+            restricted_queryset = None
+            table = None
+
+            try:
+                view_name = resolve(f"/{path}").view_name
+                model = get_model_for_view_name(view_name)
+                filterset = get_filterset_for_model(model)
+                table_class = get_table_for_model(model)
+            except (Resolver404, TypeError, ValueError):
+                filterset = None
+                table_class = None
+
+            if filterset and table_class:
+                filtered_queryset = filterset(request.GET).qs
+                if filtered_queryset:
+                    restricted_queryset = (
+                        filtered_queryset.restrict(request.user, "view")
+                        if hasattr(filtered_queryset, "restrict")
+                        else filtered_queryset
+                    )
+                    table = table_class(
+                        restricted_queryset,
+                        # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
+                        attrs={"class": "table nb-table-headings"},
+                        hide_hierarchy_ui=True,
+                        configurable=False,
+                        orderable=False,
+                        row_attrs={
+                            # Event handlers and attributes below are defined in order to imitate anchor link behavior.
+                            "role": "link",
+                            "tabindex": 0,
+                            "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
+                            "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
+                        },
+                    )
+                    # Hide unnecessary "pk" and "actions" columns, if they would otherwise be displayed.
+                    for column in ["pk", "actions"]:
+                        if column in table.columns:
+                            table.columns.hide(column)
+                    table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
+            return render(
+                request,
+                "components/htmx/live_search_results.html",
+                {"table": table},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class MessagesView(AccessMixin, View):
+    def get(self, request):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            return render(request, "components/htmx/messages.html")
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 

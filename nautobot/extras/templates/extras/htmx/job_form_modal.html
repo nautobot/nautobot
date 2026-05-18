@@ -1,0 +1,153 @@
+{% load form_helpers %}
+{% load helpers %}
+
+{% block title %}{% include 'inc/modal_header.html' with title=title %}{% endblock %}
+
+{% block content %}
+    <form hx-post="{% url 'extras:job_run_by_class_path' class_path=class_path %}"
+          hx-target="#modal-content-container"
+          id="job-form-modal"
+          hx-vals='{{ hx_vals|safe }}'
+          enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <div class="row justify-content-center flex-fill">
+                {% if not job_model.installed or job_model.job_class is None %}
+                    <div class="alert alert-warning">
+                        <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not presently installed and cannot be run.
+                    </div>
+                {% elif not job_model.enabled %}
+                    <div class="alert alert-warning">
+                        <span aria-hidden="true" class="mdi mdi-alert"></span> This job is not enabled to be run.
+                    </div>
+                {% endif %}
+                {% if job_model.read_only %}
+                    <div class="alert alert-info">
+                        <span aria-hidden="true" class="mdi mdi-info"></span>This job is read-only in its operation.
+                    </div>
+                {% endif %}
+                {% if job_form.non_field_errors %}
+                    <div class="alert alert-danger d-flex align-items-center mb-6" role="alert">
+                        <span aria-hidden="true" class="mdi mdi-alert-octagon-outline me-3 fs-4"></span>
+                        <div>
+                            <strong>Errors</strong>
+                            {{ job_form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {% block job_form_wrapper %}
+                {% render_form job_form excluded_fields=advanced_field_names %}
+                <div class="form-check mb-10 d-md-flex justify-content-center">
+                    <div class="col-md-9 offset-md-3">
+                        <div class="form-check mt-6">
+                            <input class="form-check-input" type="checkbox" id="toggle-advanced">
+                            <label class="form-check-label" for="toggle-advanced">Show Advanced Settings</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="advanced-settings" class="d-none">
+                    {% for field in advanced_fields %}
+                        {% render_field field %}
+                    {% endfor %}
+                    {% block job_execution_form_wrapper %}
+                        {% render_form job_execution_form %}
+                    {% endblock job_execution_form_wrapper %}
+                </div>
+            {% endblock job_form_wrapper %}
+        </div>
+        <div class="modal-footer">
+            {% block job_form_footer %}
+                <button
+                    class="btn btn-primary"
+                    id="id__run"
+                    type="submit"
+                    data-base-text="{{ run_button_label }}"
+                    {% if not perms.extras.run_job or not job_model.runnable %}disabled{% endif %}
+                >
+                    <span aria-hidden="true" class="mdi mdi-play me-4"></span>
+                    <span class="run-button-text">{{ run_button_label }}</span>
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                    -->Cancel
+                </button>
+            {% endblock job_form_footer %}
+        </div>
+    </form>
+{% endblock %}
+
+{% block javascript %}
+    <script type="text/javascript">
+        (function() {
+            const initJobFormLogic = () => {
+                const container = document.getElementById('modal-content-container'); // Ensure this matches your modal ID
+                if (!container) return;
+
+                // 1. Toggle Advanced Settings
+                const advancedToggle = container.querySelector('#toggle-advanced');
+                const advancedSettings = container.querySelector('#advanced-settings');
+
+                if (advancedToggle && advancedSettings) {
+                    advancedToggle.addEventListener('change', (e) => {
+                        advancedSettings.classList.toggle('d-none', !e.target.checked);
+                    });
+                }
+
+                document.addEventListener('htmx:beforeSend', (event) => {
+                    if (event.target.id !== 'job-form-modal') return; // We are only applying this to modal-based job forms
+                    const modalFooter = event.detail.target.querySelector('.modal-footer');
+                    const newRunButton = document.createElement('button');
+                    newRunButton.classList.add('btn', 'btn-primary');
+                    newRunButton.setAttribute('type', 'button');
+                    newRunButton.disabled = true;
+
+                    const loadingSpinner = document.createElement('span');
+                    loadingSpinner.classList.add('spinner-border', 'spinner-border-sm');
+                    loadingSpinner.setAttribute('aria-hidden', 'true');
+                    const loadingText = document.createElement('span');
+                    loadingText.textContent = ' Enqueuing...';
+
+                    newRunButton.appendChild(loadingSpinner);
+                    newRunButton.appendChild(loadingText);
+
+                    modalFooter.innerHTML = ''; // Clear existing buttons
+                    modalFooter.appendChild(newRunButton);
+                });
+
+                // 2. Define the DryRun toggle logic
+                const toggleExecutionType = () => {
+                    const dryrunInput = container.querySelector('#id_dryrun');
+                    if (!dryrunInput) return;
+
+                    const isDryRun = dryrunInput.type === 'checkbox' ? dryrunInput.checked : dryrunInput.value === 'True';
+                    const runButton = container.querySelector('#id__run');
+
+                    if (runButton) {
+                        const textSpan = runButton.querySelector('.run-button-text');
+                        const baseText = runButton.getAttribute('data-base-text');
+
+                        if (textSpan && baseText) {
+                            const suffix = isDryRun ? ' (DRYRUN)' : '';
+                            textSpan.textContent = `${baseText}${suffix}`;
+                        }
+                    }
+                };
+
+                // 3. Listen for changes specifically on the dryrun field
+                container.addEventListener('change', (event) => {
+                    if (event.target.id === 'id_dryrun') {
+                        toggleExecutionType();
+                    }
+                });
+
+                // 4. Initial DryRun Check
+                toggleExecutionType();
+            };
+
+            // Run the initialization function immediately after swap.
+            initJobFormLogic();
+        })();
+    </script>
+{% endblock %}
+{{ job_form.media }}

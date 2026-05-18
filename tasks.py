@@ -17,6 +17,7 @@ import json
 import os
 import platform
 import re
+import shlex
 import time
 
 from invoke import Collection, task as invoke_task
@@ -639,18 +640,21 @@ def logs(context, service=None, follow=False, tail=0):
     help={
         "quiet": "Suppress verbose output on launch",
         "print_sql": "Enable printing of all executed SQL statements",
+        "command": "Python code to execute non-interactively, instead of launching an interactive shell",
     }
 )
-def nbshell(context, quiet=False, print_sql=False):
-    """Launch an interactive Nautobot shell."""
-    command = "nautobot-server nbshell"
+def nbshell(context, quiet=False, print_sql=False, command=None):
+    """Launch an interactive Nautobot shell, or run a single Python command non-interactively."""
+    cmd = "nautobot-server nbshell"
 
     if quiet:
-        command += " --quiet"
+        cmd += " --quiet"
     if print_sql:
-        command += " --print-sql"
+        cmd += " --print-sql"
+    if command:
+        cmd += f" --command {shlex.quote(command)}"
 
-    run_command(context, command)
+    run_command(context, cmd)
 
 
 @task(
@@ -714,10 +718,14 @@ def post_upgrade(context):
     This will run the following management commands with default settings, in order:
 
     - migrate
+    - clear_cache
     - trace_paths
     - collectstatic
     - remove_stale_contenttypes
     - clearsessions
+    - send_installation_metrics
+    - refresh_content_type_cache
+    - refresh_dynamic_group_member_caches
     """
     command = "nautobot-server post_upgrade"
 
@@ -756,7 +764,7 @@ def loaddata(context, filepath="db_output.json"):
 @task(help={"command": "npm command to be executed, e.g. `ci`, `install`, `remove`, `update`, etc."})
 def npm(context, command):
     """Execute any given npm command inside `ui` directory."""
-    run_command(context, f"npm --prefix nautobot/ui {command}")
+    run_command(context, f"npm --prefix nautobot/ui {command}", service="ui_build")
 
 
 @task(help={"watch": "Spawn a continuous process to watch source files and trigger re-build when they are changed."})
@@ -805,6 +813,31 @@ def build_example_app_docs(context):
     else:
         docker_command = f"run --rm --workdir='/source/examples/example_app' --entrypoint '{command}' nautobot"
         docker_compose(context, docker_command, pty=True)
+
+
+@task(
+    help={
+        "version": "Nautobot version number to associate with the release notes.",
+        "date": "Date of the release (default: today).",
+        "keep": "Keep existing change fragment files. Useful for testing. (default: False).",
+    }
+)
+def generate_release_notes(context, version="", date="", keep=False):  # pylint: disable=redefined-outer-name
+    """Generate Release Notes using Towncrier."""
+    command = "poetry run towncrier build"
+    if not version:
+        version = context.run("poetry version --short", hide=True).stdout.strip()
+    command += f" --version {version}"
+    if date:
+        command += f" --date {date}"
+    command += " --keep" if keep else " --yes"
+
+    # N/A for Nautobot core; we create `nautobot/docs/release-notes/version-X.Y.md` for new X.Y versions in advance
+    # version_major_minor = ".".join(version.split(".")[:2])
+    # context.run(f"poetry run python scripts/ensure_release_notes.py --version {version_major_minor}")
+
+    # Due to issues with git repo ownership in the containers, this must always run locally.
+    context.run(command)
 
 
 def task_navigate_to_service_port(context, service: str, internal_port: str, proto: str = "http", creds: str = ""):
@@ -1064,6 +1097,7 @@ def check_schema(context, api_version=None):
     help={
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
+        "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
         "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
@@ -1071,6 +1105,7 @@ def check_schema(context, api_version=None):
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "no_input": "Suppress interactive prompts (e.g. confirmation when `--no-reusedb` would destroy an existing test database).",
         "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
         "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
         "pattern": "Only run tests which match the given substring. Can be used multiple times.",
@@ -1085,6 +1120,7 @@ def tests(
     context,
     append_coverage=False,
     buffer=True,
+    pdb=False,
     cache_test_fixtures=True,
     config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
@@ -1092,6 +1128,7 @@ def tests(
     failfast=False,
     keepdb=True,
     label="nautobot",
+    no_input=False,
     parallel=True,
     parallel_workers=None,
     pattern=None,
@@ -1133,12 +1170,16 @@ def tests(
         command += " --keepdb"
     if not reusedb:
         command += " --no-reusedb"
+    if no_input:
+        command += " --no-input"
     if failfast:
         command += " --failfast"
     if buffer:
         command += " --buffer"
     if verbose:
         command += " --verbosity 2"
+    if pdb:
+        command += " --pdb"
     if parallel:
         command += " --parallel"
         if parallel_workers:

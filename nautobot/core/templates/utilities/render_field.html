@@ -49,6 +49,7 @@
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
                             >
                                 <span class="mdi mdi-plus-thick"></span>
                                 <span class="visually-hidden">Add a new {{ verbose_name }}</span>
@@ -67,6 +68,7 @@
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
                             >
                                 <span class="mdi mdi-filter"></span>
                                 <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
@@ -88,7 +90,7 @@
             {% endif %}
     {% endif %}
     {% if field.errors %}
-        <ul class="mb-0 mt-4">
+        <ul class="mb-0 mt-4 w-100">
             {% for error in field.errors %}
                 {# Embed an HTML comment indicating the error for extraction by tests #}
                 <!-- FORM-ERROR {{ field.name }}: {{ error }} -->

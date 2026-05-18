@@ -162,6 +162,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                     field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
                     field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+                elif cf.type == CustomFieldTypeChoices.TYPE_DATETIME:
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DDThh:mm:ssZ</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
                     field_info["choices"] = {value: value for value in cf.choices}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -677,5 +679,6 @@ def get_bulk_queryset_from_view(
         log.debug("Saved view with no filters specified, returning all objects")
         return queryset
 
+    # This should be unreachable code.
     log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")

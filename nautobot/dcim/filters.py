@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import F, Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -51,6 +51,7 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -115,6 +116,7 @@ from nautobot.wireless.models import RadioProfile, WirelessNetwork
 __all__ = (
     "CableFilterSet",
     "CableTerminationModelFilterSetMixin",
+    "CableTypeFilterSet",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
     "ConsolePortTemplateFilterSet",
@@ -523,7 +525,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    location = NaturalKeyOrPKMultipleChoiceFilter(
+    location = TreeNodeMultipleChoiceFilter(
         queryset=Location.objects.all(),
         field_name="rack__location",
         to_field_name="name",
@@ -1429,7 +1431,7 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
-    tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+    tenant_group = TreeNodeMultipleChoiceFilter(
         field_name="master__tenant__tenant_group",
         queryset=TenantGroup.objects.all(),
         to_field_name="name",
@@ -1450,6 +1452,43 @@ class VirtualChassisFilterSet(NautobotFilterSet):
     class Meta:
         model = VirtualChassis
         fields = ["id", "domain", "name", "tags"]
+
+
+class CableTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "manufacturer__name": "icontains",
+            "part_number": "icontains",
+        }
+    )
+    is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+    )
+
+    class Meta:
+        model = CableType
+        fields = [
+            "id",
+            "name",
+            "part_number",
+            "has_embedded_transceivers",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+
+    def filter_is_breakout(self, queryset, name, value):
+        if value:
+            return queryset.exclude(a_connectors=F("b_connectors"))
+        return queryset.filter(a_connectors=F("b_connectors"))
 
 
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
@@ -1757,6 +1796,7 @@ class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetM
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interfaces (name or ID)",
+        prefers_id=True,
     )
 
     class Meta:
@@ -1813,6 +1853,12 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     software_version = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
+    )
+    software_version__platform = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_version__platform",
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Software version platform (name or ID)",
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -2197,6 +2243,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+        exclude = ["front_image", "rear_image"]  # ImageField is not filterable by django-filter
 
     def filter_module_bay(self, queryset, name, value):
         """Filter module types based on a module bay's module family."""

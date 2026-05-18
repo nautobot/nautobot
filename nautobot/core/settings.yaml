@@ -113,6 +113,20 @@ properties:
     items:
       type: "string"
     type: "array"
+  AUTH_PASSWORD_VALIDATORS:
+    default: []
+    description: >-
+      A list of dictionaries, describing password validator classes (as strings) and any associated configuration, to
+      manage validation of passwords for local user accounts. By default, this is an empty list, meaning any password
+      is permitted.
+
+      A future release of Nautobot may change the default value of this setting to increase security.
+    items:
+      type: "object"
+    see_also:
+      "Django documentation for `AUTH_PASSWORD_VALIDATORS`": "https://docs.djangoproject.com/en/stable/ref/settings/#std-setting-AUTH_PASSWORD_VALIDATORS"
+      "Django documentation for password validators": "https://docs.djangoproject.com/en/stable/topics/auth/passwords/#module-django.contrib.auth.password_validation"
+    type: "array"
   AUTHENTICATION_BACKENDS:
     default:
     - "nautobot.core.authentication.ObjectPermissionBackend"
@@ -272,6 +286,7 @@ properties:
         LOCATION: "redis://localhost:6379/1"
         OPTIONS:
           CLIENT_CLASS: "django_redis.client.DefaultClient"
+          CUSTOM_HEALTH_CHECK_CLASS: ""
           PASSWORD: ""
         TIMEOUT: 300
     description: "The `CACHES` setting is required to simplify the configuration for `django-redis`."
@@ -317,6 +332,14 @@ properties:
             properties:
               CLIENT_CLASS:
                 default: "django_redis.client.DefaultClient"
+                type: "string"
+              CUSTOM_HEALTH_CHECK_CLASS:
+                default: ""
+                description: >-
+                  The import path to a custom health check class to use when providing a custom django-redis `CLIENT_CLASS`.
+                version_added: "3.0.8"
+                see_also:
+                  "Django Health Check documentation for custom health check classes": "https://codingjoe.dev/django-health-check/usage/#writing-a-custom-health-check"
                 type: "string"
               PASSWORD:
                 default: ""
@@ -1017,6 +1040,14 @@ properties:
       "`STORAGES`": "#storages"
     type: "integer"
     version_added: "2.1.0"
+  JOB_QUEUE_PATH:
+    "$ref": "#/definitions/absolute_path"
+    default: "/etc/nautobot/job-queues"
+    description: >-
+      Directory where Job Queue configuration files are stored. Used for Kubernetes Job queues;
+      each queue may have a subdirectory named after the queue containing `manifest.json`.
+    environment_variable: "NAUTOBOT_JOB_QUEUE_PATH"
+    version_added: "3.0.9"
   JOBS_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/jobs"
@@ -2024,4 +2055,69 @@ properties:
 
       The function must return only one argument: a string of the truncated device display name.
     version_added: "1.4.0"
+  WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS:
+    default: []
+    description: >-
+      A list of network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list
+      (loopback, link-local including cloud metadata endpoints such as `169.254.169.254`, unspecified, multicast,
+      and reserved) is enforced unconditionally and cannot be disabled. Use this setting to extend it.
+    details: |-
+      For deployments that don't legitimately need to webhook into RFC1918 private networks, set this to
+      `["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]` (and the equivalent IPv6 ULA `fc00::/7`) for stricter
+      posture. Hosts listed in [`WEBHOOK_ALLOWED_HOSTS`](#webhook_allowed_hosts) bypass *this* admin-extended
+      list (but not the built-in list).
+
+      The block-list is enforced both when a Webhook is saved (for IP-literal hosts) and when the Celery worker
+      sends the request (after DNS resolution).
+    environment_variable: "NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ALLOWED_HOSTS`": "#webhook_allowed_hosts"
+      "`WEBHOOK_ALLOWED_SCHEMES`": "#webhook_allowed_schemes"
+    type: "array"
+    version_added: "3.1.2"
+  WEBHOOK_ALLOWED_HOSTS:
+    default: []
+    description: >-
+      Hostnames that Webhooks may target even if they would otherwise be blocked by the
+      [`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`](#webhook_additional_blocked_networks) admin-extended block-list.
+      Django `ALLOWED_HOSTS`-style: literal hostnames or `.example.com` to match a domain and all of its
+      subdomains. The wildcard `*` matches every hostname.
+    details: |-
+      The built-in block-list (loopback, link-local including cloud metadata endpoints such as
+      `169.254.169.254`, unspecified, multicast, reserved) is enforced unconditionally and is **not** bypassed
+      by this setting -- including the wildcard `*`. An allow-listed hostname whose DNS resolves into the
+      built-in block-list is still rejected at send time.
+
+      Typical use is to allow specific internal targets while leaving the rest of the network filtered. For
+      example, to permit a single internal monitoring host:
+
+      ```python
+      WEBHOOK_ALLOWED_HOSTS = ["monitoring.internal.example.com"]
+      ```
+    environment_variable: "NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`": "#webhook_additional_blocked_networks"
+      "`WEBHOOK_ALLOWED_SCHEMES`": "#webhook_allowed_schemes"
+      "Django documentation for `ALLOWED_HOSTS` (matching syntax)": "https://docs.djangoproject.com/en/stable/ref/settings/#allowed-hosts"
+    type: "array"
+    version_added: "3.1.2"
+  WEBHOOK_ALLOWED_SCHEMES:
+    default:
+    - "http"
+    - "https"
+    description: >-
+      URL schemes that Webhooks are permitted to target. Defaults to HTTP and HTTPS only; other schemes
+      (e.g. `file:`, `ftp:`, `gopher:`) are rejected at Webhook save time as a baseline SSRF protection.
+    environment_variable: "NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"
+    items:
+      type: "string"
+    see_also:
+      "`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`": "#webhook_additional_blocked_networks"
+      "`WEBHOOK_ALLOWED_HOSTS`": "#webhook_allowed_hosts"
+    type: "array"
+    version_added: "3.1.2"
 ...

@@ -8,6 +8,7 @@ import django_filters
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
+    MultiValueDateTimeFilter,
     MultiValueNumberFilter,
 )
 from nautobot.core.forms import NullableDateField
@@ -18,6 +19,7 @@ from nautobot.extras.models import CustomFieldChoice
 EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_BOOLEAN,
     CustomFieldTypeChoices.TYPE_DATE,
+    CustomFieldTypeChoices.TYPE_DATETIME,
     CustomFieldTypeChoices.TYPE_INTEGER,
     CustomFieldTypeChoices.TYPE_SELECT,
     CustomFieldTypeChoices.TYPE_MULTISELECT,
@@ -140,6 +142,10 @@ class CustomFieldMultiValueCharFilter(CustomFieldFilterMixin, MultiValueCharFilt
 
 class CustomFieldMultiValueDateFilter(CustomFieldFilterMixin, MultiValueDateFilter):
     """Custom field multi value date filter for extended lookup expressions"""
+
+
+class CustomFieldMultiValueDateTimeFilter(CustomFieldFilterMixin, MultiValueDateTimeFilter):
+    """Custom field multi value datetime filter for extended lookup expressions"""
 
 
 class CustomFieldMultiValueNumberFilter(CustomFieldFilterMixin, MultiValueNumberFilter):

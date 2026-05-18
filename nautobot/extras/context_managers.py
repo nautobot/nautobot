@@ -84,6 +84,7 @@ class ChangeContext:
             "user": self.get_user(instance),
             "change_id": self.change_id,
             "context": self.context,
+            "context_detail": self.context_detail,
             "pre_object_data": self.pre_object_data,
             "pre_object_data_v2": self.pre_object_data_v2,
         }

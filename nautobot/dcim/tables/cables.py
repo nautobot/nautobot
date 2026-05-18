@@ -3,21 +3,68 @@ from django_tables2.utils import Accessor
 
 from nautobot.core.tables import (
     BaseTable,
+    BooleanColumn,
+    ButtonsColumn,
     ColorColumn,
     TagColumn,
     ToggleColumn,
 )
-from nautobot.dcim.models import Cable
+from nautobot.dcim.models import Cable, CableType
 from nautobot.extras.tables import StatusTableMixin
 
 from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT
 
-__all__ = ("CableTable",)
+__all__ = ("CableTable", "CableTypeTable")
 
 
 #
 # Cables
 #
+
+
+class CableTypeTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    manufacturer = tables.Column(linkify=True)
+    has_embedded_transceivers = BooleanColumn()
+    is_shuffle = BooleanColumn()
+    total_strands = tables.Column(orderable=False)
+    is_breakout = BooleanColumn(orderable=False)
+    tags = TagColumn(url_name="dcim:cabletype_list")
+    actions = ButtonsColumn(CableType)
+
+    class Meta(BaseTable.Meta):
+        model = CableType
+        fields = (
+            "pk",
+            "name",
+            "description",
+            "manufacturer",
+            "part_number",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "has_embedded_transceivers",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "total_strands",
+            "is_breakout",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "manufacturer",
+            "part_number",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "tags",
+            "actions",
+        )
 
 
 class CableTable(StatusTableMixin, BaseTable):

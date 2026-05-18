@@ -279,12 +279,3 @@ KUBERNETES_JOB_MANIFEST = {
         "backoffLimit": 0,
     },
 }
-
-# Name of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAME = "nautobot-job"
-
-# Namespace of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAMESPACE = "default"
-
-# Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_DEFAULT_SERVICE_ADDRESS = "https://kubernetes.default.svc"

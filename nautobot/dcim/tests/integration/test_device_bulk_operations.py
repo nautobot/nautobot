@@ -87,9 +87,11 @@ class DeviceBulkUrlParamTestCase(SeleniumTestCase):
 
         self.assertTrue(
             WebDriverWait(self.browser.driver, 2).until(
-                lambda d: d.find_element(By.ID, "select2-id_device_type-container")
-                .find_element(By.CLASS_NAME, "select2-selection__placeholder")
-                .text.strip()
-                == "---------"
+                lambda d: (
+                    d.find_element(By.ID, "select2-id_device_type-container")
+                    .find_element(By.CLASS_NAME, "select2-selection__placeholder")
+                    .text.strip()
+                    == "---------"
+                )
             )
         )

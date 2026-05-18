@@ -187,8 +187,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CircuitFilterSet
     filterset_form_class = forms.CircuitFilterForm
     form_class = forms.CircuitForm
-    # v2 TODO(jathan): Replace prefetch_related with select_related
-    prefetch_related = ["provider", "circuit_type", "tenant", "circuit_termination_a", "circuit_termination_z"]
     queryset = Circuit.objects.all()
     serializer_class = serializers.CircuitSerializer
     table_class = tables.CircuitTable

@@ -110,39 +110,21 @@ A webhook request is considered successful if the receiver responds with a `2XX`
 
 ## Troubleshooting Webhooks
 
-To inspect outgoing webhooks, you can use a local HTTP listener. Nautobot provides a built-in webhook receiver that logs incoming requests:
-
-1. Set the webhook URL to `http://localhost:9000/`.
-2. Start the webhook receiver:
-
-    ```sh
-    nautobot-server webhook_receiver
-    ```
-
-    Example output:
-
-    ```sh
-    Listening on port http://localhost:9000. Stop with CONTROL-C.
-    ```
-
-3. Send a test request:
-
-    ```sh
-    curl -X POST http://localhost:9000 --data '{"foo": "bar"}'
-    ```
-
-    The listener will output:
-
-    ```sh
-    [1] Tue, 07 Apr 2020 17:44:02 GMT 127.0.0.1 "POST / HTTP/1.1" 200 -
-    Host: localhost:9000
-    Content-Type: application/json
-    Content-Length: 14
-
-    {"foo": "bar"}
-    ```
-
-> **Alternative Testing Tools:**
-> Instead of using the built-in webhook receiver, you can test webhooks with external services like [Beeceptor](https://beeceptor.com/) or [Pipedream RequestBin](https://pipedream.com/requestbin). These tools let you inspect webhook payloads and troubleshoot integration issues.
+You can test webhooks with external services like [Beeceptor](https://beeceptor.com/) or [Pipedream RequestBin](https://pipedream.com/requestbin). These tools let you inspect webhook payloads and troubleshoot integration issues.
 
 If a webhook does not trigger as expected, ensure that the **Celery worker** process is running and check the Nautobot logs for errors.
+
+## Webhook Administration and Security
+
+Because configured webhooks are sent automatically to another system, and because the data sent by a webhook contains information about the data stored in Nautobot, it's often necessary to restrict what users may configure webhooks, and what systems the webhooks may be sent to. The former is achieved by only granting webhook `add` and `change` [permissions](users/objectpermission.md) to the users that have a legitimate need to manage webhooks, while the later is a bit more involved.
+
+To provide a baseline of security, Nautobot automatically disallows the configuration of webhooks that point to certain classes of IP addresses (link-local, loopback, multicast, and reserved addresses), and at webhook transmission time, webhooks configured to send to a hostname that resolves to such an IP is also automatically blocked. This restriction is built-in to Nautobot and cannot be disabled.
+
+An administrator can further restrict the range of IPs and hosts that webhooks can be sent to by configuring [`WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS`](../administration/configuration/settings.md#webhook_additional_blocked_networks) and/or [`WEBHOOK_ALLOWED_HOSTS`](../administration/configuration/settings.md#webhook_allowed_hosts) in `nautobot_config.py`. The former defines additional IP networks that should be blocked, and the latter defines an allow-list of hosts or domains that are explicitly permitted **despite falling within the `ADDITIONAL_BLOCKED_NETWORKS` networks**. For example, to disallow webhooks to **all** hosts except for those within `example.com`, you could configure:
+
+```python
+WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = ["0.0.0.0/0", "::/0"]
+WEBHOOK_ALLOWED_HOSTS = [".example.com"]
+```
+
+A third administratively-definable setting is [`WEBHOOK_ALLOWED_SCHEMES`](../administration/configuration/settings.md#webhook_allowed_schemes). This defaults to `["http", "https"]` but can be configured if desired, for example to disallow HTTP-only webhooks or to allow specific additional protocols.

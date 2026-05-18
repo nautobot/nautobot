@@ -1,6 +1,7 @@
 """Utilities for apps to implement test automation."""
 
 from nautobot.core.testing import (
+    AssertNoRepeatedQueries,
     create_job_result_and_run_job,
     get_job_class_and_model,
     run_job_for_testing,
@@ -35,6 +36,7 @@ __all__ = (
     "APITestCase",
     "APITransactionTestCase",
     "APIViewTestCases",
+    "AssertNoRepeatedQueries",
     "BulkOperationsMixin",
     "BulkOperationsTestCases",
     "FilterTestCases",

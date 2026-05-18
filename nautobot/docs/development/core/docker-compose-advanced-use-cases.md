@@ -11,7 +11,7 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
-- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images-manually-if-needed); you shouldn't generally need to change these.
+- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-release-to-pypi-and-docker-registries); you shouldn't generally need to change these.
 - `ephemeral_ports`: Setting this value to `True` and not using any custom compose files will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts. If setting `compose_files`, this will have no effect so please ensure to manually add the `docker-compose.ephemeral-ports.yml` to your list.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
@@ -166,6 +166,7 @@ To open VS Code in the development container, first open VS Code in your local c
 ### Debugging inside a Dev Container
 
 You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
+
 - **Python: Nautobot** - Targets the Django server process
 - **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
@@ -197,6 +198,7 @@ Follow either of the options below to configure VS Code to debug Nautobot and Ce
 #### Running inside the Nautobot workspace
 
 If you have opened the project via the workspace file `nautobot.code-workspace` then there are two debug configurations for remote debugging available. These can be run via one of the debug tasks:
+
 - `Python: Nautobot (Remote)` or
 - `Python: Nautobot-Celery (Remote)`
 

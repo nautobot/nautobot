@@ -6,7 +6,7 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body pb-0">
-    <form hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
+    <form data-nb-obj-type="{{ obj_type }}" hx-post="{% url obj|viewname:'add' %}" hx-target="#embedded_action_modal .modal-content">
         {% csrf_token %}
         {% for field in form.hidden_fields %}
             {{ field }}
@@ -22,23 +22,45 @@
                 {% endif %}
             {% endwith %}
         {% endif %}
-        <div class="card">
-            <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
-            <div class="card-body">
-                {% render_form form %}
+        {% block tabs %}{% endblock %}
+        {% block form_errors %}
+            {% if form.non_field_errors or model_form.non_field_errors %}
+                <div class="card border-danger">
+                    <div class="card-header bg-danger-subtle border-danger text-body">
+                        <strong>Errors</strong>
+                    </div>
+                    <div class="card-body">
+                        {{ form.non_field_errors }}
+                        {{ model_form.non_field_errors }}
+                    </div>
+                </div>
+            {% endif %}
+        {% endblock %}
+        {% block form %}
+            <div class="card">
+                <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+                <div class="card-body">
+                    {% block form_fields %}
+                        {% render_form form %}
+                    {% endblock %}
+                </div>
             </div>
-        </div>
-        {% include 'inc/extras_features_edit_form_fields.html' %}
+            {% include 'inc/extras_features_edit_form_fields.html' %}
+        {% endblock %}
         <div class="nb-form-sticky-footer mb-0 mx-n16 rounded-bottom">
-            <button class="btn btn-primary" name="_create" type="submit">
-                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                -->Create
-            </button>
-            <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
-                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                -->Cancel
-            </button>
+            {% block buttons %}
+                <button class="btn btn-primary" name="_create" type="submit">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                    -->Create
+                </button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                    -->Cancel
+                </button>
+            {% endblock %}
         </div>
     </form>
 </div>
-{{ form.media }}
+{% block javascript %}
+    {{ form.media }}
+{% endblock %}

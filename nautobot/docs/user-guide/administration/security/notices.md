@@ -2,7 +2,187 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 500 proper-names -->
+<!-- pyml disable-num-lines 700 proper-names -->
+
+## CVE-2026-44798
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>May 7, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add/change a GitRepository record could use the REST API to directly set the <code>current_head</code> field on the record, which was not intended to be user-editable. Doing so could cause Nautobot's local clone(s) of the relevant repository to checkout a commit other than the latest commit on the specified <code>branch</code> (resulting in misleading state), or potentially to be unable to make use of the repository at all (until manually remediated) due to the <code>current_head</code> pointing to a nonexistent commit hash or malformed value.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr">GHSA-p3hx-pwf3-j8wr</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.33</li>
+        <li>&ge;3.0.0, &lt;3.1.2</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.33 (<a href="https://github.com/nautobot/nautobot/commit/9deddfc91ad9260ad17b5e20084e9e2d15be3609">patch</a>)</li>
+        <li>3.1.2 (<a href="https://github.com/nautobot/nautobot/commit/c46f97040b2bde4320be36b23577f19a8bcbd8c3">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## CVE-2026-44797
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>May 7, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's Webhook data model and associated feature set could be configured by users with sufficient access to perform requests to various hosts and IP addresses that should not be permitted, allowing for various behaviors similar to server-side request forgery (SSRF).</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26">GHSA-c35q-vxrp-ph26</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.33</li>
+        <li>&ge;3.0.0, &lt;3.1.2</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.33 (<a href="https://github.com/nautobot/nautobot/commit/16aa4aa9796ab7a31c4d615ec945e1f16d8c77c4">patch</a>)</li>
+        <li>3.1.2 (<a href="https://github.com/nautobot/nautobot/commit/7324c8f0d8c7245fbc691e15d729adc2d2707d08">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## CVE-2026-44796
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>May 7, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot UI object-bulk-rename endpoints (for example, <code>/dcim/interfaces/rename/</code>) were vulnerable to application-wide denial of service via maliciously crafted regular expressions in the find field in combination with the <code>use_regex</code> flag.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm">GHSA-qrpw-gjvh-x5gm</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.33</li>
+        <li>&ge;3.0.0, &lt;3.1.2</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.33 (<a href="https://github.com/nautobot/nautobot/commit/c2b766966d814a7141f62c7bc90c85fefb7892ee">patch</a>)</li>
+        <li>3.1.2 (<a href="https://github.com/nautobot/nautobot/commit/5a30d0916953afbeedd24a784709e762cc3879cd">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## CVE-2026-44794
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>May 7, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>In the case of inter-object references via GenericForeignKey (a pattern allowing an object to reference another object that may belong to one of several different "content types" or database tables), when creating or updating an object containing a GenericForeignKey, Nautobot's REST API failed to enforce user "view" permissions when determining whether a given reference to another object would be valid.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x">GHSA-wpxj-44w3-2j6x</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.33</li>
+        <li>&ge;3.0.0, &lt;3.1.2</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.33 (<a href="https://github.com/nautobot/nautobot/commit/9918bdb9bcf1eb42cda72c344f420a64ef7665f1">patch</a>)</li>
+        <li>3.1.2 (<a href="https://github.com/nautobot/nautobot/commit/36cde7148a207234de6212ec074f321dbc9d1b5b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## CVE-2026-34203
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>March 30, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>User creation and editing via the REST API failed to apply the password validation rules defined by Django's <code>AUTH_PASSWORD_VALIDATORS</code> setting (which defaults to an empty list, i.e., no specific rules, but can be configured in Nautobot's <code>nautobot_config.py</code> to apply various rules if desired). This could potentially allow for the creation or modification of users to have passwords that are weak or otherwise do not comply with configured standards.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-xmpv-j7p2-j873">GHSA-xmpv-j7p2-j873</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.30</li>
+        <li>&ge;3.0.0, &lt;3.0.10</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.30 (<a href="https://github.com/nautobot/nautobot/pull/8779">patch</a>)</li>
+        <li>3.0.10 (<a href="https://github.com/nautobot/nautobot/pull/8778">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## CVE-2025-49142
 

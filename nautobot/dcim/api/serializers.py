@@ -55,6 +55,7 @@ from nautobot.dcim.models import (
     Cable,
     CablePath,
     CableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -808,8 +809,13 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
 #
 
 
+class CableTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    class Meta:
+        model = CableType
+        fields = "__all__"
+
+
 class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
-    # TODO: termination_a_type/termination_b_type are a bit redundant with the full termination_a/termination_b dicts
     termination_a_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_b_type = ContentTypeField(queryset=ContentType.objects.filter(CABLE_TERMINATION_MODELS))
     termination_a = serializers.SerializerMethodField(read_only=True)
@@ -1116,6 +1122,9 @@ class ModuleSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ModuleTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    front_image = serializers.ImageField(allow_null=True, required=False)
+    rear_image = serializers.ImageField(allow_null=True, required=False)
+
     class Meta:
         model = ModuleType
         fields = "__all__"
