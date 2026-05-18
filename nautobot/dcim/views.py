@@ -18,8 +18,8 @@ from django.forms import (
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
-from django.http.response import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.http.response import HttpResponseBadRequest, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -5743,7 +5743,7 @@ class CableCreateView(LoginRequiredMixin, View):
         termination_b_type_name = kwargs.get("termination_b_type")
 
         if not termination_a_type or not termination_a_id:
-            return HttpResponse(status_code=400)
+            return HttpResponseBadRequest("termination_a_type and termination_a_id must be provided")
 
         ct_a = ContentType.objects.get_for_model(termination_a_type)
         return_url = request.GET.get("return_url", "")
