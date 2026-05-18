@@ -3691,6 +3691,126 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertIn("Virtual and wireless interfaces cannot have a port type.", response_content)
 
 
+class BulkDisconnectViewTestCase(ModelViewTestCase):
+    """Behavioral tests for `BulkDisconnectView` via its `InterfaceBulkDisconnectView` subclass.
+
+    The view is generic across cable termination types, so per-subclass coverage isn't needed —
+    the interface variant exercises every branch (initial render, confirmation flow, cabled-vs-
+    uncabled handling, permission gating, and the aggregated survivor-cable info message).
+    """
+
+    model = Interface
+
+    @classmethod
+    def setUpTestData(cls):
+        device_a = create_test_device("Disconnect Device A")
+        device_b = create_test_device("Disconnect Device B")
+        iface_status = Status.objects.get_for_model(Interface).first()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.iface_a1 = Interface.objects.create(device=device_a, name="a1", status=iface_status, type="1000base-t")
+        cls.iface_a2 = Interface.objects.create(device=device_a, name="a2", status=iface_status, type="1000base-t")
+        cls.iface_b1 = Interface.objects.create(device=device_b, name="b1", status=iface_status, type="1000base-t")
+        cls.iface_b2 = Interface.objects.create(device=device_b, name="b2", status=iface_status, type="1000base-t")
+        cls.iface_uncabled = Interface.objects.create(
+            device=device_a, name="uncabled", status=iface_status, type="1000base-t"
+        )
+        cls.cable1 = Cable.objects.create(
+            termination_a=cls.iface_a1, termination_b=cls.iface_b1, status=cls.cable_status
+        )
+        cls.cable2 = Cable.objects.create(
+            termination_a=cls.iface_a2, termination_b=cls.iface_b2, status=cls.cable_status
+        )
+
+    def _disconnect_url(self):
+        return reverse("dcim:interface_bulk_disconnect")
+
+    def test_initial_render_shows_selected_objects(self):
+        """A POST with `pk` values but no `_confirm` flag re-renders the page with the selection list."""
+        self.add_permissions("dcim.change_interface")
+        response = self.client.post(self._disconnect_url(), data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)]})
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        # Both selected interfaces are listed by name on the confirmation page.
+        self.assertIn(self.iface_a1.name, body)
+        self.assertIn(self.iface_a2.name, body)
+        # Cables are still intact — no side effects from the initial render.
+        self.cable1.refresh_from_db()
+        self.cable2.refresh_from_db()
+
+    def test_confirm_disconnects_selected_cables(self):
+        """Confirming the bulk-disconnect form deletes the join rows for *each selected* termination ONLY."""
+        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        response = self.client.post(
+            self._disconnect_url(),
+            data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
+        )
+        self.assertHttpStatus(response, 302)
+        # Re-fetch from DB; `refresh_from_db` doesn't clear the cached `cable_termination` reverse
+        # OneToOne accessor that `.cable` reads through.
+        a1 = Interface.objects.get(pk=self.iface_a1.pk)
+        a2 = Interface.objects.get(pk=self.iface_a2.pk)
+        b1 = Interface.objects.get(pk=self.iface_b1.pk)
+        b2 = Interface.objects.get(pk=self.iface_b2.pk)
+        # Selected (A-side) interfaces are disconnected.
+        self.assertIsNone(a1.cable)
+        self.assertIsNone(a2.cable)
+        # Peers are *not* disconnected — only the A-side join rows were removed. The cable now
+        # has a single termination (B-side) and is awaiting user cleanup.
+        self.assertEqual(b1.cable, self.cable1)
+        self.assertEqual(b2.cable, self.cable2)
+        # The cables themselves still exist (the message tells the user to delete them).
+        self.assertTrue(Cable.objects.filter(pk__in=[self.cable1.pk, self.cable2.pk]).exists())
+
+    def test_confirm_aggregates_survivor_cable_message_with_bullet_list(self):
+        """The post-disconnect "cable still exists" notice is a *single* info message containing a bullet list."""
+        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        response = self.client.post(
+            self._disconnect_url(),
+            data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
+            follow=True,
+        )
+        self.assertHttpStatus(response, 200)
+        info_messages = [m for m in response.context["messages"] if m.level_tag == "info"]
+        self.assertEqual(len(info_messages), 1, msg=[str(m) for m in info_messages])
+        body = info_messages[0].message
+        # The aggregated message is an HTML <ul> with one <li> per surviving cable.
+        self.assertIn("<ul>", body)
+        self.assertEqual(body.count("<li>"), 2)
+        self.assertIn(str(self.cable1), body)
+        self.assertIn(str(self.cable2), body)
+
+    def test_confirm_skips_uncabled_selections(self):
+        """Selecting an uncabled termination alongside cabled ones is harmless — the view silently skips it."""
+        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        response = self.client.post(
+            self._disconnect_url(),
+            data={
+                "pk": [str(self.iface_a1.pk), str(self.iface_uncabled.pk)],
+                "_confirm": "yes",
+                "confirm": "true",
+            },
+            follow=True,
+        )
+        self.assertHttpStatus(response, 200)
+        # Only one cable should be disconnected; the success message reflects that.
+        success_messages = [m for m in response.context["messages"] if m.level_tag == "success"]
+        self.assertEqual(len(success_messages), 1)
+        self.assertIn("Disconnected 1 interfaces", success_messages[0].message)
+        # And only one cable appears in the survivor-cable info message (just iface_a1's cable).
+        info_messages = [m for m in response.context["messages"] if m.level_tag == "info"]
+        self.assertEqual(len(info_messages), 1)
+        self.assertEqual(info_messages[0].message.count("<li>"), 1)
+
+    def test_requires_change_permission(self):
+        """A user without `change_interface` is rejected by `ObjectPermissionRequiredMixin`."""
+        # The default test user has no permissions assigned.
+        response = self.client.post(self._disconnect_url(), data={"pk": [str(self.iface_a1.pk)]})
+        self.assertHttpStatus(response, 403)
+        # Cable was not touched.
+        self.iface_a1.refresh_from_db()
+        self.assertIsNotNone(self.iface_a1.cable)
+
+
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}

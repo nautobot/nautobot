@@ -212,16 +212,19 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
                     request,
                     f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
                 )
-                # Inform user that cables still exist
-                for cable_label, cable_url in disconnected_cables:
+                # Inform the user that the surviving cables can still be cleaned up. One
+                # aggregated message with a bullet list, not one toast per cable.
+                if disconnected_cables:
+                    cable_items = format_html_join(
+                        "",
+                        '<li><a href="{}">{}</a> (<a href="{}delete/">delete</a>)</li>',
+                        ((cable_url, cable_label, cable_url) for cable_label, cable_url in disconnected_cables),
+                    )
                     messages.info(
                         request,
                         format_html(
-                            'Cable <a href="{}">{}</a> still exists. '
-                            '<a href="{}delete/">Delete it</a> if no longer needed.',
-                            cable_url,
-                            cable_label,
-                            cable_url,
+                            "The following cables still exist — delete any that are no longer needed:<ul>{}</ul>",
+                            cable_items,
                         ),
                     )
 
