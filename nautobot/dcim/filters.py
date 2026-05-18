@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import F, Q
+from django.db.models import Exists, F, OuterRef, Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -101,6 +101,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.models.cables import _TERMINATION_FK_TO_NATURAL_KEY, TERMINATION_FK_FIELDS
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
@@ -1619,7 +1620,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         """
         if value is None:
             return queryset
-        from django.db.models import Exists, OuterRef
 
         has_a = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="A"))
         has_b = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="B"))
@@ -1679,8 +1679,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     @staticmethod
     def _build_termination_type_q(value, cable_end=None):
         """Build a Q matching CableToCableTermination rows whose populated FK matches one of the given content-type labels."""
-        from nautobot.dcim.models.cables import _TERMINATION_FK_TO_NATURAL_KEY
-
         q = Q()
         for label in value:
             app_label, model = label.split(".")
@@ -1722,8 +1720,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     @staticmethod
     def _build_termination_id_q(value, cable_end):
         """Build a Q matching CableToCableTermination rows whose populated termination FK has its PK in `value`."""
-        from nautobot.dcim.models.cables import TERMINATION_FK_FIELDS
-
         q = Q()
         for fk in TERMINATION_FK_FIELDS:
             q |= Q(**{f"{fk}_id__in": value})

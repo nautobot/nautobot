@@ -4340,6 +4340,12 @@ class CableForm(NautobotModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Init-time problems encountered while resolving URL/HTMX-supplied initial values
+        # (cable_type PK, termination_[ab]_type, etc.). Each entry is `(field_name_or_None, msg)`
+        # and is drained into form errors during `clean()` so the user sees what went wrong on
+        # submission rather than the form silently falling back to a default layout.
+        self._init_warnings: list[tuple] = []
+
         # Disable cable type field for cables with incompatible termination types
         # TODO revisit this, should permit non-breakout CableTypes here...
         if self.instance and self.instance.present_in_database and not self.instance.breakout_eligible:
@@ -4391,6 +4397,7 @@ class CableForm(NautobotModelForm):
         # data (for a freshly submitted new-cable form), and `self.initial` (for URL-prepopulation
         # or HTMX-driven regenerations of the lane sub-form).
         cable_type_pk = None
+        cable_type_from_initial = False
         if self.instance and self.instance.present_in_database and self.instance.cable_type_id:
             cable_type = self.instance.cable_type
         else:
@@ -4398,12 +4405,22 @@ class CableForm(NautobotModelForm):
                 cable_type_pk = self.data.get("cable_type")
             if not cable_type_pk and self.initial:
                 cable_type_pk = self.initial.get("cable_type")
+                cable_type_from_initial = True
             if cable_type_pk:
                 try:
                     # TODO permissions restriction on cable_type lookup?
                     cable_type = CableType.objects.get(pk=cable_type_pk)
-                except (CableType.DoesNotExist, ValueError):
-                    pass  # TODO?
+                except (CableType.DoesNotExist, ValueError, ValidationError):
+                    # When the bad value came from POST data, the `cable_type` DynamicModelChoiceField
+                    # will surface its own validation error during `is_valid()`, so we don't need to
+                    # duplicate. Initial-sourced values aren't field-validated, so we do report.
+                    if cable_type_from_initial:
+                        self._init_warnings.append(
+                            (
+                                "cable_type",
+                                f"Could not load cable type {cable_type_pk!r}; falling back to a 1x1 layout.",
+                            )
+                        )
 
         # Determine connector counts per side
         if cable_type:
@@ -4428,14 +4445,13 @@ class CableForm(NautobotModelForm):
                 if b["connector"] not in existing_b:
                     existing_b[b["connector"]] = b["termination"]
 
-        # Pre-populate A-side from URL params (used by the connect flow)
+        # Pre-populate A-side from URL params (used by the connect flow). Each failure mode here
+        # records a warning and leaves the A side blank rather than crashing form construction —
+        # the URL params are upstream-supplied and the user can't fix them from the form.
         initial_a_type = self.initial.get("termination_a_type")
         initial_a_id = self.initial.get("termination_a_id")
         if not existing_a and initial_a_type and initial_a_id:
-            app_label, model_name = str(initial_a_type).split(".")
-            content_type = ContentType.objects.get_by_natural_key(app_label, model_name)
-            termination_obj = content_type.model_class().objects.get(pk=initial_a_id)
-            existing_a[1] = termination_obj
+            self._load_initial_a_termination(initial_a_type, initial_a_id, existing_a)
 
         # B-side type override from URL params (used by the connect flow when the user clicked a
         # specific "Connect to X" link). No PK to pre-fill the termination from — the user picks
@@ -4446,7 +4462,9 @@ class CableForm(NautobotModelForm):
             try:
                 _, initial_b_type_name = str(initial_b_type).split(".")
             except ValueError:
-                pass
+                self._init_warnings.append(
+                    ("b_conn_1_type", f"Invalid termination_b_type {initial_b_type!r}; B-side type defaulted.")
+                )
 
         # Determine the A-side termination type (if known) to drive the B-side default selection
         # when no explicit B-side type was supplied. This avoids defaulting the B-side dropdown
@@ -4530,6 +4548,32 @@ class CableForm(NautobotModelForm):
                 if other_refs:
                     self.fields[term_field_name].widget.add_query_param("id__n", other_refs)
 
+    def _load_initial_a_termination(self, initial_a_type, initial_a_id, existing_a):
+        """Resolve `initial_a_type` + `initial_a_id` into a termination instance, recording a
+        warning rather than raising if any step fails."""
+        # Type resolution: malformed string, missing ContentType, or stale ContentType whose model
+        # has been removed from INSTALLED_APPS all collapse to a single "invalid type" warning.
+        model_cls = None
+        try:
+            app_label, model_name = str(initial_a_type).split(".")
+            model_cls = ContentType.objects.get_by_natural_key(app_label, model_name).model_class()
+        except (ValueError, ContentType.DoesNotExist):
+            pass
+        if model_cls is None:
+            self._init_warnings.append(
+                ("a_conn_1_type", f"Invalid termination_a_type {initial_a_type!r}; A side not pre-populated.")
+            )
+            return
+        try:
+            existing_a[1] = model_cls.objects.get(pk=initial_a_id)
+        except (model_cls.DoesNotExist, ValueError):
+            self._init_warnings.append(
+                (
+                    "a_conn_1_termination",
+                    f"Could not load {initial_a_type} with id {initial_a_id!r}; A side not pre-populated.",
+                )
+            )
+
     def get_connection_fields(self):
         """Return connection_info with BoundField objects, A-left B-right with rowspan."""
         info = getattr(self, "connection_info", None)
@@ -4611,6 +4655,14 @@ class CableForm(NautobotModelForm):
         # `super().clean()` on some parent classes returns None and mutates `self.cleaned_data`
         # in place; read from the attribute rather than the return value.
         cleaned_data = self.cleaned_data
+
+        # Surface init-time problems (collected in `_init_lane_fields`) as form errors so the user
+        # sees what went wrong with URL/HTMX-supplied initial values instead of the form silently
+        # falling back to a default layout. Drain the list so re-validation doesn't double-report.
+        warnings, self._init_warnings = self._init_warnings, []
+        for field, message in warnings:
+            self.add_error(field, message)
+
         info = getattr(self, "connection_info", None)
         if not info:
             return cleaned_data

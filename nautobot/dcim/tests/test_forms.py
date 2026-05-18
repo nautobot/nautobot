@@ -1,3 +1,5 @@
+import uuid
+
 from constance.test import override_config
 from django.test import TestCase
 
@@ -29,6 +31,7 @@ from nautobot.dcim.forms import (
 from nautobot.dcim.models import (
     Cable,
     CableToCableTermination,
+    CableType,
     ConsolePort,
     Device,
     DeviceBay,
@@ -986,3 +989,144 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         self.assertEqual(form.initial.get("b_conn_1_type"), "interface")
         self.assertEqual(form.initial.get("b_conn_1_parent"), self.device.pk)
         self.assertEqual(form.initial.get("b_conn_1_termination"), self.iface_b.pk)
+
+    # `CableForm._init_lane_fields` — happy paths and the exception branches that turn malformed
+    # URL/HTMX-supplied `initial` values into a fallback layout *plus* a form-error message.
+
+    @classmethod
+    def _breakout_cable_type(cls):
+        """A 1x4 breakout CableType for lane-layout assertions."""
+        return CableType.objects.create(name="Form Test 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+
+    def _minimal_form_data(self):
+        """Minimal POST data sufficient to make `is_valid()` run `clean()`."""
+        return {
+            "status": str(self.cable_status.pk),
+            "cable_type": "",
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+        }
+
+    # ── Happy paths ───────────────────────────────────────────────────────────────
+
+    def test_init_lane_fields_uses_cable_type_from_initial(self):
+        """Validate `initial={'cable_type': pk}` works with no form-validation errors."""
+        breakout = self._breakout_cable_type()
+        form = CableForm(initial={"cable_type": str(breakout.pk)}, data=self._minimal_form_data())
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertTrue(form.connection_info["is_breakout"])
+        self.assertEqual(len(form.connection_info["a_side"]), 1)
+        self.assertEqual(len(form.connection_info["b_side"]), 4)
+        self.assertEqual([conn["connector"] for conn in form.connection_info["b_side"]], [1, 2, 3, 4])
+        self.assertIn("b_conn_4_type", form.fields)
+
+    def test_init_lane_fields_uses_cable_type_from_submitted_data(self):
+        """Validate `cable_type` in the POST data works with no form-validation errors."""
+        breakout = self._breakout_cable_type()
+        data = self._minimal_form_data()
+        data["cable_type"] = str(breakout.pk)
+        form = CableForm(data=data)
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(len(form.connection_info["b_side"]), 4)
+
+    def test_init_lane_fields_prefills_a_side_from_initial_termination(self):
+        """Validate termination_a prepopulation via `initial`."""
+        form = CableForm(
+            initial={"termination_a_type": "dcim.interface", "termination_a_id": str(self.iface_a.pk)},
+            data=self._minimal_form_data(),
+        )
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(form.initial.get("a_conn_1_type"), "interface")
+        self.assertEqual(form.initial.get("a_conn_1_parent"), self.device.pk)
+        self.assertEqual(form.initial.get("a_conn_1_termination"), self.iface_a.pk)
+
+    def test_init_lane_fields_b_side_type_default_from_initial_b_type(self):
+        """Validate termination_b_type prepopulation via `initial`."""
+        form = CableForm(initial={"termination_b_type": "dcim.consoleserverport"}, data=self._minimal_form_data())
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(form.initial.get("b_conn_1_type"), "consoleserverport")
+
+    def test_init_lane_fields_b_side_type_default_from_a_side_compatibility(self):
+        """Validate auto-determination of termination_b_type when provided only a termination_a_type."""
+        power_port = self.device.power_ports.create(name="psu-form-test")
+        form = CableForm(
+            initial={"termination_a_type": "dcim.powerport", "termination_a_id": str(power_port.pk)},
+            data=self._minimal_form_data(),
+        )
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(form.initial.get("b_conn_1_type"), "poweroutlet")  # *not* "interface"!
+
+    # ── Fallback layout + form error on submission ─────────────────────────────────
+
+    def test_init_lane_fields_unknown_cable_type_pk_from_initial(self):
+        """Test nonexistent `cable_type` PK in `initial` is handled gracefully."""
+        bad_pk = str(uuid.uuid4())
+        form = CableForm(initial={"cable_type": bad_pk}, data=self._minimal_form_data())
+        # Layout fell back…
+        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertEqual(len(form.connection_info["b_side"]), 1)
+        # …and on submission the user sees an error.
+        form.is_valid()
+        self.assertIn("cable_type", form.errors)
+        self.assertTrue(any(bad_pk in msg for msg in form.errors["cable_type"]))
+
+    def test_init_lane_fields_malformed_cable_type_pk_from_initial(self):
+        """Test non-UUID `cable_type` PK in `initial` is handled gracefully."""
+        form = CableForm(initial={"cable_type": "not-a-uuid"}, data=self._minimal_form_data())
+        self.assertFalse(form.connection_info["is_breakout"])
+        form.is_valid()
+        self.assertIn("cable_type", form.errors)
+
+    def test_init_lane_fields_bad_cable_type_in_data_does_not_double_report(self):
+        """Test nonexistent `cable_type` PK in POST data is handled gracefully."""
+        data = self._minimal_form_data()
+        data["cable_type"] = str(uuid.uuid4())
+        form = CableForm(data=data)
+        form.is_valid()
+        # Field-level validation surfaces the error — and only once.
+        self.assertIn("cable_type", form.errors)
+        self.assertEqual(len(form.errors["cable_type"]), 1)
+
+    def test_init_lane_fields_malformed_initial_a_type_with_id(self):
+        """Test malformed `termination_a_type` in `initial` is handled gracefully."""
+        form = CableForm(
+            initial={"termination_a_type": "garbage-no-dot", "termination_a_id": str(self.iface_a.pk)},
+            data=self._minimal_form_data(),
+        )
+        # No A-side prefill happened.
+        self.assertIsNone(form.initial.get("a_conn_1_termination"))
+        form.is_valid()
+        self.assertIn("a_conn_1_type", form.errors)
+        self.assertTrue(any("Invalid termination_a_type" in msg for msg in form.errors["a_conn_1_type"]))
+
+    def test_init_lane_fields_unknown_content_type_for_initial_a_type(self):
+        """Test nonexistent `termination_a_type` in `initial` is handled gracefully."""
+        form = CableForm(
+            initial={"termination_a_type": "dcim.bogusmodel", "termination_a_id": str(self.iface_a.pk)},
+            data=self._minimal_form_data(),
+        )
+        self.assertIsNone(form.initial.get("a_conn_1_termination"))
+        form.is_valid()
+        self.assertIn("a_conn_1_type", form.errors)
+
+    def test_init_lane_fields_missing_termination_for_initial_a_id(self):
+        """Test nonexistent `termination_a_id` in `initial` is handled gracefully."""
+        form = CableForm(
+            initial={"termination_a_type": "dcim.interface", "termination_a_id": str(uuid.uuid4())},
+            data=self._minimal_form_data(),
+        )
+        self.assertIsNone(form.initial.get("a_conn_1_termination"))
+        form.is_valid()
+        self.assertIn("a_conn_1_termination", form.errors)
+        self.assertTrue(any("Could not load" in msg for msg in form.errors["a_conn_1_termination"]))
+
+    def test_init_lane_fields_malformed_initial_b_type_reports_error(self):
+        """Test malformed `termination_b_type` in `initial` is handled gracefully."""
+        form = CableForm(initial={"termination_b_type": "garbage-no-dot"}, data=self._minimal_form_data())
+        self.assertEqual(form.initial.get("b_conn_1_type"), "interface")  # Fell back to global default.
+        form.is_valid()
+        self.assertIn("b_conn_1_type", form.errors)
+        self.assertTrue(any("Invalid termination_b_type" in msg for msg in form.errors["b_conn_1_type"]))
