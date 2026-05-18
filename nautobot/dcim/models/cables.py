@@ -6,7 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Sum
+from django.db.models import Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -1191,9 +1191,12 @@ class CablePath(BaseModel):
     is_active = models.BooleanField(default=False)
     is_split = models.BooleanField(default=False)
     # Cable-peer-side connector that this path emerges through on its first hop — allows
-    # multiple CablePaths per origin (one per peer-side connector on a breakout fan-out). Null
-    # for non-breakout paths.
-    peer_connector = models.PositiveSmallIntegerField(blank=True, null=True)
+    # multiple CablePaths per origin (one per peer-side connector on a breakout fan-out).
+    # Always 1 for non-breakout paths.
+    peer_connector = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
+    )
     # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
     # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
     is_metadata_associable_model = False
@@ -1202,7 +1205,7 @@ class CablePath(BaseModel):
 
     class Meta:
         unique_together = ("origin_type", "origin_id", "peer_connector")
-        ordering = [F("peer_connector").asc(nulls_first=True)]
+        ordering = ["peer_connector"]
 
     def __str__(self):
         status = " (active)" if self.is_active else " (split)" if self.is_split else ""
@@ -1214,17 +1217,16 @@ class CablePath(BaseModel):
         return int(total_length / 3)
 
     @classmethod
-    def from_origin(cls, origin, peer_connector=None):
+    def from_origin(cls, origin, peer_connector=1):
         """
         Create a new CablePath instance as traced from the given path origin.
 
         Args:
             origin: The PathEndpoint to trace from.
             peer_connector: For breakout-origin paths, the cable-peer-side connector to follow on
-                the first hop. Required when `origin` sits on a breakout cable, since without it
-                the trace has no way to pick one fan-out lane over another and bails out as
-                `is_split=True, destination=None`. Stamped onto the returned CablePath so its
-                identity matches the lane it represents.
+                the first hop. Defaults to 1, which is the only valid value for non-breakout
+                cables. Stamped onto the returned CablePath so its identity matches the lane it
+                represents.
         """
         if origin is None or origin.cable is None:
             return None
@@ -1259,16 +1261,11 @@ class CablePath(BaseModel):
             # Follow the cable to its far-end termination
             path.append(object_to_path_node(node.cable))
             if first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
-                # Origin sits on a breakout cable. Without a peer_connector the trace can't
-                # pick a lane, so mark the path as split. With one, look up the peer at that
-                # specific connector — may be None for disconnected lanes (also split).
-                if peer_connector is None:
+                # Origin sits on a breakout cable. Look up the peer at the requested connector —
+                # may be None for disconnected lanes (path is split).
+                peer_termination = node.get_cable_peer(peer_connector=peer_connector)
+                if peer_termination is None:
                     is_split = True
-                    peer_termination = None
-                else:
-                    peer_termination = node.get_cable_peer(peer_connector=peer_connector)
-                    if peer_termination is None:
-                        is_split = True
             else:
                 peer_termination = node.get_cable_peer()
             first_hop = False
