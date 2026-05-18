@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 
+from django import forms
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -7,6 +8,18 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms import (
+    add_blank_choice,
+    CommentField,
+    DatePicker,
+    DateTimePicker,
+    JSONField as JSONFormField,
+    LaxURLField,
+    NullableDateField,
+    SmallTextarea,
+    StaticSelect2,
+    StaticSelect2Multiple,
+)
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
@@ -84,6 +97,56 @@ class MetadataType(PrimaryModel):
             MetadataTypeDataTypeChoices.TYPE_MULTISELECT,
         ):
             raise ValidationError("Choices may be set only for select/multi-select data_type.")
+
+    def to_form_field(self, required=False, initial=None):
+        """
+        Return a Django form field appropriate for entering an ObjectMetadata._value of this type.
+
+        Returns None for TYPE_CONTACT_TEAM, since those instances use the contact/team fields
+        rather than _value.
+        """
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            return None
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
+            return forms.IntegerField(required=required, initial=initial)
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
+            return forms.FloatField(required=required, initial=initial)
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return forms.NullBooleanField(
+                required=required,
+                initial=initial,
+                widget=StaticSelect2(choices=((None, "---------"), (True, "True"), (False, "False"))),
+            )
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
+            return NullableDateField(required=required, initial=initial, widget=DatePicker())
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+            return forms.DateTimeField(required=required, initial=initial, widget=DateTimePicker())
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_URL:
+            return LaxURLField(required=required, initial=initial)
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_TEXT:
+            return forms.CharField(required=required, initial=initial, max_length=CHARFIELD_MAX_LENGTH)
+        if self.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            return CommentField(required=required, initial=initial, widget=SmallTextarea, label="")
+        if self.data_type in (
+            MetadataTypeDataTypeChoices.TYPE_SELECT,
+            MetadataTypeDataTypeChoices.TYPE_MULTISELECT,
+        ):
+            choices = [(c.value, c.value) for c in self.choices.all()]
+            if self.data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
+                return forms.ChoiceField(
+                    choices=add_blank_choice(choices),
+                    required=required,
+                    initial=initial,
+                    widget=StaticSelect2(),
+                )
+            return forms.MultipleChoiceField(
+                choices=choices,
+                required=required,
+                initial=initial,
+                widget=StaticSelect2Multiple(),
+            )
+        # Fall back to raw JSON for TYPE_JSON and any unhandled type.
+        return JSONFormField(required=required, initial=initial)
 
 
 @extras_features(

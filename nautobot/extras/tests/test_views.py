@@ -5009,16 +5009,33 @@ class ObjectMetadataTestCase(
             "assigned_object_type": location_ct.pk,
             "assigned_object_id": target_location.pk,
             "scoped_fields": "time_zone",
-            "_value": None,
+            "value": None,
         }
+        # The create view requires assigned_object_type / assigned_object_id query params on GET
+        # (entry must come from the parent object's Metadata tab); stash them for test overrides.
+        cls._create_url_query = f"assigned_object_type={location_ct.pk}&assigned_object_id={target_location.pk}"
         # `update_data` only includes fields editable via `ObjectMetadataForm`
         # (metadata_type / assigned_object_* are immutable after creation).
         cls.update_data = {
             "contact": None,
             "team": Team.objects.first().pk,
             "scoped_fields": "status",
-            "_value": None,
+            "value": None,
         }
+        cls.contact_team_mdt = contact_team_mdt
+
+    def _get_queryset(self):
+        # Scope to our deterministic CONTACT_TEAM records so generic test helpers that pick
+        # `.first()` from the queryset don't surface factory rows with other data_types
+        # (form_data / update_data here only make sense for CONTACT_TEAM).
+        return super()._get_queryset().filter(metadata_type=self.contact_team_mdt)
+
+    def _get_url(self, action, instance=None):
+        url = super()._get_url(action, instance=instance)
+        if action == "add":
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{self._create_url_query}"
+        return url
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_column_in_list_view_rendered_correctly(self):

@@ -1,0 +1,117 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+        <div class="card-body">
+            {# Iterate visible fields so we can wrap the metadata-type-dependent ones (contact, #}
+            {# team, value) in IDed divs for show/hide and HTMX-driven widget swap. #}
+            {% for field in form.visible_fields %}
+                {% if field.name == "contact" %}
+                    <div id="nb-objectmetadata-contact-field">{% render_field field %}</div>
+                {% elif field.name == "team" %}
+                    <div id="nb-objectmetadata-team-field">{% render_field field %}</div>
+                {% elif field.name == "value" %}
+                    {# HTMX swaps innerHTML with a type-appropriate widget whenever the user #}
+                    {# changes metadata_type. jsify_form re-runs after the swap to re-init #}
+                    {# Select2/date pickers on whatever widget the server returns. #}
+                    <div id="nb-objectmetadata-value-field"
+                         hx-get="{% url 'extras:objectmetadata_value_widget' %}"
+                         hx-trigger="change from:#id_metadata_type"
+                         hx-include="#id_metadata_type"
+                         hx-target="this"
+                         hx-swap="innerHTML"
+                         hx-on::after-swap="if (window.jsify_form) jsify_form(this);">
+                        {% render_field field %}
+                    </div>
+                {% elif field.name == "scoped_fields" %}
+                    <div id="nb-objectmetadata-scoped-fields-field">{% render_field field %}</div>
+                {% else %}
+                    {% render_field field %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", () => {
+            const dataTypes = {{ metadata_type_data_types|default:"{}"|safe }};
+            const contactTeamDataType = "{{ contact_team_data_type }}";
+            const assignedTypeFields = {{ assigned_object_type_fields|default:"{}"|safe }};
+            const metadataTypeSelect = document.getElementById("id_metadata_type");
+            const assignedTypeSelect = document.getElementById("id_assigned_object_type");
+            const scopedFieldsSelect = document.getElementById("id_scoped_fields");
+            const contactField = document.getElementById("nb-objectmetadata-contact-field");
+            const teamField = document.getElementById("nb-objectmetadata-team-field");
+            const valueField = document.getElementById("nb-objectmetadata-value-field");
+
+            const clearInput = (containerEl) => {
+                if (!containerEl) return;
+                containerEl.querySelectorAll("input, textarea").forEach((el) => {
+                    if (el.type === "hidden" && el.name.startsWith("csrf")) return;
+                    el.value = "";
+                });
+                containerEl.querySelectorAll("select").forEach((el) => {
+                    if (window.jQuery && window.jQuery(el).data("select2")) {
+                        window.jQuery(el).val(null).trigger("change");
+                    } else {
+                        el.selectedIndex = -1;
+                    }
+                });
+            };
+
+            const updateFieldVisibility = () => {
+                if (!metadataTypeSelect) return;
+                const dataType = dataTypes[metadataTypeSelect.value];
+                const isContactTeam = dataType === contactTeamDataType;
+                if (contactField) contactField.style.display = isContactTeam ? "" : "none";
+                if (teamField) teamField.style.display = isContactTeam ? "" : "none";
+                if (valueField) valueField.style.display = isContactTeam ? "none" : "";
+                if (isContactTeam) {
+                    clearInput(valueField);
+                } else {
+                    clearInput(contactField);
+                    clearInput(teamField);
+                }
+            };
+
+            const rebuildScopedFieldsChoices = () => {
+                if (!scopedFieldsSelect || !assignedTypeSelect) return;
+                const ctId = assignedTypeSelect.value;
+                const fields = assignedTypeFields[ctId] || [];
+                scopedFieldsSelect.innerHTML = "";
+                fields.forEach((name) => {
+                    const opt = document.createElement("option");
+                    opt.value = name;
+                    opt.textContent = name;
+                    scopedFieldsSelect.appendChild(opt);
+                });
+                if (window.jQuery && window.jQuery(scopedFieldsSelect).data("select2")) {
+                    window.jQuery(scopedFieldsSelect).val(null).trigger("change");
+                }
+            };
+
+            if (metadataTypeSelect) {
+                metadataTypeSelect.addEventListener("change", updateFieldVisibility);
+                updateFieldVisibility();
+            }
+            if (assignedTypeSelect) {
+                // Listen only to user-driven Select2 events so we don't wipe pre-filled
+                // scoped_fields when Select2 fires "change" during initialization.
+                if (window.jQuery) {
+                    window.jQuery(assignedTypeSelect).on(
+                        "select2:select select2:clear",
+                        rebuildScopedFieldsChoices,
+                    );
+                } else {
+                    assignedTypeSelect.addEventListener("change", rebuildScopedFieldsChoices);
+                }
+            }
+        });
+    </script>
+{% endblock javascript %}

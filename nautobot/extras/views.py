@@ -1,8 +1,10 @@
 from functools import partial
+import json
 import logging
 from typing import Optional
 from urllib.parse import parse_qs
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -97,6 +99,7 @@ from nautobot.dcim.tables import (
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
+    FeatureQuery,
     fixup_filterset_query_params,
     get_base_template,
     get_pending_approval_workflow_stages,
@@ -117,12 +120,14 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
 )
 from .datasources import (
     enqueue_git_repository_diff_origin_and_local,
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
+from .forms.forms import _direct_field_names_for_content_type
 from .jobs import get_job
 from .models import (
     ApprovalWorkflow,
@@ -3313,6 +3318,70 @@ class ObjectMetadataUIViewSet(
             ),
         ),
     )
+
+    def create(self, request, *args, **kwargs):
+        # ObjectMetadata is always anchored to an existing object. Block direct navigation to
+        # the bare add URL — entry must come from the parent object's Metadata tab, which
+        # supplies assigned_object_type and assigned_object_id as query params.
+        if request.method == "GET" and not (
+            request.GET.get("assigned_object_type") and request.GET.get("assigned_object_id")
+        ):
+            messages.warning(
+                request,
+                "Object metadata must be created from the parent object's detail view (Metadata tab).",
+            )
+            return redirect("extras:objectmetadata_list")
+        return super().create(request, *args, **kwargs)
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "create":
+            # Provide a {metadata_type_id: data_type} map so the create template's JS can
+            # show/hide contact, team, and value based on the selected metadata_type.
+            context["metadata_type_data_types"] = json.dumps(
+                {str(mt.pk): mt.data_type for mt in MetadataType.objects.all()}
+            )
+            context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+            # Provide a {content_type_id: [field_name, ...]} map so the create template's JS
+            # can rebuild scoped_fields choices when assigned_object_type changes.
+            metadata_cts = ContentType.objects.filter(FeatureQuery("metadata").get_query())
+            context["assigned_object_type_fields"] = json.dumps(
+                {str(ct.pk): _direct_field_names_for_content_type(ct) for ct in metadata_cts}
+            )
+        return context
+
+    @action(detail=False, methods=["get"], url_path="value-widget", url_name="value_widget")
+    def value_widget(self, request, *args, **kwargs):
+        """
+        Render the appropriate `value` field for a given metadata_type.
+
+        Called by the create template via HTMX when the user changes the metadata_type select,
+        so the input adapts (date picker, choice list, etc.) without a full page reload.
+        Returns an empty fragment for TYPE_CONTACT_TEAM, since those don't use `value`.
+        """
+        mt_id = request.GET.get("metadata_type")
+        mt = None
+        if mt_id:
+            try:
+                mt = MetadataType.objects.get(pk=mt_id)
+            except (MetadataType.DoesNotExist, ValueError, TypeError):
+                mt = None
+        field = None
+        if mt is not None:
+            field = mt.to_form_field(required=False)
+            if field is not None:
+                field.label = "Value"
+                field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+
+        class _ValueOnlyForm(django_forms.Form):
+            pass
+
+        bound_field = None
+        if field is not None:
+            f = _ValueOnlyForm()
+            f.fields["value"] = field
+            bound_field = f["value"]
+        return render(request, "extras/inc/objectmetadata_value_field.html", {"field": bound_field})
 
 
 #
