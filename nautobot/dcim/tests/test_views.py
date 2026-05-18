@@ -4748,6 +4748,72 @@ class CableConnectURLTestCase(ModelViewTestCase):
         self.assertEqual(form.initial.get("b_conn_1_type"), "consoleserverport")
 
 
+class CableLaneSideFieldsTestCase(ModelViewTestCase):
+    """Tests for the HTMX endpoint `dcim:cable_lane_side_fields` (CableUIViewSet.lane_side_fields).
+
+    The endpoint re-renders the parent + termination fields for a single lane side when the
+    type dropdown changes. It depends only on the URL query string — no cable instance is
+    involved — so all assertions are against the rendered partial and the form passed to it.
+    """
+
+    model = Cable
+
+    def _url(self):
+        return reverse("dcim:cable_lane_side_fields")
+
+    def test_defaults_to_a_side_connector_1_interface(self):
+        """With no query params, endpoint should render the A-side connector-1 fields for the 'interface' default."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("a_conn_1_parent", form.fields)
+        self.assertIn("a_conn_1_termination", form.fields)
+        self.assertEqual(response.context["parent_field"], "a_conn_1_parent")
+        self.assertEqual(response.context["term_field"], "a_conn_1_termination")
+        # The interface termination type uses a Device parent.
+        self.assertEqual(form.fields["a_conn_1_parent"].label, "Device")
+
+    def test_honors_side_and_connector_query_params(self):
+        """Query params of `side=b&connector=3` switches the field-name prefix to `b_conn_3_*`."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._url(), {"side": "b", "connector": "3"})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("b_conn_3_parent", form.fields)
+        self.assertIn("b_conn_3_termination", form.fields)
+        self.assertEqual(response.context["parent_field"], "b_conn_3_parent")
+        self.assertEqual(response.context["term_field"], "b_conn_3_termination")
+
+    def test_uses_prefixed_type_param_to_pick_termination_type(self):
+        """Sending the connector type as a query param is respected."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._url(), {"side": "b", "connector": "1", "b_conn_1_type": "powerport"})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(form.fields["b_conn_1_termination"].label, "Power Port")
+
+    def test_non_device_termination_type_uses_correct_parent_model(self):
+        """A connector type of `circuittermination` swaps the parent type from Device to Circuit."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._url(), {"a_conn_1_type": "circuittermination"})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(form.fields["a_conn_1_parent"].label, "Circuit")
+        self.assertEqual(form.fields["a_conn_1_termination"].label, "Termination")
+
+    def test_unknown_termination_type_returns_500(self):
+        """An unknown `<prefix>_type` reaches `CableTerminationFieldSet.get_fields`, which raises ValueError (500)."""
+        self.add_permissions("dcim.view_cable")
+        with self.assertRaises(ValueError):
+            self.client.get(self._url(), {"a_conn_1_type": "bogus"})
+
+    def test_requires_view_permission(self):
+        """Unauthenticated/unauthorized users get 403."""
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 403)
+
+
 class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
     """
     Test the ConsoleConnectionsListView.

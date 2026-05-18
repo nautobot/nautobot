@@ -5602,10 +5602,8 @@ class CableUIViewSet(NautobotUIViewSet):
         fieldset = CableTerminationFieldSet()
         result = fieldset.get_fields(prefix, term_type=term_type)
 
-        # Build a minimal form-like object for template rendering
-        from django import forms as django_forms
-
-        temp_form = django_forms.Form()
+        # Build a minimal form-like object for template rendering.
+        temp_form = Form()
         temp_form.fields.update(result["fields"])
         for k, v in result["initial"].items():
             temp_form.initial[k] = v
