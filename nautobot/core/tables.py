@@ -246,7 +246,8 @@ class BaseTable(django_tables2.Table):
 
             if count_fields:
                 for column_name, column_model, lookup_name, distinct in count_fields:
-                    if hasattr(queryset.first(), column_name):
+                    # Keep the check lazy so the queryset is not evaluated here.
+                    if column_name in queryset.query.annotations or hasattr(model, column_name):
                         continue
                     try:
                         logger.debug(
