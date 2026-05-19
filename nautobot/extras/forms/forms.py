@@ -2134,6 +2134,9 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
     scoped_fields = JSONArrayFormField(
         required=False,
         base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        # Always rendered as a Select2 multi-select so client-side JS has a <select> to populate
+        # when the user changes assigned_object_type on the create form.
+        widget=StaticSelect2Multiple(),
         help_text=(
             "Direct fields on the assigned object's model that this metadata applies to. "
             "Leave empty to apply to all fields."
@@ -2156,13 +2159,13 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         instance = kwargs.get("instance")
         # Pre-fill the `value` form field from the instance's current value when editing.
-        if instance and instance.pk:
+        if instance and instance.present_in_database:
             kwargs.setdefault("initial", {})
             kwargs["initial"].setdefault("value", instance._value)
         super().__init__(*args, **kwargs)
         self._populate_scoped_fields_choices(initial=kwargs.get("initial"))
         self._adapt_value_field(initial=kwargs.get("initial"))
-        if instance and instance.pk and instance.metadata_type_id:
+        if instance and instance.present_in_database and instance.metadata_type_id:
             if instance.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
                 self.fields.pop("value", None)
             else:
@@ -2171,12 +2174,10 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
 
     def _adapt_value_field(self, initial=None):
         """Swap the value field for one appropriate to the resolved metadata_type's data_type."""
-        if "value" not in self.fields:
-            return
         mt_id = None
         if self.is_bound:
             mt_id = self.data.get("metadata_type")
-        if not mt_id and self.instance and self.instance.pk:
+        if not mt_id and self.instance and self.instance.present_in_database:
             mt_id = self.instance.metadata_type_id
         if not mt_id and initial:
             mt_id = initial.get("metadata_type")
@@ -2187,11 +2188,11 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
         except (MetadataType.DoesNotExist, ValueError, TypeError):
             return
         instance = getattr(self, "instance", None)
-        existing = instance._value if instance and instance.pk else None
+        existing = instance._value if instance and instance.present_in_database else None
         new_field = mt.to_form_field(required=False, initial=existing)
         if new_field is None:
             return
-        new_field.label = self.fields["value"].label or "Value"
+        new_field.label = "Value"
         new_field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
         self.fields["value"] = new_field
 
@@ -2215,16 +2216,13 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
         super()._post_clean()
 
     def _populate_scoped_fields_choices(self, initial=None):
-        """Swap the scoped_fields free-text widget for a Select2 multi-select of the model's fields."""
+        """Populate scoped_fields choices from the resolved assigned_object_type's model."""
         scoped = self.fields["scoped_fields"]
-        # Always render as a Select2 multi-select so client-side JS has a <select> to populate
-        # when the user changes assigned_object_type on the create form.
-        scoped.widget = StaticSelect2Multiple()
         ct_id = None
         if self.is_bound:
             # On POST. Update form doesn't include assigned_object_type, so fall back to instance.
             ct_id = self.data.get("assigned_object_type")
-        if not ct_id and self.instance and self.instance.pk:
+        if not ct_id and self.instance and self.instance.present_in_database:
             ct_id = self.instance.assigned_object_type_id
         if not ct_id and initial:
             ct_id = initial.get("assigned_object_type")
@@ -2258,6 +2256,19 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Persistent HTMX swap target around the value field: when the user changes
+        # metadata_type, the wrapper's innerHTML is replaced with the appropriate input
+        # widget for that data type. `jsify_form` re-runs to re-init Select2/date pickers.
+        if "value" in self.fields:
+            self.fields["value"].htmx_attrs = {
+                "id": "nb-objectmetadata-value-field",
+                "hx-get": reverse_lazy("extras:objectmetadata_value_widget"),
+                "hx-trigger": "change from:#id_metadata_type",
+                "hx-include": "#id_metadata_type",
+                "hx-target": "this",
+                "hx-swap": "innerHTML",
+                "hx-on::after-swap": "if (window.jsify_form) jsify_form(this);",
+            }
         initial = kwargs.get("initial", {})
         if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
             self.fields["assigned_object_type"].disabled = True

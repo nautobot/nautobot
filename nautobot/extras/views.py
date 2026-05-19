@@ -100,7 +100,6 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.jobs_revoke import RevokeFactory
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
-    FeatureQuery,
     fixup_filterset_query_params,
     get_base_template,
     get_kubernetes_job_manifest,
@@ -130,7 +129,6 @@ from .datasources import (
     enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
 )
-from .forms.forms import _direct_field_names_for_content_type
 from .jobs import get_job
 from .models import (
     ApprovalWorkflow,
@@ -4131,6 +4129,26 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
         return obj
 
 
+class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
+    """ObjectFieldsPanel that drops the irrelevant value/contact/team rows based on data_type.
+
+    For CONTACT_TEAM types, `_value` is always None and not meaningful — hide it.
+    For all other types, `contact`/`team` are always None — hide them.
+    """
+
+    def get_data(self, context):
+        data = super().get_data(context)
+        instance = get_obj_from_context(context, self.context_object_key)
+        if instance is None:
+            return data
+        if instance.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            data.pop("_value", None)
+        else:
+            data.pop("contact", None)
+            data.pop("team", None)
+        return data
+
+
 class ObjectMetadataUIViewSet(
     ObjectListViewMixin,
     ObjectDetailViewMixin,
@@ -4150,7 +4168,7 @@ class ObjectMetadataUIViewSet(
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            _ObjectMetadataFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=[
@@ -4189,12 +4207,6 @@ class ObjectMetadataUIViewSet(
                 {str(mt.pk): mt.data_type for mt in MetadataType.objects.all()}
             )
             context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
-            # Provide a {content_type_id: [field_name, ...]} map so the create template's JS
-            # can rebuild scoped_fields choices when assigned_object_type changes.
-            metadata_cts = ContentType.objects.filter(FeatureQuery("metadata").get_query())
-            context["assigned_object_type_fields"] = json.dumps(
-                {str(ct.pk): _direct_field_names_for_content_type(ct) for ct in metadata_cts}
-            )
         return context
 
     @action(detail=False, methods=["get"], url_path="value-widget", url_name="value_widget")
@@ -4228,7 +4240,7 @@ class ObjectMetadataUIViewSet(
             f = _ValueOnlyForm()
             f.fields["value"] = field
             bound_field = f["value"]
-        return render(request, "extras/inc/objectmetadata_value_field.html", {"field": bound_field})
+        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
 
 
 #

@@ -306,7 +306,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
     def __str__(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             return f"{self.metadata_type} - {self.assigned_object} - {self.contact or self.team}"
-        return f"{self.metadata_type} - {self.assigned_object} - {self.value}"
+        return f"{self.metadata_type} - {self.assigned_object}"
 
     def validated_save(self, *args, **kwargs):
         # call clean() first so that the data type-conversion is done first

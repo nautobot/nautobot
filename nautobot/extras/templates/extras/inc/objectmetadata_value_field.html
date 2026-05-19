@@ -1,5 +1,0 @@
-{% load form_helpers %}
-{# Partial fragment used by ObjectMetadataUIViewSet.value_widget to HTMX-swap the value #}
-{# input on the create form when metadata_type changes. Empty when the type has no value #}
-{# (e.g. TYPE_CONTACT_TEAM) or when no metadata_type is selected yet. #}
-{% if field %}{% render_field field %}{% endif %}
