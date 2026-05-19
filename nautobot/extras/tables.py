@@ -146,7 +146,6 @@ IMAGEATTACHMENT_NAME = """
 IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
-<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
 <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
@@ -218,10 +217,6 @@ OBJECTCHANGE_OBJECT = """
 
 OBJECTCHANGE_REQUEST_ID = """
 <a href="{% url 'extras:objectchange_list' %}?request_id={{ value }}">{{ value }}</a>
-"""
-
-OBJECTMETADATA_BUTTONS = """
-<li><a href="{% url 'extras:objectmetadata' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
 """
 
 MEMBERS_COUNT = """
@@ -1481,7 +1476,7 @@ class ObjectMetadataTable(BaseTable):
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
     value = tables.Column(empty_values=[], order_by=("_value",))
-    actions = ButtonsColumn(ObjectMetadata, prepend_template=OBJECTMETADATA_BUTTONS)
+    actions = ButtonsColumn(ObjectMetadata)
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata

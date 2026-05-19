@@ -416,10 +416,6 @@ DEVICEBAY_BUTTONS = """
 {% endif %}
 """
 
-MODULE_BUTTONS = """
-<li><a href="{% url 'dcim:module' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
-"""
-
 MODULEBAY_BUTTONS = """
 {% if perms.dcim.change_modulebay and perms.dcim.add_module %}
     {% if not record.installed_module %}
