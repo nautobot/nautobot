@@ -99,7 +99,7 @@ from nautobot.extras.models import (
 from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
-from nautobot.extras.utils import TaggableClassesQuery
+from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -3876,6 +3876,20 @@ class ObjectChangeTest(APIViewTestCases.GetObjectViewTestCase, APIViewTestCases.
     # ObjectChange records created for SoftwareImageFile records will contain a `hashing_algorithm` key;
     # presence of strings like "md5" and "sha256" in the API response for ObjectChanges is therefore *not* a failure
     VERBOTEN_STRINGS = ("password",)
+
+    def _get_queryset(self):
+        # ObjectChange.objects.restrict() hides records whose changed_object_type is marked
+        # is_staff_only_changelog_model = True (User, Group, Token, ObjectPermission, ...) from
+        # non-staff / non-superuser viewers. The inherited API tests assert that the list response
+        # length matches _get_queryset().count(); apply the equivalent exclusion here so the
+        # expected count reflects what the API returns to the regular test user.
+        return (
+            super()
+            ._get_queryset()
+            .exclude(
+                changed_object_type__in=ContentType.objects.filter(FeatureQuery("staff_only_changelog").get_query())
+            )
+        )
 
     @classmethod
     def setUpTestData(cls):
