@@ -637,22 +637,6 @@ class Cable(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # Validate cable type compatibility with termination types
-        if self.cable_type_id and self.present_in_database:
-            for ct_row in self.terminations.all():
-                term = ct_row.termination
-                if term is None:
-                    continue
-                model_name = term._meta.model_name
-                if model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:
-                    raise ValidationError(
-                        {
-                            "cable_type": f"Breakout cable types cannot be assigned to cables with "
-                            f"{model_name} terminations. Only interface, front port, "
-                            f"rear port, and circuit termination types are supported."
-                        }
-                    )
-
         # Per-termination validations on the first A/B terminations (sufficient for standard cables;
         # breakout-cable iteration across all lanes is a future enhancement).
         # Form-driven flows set `_form_cleaned_terminations` on the instance to tell us to use

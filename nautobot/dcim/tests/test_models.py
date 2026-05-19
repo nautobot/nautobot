@@ -3052,7 +3052,17 @@ class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(breakout.mapping[0]["label"], "0")
         self.assertEqual(breakout.mapping[1]["label"], "1")
 
-    # TODO: add a test for cable_count once Cable has a FK (related_name="cables") to CableType.
+    def test_autogenerate_mapping_does_nothing_on_invalid_data_bypassing_clean(self):
+        breakout = CableType(
+            name="Wrong total_lanes",
+            a_connectors=3,
+            b_connectors=4,
+            total_lanes=7,
+        )
+        breakout.save()
+        self.assertFalse(breakout.mapping)
+        with self.assertRaises(ValidationError):
+            breakout.clean()
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
@@ -3169,6 +3179,24 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.cable.termination_b, interface2)
         self.assertEqual(interface2.get_cable_peer(), interface1)
         self.assertEqual(interface2.get_cable_peers(), [interface1])
+        # Behaviors of a non-breakout cable:
+        self.assertEqual(1, self.cable.total_lanes)
+        self.assertEqual(1, self.cable.connected_lanes)
+        self.assertEqual("", self.cable.get_mapping_diagram_svg())
+        self.assertEqual(
+            [
+                {
+                    "lane": 1,
+                    "a_connector": 1,
+                    "a_position": 1,
+                    "b_connector": 1,
+                    "b_position": 1,
+                    "a_termination": interface1,
+                    "b_termination": interface2,
+                },
+            ],
+            self.cable.get_lanes(),
+        )
 
     def test_termination_backward_compat_properties(self):
         """
@@ -3563,7 +3591,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             front_port=self.front_port1,
             connector=2,
         )
-        CableToCableTermination.objects.create(
+        term2 = CableToCableTermination.objects.create(
             cable=cable,
             cable_end="B",
             rear_port=self.rear_port1,
@@ -3571,6 +3599,12 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):
+            cable.clean()
+
+        term2.rear_port = None
+        term2.front_port = self.front_port1
+        term2.save()
+        with self.assertRaisesRegex(ValidationError, "Cannot connect front port to itself"):
             cable.clean()
 
     def test_cabletocabletermination_connector_defaults_to_one(self):
