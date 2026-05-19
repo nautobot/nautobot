@@ -5470,6 +5470,78 @@ class PathTraceViewTestCase(ModelViewTestCase):
         self.assertBodyContains(response, "Rear Port 1")
         self.assertBodyContains(response, "eth0")
 
+    def _path_endpoint_setup(self):
+        """Build a Device with an interface, returned as `(device, status_active, status_connected)`."""
+        active = Status.objects.get(name="Active")
+        connected = Status.objects.get(name="Connected")
+        manufacturer = Manufacturer.objects.first()
+        devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="PathTrace DT")
+        devicerole = Role.objects.get_for_model(Device).first()
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.create(location_type=location_type, name="PathTrace Location", status=active)
+        device = Device.objects.create(
+            device_type=devicetype, role=devicerole, name="PathTrace Device", location=location, status=active
+        )
+        return device, active, connected
+
+    def test_pathendpoint_trace_uncabled(self):
+        """An uncabled PathEndpoint has no CablePath; `path` is None, `related_paths` empty, `breakout_fanout` False."""
+        self.add_permissions("dcim.view_cable", "dcim.view_interface")
+        device, active, _ = self._path_endpoint_setup()
+        interface = Interface.objects.create(device=device, name="uncabled-eth", status=active)
+
+        response = self.client.get(reverse("dcim:interface_trace", args=[interface.pk]))
+        self.assertHttpStatus(response, 200)
+        self.assertIsNone(response.context["path"])
+        self.assertFalse(response.context["breakout_fanout"])
+        self.assertEqual(list(response.context["related_paths"]), [])
+
+    def test_pathendpoint_trace_standard_cable(self):
+        """PathEndpoint on non-breakout cable: `path` resolved via `cable_paths.first()`, `breakout_fanout` is False."""
+        self.add_permissions("dcim.view_cable", "dcim.view_interface")
+        device, active, connected = self._path_endpoint_setup()
+        iface_a = Interface.objects.create(device=device, name="standard-a", status=active)
+        iface_b = Interface.objects.create(device=device, name="standard-b", status=active)
+        Cable.objects.create(termination_a=iface_a, termination_b=iface_b, status=connected)
+
+        response = self.client.get(reverse("dcim:interface_trace", args=[iface_a.pk]))
+        self.assertHttpStatus(response, 200)
+        path = response.context["path"]
+        self.assertIsNotNone(path)
+        self.assertEqual(path.origin, iface_a)
+        self.assertFalse(response.context["breakout_fanout"])
+        self.assertEqual(list(response.context["related_paths"]), [])
+
+    def test_pathendpoint_trace_breakout_fanout(self):
+        """Trunk/lane sides of breakout cable, validate `related_paths` correctness and `breakout_fanout`."""
+        self.add_permissions("dcim.view_cable", "dcim.view_interface")
+        device, active, connected = self._path_endpoint_setup()
+        breakout = CableType.objects.create(name="PathTrace 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        trunk = Interface.objects.create(device=device, name="trunk", status=active)
+        lane1 = Interface.objects.create(device=device, name="lane1", status=active)
+        lane2 = Interface.objects.create(device=device, name="lane2", status=active)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=connected)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # Trace from trunk side
+        response = self.client.get(reverse("dcim:interface_trace", args=[trunk.pk]))
+        self.assertHttpStatus(response, 200)
+        self.assertTrue(response.context["breakout_fanout"])
+        # Both lane paths are surfaced for the fanout selector.
+        self.assertEqual(len(response.context["related_paths"]), 2)
+        self.assertQuerySetEqualAndNotEmpty(
+            response.context["related_paths"], CablePath.objects.filter(origin_id=trunk.pk)
+        )
+
+        # Trace from lane side
+        response = self.client.get(reverse("dcim:interface_trace", args=[lane1.pk]))
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(response.context["breakout_fanout"])
+        self.assertEqual(list(response.context["related_paths"]), [])
+        # The single path on lane1 goes back to the trunk.
+        self.assertEqual(response.context["path"].origin, lane1)
+
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = DeviceRedundancyGroup

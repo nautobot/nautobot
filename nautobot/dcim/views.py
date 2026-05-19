@@ -5636,21 +5636,13 @@ class PathTraceView(generic.ObjectView):
         related_paths = []
         breakout_fanout = False
 
-        # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin
+        # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin.
         if isinstance(instance, PathEndpoint):
-            path = instance.cable_paths.first()
-
-            # Check if this is a trunk-side breakout termination that fans out
-
-            ct_row = getattr(instance, "cable_termination", None) if path else None
-            if ct_row is not None:
-                cable = ct_row.cable
-                if cable and cable.cable_type_id and ct_row.connector is not None:
-                    # Find all CablePaths through this cable (all lanes)
-                    all_cable_paths = CablePath.objects.filter(path__contains=cable).prefetch_related("origin")
-                    if all_cable_paths.count() > 1:
-                        related_paths = all_cable_paths
-                        breakout_fanout = True
+            cable_paths = instance.cable_paths.all().prefetch_related("origin")
+            path = cable_paths.first()
+            if cable_paths.count() > 1:  # breakout cable!
+                related_paths = cable_paths
+                breakout_fanout = True
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:
