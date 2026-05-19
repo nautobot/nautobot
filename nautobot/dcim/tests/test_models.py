@@ -3814,6 +3814,37 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             standard_cable.add_termination(self.interface3, "A", connector=0)
 
 
+class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
+    model = CableToCableTermination
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.status = Status.objects.get(name="Connected")
+        Cable.objects.create(
+            termination_a=Interface.objects.first(),
+            termination_b=Interface.objects.last(),
+            status=cls.status,
+        )
+
+    def test_get_docs_url(self):
+        """Docs page for this model doesn't exist yet."""
+        # TODO: remove this override once a docs page is added for CableToCableTermination.
+
+    def test_properties_handle_invalid_data(self):
+        """The database permits a null `termination` (no FK set), make sure it doesn't error out various cases."""
+        c_to_ct = CableToCableTermination.objects.create(cable=Cable.objects.create(status=self.status), cable_end="A")
+        self.assertIsNone(c_to_ct.termination)
+        self.assertIsNone(c_to_ct.termination_type)
+        self.assertIsNone(c_to_ct.termination_id)
+        with self.assertRaisesRegex(ValidationError, "Exactly one termination foreign key must be set"):
+            c_to_ct.clean()
+
+        c_to_ct.rear_port = RearPort.objects.first()
+        c_to_ct.front_port = FrontPort.objects.first()
+        with self.assertRaisesRegex(ValidationError, "Exactly one termination foreign key must be set"):
+            c_to_ct.clean()
+
+
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
     model = PowerFeed
 

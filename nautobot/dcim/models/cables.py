@@ -1103,10 +1103,7 @@ class CableToCableTermination(BaseModel):
 
         term = self.termination
         if term is not None:
-            try:
-                validate_cable_termination(term, cable_id=self.cable_id)
-            except ObjectDoesNotExist:
-                pass
+            validate_cable_termination(term, cable_id=self.cable_id)
 
         # `connector` must be in the range defined by the parent cable's CableType. Standard cables
         # (no CableType) have a single connector on each end, so `connector` must be 1; breakout
