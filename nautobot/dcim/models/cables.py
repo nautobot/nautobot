@@ -441,10 +441,10 @@ class Cable(PrimaryModel):
 
     @property
     def total_lanes(self):
-        """Total number of lanes defined by the CableType, or None for standard cables."""
+        """Total number of lanes defined by the CableType; 1 for standard (non-breakout) cables."""
         if self.cable_type_id:
             return self.cable_type.total_lanes
-        return None
+        return 1
 
     def _get_connector_status(self):
         """Collect connected connector sets and termination labels from this cable's endpoints.
