@@ -4,7 +4,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
 from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
@@ -651,16 +650,14 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertTrue(self.user.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
         self.assertTrue(obj_user2.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
 
-        # Check against 1st user's response
+        # Check against 1st user's response.
+        # Use restrict() rather than a raw filter() so the expected count reflects every gate the API applies -
+        # the ObjectPermission constraint AND the staff_only_changelog content-type filter.
         self.assertEqual(response_user1.status_code, 200)
-        self.assertEqual(
-            response_user1.data["count"], ObjectChange.objects.filter(Q(user=self.user) | Q(action="delete")).count()
-        )
+        self.assertEqual(response_user1.data["count"], ObjectChange.objects.restrict(self.user, "view").count())
         self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
-        self.assertEqual(
-            response_user2.data["count"], ObjectChange.objects.filter(Q(user=obj_user2) | Q(action="delete")).count()
-        )
+        self.assertEqual(response_user2.data["count"], ObjectChange.objects.restrict(obj_user2, "view").count())
         self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)

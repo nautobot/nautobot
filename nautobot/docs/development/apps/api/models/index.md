@@ -41,6 +41,9 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 +++ 3.0.0 "Support for Data Compliance on OrganizationalModel and PrimaryModel"
     Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceModelMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
 
++++ 3.2.0 "Staff-only change log records"
+    A model can opt into having its `ObjectChange` records hidden from non-staff / non-superuser viewers by declaring the class attribute `is_staff_only_changelog_model = True`. This is intended for models that hold credentials, permissions, or other sensitive data whose change history should not leak to ordinary users (e.g. `User`, `Token`, `ObjectPermission`). The flag is picked up by `populate_model_features_registry()` under the `staff_only_changelog` feature, and the filtering is enforced inside `ObjectChange.objects.restrict()`, which means it applies uniformly to the change log list view, the REST API, GraphQL, and any other caller that goes through `restrict()`. The default is `False`.
+
 Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python

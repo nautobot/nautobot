@@ -32,6 +32,8 @@ article ul li {
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
         - Data Compliance (`is_data_compliance_model = False`, OrganizationalModel/PrimaryModel only)
+    - _optional_ Opt **into** restricting visibility of this model's change-log entries to staff/superuser viewers only:
+        - Staff-only change log (`is_staff_only_changelog_model = True`, any base class) — use for models containing credentials, permissions, or other sensitive data whose change history should not be exposed to non-privileged users (e.g. `User`, `Token`, `ObjectPermission`)
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
@@ -54,6 +56,7 @@ article ul li {
 - `job_results`: No longer used.
 - `locations`: Models that support a foreign key to `Location`, used for limiting the choices for the `LocationType.content_types` field
 - `relationships`: (DEPRECATED - Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md)) Models that support custom relationships
+- `staff_only_changelog`: (Uses `nautobot.extras.utils.populate_model_features_registry` to populate [Model Features Registry](model-features.md), driven by the `is_staff_only_changelog_model = True` flag on the model class) Models whose `ObjectChange` records are hidden from non-staff / non-superuser viewers
 - `statuses`: Models that support a foreign key to `Status`, used for limiting the choices for the `Status.content_types` field
 - `webhooks`: Models that can be used to trigger webhooks, used for limiting the choices for the `Webhook.content_types` field
 
