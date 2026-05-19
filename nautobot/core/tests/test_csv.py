@@ -67,6 +67,12 @@ class CSVParsingRelatedTestCase(TestCase):
             expected_related_natural_key_fields = [
                 "parent_bay__name",
                 "parent_bay__device__name",
+                "parent_bay__device__tenant__name",
+                "parent_bay__device__location__name",
+                *[
+                    f"parent_bay__device__location__{'parent__' * depth}name"
+                    for depth in range(1, Location.objects.max_tree_depth() + 1)
+                ],  # Location max_tree_depth is based on factory data so this has to be generated dynamically
                 "vc_master_for__name",
                 "local_config_context_schema__name",
                 "device_type__manufacturer__name",
@@ -191,6 +197,10 @@ class CSVParsingRelatedTestCase(TestCase):
             )
 
         with self.subTest("To Serializer Representation"):
+            expected_parent_bay_nested_lookup_values = {
+                f"parent_bay__device__location__{'parent__' * depth}name": CSV_NO_OBJECT
+                for depth in range(1, Location.objects.max_tree_depth() + 1)
+            }  # Location max_tree_depth is based on factory data so this has to be generated dynamically
             expected_data = {
                 "id": str(device.pk),
                 "object_type": "dcim.device",
@@ -235,6 +245,9 @@ class CSVParsingRelatedTestCase(TestCase):
                 "secrets_group__name": CSV_NO_OBJECT,
                 "parent_bay__name": CSV_NO_OBJECT,
                 "parent_bay__device__name": CSV_NO_OBJECT,
+                "parent_bay__device__tenant__name": CSV_NO_OBJECT,
+                "parent_bay__device__location__name": CSV_NO_OBJECT,
+                **expected_parent_bay_nested_lookup_values,
             }
             serializer_data = serializer.data
 
