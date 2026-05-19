@@ -1,4 +1,6 @@
+import os
 import sys
+import tempfile
 from unittest import mock
 import uuid
 
@@ -20,7 +22,11 @@ from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
+from nautobot.core.utils.module_loading import (
+    check_name_safe_to_import_privately,
+    import_modules_privately,
+    import_string_optional,
+)
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import (
     filters as dcim_filters,
@@ -1212,6 +1218,78 @@ class TestModuleLoadingUtils(TestCase):
             self.assertEqual(
                 import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
             )
+
+    def _write_consumer_shared_fixture(self, package_dir):
+        """
+        Write the minimal 3-file fixture that exposes class-identity divergence.
+
+        `consumer.py` sorts before `shared.py` alphabetically, so the walker re-execs
+        `shared.py` after `consumer.py` has already captured `Widget`.
+        """
+        os.makedirs(package_dir, exist_ok=True)
+        with open(os.path.join(package_dir, "__init__.py"), "w"):
+            pass
+        with open(os.path.join(package_dir, "consumer.py"), "w") as fd:
+            fd.write("from .shared import Widget\nCAPTURED = Widget\n")
+        with open(os.path.join(package_dir, "shared.py"), "w") as fd:
+            fd.write("class Widget:\n    pass\n")
+
+    def _clear_test_modules(self, *prefixes):
+        for cached in list(sys.modules):
+            if any(cached == prefix or cached.startswith(f"{prefix}.") for prefix in prefixes):
+                del sys.modules[cached]
+
+    def test_import_modules_privately_preserves_class_identity(self):
+        """
+        Regression test for NTC-5779: a class imported by one sibling module and re-defined by the
+        walker on a subsequent iteration must remain a single object identity in sys.modules after
+        the loader returns.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                self._write_consumer_shared_fixture(os.path.join(tempdir, package_name))
+                import_modules_privately(tempdir)
+
+                consumer_module = sys.modules[f"{package_name}.consumer"]
+                shared_module = sys.modules[f"{package_name}.shared"]
+
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+                self.assertIsInstance(consumer_module.CAPTURED(), shared_module.Widget)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_module_path_filter_preserves_class_identity(self):
+        """
+        Same invariant as above, but with `module_path=[outer, pkg]` filtering, and an
+        unrelated sibling package that should not be touched by the loader.
+        """
+        outer_name = f"outer_{uuid.uuid4().hex[:8]}"
+        sibling_name = f"sibling_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                outer_dir = os.path.join(tempdir, outer_name)
+                os.makedirs(outer_dir)
+                with open(os.path.join(outer_dir, "__init__.py"), "w"):
+                    pass
+                self._write_consumer_shared_fixture(os.path.join(outer_dir, "pkg"))
+
+                sibling_dir = os.path.join(tempdir, sibling_name)
+                os.makedirs(sibling_dir)
+                with open(os.path.join(sibling_dir, "__init__.py"), "w"):
+                    pass
+                with open(os.path.join(sibling_dir, "should_not_load.py"), "w") as fd:
+                    fd.write("LOADED = True\n")
+
+                import_modules_privately(tempdir, module_path=[outer_name, "pkg"])
+
+                consumer_module = sys.modules[f"{outer_name}.pkg.consumer"]
+                shared_module = sys.modules[f"{outer_name}.pkg.shared"]
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+
+                self.assertNotIn(f"{sibling_name}.should_not_load", sys.modules)
+        finally:
+            self._clear_test_modules(outer_name, sibling_name)
 
 
 class TestQuerySetUtils(TestCase):
