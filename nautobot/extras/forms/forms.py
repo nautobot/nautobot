@@ -2271,20 +2271,23 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
             }
         initial = kwargs.get("initial", {})
         if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
-            self.fields["assigned_object_type"].disabled = True
-            self.fields["assigned_object_id"].disabled = True
-            self.fields["metadata_type"].queryset = MetadataType.objects.filter(
-                content_types=initial["assigned_object_type"]
-            )
-            # Replace the raw UUID input with the resolved object's __str__ (e.g. "ams01-asw-01")
-            # for a friendlier display. The original assigned_object_id field is kept as a hidden
-            # input so the ModelForm save still receives the UUID.
+            # Resolve the ContentType + assigned object first. Garbage query-param values
+            # (non-numeric pk, non-existent pk) fall through to default form rendering;
+            # field-level validation surfaces the actual error when the user submits.
             try:
                 ct = ContentType.objects.get(pk=initial["assigned_object_type"])
                 obj = ct.get_object_for_this_type(pk=initial["assigned_object_id"])
             except (ContentType.DoesNotExist, ObjectDoesNotExist, ValueError, TypeError):
+                ct = None
                 obj = None
+            if ct is not None:
+                self.fields["assigned_object_type"].disabled = True
+                self.fields["assigned_object_id"].disabled = True
+                self.fields["metadata_type"].queryset = MetadataType.objects.filter(content_types=ct)
             if obj is not None:
+                # Replace the raw UUID input with the resolved object's __str__ (e.g. "ams01-asw-01")
+                # for a friendlier display. The original assigned_object_id field is kept as a hidden
+                # input so the ModelForm save still receives the UUID.
                 self.fields["assigned_object_id"].widget = forms.HiddenInput()
                 display_field = forms.CharField(
                     label="Assigned object",
