@@ -483,10 +483,21 @@ class Cable(PrimaryModel):
         return diagram.render()
 
     @property
+    def _effective_mapping(self):
+        """The breakout mapping for this cable, or a synthetic single-lane mapping for standard
+        (non-breakout) cables — lets `connected_lanes` and `get_lanes` use the same code path
+        regardless of cable type."""
+        if self.cable_type_id:
+            return self.cable_type.mapping
+        return [{"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1}]
+
+    @property
     def connected_lanes(self):
-        """Number of lanes where both the A-side and B-side connectors have terminations."""
-        if not self.cable_type_id:
-            return None
+        """Number of lanes where both the A-side and B-side connectors have terminations.
+
+        For standard (non-breakout) cables this is 0 (no terminations or only one side) or 1
+        (both sides terminated).
+        """
         connected_a_connectors = set()
         connected_b_connectors = set()
         for endpoint in self.terminations.all():
@@ -494,30 +505,27 @@ class Cable(PrimaryModel):
                 connected_a_connectors.add(endpoint.connector)
             else:
                 connected_b_connectors.add(endpoint.connector)
-        lane_count = 0
-        for entry in self.cable_type.mapping:
-            if entry["a_connector"] in connected_a_connectors and entry["b_connector"] in connected_b_connectors:
-                lane_count += 1
-        return lane_count
+        return sum(
+            1
+            for entry in self._effective_mapping
+            if entry["a_connector"] in connected_a_connectors and entry["b_connector"] in connected_b_connectors
+        )
 
     def get_lanes(self):
         """
-        Return a list of lane dicts for breakout cables, each containing lane number,
-        connector/position info, and actual termination objects (or None for unconnected).
-        Returns an empty list for standard cables.
+        Return a list of lane dicts, each containing lane number, connector/position info, and
+        actual termination objects (or None for unconnected). Standard (non-breakout) cables
+        return a single-element list representing the implicit one-lane connection.
 
         Note that multiple lanes which share a far-/near-side connector resolve to the same
         termination object — the cable's mapping is what makes them distinct logical lanes,
         not the termination row.
         """
-        if not self.cable_type_id:
-            return []
-
         # Build lookup: (cable_end, connector) → CableToCableTermination
         endpoint_lookup = {(endpoint.cable_end, endpoint.connector): endpoint for endpoint in self.terminations.all()}
 
         lanes = []
-        for lane_number, entry in enumerate(self.cable_type.mapping, start=1):
+        for lane_number, entry in enumerate(self._effective_mapping, start=1):
             a_endpoint = endpoint_lookup.get(("A", entry["a_connector"]))
             b_endpoint = endpoint_lookup.get(("B", entry["b_connector"]))
             lanes.append(
