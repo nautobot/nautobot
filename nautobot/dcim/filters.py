@@ -1494,6 +1494,20 @@ class CableTypeFilterSet(NautobotFilterSet):
         return queryset.filter(a_connectors=F("b_connectors"))
 
 
+class CableToCableTerminationFilterSet(NautobotFilterSet):
+    """FilterSet for the cable→termination join model."""
+
+    cable = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cable.objects.all(),
+        to_field_name="pk",
+        label="Cable (ID)",
+    )
+
+    class Meta:
+        model = CableToCableTermination
+        fields = ["id", "cable", "cable_end", "connector"]
+
+
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
     cable_type = NaturalKeyOrPKMultipleChoiceFilter(

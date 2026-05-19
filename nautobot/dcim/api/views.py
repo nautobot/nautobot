@@ -30,6 +30,7 @@ from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -723,6 +724,14 @@ class CableViewSet(NautobotModelViewSet):
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+
+class CableToCableTerminationViewSet(NautobotModelViewSet):
+    """API endpoint for the cable→termination join model."""
+
+    queryset = CableToCableTermination.objects.select_related("cable")
+    serializer_class = serializers.CableToCableTerminationSerializer
+    filterset_class = filters.CableToCableTerminationFilterSet
 
 
 #
