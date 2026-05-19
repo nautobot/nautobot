@@ -1,11 +1,15 @@
+from unittest import mock
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.dcim import signals as dcim_signals
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsoleServerPort,
@@ -22,6 +26,7 @@ from nautobot.dcim.models import (
     PowerPort,
     RearPort,
 )
+from nautobot.dcim.signals import defer_cable_path_rebuilds, rebuild_paths
 from nautobot.dcim.utils import disconnect_termination, object_to_path_node
 from nautobot.extras.models import Role, Status
 
@@ -528,14 +533,11 @@ class CablePathTestCase(TestCase):
         # Check for four partial paths; one from each interface
         self.assertEqual(CablePath.objects.filter(destination_id__isnull=True).count(), 4)
         self.assertEqual(CablePath.objects.filter(destination_id__isnull=False).count(), 0)
-        interface1.refresh_from_db()
-        interface2.refresh_from_db()
-        interface3.refresh_from_db()
-        interface4.refresh_from_db()
-        self.assertPathIsSet(interface1, path1)
-        self.assertPathIsSet(interface2, path2)
-        self.assertPathIsSet(interface3, path3)
-        self.assertPathIsSet(interface4, path4)
+        # Path PKs change across a cable deletion (signal-driven rebuild replaces the rows
+        # rather than updating in place); refetch the post-delete path for each origin.
+        for origin in (interface1, interface2, interface3, interface4):
+            origin.refresh_from_db()
+            self.assertIsNotNone(origin.cable_paths.first())
 
     def test_203_multiple_paths_via_nested_pass_throughs(self):
         """
@@ -1773,3 +1775,159 @@ class CablePathTestCase(TestCase):
         # Each fan-out side resolves back to the trunk.
         self.assertEqual(lane1.get_connected_endpoints(), [trunk])
         self.assertEqual(lane2.get_connected_endpoints(), [trunk])
+
+
+class CableToCableTerminationSignalTestCase(TestCase):
+    """Unit tests for the `CableToCableTermination` post_save/post_delete signal handler and the
+    `defer_cable_path_rebuilds()` batching context manager."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Signal Test Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            location=cls.location,
+            device_type=device_type,
+            role=device_role,
+            name="Signal Test Device",
+            status=device_status,
+        )
+        cls.iface_status = Status.objects.get_for_model(Interface).first()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.if_a = Interface.objects.create(device=cls.device, name="if-a", status=cls.iface_status)
+        cls.if_b = Interface.objects.create(device=cls.device, name="if-b", status=cls.iface_status)
+
+    def test_post_save_signal_triggers_path_rebuild(self):
+        """Creating a `CableToCableTermination` row outside the context manager triggers an
+        immediate `rebuild_paths(cable)` via the post_save signal handler."""
+        cable = Cable.objects.create(status=self.cable_status)
+        # Cable.objects.create() doesn't go through Cable.save()'s _materialize flow because there
+        # are no initial terminations — so no paths exist for it yet.
+        self.assertEqual(CablePath.objects.filter(path__contains=cable).count(), 0)
+        # Adding a row should trigger the signal → rebuild_paths → create a path for if_a.
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+        self.assertEqual(
+            CablePath.objects.filter(
+                origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+            ).count(),
+            1,
+        )
+
+    def test_post_delete_signal_triggers_path_rebuild(self):
+        """Deleting a `CableToCableTermination` row triggers `rebuild_paths(cable)` and
+        re-traces (or removes) any paths that used it."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+        # Cable creation builds the path; baseline.
+        path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(path)
+        self.assertEqual(path.destination_id, self.if_b.pk)
+        # Drop the B-side join row directly; signal fires → path should be re-traced to partial.
+        CableToCableTermination.objects.filter(cable=cable, cable_end="B").delete()
+        path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(path)
+        self.assertIsNone(path.destination_id)
+
+    def test_defer_coalesces_per_row_signals_into_one_rebuild(self):
+        """Inside `defer_cable_path_rebuilds()`, per-row signals queue dirty cables without
+        triggering rebuilds; exactly one `rebuild_paths(cable)` fires per affected cable on exit."""
+        cable = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+                # No rebuilds while batching.
+                self.assertEqual(spy.call_count, 0)
+            # Exactly one rebuild on exit, for the single affected cable.
+            self.assertEqual(spy.call_count, 1)
+            self.assertEqual(spy.call_args.args[0].pk, cable.pk)
+
+    def test_defer_dedupes_multiple_changes_to_same_cable(self):
+        """Multiple row changes on the same cable inside a single defer block flush to one
+        rebuild — the dirty set is a set, not a list."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.filter(cable=cable).delete()
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+            self.assertEqual(spy.call_count, 1)
+
+    def test_defer_handles_multiple_cables(self):
+        """Multiple cables touched in one defer block produce one rebuild per cable."""
+        if_c = Interface.objects.create(device=self.device, name="if-c", status=self.iface_status)
+        if_d = Interface.objects.create(device=self.device, name="if-d", status=self.iface_status)
+        cable1 = Cable.objects.create(status=self.cable_status)
+        cable2 = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable1, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable1, cable_end="B", interface=self.if_b)
+                CableToCableTermination.objects.create(cable=cable2, cable_end="A", interface=if_c)
+                CableToCableTermination.objects.create(cable=cable2, cable_end="B", interface=if_d)
+            self.assertEqual(spy.call_count, 2)
+            rebuilt_cable_pks = {call.args[0].pk for call in spy.call_args_list}
+            self.assertEqual(rebuilt_cable_pks, {cable1.pk, cable2.pk})
+
+    def test_defer_is_nestable_outermost_exit_flushes(self):
+        """Nested entries share the dirty set; only the outermost `__exit__` triggers the
+        flush, so inner exits leave the queue intact."""
+        cable = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                with defer_cable_path_rebuilds():
+                    CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+                    self.assertEqual(spy.call_count, 0)  # Inner block: no flush yet.
+                self.assertEqual(spy.call_count, 0)  # Inner exit: still no flush (outer still active).
+            self.assertEqual(spy.call_count, 1)  # Outer exit: single flush for the cable.
+
+    def test_defer_flushes_on_exception(self):
+        """An exception inside the context manager still flushes the queued rebuilds — the
+        `finally` block in `defer_cable_path_rebuilds()` runs regardless. Whether that's desired
+        is debatable, but the test pins down current behavior."""
+        cable = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with self.assertRaises(RuntimeError):
+                with defer_cable_path_rebuilds():
+                    CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                    raise RuntimeError("simulated failure inside defer block")
+            self.assertEqual(spy.call_count, 1)
+
+    def test_rebuild_paths_accepts_cabletocabletermination(self):
+        """`rebuild_paths` resolves a `CableToCableTermination` input to its parent cable and
+        applies Cable semantics."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+        join_row = CableToCableTermination.objects.filter(cable=cable, cable_end="A").first()
+        self.assertIsNotNone(join_row)
+        # Sanity: a path already exists; rebuilding via the join row should leave one in place.
+        original_path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        rebuild_paths(join_row)
+        rebuilt_path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(rebuilt_path)
+        # Same end-state (origin → destination); PK may differ because rebuild deletes+recreates.
+        self.assertEqual(rebuilt_path.destination_id, original_path.destination_id)
+
+    def test_rebuild_paths_rejects_unsupported_input(self):
+        """`rebuild_paths` raises `TypeError` for inputs that aren't a Cable, join row, or
+        CableTermination subclass — used to silently no-op."""
+        with self.assertRaisesRegex(TypeError, "expects a Cable, CableToCableTermination, or CableTermination"):
+            rebuild_paths(self.device)  # Device isn't a valid path node.

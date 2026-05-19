@@ -723,10 +723,15 @@ class Cable(PrimaryModel):
 
         # Side effects previously handled by the `update_connected_endpoints` post_save signal.
         # Loaddata bypasses `save()` entirely (it calls `save_base()`), so we no longer need a
-        # `raw=True` guard here.
+        # `raw=True` guard here. Path rebuilds are now driven by the post_save/post_delete signal
+        # handlers on `CableToCableTermination` — wrap the row-population in
+        # `defer_cable_path_rebuilds()` so the per-row signals coalesce into one rebuild for this
+        # cable on context exit.
         if is_creation:
-            self._materialize_initial_terminations()
-            self._build_cable_paths_for_terminations()
+            from nautobot.dcim.signals import defer_cable_path_rebuilds
+
+            with defer_cable_path_rebuilds():
+                self._materialize_initial_terminations()
         elif status_changed:
             self._sync_cable_path_active_flags()
 
@@ -777,26 +782,6 @@ class Cable(PrimaryModel):
             )
             logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {self}")
 
-    def _build_cable_paths_for_terminations(self):
-        """
-        Build `CablePath` rows for each termination on this cable. Called once at the end of
-        `Cable.save()` (for new cables) so that all terminations are present in the join table
-        before paths are traced.
-
-        Callers that add or remove `CableToCableTermination` rows directly (outside this flow)
-        are responsible for calling `rebuild_paths(cable)` themselves; see also the
-        `add_cable_termination` / `disconnect_termination` helpers in `nautobot.dcim.utils`.
-        """
-        from nautobot.dcim.models.device_components import PathEndpoint
-        from nautobot.dcim.signals import create_cablepath, rebuild_paths
-
-        for ct_row in self.terminations.all():
-            term = ct_row.termination
-            if isinstance(term, PathEndpoint):
-                create_cablepath(term)
-            else:
-                rebuild_paths(term)
-
     def _sync_cable_path_active_flags(self):
         """Reflect a Cable status change onto any CablePath that traverses this cable."""
         from nautobot.dcim.signals import rebuild_paths
@@ -816,11 +801,11 @@ class Cable(PrimaryModel):
         the single A/B kwargs on `Cable.__init__` can't express). The single-step Cable creation
         flow (`Cable(termination_a=..., termination_b=..., ...).save()`) is unchanged.
 
-        Each call triggers a full `rebuild_paths(self)` after the row is inserted, so adding
-        many terminations one-by-one (e.g. populating all connectors of a wide breakout cable)
-        is O(N) path rebuilds. For bulk additions, prefer creating the `CableToCableTermination`
-        rows directly (e.g. via `CableToCableTermination.objects.bulk_create([...])`) and
-        calling `rebuild_paths(cable)` once after all rows are in place.
+        Each call triggers a full `rebuild_paths(self)` after the row is inserted (via the
+        `CableToCableTermination` post_save signal handler), so adding many terminations one-by-one
+        (e.g. populating all connectors of a wide breakout cable) is O(N) path rebuilds. For bulk
+        additions, wrap the loop in `defer_cable_path_rebuilds()` so the signal coalesces into a
+        single rebuild on context exit.
 
         Args:
             termination: A `CableTermination` subclass instance (Interface, FrontPort, RearPort,
@@ -832,8 +817,6 @@ class Cable(PrimaryModel):
         Returns:
             The newly-created `CableToCableTermination` row.
         """
-        from nautobot.dcim.signals import rebuild_paths
-
         fk_field = termination_fk_field(termination)
         if fk_field is None:
             raise ValueError(f"{type(termination).__name__} is not a valid cable termination type")
@@ -845,8 +828,8 @@ class Cable(PrimaryModel):
         )
         # `validated_save` runs `full_clean` so the connector-range check in `clean()` and the
         # field-level MinValueValidator/MaxValueValidator on `connector` are enforced.
+        # The post_save signal handler on `CableToCableTermination` triggers the path rebuild.
         row.validated_save()
-        rebuild_paths(self)
         return row
 
     def get_compatible_types(self):

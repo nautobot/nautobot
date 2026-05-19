@@ -128,7 +128,6 @@ from .constants import (
 )
 from .models import (
     Cable,
-    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -158,7 +157,6 @@ from .models import (
     ModuleBayTemplate,
     ModuleFamily,
     ModuleType,
-    PathEndpoint,
     Platform,
     PowerFeed,
     PowerOutlet,
@@ -4734,28 +4732,23 @@ class CableForm(NautobotModelForm):
         if existing_keys == proposed_keys:
             return
 
-        CableToCableTermination.objects.filter(cable=cable).delete()
-        for side_label, connector, termination in proposed_rows:
-            fk_field = termination_fk_field(termination)
-            if fk_field is None:
-                continue
-            CableToCableTermination.objects.create(
-                cable=cable,
-                cable_end=side_label,
-                connector=connector,
-                **{fk_field: termination},
-            )
+        # Wrap the bulk row replacement so that the per-row post_save/post_delete signals on
+        # CableToCableTermination don't trigger a full path rebuild for each row — the context
+        # manager fires one `rebuild_paths(cable)` at exit instead.
+        from nautobot.dcim.signals import defer_cable_path_rebuilds
 
-        # Rebuild CablePaths (create_cablepath fans out one path per far-side connector for breakouts)
-        from nautobot.dcim.signals import create_cablepath
-
-        for _, _, termination in proposed_rows:
-            if isinstance(termination, PathEndpoint):
-                CablePath.objects.filter(
-                    origin_type=ContentType.objects.get_for_model(termination),
-                    origin_id=termination.pk,
-                ).delete()
-                create_cablepath(termination, rebuild=False)
+        with defer_cable_path_rebuilds():
+            CableToCableTermination.objects.filter(cable=cable).delete()
+            for side_label, connector, termination in proposed_rows:
+                fk_field = termination_fk_field(termination)
+                if fk_field is None:
+                    continue
+                CableToCableTermination.objects.create(
+                    cable=cable,
+                    cable_end=side_label,
+                    connector=connector,
+                    **{fk_field: termination},
+                )
 
 
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):

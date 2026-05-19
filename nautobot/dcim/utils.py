@@ -359,9 +359,10 @@ def validate_cable_termination(termination, cable_id=None):
 def disconnect_termination(termination):
     """Disconnect a single termination from its cable without deleting the cable.
 
-    Removes the CableToCableTermination row for this termination and rebuilds every CablePath
-    that traversed the cable. The cable itself and any other terminations on it are left intact.
-    Returns the cable if successful, None otherwise.
+    Removes the CableToCableTermination row for this termination; the post_delete signal handler
+    on `CableToCableTermination` rebuilds every CablePath that traversed the cable. The cable
+    itself and any other terminations on it are left intact. Returns the cable if successful,
+    None otherwise.
 
     For breakout cables, this correctly preserves cable paths on the surviving lanes: only the
     lane(s) involving the disconnected termination produce partial paths after the rebuild.
@@ -374,11 +375,6 @@ def disconnect_termination(termination):
 
     cable = cable_termination.cable
     cable_termination.delete()
-
-    # Deferred import to avoid the cables.py → signals.py circular path at module load time.
-    from nautobot.dcim.signals import rebuild_paths
-
-    rebuild_paths(cable)
     return cable
 
 
