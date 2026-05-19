@@ -4503,6 +4503,7 @@ class CableTestCase(
 
         statuses = Status.objects.get_for_model(Cable)
 
+        # Two standard (non-breakout) cables and one 1x2 breakout, so as to exercise alternate code paths.
         Cable.objects.create(
             termination_a=interfaces[0],
             termination_b=interfaces[3],
@@ -4515,21 +4516,22 @@ class CableTestCase(
             type=CableTypeChoices.TYPE_CAT6,
             status=statuses[0],
         )
+        cls.breakout_cable_type = CableType.objects.create(
+            name="Cable View 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
         Cable.objects.create(
             termination_a=interfaces[2],
             termination_b=interfaces[5],
+            cable_type=cls.breakout_cable_type,
             type=CableTypeChoices.TYPE_CAT6,
             status=statuses[0],
         )
 
-        # interface_ct = ContentType.objects.get_for_model(Interface)
         cls.form_data = {
-            # Changing terminations not supported when editing an existing Cable
-            # FIXME(John): Revisit this as it is likely an actual bug allowing the terminations to be changed after creation.
-            # 'termination_a_type': interface_ct.pk,
-            # 'termination_a_id': interfaces[0].pk,
-            # 'termination_b_type': interface_ct.pk,
-            # 'termination_b_id': interfaces[3].pk,
+            "a_conn_1_type": "interface",
+            "a_conn_1_termination": interfaces[6].pk,
+            "b_conn_1_type": "interface",
+            "b_conn_1_termination": interfaces[9].pk,
             "type": CableTypeChoices.TYPE_CAT6,
             "status": statuses[1].pk,
             "label": "Label",
@@ -4637,6 +4639,30 @@ class CableTestCase(
         )
         # pylint: enable=unsupported-binary-operation
         self.assertTrue(cable_path_2.exists())
+
+    def test_cable_detail_view_breakout_vs_standard_branches(self):
+        """Cable detail template branches on `cable_type` and `get_connections().is_breakout` - verify both cases."""
+        self.add_permissions("dcim.view_cable")
+
+        standard_cable = Cable.objects.filter(cable_type__isnull=True).first()
+        breakout_cable = Cable.objects.filter(cable_type__isnull=False).first()
+        self.assertIsNotNone(standard_cable)
+        self.assertIsNotNone(breakout_cable)
+
+        # Markers that should appear only on a breakout cable's detail page.
+        breakout_only_markers = (
+            self.breakout_cable_type.name,  # The cable_type field is shown only when present.
+            "Lane Mapping",  # The lane-mapping diagram card is only rendered for breakouts.
+            ">A1<",  # Connector labels (e.g. "A1") are added only in the breakout branch.
+        )
+
+        standard_body = self.client.get(standard_cable.get_absolute_url()).content.decode()
+        for marker in breakout_only_markers:
+            self.assertNotIn(marker, standard_body, msg=f"Standard cable detail unexpectedly contained {marker!r}")
+
+        breakout_body = self.client.get(breakout_cable.get_absolute_url()).content.decode()
+        for marker in breakout_only_markers:
+            self.assertIn(marker, breakout_body, msg=f"Breakout cable detail missing expected {marker!r}")
 
     def test_cable_list_renders_multi_termination_columns_for_breakout_cable(self):
         """For a breakout cable, the `terminations_a`/`terminations_b` columns render every termination on each side."""
