@@ -113,7 +113,6 @@ from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
-    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -160,7 +159,6 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from .models.cables import _NATURAL_KEY_TO_TERMINATION_FK
 from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
@@ -5617,50 +5615,6 @@ class CableUIViewSet(NautobotUIViewSet):
                 "term_field": result["meta"]["term_field"],
             },
         )
-
-    @action(
-        detail=True,
-        methods=["get"],
-        url_path="disconnect",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.view_cable"],
-    )
-    def disconnect(self, request, pk=None):
-        """Disconnect a single termination from this cable without deleting the cable."""
-
-        cable = self.get_object()
-        termination_type = request.GET.get("termination_type")
-        termination_id = request.GET.get("termination_id")
-        return_url = request.GET.get("return_url") or cable.get_absolute_url()
-
-        if termination_type and termination_id:
-            app_label, model_name = termination_type.split(".")
-            fk_field = _NATURAL_KEY_TO_TERMINATION_FK.get((app_label, model_name))
-            endpoint = (
-                CableToCableTermination.objects.filter(cable=cable, **{f"{fk_field}_id": termination_id}).first()
-                if fk_field
-                else None
-            )
-
-            if endpoint:
-                termination = endpoint.termination
-                disconnect_termination(termination)
-
-                messages.success(request, f"Disconnected {termination} from {cable}.")
-                messages.info(
-                    request,
-                    format_html(
-                        'Cable <a href="{}">{}</a> still exists.',
-                        cable.get_absolute_url(),
-                        cable,
-                    ),
-                )
-            else:
-                messages.warning(request, "Termination not found on this cable.")
-        else:
-            messages.error(request, "Missing termination_type or termination_id parameters.")
-
-        return redirect(return_url)
 
 
 class PathTraceView(generic.ObjectView):

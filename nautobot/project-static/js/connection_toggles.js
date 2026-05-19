@@ -42,11 +42,34 @@ function toggleConnection(elem) {
     return false;
 }
 
+function disconnectTermination(elem) {
+    // Detach a single termination from its cable. The post_delete signal handler on
+    // CableToCableTermination rebuilds affected CablePaths.
+    fetch(nautobot_api_path + "dcim/cables-to-cable-terminations/" + elem.getAttribute('data') + "/", {
+        method: 'DELETE',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': nautobot_csrf_token,
+        },
+    }).then(function(response) {
+        if (response.ok) {
+            window.location.reload();
+        }
+    });
+    return false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.cable-toggle').forEach(function(elem) {
         elem.addEventListener('click', function(event) {
             event.preventDefault();
             toggleConnection(elem);
+        });
+    });
+    document.querySelectorAll('.cable-disconnect').forEach(function(elem) {
+        elem.addEventListener('click', function(event) {
+            event.preventDefault();
+            disconnectTermination(elem);
         });
     });
 });

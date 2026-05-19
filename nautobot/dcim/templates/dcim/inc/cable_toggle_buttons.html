@@ -13,9 +13,9 @@
             </a>
         </li>
     {% endif %}
-    {% if termination %}
+    {% if termination and termination.cable_termination %}
         <li>
-            <a href="{% url 'dcim:cable_disconnect' pk=cable.pk %}?termination_type={{ termination|meta:"app_label" }}.{{ termination|meta:"model_name" }}&termination_id={{ termination.pk }}&return_url={{ request.path }}" class="dropdown-item text-warning">
+            <a href="#" class="dropdown-item text-warning cable-disconnect" data="{{ termination.cable_termination.pk }}">
                 <span class="mdi mdi-lan-disconnect me-4" aria-hidden="true"></span>Detach cable from {{ termination }}
             </a>
         </li>

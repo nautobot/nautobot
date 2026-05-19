@@ -26,6 +26,24 @@ the new value. Table views load `connection_toggles.js` separately and update th
                 });
             });
         });
+        // Detach: DELETE the CableToCableTermination row, then reload so the page reflects the
+        // updated cable state. The post_delete signal handler rebuilds any affected paths.
+        document.querySelectorAll('.cable-disconnect').forEach(function(elem) {
+            elem.addEventListener('click', function(event) {
+                event.preventDefault();
+                fetch(nautobot_api_path + "dcim/cables-to-cable-terminations/" + elem.getAttribute('data') + "/", {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRFToken': nautobot_csrf_token,
+                    },
+                }).then(function(response) {
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                });
+            });
+        });
     });
 </script>
 <span class="float-end">
