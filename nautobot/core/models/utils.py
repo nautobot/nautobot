@@ -143,6 +143,7 @@ def serialize_object_v2(obj):
     """
     from nautobot.core.api.exceptions import SerializerNotFound
     from nautobot.core.api.utils import get_serializer_for_model
+    from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 
     # Try serializing obj(model instance) using its API Serializer
     try:
@@ -152,7 +153,16 @@ def serialize_object_v2(obj):
         # Fall back to generic JSON representation of obj
         data = serialize_object(obj)
 
-    return data
+    # Force materialization of any lazy QuerySets/managers that DRF serializers
+    # can leave in the returned dict (e.g. relational fields built from
+    # TagsManager). Without this, downstream code that JSON-encodes `data`
+    # inside another query (such as psycopg's parameter conversion during
+    # ObjectChange.bulk_create) ends up iterating a QuerySet on a connection
+    # that's already mid-INSERT, which deadlocks (both connections show
+    # `idle in transaction` + `ClientRead` in pg_stat_activity).
+    # Round-tripping through JSON here runs the encoder in a clean context
+    # so any QuerySet evaluation happens before psycopg sees the value.
+    return json.loads(json.dumps(data, cls=NautobotKombuJSONEncoder))
 
 
 def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):
