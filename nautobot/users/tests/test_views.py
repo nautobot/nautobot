@@ -13,6 +13,7 @@ from nautobot.core.testing import TestCase, utils, ViewTestCases
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import post_data
 from nautobot.users.models import Token
+from nautobot.users.tables import TokenTable
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
@@ -221,6 +222,13 @@ class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_get_object_anonymous(self):
+        """Ensure anonymous detail-view access is blocked even when all views are exempted from auth.
+
+        Tokens are user-scoped credentials, so we override the default anonymous object lookup
+        behavior to avoid a security gap: even with EXEMPT_VIEW_PERMISSIONS=["*"], anonymous
+        clients must not be able to retrieve a specific token via its detail URL, and the
+        response should be 404 (not found) rather than 200 (object data exposed).
+        """
         self.client.logout()
         response = self.client.get(self._get_queryset().first().get_absolute_url())
         self.assertHttpStatus(response, 404)
@@ -275,6 +283,73 @@ class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, "staff-own-token")
         self.assertBodyContains(response, "staff-can-see-other")
+
+    def test_token_table_does_not_expose_key_column(self):
+        """The `key` field must not be an available/enable-able column on the token list table."""
+        self.assertNotIn("key", TokenTable.Meta.fields)
+        self.assertNotIn("key", TokenTable.Meta.default_columns)
+        self.assertNotIn("key", TokenTable(Token.objects.none()).base_columns)
+
+    def test_token_list_view_does_not_render_key_values(self):
+        """The rendered list view must never include any token's raw key value, even for staff."""
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.view_token")
+        own_token = Token.objects.create(user=self.user, description="own-list-token")
+        other_token = Token.objects.create(user=self.other_user, description="other-list-token")
+
+        response = self.client.get(reverse("user:token_list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+        self.assertNotIn(own_token.key, body)
+        self.assertNotIn(other_token.key, body)
+
+    def test_non_staff_can_view_own_token_detail(self):
+        """A non-staff user must be able to load the detail view for a token they own."""
+        self.add_permissions("users.view_token")
+        token = Token.objects.create(user=self.user, description="own-detail-token")
+        response = self.client.get(reverse("user:token", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertIn(str(token), utils.extract_page_title(response.content.decode(response.charset)))
+
+    def test_non_staff_cannot_view_other_users_token_detail(self):
+        """A non-staff user must get 404 (not 403) when requesting another user's token detail view."""
+        self.add_permissions("users.view_token")
+        token = Token.objects.create(user=self.other_user, description="other-detail-token")
+        response = self.client.get(reverse("user:token", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 404)
+
+    def test_staff_can_view_other_users_token_detail(self):
+        """Staff/superusers must be able to load the detail view for any user's token."""
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        self.add_permissions("users.view_token")
+        token = Token.objects.create(user=self.other_user, description="staff-detail-other")
+        response = self.client.get(reverse("user:token", kwargs={"pk": token.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertIn(str(token), utils.extract_page_title(response.content.decode(response.charset)))
+
+    def test_token_detail_view_does_not_expose_key(self):
+        """The raw key value must not appear in the detail view body for owner or staff viewers."""
+        self.add_permissions("users.view_token")
+        own_token = Token.objects.create(user=self.user, description="own-detail-key-check")
+
+        response = self.client.get(reverse("user:token", kwargs={"pk": own_token.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn(own_token.key, response.content.decode(response.charset))
+
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+        other_token = Token.objects.create(user=self.other_user, description="staff-detail-key-check")
+
+        response = self.client.get(reverse("user:token", kwargs={"pk": other_token.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn(other_token.key, response.content.decode(response.charset))
 
     def test_non_staff_create_cannot_assign_other_user(self):
         self.add_permissions("users.add_token", "users.view_token")
