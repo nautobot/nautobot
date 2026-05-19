@@ -453,7 +453,7 @@ class CablePathTestCase(TestCase):
         cable4.save()
         cable5 = Cable(termination_a=frontport2_2, termination_b=interface4, status=self.status)
         cable5.save()
-        path1 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface1,
             destination=interface3,
             path=(
@@ -467,7 +467,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path2 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface2,
             destination=interface4,
             path=(
@@ -481,7 +481,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path3 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface3,
             destination=interface1,
             path=(
@@ -495,7 +495,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path4 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface4,
             destination=interface2,
             path=(
