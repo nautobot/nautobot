@@ -3,6 +3,7 @@ import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils.html import format_html, format_html_join
 from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
@@ -374,7 +375,11 @@ def disconnect_termination(termination):
         return None
 
     cable = cable_termination.cable
-    cable_termination.delete()
+    # Wrap the row delete + signal-driven path rebuild in a transaction so a rebuild failure
+    # rolls the row deletion back too. Otherwise the cable could end up with stale CablePath
+    # rows referencing a now-deleted termination row.
+    with transaction.atomic():
+        cable_termination.delete()
     return cable
 
 

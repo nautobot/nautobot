@@ -5,7 +5,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Sum
 from django.utils.functional import classproperty
 
@@ -724,24 +724,30 @@ class Cable(PrimaryModel):
         is_creation = self._state.adding
         status_changed = (not is_creation) and self.status != self._orig_status
 
-        super().save(*args, **kwargs)
+        # Wrap the Cable row save and its post-save side effects (join-row materialization +
+        # CablePath rebuild) in a single transaction so any failure during termination
+        # materialization or the signal-driven path rebuild rolls the Cable row back too.
+        # Otherwise we'd be left with an orphaned Cable row that has no join rows and can't be
+        # cleaned up through the cable form.
+        with transaction.atomic():
+            super().save(*args, **kwargs)
 
-        # Update the private pk used in __str__ in case this is a new object (i.e. just got its pk)
-        self._pk = self.pk
+            # Update the private pk used in __str__ in case this is a new object (i.e. just got its pk)
+            self._pk = self.pk
 
-        # Side effects previously handled by the `update_connected_endpoints` post_save signal.
-        # Loaddata bypasses `save()` entirely (it calls `save_base()`), so we no longer need a
-        # `raw=True` guard here. Path rebuilds are now driven by the post_save/post_delete signal
-        # handlers on `CableToCableTermination` — wrap the row-population in
-        # `defer_cable_path_rebuilds()` so the per-row signals coalesce into one rebuild for this
-        # cable on context exit.
-        if is_creation:
-            from nautobot.dcim.signals import defer_cable_path_rebuilds
+            # Side effects previously handled by the `update_connected_endpoints` post_save signal.
+            # Loaddata bypasses `save()` entirely (it calls `save_base()`), so we no longer need a
+            # `raw=True` guard here. Path rebuilds are now driven by the post_save/post_delete signal
+            # handlers on `CableToCableTermination` — wrap the row-population in
+            # `defer_cable_path_rebuilds()` so the per-row signals coalesce into one rebuild for this
+            # cable on context exit.
+            if is_creation:
+                from nautobot.dcim.signals import defer_cable_path_rebuilds
 
-            with defer_cable_path_rebuilds():
-                self._materialize_initial_terminations()
-        elif status_changed:
-            self._sync_cable_path_active_flags()
+                with defer_cable_path_rebuilds():
+                    self._materialize_initial_terminations()
+            elif status_changed:
+                self._sync_cable_path_active_flags()
 
         # Reset the cached "previous status" so subsequent saves compare against the value just
         # persisted, not against the initial value captured in __init__.
@@ -834,10 +840,12 @@ class Cable(PrimaryModel):
             connector=connector,
             **{fk_field: termination},
         )
-        # `validated_save` runs `full_clean` so the connector-range check in `clean()` and the
-        # field-level MinValueValidator/MaxValueValidator on `connector` are enforced.
-        # The post_save signal handler on `CableToCableTermination` triggers the path rebuild.
-        row.validated_save()
+        # Wrap row insert + signal-driven path rebuild in a transaction so a rebuild failure
+        # rolls the row back too. `validated_save` runs `full_clean` so the connector-range
+        # check in `clean()` and the field-level MinValueValidator/MaxValueValidator on
+        # `connector` are enforced.
+        with transaction.atomic():
+            row.validated_save()
         return row
 
     def get_compatible_types(self):

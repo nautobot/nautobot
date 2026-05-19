@@ -1894,18 +1894,23 @@ class CableToCableTerminationSignalTestCase(TestCase):
                 self.assertEqual(spy.call_count, 0)  # Inner exit: still no flush (outer still active).
             self.assertEqual(spy.call_count, 1)  # Outer exit: single flush for the cable.
 
-    def test_defer_flushes_on_exception(self):
-        """An exception inside the context manager still flushes the queued rebuilds — the
-        `finally` block in `defer_cable_path_rebuilds()` runs regardless. Whether that's desired
-        is debatable, but the test pins down current behavior."""
+    def test_defer_rolls_back_on_exception(self):
+        """An exception inside the context manager rolls back the transactional block: the
+        queued row changes are undone and the flushed rebuild is skipped. Avoids the
+        "rows committed, paths stale" inconsistency."""
         cable = Cable.objects.create(status=self.cable_status)
+        # No join rows before; we'll add one inside the failing block and assert it's rolled back.
+        self.assertEqual(CableToCableTermination.objects.filter(cable=cable).count(), 0)
 
         with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
             with self.assertRaises(RuntimeError):
                 with defer_cable_path_rebuilds():
                     CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
                     raise RuntimeError("simulated failure inside defer block")
-            self.assertEqual(spy.call_count, 1)
+            self.assertEqual(spy.call_count, 0)  # flush skipped — transaction rolled back
+
+        # The join row created inside the block doesn't survive the rollback.
+        self.assertEqual(CableToCableTermination.objects.filter(cable=cable).count(), 0)
 
     def test_rebuild_paths_accepts_cabletocabletermination(self):
         """`rebuild_paths` resolves a `CableToCableTermination` input to its parent cable and

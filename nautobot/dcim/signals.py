@@ -202,26 +202,28 @@ def _batching_active():
 @contextlib.contextmanager
 def defer_cable_path_rebuilds():
     """Coalesce CableToCableTermination signal-driven path rebuilds into one flush per affected
-    cable at context exit.
-
-    Use around bulk row-replacement flows to avoid the per-row rebuild cost. Outside this
-    context, every row change still triggers an immediate rebuild. Nestable: nested entries
-    share the dirty set, and only the outermost exit fires flushes.
+    cable at context exit, inside a transaction so the row changes and the resulting rebuild
+    commit (or roll back) as a unit. Nestable: nested entries share the dirty set and only the
+    outermost exit fires the flush.
     """
     _batch_state.depth = getattr(_batch_state, "depth", 0) + 1
     if _batch_state.depth == 1:
         _batch_state.dirty_cables = set()
     try:
-        yield
+        with transaction.atomic():
+            yield
+            # Only the outermost defer entry triggers the flush; nested entries contribute to
+            # the shared dirty set and let the outermost handle it. Flushing inside the atomic
+            # block means a rebuild_paths failure rolls back the queued row changes too.
+            if _batch_state.depth == 1:
+                for cable_id in _batch_state.dirty_cables:
+                    cable = Cable.objects.filter(pk=cable_id).first()
+                    if cable is not None:
+                        rebuild_paths(cable)
     finally:
         _batch_state.depth -= 1
         if _batch_state.depth == 0:
-            dirty = _batch_state.dirty_cables
             _batch_state.dirty_cables = set()
-            for cable_id in dirty:
-                cable = Cable.objects.filter(pk=cable_id).first()
-                if cable is not None:
-                    rebuild_paths(cable)
 
 
 @receiver(post_save, sender=CableToCableTermination)

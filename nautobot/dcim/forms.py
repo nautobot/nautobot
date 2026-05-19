@@ -4732,9 +4732,9 @@ class CableForm(NautobotModelForm):
         if existing_keys == proposed_keys:
             return
 
-        # Wrap the bulk row replacement so that the per-row post_save/post_delete signals on
-        # CableToCableTermination don't trigger a full path rebuild for each row — the context
-        # manager fires one `rebuild_paths(cable)` at exit instead.
+        # `defer_cable_path_rebuilds()` wraps the block in a transaction (so a creation failure
+        # mid-loop rolls back the delete) AND coalesces the per-row CableToCableTermination
+        # signals into one `rebuild_paths(cable)` at context exit.
         from nautobot.dcim.signals import defer_cable_path_rebuilds
 
         with defer_cable_path_rebuilds():
