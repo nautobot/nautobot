@@ -1632,9 +1632,6 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         *not* verify that every fan-out lane is populated. Per-lane completeness against the
         cable's `cable_type` connector counts is a future refinement.
         """
-        if value is None:
-            return queryset
-
         has_a = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="A"))
         has_b = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="B"))
         annotated = queryset.annotate(_has_a_side=has_a, _has_b_side=has_b)
@@ -1654,8 +1651,8 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             lookup_path = "_termination_device"
         elif field_name.startswith("device__"):
             lookup_path = "_termination_device__" + field_name[len("device__") :]
-        else:
-            lookup_path = field_name
+        else:  # pragma: no cover  # should never happen
+            raise ValueError(f"filter_device() expects a field_name of 'device' or 'device__*'; got {field_name!r}")
 
         has_null = any(v == "null" for v in value)
         value = [v for v in value if v != "null"]
@@ -1840,13 +1837,9 @@ class InterfaceConnectionFilterSet(BaseFilterSet):
         return self._filter_either_endpoint(queryset, Q(device__location__name=value))
 
     def filter_device_id(self, queryset, name, value):
-        if not value:
-            return queryset
         return self._filter_either_endpoint(queryset, Q(device_id__in=value))
 
     def filter_device_name(self, queryset, name, value):
-        if not value:
-            return queryset
         return self._filter_either_endpoint(queryset, Q(device__name__in=value))
 
 

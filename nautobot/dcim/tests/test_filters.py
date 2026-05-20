@@ -83,6 +83,7 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -4871,7 +4872,6 @@ class InterfaceConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, Filter
 
     @classmethod
     def setUpTestData(cls):
-        from nautobot.dcim.models import CablePath
 
         iface_status = Status.objects.get_for_model(Interface).first()
         cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
@@ -4932,3 +4932,13 @@ class InterfaceConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, Filter
                 {cp.origin.device.pk, cp.destination.device.pk},
                 msg=f"Charlie not on either endpoint of {cp}",
             )
+
+    def test_q_whitespace_only_input_returns_unfiltered_queryset(self):
+        unfiltered_count = self.queryset.count()
+        result = self.filterset({"q": "   "}, self.queryset).qs
+        self.assertEqual(result.count(), unfiltered_count)
+
+    def test_location_whitespace_only_input_returns_unfiltered_queryset(self):
+        unfiltered_count = self.queryset.count()
+        result = self.filterset({"location": "   "}, self.queryset).qs
+        self.assertEqual(result.count(), unfiltered_count)
