@@ -191,7 +191,7 @@ invoke debug
 Then:
 
 1. Open Nautobot at `http://localhost:8080`.
-2. Navigate to **Jobs**, pick a job (e.g. one from `example_app`), and run it. (For the job to actually be dispatched to Kubernetes (rather than running in the regular Celery worker), it needs to be assigned to a job queue of type **Kubernetes**. See [Configure a New Job Queue of Type Kubernetes](../../user-guide/platform-functionality/jobs/kubernetes-job-support.md#configure-a-new-job-queue-of-type-kubernetes) for how to create the queue and route a job to it.)
+2. Navigate to **Jobs**, pick a job (e.g. one from `example_app`), and run it. (For the job to actually be dispatched to Kubernetes (rather than running in the regular Celery worker), it needs to be assigned to a job queue of type **Kubernetes**. See [Configure a New Job Queue of Type Kubernetes](../../user-guide/platform-functionality/jobs/kubernetes-job-support.md#configuration) for how to create the queue and route a job to it.)
 3. Watch the cluster react:
 
     ```bash
