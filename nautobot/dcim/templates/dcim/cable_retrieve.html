@@ -75,7 +75,7 @@
         <div class="card">
             <div class="card-header">
                 <strong>Connections</strong>
-                {% if conns.is_breakout %}
+                {% if object.cable_type.is_breakout %}
                     <span class="badge bg-info float-end">{{ conns.a_connector_count }}A &rarr; {{ conns.b_connector_count }}B</span>
                 {% endif %}
             </div>
@@ -91,7 +91,7 @@
                         <tr>
                             {% if row.a_rowspan > 0 %}
                                 <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end">
-                                    {% if conns.is_breakout %}
+                                    {% if object.cable_type.is_breakout %}
                                         <strong>A{{ row.a.connector }}</strong>
                                         {% if row.a.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.a.lanes }} lanes</span>{% endif %}
                                         <br>
@@ -101,7 +101,7 @@
                             {% endif %}
                             {% if row.b_rowspan > 0 %}
                                 <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top">
-                                    {% if conns.is_breakout %}
+                                    {% if object.cable_type.is_breakout %}
                                         <strong>B{{ row.b.connector }}</strong>
                                         {% if row.b.lanes > 1 %}<span class="badge bg-secondary ms-1">{{ row.b.lanes }} lanes</span>{% endif %}
                                         <br>
@@ -115,7 +115,7 @@
             </table>
         </div>
 
-        {% if conns.is_breakout %}
+        {% if object.cable_type %}
             <div class="card mt-3">
                 <div class="card-header">
                     <strong>Lane Mapping</strong>

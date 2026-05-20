@@ -769,9 +769,6 @@ class Cable(PrimaryModel):
             if not term:
                 continue
             fk_field = termination_fk_field(term)
-            if fk_field is None:
-                logger.warning(f"Termination {term} has no matching FK on CableToCableTermination; skipping")
-                continue
             CableToCableTermination.objects.get_or_create(
                 cable=self,
                 cable_end=end,
@@ -816,8 +813,6 @@ class Cable(PrimaryModel):
             The newly-created `CableToCableTermination` row.
         """
         fk_field = termination_fk_field(termination)
-        if fk_field is None:
-            raise ValueError(f"{type(termination).__name__} is not a valid cable termination type")
         row = CableToCableTermination(
             cable=self,
             cable_end=cable_end,
@@ -879,10 +874,16 @@ _NATURAL_KEY_TO_TERMINATION_FK = {nk: fk for fk, nk in _TERMINATION_FK_TO_NATURA
 def termination_fk_field(model_or_instance):
     """Return the CableToCableTermination FK field name corresponding to the given model class or instance.
 
-    Returns None if the given model isn't a known CableTermination subclass.
+    Raises TypeError if the given model isn't a known CableTermination subclass.
     """
     opts = model_or_instance._meta
-    return _NATURAL_KEY_TO_TERMINATION_FK.get((opts.app_label, opts.model_name))
+    try:
+        return _NATURAL_KEY_TO_TERMINATION_FK[(opts.app_label, opts.model_name)]
+    except KeyError:
+        raise TypeError(
+            f"{opts.label} is not a known CableTermination subclass; expected one of "
+            f"{sorted(_NATURAL_KEY_TO_TERMINATION_FK)}"
+        ) from None
 
 
 def _resolve_termination_device(termination):

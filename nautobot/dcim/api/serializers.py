@@ -1004,9 +1004,10 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 term_obj = self._resolve_termination_object(lane_data.get(key))
                 if term_obj is None:
                     continue
-                fk_field = termination_fk_field(term_obj)
-                if fk_field is None:
-                    raise serializers.ValidationError(f"{term_obj._meta.label} is not a valid CableTermination type.")
+                try:
+                    fk_field = termination_fk_field(term_obj)
+                except TypeError as exc:
+                    raise serializers.ValidationError(str(exc)) from exc
                 CableToCableTermination.objects.update_or_create(
                     **{fk_field: term_obj},
                     defaults={

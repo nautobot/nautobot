@@ -4402,9 +4402,6 @@ class CableForm(NautobotModelForm):
         # cable_type" rather than silently falling back to the saved value.
         cable_type_pk = None
         cable_type_from_initial = False
-        override_present = bool(self.data and "cable_type" in self.data) or bool(
-            self.initial and "cable_type" in self.initial
-        )
         if self.data and "cable_type" in self.data:
             cable_type_pk = self.data.get("cable_type") or None
         elif self.initial and "cable_type" in self.initial:
@@ -4426,11 +4423,6 @@ class CableForm(NautobotModelForm):
                             f"Could not load cable type {cable_type_pk!r}; falling back to a 1x1 layout.",
                         )
                     )
-        elif (
-            not override_present and self.instance and self.instance.present_in_database and self.instance.cable_type_id
-        ):
-            # No live-preview override — use the saved instance value.
-            cable_type = self.instance.cable_type
 
         # Determine connector counts per side
         if cable_type:
@@ -4498,9 +4490,9 @@ class CableForm(NautobotModelForm):
         self.connection_info = {
             "a_side": [],
             "b_side": [],
-            "is_breakout": cable_type is not None,  # TODO
             "a_positions": a_positions,
             "b_positions": b_positions,
+            "cable_type": cable_type,
         }
 
         for side, connector_count, existing, side_info_key in (
@@ -4601,16 +4593,9 @@ class CableForm(NautobotModelForm):
         a_enriched = {conn["connector"]: _enrich(conn) for conn in info["a_side"]}
         b_enriched = {conn["connector"]: _enrich(conn) for conn in info["b_side"]}
 
-        cable_type = None
-        if info["is_breakout"]:
-            if self.instance and self.instance.cable_type_id:
-                cable_type = self.instance.cable_type
-            elif self.initial and self.initial.get("cable_type"):
-                try:
-                    # TODO: permissions restrictions on CableType lookup?
-                    cable_type = CableType.objects.get(pk=self.initial["cable_type"])
-                except (CableType.DoesNotExist, ValueError):
-                    pass  # TODO?
+        # `_init_lane_fields` already resolved the cable_type when shaping the lane layout; reuse
+        # it here rather than repeating the lookup.
+        cable_type = info["cable_type"]
 
         if cable_type is None:
             rows = [
@@ -4655,7 +4640,7 @@ class CableForm(NautobotModelForm):
 
         return {
             "rows": rows,
-            "is_breakout": info["is_breakout"],
+            "cable_type": cable_type,
         }
 
     def clean(self):
@@ -4751,14 +4736,13 @@ class CableForm(NautobotModelForm):
         with defer_cable_path_rebuilds():
             CableToCableTermination.objects.filter(cable=cable).delete()
             for side_label, connector, termination in proposed_rows:
-                fk_field = termination_fk_field(termination)
-                if fk_field is None:
-                    continue
+                # Lane fields' querysets are constrained to registered termination types, so
+                # `termination_fk_field()` always resolves here.
                 CableToCableTermination.objects.create(
                     cable=cable,
                     cable_end=side_label,
                     connector=connector,
-                    **{fk_field: termination},
+                    **{termination_fk_field(termination): termination},
                 )
 
 

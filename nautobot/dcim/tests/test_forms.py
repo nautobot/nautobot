@@ -1023,7 +1023,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         breakout = self._breakout_cable_type()
         form = CableForm(initial={"cable_type": str(breakout.pk)}, data=self._minimal_form_data())
         self.assertTrue(form.is_valid(), msg=form.errors)
-        self.assertTrue(form.connection_info["is_breakout"])
+        self.assertIsNotNone(form.connection_info["cable_type"])
         self.assertEqual(len(form.connection_info["a_side"]), 1)
         self.assertEqual(len(form.connection_info["b_side"]), 4)
         self.assertEqual([conn["connector"] for conn in form.connection_info["b_side"]], [1, 2, 3, 4])
@@ -1072,7 +1072,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         bad_pk = str(uuid.uuid4())
         form = CableForm(initial={"cable_type": bad_pk}, data=self._minimal_form_data())
         # Layout fell back…
-        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertIsNone(form.connection_info["cable_type"])
         self.assertEqual(len(form.connection_info["b_side"]), 1)
         # …and on submission the user sees an error.
         form.is_valid()
@@ -1082,7 +1082,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
     def test_init_lane_fields_malformed_cable_type_pk_from_initial(self):
         """Test non-UUID `cable_type` PK in `initial` is handled gracefully."""
         form = CableForm(initial={"cable_type": "not-a-uuid"}, data=self._minimal_form_data())
-        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertIsNone(form.connection_info["cable_type"])
         form.is_valid()
         self.assertIn("cable_type", form.errors)
 
@@ -1143,7 +1143,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         """A non-breakout cable renders as one row connecting A connector 1 to B connector 1."""
         form = CableForm(instance=self.cable)
         result = form.get_connection_fields()
-        self.assertFalse(result["is_breakout"])
+        self.assertIsNone(result["cable_type"])
         self.assertEqual(len(result["rows"]), 1)
         row = result["rows"][0]
         self.assertEqual((row["_ac"], row["_bc"]), (1, 1))
@@ -1158,7 +1158,7 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         breakout = self._breakout_cable_type()
         cable = Cable.objects.create(status=self.cable_status, cable_type=breakout)
         result = CableForm(instance=cable).get_connection_fields()
-        self.assertTrue(result["is_breakout"])
+        self.assertIsNotNone(result["cable_type"])
         # 1x4 → 4 lanes, each (1, bc) for bc in 1..4.
         self.assertEqual(len(result["rows"]), 4)
         self.assertEqual([(row["_ac"], row["_bc"]) for row in result["rows"]], [(1, 1), (1, 2), (1, 3), (1, 4)])
@@ -1168,14 +1168,14 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         breakout = self._breakout_cable_type()
         form = CableForm(initial={"cable_type": str(breakout.pk)})
         result = form.get_connection_fields()
-        self.assertTrue(result["is_breakout"])
+        self.assertIsNotNone(result["cable_type"])
         self.assertEqual(len(result["rows"]), 4)
 
     def test_get_connection_fields_falls_back_when_initial_cable_type_unknown(self):
         """A bad `initial['cable_type']` makes get_connection_fields` renders a single row."""
         form = CableForm(initial={"cable_type": str(uuid.uuid4())})
         result = form.get_connection_fields()
-        self.assertFalse(result["is_breakout"])
+        self.assertIsNone(result["cable_type"])
         self.assertEqual(len(result["rows"]), 1)
 
     def test_get_connection_fields_rowspans_for_1x4(self):
@@ -1188,3 +1188,21 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         for row in rows[1:]:
             self.assertEqual(row["a_rowspan"], 0)  # Continuation of the merged A cell.
             self.assertEqual(row["b_rowspan"], 1)
+
+    def test_get_connection_fields_dedupes_rows_for_1x1_multi_lane_cable_type(self):
+        """Ensure that a cable with multiple lanes per connector generates only a single row, not multiple rows."""
+        multi_lane_single_connector = CableType.objects.create(
+            name="Form Test 1x1x4", a_connectors=1, b_connectors=1, total_lanes=4
+        )
+        # Sanity: the auto-generated mapping has 4 entries, all with (a_connector=1, b_connector=1).
+        self.assertEqual(len(multi_lane_single_connector.mapping), 4)
+        self.assertEqual(
+            {(entry["a_connector"], entry["b_connector"]) for entry in multi_lane_single_connector.mapping},
+            {(1, 1)},
+        )
+        cable = Cable.objects.create(status=self.cable_status, cable_type=multi_lane_single_connector)
+        result = CableForm(instance=cable).get_connection_fields()
+        self.assertIsNotNone(result["cable_type"])
+        # Only one row despite four mapping entries — the dedupe skips the (1, 1) repeats.
+        self.assertEqual(len(result["rows"]), 1)
+        self.assertEqual((result["rows"][0]["_ac"], result["rows"][0]["_bc"]), (1, 1))

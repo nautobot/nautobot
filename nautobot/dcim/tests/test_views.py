@@ -4636,7 +4636,7 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(cable_path_2.exists())
 
     def test_cable_detail_view_breakout_vs_standard_branches(self):
-        """Cable detail template branches on `cable_type` and `get_connections().is_breakout` - verify both cases."""
+        """Cable detail template branches on `object.cable_type` (and `.is_breakout`) - verify both cases."""
         self.add_permissions("dcim.view_cable")
 
         standard_cable = Cable.objects.filter(cable_type__isnull=True).first()
@@ -4832,7 +4832,7 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(self._lane_form_new_url())
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertIsNone(form.connection_info["cable_type"])
         self.assertEqual(len(form.connection_info["a_side"]), 1)
         self.assertEqual(len(form.connection_info["b_side"]), 1)
 
@@ -4842,7 +4842,7 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(self._lane_form_new_url(), {"cable_type": str(self.breakout_cable_type.pk)})
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertTrue(form.connection_info["is_breakout"])
+        self.assertIsNotNone(form.connection_info["cable_type"])
         # The fixture's `breakout_cable_type` is 1x2.
         self.assertEqual(len(form.connection_info["a_side"]), 1)
         self.assertEqual(len(form.connection_info["b_side"]), 2)
@@ -4878,7 +4878,7 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(self._lane_form_detail_url(breakout_cable))
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertTrue(form.connection_info["is_breakout"])
+        self.assertIsNotNone(form.connection_info["cable_type"])
         # Fixture's breakout is 1x2 → 2 B-side connectors.
         self.assertEqual(len(form.connection_info["b_side"]), 2)
         self.assertEqual(form.instance.pk, breakout_cable.pk)
@@ -4903,7 +4903,7 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(self._lane_form_detail_url(breakout_cable), {"cable_type": ""})
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertIsNone(form.connection_info["cable_type"])
         self.assertEqual(len(form.connection_info["b_side"]), 1)
 
     def test_lane_form_detail_requires_view_permission(self):

@@ -4011,9 +4011,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(trunk_paths_post.get(peer_connector=2).destination, lane2)
 
     def test_add_termination_rejects_invalid_termination_type(self):
-        """Passing something that isn't a recognized cable-termination type raises `ValueError`."""
+        """Passing something that isn't a recognized cable-termination type raises `TypeError`."""
         cable = Cable.objects.create(status=self.status)
-        with self.assertRaisesRegex(ValueError, "not a valid cable termination type"):
+        with self.assertRaisesRegex(TypeError, "is not a known CableTermination subclass"):
             cable.add_termination(self.device1, "A")  # Device is not a CableTermination
 
     def test_add_termination_rejects_out_of_range_connector(self):

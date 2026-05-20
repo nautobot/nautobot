@@ -393,8 +393,6 @@ def power_ports_connected_to(target_queryset):
     from nautobot.dcim.models.cables import termination_fk_field
 
     target_fk = termination_fk_field(target_queryset.model)
-    if target_fk is None:
-        return PowerPort.objects.none()
 
     target_cables = CableToCableTermination.objects.filter(**{f"{target_fk}__in": target_queryset}).values("cable_id")
 
