@@ -1291,6 +1291,69 @@ class TestModuleLoadingUtils(TestCase):
         finally:
             self._clear_test_modules(outer_name, sibling_name)
 
+    def test_import_modules_privately_cleans_up_deleted_submodules(self):
+        """
+        Loading a package with a submodule, deleting that submodule from disk, and reloading should
+        remove the stale entry from sys.modules so subsequent isinstance/import lookups don't see it.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        submodule = f"{package_name}.removable"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                package_dir = os.path.join(tempdir, package_name)
+                os.makedirs(package_dir)
+                with open(os.path.join(package_dir, "__init__.py"), "w"):
+                    pass
+                removable_path = os.path.join(package_dir, "removable.py")
+                with open(removable_path, "w") as fd:
+                    fd.write("VALUE = 1\n")
+
+                import_modules_privately(tempdir)
+                self.assertIn(submodule, sys.modules)
+                self.assertEqual(sys.modules[submodule].VALUE, 1)
+
+                os.remove(removable_path)
+                import_modules_privately(tempdir)
+                self.assertNotIn(submodule, sys.modules)
+                self.assertIn(package_name, sys.modules)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_raises_when_ignore_import_errors_false(self):
+        """
+        With ignore_import_errors=False, exceptions raised by either the top-level cascade
+        (Phase 3) or the leaf-sweep (Phase 4) must propagate to the caller.
+        """
+        with self.subTest("Top-level package import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from __init__')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from __init__"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+                    # Same scenario with ignore_import_errors=True should swallow the exception.
+                    self.assertEqual(import_modules_privately(tempdir), [])
+            finally:
+                self._clear_test_modules(package_name)
+
+        with self.subTest("Leaf-sweep import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w"):
+                        pass
+                    with open(os.path.join(package_dir, "leaf.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from leaf')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from leaf"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+            finally:
+                self._clear_test_modules(package_name)
+
 
 class TestQuerySetUtils(TestCase):
     def test_maybe_select_related(self):
