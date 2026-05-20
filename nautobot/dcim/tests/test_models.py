@@ -3773,6 +3773,50 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             list(Interface.objects.filter(name=self.interface1.name).values_list("pk", flat=True))
         self.assertFalse(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
+    # `CableTermination.cable` setter + `_pending_cable_disconnect` flag — assigning
+    # `termination.cable = None` defers the actual disconnect until the next save() so the
+    # caller can also update other fields on the termination in the same transaction.
+
+    def test_setting_cable_to_none_marks_pending_disconnect_and_shadows_property(self):
+        """`termination.cable = None` sets pending flag and the property returns None immediately, join row persists."""
+        interface = Interface.objects.get(pk=self.interface1.pk)
+        self.assertEqual(interface.cable, self.cable)  # baseline: cabled
+
+        interface.cable = None
+        self.assertTrue(interface._pending_cable_disconnect)
+        self.assertIsNone(interface.cable)  # property short-circuits on the flag
+        # Join row is still in the DB until save() runs.
+        self.assertTrue(CableToCableTermination.objects.filter(cable=self.cable, interface=interface).exists())
+
+    def test_save_after_setting_cable_none_performs_disconnect(self):
+        """Saving a termination with `_pending_cable_disconnect=True` removes the `CableToCableTermination` row."""
+        interface = Interface.objects.get(pk=self.interface1.pk)
+        interface.cable = None
+        interface.save()
+
+        self.assertFalse(interface._pending_cable_disconnect)  # flag cleared on save
+        refetched = Interface.objects.get(pk=interface.pk)
+        self.assertIsNone(refetched.cable)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=self.cable, interface=refetched).exists())
+        # The cable itself survives the disconnect (only one side detached).
+        self.assertTrue(Cable.objects.filter(pk=self.cable.pk).exists())
+
+    def test_save_with_pending_disconnect_on_uncabled_termination_is_noop(self):
+        """Setting `cable=None` then saving on a termination that has no `CableToCableTermination` row is a no-op."""
+        # interface3 is part of setUpTestData and is not cabled.
+        self.assertIsNone(self.interface3.cable)
+        self.interface3.cable = None
+        self.interface3.save()  # must not raise
+        self.assertFalse(self.interface3._pending_cable_disconnect)
+        # Still uncabled.
+        self.assertIsNone(Interface.objects.get(pk=self.interface3.pk).cable)
+
+    def test_setting_cable_to_value_raises(self):
+        """Connecting a termination via `termination.cable = <cable>` is intentionally unsupported."""
+        interface = Interface.objects.get(pk=self.interface3.pk)  # uncabled
+        with self.assertRaisesRegex(NotImplementedError, "is not supported"):
+            interface.cable = self.cable
+
     # `Cable.add_termination()` — public helper for attaching a CableTermination to a saved cable.
 
     def test_add_termination_creates_join_row_and_returns_it(self):
