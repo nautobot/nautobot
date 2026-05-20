@@ -5710,7 +5710,7 @@ class CableCreateView(LoginRequiredMixin, View):
             try:
                 ct_b = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
             except ContentType.DoesNotExist:
-                return HttpResponseBadRequest(f"Unknown termination_b_type: {termination_b_type_name!r}")
+                return HttpResponseBadRequest("Unknown termination_b_type")
             params["termination_b_type"] = f"{ct_b.app_label}.{ct_b.model}"
         if return_url and url_has_allowed_host_and_scheme(return_url, allowed_hosts=request.get_host()):
             params["return_url"] = iri_to_uri(return_url)
