@@ -4735,6 +4735,61 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("termination_b_type=circuits.circuittermination", response["Location"])
 
+    def test_interface_connect_unknown_b_type_returns_400(self):
+        """An unrecognized `termination_b_type` returns 400 rather than silently falling through."""
+        self.user.is_superuser = True
+        self.user.save()
+        iface = Interface.objects.first()
+        url = reverse(
+            "dcim:interface_connect",
+            kwargs={"termination_a_id": iface.pk, "termination_b_type": "totally-bogus"},
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"Unknown termination_b_type", response.content)
+
+    def test_interface_connect_redirect_forwards_safe_return_url(self):
+        """`?return_url=<safe>` in the request is forwarded into the redirect's query string so
+        the cable_add form can route the user back after save."""
+        self.user.is_superuser = True
+        self.user.save()
+        iface = Interface.objects.first()
+        url = reverse(
+            "dcim:interface_connect",
+            kwargs={"termination_a_id": iface.pk, "termination_b_type": "console-server-port"},
+        )
+        response = self.client.get(url, {"return_url": "/dcim/devices/"})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("return_url=", response["Location"])
+        self.assertIn("dcim%2Fdevices%2F", response["Location"])
+
+    def test_interface_connect_redirect_drops_unsafe_return_url(self):
+        """An unsafe `return_url` (different host) is silently dropped — only same-host URLs
+        survive the `url_has_allowed_host_and_scheme` check."""
+        self.user.is_superuser = True
+        self.user.save()
+        iface = Interface.objects.first()
+        url = reverse(
+            "dcim:interface_connect",
+            kwargs={"termination_a_id": iface.pk, "termination_b_type": "console-server-port"},
+        )
+        response = self.client.get(url, {"return_url": "https://evil.example.com/"})
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("return_url=", response["Location"])
+
+    def test_cable_create_view_missing_kwargs_returns_400(self):
+        """Direct invocation with missing `termination_a_type`/`termination_a_id` returns 400.
+        The URL patterns always supply both, so this only fires for programmatic misuse."""
+        from django.test import RequestFactory
+
+        from nautobot.dcim.views import CableCreateView
+
+        request = RequestFactory().get("/")
+        request.user = self.user
+        response = CableCreateView.as_view()(request)  # no kwargs
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(b"termination_a_type and termination_a_id must be provided", response.content)
+
     def test_cable_add_preselects_b_side_type_from_termination_b_type_param(self):
         """The cable add form should preselect the B-side type dropdown when `termination_b_type` is provided."""
         self.user.is_superuser = True
