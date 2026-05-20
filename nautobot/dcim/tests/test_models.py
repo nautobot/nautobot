@@ -3724,6 +3724,55 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             list(qs[:1])
         self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
+    def test_filter_cable_none_translates_to_isnull_true(self):
+        """`filter(cable=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable=None).values_list("pk", flat=True))
+        expected = set(Interface.objects.filter(cable_termination__isnull=True).values_list("pk", flat=True))
+        self.assertEqual(actual, expected)
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) and "cable=None" in str(w.message) for w in caught)
+        )
+
+    def test_filter_cable_id_none_translates_to_isnull_true(self):
+        """`filter(cable_id=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id=None).values_list("pk", flat=True))
+        expected = set(Interface.objects.filter(cable_termination__isnull=True).values_list("pk", flat=True))
+        self.assertEqual(actual, expected)
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) and "cable_id=None" in str(w.message) for w in caught)
+        )
+
+    def test_filter_cable_id_lookup_suffix_translates(self):
+        """`filter(cable_id__<suffix>=[...])` translates to `cable_termination__cable_id__<suffix>`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id__in=[self.cable.pk]).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_get_cable_deprecation_warns_and_translates(self):
+        """`.get(cable=...)` goes through the same translation as `.filter()`."""
+        # Use one of the actual interfaces on `self.cable` so the `.get()` returns exactly one row.
+        on_cable_pks = self._expected_interfaces_on_cable()
+        self.assertGreaterEqual(len(on_cable_pks), 1)
+        target_pk = next(iter(on_cable_pks))
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            obj = Interface.objects.get(cable=self.cable, pk=target_pk)
+        self.assertEqual(obj.pk, target_pk)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_passthrough_kwargs_unchanged(self):
+        """Lookup keys unrelated to `cable*` flow through unchanged with no deprecation warning."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            list(Interface.objects.filter(name=self.interface1.name).values_list("pk", flat=True))
+        self.assertFalse(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
     # `Cable.add_termination()` — public helper for attaching a CableTermination to a saved cable.
 
     def test_add_termination_creates_join_row_and_returns_it(self):
