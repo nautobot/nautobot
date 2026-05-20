@@ -26,7 +26,7 @@ from nautobot.dcim.models import (
     PowerPort,
     RearPort,
 )
-from nautobot.dcim.signals import defer_cable_path_rebuilds, rebuild_paths
+from nautobot.dcim.signals import create_cablepath, defer_cable_path_rebuilds, rebuild_paths
 from nautobot.dcim.utils import disconnect_termination, object_to_path_node
 from nautobot.extras.models import Role, Status
 
@@ -1936,3 +1936,44 @@ class CableToCableTerminationSignalTestCase(TestCase):
         CableTermination subclass — used to silently no-op."""
         with self.assertRaisesRegex(TypeError, "expects a Cable, CableToCableTermination, or CableTermination"):
             rebuild_paths(self.device)  # Device isn't a valid path node.
+
+    # `create_cablepath` direct-invocation branches not exercised by the standard cable-save flow.
+
+    def test_create_cablepath_on_uncabled_node_with_rebuild_is_noop(self):
+        """When the node has no `cable_termination` and `rebuild=True`, `create_cablepath` calls
+        `rebuild_paths(node)` (a no-op for a node with no paths) and returns. The `rebuild=False`
+        variant of this code path is exercised by signals; `rebuild=True` only happens when
+        callers like the `trace_paths` management command pass an uncabled node directly."""
+        uncabled = Interface.objects.create(device=self.device, name="uncabled-cp", status=self.iface_status)
+        self.assertIsNone(uncabled.cable)
+        create_cablepath(uncabled, rebuild=True)
+        self.assertEqual(uncabled.cable_paths.count(), 0)
+
+    def test_create_cablepath_breakout_dedupes_repeated_peer_connectors(self):
+        """One CablePath per distinct peer_connector, not per mapping lane (1x2 with 4 lanes → 2 paths)."""
+        breakout = CableType.objects.create(name="Test 1x2x4", a_connectors=1, b_connectors=2, total_lanes=4)
+        # Sanity: at least one (a_connector, b_connector) pair repeats in the mapping.
+        peer_connectors_seen = [entry["b_connector"] for entry in breakout.mapping]
+        self.assertGreater(len(peer_connectors_seen), len(set(peer_connectors_seen)))
+
+        trunk = Interface.objects.create(device=self.device, name="trunk-1x2x4", status=self.iface_status)
+        lane1 = Interface.objects.create(device=self.device, name="lane1-1x2x4", status=self.iface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.cable_status)
+        cable.save()
+        # Trunk-side has one path per distinct peer_connector (2), not per mapping lane (4).
+        trunk_paths = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        self.assertEqual(trunk_paths.count(), 2)
+        self.assertEqual(set(trunk_paths.values_list("peer_connector", flat=True)), {1, 2})
+
+    def test_create_cablepath_breakout_with_rebuild_true_invokes_rebuild_paths(self):
+        """After fanning out a cable's paths, `create_cablepath(rebuild=True)` calls `rebuild_paths` on the origin."""
+        breakout = CableType.objects.create(name="Test 1x2 rebuild", a_connectors=1, b_connectors=2, total_lanes=2)
+        trunk = Interface.objects.create(device=self.device, name="trunk-rb", status=self.iface_status)
+        lane1 = Interface.objects.create(device=self.device, name="lane1-rb", status=self.iface_status)
+        Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.cable_status).save()
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            create_cablepath(trunk, rebuild=True)
+        spy.assert_any_call(trunk)

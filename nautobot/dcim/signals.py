@@ -63,9 +63,8 @@ def create_cablepath(node, rebuild=True):
                 continue
             seen_peer_connectors.add(peer_connector)
 
+            # `node` is cabled (checked via `my_endpoint` above), so `from_origin` won't return None.
             cable_path = CablePath.from_origin(node, peer_connector=peer_connector)
-            if cable_path is None:
-                continue
             # Guard against re-entry: a parallel signal path (e.g. two `rebuild_paths` calls
             # landing on the same origin) may have already inserted the row for this
             # (origin, peer_connector). Check before saving so unrelated save failures still
@@ -129,10 +128,7 @@ def rebuild_paths(obj):
     """
     # Resolve CableToCableTermination → its cable (use Cable semantics from there).
     if isinstance(obj, CableToCableTermination):
-        cable = Cable.objects.filter(pk=obj.cable_id).first()
-        if cable is None:
-            return
-        obj = cable
+        obj = obj.cable
     elif not isinstance(obj, (Cable, CableTermination)):
         raise TypeError(
             f"rebuild_paths() expects a Cable, CableToCableTermination, or CableTermination "
@@ -234,15 +230,10 @@ def _rebuild_paths_on_join_change(sender, instance, **kwargs):
     Within a `defer_cable_path_rebuilds()` block, just record the cable as dirty; the outer
     context flushes once on exit.
     """
-    cable_id = instance.cable_id
-    if cable_id is None:
-        return
     if _batching_active():
-        _batch_state.dirty_cables.add(cable_id)
+        _batch_state.dirty_cables.add(instance.cable_id)
     else:
-        cable = Cable.objects.filter(pk=cable_id).first()
-        if cable is not None:
-            rebuild_paths(cable)
+        rebuild_paths(instance.cable)
 
 
 #
