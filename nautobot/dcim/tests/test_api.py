@@ -1,7 +1,7 @@
 import datetime
 import json
 import tempfile
-from unittest import expectedFailure, skip
+from unittest import skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
@@ -3325,10 +3325,6 @@ class CableTypeTest(APIViewTestCases.APIViewTestCase):
                 "description": "8-lane breakout",
             },
         ]
-
-    # `mapping` is a JSONField; CSV export renders it as a Python `repr` (single quotes) rather
-    # than valid JSON, so the CSV → POST round-trip fails on import. Tracked as a known gap.
-    test_recreate_object_csv = expectedFailure(APIViewTestCases.APIViewTestCase.test_recreate_object_csv)
 
 
 class CableTest(Mixins.BaseComponentTestMixin):
