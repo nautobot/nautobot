@@ -64,7 +64,12 @@ class RelationshipModel(models.Model):
 
     @property
     def associations(self):
-        return list(self.source_for_associations.all()) + list(self.destination_for_associations.all())
+        content_type = get_content_type_for_model(self)
+        return list(
+            RelationshipAssociation.objects.filter(
+                Q(source_id=self.pk, source_type=content_type) | Q(destination_id=self.pk, destination_type=content_type)
+            )
+        )
 
     def get_relationships(self, include_hidden=False, advanced_ui=None):
         """
@@ -229,6 +234,7 @@ class RelationshipModel(models.Model):
     def get_relationships_with_related_objects(self, include_hidden=False, advanced_ui=None):
         """Alternative version of get_relationships()."""
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+        content_type = get_content_type_for_model(self)
 
         if advanced_ui is not None:
             src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
@@ -265,26 +271,35 @@ class RelationshipModel(models.Model):
                 remote_model = remote_ct.model_class()
                 if remote_model is not None:
                     if not relationship.symmetric:
-                        query_params = {
-                            f"{peer_side}_for_associations__relationship": relationship,
-                            f"{peer_side}_for_associations__{side}_id": self.pk,
-                        }
+                        association_queryset = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{
+                                f"{side}_id": self.pk,
+                                f"{side}_type": content_type,
+                            },
+                        )
+                        peer_ids = association_queryset.values_list(f"{peer_side}_id", flat=True)
                         # Get the related objects for this relationship on the opposite side.
-                        resp[side][relationship] = remote_model.objects.filter(**query_params).distinct()
+                        resp[side][relationship] = remote_model.objects.filter(pk__in=peer_ids).distinct()
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
-                        side_query_params = {
-                            f"{peer_side}_for_associations__relationship": relationship,
-                            f"{peer_side}_for_associations__{side}_id": self.pk,
-                        }
-                        peer_side_query_params = {
-                            f"{side}_for_associations__relationship": relationship,
-                            f"{side}_for_associations__{peer_side}_id": self.pk,
-                        }
+                        association_queryset = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                        ).filter(
+                            Q(source_id=self.pk, source_type=content_type)
+                            | Q(destination_id=self.pk, destination_type=content_type)
+                        ).distinct()
+                        peer_ids = []
+                        for association in association_queryset:
+                            if association.source_id == self.pk and association.source_type_id == content_type.id:
+                                peer_ids.append(association.destination_id)
+                            elif association.destination_id == self.pk and association.destination_type_id == content_type.id:
+                                peer_ids.append(association.source_id)
+
                         # Get the related objects based on the pks we gathered.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                            Q(**side_query_params) | Q(**peer_side_query_params)
+                            pk__in=peer_ids
                         ).distinct()
                         if not relationship.has_many(peer_side):
                             resp[RelationshipSideChoices.SIDE_PEER][relationship] = resp[
@@ -295,13 +310,20 @@ class RelationshipModel(models.Model):
                     # We can't provide a relevant queryset, but we can provide a descriptive string
                     if not relationship.symmetric:
                         count = RelationshipAssociation.objects.filter(
-                            relationship=relationship, **{f"{side}_id": self.pk}
+                            relationship=relationship,
+                            **{
+                                f"{side}_id": self.pk,
+                                f"{side}_type": content_type,
+                            },
                         ).count()
                         resp[side][relationship] = f"{count} {remote_ct} object(s)"
                     else:
                         count = (
                             RelationshipAssociation.objects.filter(relationship=relationship)
-                            .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
+                            .filter(
+                                Q(source_id=self.pk, source_type=content_type)
+                                | Q(destination_id=self.pk, destination_type=content_type)
+                            )
                             .count()
                         )
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)"

@@ -1562,6 +1562,53 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
             for value in col_expected_value:
                 self.assertIn(value, rendered_value)
 
+    def test_proxy_symmetric_relationship_table_column_renders_related_objects(self):
+        """Proxy symmetric relationship columns should render links in list tables."""
+        proxy_location_model = get_proxy_location_model()
+        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
+        proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
+        proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
+        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
+
+        relationship = Relationship(
+            label=f"Proxy Symmetric Table {uuid.uuid4().hex[:8]}",
+            key=f"proxy_sym_table_{uuid.uuid4().hex[:12]}",
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
+            relationship.save()
+
+        RelationshipAssociation.objects.create(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination_1.pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination_2.pk,
+        )
+
+        class ProxyLocationTable(LocationTable):
+            class Meta(LocationTable.Meta):
+                model = proxy_location_model
+
+        location_table = ProxyLocationTable(proxy_location_model.objects.filter(pk=proxy_source.pk))
+        column_name = f"cr_{relationship.key}_peer"
+
+        relationship_column = location_table.base_columns.get(column_name)
+        self.assertIsNotNone(relationship_column)
+        self.assertIsInstance(relationship_column, RelationshipColumn)
+
+        rendered_value = location_table.rows[0].get_cell(column_name)  # pylint: disable=no-member
+        self.assertIn(f"relationship={relationship.key}", rendered_value)
+
 class RequiredRelationshipTestMixin:
     """Common test mixin for both view and API tests dealing with required relationships."""
 
