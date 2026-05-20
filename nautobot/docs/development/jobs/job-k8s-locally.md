@@ -159,19 +159,16 @@ mount the token as a volume in `docker-compose.yml`:
 
 The local cluster's TLS certificate is issued for `127.0.0.1` / `kubernetes.default.svc`, **not** for `host.docker.internal`. Because we connect via `host.docker.internal`, the hostname does not match and verification fails. For local development we disable verification.
 
-In the relevant function (e.g. `create_kubernetes_job` in `nautobot/extras/jobs.py` or wherever your project keeps it), comment out the CA cert assignment and turn off SSL verification:
+In the function (`build_kubernetes_api_client` in `nautobot/extras/utils.py`), comment out the CA cert assignment and turn off SSL verification:
 
 ```python
-def create_kubernetes_job():
+def build_kubernetes_api_client():
+    """Build an authenticated ApiClient using the in-cluster service account."""
     configuration = kubernetes.client.Configuration()
     configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-    # configuration.ssl_ca_cert = pod_ssl_ca_cert   # <-- COMMENT OUT for local dev
-    configuration.verify_ssl = False                # <-- ADD for local dev
-    with open(pod_token, "r", encoding="utf-8") as token_file:
-        token = token_file.read().strip()
-    configuration.api_key_prefix["authorization"] = "Bearer"
-    configuration.api_key["authorization"] = token
-    ...
+    # configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH # <-- COMMENT OUT for local dev
+    configuration.verify_ssl = False                                   # <-- ADD for local dev
+...
 ```
 
 ## Start Nautobot and run a job

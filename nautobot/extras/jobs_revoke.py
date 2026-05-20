@@ -12,6 +12,7 @@ from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import JobQueueTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobResult
+from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -257,24 +258,6 @@ class K8sStrategy(JobRevokeStrategy):
         """Recreate the K8s Job name that was used at submission time."""
         return f"{settings.KUBERNETES_JOB_POD_NAME}-{job_result.pk}"
 
-    def _api_client(self):
-        """Build an authenticated ApiClient using the in-cluster service account.
-
-        Mirrors the auth setup in run_kubernetes_job_and_return_job_result;
-        ideally this should be extracted into a shared helper used by both
-        creation and termination paths.
-        """
-        configuration = kubernetes.client.Configuration()
-        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-        configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
-        pod_token = settings.KUBERNETES_TOKEN_PATH
-        with open(pod_token, "r", encoding="utf-8") as token_file:
-            token = token_file.read().strip()
-        # configure API Key authorization: BearerToken
-        configuration.api_key_prefix["authorization"] = "Bearer"
-        configuration.api_key["authorization"] = token
-        return kubernetes.client.ApiClient(configuration)
-
     def _delete_k8s_job(self, job_result: JobResult) -> bool:
         """Delete a K8s Job and its pods (Background propagation).
 
@@ -295,7 +278,7 @@ class K8sStrategy(JobRevokeStrategy):
             grace_period_seconds=0,
         )
         try:
-            with self._api_client() as api_client:
+            with build_kubernetes_api_client() as api_client:
                 api = kubernetes.client.BatchV1Api(api_client)
                 api.delete_namespaced_job(
                     name=job_name,
@@ -339,7 +322,7 @@ class K8sStrategy(JobRevokeStrategy):
         namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
 
         try:
-            with self._api_client() as api_client:
+            with build_kubernetes_api_client() as api_client:
                 k8s_job = self._read_k8s_job(api_client, job_name, namespace)
                 if k8s_job is None or k8s_job.status.failed:
                     return False

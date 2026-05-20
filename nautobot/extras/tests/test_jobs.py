@@ -2589,7 +2589,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_true_when_pod_container_running(self, mock_api_client, mock_read_job, mock_read_pod):
         """Job exists, not failed, pod has a running container returns True."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2599,7 +2599,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertTrue(self.strategy.is_alive(job_result))
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_job_missing(self, mock_api_client, mock_read_job):
         """_read_k8s_job returns None (404) returns False."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2608,7 +2608,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertFalse(self.strategy.is_alive(job_result))
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_job_failed(self, mock_api_client, mock_read_job):
         """K8s Job has status.failed set returns False."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2618,7 +2618,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_no_pod(self, mock_api_client, mock_read_job, mock_read_pod):
         """Job exists but no pod returns False."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2629,7 +2629,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_pod_has_no_container_statuses(
         self, mock_api_client, mock_read_job, mock_read_pod
     ):
@@ -2642,7 +2642,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_pod_waiting(self, mock_api_client, mock_read_job, mock_read_pod):
         """Pod in waiting state returns False."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2653,7 +2653,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_when_pod_terminated(self, mock_api_client, mock_read_job, mock_read_pod):
         """Pod terminated (success or error) returns False."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2663,7 +2663,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertFalse(self.strategy.is_alive(job_result))
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._api_client")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
     def test_is_alive_returns_false_on_api_server_error(self, mock_api_client, mock_read_job):
         """K8s API unreachable (5xx) returns False, no exception."""
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)

@@ -672,6 +672,20 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
+def build_kubernetes_api_client():
+    """Build an authenticated ApiClient using the in-cluster service account."""
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+    with open(pod_token, "r", encoding="utf-8") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["authorization"] = "Bearer"
+    configuration.api_key["authorization"] = token
+    return kubernetes.client.ApiClient(configuration)
+
+
 def get_kubernetes_job_manifest(queue_name):
     """Retrieve the job manifest for the given job queue name.
 
@@ -730,8 +744,6 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     pod_manifest = get_kubernetes_job_manifest(queue_name)
     if not pod_manifest:
         raise KubernetesJobManifestError("Unable to retrieve a kubernetes job manifest.")
-    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
-    pod_token = settings.KUBERNETES_TOKEN_PATH
 
     if not getattr(job_result.job_model, "has_sensitive_variables", False):
         job_result.task_kwargs = job_kwargs
@@ -751,15 +763,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
 
     def create_kubernetes_job():
         """Create and read the Kubernetes job after the transaction commits."""
-        configuration = kubernetes.client.Configuration()
-        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-        configuration.ssl_ca_cert = pod_ssl_ca_cert
-        with open(pod_token, "r", encoding="utf-8") as token_file:
-            token = token_file.read().strip()
-        # configure API Key authorization: BearerToken
-        configuration.api_key_prefix["authorization"] = "Bearer"
-        configuration.api_key["authorization"] = token
-        with kubernetes.client.ApiClient(configuration) as api_client:
+        with build_kubernetes_api_client() as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
