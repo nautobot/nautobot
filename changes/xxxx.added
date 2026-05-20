@@ -1,0 +1,2 @@
+Added abstract `perform_reap` method to `JobRevokeStrategy` class. 
+Added implementation for K8s revoke job.

@@ -4939,7 +4939,7 @@ class JobResultTestCase(
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("terminated" in m.lower() for m in messages_list),
+            any("Job revoked." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
@@ -4966,7 +4966,7 @@ class JobResultTestCase(
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("terminated" in m.lower() for m in messages_list),
+            any("Job revoked." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
@@ -5034,6 +5034,8 @@ class JobResultTestCase(
     @mock.patch.object(JobResult, "log")
     def test_revoke_unsupported_queue_type_should_reap_job(self, mock_job_log):
         """Unsuporrted queue type should reap job."""
+        self.job_result_pending.celery_kwargs = {}
+        self.job_result_pending.save()
         self.user.is_staff = True
         self.user.save()
         self.add_permissions(
@@ -5045,7 +5047,7 @@ class JobResultTestCase(
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
-        self.assertTrue(any("Job terminated." in m for m in messages_list))
+        self.assertTrue(any("Job revoked." in m for m in messages_list))
         mock_job_log.assert_called_once_with(
             f"Reaped dead job {self.job_result_pending.pk} by {self.user}",
             level_choice=LogLevelChoices.LOG_FAILURE,

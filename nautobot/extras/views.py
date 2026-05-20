@@ -3855,7 +3855,7 @@ class JobResultUIViewSet(
             messages.error(request, result["error"])
         else:
             if result["revoked"]:
-                messages.success(request, "Job terminated.")
+                messages.success(request, "Job revoked.")
             else:
                 messages.info(request, "Job finished before it could be revoked. No action was taken.")
 

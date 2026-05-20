@@ -3,8 +3,10 @@ from datetime import datetime
 import logging
 
 from celery.exceptions import TaskRevokedError
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+import kubernetes.client
 
 from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.logging import sanitize
@@ -19,7 +21,7 @@ class JobRevokeStrategy(ABC):
     """Abstract base class for job termination strategies across different queues.
 
     Defines the interface for various backends (Celery, Kubernetes, etc.).
-    Subclasses implement the `is_alive`, `should_reap`, and
+    Subclasses implement the `is_alive`, 'perform_reap`, and
     `perform_termination` hooks; `revoke` orchestrates them.
     """
 
@@ -28,12 +30,23 @@ class JobRevokeStrategy(ABC):
         """Return True/False if the backend can confirm the job's liveness, None if unknown."""
 
     @abstractmethod
-    def should_reap(self, job_result: JobResult) -> bool:
-        """Return True if the job can be marked revoked without sending a kill signal."""
+    def perform_reap(self, job_result: JobResult, user: User) -> bool:
+        """Reap a job: mark it revoked without claiming we killed live work."""
 
     @abstractmethod
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
         """Send the backend-specific kill signal and mark the job revoked."""
+
+    def _should_reap(self, job_result) -> bool:
+        """Return True if the job should be reaped (marked revoked without a kill signal).
+
+        Args:
+            job_result: The `JobResult` to evaluate.
+
+        Returns:
+            True if the job should be reaped, False otherwise.
+        """
+        return job_result.is_unready_state and not self.is_alive(job_result)
 
     def _apply_termination_metadata(
         self, job_result: JobResult, user: User, now_timestamp: None | datetime = None
@@ -78,14 +91,8 @@ class JobRevokeStrategy(ABC):
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
             changed = self._apply_termination_metadata(job_result, user)
 
-            exc = TaskRevokedError("revoked")
             job_result.status = JobResultStatusChoices.STATUS_REVOKED
-            job_result.result = {
-                "exc_type": type(exc).__name__,
-                "exc_module": "celery.exceptions",
-                "exc_message": [sanitize(str(exc))],
-            }
-            changed |= {"status", "result"}
+            changed |= {"status"}
 
             job_result.save(update_fields=list(changed))
 
@@ -107,14 +114,18 @@ class JobRevokeStrategy(ABC):
             set only when `perform_termination` raised.
         """
         # REAP
-        if self.should_reap(job_result):
-            logger.info("Reaped dead job %s by %s", job_result.pk, user)
+        try:
+            if self._should_reap(job_result):
+                revoked = self.perform_reap(job_result, user)
+                return {"job_result": job_result, "error": None, "revoked": revoked}
+        except Exception as e:
+            logger.error("Reap failed for %s: %s", job_result.pk, e)
             job_result.log(
-                f"Reaped dead job {job_result.pk} by {user}",
-                level_choice=LogLevelChoices.LOG_FAILURE,
+                f"Reap failed for {job_result.pk}: {e}",
+                level_choice=LogLevelChoices.LOG_ERROR,
                 grouping="revoking",
             )
-            return {"job_result": self._mark_revoked(job_result, user), "error": None, "revoked": True}
+            return {"job_result": job_result, "error": f"Reap failed: {e}", "revoked": False}
 
         # TERMINATE
         try:
@@ -169,22 +180,33 @@ class CeleryStrategy(JobRevokeStrategy):
         # replies shape: {worker_hostname: {task_id: [state, info]}}
         return any(task_id in worker_tasks for worker_tasks in replies.values())
 
-    def should_reap(self, job_result):
-        """Return True if the job should be reaped (marked revoked without a kill signal).
+    def perform_reap(self, job_result, user) -> bool:
+        """Reap a dead Celery job: mark revoked without sending a signal.
 
-        Reap when no worker will handle the job *and* the job isn't already done.
-        `not self.is_alive(...)` covers both False (workers replied, none has the
-        task) and None (couldn't reach workers at all) — both are treated as
-        "no worker will handle this." The `_is_unready_state` guard prevents
-        reaping a job that already finished normally.
-
-        Args:
-            job_result: The `JobResult` to evaluate.
-
-        Returns:
-            True if the job should be reaped, False otherwise.
+        Called when no worker is processing the task. Records revoke metadata
+        and stamps a Celery-shaped `result` payload imitating what a worker
+        would write on TaskRevokedError, so the JobResult looks the same as
+        normally-revoked tasks for downstream consumers.
         """
-        return job_result.is_unready_state and not self.is_alive(job_result)
+        logger.info("Reaped dead job %s by %s", job_result.pk, user)
+        job_result.log(
+            f"Reaped dead job {job_result.pk} by {user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="revoking",
+        )
+
+        with transaction.atomic():
+            job_result = self._mark_revoked(job_result, user)
+
+            exc = TaskRevokedError("revoked")
+            job_result.result = {
+                "exc_type": type(exc).__name__,
+                "exc_module": "celery.exceptions",
+                "exc_message": [sanitize(str(exc))],
+            }
+            job_result.save(update_fields=["result"])
+
+        return True
 
     def perform_termination(self, job_result: JobResult, user: User):
         """Send a SIGKILL revoke to the Celery worker and mark the job revoked.
@@ -231,7 +253,184 @@ class CeleryStrategy(JobRevokeStrategy):
 
 
 class K8sStrategy(JobRevokeStrategy):
-    """Placeholder for now"""
+    def _job_name(self, job_result: JobResult) -> str:
+        """Recreate the K8s Job name that was used at submission time."""
+        return f"{settings.KUBERNETES_JOB_POD_NAME}-{job_result.pk}"
+
+    def _api_client(self):
+        """Build an authenticated ApiClient using the in-cluster service account.
+
+        Mirrors the auth setup in run_kubernetes_job_and_return_job_result;
+        ideally this should be extracted into a shared helper used by both
+        creation and termination paths.
+        """
+        configuration = kubernetes.client.Configuration()
+        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+        configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+        pod_token = settings.KUBERNETES_TOKEN_PATH
+        with open(pod_token, "r", encoding="utf-8") as token_file:
+            token = token_file.read().strip()
+        # configure API Key authorization: BearerToken
+        configuration.api_key_prefix["authorization"] = "Bearer"
+        configuration.api_key["authorization"] = token
+        return kubernetes.client.ApiClient(configuration)
+
+    def _delete_k8s_job(self, job_result: JobResult) -> bool:
+        """Delete a K8s Job and its pods (Background propagation).
+
+        Returns:
+            bool:
+                True: delete request was accepted by the API server.
+                False: job was already gone (404).
+        Other ApiExceptions (401/403/5xx) propagate.
+        """
+        job_name = self._job_name(job_result)
+        namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+
+        # Background - allow the garbage collector to delete the dependents in the background
+        # grace_period_seconds - The duration in seconds before the object should be deleted.
+        # Value must be non-negative integer. The value zero indicates delete immediately
+        delete_options = kubernetes.client.V1DeleteOptions(
+            propagation_policy="Background",
+            grace_period_seconds=0,
+        )
+        try:
+            with self._api_client() as api_client:
+                api = kubernetes.client.BatchV1Api(api_client)
+                api.delete_namespaced_job(
+                    name=job_name,
+                    namespace=namespace,
+                    body=delete_options,
+                )
+            logger.info("Deleted K8s job %s", job_name)
+            return True
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 404:
+                logger.info("K8s job %s already gone", job_name)
+                return False
+            raise
+
+    def _read_k8s_job(self, api_client, job_name, namespace):
+        """Return the K8s Job object, or None if it doesn't exist (404)."""
+        batch_api = kubernetes.client.BatchV1Api(api_client)
+        try:
+            return batch_api.read_namespaced_job(name=job_name, namespace=namespace)
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 404:
+                return None
+            raise
+
+    def _read_first_pod_for_job(self, api_client, job_name, namespace):
+        """Return the first pod for this job, or None if there isn't one yet."""
+        core_api = kubernetes.client.CoreV1Api(api_client)
+        pods = core_api.list_namespaced_pod(
+            namespace=namespace,
+            label_selector=f"job-name={job_name}",
+            limit=1,
+        )
+        return pods.items[0] if pods.items else None
+
+    def is_alive(self, job_result) -> bool:
+        """
+        Return True if the K8s Job exists and is still progressing,
+        False if it's gone or has reached a failed, waiting or terminated state.
+        """
+        job_name = self._job_name(job_result)
+        namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+
+        try:
+            with self._api_client() as api_client:
+                k8s_job = self._read_k8s_job(api_client, job_name, namespace)
+                if k8s_job is None or k8s_job.status.failed:
+                    return False
+
+                pod = self._read_first_pod_for_job(api_client, job_name, namespace)
+                if pod is None:
+                    return False
+        except kubernetes.client.exceptions.ApiException as e:
+            if e.status == 404:
+                return False
+            logger.warning("Kubernetes API error while checking job %s: %s", job_name, e)
+            job_result.log(
+                f"Kubernetes API error while checking job {job_name}: {e}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="revoking",
+            )
+            return False
+
+        # container_statuses can be None/[] while the pod is being scheduled.
+        # We use [0] because our pod_manifest only defines one container under
+        # spec.template.spec.containers.
+        container_statuses = pod.status.container_statuses
+        if not container_statuses:
+            return False
+
+        # running, terminated, waiting
+        return bool(container_statuses[0].state.running)
+
+    def perform_reap(self, job_result: JobResult, user: User) -> bool:
+        """Reap a dead K8s job: clean up leftover resources, then mark JobResult revoked."""
+
+        # Ideally, this operation has no effect
+        # Functions in k8s, such as `ttlSecondsAfterFinished` or others
+        # should already have deleted the job and its associated pods
+        # but there are a few cases where this does not happen
+        # That is why it is good to have this cleanup mechanism here as well
+        deleted = self._delete_k8s_job(job_result)
+        job_name = self._job_name(job_result)
+
+        if not deleted:
+            # 404 — JobResult may have already settled into a terminal state
+            if not job_result.is_unready_state:
+                logger.info(
+                    "Job %s already in terminal state %s, no action taken.",
+                    job_result.pk,
+                    job_result.status,
+                )
+                job_result.log(
+                    f"Job {job_result.pk} already in terminal state {job_result.status}, no action taken",
+                    grouping="revoking",
+                )
+                return False
+
+        job_result.log(
+            f"Reaped dead K8s job {job_name} by {user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="revoking",
+        )
+        self._mark_revoked(job_result, user)
+        return True
+
+    def perform_termination(self, job_result: JobResult, user: User) -> bool:
+        """Delete the K8s job and mark the JobResult revoked and set date_terminated."""
+
+        deleted = self._delete_k8s_job(job_result)
+        if not deleted:
+            # 404 race — K8s job was deleted between is_alive and manual delete.
+            # Success-path handler may have already updated JobResult.
+            if not job_result.is_unready_state:
+                logger.info(
+                    "Job %s already in terminal state %s, no action taken.",
+                    job_result.pk,
+                    job_result.status,
+                )
+                job_result.log(
+                    f"Job {job_result.pk} already in terminal state {job_result.status}, no action taken",
+                    grouping="revoking",
+                )
+                return False
+
+        with transaction.atomic():
+            now = timezone.now()
+            job_result = self._mark_revoked(job_result, user)
+            job_result.date_terminated = now
+            job_result.save(update_fields=["date_terminated"])
+
+        logger.info("Job %s terminated by %s", job_result.pk, user)
+        job_result.log(
+            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
+        )
+        return True
 
 
 class UnknownStrategy(JobRevokeStrategy):
@@ -245,15 +444,16 @@ class UnknownStrategy(JobRevokeStrategy):
         """Always return False. There is no backend to query for liveness."""
         return False
 
-    def should_reap(self, job_result) -> bool:
-        """Always reap when the job is still in an unready state.
-
-        The is_unready_state check prevents a task that
-        has already been completed from being overwritten.
-        """
-        # TBD: maybe this method shouldn't be abstract and should be defined in ABC class
-        # Review after implementing K8sStrategy
-        return job_result.is_unready_state and not self.is_alive(job_result)
+    def perform_reap(self, job_result, user) -> bool:
+        """Reap: mark revoked without sending a signal."""
+        logger.info("Reaped dead job %s by %s", job_result.pk, user)
+        job_result.log(
+            f"Reaped dead job {job_result.pk} by {user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="revoking",
+        )
+        self._mark_revoked(job_result, user)
+        return True
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
         """No-op; never reached in normal flow. See class docstring."""
