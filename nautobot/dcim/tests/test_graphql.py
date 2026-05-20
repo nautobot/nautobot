@@ -11,6 +11,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.models import (
+    Cable,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -301,6 +302,45 @@ class GraphQLTestCase(TestCase):
                 self.assertIsNone(resp.errors)
                 names = [t["name"] for t in resp.data[query_name]]
                 self.assertIn(instance.name, names)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_cable_and_termination_fields(self):
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cable = Cable.objects.create(
+            termination_a=self.interfaces[2],
+            termination_b=self.interfaces[3],
+            label="GraphQL Test Cable",
+            status=cable_status,
+        )
+
+        with self.subTest("interfaces resolve their connected cable"):
+            query = "query { interfaces { name cable { id label } } }"
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            by_name = {i["name"]: i for i in resp.data["interfaces"]}
+            # The cabled interfaces surface their cable.
+            self.assertEqual(by_name["eth2"]["cable"]["id"], str(cable.pk))
+            self.assertEqual(by_name["eth2"]["cable"]["label"], "GraphQL Test Cable")
+            self.assertEqual(by_name["eth3"]["cable"]["id"], str(cable.pk))
+            # An uncabled interface resolves `cable` as null.
+            self.assertIsNone(by_name["eth0"]["cable"])
+
+        with self.subTest("cables resolve termination_a_type / termination_b_type as app.model"):
+            query = "query { cables { id label termination_a_type termination_b_type } }"
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            test_cable = next(c for c in resp.data["cables"] if c["id"] == str(cable.pk))
+            self.assertEqual(test_cable["termination_a_type"], "dcim.interface")
+            self.assertEqual(test_cable["termination_b_type"], "dcim.interface")
+
+        with self.subTest("an uncabled-side cable returns null type strings"):
+            empty_cable = Cable.objects.create(label="GraphQL Empty Cable", status=cable_status)
+            query = 'query { cables(id: "' + str(empty_cable.pk) + '") { termination_a_type termination_b_type } }'
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            self.assertEqual(len(resp.data["cables"]), 1)
+            self.assertIsNone(resp.data["cables"][0]["termination_a_type"])
+            self.assertIsNone(resp.data["cables"][0]["termination_b_type"])
 
 
 class GraphQLFKPermissionTest(GraphQLTestCase):
