@@ -2253,6 +2253,7 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
     )
     metadata_type = DynamicModelChoiceField(
         queryset=MetadataType.objects.all(),
+        query_params={"content_type_id": "$assigned_object_type"},
         required=True,
     )
 
@@ -2296,7 +2297,6 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
             if ct is not None:
                 self.fields["assigned_object_type"].disabled = True
                 self.fields["assigned_object_id"].disabled = True
-                self.fields["metadata_type"].queryset = MetadataType.objects.filter(content_types=ct)
             if obj is not None:
                 # Replace the raw UUID input with the resolved object's __str__ (e.g. "ams01-asw-01")
                 # for a friendlier display. The original assigned_object_id field is kept as a hidden

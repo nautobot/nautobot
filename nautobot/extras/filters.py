@@ -1351,6 +1351,7 @@ class MetadataTypeFilterSet(NautobotFilterSet):
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("metadata").get_choices,
     )
+    content_type_id = django_filters.NumberFilter(field_name="content_types", lookup_expr="exact")
 
     class Meta:
         model = MetadataType

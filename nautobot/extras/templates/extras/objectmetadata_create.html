@@ -56,12 +56,13 @@
             if (metadataTypeSelect) {
                 if (window.jQuery) {
                     window.jQuery(metadataTypeSelect).on(
-                        "select2:select select2:clear change",
-                        updateFieldVisibility,
+                        "select2:select select2:clear",
+                        () => {
+                            metadataTypeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                        },
                     );
-                } else {
-                    metadataTypeSelect.addEventListener("change", updateFieldVisibility);
                 }
+                metadataTypeSelect.addEventListener("change", updateFieldVisibility);
                 updateFieldVisibility();
             }
         });
