@@ -542,10 +542,6 @@ class PathEndpoint(models.Model):
     def path(self):
         return self.cable_paths.first()  # pylint: disable=no-member
 
-    def get_all_paths(self):
-        """Return all CablePaths originating from this endpoint (multiple for breakout cables)."""
-        return self.cable_paths.all()
-
     @property
     def connected_endpoint(self):
         """
