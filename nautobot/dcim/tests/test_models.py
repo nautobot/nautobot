@@ -230,6 +230,141 @@ class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
     model = PowerPort
     modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
 
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.feed_status = Status.objects.get_for_model(PowerFeed).first()
+        cls.power_panel = PowerPanel.objects.create(location=cls.device.location, name="PowerDraw Panel")
+
+    # `PowerPort.get_power_draw()` — four branches: manual draw cabled-to-feed / manual draw
+    # uncabled / aggregated draw with single-phase peer / aggregated draw with three-phase peer.
+
+    def _make_powerfeed(self, name, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=120, amperage=20):
+        """Build a PowerFeed with explicit voltage/amperage so `available_power` is deterministic."""
+        return PowerFeed.objects.create(
+            name=name,
+            power_panel=self.power_panel,
+            status=self.feed_status,
+            voltage=voltage,
+            amperage=amperage,
+            max_utilization=100,
+            phase=phase,
+        )
+
+    def _build_outlets_with_remote_ports(self, power_port, draws, feed_leg=""):
+        """Create a set of PowerOutlet/PowerPort pairs with the provided `draws` depending on the given `power_port`."""
+        for index, (allocated_w, maximum_w) in enumerate(draws):
+            outlet = PowerOutlet.objects.create(
+                device=power_port.device,
+                name=f"{power_port.name}-out{feed_leg or '_'}-{index}",
+                power_port=power_port,
+                feed_leg=feed_leg,
+            )
+            # Each remote PowerPort lives on its own device so names stay unique.
+            remote_device = Device.objects.create(
+                name=f"remote-{power_port.name}-{feed_leg or '_'}-{index}",
+                device_type=power_port.device.device_type,
+                role=power_port.device.role,
+                location=power_port.device.location,
+                status=power_port.device.status,
+            )
+            remote_port = PowerPort.objects.create(
+                device=remote_device,
+                name="psu",
+                allocated_draw=allocated_w,
+                maximum_draw=maximum_w,
+            )
+            Cable.objects.create(termination_a=outlet, termination_b=remote_port, status=self.cable_status)
+        return len(draws)
+
+    def test_get_power_draw_manual_connected_to_powerfeed(self):
+        """With `allocated_draw`/`maximum_draw` set and a peer, the denominator is the feed's `available_power`."""
+        port = PowerPort.objects.create(
+            device=self.device, name="gpd-manual-cabled", allocated_draw=190, maximum_draw=380
+        )
+        feed = self._make_powerfeed("gpd-feed-manual")
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        port.refresh_from_db()
+
+        result = port.get_power_draw()
+        # recall that power_factor defaults to 0.95
+        # allocated_va = int(190 / 0.95) = 200; maximum_va = int(380 / 0.95) = 400.
+        self.assertEqual(result["allocated"], 200)
+        self.assertEqual(result["maximum"], 400)
+        self.assertEqual(result["outlet_count"], 0)
+        self.assertEqual(result["legs"], [])
+        self.assertEqual(result["utilization_data"].numerator, 200)
+        self.assertEqual(result["utilization_data"].denominator, feed.available_power)
+        self.assertGreater(result["utilization_data"].denominator, 0)
+
+    def test_get_power_draw_manual_uncabled(self):
+        """No peer (uncabled or peer without `available_power`) → denominator = 0."""
+        port = PowerPort.objects.create(
+            device=self.device, name="gpd-manual-uncabled", allocated_draw=100, maximum_draw=200
+        )
+        result = port.get_power_draw()
+        self.assertEqual(result["utilization_data"].denominator, 0)
+        self.assertEqual(result["legs"], [])
+        self.assertEqual(result["outlet_count"], 0)
+
+    def test_get_power_draw_aggregated_no_outlets(self):
+        """Aggregated mode with no child PowerOutlets → all-zero result, no legs."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-empty")
+        result = port.get_power_draw()
+        self.assertEqual(result["allocated"], 0)
+        self.assertEqual(result["maximum"], 0)
+        self.assertEqual(result["outlet_count"], 0)
+        self.assertEqual(result["legs"], [])
+
+    def test_get_power_draw_aggregated_single_phase_peer(self):
+        """Aggregated mode with outlets cabled to remote PowerPorts; peer is single-phase."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-single")
+        feed = self._make_powerfeed("gpd-feed-single", phase=PowerFeedPhaseChoices.PHASE_SINGLE)
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        outlet_count = self._build_outlets_with_remote_ports(port, [(95, 190), (190, 285)])
+
+        result = port.get_power_draw()
+        # Allocated total 95+190=285 W → 300 VA; max total 190+285=475 → 500 VA.
+        self.assertEqual(result["allocated"], 300)
+        self.assertEqual(result["maximum"], 500)
+        self.assertEqual(result["outlet_count"], outlet_count)
+        self.assertEqual(result["legs"], [])
+
+    def test_get_power_draw_aggregated_three_phase_peer(self):
+        """Aggregated mode with outlets cabled to remote PowerPorts; peer is THREE-PHASE, so `legs` are calculated."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-3ph")
+        feed = self._make_powerfeed("gpd-feed-3ph", phase=PowerFeedPhaseChoices.PHASE_3PHASE)
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        # Leg A: one outlet 95W/190W; Leg B: two outlets (95W/95W and 190W/285W); Leg C: empty.
+        self._build_outlets_with_remote_ports(port, [(95, 190)], feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A)
+        self._build_outlets_with_remote_ports(
+            port,
+            [(95, 95), (190, 285)],
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+        )
+
+        result = port.get_power_draw()
+        self.assertEqual(result["outlet_count"], 3)
+        self.assertEqual(len(result["legs"]), 3)  # all 3 legs always rendered, even when empty.
+
+        legs_by_name = {leg["name"]: leg for leg in result["legs"]}
+        # Leg A: 95W → 100 VA allocated, 190W → 200 VA max, 1 outlet.
+        self.assertEqual(legs_by_name["A"]["allocated"], 100)
+        self.assertEqual(legs_by_name["A"]["maximum"], 200)
+        self.assertEqual(legs_by_name["A"]["outlet_count"], 1)
+        # Leg B: 95+190=285 W → 300 VA allocated, 95+285=380 W → 400 VA max, 2 outlets.
+        self.assertEqual(legs_by_name["B"]["allocated"], 300)
+        self.assertEqual(legs_by_name["B"]["maximum"], 400)
+        self.assertEqual(legs_by_name["B"]["outlet_count"], 2)
+        # Leg C: empty.
+        self.assertEqual(legs_by_name["C"]["allocated"], 0)
+        self.assertEqual(legs_by_name["C"]["maximum"], 0)
+        self.assertEqual(legs_by_name["C"]["outlet_count"], 0)
+        # Overall totals across legs: 95+95+190=380 W → 400 VA, 190+95+285=570 W → 600 VA.
+        self.assertEqual(result["allocated"], 400)
+        self.assertEqual(result["maximum"], 600)
+
 
 class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
     model = PowerOutlet
