@@ -62,6 +62,8 @@ class BaseModel(models.Model):
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
     is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
+    # Default ContentType policy. Models (including proxies) can override to False to use proxy ContentType.
+    for_concrete_model = True
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",

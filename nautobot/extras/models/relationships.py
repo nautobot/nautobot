@@ -24,6 +24,8 @@ from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_undersc
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.contenttypes import get_content_type_for_model
+from nautobot.core.utils.contenttypes import resolve_for_concrete_model
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -88,7 +90,7 @@ class RelationshipModel(models.Model):
         if advanced_ui is not None:
             src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
             dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
-        content_type = ContentType.objects.get_for_model(self)
+        content_type = get_content_type_for_model(self)
 
         sides = {
             RelationshipSideChoices.SIDE_SOURCE: src_relationships,
@@ -426,7 +428,7 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, hidden=None, get_queryset=True):
+    def get_for_model(self, model, hidden=None, get_queryset=True, for_concrete_model=None):
         """
         Return all Relationships assigned to the given model.
 
@@ -438,11 +440,15 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         Returns a tuple of source and destination scoped relationship record querysets/lists.
         """
         return (
-            self.get_for_model_source(model, hidden=hidden, get_queryset=get_queryset),
-            self.get_for_model_destination(model, hidden=hidden, get_queryset=get_queryset),
+            self.get_for_model_source(
+                model, hidden=hidden, get_queryset=get_queryset, for_concrete_model=for_concrete_model
+            ),
+            self.get_for_model_destination(
+                model, hidden=hidden, get_queryset=get_queryset, for_concrete_model=for_concrete_model
+            ),
         )
 
-    def get_for_model_source(self, model, hidden=None, get_queryset=True):
+    def get_for_model_source(self, model, hidden=None, get_queryset=True, for_concrete_model=None):
         """
         Return all Relationships assigned to the given model for the source side only.
 
@@ -451,19 +457,21 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
             get_queryset (bool): Whether to return a queryset or an object list.
         """
-        concrete_model = model._meta.concrete_model
+        model = model if isinstance(model, type) else model.__class__
+        resolved_for_concrete_model = resolve_for_concrete_model(model, for_concrete_model=for_concrete_model)
+        model_for_cache = model._meta.concrete_model if resolved_for_concrete_model else model
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model_source",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_source",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             hidden=hidden,
             listing=True,
         )
@@ -473,7 +481,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = get_content_type_for_model(model, for_concrete_model=resolved_for_concrete_model)
             queryset = (
                 self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
             )  # You almost always will want access to the source_type/destination_type
@@ -488,7 +496,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             return listing
         return queryset
 
-    def get_for_model_destination(self, model, hidden=None, get_queryset=True):
+    def get_for_model_destination(self, model, hidden=None, get_queryset=True, for_concrete_model=None):
         """
         Return all Relationships assigned to the given model for the destination side only.
 
@@ -497,19 +505,21 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
             get_queryset (bool): Whether to return a queryset or an object list.
         """
-        concrete_model = model._meta.concrete_model
+        model = model if isinstance(model, type) else model.__class__
+        resolved_for_concrete_model = resolve_for_concrete_model(model, for_concrete_model=for_concrete_model)
+        model_for_cache = model._meta.concrete_model if resolved_for_concrete_model else model
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model_destination",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_destination",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             hidden=hidden,
             listing=True,
         )
@@ -519,7 +529,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = get_content_type_for_model(model, for_concrete_model=resolved_for_concrete_model)
             queryset = (
                 self.get_queryset()
                 .filter(destination_type=content_type)
@@ -536,11 +546,11 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             return listing
         return queryset
 
-    def get_required_for_model(self, model):
+    def get_required_for_model(self, model, for_concrete_model=None):
         """
         Return a queryset with all required Relationships on the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        content_type = get_content_type_for_model(model, for_concrete_model=for_concrete_model)
         return self.get_queryset().filter(
             Q(source_type=content_type, required_on=RelationshipRequiredSideChoices.SOURCE_SIDE_REQUIRED)
             | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)

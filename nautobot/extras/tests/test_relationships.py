@@ -1,7 +1,9 @@
 import contextlib
 import logging
+from unittest import mock
 import uuid
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -51,6 +53,29 @@ from nautobot.extras.models.jobs import JobLogEntry
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+
+
+def get_proxy_location_model():
+    """Return a lazily-registered proxy model to avoid migration warnings at import time."""
+    try:
+        return apps.get_model("dcim", "ProxyLocation")
+    except LookupError:
+        pass
+
+    class Meta:
+        proxy = True
+        app_label = "dcim"
+
+    return type(
+        "ProxyLocation",
+        (Location,),
+        {
+            "__module__": Location.__module__,
+            "Meta": Meta,
+            "for_concrete_model": False,
+            "get_absolute_url": lambda self: reverse("dcim:location", kwargs={"pk": self.pk}),
+        },
+    )
 
 
 class RelationshipBaseTest:
@@ -746,6 +771,172 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             form6.save()
 
+    def test_proxy_symmetric_detail_path_matches_basic_relationship_data(self):
+        """
+        Proxy symmetric one-to-one relationships should resolve in both basic and detail panel paths.
+
+        Regression guard: `get_relationships_with_related_objects()` previously returned None while
+        `get_relationships_data_basic_fields()` returned the expected peer object.
+        """
+        proxy_location_model = get_proxy_location_model()
+        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
+        proxy_destination = proxy_location_model.objects.get(pk=self.locations[1].pk)
+        ContentType.objects.clear_cache()
+        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
+
+        relationship_key = f"proxy_sym_{uuid.uuid4().hex[:12]}"
+        relationship = Relationship(
+            label=f"Proxy Symmetric {uuid.uuid4().hex[:8]}",
+            key=relationship_key,
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
+            relationship.save()
+
+        RelationshipAssociation.objects.create(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination.pk,
+        )
+
+        proxy_source_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_source(proxy_location_model, get_queryset=False)
+        ]
+        proxy_destination_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
+        ]
+        concrete_source_keys = [rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)]
+        concrete_destination_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
+        ]
+        print(
+            "proxy_o2o_lookup",
+            {
+                "relationship_key": relationship.key,
+                "proxy_source_keys": proxy_source_keys,
+                "proxy_destination_keys": proxy_destination_keys,
+                "concrete_source_keys": concrete_source_keys,
+                "concrete_destination_keys": concrete_destination_keys,
+            },
+        )
+
+        basic_peer_data = {rel.key: value for rel, value in proxy_source.get_relationships()["peer"].items()}
+        detail_peer_data = {
+            rel.key: value
+            for rel, value in proxy_source.get_relationships_with_related_objects(advanced_ui=False)["peer"].items()
+        }
+        print(
+            "proxy_o2o_data",
+            {
+                "basic_peer_keys": list(basic_peer_data.keys()),
+                "detail_peer_keys": list(detail_peer_data.keys()),
+            },
+        )
+
+        self.assertIn(relationship.key, basic_peer_data)
+        self.assertIn(relationship.key, detail_peer_data)
+        basic_association = basic_peer_data[relationship.key].first()
+        detail_peer = detail_peer_data[relationship.key]
+
+        self.assertIsNotNone(basic_association)
+        basic_peer_id = (
+            basic_association.destination_id
+            if basic_association.source_id == proxy_source.pk
+            else basic_association.source_id
+        )
+        self.assertEqual(basic_peer_id, proxy_destination.pk)
+        self.assertIsNotNone(detail_peer)
+        self.assertEqual(detail_peer.pk, proxy_destination.pk)
+
+    def test_proxy_symmetric_many_to_many_detail_path_matches_basic_relationship_data(self):
+        """
+        Proxy symmetric many-to-many relationships should resolve in both basic and detail panel paths.
+        """
+        proxy_location_model = get_proxy_location_model()
+        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
+        proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
+        proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
+        ContentType.objects.clear_cache()
+        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
+
+        relationship_key = f"proxy_sym_m2m_{uuid.uuid4().hex[:12]}"
+        relationship = Relationship(
+            label=f"Proxy Symmetric M2M {uuid.uuid4().hex[:8]}",
+            key=relationship_key,
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        )
+        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
+            relationship.save()
+
+        RelationshipAssociation.objects.create(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination_1.pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination_2.pk,
+        )
+
+        proxy_source_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_source(proxy_location_model, get_queryset=False)
+        ]
+        proxy_destination_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
+        ]
+        concrete_source_keys = [rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)]
+        concrete_destination_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
+        ]
+        print(
+            "proxy_m2m_lookup",
+            {
+                "relationship_key": relationship.key,
+                "proxy_source_keys": proxy_source_keys,
+                "proxy_destination_keys": proxy_destination_keys,
+                "concrete_source_keys": concrete_source_keys,
+                "concrete_destination_keys": concrete_destination_keys,
+            },
+        )
+
+        basic_peer_data = {rel.key: value for rel, value in proxy_source.get_relationships()["peer"].items()}
+        detail_peer_data = {
+            rel.key: value
+            for rel, value in proxy_source.get_relationships_with_related_objects(advanced_ui=False)["peer"].items()
+        }
+        print(
+            "proxy_m2m_data",
+            {
+                "basic_peer_keys": list(basic_peer_data.keys()),
+                "detail_peer_keys": list(detail_peer_data.keys()),
+            },
+        )
+
+        self.assertIn(relationship.key, basic_peer_data)
+        self.assertIn(relationship.key, detail_peer_data)
+        basic_queryset = basic_peer_data[relationship.key]
+        detail_queryset = detail_peer_data[relationship.key]
+
+        self.assertEqual(
+            {
+                association.destination_id if association.source_id == proxy_source.pk else association.source_id
+                for association in basic_queryset
+            },
+            {proxy_destination_1.pk, proxy_destination_2.pk},
+        )
+        self.assertEqual({obj.pk for obj in detail_queryset}, {proxy_destination_1.pk, proxy_destination_2.pk})
+
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = RelationshipAssociation
@@ -1370,7 +1561,6 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
             # Exact match is difficult because the order of rendering is unpredictable.
             for value in col_expected_value:
                 self.assertIn(value, rendered_value)
-
 
 class RequiredRelationshipTestMixin:
     """Common test mixin for both view and API tests dealing with required relationships."""
