@@ -65,7 +65,14 @@
             };
 
             if (metadataTypeSelect) {
-                metadataTypeSelect.addEventListener("change", updateFieldVisibility);
+                if (window.jQuery) {
+                    window.jQuery(metadataTypeSelect).on(
+                        "select2:select select2:clear change",
+                        updateFieldVisibility,
+                    );
+                } else {
+                    metadataTypeSelect.addEventListener("change", updateFieldVisibility);
+                }
                 updateFieldVisibility();
             }
         });

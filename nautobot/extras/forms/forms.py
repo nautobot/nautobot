@@ -2142,6 +2142,14 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
             "Leave empty to apply to all fields."
         ),
     )
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+    )
     value = forms.JSONField(
         required=False,
         help_text=(
@@ -2240,6 +2248,11 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
 class ObjectMetadataCreateForm(ObjectMetadataForm):
     assigned_object_type = DynamicModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        query_params={"feature": "metadata"},
+        required=True,
+    )
+    metadata_type = DynamicModelChoiceField(
+        queryset=MetadataType.objects.all(),
         required=True,
     )
 
