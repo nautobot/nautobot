@@ -1,0 +1,1 @@
+Fixed Git Repository Job loading producing multiple class objects for the same source file, which caused `isinstance` checks against shared classes to return false negatives.
