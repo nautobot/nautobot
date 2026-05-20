@@ -606,6 +606,7 @@ nav:
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
           - Job Execution: "development/jobs/job-execution.md"
+          - Running Jobs Locally on Kubernetes: "development/jobs/job-k8s-locally.md"
           - Migration Guides:
               -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:

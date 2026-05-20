@@ -1,0 +1,1 @@
+Added a new development guide `Running a Nautobot Job on a Local Kubernetes Cluster` that walks through running a Nautobot Job inside a Kubernetes job pod while the rest of the dev stack (Django, Postgres, Redis) runs locally in Docker Compose.
