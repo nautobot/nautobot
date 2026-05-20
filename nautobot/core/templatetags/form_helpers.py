@@ -10,7 +10,7 @@ register = template.Library()
 
 
 @register.inclusion_tag("utilities/render_field.html", takes_context=True)
-def render_field(context, field, bulk_nullable=False, container_class=None, container_id=None):
+def render_field(context, field, bulk_nullable=False, container_class=None):
     """
     Render a single form field from template
     """
@@ -68,7 +68,6 @@ def render_field(context, field, bulk_nullable=False, container_class=None, cont
         "embedded_search_query_string": urlencode(embedded_search_query_params),
         "embedded_search_content_type": embedded_search_content_type,
         "container_class": container_class,
-        "container_id": container_id,
     }
 
 

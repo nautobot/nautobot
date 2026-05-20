@@ -5,7 +5,7 @@
 {# The wrapper's innerHTML is replaced on each swap; the wrapper itself persists across swaps so #}
 {# its HTMX attributes do not need to be re-emitted by the partial that returns the new content. #}
 {% if field.field.htmx_attrs %}<div {% for attr_name, attr_value in field.field.htmx_attrs.items %}{{ attr_name }}="{{ attr_value }}" {% endfor %}>{% endif %}
-<div{% if container_id %} id="{{ container_id }}"{% endif %} class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
+<div{% if field.auto_id %} id="{{ field.auto_id }}-container"{% endif %} class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">

@@ -5,19 +5,8 @@
     <div class="card">
         <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
         <div class="card-body">
-            {# contact/team/scoped_fields get container_ids so the JS below can show/hide them. #}
-            {# The value field's HTMX wrapper is declared via `htmx_attrs` on the form field; #}
-            {# render_field handles the wrapping automatically. #}
             {% for field in form.visible_fields %}
-                {% if field.name == "contact" %}
-                    {% render_field field container_id="nb-objectmetadata-contact-field" %}
-                {% elif field.name == "team" %}
-                    {% render_field field container_id="nb-objectmetadata-team-field" %}
-                {% elif field.name == "scoped_fields" %}
-                    {% render_field field container_id="nb-objectmetadata-scoped-fields-field" %}
-                {% else %}
-                    {% render_field field %}
-                {% endif %}
+                {% render_field field %}
             {% endfor %}
         </div>
     </div>
@@ -31,8 +20,8 @@
             const dataTypes = {{ metadata_type_data_types|default:"{}"|safe }};
             const contactTeamDataType = "{{ contact_team_data_type }}";
             const metadataTypeSelect = document.getElementById("id_metadata_type");
-            const contactField = document.getElementById("nb-objectmetadata-contact-field");
-            const teamField = document.getElementById("nb-objectmetadata-team-field");
+            const contactField = document.getElementById("id_contact-container");
+            const teamField = document.getElementById("id_team-container");
             const valueField = document.getElementById("nb-objectmetadata-value-field");
 
             const clearInput = (containerEl) => {
