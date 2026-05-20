@@ -6239,11 +6239,12 @@ class ObjectMetadataTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        # Delete existing ObjectMetadata objects to have deterministic test data
-        ObjectMetadata.objects.all().delete()
+        text_mdt = MetadataType.objects.create(
+            name="Test Text Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_TEXT,
+        )
+        text_mdt.content_types.set(ContentType.objects.all())
 
-        # Create a MetadataType of Contact/Team data type so all test records have `_value=None`,
-        # which keeps form_data/update_data comparisons straightforward with Django's JSONField form handling.
         contact_team_mdt = MetadataType.objects.create(
             name="Test Contact Or Team Metadata Type",
             data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
@@ -6255,65 +6256,72 @@ class ObjectMetadataTestCase(
         device_ct = ContentType.objects.get_for_model(Device)
         ip_ct = ContentType.objects.get_for_model(IPAddress)
 
-        # Create at least 4 ObjectMetadata instances, with a mix of contact and team variants to satisfy
-        # test_value_column_in_list_view_rendered_correctly and provide enough records for bulk delete tests.
         ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 1",
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 2",
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 3",
+            scoped_fields=["name"],
+            assigned_object_type=device_ct,
+            assigned_object_id=Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 4",
+            scoped_fields=["type"],
+            assigned_object_type=ip_ct,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        cls.contact_team_instance_with_contact = ObjectMetadata.objects.create(
             metadata_type=contact_team_mdt,
             contact=Contact.objects.first(),
             scoped_fields=["name"],
             assigned_object_type=location_ct,
             assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
         )
-        ObjectMetadata.objects.create(
+        cls.contact_team_instance_with_team = ObjectMetadata.objects.create(
             metadata_type=contact_team_mdt,
             team=Team.objects.first(),
             scoped_fields=["description"],
             assigned_object_type=prefix_ct,
             assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
         )
-        ObjectMetadata.objects.create(
-            metadata_type=contact_team_mdt,
-            contact=Contact.objects.last(),
-            scoped_fields=["name"],
-            assigned_object_type=device_ct,
-            assigned_object_id=Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
-        )
-        ObjectMetadata.objects.create(
-            metadata_type=contact_team_mdt,
-            team=Team.objects.last(),
-            scoped_fields=["type"],
-            assigned_object_type=ip_ct,
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
-        )
 
         target_location = Location.objects.filter(associated_object_metadata__isnull=True).last()
         cls.form_data = {
-            "metadata_type": contact_team_mdt.pk,
-            "contact": Contact.objects.first().pk,
+            "metadata_type": text_mdt.pk,
+            "contact": None,
             "team": None,
             "assigned_object_type": location_ct.pk,
             "assigned_object_id": target_location.pk,
             "scoped_fields": "time_zone",
-            "value": None,
+            "value": "new test value",
         }
         # The create view requires assigned_object_type / assigned_object_id query params on GET
         # (entry must come from the parent object's Metadata tab); stash them for test overrides.
         cls._create_url_query = f"assigned_object_type={location_ct.pk}&assigned_object_id={target_location.pk}"
-        # `update_data` only includes fields editable via `ObjectMetadataForm`
-        # (metadata_type / assigned_object_* are immutable after creation).
         cls.update_data = {
-            "contact": None,
-            "team": Team.objects.first().pk,
             "scoped_fields": "status",
-            "value": None,
+            "value": "updated test value",
         }
+        cls.text_mdt = text_mdt
         cls.contact_team_mdt = contact_team_mdt
 
     def _get_queryset(self):
-        # Scope to our deterministic CONTACT_TEAM records so generic test helpers that pick
-        # `.first()` from the queryset don't surface factory rows with other data_types
-        # (form_data / update_data here only make sense for CONTACT_TEAM).
-        return super()._get_queryset().filter(metadata_type=self.contact_team_mdt)
+        return super()._get_queryset().filter(metadata_type=self.text_mdt)
 
     def _get_url(self, action, instance=None):
         url = super()._get_url(action, instance=instance)
@@ -6324,28 +6332,21 @@ class ObjectMetadataTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_column_in_list_view_rendered_correctly(self):
-        """
-        GET a list of objects as an authenticated user with permission to view the objects.
-        """
-        instance1 = self._get_queryset().filter(contact__isnull=False).first()
-        instance2 = self._get_queryset().filter(team__isnull=False).first()
+        instance1 = self.contact_team_instance_with_contact
+        instance2 = self.contact_team_instance_with_team
 
-        # Try GET to permitted objects
-        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        list_url = self._get_url("list") + f"?metadata_type={self.contact_team_mdt.pk}"
+        response = self.client.get(list_url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Check if the contact or team absolute url is rendered in the ObjectListView table
         self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
         self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
-        # TODO check if other types of values are rendered correctly
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
         instance1 = self._get_queryset().first()
         instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
-        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
 
-        # Add object-level permission
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
@@ -6355,12 +6356,9 @@ class ObjectMetadataTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        # Try GET with object-level permission
         response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
-        # fields and if they are rendered.
         self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 

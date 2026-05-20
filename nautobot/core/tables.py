@@ -456,15 +456,12 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         <ul class="dropdown-menu dropdown-menu-end">
             {prepend_template}
             {{% if "detail" in buttons %}}
-                {{% url '{detail_route}' {pk_field}=record.{pk_field} as detail_url %}}
-                {{% if detail_url %}}
-                    <li>
-                        <a href="{{{{ detail_url }}}}" class="dropdown-item">
-                            <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                            Details
-                        </a>
-                    </li>
-                {{% endif %}}
+                <li>
+                    <a href="{{% url '{detail_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
+                        <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                        Details
+                    </a>
+                </li>
             {{% endif %}}
             {{% if "changelog" in buttons %}}
                 <li>

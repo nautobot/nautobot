@@ -4180,9 +4180,6 @@ class ObjectMetadataUIViewSet(
                     "assigned_object",
                     "_value",
                 ],
-                # For a CONTACT_TEAM instance, exactly one of contact/team is set; suppress the
-                # other instead of rendering an em-dash. `_value` is intentionally NOT listed —
-                # legitimate values like False / 0 / 0.0 are falsy but should still display.
                 hide_if_unset=["contact", "team"],
             ),
         ),
