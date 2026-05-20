@@ -2241,11 +2241,8 @@ class _JobRevokeTestBase(TransactionTestCase):
     """Shared scaffolding for revoke strategy tests.
 
     Not run on its own. Subclasses set `strategy_class` and inherit:
-      * a configured `self.strategy` via setUp
-      * `_make_job_result(status)` for building test JobResults
-    #   * `assertLoggedMessage` / `assertJobLogEntryExists` for log assertions
-    #   * `assertReaped` / `assertTerminated` / `assertUntouched` for the
-    #     three standard revoke outcomes
+        - a configured `self.strategy` via setUp
+        - `_make_job_result(status)` for building test JobResults
     """
 
     strategy_class = None
@@ -2254,7 +2251,8 @@ class _JobRevokeTestBase(TransactionTestCase):
         if self.strategy_class is None:
             self.skipTest("Base class, not runnable on its own")
         super().setUp()
-        self.strategy = self.strategy_class()
+        # strategy_class is set by subclasses; setUp skips the base class.
+        self.strategy = self.strategy_class()  # pylint: disable=not-callable
         self.job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
 
     def _make_job_result(self, status):
