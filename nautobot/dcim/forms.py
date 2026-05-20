@@ -4392,34 +4392,45 @@ class CableForm(NautobotModelForm):
 
         cable_type = None
 
-        # Determine the cable type. Three sources, in order: the saved instance, submitted POST
-        # data (for a freshly submitted new-cable form), and `self.initial` (for URL-prepopulation
-        # or HTMX-driven regenerations of the lane sub-form).
+        # Determine the cable type. Sources, in priority order:
+        #   1. Submitted POST data (a freshly submitted form).
+        #   2. Explicit `self.initial` (URL prepopulation or an HTMX lane_form preview after the
+        #      user changed the cable_type dropdown on an existing cable).
+        #   3. The saved instance value (initial display of an existing cable's edit form).
+        # Explicit data/initial overrides the saved value so the live preview reflects the user's
+        # in-progress choice; a falsy override (user cleared the dropdown) is honored as "no
+        # cable_type" rather than silently falling back to the saved value.
         cable_type_pk = None
         cable_type_from_initial = False
-        if self.instance and self.instance.present_in_database and self.instance.cable_type_id:
-            cable_type = self.instance.cable_type
-        else:
-            if self.data:
-                cable_type_pk = self.data.get("cable_type")
-            if not cable_type_pk and self.initial:
-                cable_type_pk = self.initial.get("cable_type")
-                cable_type_from_initial = True
-            if cable_type_pk:
-                try:
-                    # TODO permissions restriction on cable_type lookup?
-                    cable_type = CableType.objects.get(pk=cable_type_pk)
-                except (CableType.DoesNotExist, ValueError, ValidationError):
-                    # When the bad value came from POST data, the `cable_type` DynamicModelChoiceField
-                    # will surface its own validation error during `is_valid()`, so we don't need to
-                    # duplicate. Initial-sourced values aren't field-validated, so we do report.
-                    if cable_type_from_initial:
-                        self._init_warnings.append(
-                            (
-                                "cable_type",
-                                f"Could not load cable type {cable_type_pk!r}; falling back to a 1x1 layout.",
-                            )
+        override_present = bool(self.data and "cable_type" in self.data) or bool(
+            self.initial and "cable_type" in self.initial
+        )
+        if self.data and "cable_type" in self.data:
+            cable_type_pk = self.data.get("cable_type") or None
+        elif self.initial and "cable_type" in self.initial:
+            cable_type_pk = self.initial.get("cable_type") or None
+            cable_type_from_initial = True
+
+        if cable_type_pk:
+            try:
+                # TODO permissions restriction on cable_type lookup?
+                cable_type = CableType.objects.get(pk=cable_type_pk)
+            except (CableType.DoesNotExist, ValueError, ValidationError):
+                # When the bad value came from POST data, the `cable_type` DynamicModelChoiceField
+                # will surface its own validation error during `is_valid()`, so we don't need to
+                # duplicate. Initial-sourced values aren't field-validated, so we do report.
+                if cable_type_from_initial:
+                    self._init_warnings.append(
+                        (
+                            "cable_type",
+                            f"Could not load cable type {cable_type_pk!r}; falling back to a 1x1 layout.",
                         )
+                    )
+        elif (
+            not override_present and self.instance and self.instance.present_in_database and self.instance.cable_type_id
+        ):
+            # No live-preview override — use the saved instance value.
+            cable_type = self.instance.cable_type
 
         # Determine connector counts per side
         if cable_type:

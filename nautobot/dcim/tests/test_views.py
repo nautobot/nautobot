@@ -4373,17 +4373,7 @@ class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertNotContains(response, "other-type-label")
 
 
-# TODO: Change base class to PrimaryObjectViewTestCase
-# Blocked by lack of common creation view for cables (termination A must be initialized)
-class CableTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Cable
 
     @classmethod
@@ -4528,9 +4518,14 @@ class CableTestCase(
         )
 
         cls.form_data = {
+            # Lane fields point at two uncabled interfaces from the fixture so the create-test path
+            # of `PrimaryObjectViewTestCase` can POST a valid cable. The CableTerminationFieldSet
+            # `_parent` field is also required since it scopes the termination dropdown.
             "a_conn_1_type": "interface",
+            "a_conn_1_parent": interfaces[6].device.pk,
             "a_conn_1_termination": interfaces[6].pk,
             "b_conn_1_type": "interface",
+            "b_conn_1_parent": interfaces[9].device.pk,
             "b_conn_1_termination": interfaces[9].pk,
             "type": CableTypeChoices.TYPE_CAT6,
             "status": statuses[1].pk,
@@ -4709,48 +4704,32 @@ class CableTestCase(
         self.assertIn("multilane-1-iface", body)
         self.assertIn("multilane-2-iface", body)
 
-
-class CableConnectURLTestCase(ModelViewTestCase):
-    """
-    Test that the `dcim:<port>_connect` URLs correctly forward `termination_b_type` from the URL
-    path into the cable-add form, so the B-side type dropdown is pre-populated to match the link
-    the user clicked.
-    """
-
-    model = Cable
-
-    @classmethod
-    def setUpTestData(cls):
-        interface_status = Status.objects.get_for_model(Interface).first()
-        cls.device = create_test_device("Connect URL Test Device")
-        cls.interface = Interface.objects.create(
-            device=cls.device,
-            name="eth0",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
-            status=interface_status,
-        )
+    # `dcim:<port>_connect` URL redirects → `cable_add` with the A-side identity and optional
+    # B-side type pre-selection.
 
     def test_interface_connect_redirect_includes_termination_b_type(self):
         """The connect URL should redirect to cable_add with termination_b_type in the query string."""
         self.user.is_superuser = True
         self.user.save()
+        iface = Interface.objects.first()
         url = reverse(
             "dcim:interface_connect",
-            kwargs={"termination_a_id": self.interface.pk, "termination_b_type": "console-server-port"},
+            kwargs={"termination_a_id": iface.pk, "termination_b_type": "console-server-port"},
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
         self.assertIn("termination_b_type=dcim.consoleserverport", response["Location"])
-        self.assertIn(f"termination_a_id={self.interface.pk}", response["Location"])
+        self.assertIn(f"termination_a_id={iface.pk}", response["Location"])
         self.assertIn("termination_a_type=dcim.interface", response["Location"])
 
     def test_interface_connect_redirect_circuit_termination_b_type(self):
         """B-side type lookup must handle non-`dcim` apps (e.g. circuits.CircuitTermination)."""
         self.user.is_superuser = True
         self.user.save()
+        iface = Interface.objects.first()
         url = reverse(
             "dcim:interface_connect",
-            kwargs={"termination_a_id": self.interface.pk, "termination_b_type": "circuit-termination"},
+            kwargs={"termination_a_id": iface.pk, "termination_b_type": "circuit-termination"},
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302)
@@ -4760,11 +4739,12 @@ class CableConnectURLTestCase(ModelViewTestCase):
         """The cable add form should preselect the B-side type dropdown when `termination_b_type` is provided."""
         self.user.is_superuser = True
         self.user.save()
+        iface = Interface.objects.first()
         response = self.client.get(
             reverse("dcim:cable_add"),
             {
                 "termination_a_type": "dcim.interface",
-                "termination_a_id": str(self.interface.pk),
+                "termination_a_id": str(iface.pk),
                 "termination_b_type": "dcim.consoleserverport",
             },
         )
@@ -4773,24 +4753,17 @@ class CableConnectURLTestCase(ModelViewTestCase):
         form = response.context["form"]
         self.assertEqual(form.initial.get("b_conn_1_type"), "consoleserverport")
 
+    # HTMX endpoint `dcim:cable_lane_side_fields` — re-renders the parent + termination fields
+    # for a single lane side when the type dropdown changes. Depends only on the URL query
+    # string; no cable instance is involved.
 
-class CableLaneSideFieldsTestCase(ModelViewTestCase):
-    """Tests for the HTMX endpoint `dcim:cable_lane_side_fields` (CableUIViewSet.lane_side_fields).
-
-    The endpoint re-renders the parent + termination fields for a single lane side when the
-    type dropdown changes. It depends only on the URL query string — no cable instance is
-    involved — so all assertions are against the rendered partial and the form passed to it.
-    """
-
-    model = Cable
-
-    def _url(self):
+    def _lane_side_fields_url(self):
         return reverse("dcim:cable_lane_side_fields")
 
-    def test_defaults_to_a_side_connector_1_interface(self):
-        """With no query params, endpoint should render the A-side connector-1 fields for the 'interface' default."""
+    def test_lane_side_fields_defaults_to_a_side_connector_1_interface(self):
+        """No query params → A-side connector-1 fields for the default 'interface' type."""
         self.add_permissions("dcim.view_cable")
-        response = self.client.get(self._url())
+        response = self.client.get(self._lane_side_fields_url())
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
         self.assertIn("a_conn_1_parent", form.fields)
@@ -4800,10 +4773,10 @@ class CableLaneSideFieldsTestCase(ModelViewTestCase):
         # The interface termination type uses a Device parent.
         self.assertEqual(form.fields["a_conn_1_parent"].label, "Device")
 
-    def test_honors_side_and_connector_query_params(self):
-        """Query params of `side=b&connector=3` switches the field-name prefix to `b_conn_3_*`."""
+    def test_lane_side_fields_honors_side_and_connector_query_params(self):
+        """`side=b&connector=3` switches the field-name prefix to `b_conn_3_*`."""
         self.add_permissions("dcim.view_cable")
-        response = self.client.get(self._url(), {"side": "b", "connector": "3"})
+        response = self.client.get(self._lane_side_fields_url(), {"side": "b", "connector": "3"})
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
         self.assertIn("b_conn_3_parent", form.fields)
@@ -4811,32 +4784,131 @@ class CableLaneSideFieldsTestCase(ModelViewTestCase):
         self.assertEqual(response.context["parent_field"], "b_conn_3_parent")
         self.assertEqual(response.context["term_field"], "b_conn_3_termination")
 
-    def test_uses_prefixed_type_param_to_pick_termination_type(self):
-        """Sending the connector type as a query param is respected."""
+    def test_lane_side_fields_uses_prefixed_type_param_to_pick_termination_type(self):
+        """`<prefix>_type=powerport` selects the PowerPort termination config (label "Power Port")."""
         self.add_permissions("dcim.view_cable")
-        response = self.client.get(self._url(), {"side": "b", "connector": "1", "b_conn_1_type": "powerport"})
+        response = self.client.get(
+            self._lane_side_fields_url(),
+            {"side": "b", "connector": "1", "b_conn_1_type": "powerport"},
+        )
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
         self.assertEqual(form.fields["b_conn_1_termination"].label, "Power Port")
 
-    def test_non_device_termination_type_uses_correct_parent_model(self):
-        """A connector type of `circuittermination` swaps the parent type from Device to Circuit."""
+    def test_lane_side_fields_non_device_termination_type_uses_correct_parent_model(self):
+        """`circuittermination` swaps the parent type from Device to Circuit."""
         self.add_permissions("dcim.view_cable")
-        response = self.client.get(self._url(), {"a_conn_1_type": "circuittermination"})
+        response = self.client.get(self._lane_side_fields_url(), {"a_conn_1_type": "circuittermination"})
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
         self.assertEqual(form.fields["a_conn_1_parent"].label, "Circuit")
         self.assertEqual(form.fields["a_conn_1_termination"].label, "Termination")
 
-    def test_unknown_termination_type_returns_500(self):
-        """An unknown `<prefix>_type` reaches `CableTerminationFieldSet.get_fields`, which raises ValueError (500)."""
+    def test_lane_side_fields_unknown_termination_type_raises(self):
+        """An unknown `<prefix>_type` reaches `CableTerminationFieldSet.get_fields`, which raises
+        ValueError (500). Documents the current behavior."""
         self.add_permissions("dcim.view_cable")
         with self.assertRaises(ValueError):
-            self.client.get(self._url(), {"a_conn_1_type": "bogus"})
+            self.client.get(self._lane_side_fields_url(), {"a_conn_1_type": "bogus"})
 
-    def test_requires_view_permission(self):
+    def test_lane_side_fields_requires_view_permission(self):
         """Unauthenticated/unauthorized users get 403."""
-        response = self.client.get(self._url())
+        response = self.client.get(self._lane_side_fields_url())
+        self.assertEqual(response.status_code, 403)
+
+    # HTMX endpoints `dcim:cable_lane_form_new` (no cable yet) and `dcim:cable_lane_form`
+    # (existing cable) — both delegate to `_render_lane_form`, feeding GET parameters into a
+    # `CableForm` and rendering the lane partial.
+
+    def _lane_form_new_url(self):
+        return reverse("dcim:cable_lane_form_new")
+
+    def _lane_form_detail_url(self, cable):
+        return reverse("dcim:cable_lane_form", kwargs={"pk": cable.pk})
+
+    def test_lane_form_new_defaults_to_1x1_layout(self):
+        """With no GET params, the rendered form is a standard non-breakout 1x1 layout."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._lane_form_new_url())
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertEqual(len(form.connection_info["a_side"]), 1)
+        self.assertEqual(len(form.connection_info["b_side"]), 1)
+
+    def test_lane_form_new_with_cable_type_renders_breakout_layout(self):
+        """`?cable_type=<pk>` shapes the lane layout per the referenced CableType."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._lane_form_new_url(), {"cable_type": str(self.breakout_cable_type.pk)})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertTrue(form.connection_info["is_breakout"])
+        # The fixture's `breakout_cable_type` is 1x2.
+        self.assertEqual(len(form.connection_info["a_side"]), 1)
+        self.assertEqual(len(form.connection_info["b_side"]), 2)
+
+    def test_lane_form_new_with_termination_a_prefills_a_side(self):
+        """`?termination_a_type=...&termination_a_id=...` pre-fills the A-side connector."""
+        self.add_permissions("dcim.view_cable")
+        iface = Interface.objects.first()
+        response = self.client.get(
+            self._lane_form_new_url(),
+            {"termination_a_type": "dcim.interface", "termination_a_id": str(iface.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertEqual(form.initial.get("a_conn_1_type"), "interface")
+        self.assertEqual(form.initial.get("a_conn_1_termination"), iface.pk)
+
+    def test_lane_form_new_with_termination_b_type_sets_b_side_default(self):
+        """`?termination_b_type=dcim.consoleserverport` pre-selects the B-side type dropdown."""
+        self.add_permissions("dcim.view_cable")
+        response = self.client.get(self._lane_form_new_url(), {"termination_b_type": "dcim.consoleserverport"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial.get("b_conn_1_type"), "consoleserverport")
+
+    def test_lane_form_new_requires_view_permission(self):
+        response = self.client.get(self._lane_form_new_url())
+        self.assertEqual(response.status_code, 403)
+
+    def test_lane_form_detail_uses_instance_cable_type(self):
+        """Existing cable with no live-preview override in the query string: the saved `cable_type` drives layout."""
+        self.add_permissions("dcim.view_cable")
+        breakout_cable = Cable.objects.filter(cable_type__isnull=False).first()
+        response = self.client.get(self._lane_form_detail_url(breakout_cable))
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertTrue(form.connection_info["is_breakout"])
+        # Fixture's breakout is 1x2 → 2 B-side connectors.
+        self.assertEqual(len(form.connection_info["b_side"]), 2)
+        self.assertEqual(form.instance.pk, breakout_cable.pk)
+
+    def test_lane_form_detail_cable_type_override_via_get_param(self):
+        """GET cable_type=... in the HTMX request wins out over the saved value on the instance."""
+        self.add_permissions("dcim.view_cable")
+        breakout_cable = Cable.objects.filter(cable_type__isnull=False).first()  # saved 1x2
+        override_type = CableType.objects.create(
+            name="Cable View 1x4 override", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        response = self.client.get(self._lane_form_detail_url(breakout_cable), {"cable_type": str(override_type.pk)})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        # Override (1x4) wins over saved (1x2) — 4 B-side connectors rendered.
+        self.assertEqual(len(form.connection_info["b_side"]), 4)
+
+    def test_lane_form_detail_cable_type_cleared_via_get_param_renders_non_breakout(self):
+        """GET cable_type= (empty, cleared select menu) also wins out in HTMX request."""
+        self.add_permissions("dcim.view_cable")
+        breakout_cable = Cable.objects.filter(cable_type__isnull=False).first()
+        response = self.client.get(self._lane_form_detail_url(breakout_cable), {"cable_type": ""})
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertFalse(form.connection_info["is_breakout"])
+        self.assertEqual(len(form.connection_info["b_side"]), 1)
+
+    def test_lane_form_detail_requires_view_permission(self):
+        breakout_cable = Cable.objects.filter(cable_type__isnull=False).first()
+        response = self.client.get(self._lane_form_detail_url(breakout_cable))
         self.assertEqual(response.status_code, 403)
 
 

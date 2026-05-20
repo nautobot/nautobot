@@ -5566,11 +5566,15 @@ class CableUIViewSet(NautobotUIViewSet):
         return self._render_lane_form(request, cable=None)
 
     def _render_lane_form(self, request, cable):
-        """Shared: render the lane form partial with an optional cable-type override."""
-        cable_type_id = request.GET.get("cable_type")
-        initial = {"cable_type": cable_type_id}
-        for key in ("termination_a_type", "termination_a_id", "termination_b_type"):
-            if request.GET.get(key):
+        """Shared: render the lane form partial with an optional cable-type override.
+
+        Only forwards keys actually present in `request.GET` into the form's initial — so the form
+        can distinguish "no override sent" (initial display) from "user cleared this field"
+        (explicit override) for the live-preview lane re-render.
+        """
+        initial = {}
+        for key in ("cable_type", "termination_a_type", "termination_a_id", "termination_b_type"):
+            if key in request.GET:
                 initial[key] = request.GET[key]
 
         form = forms.CableForm(instance=cable, initial=initial)

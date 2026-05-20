@@ -999,10 +999,16 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         return CableType.objects.create(name="Form Test 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
 
     def _minimal_form_data(self):
-        """Minimal POST data sufficient to make `is_valid()` run `clean()`."""
+        """Minimal POST data sufficient to make `is_valid()` run `clean()`.
+
+        Intentionally omits `cable_type` — `_init_lane_fields` treats a key being present in
+        `self.data` as a live-preview override (with falsy meaning "user cleared"), so including
+        `cable_type=""` here would shadow any `initial['cable_type']` in tests that pair `initial`
+        with this baseline data. Tests that specifically want to exercise the data-driven path
+        add the key explicitly.
+        """
         return {
             "status": str(self.cable_status.pk),
-            "cable_type": "",
             "type": "",
             "color": "",
             "length": "",
