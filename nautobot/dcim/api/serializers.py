@@ -105,7 +105,6 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.dcim.models.cables import termination_fk_field
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
@@ -864,11 +863,12 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
         }
 
-    def get_total_lanes(self, obj):
-        return obj.total_lanes
-
-    def get_connected_lanes(self, obj):
-        return obj.connected_lanes
+    # TODO: disabled for now, to re-enable and test in a future PR
+    # def get_total_lanes(self, obj):
+    #     return obj.total_lanes
+    #
+    # def get_connected_lanes(self, obj):
+    #     return obj.connected_lanes
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -932,22 +932,23 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
-    def _resolve_termination_object(self, termination_data):
-        """Resolve a termination dict to an object."""
-        if termination_data is None:
-            return None
-        object_type = termination_data.get("object_type")
-        object_id = termination_data.get("object_id")
-        if not object_type or not object_id:
-            raise serializers.ValidationError("Each termination must have 'object_type' and 'object_id'.")
-        try:
-            app_label, model_name = object_type.split(".")
-            ct = ContentType.objects.get_by_natural_key(app_label, model_name)
-            return ct.model_class().objects.get(pk=object_id)
-        except (ValueError, ContentType.DoesNotExist):
-            raise serializers.ValidationError(f"Invalid object_type: {object_type}")
-        except ct.model_class().DoesNotExist:
-            raise serializers.ValidationError(f"Object not found: {object_type} {object_id}")
+    # TODO: disabled for now, to re-enable and test in a future PR
+    # def _resolve_termination_object(self, termination_data):
+    #     """Resolve a termination dict to an object."""
+    #     if termination_data is None:
+    #         return None
+    #     object_type = termination_data.get("object_type")
+    #     object_id = termination_data.get("object_id")
+    #     if not object_type or not object_id:
+    #         raise serializers.ValidationError("Each termination must have 'object_type' and 'object_id'.")
+    #     try:
+    #         app_label, model_name = object_type.split(".")
+    #         ct = ContentType.objects.get_by_natural_key(app_label, model_name)
+    #         return ct.model_class().objects.get(pk=object_id)
+    #     except (ValueError, ContentType.DoesNotExist):
+    #         raise serializers.ValidationError(f"Invalid object_type: {object_type}")
+    #     except ct.model_class().DoesNotExist:
+    #         raise serializers.ValidationError(f"Object not found: {object_type} {object_id}")
 
     def create(self, validated_data):
         # Extract termination fields (writable on the serializer but not on the Cable model)
@@ -965,57 +966,58 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
         cable.validated_save()
 
+        # TODO: disabled for now, to re-enable and test in a future PR
         # Handle breakout lanes if provided
-        initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
-        lanes_data = initial.get("lanes")
-        if lanes_data and cable.cable_type:
-            self._assign_lanes(cable, lanes_data)
+        # initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
+        # lanes_data = initial.get("lanes")
+        # if lanes_data and cable.cable_type:
+        #     self._assign_lanes(cable, lanes_data)
 
         return cable
 
     def update(self, instance, validated_data):
         cable = super().update(instance, validated_data)
 
-        initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
-        lanes_data = initial.get("lanes")
-        if lanes_data and cable.cable_type:
-            self._assign_lanes(cable, lanes_data)
+        # TODO: disabled for now, to re-enable and test in a future PR
+        # initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
+        # lanes_data = initial.get("lanes")
+        # if lanes_data and cable.cable_type:
+        #     self._assign_lanes(cable, lanes_data)
 
         return cable
 
-    def _assign_lanes(self, cable, lanes_data):
-        """Assign lane terminations to a breakout cable via CableToCableTermination rows."""
-
-        cable_type = cable.cable_type
-        mapping = cable_type.mapping
-
-        for lane_data in lanes_data:
-            lane_num = lane_data["lane"]
-            if lane_num < 1 or lane_num > len(mapping):
-                raise serializers.ValidationError(
-                    f"Lane {lane_num} is outside the cable type's range (1-{len(mapping)})."
-                )
-            entry = mapping[lane_num - 1]
-
-            for key, side, conn in (
-                ("a_termination", "A", entry["a_connector"]),
-                ("b_termination", "B", entry["b_connector"]),
-            ):
-                term_obj = self._resolve_termination_object(lane_data.get(key))
-                if term_obj is None:
-                    continue
-                try:
-                    fk_field = termination_fk_field(term_obj)
-                except TypeError as exc:
-                    raise serializers.ValidationError(str(exc)) from exc
-                CableToCableTermination.objects.update_or_create(
-                    **{fk_field: term_obj},
-                    defaults={
-                        "cable": cable,
-                        "cable_end": side,
-                        "connector": conn,
-                    },
-                )
+    # TODO: disabled for now, to re-enable and test in a future PR
+    # def _assign_lanes(self, cable, lanes_data):
+    #     """Assign lane terminations to a breakout cable via CableToCableTermination rows."""
+    #     cable_type = cable.cable_type
+    #     mapping = cable_type.mapping
+    #     for lane_data in lanes_data:
+    #         lane_num = lane_data["lane"]
+    #         if lane_num < 1 or lane_num > len(mapping):
+    #             raise serializers.ValidationError(
+    #                 f"Lane {lane_num} is outside the cable type's range (1-{len(mapping)})."
+    #             )
+    #         entry = mapping[lane_num - 1]
+    #
+    #         for key, side, conn in (
+    #             ("a_termination", "A", entry["a_connector"]),
+    #             ("b_termination", "B", entry["b_connector"]),
+    #         ):
+    #             term_obj = self._resolve_termination_object(lane_data.get(key))
+    #             if term_obj is None:
+    #                 continue
+    #             try:
+    #                 fk_field = termination_fk_field(term_obj)
+    #             except TypeError as exc:
+    #                 raise serializers.ValidationError(str(exc)) from exc
+    #             CableToCableTermination.objects.update_or_create(
+    #                 **{fk_field: term_obj},
+    #                 defaults={
+    #                     "cable": cable,
+    #                     "cable_end": side,
+    #                     "connector": conn,
+    #                 },
+    #             )
 
     def _serialize_term(self, obj):
         return {
