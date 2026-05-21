@@ -26,6 +26,7 @@ from nautobot.extras.forms import (
     ObjectMetadataForm,
     WebhookForm,
 )
+from nautobot.extras.forms.forms import _direct_field_names_for_content_type
 from nautobot.extras.models import (
     Contact,
     CustomField,
@@ -1386,3 +1387,21 @@ class ObjectMetadataFormTestCase(TestCase):
             }
         )
         self.assertNotIn("assigned_object_display", form.fields)
+
+    def test_direct_field_names_helper_returns_empty_for_missing_content_type(self):
+        self.assertEqual(_direct_field_names_for_content_type(None), [])
+
+    def test_bound_form_with_invalid_metadata_type_pk_silently_skips_value_field_swap(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        for val in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
+            with self.subTest(metadata_type=val):
+                form = ObjectMetadataForm(
+                    data={
+                        "metadata_type": val,
+                        "assigned_object_type": str(location_ct.pk),
+                        "assigned_object_id": str(self.location.pk),
+                        "scoped_fields": "",
+                        "value": "",
+                    }
+                )
+                self.assertIn("value", form.fields)

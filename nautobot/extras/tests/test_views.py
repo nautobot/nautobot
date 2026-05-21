@@ -6362,6 +6362,107 @@ class ObjectMetadataTestCase(
         self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_view_redirects_without_query_params(self):
+        """The create view requires `assigned_object_type` + `assigned_object_id` in the URL
+        query string (entry is from the parent object's Metadata tab). Without them, GET should
+        redirect to the list view rather than rendering a form the user can't actually use."""
+        response = self.client.get(reverse("extras:objectmetadata_add"))
+        self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("parent object's detail view" in m for m in messages_list),
+            f"Expected redirect warning, got: {messages_list}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_renders_text_input_for_text_metadata_type(self):
+        """`value_widget` HTMX endpoint returns a CharField-backed widget for TYPE_TEXT."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            data={"metadata_type": str(self.text_mdt.pk)},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # TYPE_TEXT renders an <input type="text"> with the field name `value`.
+        self.assertIn('name="value"', content)
+        # Help text mentions the resolved metadata type's display name.
+        self.assertIn(str(self.text_mdt), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_contact_team_metadata_type(self):
+        """For CONTACT_TEAM types, `MetadataType.to_form_field` returns None, so the value
+        widget endpoint renders an empty fragment (no input). HTMX swaps in nothing, removing
+        any prior value input."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            data={"metadata_type": str(self.contact_team_mdt.pk)},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset).strip()
+        self.assertNotIn('name="value"', content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_missing_metadata_type(self):
+        """No `metadata_type` query param → empty fragment, no crash."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn('name="value"', response.content.decode(response.charset))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_invalid_metadata_type(self):
+        """Bogus pk or non-existent metadata_type → swallow via the view's try/except, return
+        an empty fragment instead of raising."""
+        for bogus in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
+            with self.subTest(metadata_type=bogus):
+                response = self.client.get(
+                    reverse("extras:objectmetadata_value_widget"),
+                    data={"metadata_type": bogus},
+                    headers={"HX-Request": "true"},
+                )
+                self.assertHttpStatus(response, 200)
+                self.assertNotIn('name="value"', response.content.decode(response.charset))
+
+    def test_object_metadata_fields_panel_hides_value_for_contact_team(self):
+        """_ObjectMetadataFieldsPanel drops `_value` from the panel data for CONTACT_TEAM
+        instances so the detail view doesn't render a meaningless Value row."""
+        from django.template import Context
+
+        from nautobot.extras.views import _ObjectMetadataFieldsPanel
+
+        panel = _ObjectMetadataFieldsPanel(
+            weight=100,
+            fields=["metadata_type", "contact", "team", "scoped_fields", "_value"],
+        )
+        context = Context({"object": self.contact_team_instance_with_contact})
+        data = panel.get_data(context)
+        self.assertIn("contact", data)
+        self.assertIn("team", data)
+        self.assertNotIn("_value", data)
+
+    def test_object_metadata_fields_panel_hides_contact_and_team_for_other_types(self):
+        """_ObjectMetadataFieldsPanel drops `contact` and `team` for non-CONTACT_TEAM instances
+        so the detail view doesn't render meaningless Contact / Team rows."""
+        from django.template import Context
+
+        from nautobot.extras.views import _ObjectMetadataFieldsPanel
+
+        panel = _ObjectMetadataFieldsPanel(
+            weight=100,
+            fields=["metadata_type", "contact", "team", "scoped_fields", "_value"],
+        )
+        text_instance = self._get_queryset().first()
+        context = Context({"object": text_instance})
+        data = panel.get_data(context)
+        self.assertIn("_value", data)
+        self.assertNotIn("contact", data)
+        self.assertNotIn("team", data)
+
 
 class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Relationship

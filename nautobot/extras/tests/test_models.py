@@ -6,6 +6,7 @@ from unittest import expectedFailure, mock
 import uuid
 from zoneinfo import ZoneInfo
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -24,6 +25,9 @@ import time_machine
 from nautobot.circuits.models import CircuitType
 from nautobot.core.celery.schedulers import NautobotScheduleEntry
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms import CommentField, JSONField as JSONFormField
+from nautobot.core.forms.fields import LaxURLField, NullableDateField
 from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
@@ -2400,6 +2404,101 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance.data_type = MetadataTypeDataTypeChoices.TYPE_TEXT
             instance.validated_save()
+
+    def test_to_form_field_contact_team_returns_none(self):
+        """CONTACT_TEAM data_type has no `_value` input — `to_form_field` must return None
+        so callers can branch on absence rather than receiving a no-op widget."""
+
+        mt = MetadataType.objects.create(
+            name="MT contact-team", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        self.assertIsNone(mt.to_form_field())
+        self.assertNotIsInstance(mt.to_form_field(), django_forms.Field)
+
+    def test_to_form_field_integer_returns_integer_field(self):
+
+        mt = MetadataType.objects.create(name="MT int", data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER)
+        field = mt.to_form_field(initial=42)
+        self.assertIs(type(field), django_forms.IntegerField)
+        self.assertEqual(field.initial, 42)
+        self.assertFalse(field.required)
+
+    def test_to_form_field_float_returns_float_field(self):
+
+        mt = MetadataType.objects.create(name="MT float", data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT)
+        field = mt.to_form_field(initial=1.5)
+        self.assertIs(type(field), django_forms.FloatField)
+        self.assertEqual(field.initial, 1.5)
+
+    def test_to_form_field_boolean_returns_nullboolean_field(self):
+
+        mt = MetadataType.objects.create(name="MT bool", data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN)
+        field = mt.to_form_field(initial=False)
+        self.assertIs(type(field), django_forms.NullBooleanField)
+        widget_choices = dict(field.widget.choices)
+        self.assertIn(None, widget_choices)
+        self.assertIn(True, widget_choices)
+        self.assertIn(False, widget_choices)
+
+    def test_to_form_field_date_returns_nullable_date_field(self):
+
+        mt = MetadataType.objects.create(name="MT date", data_type=MetadataTypeDataTypeChoices.TYPE_DATE)
+        field = mt.to_form_field()
+        self.assertIs(type(field), NullableDateField)
+
+    def test_to_form_field_datetime_returns_datetime_field(self):
+
+        mt = MetadataType.objects.create(name="MT datetime", data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME)
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.DateTimeField)
+
+    def test_to_form_field_url_returns_lax_url_field(self):
+
+        mt = MetadataType.objects.create(name="MT url", data_type=MetadataTypeDataTypeChoices.TYPE_URL)
+        field = mt.to_form_field()
+        self.assertIs(type(field), LaxURLField)
+
+    def test_to_form_field_text_returns_charfield_with_max_length(self):
+        mt = MetadataType.objects.create(name="MT text", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        field = mt.to_form_field(initial="hello")
+        self.assertIs(type(field), django_forms.CharField)
+        self.assertEqual(field.max_length, CHARFIELD_MAX_LENGTH)
+        self.assertEqual(field.initial, "hello")
+
+    def test_to_form_field_markdown_returns_comment_field(self):
+
+        mt = MetadataType.objects.create(name="MT md", data_type=MetadataTypeDataTypeChoices.TYPE_MARKDOWN)
+        field = mt.to_form_field()
+        self.assertIs(type(field), CommentField)
+
+    def test_to_form_field_select_returns_choice_field_with_choices(self):
+
+        mt = MetadataType.objects.create(name="MT select", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="alpha")
+        MetadataChoice.objects.create(metadata_type=mt, value="beta")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.ChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertIn("alpha", choice_values)
+        self.assertIn("beta", choice_values)
+
+    def test_to_form_field_multiselect_returns_multiple_choice_field(self):
+
+        mt = MetadataType.objects.create(name="MT multiselect", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="x")
+        MetadataChoice.objects.create(metadata_type=mt, value="y")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.MultipleChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertEqual(set(choice_values), {"x", "y"})
+
+    def test_to_form_field_json_falls_back_to_jsonformfield(self):
+
+        mt = MetadataType.objects.create(name="MT json", data_type=MetadataTypeDataTypeChoices.TYPE_JSON)
+        field = mt.to_form_field()
+        self.assertIs(type(field), JSONFormField)
 
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
