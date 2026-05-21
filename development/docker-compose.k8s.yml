@@ -3,8 +3,6 @@ volumes:
   media_root:
 services:
   nautobot:
-    secrets:
-        - k8s_token
     build:
       args:
         PYTHON_VER: "${PYTHON_VER}"
@@ -100,6 +98,3 @@ services:
     tty: true
     ports:
       - "8001:8001"
-secrets:
-  k8s_token:
-    file: ./tmp/k8s-token
