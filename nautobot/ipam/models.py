@@ -433,6 +433,7 @@ class VRFPrefixAssignment(BaseModel):
 
     class Meta:
         verbose_name = "VRF-prefix assignment"
+        ordering = ["vrf", "prefix"]
         unique_together = ["vrf", "prefix"]
 
     def __str__(self):
