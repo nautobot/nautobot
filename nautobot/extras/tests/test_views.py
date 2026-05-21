@@ -6429,40 +6429,38 @@ class ObjectMetadataTestCase(
                 self.assertHttpStatus(response, 200)
                 self.assertNotIn('name="value"', response.content.decode(response.charset))
 
-    def test_object_metadata_fields_panel_hides_value_for_contact_team(self):
-        """_ObjectMetadataFieldsPanel drops `_value` from the panel data for CONTACT_TEAM
-        instances so the detail view doesn't render a meaningless Value row."""
+    def test_object_metadata_fields_panel_delegates_value_rendering_to_model(self):
+        """The panel's render_value override delegates `_value` rendering to
+        ObjectMetadata.get_value_display() so URL/Markdown/JSON/etc. produce type-appropriate output
+        (per-type rendering itself is unit-tested on the model)."""
         from django.template import Context
 
         from nautobot.extras.views import _ObjectMetadataFieldsPanel
 
         panel = _ObjectMetadataFieldsPanel(
             weight=100,
-            fields=["metadata_type", "contact", "team", "scoped_fields", "_value"],
-        )
-        context = Context({"object": self.contact_team_instance_with_contact})
-        data = panel.get_data(context)
-        self.assertIn("contact", data)
-        self.assertIn("team", data)
-        self.assertNotIn("_value", data)
-
-    def test_object_metadata_fields_panel_hides_contact_and_team_for_other_types(self):
-        """_ObjectMetadataFieldsPanel drops `contact` and `team` for non-CONTACT_TEAM instances
-        so the detail view doesn't render meaningless Contact / Team rows."""
-        from django.template import Context
-
-        from nautobot.extras.views import _ObjectMetadataFieldsPanel
-
-        panel = _ObjectMetadataFieldsPanel(
-            weight=100,
-            fields=["metadata_type", "contact", "team", "scoped_fields", "_value"],
+            fields=["metadata_type", "_value"],
         )
         text_instance = self._get_queryset().first()
         context = Context({"object": text_instance})
-        data = panel.get_data(context)
-        self.assertIn("_value", data)
-        self.assertNotIn("contact", data)
-        self.assertNotIn("team", data)
+        self.assertEqual(
+            panel.render_value("_value", text_instance._value, context),
+            text_instance.get_value_display(),
+        )
+
+    def test_object_metadata_fields_panel_hide_if_unset_drops_irrelevant_rows(self):
+        """`_value`, `contact`, and `team` are listed in `hide_if_unset` on the configured panel.
+
+        This is what makes the detail view drop the meaningless row depending on data_type:
+        - For CONTACT_TEAM records, `_value` is always None and gets hidden.
+        - For all other types, `contact`/`team` are always None and get hidden.
+        """
+        from nautobot.extras.views import ObjectMetadataUIViewSet
+
+        panel = ObjectMetadataUIViewSet.object_detail_content.panels[0]
+        self.assertIn("_value", panel.hide_if_unset)
+        self.assertIn("contact", panel.hide_if_unset)
+        self.assertIn("team", panel.hide_if_unset)
 
 
 class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):

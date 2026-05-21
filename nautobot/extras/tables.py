@@ -24,7 +24,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import JobResultStatusChoices, MetadataTypeDataTypeChoices
+from .choices import JobResultStatusChoices
 from .models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1503,18 +1503,10 @@ class ObjectMetadataTable(BaseTable):
         return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
 
     def render_value(self, record):
-        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
-            return render_json(record.value, pretty_print=True)
-        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
-            return render_markdown(record.value)
-        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
-            return render_boolean(record.value)
-        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if record.contact:
-                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
-            else:
-                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
-        return record.value
+        # Delegate to the model so URL/Markdown/JSON/Boolean/MultiSelect/Contact-Team rendering
+        # stays consistent between the list table and the detail panel.
+        display = record.get_value_display()
+        return display if display is not None else record.value
 
 
 #

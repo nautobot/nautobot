@@ -6,6 +6,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.html import format_html
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -25,6 +26,7 @@ from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.settings_funcs import is_truthy
+from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.extras.choices import MetadataTypeDataTypeChoices
 from nautobot.extras.models.change_logging import ChangeLoggedModel
@@ -302,6 +304,38 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         else:
             self._value = v
         self.clean()
+
+    def get_value_display(self):
+        """Return a type-appropriate display representation of this record's value.
+
+        For CONTACT_TEAM, returns the linkified contact or team (HTML-safe).
+        For URL/MARKDOWN/JSON/BOOLEAN, returns rendered HTML via the standard Nautobot helpers.
+        For MULTISELECT, returns the list values joined with commas.
+        For all other types (TEXT/INTEGER/FLOAT/SELECT/DATE/DATETIME), returns the raw stored value.
+        Returns None when no value is set, so callers can branch on absence.
+        """
+        data_type = self.metadata_type.data_type
+        if data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+            obj = self.contact or self.team
+            if not obj:
+                return None
+            return format_html('<a href="{}">{}</a>', obj.get_absolute_url(), obj)
+
+        value = self._value
+        if value is None:
+            return None
+
+        if data_type == MetadataTypeDataTypeChoices.TYPE_URL:
+            return format_html('<a href="{}">{}</a>', value, value)
+        if data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            return render_markdown(value)
+        if data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
+            return render_json(value, pretty_print=True)
+        if data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            return render_boolean(value)
+        if data_type == MetadataTypeDataTypeChoices.TYPE_MULTISELECT and isinstance(value, list):
+            return ", ".join(str(v) for v in value)
+        return value
 
     def __str__(self):
         if self.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:

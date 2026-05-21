@@ -2976,6 +2976,81 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             instance2.scoped_fields = ["role", "status", "type"]
             instance2.validated_save()
 
+    def _make_om(self, data_type, value=None, *, contact=None, team=None):
+        """Helper to build an ObjectMetadata for a fresh MetadataType of the given data_type."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        mt = MetadataType.objects.create(name=f"GVD {data_type}", data_type=data_type)
+        mt.content_types.set([location_ct])
+        # Use a Location not already metadata-targeted to keep the helper independent.
+        loc = Location.objects.filter(associated_object_metadata__isnull=True).first()
+        return ObjectMetadata(
+            metadata_type=mt,
+            _value=value,
+            contact=contact,
+            team=team,
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=loc.pk,
+        )
+
+    def test_get_value_display_text_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value="hello")
+        self.assertEqual(om.get_value_display(), "hello")
+
+    def test_get_value_display_integer_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_INTEGER, value=42)
+        self.assertEqual(om.get_value_display(), 42)
+
+    def test_get_value_display_boolean_renders_html_icon(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_BOOLEAN, value=True)
+        # render_boolean(True) emits the check-bold span; render_boolean(False) emits close-thick.
+        self.assertIn("mdi-check-bold", om.get_value_display())
+        om._value = False
+        self.assertIn("mdi-close-thick", om.get_value_display())
+
+    def test_get_value_display_url_returns_linkified_anchor(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_URL, value="https://example.com")
+        rendered = om.get_value_display()
+        self.assertIn('href="https://example.com"', rendered)
+        self.assertIn(">https://example.com<", rendered)
+
+    def test_get_value_display_markdown_renders_html(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MARKDOWN, value="**bold**")
+        rendered = om.get_value_display()
+        self.assertIn("<strong>bold</strong>", rendered)
+
+    def test_get_value_display_json_pretty_prints(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_JSON, value={"key": "val"})
+        rendered = om.get_value_display()
+        self.assertIn("language-json", rendered)
+        self.assertIn("key", rendered)
+
+    def test_get_value_display_multiselect_joins_with_commas(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MULTISELECT, value=["red", "blue"])
+        self.assertEqual(om.get_value_display(), "red, blue")
+
+    def test_get_value_display_contact_team_returns_linkified_contact(self):
+        contact = Contact.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, contact=contact)
+        rendered = om.get_value_display()
+        self.assertIn(contact.get_absolute_url(), rendered)
+        self.assertIn(str(contact), rendered)
+
+    def test_get_value_display_contact_team_returns_linkified_team(self):
+        team = Team.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, team=team)
+        rendered = om.get_value_display()
+        self.assertIn(team.get_absolute_url(), rendered)
+        self.assertIn(str(team), rendered)
+
+    def test_get_value_display_contact_team_returns_none_when_neither_set(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM)
+        self.assertIsNone(om.get_value_display())
+
+    def test_get_value_display_returns_none_when_value_is_none(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value=None)
+        self.assertIsNone(om.get_value_display())
+
 
 class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""

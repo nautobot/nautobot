@@ -4130,23 +4130,12 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
 
 class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
-    """ObjectFieldsPanel that drops the irrelevant value/contact/team rows based on data_type.
-
-    For CONTACT_TEAM types, `_value` is always None and not meaningful — hide it.
-    For all other types, `contact`/`team` are always None — hide them.
-    """
-
-    def get_data(self, context):
-        data = super().get_data(context)
-        instance = get_obj_from_context(context, self.context_object_key)
-        if instance is None:
-            return data
-        if instance.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            data.pop("_value", None)
-        else:
-            data.pop("contact", None)
-            data.pop("team", None)
-        return data
+    def render_value(self, key, value, context):
+        if key == "_value":
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj:
+                return obj.get_value_display()
+        return super().render_value(key, value, context)
 
 
 class ObjectMetadataUIViewSet(
@@ -4180,7 +4169,7 @@ class ObjectMetadataUIViewSet(
                     "assigned_object",
                     "_value",
                 ],
-                hide_if_unset=["contact", "team"],
+                hide_if_unset=["contact", "team", "_value"],
             ),
         ),
     )
