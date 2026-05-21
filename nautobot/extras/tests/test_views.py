@@ -6367,6 +6367,7 @@ class ObjectMetadataTestCase(
         """The create view requires `assigned_object_type` + `assigned_object_id` in the URL
         query string (entry is from the parent object's Metadata tab). Without them, GET should
         redirect to the list view rather than rendering a form the user can't actually use."""
+        self.add_permissions("extras.add_objectmetadata")
         response = self.client.get(reverse("extras:objectmetadata_add"))
         self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
