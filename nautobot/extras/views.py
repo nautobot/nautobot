@@ -4210,7 +4210,13 @@ class ObjectMetadataUIViewSet(
             context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
         return context
 
-    @action(detail=False, methods=["get"], url_path="value-widget", url_name="value_widget")
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="value-widget",
+        url_name="value_widget",
+        custom_view_base_action="view",
+    )
     def value_widget(self, request, *args, **kwargs):
         """
         Render the appropriate `value` field for a given metadata_type.
