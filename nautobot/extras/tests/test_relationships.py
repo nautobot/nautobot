@@ -74,7 +74,7 @@ class ProxyLocationTestMixin:
                 proxy = True
                 app_label = "dcim"
 
-            def get_absolute_url(self):
+            def get_absolute_url(self, api=False):
                 return reverse("dcim:location", kwargs={"pk": self.pk})
 
         self._proxy_location_model = ProxyLocation
