@@ -38,7 +38,7 @@ celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "~46.0.7"
+cryptography = ">=48.0.0,<49"
 # Fundamental web framework for Nautobot
 Django = "~4.2.30"
 # Adds AJAX capabilities to django-tables2
