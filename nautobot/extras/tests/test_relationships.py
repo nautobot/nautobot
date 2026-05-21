@@ -55,27 +55,38 @@ from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 
-def get_proxy_location_model():
-    """Return a lazily-registered proxy model to avoid migration warnings at import time."""
-    try:
-        return apps.get_model("dcim", "ProxyLocation")
-    except LookupError:
-        pass
+class ProxyLocationTestMixin:
+    """Build and clean up proxy models used by proxy relationship regressions."""
 
-    class Meta:
-        proxy = True
-        app_label = "dcim"
+    _proxy_location_model = None
 
-    return type(
-        "ProxyLocation",
-        (Location,),
-        {
-            "__module__": Location.__module__,
-            "Meta": Meta,
-            "for_concrete_model": False,
-            "get_absolute_url": lambda self: reverse("dcim:location", kwargs={"pk": self.pk}),
-        },
-    )
+    def build_proxy_location_model(self):
+        try:
+            self._proxy_location_model = apps.get_model("dcim", "ProxyLocation")
+            return self._proxy_location_model
+        except LookupError:
+            pass
+
+        class ProxyLocation(Location):
+            for_concrete_model = False
+
+            class Meta:
+                proxy = True
+                app_label = "dcim"
+
+            def get_absolute_url(self):
+                return reverse("dcim:location", kwargs={"pk": self.pk})
+
+        self._proxy_location_model = ProxyLocation
+        return self._proxy_location_model
+
+    def tearDown(self):
+        if self._proxy_location_model is not None:
+            apps.all_models.get("dcim", {}).pop("proxylocation", None)
+            apps.clear_cache()
+            ContentType.objects.clear_cache()
+            self._proxy_location_model = None
+        super().tearDown()
 
 
 class RelationshipBaseTest:
@@ -221,7 +232,7 @@ class RelationshipBaseTest:
             )
 
 
-class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+class RelationshipTest(ProxyLocationTestMixin, RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = Relationship
 
     def test_clean_filter_not_dict(self):
@@ -778,7 +789,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         Regression guard: `get_relationships_with_related_objects()` previously returned None while
         `get_relationships_data_basic_fields()` returned the expected peer object.
         """
-        proxy_location_model = get_proxy_location_model()
+        proxy_location_model = self.build_proxy_location_model()
         proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
         proxy_destination = proxy_location_model.objects.get(pk=self.locations[1].pk)
         ContentType.objects.clear_cache()
@@ -858,7 +869,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         """
         Proxy symmetric many-to-many relationships should resolve in both basic and detail panel paths.
         """
-        proxy_location_model = get_proxy_location_model()
+        proxy_location_model = self.build_proxy_location_model()
         proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
         proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
         proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
@@ -1415,7 +1426,7 @@ class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModel
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_location=self.locations[0]).count())
 
 
-class RelationshipTableTest(RelationshipBaseTest, TestCase):
+class RelationshipTableTest(ProxyLocationTestMixin, RelationshipBaseTest, TestCase):
     """
     Test inclusion of relationships in object table views.
     """
@@ -1568,7 +1579,7 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
 
     def test_proxy_symmetric_relationship_table_column_renders_related_objects(self):
         """Proxy symmetric relationship columns should render links in list tables."""
-        proxy_location_model = get_proxy_location_model()
+        proxy_location_model = self.build_proxy_location_model()
         proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
         proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
         proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
