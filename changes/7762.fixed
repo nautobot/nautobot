@@ -1,0 +1,1 @@
+Added a reentrant lock to the `import_modules_privately()` method to address a race condition in multithreaded code.

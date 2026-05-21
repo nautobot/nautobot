@@ -6,8 +6,11 @@ import logging
 import os
 import pkgutil
 import sys
+import threading
 
 logger = logging.getLogger(__name__)
+
+_import_lock = threading.RLock()
 
 
 @contextmanager
@@ -74,7 +77,7 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     """
     module_prefix = ".".join(module_path) if module_path else None
 
-    with _temporarily_add_to_sys_path(path):
+    with _import_lock, _temporarily_add_to_sys_path(path):
         # Phase 1: discover module names without importing.
         discovered = []
         for _finder, name, _is_package in pkgutil.walk_packages([path], onerror=logger.error):
