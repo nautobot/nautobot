@@ -41,7 +41,9 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 +++ 3.0.0 "Support for Data Compliance on OrganizationalModel and PrimaryModel"
     Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceModelMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
 
-Below is an example `models.py` file containing a basic model with two character fields:
+## Basic model example
+
+The following example shows a standard (non-proxy) `models.py` definition with two character fields:
 
 ```python
 # models.py
@@ -100,5 +102,37 @@ Operations to perform:
 Running migrations:
   Applying nautobot_animal_sounds.0001_initial... OK
 ```
+
+## Proxy Model ContentType Resolution
+
+Proxy models generally don't create new database schema and therefore typically don't need migrations.
+
+Nautobot models inherit a class attribute named `for_concrete_model` from `BaseModel`.
+
+- Default is `True`, which preserves Django's concrete-model `ContentType` behavior.
+- Set it to `False` on a proxy model to use the proxy model `ContentType` instead.
+
+This setting is used by core `ContentType` resolution helpers and is honored by common Nautobot UI and extras paths (such as bulk operations, UI renderer context, and relationship lookup code).
+
+Example:
+
+```python
+from django.db import models
+
+from nautobot.apps.models import PrimaryModel
+
+
+class ExampleModel(PrimaryModel):
+    name = models.CharField(max_length=100)
+
+
+class ProxyExampleModel(ExampleModel):
+    for_concrete_model = False
+
+    class Meta:
+        proxy = True
+```
+
+In custom app code, use `nautobot.core.utils.contenttypes.get_content_type_for_model()` instead of calling `ContentType.objects.get_for_model()` directly, so the `for_concrete_model` flag is applied consistently.
 
 For more background on schema migrations, see the [Django documentation](https://docs.djangoproject.com/en/stable/topics/migrations/).
