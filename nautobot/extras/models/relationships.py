@@ -24,8 +24,7 @@ from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_undersc
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.cache import construct_cache_key
-from nautobot.core.utils.contenttypes import get_content_type_for_model
-from nautobot.core.utils.contenttypes import resolve_for_concrete_model
+from nautobot.core.utils.contenttypes import get_content_type_for_model, resolve_for_concrete_model
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -67,7 +66,8 @@ class RelationshipModel(models.Model):
         content_type = get_content_type_for_model(self)
         return list(
             RelationshipAssociation.objects.filter(
-                Q(source_id=self.pk, source_type=content_type) | Q(destination_id=self.pk, destination_type=content_type)
+                Q(source_id=self.pk, source_type=content_type)
+                | Q(destination_id=self.pk, destination_type=content_type)
             )
         )
 
@@ -284,17 +284,24 @@ class RelationshipModel(models.Model):
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
-                        association_queryset = RelationshipAssociation.objects.filter(
-                            relationship=relationship,
-                        ).filter(
-                            Q(source_id=self.pk, source_type=content_type)
-                            | Q(destination_id=self.pk, destination_type=content_type)
-                        ).distinct()
+                        association_queryset = (
+                            RelationshipAssociation.objects.filter(
+                                relationship=relationship,
+                            )
+                            .filter(
+                                Q(source_id=self.pk, source_type=content_type)
+                                | Q(destination_id=self.pk, destination_type=content_type)
+                            )
+                            .distinct()
+                        )
                         peer_ids = []
                         for association in association_queryset:
                             if association.source_id == self.pk and association.source_type_id == content_type.id:
                                 peer_ids.append(association.destination_id)
-                            elif association.destination_id == self.pk and association.destination_type_id == content_type.id:
+                            elif (
+                                association.destination_id == self.pk
+                                and association.destination_type_id == content_type.id
+                            ):
                                 peer_ids.append(association.source_id)
 
                         # Get the related objects based on the pks we gathered.

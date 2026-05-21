@@ -809,7 +809,9 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         proxy_destination_keys = [
             rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
         ]
-        concrete_source_keys = [rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)]
+        concrete_source_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)
+        ]
         concrete_destination_keys = [
             rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
         ]
@@ -895,7 +897,9 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         proxy_destination_keys = [
             rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
         ]
-        concrete_source_keys = [rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)]
+        concrete_source_keys = [
+            rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)
+        ]
         concrete_destination_keys = [
             rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
         ]
@@ -1608,6 +1612,7 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
 
         rendered_value = location_table.rows[0].get_cell(column_name)  # pylint: disable=no-member
         self.assertIn(f"relationship={relationship.key}", rendered_value)
+
 
 class RequiredRelationshipTestMixin:
     """Common test mixin for both view and API tests dealing with required relationships."""

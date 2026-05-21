@@ -4,7 +4,6 @@ from typing import ClassVar, Optional, Type, Union
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
     ImproperlyConfigured,
@@ -44,9 +43,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils.contenttypes import get_content_type_for_model
-from nautobot.core.utils.contenttypes import resolve_for_concrete_model
 from nautobot.core.utils import lookup, permissions
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
     get_filterable_params_from_filter_params,
@@ -928,7 +926,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             model = queryset.model
-            content_type = get_content_type_for_model(model, for_concrete_model=getattr(self, "for_concrete_model", None))
+            content_type = get_content_type_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
@@ -1163,16 +1161,10 @@ class BulkEditAndBulkDeleteModelMixin:
     """
 
     logger = logging.getLogger(__name__)
-    # Optional layer override for ContentType resolution; None defers to the model class policy.
-    for_concrete_model = None
-
-    def get_for_concrete_model(self, model):
-        """Resolve ContentType behavior for this view and model."""
-        return resolve_for_concrete_model(model, for_concrete_model=self.for_concrete_model)
 
     def get_bulk_content_type(self, model):
-        """Return the ContentType used for bulk edit/delete object selection."""
-        return get_content_type_for_model(model, for_concrete_model=self.get_for_concrete_model(model))
+        """Return the model-policy ContentType used for bulk edit/delete object selection."""
+        return get_content_type_for_model(model)
 
     def send_bulk_delete_objects_to_job(self, request):
         """Prepare and enqueue bulk delete job."""

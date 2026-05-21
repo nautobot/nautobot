@@ -73,9 +73,12 @@ class ObjectListViewTitlesTest(TestCase):
         view.initial(request)
 
         model = view.alter_queryset(request).model
-        with patch.object(model, "for_concrete_model", False), patch.object(
-            ContentType.objects, "get_for_model", wraps=ContentType.objects.get_for_model
-        ) as mocked_get_for_model:
+        with (
+            patch.object(model, "for_concrete_model", False),
+            patch.object(
+                ContentType.objects, "get_for_model", wraps=ContentType.objects.get_for_model
+            ) as mocked_get_for_model,
+        ):
             renderer = NautobotHTMLRenderer()
             renderer.get_context(
                 data={},
@@ -84,32 +87,6 @@ class ObjectListViewTitlesTest(TestCase):
             )
 
         mocked_get_for_model.assert_any_call(model, for_concrete_model=False)
-
-    @override_settings(ALLOWED_HOSTS=["*"], PAGINATE_COUNT=5, MAX_PAGE_SIZE=10)
-    def test_renderer_content_type_view_override_wins_over_model_policy(self):
-        """Renderer should prioritize explicit view.for_concrete_model over model policy."""
-        path = reverse("cloud:cloudresourcetype_list")
-        request = self.factory.get(path)
-        request.user = self.user
-        view = CloudResourceTypeUIViewSet()
-        view.for_concrete_model = True
-        view.action_map = {"get": "list"}
-        request = view.initialize_request(request)
-        view.setup(request)
-        view.initial(request)
-
-        model = view.alter_queryset(request).model
-        with patch.object(model, "for_concrete_model", False), patch.object(
-            ContentType.objects, "get_for_model", wraps=ContentType.objects.get_for_model
-        ) as mocked_get_for_model:
-            renderer = NautobotHTMLRenderer()
-            renderer.get_context(
-                data={},
-                accepted_media_type="text/html",
-                renderer_context={"view": view, "request": request, "response": Response({})},
-            )
-
-        mocked_get_for_model.assert_any_call(model, for_concrete_model=True)
 
 
 class NautobotHTMLRendererFilterSetNoneTest(TestCase):

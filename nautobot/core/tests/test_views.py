@@ -92,23 +92,6 @@ class BulkEditAndBulkDeleteModelMixinTestCase(TestCase):
             self.assertEqual(mixin.get_bulk_content_type(ProxyAdminGroup), sentinel_ct)
         mocked_get_for_model.assert_called_once_with(ProxyAdminGroup, for_concrete_model=False)
 
-    def test_get_bulk_content_type_prefers_view_override_over_model_policy(self):
-        """Explicit view override should take precedence over model.for_concrete_model."""
-
-        class ProxyAdminGroup(AdminGroup):
-            for_concrete_model = False
-
-            class Meta:
-                proxy = True
-                app_label = "users"
-
-        mixin = BulkEditAndBulkDeleteModelMixin()
-        mixin.for_concrete_model = True
-        sentinel_ct = object()
-        with mock.patch.object(ContentType.objects, "get_for_model", return_value=sentinel_ct) as mocked_get_for_model:
-            self.assertEqual(mixin.get_bulk_content_type(ProxyAdminGroup), sentinel_ct)
-        mocked_get_for_model.assert_called_once_with(ProxyAdminGroup, for_concrete_model=True)
-
 
 class HomeViewTestCase(TestCase):
     def test_home(self):

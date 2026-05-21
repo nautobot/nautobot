@@ -15,8 +15,8 @@ from nautobot.core.forms import (
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import validated_viewname
-from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_factory_formset_acceptable_querydict,
@@ -210,8 +210,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
-        view_for_concrete_model = getattr(view, "for_concrete_model", None)
-        content_type = get_content_type_for_model(model, for_concrete_model=view_for_concrete_model)
+        content_type = get_content_type_for_model(model)
         form = None
         table = None
         instance = None
