@@ -4224,7 +4224,7 @@ class ObjectMetadataUIViewSet(
         if mt_id:
             try:
                 mt = MetadataType.objects.get(pk=mt_id)
-            except (MetadataType.DoesNotExist, ValueError, TypeError):
+            except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
                 mt = None
         field = None
         if mt is not None:

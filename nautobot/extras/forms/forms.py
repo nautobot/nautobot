@@ -2193,7 +2193,7 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
             return
         try:
             mt = MetadataType.objects.get(pk=mt_id)
-        except (MetadataType.DoesNotExist, ValueError, TypeError):
+        except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
             return
         instance = getattr(self, "instance", None)
         existing = instance._value if instance and instance.present_in_database else None
@@ -2291,7 +2291,7 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
             try:
                 ct = ContentType.objects.get(pk=initial["assigned_object_type"])
                 obj = ct.get_object_for_this_type(pk=initial["assigned_object_id"])
-            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValueError, TypeError):
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValidationError, ValueError, TypeError):
                 ct = None
                 obj = None
             if ct is not None:
