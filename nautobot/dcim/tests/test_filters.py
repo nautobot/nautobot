@@ -3065,11 +3065,11 @@ class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTe
         # Cables
         Cable.objects.create(
             termination_a=rear_ports[0],
-            termination_b=rear_ports[3],
+            termination_b=rear_ports[1],
             status=status_connected,
         )
         Cable.objects.create(
-            termination_a=rear_ports[1],
+            termination_a=rear_ports[3],
             termination_b=rear_ports[4],
             status=status_connected,
         )

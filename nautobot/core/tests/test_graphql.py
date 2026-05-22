@@ -945,7 +945,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -955,7 +955,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             status=interface_status,
             role=interface_role,
@@ -1035,7 +1035,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -1044,7 +1044,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device2,
             mac_address="00:12:12:12:12:12",
             status=interface_status,
@@ -1068,12 +1068,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface31 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device3,
             status=interface_status,
             role=interface_role,
         )
-        cls.interface31 = Interface.objects.create(
+        cls.interface32 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device3,
