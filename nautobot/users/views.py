@@ -358,15 +358,6 @@ class TokenUIViewSet(NautobotUIViewSet):
 
         return super().form_save(form, **kwargs)
 
-    def get_queryset(self):
-        """Allow staff/superusers to manage all tokens; others are limited to their own."""
-        queryset = super().get_queryset()
-        if not self.request.user.is_authenticated:
-            return queryset.none()
-        if self.request.user.is_staff or self.request.user.is_superuser:
-            return queryset
-        return queryset.filter(user=self.request.user)
-
 
 #
 # Advanced Profile Settings

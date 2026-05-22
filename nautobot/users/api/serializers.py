@@ -77,11 +77,32 @@ class TokenSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         exclude = ["user"]
 
     def to_internal_value(self, data):
-        data = super().to_internal_value(data)
-        if "key" not in data and not self.instance:
-            data["key"] = Token.generate_key()
-        data["user"] = self.context["request"].user
-        return data
+        # Capture raw user input before super() strips it (Meta.exclude removes "user").
+        raw_user_input = data.get("user") if isinstance(data, dict) else None
+
+        validated = super().to_internal_value(data)
+
+        if "key" not in validated and not self.instance:
+            validated["key"] = Token.generate_key()
+
+        request_user = self.context["request"].user
+
+        # Mirror TokenUIViewSet.form_save: staff/superusers may explicitly assign ownership;
+        # non-staff users are always restricted to themselves regardless of input.
+        if request_user.is_staff or request_user.is_superuser:
+            if raw_user_input:
+                User = get_user_model()
+                try:
+                    validated["user"] = User.objects.get(pk=raw_user_input)
+                except (User.DoesNotExist, ValueError, TypeError) as exc:
+                    raise ValidationError({"user": f"User {raw_user_input!r} does not exist."}) from exc
+            elif not self.instance:
+                validated["user"] = request_user
+            # else: editing without an explicit user= → preserve existing instance.user
+        else:
+            validated["user"] = request_user
+
+        return validated
 
 
 class ObjectPermissionSerializer(ValidatedModelSerializer):

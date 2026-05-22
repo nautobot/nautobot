@@ -13,6 +13,7 @@ from django.utils import timezone
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import serialize_object, serialize_object_v2
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -234,11 +235,31 @@ class AdminGroup(Group):
 #
 
 
+class TokenQuerySet(RestrictedQuerySet):
+    """Apply Token-specific access restrictions on top of the standard permission filtering.
+
+    Tokens are user-scoped credentials, so anonymous users never see any tokens and non-staff
+    users only see their own. Staff/superusers can manage all tokens (e.g. to revoke a leaked
+    user's key). Centralizing this here means the same rule applies to UI views, REST/GraphQL,
+    and ORM call sites such as changelog access checks.
+    """
+
+    def restrict(self, user, action="view"):
+        if not user.is_authenticated:
+            return self.none()
+        qs = super().restrict(user, action)
+        if not (user.is_staff or user.is_superuser):
+            qs = qs.filter(user=user)
+        return qs
+
+
 class Token(ChangeLoggedModel, NotesMixin, BaseModel):
     """
     An API token used for user authentication. This extends the stock model to allow each user to have multiple tokens.
     It also supports setting an expiration time and toggling write ability.
     """
+
+    objects = BaseManager.from_queryset(TokenQuerySet)()
 
     user = models.ForeignKey(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tokens")
     created = models.DateTimeField(auto_now_add=True)

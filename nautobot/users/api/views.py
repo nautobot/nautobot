@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.models import Group
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiTypes
 from rest_framework.authentication import BasicAuthentication
@@ -44,7 +44,7 @@ class GroupViewSet(ModelViewSet):
 
 
 class TokenViewSet(NotesViewSetMixin, ModelViewSet):
-    queryset = RestrictedQuerySet(model=Token).select_related("user")  # pylint: disable=not-callable  # no idea why?
+    queryset = Token.objects.select_related("user")
     serializer_class = serializers.TokenSerializer
     filterset_class = filters.TokenFilterSet
 
@@ -53,15 +53,6 @@ class TokenViewSet(NotesViewSetMixin, ModelViewSet):
         """Inherit default authentication_classes and basic authentication."""
         classes = super().authentication_classes
         return [*classes, BasicAuthentication]
-
-    def get_queryset(self):
-        """
-        Limit users to their own Tokens.
-        """
-        queryset = super().get_queryset()
-        if not isinstance(self.request.user, AnonymousUser):
-            return queryset.filter(user=self.request.user)
-        return queryset.none()
 
 
 #

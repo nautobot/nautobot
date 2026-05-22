@@ -276,7 +276,8 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
     def test_edit_other_user_token_restriction(self):
         """
-        Tests to ensure that a user cannot modify tokens belonging to other users.
+        Non-staff users cannot view or modify another user's tokens (404 even with permissions),
+        while superusers can administer any user's tokens (matching the UI viewset).
         """
         other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
 
@@ -305,19 +306,23 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
 
         self.user.is_superuser = True
         self.user.save()
-        # Check to make sure user1 can't modify another user's token, even as superuser
+        # Superusers can modify any user's token (matching the UI viewset's administration model).
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        other_user_token.refresh_from_db()
+        self.assertEqual(other_user_token.description, "Meep.")
+        # Without an explicit user= in the payload, the existing owner is preserved.
+        self.assertEqual(other_user_token.user, self.basic_auth_user_granted)
 
-        # Check to make sure user1 can't take over another user's token, even as superuser
-        previous_token_count = len(Token.objects.filter(user=self.user))
+        # Superusers can also explicitly reassign a token to another user.
+        previous_token_count = Token.objects.filter(user=self.user).count()
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
         )
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Token.objects.filter(user=self.user).count(), previous_token_count + 1)
 
     def test_list_tokens_restrictions(self):
         """
