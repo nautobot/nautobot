@@ -26,8 +26,16 @@ class ManagementCommandTestCase(TestCase):
             for endpoint in value:
                 with self.subTest(endpoint=endpoint):
                     response = self.client.get(endpoint, follow=True)
-                    self.assertHttpStatus(
-                        response,
-                        200,
-                        f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200",
-                    )
+                    # in factory we create JobResult `SUCCESS` or `FAILURE` and revoke GET endpoint return 409 in that case
+                    if "revoke" in endpoint:
+                        self.assertHttpStatus(
+                            response,
+                            409,
+                            f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 409",
+                        )
+                    else:
+                        self.assertHttpStatus(
+                            response,
+                            200,
+                            f"{view_name}: {endpoint} returns status Code {response.status_code} instead of 200",
+                        )
