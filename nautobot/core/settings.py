@@ -106,6 +106,9 @@ if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UN
 # Event Brokers
 EVENT_BROKERS = {}
 
+# Event Consumers
+EVENT_CONSUMERS = {}
+
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
