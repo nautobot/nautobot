@@ -63,6 +63,25 @@ class GenerateCableBreakoutMappingTestCase(TestCase):
         self.assertEqual([e["b_connector"] for e in mapping], [1, 1, 2, 2, 3, 3, 4, 4])
         self.assertEqual([e["b_position"] for e in mapping], [1, 2, 1, 2, 1, 2, 1, 2])
 
+    def test_generate_cable_breakout_mapping_with_labels(self):
+        """Custom labels keyed by lane assignment are applied where the key matches, defaults elsewhere."""
+        labels = {
+            (1, 1, 1, 1): "Tx1",
+            (1, 4, 1, 4): "Rx1",
+            (9, 9, 9, 9): "ignored — no such lane",
+        }
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=4, labels=labels)
+        self.assertEqual(mapping[0]["label"], "Tx1")
+        self.assertEqual(mapping[1]["label"], "2")  # default
+        self.assertEqual(mapping[2]["label"], "3")  # default
+        self.assertEqual(mapping[3]["label"], "Rx1")
+
+    def test_generate_cable_breakout_mapping_none_labels(self):
+        """`labels=None` behaves the same as not providing the arg at all."""
+        default_mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        with_none = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2, labels=None)
+        self.assertEqual(default_mapping, with_none)
+
 
 class ValidateCableBreakoutMappingTestCase(TestCase):
     """Test the validate_cable_breakout_mapping utility function."""

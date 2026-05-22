@@ -4328,6 +4328,56 @@ class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["mapping"])
 
+    def test_mapping_editor_regenerates_when_posted_mapping_does_not_match_dimensions(self):
+        """If user changes dimensions on an existing CableType, the stale mapping is replaced, not rendered."""
+        self.add_permissions("dcim.view_cabletype")
+        # A 2-lane mapping posted alongside total_lanes=4 — stale and must be regenerated.
+        stale_mapping = [
+            {"label": "old-1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+            {"label": "old-2", "a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+        ]
+        response = self.client.post(
+            reverse("dcim:cabletype_mapping_editor"),
+            {
+                "a_connectors": 1,
+                "b_connectors": 1,
+                "total_lanes": 4,
+                "mapping": json.dumps(stale_mapping),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        mapping = response.context["mapping"]
+        self.assertEqual(len(mapping), 4)
+        # Labels from the matching A/B-keyed entries are carried over; new entries get default labels.
+        self.assertEqual(mapping[0]["label"], "old-1")
+        self.assertEqual(mapping[1]["label"], "old-2")
+        self.assertEqual(mapping[2]["label"], "3")
+        self.assertEqual(mapping[3]["label"], "4")
+
+    def test_mapping_editor_regenerates_when_posted_mapping_has_out_of_range_values(self):
+        """A mapping referencing connector/position values outside the posted dimensions is also regenerated."""
+        self.add_permissions("dcim.view_cabletype")
+        # b_connector=4 is out of range for b_connectors=2; the second entry's key matches the regenerated lane.
+        bad_mapping = [
+            {"label": "X", "a_connector": 1, "a_position": 1, "b_connector": 4, "b_position": 1},
+            {"label": "Y", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+        ]
+        response = self.client.post(
+            reverse("dcim:cabletype_mapping_editor"),
+            {
+                "a_connectors": 1,
+                "b_connectors": 2,
+                "total_lanes": 2,
+                "mapping": json.dumps(bad_mapping),
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        mapping = response.context["mapping"]
+        self.assertEqual(len(mapping), 2)
+        # "Y" has key (1, 2, 2, 1) which matches the regenerated entry at index 1; "X" is dropped (no key match).
+        self.assertEqual(mapping[0]["label"], "1")
+        self.assertEqual(mapping[1]["label"], "Y")
+
     def test_mapping_editor_blank_param_values_do_not_crash(self):
         """Empty-string params from HTMX on initial load should be treated as zero, not trigger ValueError."""
         self.add_permissions("dcim.view_cabletype")

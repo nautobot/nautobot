@@ -83,6 +83,7 @@ from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
     get_all_network_driver_mappings,
     render_software_version_and_image_files,
+    validate_cable_breakout_mapping,
 )
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
@@ -5416,6 +5417,36 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 #
 # Cable Types
 #
+def _mapping_matches_dimensions(mapping, a_connectors, b_connectors, total_lanes):
+    """True if `mapping` is shape-consistent with the given lane dimensions per validate_cable_breakout_mapping."""
+    if not (a_connectors and b_connectors and total_lanes):
+        return False
+    try:
+        validate_cable_breakout_mapping(mapping, a_connectors, b_connectors, total_lanes)
+    except ValidationError:
+        return False
+    return True
+
+
+def _user_labels_from_mapping(mapping):
+    """Build a `(a_connector, a_position, b_connector, b_position) -> label` dict from an untrusted mapping list."""
+    if not isinstance(mapping, list):
+        return {}
+    labels = {}
+    for entry in mapping:
+        if not isinstance(entry, dict):
+            continue
+        label = entry.get("label")
+        if not (isinstance(label, str) and label):
+            continue
+        try:
+            key = (entry["a_connector"], entry["a_position"], entry["b_connector"], entry["b_position"])
+        except KeyError:
+            continue
+        labels[key] = label
+    return labels
+
+
 class CableTypeUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CableTypeFilterSet
     filterset_form_class = forms.CableTypeFilterForm
@@ -5494,19 +5525,25 @@ class CableTypeUIViewSet(NautobotUIViewSet):
         a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
         b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
 
-        # Try to parse existing mapping from the request
-        mapping = None
+        # Parse the existing mapping from the request. If it's shape-consistent with the posted dimensions,
+        # use it as-is; otherwise (e.g. user just changed connector counts or total_lanes on an existing
+        # CableType), regenerate but carry over any user-supplied labels keyed by lane assignment.
+        posted_mapping = None
         mapping_json = request.POST.get("mapping", "")
         if mapping_json:
             try:
-                mapping = json.loads(mapping_json)
-                if not isinstance(mapping, list):
-                    mapping = None
+                posted_mapping = json.loads(mapping_json)
             except (json.JSONDecodeError, TypeError):
-                mapping = None
+                posted_mapping = None
 
-        if not mapping and all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
-            mapping = generate_cable_breakout_mapping(a_connectors, b_connectors, total_lanes)
+        if _mapping_matches_dimensions(posted_mapping, a_connectors, b_connectors, total_lanes):
+            mapping = posted_mapping
+        elif all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
+            mapping = generate_cable_breakout_mapping(
+                a_connectors, b_connectors, total_lanes, labels=_user_labels_from_mapping(posted_mapping)
+            )
+        else:
+            mapping = None
 
         return render(
             request,

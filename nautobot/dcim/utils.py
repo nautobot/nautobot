@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Optional
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -189,8 +190,14 @@ def clear_default_cable_types(apps, schema_editor=None):
         CableType.objects.filter(name=name).delete()
 
 
-def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_lanes: int):
-    """Generate a default mapping from the given connector and lane counts."""
+def generate_cable_breakout_mapping(
+    a_connectors: int, b_connectors: int, total_lanes: int, labels: Optional[dict] = None
+):
+    """Generate a default mapping from the given connector and lane counts.
+
+    Optional `labels`: dict keyed by `(a_connector, a_position, b_connector, b_position)` → label string,
+    used in place of the default `str(lane_index + 1)` per lane.
+    """
     a_positions = total_lanes // a_connectors
     b_positions = total_lanes // b_connectors
     mapping = []
@@ -199,14 +206,16 @@ def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_
         for a_position in range(a_positions):
             b_connector = lane_index // b_positions
             b_position = lane_index % b_positions
+            # Change 0-indexed iterations to 1-indexed mapping entries!
+            entry_key = (a_connector + 1, a_position + 1, b_connector + 1, b_position + 1)
+            label = labels.get(entry_key) if labels else None
             mapping.append(
                 {
-                    # Change 0-indexed iterations to 1-indexed mapping entries!
-                    "label": str(lane_index + 1),
-                    "a_connector": a_connector + 1,
-                    "a_position": a_position + 1,
-                    "b_connector": b_connector + 1,
-                    "b_position": b_position + 1,
+                    "label": label or str(lane_index + 1),
+                    "a_connector": entry_key[0],
+                    "a_position": entry_key[1],
+                    "b_connector": entry_key[2],
+                    "b_position": entry_key[3],
                 }
             )
             lane_index += 1
