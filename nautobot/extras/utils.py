@@ -17,6 +17,7 @@ from django.core.cache import cache
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
+from django.db.models.deletion import Collector
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
@@ -26,6 +27,7 @@ from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.models import BaseModel
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
@@ -933,36 +935,90 @@ def migrate_role_data(
 
 def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     """
-    Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
-    For use with bulk delete views. This operation is wrapped in an atomic transaction.
+    Delete objects in the provided queryset and create ObjectChange instances in bulk for performance.
+
+    In addition to logging the queryset members, this also logs every CASCADE-deleted child Django's
+    Collector would remove, plus any Note rows that the pre_delete signal handler cleans up.
+    Parents are processed in chunks of ``batch_size`` to keep peak memory bounded.
+    The whole operation is wrapped in an atomic transaction.
     """
-    from nautobot.extras.models import ObjectChange
+    # Lazy imports to avoid circular imports.
+    # extras.models and extras.signals transitively re-enter extras.utils during app load.
+    from nautobot.extras.models import Note, ObjectChange
     from nautobot.extras.signals import change_context_state
 
     change_context = change_context_state.get()
     if change_context is None:
         raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
 
+    user = change_context.get_user()
+    model = qs.model
+
+    def _build_objectchange(obj):
+        if not hasattr(obj, "to_objectchange"):
+            return None
+        oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+        if oc is None:
+            return None
+        oc.user = user
+        oc.user_name = user.username if user is not None else ""
+        oc.request_id = change_context.change_id
+        oc.change_context = change_context.context
+        oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+        return oc
+
     with transaction.atomic():
         try:
-            queued_object_changes = []
             change_context.defer_object_changes = True
-            for obj in qs.iterator(chunk_size=1000):
-                if not hasattr(obj, "to_objectchange"):
-                    break
-                if len(queued_object_changes) >= batch_size:
-                    ObjectChange.objects.bulk_create(queued_object_changes)
-                    queued_object_changes = []
-                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                if oc is not None:
-                    oc.user = change_context.get_user()
-                    oc.user_name = oc.user.username
-                    oc.request_id = change_context.change_id
-                    oc.change_context = change_context.context
-                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                    queued_object_changes.append(oc)
-            ObjectChange.objects.bulk_create(queued_object_changes)
-            return qs.delete()
+
+            # Snapshot parent PKs first so deletes in earlier batches do not shift later ones.
+            parent_pks = list(qs.values_list("pk", flat=True))
+
+            total_deleted = 0
+            deleted_by_label = {}
+
+            for offset in range(0, len(parent_pks), batch_size):
+                batch_pks = parent_pks[offset : offset + batch_size]
+                batch_qs = model.objects.filter(pk__in=batch_pks)
+
+                # Collector identifies the parent rows and every row Django will CASCADE-delete for this batch.
+                collector = Collector(using=batch_qs.db)
+                collector.collect(list(batch_qs))
+
+                queued = []
+                ct_to_pks = {}
+
+                for cascade_model, instances in collector.data.items():
+                    if not issubclass(cascade_model, BaseModel):
+                        continue
+                    ct = ContentType.objects.get_for_model(cascade_model)
+                    pks = ct_to_pks.setdefault(ct, [])
+                    for obj in instances:
+                        pks.append(obj.pk)
+                        oc = _build_objectchange(obj)
+                        if oc is not None:
+                            queued.append(oc)
+
+                # Notes are not in Collector.data because NotesMixin does not declare a GenericRelation;
+                # the pre_delete signal handler removes them explicitly, so log them ourselves.
+                for ct, pks in ct_to_pks.items():
+                    for note in Note.objects.filter(assigned_object_type=ct, assigned_object_id__in=pks):
+                        oc = _build_objectchange(note)
+                        if oc is not None:
+                            queued.append(oc)
+
+                if queued:
+                    ObjectChange.objects.bulk_create(queued, batch_size=batch_size)
+
+                batch_deleted, batch_info = batch_qs.delete()
+                total_deleted += batch_deleted
+                for label, count in batch_info.items():
+                    deleted_by_label[label] = deleted_by_label.get(label, 0) + count
+
+                # Drop per-batch deferred entries so the dict does not grow across batches.
+                change_context.reset_deferred_object_changes()
+
+            return total_deleted, deleted_by_label
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()

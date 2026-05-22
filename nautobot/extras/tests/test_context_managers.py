@@ -23,7 +23,7 @@ from nautobot.extras.context_managers import (
     deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
-from nautobot.extras.models import JobHook, Status, Webhook
+from nautobot.extras.models import Contact, ContactAssociation, JobHook, Note, Role, Status, Webhook
 from nautobot.extras.utils import bulk_delete_with_bulk_change_logging
 
 # Use the proper swappable User model
@@ -306,6 +306,79 @@ class BulkEditDeleteChangeLogging(TestCase):
         self.assertEqual(oc_list[0].action, ObjectChangeActionChoices.ACTION_DELETE)
         self.assertEqual(oc_list[0].user, self.user)
         self.assertEqual(oc_list[0].user_name, self.user.username)
+
+    def test_bulk_delete_logs_cascade_children(self):
+        """Bulk delete should log ObjectChanges for CASCADE-deleted child rows, not just queryset members."""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        parent = Location.objects.create(name="Parent BulkDelete", location_type=location_type, status=location_status)
+        child_a = Location.objects.create(
+            name="Child A", location_type=location_type, status=location_status, parent=parent
+        )
+        child_b = Location.objects.create(
+            name="Child B", location_type=location_type, status=location_status, parent=parent
+        )
+        parent_pk, child_a_pk, child_b_pk = parent.pk, child_a.pk, child_b.pk
+
+        with web_request_context(self.user):
+            bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=parent_pk))
+
+        delete_changes = get_changes_for_model(Location).filter(
+            action=ObjectChangeActionChoices.ACTION_DELETE,
+            changed_object_id__in=[parent_pk, child_a_pk, child_b_pk],
+        )
+        self.assertEqual(delete_changes.count(), 3)
+        request_ids = {oc.request_id for oc in delete_changes}
+        self.assertEqual(len(request_ids), 1, "all cascade deletes should share the same request_id")
+        for oc in delete_changes:
+            self.assertEqual(oc.user, self.user)
+            self.assertEqual(oc.user_name, self.user.username)
+
+    def test_bulk_delete_logs_contact_associations(self):
+        """Bulk delete should log an ObjectChange for ContactAssociations the receiver cleans up."""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Location With Contact", location_type=location_type, status=location_status
+        )
+        contact = Contact.objects.create(name="Test Contact")
+        assoc_role = Role.objects.get_for_model(ContactAssociation).first()
+        assoc_status = Status.objects.get_for_model(ContactAssociation).first()
+        association = ContactAssociation.objects.create(
+            contact=contact,
+            associated_object=location,
+            role=assoc_role,
+            status=assoc_status,
+        )
+        association_pk = association.pk
+
+        with web_request_context(self.user):
+            bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=location.pk))
+
+        assoc_changes = get_changes_for_model(ContactAssociation).filter(
+            action=ObjectChangeActionChoices.ACTION_DELETE, changed_object_id=association_pk
+        )
+        self.assertEqual(assoc_changes.count(), 1)
+        self.assertEqual(assoc_changes.first().user, self.user)
+
+    def test_bulk_delete_logs_notes(self):
+        """Bulk delete should log an ObjectChange for Notes the receiver cleans up."""
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="Location With Note", location_type=location_type, status=location_status
+        )
+        note = Note.objects.create(assigned_object=location, user=self.user, note="A note on this location")
+        note_pk = note.pk
+
+        with web_request_context(self.user):
+            bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=location.pk))
+
+        note_changes = get_changes_for_model(Note).filter(
+            action=ObjectChangeActionChoices.ACTION_DELETE, changed_object_id=note_pk
+        )
+        self.assertEqual(note_changes.count(), 1)
+        self.assertEqual(note_changes.first().user, self.user)
 
     def test_create_then_update(self):
         """Test that a create followed by an update is logged as a single create"""
