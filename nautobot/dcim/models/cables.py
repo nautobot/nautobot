@@ -240,7 +240,8 @@ class Cable(PrimaryModel):
     A physical connection between two endpoints.
 
     Terminations are stored in the CableTermination join table. The `termination_a` and `termination_b`
-    properties retrieve the first A-side and B-side terminations respectively for backward compatibility.
+    properties retrieve the A-side and B-side termination on connector 1 respectively for backward
+    compatibility; use `terminations_a` / `terminations_b` to access all terminations on each side.
     """
 
     cable_type = models.ForeignKey(
@@ -370,20 +371,21 @@ class Cable(PrimaryModel):
 
     # ─── Termination properties (read from CableToCableTermination join table) ───
 
-    def _first_endpoint(self, side):
-        """Return the first CableToCableTermination row for the given side, or None."""
-        return self.terminations.filter(cable_end=side).order_by("connector").first()
-
     def _get_termination_attr(self, side, endpoint_attr, fallback_attr):
-        """Get an attribute from the first endpoint on the given side, or fall back to an _initial_* attr."""
-        endpoint = self._first_endpoint(side)
+        """Get an attribute from the connector=1 endpoint on the given side, or fall back to an _initial_* attr.
+
+        Returns None for partially-cabled breakouts where connector 1 is uncabled, by design — the
+        backward-compat `termination_a`/`termination_b` properties have a singular meaning that only
+        maps cleanly to connector 1. Use `terminations_a`/`terminations_b` for the full set.
+        """
+        endpoint = self.terminations.filter(cable_end=side, connector=1).first()
         if endpoint:
             return getattr(endpoint, endpoint_attr)
         return getattr(self, fallback_attr, None)
 
     @property
     def termination_a(self):
-        """First A-side termination object (backward compat)."""
+        """A-side termination on connector 1 (backward compat). None if connector 1 is uncabled."""
         return self._get_termination_attr("A", "termination", "_initial_termination_a")
 
     @termination_a.setter
@@ -394,7 +396,7 @@ class Cable(PrimaryModel):
 
     @property
     def termination_b(self):
-        """First B-side termination object (backward compat)."""
+        """B-side termination on connector 1 (backward compat). None if connector 1 is uncabled."""
         return self._get_termination_attr("B", "termination", "_initial_termination_b")
 
     @termination_b.setter
@@ -403,7 +405,7 @@ class Cable(PrimaryModel):
 
     @property
     def termination_a_type(self):
-        """ContentType of first A-side termination (backward compat)."""
+        """ContentType of the A-side termination on connector 1 (backward compat)."""
         return self._get_termination_attr("A", "termination_type", "_initial_termination_a_type")
 
     @termination_a_type.setter
@@ -412,7 +414,7 @@ class Cable(PrimaryModel):
 
     @property
     def termination_a_id(self):
-        """UUID of first A-side termination (backward compat)."""
+        """UUID of the A-side termination on connector 1 (backward compat)."""
         return self._get_termination_attr("A", "termination_id", "_initial_termination_a_id")
 
     @termination_a_id.setter
@@ -421,7 +423,7 @@ class Cable(PrimaryModel):
 
     @property
     def termination_b_type(self):
-        """ContentType of first B-side termination (backward compat)."""
+        """ContentType of the B-side termination on connector 1 (backward compat)."""
         return self._get_termination_attr("B", "termination_type", "_initial_termination_b_type")
 
     @termination_b_type.setter
@@ -430,7 +432,7 @@ class Cable(PrimaryModel):
 
     @property
     def termination_b_id(self):
-        """UUID of first B-side termination (backward compat)."""
+        """UUID of the B-side termination on connector 1 (backward compat)."""
         return self._get_termination_attr("B", "termination_id", "_initial_termination_b_id")
 
     @termination_b_id.setter
