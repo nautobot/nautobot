@@ -6388,15 +6388,38 @@ class ObjectMetadataTestCase(
                 "valid CT but nonexistent object",
                 {"assigned_object_type": str(location_ct.pk), "assigned_object_id": bogus_uuid},
             ),
+            (
+                "malformed UUID for object id",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": "ppp"},
+            ),
         ]:
             with self.subTest(case=case_name):
-                response = self.client.get(reverse("extras:objectmetadata_add"), data=params)
+                with self.assertLogs("nautobot.extras.views", level="DEBUG") as captured_logs:
+                    response = self.client.get(reverse("extras:objectmetadata_add"), data=params)
                 self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
                 messages_list = [str(m) for m in get_messages(response.wsgi_request)]
                 self.assertTrue(
                     any("does not exist" in m for m in messages_list),
                     f"[{case_name}] expected does-not-exist warning, got: {messages_list}",
                 )
+                self.assertTrue(
+                    any("could not resolve assigned object" in log for log in captured_logs.output),
+                    f"[{case_name}] expected debug log entry, got: {captured_logs.output}",
+                )
+
+    def test_create_view_honors_return_url_on_validation_failure(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        return_url = "/dcim/devices/"  # any safe local URL
+        response = self.client.get(
+            reverse("extras:objectmetadata_add"),
+            data={
+                "assigned_object_type": str(location_ct.pk),
+                "assigned_object_id": "ppp",  # malformed UUID
+                "return_url": return_url,
+            },
+        )
+        self.assertRedirects(response, return_url, fetch_redirect_response=False)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_widget_renders_text_input_for_text_metadata_type(self):

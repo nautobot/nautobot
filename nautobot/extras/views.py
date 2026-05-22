@@ -4186,16 +4186,23 @@ class ObjectMetadataUIViewSet(
                     request,
                     "Object metadata must be created from the parent object's detail view (Metadata tab).",
                 )
-                return redirect("extras:objectmetadata_list")
+                return redirect(self.get_return_url(request))
             try:
                 ct = ContentType.objects.get(pk=ct_id)
                 ct.get_object_for_this_type(pk=obj_id)
-            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValueError, TypeError):
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValidationError, ValueError, TypeError) as exc:
+                logger.debug(
+                    "Object metadata create: could not resolve assigned object "
+                    "(assigned_object_type=%r, assigned_object_id=%r): %r",
+                    ct_id,
+                    obj_id,
+                    exc,
+                )
                 messages.warning(
                     request,
                     "Cannot create metadata: the requested assigned object does not exist.",
                 )
-                return redirect("extras:objectmetadata_list")
+                return redirect(self.get_return_url(request))
         return super().create(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance=None):
