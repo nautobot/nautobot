@@ -1,3 +1,4 @@
 Added abstract `perform_reap` method to `JobRevokeStrategy` class. 
 Added implementation for K8s revoke job.
 Added helper method `build_kubernetes_api_client` to `extras.utils` to avoid duplication.
+Added `--env`/`-e` option to `invoke start`, `invoke debug` and `invoke restart` to pass environment variables to docker compose (e.g. `-e KEY=VALUE`, can be repeated).

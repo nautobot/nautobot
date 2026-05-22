@@ -500,47 +500,71 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
+def _parse_env_kwargs(env) -> dict:
+    """Parse a list of 'KEY=VALUE' strings into a dict.
+
+    Args:
+        env: None, or an iterable of 'KEY=VALUE' strings (as produced by invoke's
+            iterable=['env'] CLI argument).
+
+    Returns:
+        dict mapping keys to values; empty dict if env is falsy.
+    """
+    if not env:
+        return {}
+    result = {}
+    for item in env:
+        if "=" not in item:
+            raise Exit(f"Invalid --env value {item!r}; expected KEY=VALUE.")
+        key, value = item.split("=", 1)
+        result[key] = value
+    return result
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def debug(context, service=None):
+def debug(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in debug mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in debug mode...")
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
-        docker_compose(context, "up", service=service)
+        docker_compose(context, "up", service=service, env=dict_env)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def start(context, service=None):
+def start(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in detached mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in detached mode...")
-    docker_compose(context, "up --detach", service=service)
+    docker_compose(context, "up --detach", service=service, env=dict_env)
     dump_service_ports_to_disk(context)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def restart(context, service=None):
+def restart(context, service=None, env=None):
     """Gracefully restart specified or all services."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Restarting {service or 'all services'}...")
-    docker_compose(context, "restart", service=service)
+    docker_compose(context, "restart", service=service, env=dict_env)
 
 
 @task(

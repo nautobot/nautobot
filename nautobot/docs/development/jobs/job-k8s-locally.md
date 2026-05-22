@@ -13,8 +13,9 @@ Both "sides" share the same database, so the `JobResult` row created by the Naut
 
 ## Prerequisites
 
-- Docker Desktop version `4.72.0` or higher installed.
+- Docker Desktop version `4.64` or higher installed. The instructions below assume the Kubernetes setup flow available in `4.64+` (UI may differ in older versions, so steps may not match exactly).
 - `kubectl` installed and available on your `$PATH`.
+- Kubernetes version: any version Docker Desktop ships with should work. This guide was verified against `1.34.3`
 
 ### Create a local Kubernetes cluster
 
@@ -27,7 +28,7 @@ error: current-context is not set
 Create one through the Docker Desktop UI:
 
 1. Open **Docker Desktop → Settings → Kubernetes**.
-2. Click **Create cluster**, pick provisioner **kind** with **1 node**, and confirm.
+2. Click **Create cluster**, pick provisioner **kind** with **1 node** and default `1.34.3` kubernetes version and confirm.
 3. Wait for Docker Desktop to report Kubernetes as running.
 Verify the cluster is up and that `kubectl` is pointing at it:
 
@@ -56,106 +57,76 @@ kubectl create clusterrolebinding nautobot-sa-binding \
 kubectl create token nautobot-sa --duration=8760h > <path_to_your_k8s_token>
 ```
 
-Tell Nautobot where to find the token (in `dev.env` or equivalent):
+The token is valid for one year (`8760h`). To verify it still valid you can check `exp` from:
 
 ```bash
-NAUTOBOT_KUBERNETES_TOKEN_PATH="/tmp/k8s-token"
+jq -R 'split(".") | .[0],.[1] | @base64d | fromjson' < <path_to_your_k8s_token>
 ```
 
-mount the token as a volume in `docker-compose.yml`
+example output:
+
+```json
+  {
+    "alg": "RS256",
+    "kid": ...
+  }
+  {
+    "aud": [
+      "https://kubernetes.default.svc.cluster.local"
+    ],
+    "exp": 1779452794,
+    "iat": 1779452194,
+    "iss": "https://kubernetes.default.svc.cluster.local",
+    ...
+  }
+```
+
+If token expired - re-run the `kubectl create token ...` command above to overwrite the file with a fresh one.
+
+## Wire up the local-development Compose overrides
+
+The k8s-specific changes (token mount, host-side Postgres and Redis ports) all live in dedicated override files so the shared compose files stay untouched:
+
+- `development/docker-compose.k8s.yml` — exposes Redis on the host and mounts the token into the Nautobot container.
+- `development/docker-compose.postgres.k8s.yml` — exposes Postgres on the host.
+
+Add both to the `compose_files` list in your local `development/invoke.yml`, in the order shown below (each k8s override must come **after** the base file it extends):
 
 ```yaml
- services:
-  nautobot:
-    secrets:
-        - k8s_token
-    build:
-      args:
-        PYTHON_VER: "${PYTHON_VER}"
-      context: ../
-      dockerfile: docker/Dockerfile
-      target: dev
-    healthcheck:
-      start_period: 10m
-    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
-    ports:
-      - "8080:8080"
-    volumes:
-      - media_root:/opt/nautobot/media
-      - <path_to_your_k8s_token>:/tmp/k8s-token:ro # <-- ADD
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.k8s.yml"          # <-- ADD: extends docker-compose.yml
+    - "docker-compose.postgres.yml"
+    - "docker-compose.postgres.k8s.yml" # <-- ADD: extends docker-compose.postgres.yml
+    - "docker-compose.dev.yml"
 ```
 
-or just use `docker-compose.k8s.yml` and change only <path_to_your_k8s_token>:
+From now on, all `invoke` commands automatically include the k8s overrides.
 
-```yaml
-services:
-  nautobot:
-    secrets:
-        - k8s_token
-    build:
-      args:
-        PYTHON_VER: "${PYTHON_VER}"
-      context: ../
-      dockerfile: docker/Dockerfile
-      target: dev
-    healthcheck:
-      start_period: 10m
-    image: "local/nautobot-dev:local-${NAUTOBOT_VER}-py${PYTHON_VER}"
-    ports:
-      - "8080:8080"
-    volumes:
-      - media_root:/opt/nautobot/media
-      - <path_to_your_k8s_token>:/tmp/k8s-token:ro # <-- CHANGE
-```
+## Apply the local-development ConfigMap override
 
-## Expose Postgres and Redis on host ports
+The job pod reads its database and Redis hosts from the `dev-env` ConfigMap. By default that ConfigMap targets the Kubernetes-internal service names `db` and `redis`, but in this setup Postgres and Redis run on the host (via Docker Compose), not in the cluster, so the pod needs `host.docker.internal` instead.
 
-By default the dev compose file exposes Postgres and Redis only inside the Compose network. The Kubernetes job pod cannot reach them there, so we need to publish them on the host.
-
-So please use `development/docker-compose.k8s.postgres.yml` insted of `development/docker-compose.postgres.yml` and `development/docker-compose.k8s.yml` instead of `development/docker-compose.yml` or just do below changes.
-
-Edit `development/docker-compose.postgres.yml` and add a `ports` mapping:
-
-```yaml
-services:
-  db:
-    image: postgres:14
-    env_file:
-      - dev.env
-    ports:
-      - "5432:5432"   # <-- ADD
-    volumes:
-      - pgdata_nautobot:/var/lib/postgresql/data
-```
-
-Do the same for Redis edit `development/docker-compose.yml`:
-
-```yaml
-    redis:
-      image: redis:6-alpine
-      ports:
-        - "6379:6379"    # <-- ADD
-```
-
-## Update the `dev-env` ConfigMap
-
-The job pod uses environment variables from the `dev-env` ConfigMap to find the database and Redis. By default they point at the Kubernetes-internal service names `db` and `redis`. Since we are pointing the pod at the host's Postgres and Redis instead, change both to `host.docker.internal`.
-
-In `development/kubernetes/dev-env-configmap.yaml`:
-
-```yaml
-data:
-  NAUTOBOT_DB_HOST: host.docker.internal     # was: db
-  NAUTOBOT_REDIS_HOST: host.docker.internal  # was: redis
-```
-
-> **Why `host.docker.internal`?**
-> Inside the cluster, `127.0.0.1` resolves to the pod itself, not your host. `host.docker.internal` is the DNS name that Docker Desktop provide for "the machine running the container runtime".
-
-Apply the change:
+A ready-made patch file is provided at `development/kubernetes/dev-env-local-patch.yaml` that overrides only the two host entries. Apply the base ConfigMap first, then patch it:
 
 ```bash
 kubectl apply -f development/kubernetes/dev-env-configmap.yaml
+kubectl patch configmap dev-env --patch-file development/kubernetes/dev-env-local-patch.yaml
+```
+
+The patch contents:
+
+```yaml
+data:
+  NAUTOBOT_DB_HOST: host.docker.internal
+  NAUTOBOT_REDIS_HOST: host.docker.internal
+```
+
+Verify all original keys are still present after the patch:
+
+```bash
+kubectl describe configmap dev-env
 ```
 
 ## (Optional) Enable apps in `development/kubernetes/nautobot-cm1-configmap.yaml`
@@ -212,18 +183,6 @@ Then copy the tag that matches the `local/nautobot-dev:...` and paste into the m
 ]
 ```
 
-While you're editing the manifest, bump `ttlSecondsAfterFinished` for development. The default in the manifest is very short (a few seconds), which means Kubernetes garbage-collects the finished Job and its pod before you can inspect it with `kubectl logs`. Set it to something like 300 (5 minutes) so completed jobs stick around long enough to debug:
-
-```python
-"spec": {
-    "ttlSecondsAfterFinished": 300,   # <-- bump from the default
-    "template": {
-        ...
-    },
-    ...
-}
-```
-
 ## Point Nautobot at the host's Kubernetes API
 
 Inside the Compose container, `127.0.0.1` is the container, not the host. So even though `kubectl config view` shows the cluster as `https://127.0.0.1:50675`, the Nautobot container needs the host-routable form.
@@ -263,20 +222,29 @@ def build_kubernetes_api_client():
 With all the configuration in place, bring up the Nautobot stack:
 
 ```bash
-invoke start
+invoke start \
+  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH= \
+  -e DESC_KUBERNETES_TOKEN_PATH=NAUTOBOT_KUBERNETES_TOKEN_PATH
 ```
 
-or, if you want to attach a debugger to the Django process:
+Or, if you want to attach a debugger to the Django process:
 
 ```bash
-invoke debug
+invoke debug \
+  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH= \
+  -e DESC_KUBERNETES_TOKEN_PATH=NAUTOBOT_KUBERNETES_TOKEN_PATH
 ```
+
+- `SRC_KUBERNETES_TOKEN_LOCAL_PATH` — absolute path on your host where you saved the token (the file produced by `kubectl create token`).
+- `DESC_KUBERNETES_TOKEN_PATH` — name of the env var inside the container that points at the mounted token; should match `NAUTOBOT_KUBERNETES_TOKEN_PATH` from `dev.env`.
 
 Then:
 
 1. Open Nautobot at `http://localhost:8080`.
-2. Navigate to **Jobs**, pick a job (e.g. one from `example_app`), and run it. (For the job to actually be dispatched to Kubernetes (rather than running in the regular Celery worker), it needs to be assigned to a job queue of type **Kubernetes**. See [Configure a New Job Queue of Type Kubernetes](../../user-guide/platform-functionality/jobs/kubernetes-job-support.md#configuration) for how to create the queue and route a job to it.)
-3. Watch the cluster react:
+2. Create new queue type kubernetes: Left nav → Jobs → Job Queues → + → Name: kubernetes, Queue Type: Kubernetes → Create
+3. Assign that Job Queue to a Job: Update job Open the job's edit form → check override on Job Queues and Default Job Queue → select the kubernetes queue → Update (**More on Kubernetes job queues** See [Configure a New Job Queue of Type Kubernetes](../../user-guide/platform-functionality/jobs/kubernetes-job-support.md#configuration) for full details on creating Kubernetes queues and routing jobs to them.)
+4. Navigate to **Jobs**, pick a job (e.g. one from `example_app`), and run it.
+5. Watch the cluster react:
 
     ```bash
     kubectl get all
@@ -284,10 +252,10 @@ Then:
 
     You should see a pod named `nautobot-job-<job_result_uuid>-<suffix>` appear and progress through `Pending` - `ContainerCreating` - `Running` - `Completed`.
 
-4. Inspect what the pod did:
+6. Inspect what the pod did:
 
     ```bash
     kubectl logs <pod-name>
     ```
 
-5. Check the **Job Results** page in the Nautobot UI. The result should be marked successful and contain the log output.
+7. Check the **Job Results** page in the Nautobot UI. The result should be marked successful and contain the log output.
