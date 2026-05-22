@@ -877,6 +877,77 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         form = CableForm(data=data, instance=self.cable)
         self.assertTrue(hasattr(form, "fields"))
 
+    def test_form_rejects_incompatible_termination_pair(self):
+        """A form submission pairing an Interface with a ConsolePort must fail validation, not save."""
+        iface_status = Status.objects.get_for_model(Interface).first()
+        iface_free = Interface.objects.create(
+            device=self.device, name="iface-free", status=iface_status, type="1000base-t"
+        )
+        cp = ConsolePort.objects.create(
+            device=self.device, name="cp-incompatible", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": "",
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(iface_free.pk),
+            "b_conn_1_type": "consoleport",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(cp.pk),
+        }
+        form = CableForm(data=data)
+        self.assertFalse(form.is_valid())
+        # Error is attached to the B-side termination field for clear UX, not buried in non-field errors.
+        self.assertIn("b_conn_1_termination", form.errors)
+        self.assertIn("Incompatible termination types", str(form.errors["b_conn_1_termination"]))
+        # The freshly-created ConsolePort never got attached to any cable.
+        self.assertFalse(CableToCableTermination.objects.filter(console_port=cp).exists())
+
+    def test_form_rejects_incompatible_breakout_lane_pair(self):
+        """On a 1x2 breakout, lane 2 (A1↔B2) incompatibility must surface as a form error at submit time."""
+        ct = CableType.objects.create(name="form-test 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        iface_status = Status.objects.get_for_model(Interface).first()
+        iface_a1 = Interface.objects.create(
+            device=self.device, name="lane-iface-a1", status=iface_status, type="1000base-t"
+        )
+        iface_b1 = Interface.objects.create(
+            device=self.device, name="lane-iface-b1", status=iface_status, type="1000base-t"
+        )
+        cp_b2 = ConsolePort.objects.create(device=self.device, name="lane-cp-b2", type=ConsolePortTypeChoices.TYPE_RJ45)
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": str(ct.pk),
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(iface_a1.pk),
+            "b_conn_1_type": "interface",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(iface_b1.pk),
+            # Lane 2: A1 (interface) ↔ B2 (consoleport) — incompatible.
+            "b_conn_2_type": "consoleport",
+            "b_conn_2_parent": str(self.device.pk),
+            "b_conn_2_termination": str(cp_b2.pk),
+        }
+        form = CableForm(data=data)
+        self.assertFalse(form.is_valid())
+        # The incompatibility is on lane 2 (b_conn_2), not lane 1.
+        self.assertIn("b_conn_2_termination", form.errors)
+        self.assertNotIn("b_conn_1_termination", form.errors)
+        self.assertIn("Incompatible termination types", str(form.errors["b_conn_2_termination"]))
+        # No CableToCableTermination row was created for the rejected ConsolePort.
+        self.assertFalse(CableToCableTermination.objects.filter(console_port=cp_b2).exists())
+
     def test_disconnect_one_side_of_invalid_cable_is_allowed(self):
         """A cable that's already in an invalid state (e.g. incompatible termination types saved
         before the create-time validation gap was fixed) should be editable to *remove* one side's

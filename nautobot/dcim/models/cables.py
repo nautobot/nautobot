@@ -662,13 +662,13 @@ class Cable(PrimaryModel):
         super().clean()
 
         # Per-termination validations on the first A/B terminations (sufficient for standard cables;
-        # breakout-cable iteration across all lanes is a future enhancement).
-        # Form-driven flows set `_form_cleaned_terminations` on the instance to tell us to use
-        # the cleaned form data (`_initial_termination_a/_b`) directly — including the case where
-        # the user has *cleared* a side (None) and wants us to validate the new partial pair, not
-        # the previously-saved invalid pair. For direct model usage we fall back to the saved-rows
-        # property as before.
-        if getattr(self, "_form_cleaned_terminations", False):
+        # `CableToCableTermination.clean()` covers per-lane validation for breakout cables).
+        # Form-driven flows set `_form_cleaned_terminations` to tell us to use the cleaned form data
+        # (`_initial_termination_a/_b`) directly — including the case where the user has *cleared* a
+        # side (None) and wants us to validate the new partial pair, not the previously-saved
+        # invalid pair. For direct model usage we fall back to the saved-rows property as before.
+        is_form_driven = getattr(self, "_form_cleaned_terminations", False)
+        if is_form_driven:
             term_a = getattr(self, "_initial_termination_a", None)
             term_b = getattr(self, "_initial_termination_b", None)
         else:
@@ -677,8 +677,10 @@ class Cable(PrimaryModel):
         validate_cable_termination(term_a, cable_id=self.pk)
         validate_cable_termination(term_b, cable_id=self.pk)
 
-        # Pair-wise validation on the first A/B pair.
-        self._validate_termination_pair(term_a, term_b)
+        # Pair-wise validation on the first A/B pair. The form does its own lane-by-lane iteration
+        # and attaches per-field errors, so skip this redundant check on form-driven saves.
+        if not is_form_driven:
+            self.validate_termination_pair(term_a, term_b)
 
         # Validate length and length_unit
         if self.length is not None and not self.length_unit:
@@ -687,7 +689,7 @@ class Cable(PrimaryModel):
             self.length_unit = ""
 
     @staticmethod
-    def _validate_termination_pair(term_a, term_b):
+    def validate_termination_pair(term_a, term_b):
         """Validate compatibility of one A-side / B-side termination pair.
 
         Raises ValidationError if the pair is incompatible (mismatched types, same termination on both
@@ -792,13 +794,7 @@ class Cable(PrimaryModel):
         ):
             if not term:
                 continue
-            fk_field = termination_fk_field(term)
-            CableToCableTermination.objects.get_or_create(
-                cable=self,
-                cable_end=end,
-                **{fk_field: term},
-                defaults={"connector": conn},
-            )
+            self.add_termination(term, cable_end=end, connector=conn)
             logger.debug(f"Created CableToCableTermination {end}-side for {term} on cable {self}")
 
     def _sync_cable_path_active_flags(self):
@@ -1149,6 +1145,33 @@ class CableToCableTermination(BaseModel):
                         )
                     }
                 )
+
+        # Pair-wise compatibility: each row's termination must be compatible with every peer
+        # termination on the opposite cable_end that shares a lane via the cable_type mapping
+        # (or against the single connector-1 peer on a standard cable). Catches breakout cases
+        # like A-connector 1 = Interface and A-connector 2 = PowerPort connecting to B-side
+        # Interfaces — only the second row's pair check exposes the incompatibility.
+        if term is not None and self.cable is not None:
+            if self.cable.cable_type_id is None:
+                peer_connectors = {1}
+            else:
+                our_side_key = "a_connector" if self.cable_end == "A" else "b_connector"
+                peer_side_key = "b_connector" if self.cable_end == "A" else "a_connector"
+                peer_connectors = {
+                    entry[peer_side_key]
+                    for entry in self.cable.cable_type.mapping
+                    if entry[our_side_key] == self.connector
+                }
+            if peer_connectors:
+                opposite_end = "B" if self.cable_end == "A" else "A"
+                peer_rows = self.cable.terminations.filter(cable_end=opposite_end, connector__in=peer_connectors)
+                if self.present_in_database:
+                    peer_rows = peer_rows.exclude(pk=self.pk)
+                for peer in peer_rows:
+                    peer_term = peer.termination
+                    if peer_term is None:
+                        continue
+                    Cable.validate_termination_pair(term, peer_term)
 
     def save(self, *args, **kwargs):
         # Cache the effective parent device for filtering. See `_termination_device` field comment.

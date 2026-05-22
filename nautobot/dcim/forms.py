@@ -174,7 +174,6 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from .models.cables import termination_fk_field
 
 logger = logging.getLogger(__name__)
 
@@ -4671,6 +4670,26 @@ class CableForm(NautobotModelForm):
             b_connector = info["b_side"][0]["connector"]
             self.instance._initial_termination_b = cleaned_data.get(f"b_conn_{b_connector}_termination")
         self.instance._form_cleaned_terminations = True
+
+        # Per-lane pair compatibility check. Iterate every unique (a_connector, b_connector) pair
+        # in the cable_type's mapping (or [(1,1)] for standard cables) so breakout incompatibilities
+        # surface as form errors at submit time rather than as a ValidationError raised from
+        # `CableToCableTermination.clean()` during `save()`.
+        cable_type = info["cable_type"]
+        mapping = cable_type.mapping if cable_type else [{"a_connector": 1, "b_connector": 1}]
+        seen_pairs = set()
+        for entry in mapping:
+            pair = (entry["a_connector"], entry["b_connector"])
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            term_a = cleaned_data.get(f"a_conn_{entry['a_connector']}_termination")
+            term_b = cleaned_data.get(f"b_conn_{entry['b_connector']}_termination")
+            try:
+                Cable.validate_termination_pair(term_a, term_b)
+            except ValidationError as exc:
+                self.add_error(f"b_conn_{entry['b_connector']}_termination", exc)
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -4736,14 +4755,7 @@ class CableForm(NautobotModelForm):
         with defer_cable_path_rebuilds():
             CableToCableTermination.objects.filter(cable=cable).delete()
             for side_label, connector, termination in proposed_rows:
-                # Lane fields' querysets are constrained to registered termination types, so
-                # `termination_fk_field()` always resolves here.
-                CableToCableTermination.objects.create(
-                    cable=cable,
-                    cable_end=side_label,
-                    connector=connector,
-                    **{termination_fk_field(termination): termination},
-                )
+                cable.add_termination(termination, cable_end=side_label, connector=connector)
 
 
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):

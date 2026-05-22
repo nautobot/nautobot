@@ -3453,14 +3453,17 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        # Factory-generated interfaces have arbitrary types; pick a connectable one per device so the
+        # `Cable.objects.create(...)` calls below pass the new pair-compatibility check.
+        connectable = Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         interfaces = (
-            Interface.objects.get(device__name="Device 1"),
-            Interface.objects.get(device__name="Device 2"),
-            Interface.objects.get(device__name="Device 3"),
-            Interface.objects.get(device__name="Device 4"),
-            Interface.objects.get(device__name="Device 5"),
-            Interface.objects.get(device__name="Device 6"),
-            Interface.objects.get(device__name="Device 7"),
+            connectable.filter(device__name="Device 1").first(),
+            connectable.filter(device__name="Device 2").first(),
+            connectable.filter(device__name="Device 3").first(),
+            connectable.filter(device__name="Device 4").first(),
+            connectable.filter(device__name="Device 5").first(),
+            connectable.filter(device__name="Device 6").first(),
+            connectable.filter(device__name="Device 7").first(),
             Interface.objects.create(
                 device=devices[0],
                 name="Test Interface 8",
@@ -3626,7 +3629,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
-        interfaces = list(Interface.objects.filter(cable__isnull=True)[:3])
+        interfaces = list(Interface.objects.filter(cable__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:3])
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer, model="Test Device Filter for Cable Device Type"

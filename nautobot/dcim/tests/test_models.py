@@ -3397,7 +3397,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         `_initial_*` cache before save.
         """
         interface_ct = ContentType.objects.get_for_model(Interface)
-        power_port_ct = ContentType.objects.get_for_model(PowerPort)
+        rear_port_ct = ContentType.objects.get_for_model(RearPort)
 
         # Getters on a saved cable resolve through the first endpoint on each side.
         self.assertEqual(self.cable.termination_a_type, interface_ct)
@@ -3414,58 +3414,58 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
                 self.assertEqual(rows[0].cable_end, "A")
                 self.assertEqual(rows[0].termination, self.interface3)
                 self.assertEqual(rows[1].cable_end, "B")
-                self.assertEqual(rows[1].termination, self.power_port1)
+                self.assertEqual(rows[1].termination, self.rear_port1)
                 # Re-fetch so we're reading through the join table, not any cached `_initial_*`.
                 refetched = Cable.objects.get(pk=cable.pk)
                 self.assertEqual(refetched.termination_a, self.interface3)
                 self.assertEqual(refetched.termination_a_type, interface_ct)
                 self.assertEqual(refetched.termination_a_id, self.interface3.pk)
-                self.assertEqual(refetched.termination_b, self.power_port1)
-                self.assertEqual(refetched.termination_b_type, power_port_ct)
-                self.assertEqual(refetched.termination_b_id, self.power_port1.pk)
+                self.assertEqual(refetched.termination_b, self.rear_port1)
+                self.assertEqual(refetched.termination_b_type, rear_port_ct)
+                self.assertEqual(refetched.termination_b_id, self.rear_port1.pk)
             finally:
-                # `interface3` + `power_port1` are reused across variants; clear the cable so the
+                # `interface3` + `rear_port1` are reused across variants; clear the cable so the
                 # next save can claim them again.
                 cable.delete()
 
         # Variant 1: legacy object-form kwargs flowing into `_initial_termination_[ab]`.
-        via_objects = Cable(termination_a=self.interface3, termination_b=self.power_port1, status=self.status)
+        via_objects = Cable(termination_a=self.interface3, termination_b=self.rear_port1, status=self.status)
         self.assertEqual(via_objects.termination_a, self.interface3)
-        self.assertEqual(via_objects.termination_b, self.power_port1)
+        self.assertEqual(via_objects.termination_b, self.rear_port1)
         assert_round_trip(via_objects)
 
         # Variant 2: serializer-style type/id kwargs flowing into `_initial_termination_[ab]_[type|id]`.
         via_type_id = Cable(
             termination_a_type=interface_ct,
             termination_a_id=self.interface3.pk,
-            termination_b_type=power_port_ct,
-            termination_b_id=self.power_port1.pk,
+            termination_b_type=rear_port_ct,
+            termination_b_id=self.rear_port1.pk,
             status=self.status,
         )
         self.assertEqual(via_type_id.termination_a_type, interface_ct)
         self.assertEqual(via_type_id.termination_a_id, self.interface3.pk)
-        self.assertEqual(via_type_id.termination_b_type, power_port_ct)
-        self.assertEqual(via_type_id.termination_b_id, self.power_port1.pk)
+        self.assertEqual(via_type_id.termination_b_type, rear_port_ct)
+        self.assertEqual(via_type_id.termination_b_id, self.rear_port1.pk)
         assert_round_trip(via_type_id)
 
         # Variant 3a: direct attribute assignment via the object-form `@*.setter` decorators.
         via_object_setters = Cable(status=self.status)
         via_object_setters.termination_a = self.interface3
-        via_object_setters.termination_b = self.power_port1
+        via_object_setters.termination_b = self.rear_port1
         self.assertEqual(via_object_setters.termination_a, self.interface3)
-        self.assertEqual(via_object_setters.termination_b, self.power_port1)
+        self.assertEqual(via_object_setters.termination_b, self.rear_port1)
         assert_round_trip(via_object_setters)
 
         # Variant 3b: direct attribute assignment via the type/id `@*.setter` decorators.
         via_type_id_setters = Cable(status=self.status)
         via_type_id_setters.termination_a_type = interface_ct
         via_type_id_setters.termination_a_id = self.interface3.pk
-        via_type_id_setters.termination_b_type = power_port_ct
-        via_type_id_setters.termination_b_id = self.power_port1.pk
+        via_type_id_setters.termination_b_type = rear_port_ct
+        via_type_id_setters.termination_b_id = self.rear_port1.pk
         self.assertEqual(via_type_id_setters.termination_a_type, interface_ct)
         self.assertEqual(via_type_id_setters.termination_a_id, self.interface3.pk)
-        self.assertEqual(via_type_id_setters.termination_b_type, power_port_ct)
-        self.assertEqual(via_type_id_setters.termination_b_id, self.power_port1.pk)
+        self.assertEqual(via_type_id_setters.termination_b_type, rear_port_ct)
+        self.assertEqual(via_type_id_setters.termination_b_id, self.rear_port1.pk)
         assert_round_trip(via_type_id_setters)
 
     def test_cable_deletion(self):
@@ -3841,6 +3841,50 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=0)
         with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
             row.full_clean()
+
+    def test_cabletocabletermination_rejects_incompatible_peer_on_standard_cable(self):
+        """For a standard cable, the second-added row must be compatible with the first row's termination."""
+        cable = Cable.objects.create(status=self.status)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # PowerPort is not in COMPATIBLE_TERMINATION_TYPES["interface"], so this peer-pair check must fail.
+        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", power_port=self.power_port1, connector=1)
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            incompatible_row.full_clean()
+
+    def test_cabletocabletermination_rejects_incompatible_peer_on_breakout_lane(self):
+        """On a 1x2 breakout, each B-side row peers with A-connector 1 — incompatible types fail clean."""
+        ct = CableType.objects.create(name="Test 1x2 mixed", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # B-side connector 2 shares lane 2 with A-connector 1, so this pair gets checked.
+        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", power_port=self.power_port1, connector=2)
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            incompatible_row.full_clean()
+
+    def test_cabletocabletermination_compatible_peer_on_breakout_lane_accepted(self):
+        """Two compatible terminations across a breakout lane pair pass clean."""
+        ct = CableType.objects.create(name="Test 1x2 compat", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        peer_interface = Interface.objects.create(
+            device=self.device2, name="peer-lane-2", status=self.interface3.status
+        )
+        compatible_row = CableToCableTermination(cable=cable, cable_end="B", interface=peer_interface, connector=2)
+        compatible_row.full_clean()  # Should not raise
+
+    def test_orm_cable_create_rejects_incompatible_initial_terminations(self):
+        """`Cable.objects.create(termination_a=..., termination_b=...)` must reject incompatible pairs."""
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            Cable.objects.create(termination_a=self.interface3, termination_b=self.power_port1, status=self.status)
+        # The atomic block in Cable.save rolls the cable back too; no orphan row.
+        self.assertFalse(Cable.objects.filter(terminations__interface=self.interface3).exists())
+
+    def test_cabletocabletermination_skips_self_when_updating(self):
+        """An existing row being re-cleaned must not peer-pair-check against itself."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # Re-clean the saved row; without the `present_in_database` exclusion this would self-compare.
+        row.full_clean()  # Should not raise
 
     # Backward-compatibility query translation for `cable=`/`select_related("cable")` patterns.
     # The `cable` FK was replaced by the `CableToCableTermination` join; old queries are

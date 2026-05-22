@@ -3810,6 +3810,16 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
         self.iface_a1.refresh_from_db()
         self.assertIsNotNone(self.iface_a1.cable)
 
+    def test_confirm_redirects_to_return_url(self):
+        """When `return_url` is supplied (e.g. by the panel-footer JS), the view redirects there."""
+        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        device_tab_url = reverse("dcim:device_interfaces", kwargs={"pk": self.iface_a1.device.pk})
+        response = self.client.post(
+            self._disconnect_url() + f"?return_url={device_tab_url}",
+            data={"pk": [str(self.iface_a1.pk)], "_confirm": "yes", "confirm": "true"},
+        )
+        self.assertRedirects(response, device_tab_url, fetch_redirect_response=False)
+
 
 class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = FrontPort
