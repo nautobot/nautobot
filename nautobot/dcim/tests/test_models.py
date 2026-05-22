@@ -3199,6 +3199,62 @@ class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             breakout.clean()
 
+    def test_immutable_fields_when_referenced_by_cables(self):
+        """Fields defining physical structure may not change once Cables reference this CableType."""
+        ct = CableType.objects.create(name="Lock me", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable_status = Status.objects.get_for_model(Cable).first()
+        Cable.objects.create(status=cable_status, cable_type=ct)
+
+        # Direct ORM save must reject changes to immutable fields.
+        ct.a_connectors = 1
+        ct.b_connectors = 4
+        ct.total_lanes = 4
+        ct.mapping = []  # would otherwise regenerate to the 1x4 mapping
+        with self.assertRaises(ValidationError) as cm:
+            ct.save()
+        self.assertIn("b_connectors", cm.exception.message_dict)
+        self.assertIn("total_lanes", cm.exception.message_dict)
+        self.assertIn("mapping", cm.exception.message_dict)
+
+        # `clean()` (used by validated_save, forms, serializers) must reject the same.
+        ct.refresh_from_db()
+        ct.strands_per_lane = 4
+        with self.assertRaises(ValidationError) as cm:
+            ct.clean()
+        self.assertIn("strands_per_lane", cm.exception.message_dict)
+
+    def test_mutable_fields_still_editable_when_referenced(self):
+        """Metadata/informational fields remain editable even when Cables reference the CableType."""
+        ct = CableType.objects.create(name="Edit metadata")
+        cable_status = Status.objects.get_for_model(Cable).first()
+        Cable.objects.create(status=cable_status, cable_type=ct)
+
+        ct.description = "Updated description"
+        ct.part_number = "P/N-123"
+        ct.is_shuffle = True
+        ct.polarity_method = "straight-through"
+        ct.save()  # Should not raise
+        ct.refresh_from_db()
+        self.assertEqual(ct.description, "Updated description")
+        self.assertEqual(ct.part_number, "P/N-123")
+        self.assertTrue(ct.is_shuffle)
+        self.assertEqual(ct.polarity_method, "straight-through")
+
+    def test_immutable_fields_editable_when_no_cables_reference(self):
+        """Without any referencing Cables, the immutable-when-referenced fields are freely editable."""
+        ct = CableType.objects.create(name="Free to edit", a_connectors=1, b_connectors=2, total_lanes=2)
+        ct.a_connectors = 1
+        ct.b_connectors = 4
+        ct.total_lanes = 4
+        ct.strands_per_lane = 2
+        ct.mapping = []
+        ct.save()  # Should not raise
+        ct.refresh_from_db()
+        self.assertEqual(ct.b_connectors, 4)
+        self.assertEqual(ct.total_lanes, 4)
+        self.assertEqual(ct.strands_per_lane, 2)
+        self.assertEqual(len(ct.mapping), 4)  # auto-regenerated
+
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
     model = Cable

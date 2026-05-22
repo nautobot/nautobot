@@ -173,10 +173,31 @@ class CableType(PrimaryModel):
             return
         self.mapping = generate_cable_breakout_mapping(self.a_connectors, self.b_connectors, self.total_lanes)
 
+    # Fields that may not be modified once any Cable references this CableType.
+    IMMUTABLE_FIELDS_WHEN_REFERENCED = ("a_connectors", "b_connectors", "total_lanes", "strands_per_lane", "mapping")
+
+    def _check_immutable_fields_when_referenced(self):
+        """If any Cable references this CableType, forbid changes to fields that define its physical structure."""
+        if not self.present_in_database:
+            return
+        try:
+            original = type(self).objects.get(pk=self.pk)
+        except type(self).DoesNotExist:
+            return
+        changed = [f for f in self.IMMUTABLE_FIELDS_WHEN_REFERENCED if getattr(original, f) != getattr(self, f)]
+        if changed and self.cables.exists():
+            raise ValidationError(
+                {
+                    field: "Cannot be changed because this CableType is already referenced by one or more Cables."
+                    for field in changed
+                }
+            )
+
     def save(self, *args, **kwargs):
         # Auto-generate the mapping here (not only in `clean()`) so callers using `objects.create()`
         # or bare `.save()` get a working breakout cable type, not just `validated_save()` callers.
         self._autogenerate_mapping()
+        self._check_immutable_fields_when_referenced()
         super().save(*args, **kwargs)
 
     def clean(self):
@@ -198,6 +219,7 @@ class CableType(PrimaryModel):
 
         self._autogenerate_mapping()
         validate_cable_breakout_mapping(self.mapping, self.a_connectors, self.b_connectors, self.total_lanes)
+        self._check_immutable_fields_when_referenced()
 
 
 #
