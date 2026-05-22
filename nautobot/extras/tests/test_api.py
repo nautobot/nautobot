@@ -3742,9 +3742,15 @@ class JobResultTest(
             "extras.run_job",
         )
         url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
-        response = self.client.post(url, **self.header)
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn("already finished", response.data["detail"].lower())
+        with self.subTest("post"):
+            response = self.client.post(url, **self.header)
+            self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+            self.assertIn("already finished", response.data["detail"].lower())
+
+        with self.subTest("get"):
+            response = self.client.get(url, **self.header)
+            self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+            self.assertIn("already finished", response.data["detail"].lower())
 
     def test_revoke_non_owner_non_staff_denied_with_run_job_permission(self):
         """A user who is neither owner nor staff cannot revoke."""
