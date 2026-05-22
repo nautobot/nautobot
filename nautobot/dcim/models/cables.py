@@ -109,7 +109,7 @@ class CableType(PrimaryModel):
         default=list,
         blank=True,
         help_text="A→B lane mapping as a JSON array of objects with keys: "
-        "label, a_connector, a_position, b_connector, b_position. If empty, populated by clean().",
+        "label, a_connector, a_position, b_connector, b_position. If empty, will be auto-populated.",
     )
     is_shuffle = models.BooleanField(
         default=False,
