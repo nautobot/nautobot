@@ -1204,7 +1204,7 @@ class JobResultViewSet(
         if job_result.user != request.user and not request.user.is_staff:
             raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
 
-        if request.method == "POST" and not job_result.is_unready_state:
+        if not job_result.is_unready_state:
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
                 status=status.HTTP_409_CONFLICT,

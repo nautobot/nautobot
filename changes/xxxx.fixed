@@ -1,0 +1,1 @@
+Fixed `GET` revoke api when job was already in ready state. API now returns 409 instead of form with `REAP` or `TERMINATE` action.
