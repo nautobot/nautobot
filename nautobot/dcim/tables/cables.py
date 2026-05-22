@@ -6,6 +6,7 @@ from nautobot.core.tables import (
     BooleanColumn,
     ButtonsColumn,
     ColorColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -30,6 +31,11 @@ class CableTypeTable(BaseTable):
     is_shuffle = BooleanColumn()
     total_strands = tables.Column(orderable=False)
     is_breakout = BooleanColumn(orderable=False)
+    cable_count = LinkedCountColumn(
+        viewname="dcim:cable_list",
+        url_params={"cable_type": "pk"},
+        verbose_name="Cables",
+    )
     tags = TagColumn(url_name="dcim:cabletype_list")
     actions = ButtonsColumn(CableType)
 
@@ -50,6 +56,7 @@ class CableTypeTable(BaseTable):
             "polarity_method",
             "total_strands",
             "is_breakout",
+            "cable_count",
             "tags",
             "actions",
         )
@@ -61,7 +68,7 @@ class CableTypeTable(BaseTable):
             "a_connectors",
             "b_connectors",
             "total_lanes",
-            "is_shuffle",
+            "cable_count",
             "tags",
             "actions",
         )
