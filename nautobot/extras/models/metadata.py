@@ -259,7 +259,7 @@ class ObjectMetadata(ChangeLoggedModel, BaseModel):
         null=True,
         help_text="Relevant data value to an object field or a set of object fields",
     )
-    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.SET_NULL, null=True, related_name="+")
+    assigned_object_type = models.ForeignKey(to=ContentType, on_delete=models.CASCADE, related_name="+")
     assigned_object_id = models.UUIDField(db_index=True)
     assigned_object = GenericForeignKey(ct_field="assigned_object_type", fk_field="assigned_object_id")
 

@@ -4178,14 +4178,24 @@ class ObjectMetadataUIViewSet(
         # ObjectMetadata is always anchored to an existing object. Block direct navigation to
         # the bare add URL — entry must come from the parent object's Metadata tab, which
         # supplies assigned_object_type and assigned_object_id as query params.
-        if request.method == "GET" and not (
-            request.GET.get("assigned_object_type") and request.GET.get("assigned_object_id")
-        ):
-            messages.warning(
-                request,
-                "Object metadata must be created from the parent object's detail view (Metadata tab).",
-            )
-            return redirect("extras:objectmetadata_list")
+        if request.method == "GET":
+            ct_id = request.GET.get("assigned_object_type")
+            obj_id = request.GET.get("assigned_object_id")
+            if not (ct_id and obj_id):
+                messages.warning(
+                    request,
+                    "Object metadata must be created from the parent object's detail view (Metadata tab).",
+                )
+                return redirect("extras:objectmetadata_list")
+            try:
+                ct = ContentType.objects.get(pk=ct_id)
+                ct.get_object_for_this_type(pk=obj_id)
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValueError, TypeError):
+                messages.warning(
+                    request,
+                    "Cannot create metadata: the requested assigned object does not exist.",
+                )
+                return redirect("extras:objectmetadata_list")
         return super().create(request, *args, **kwargs)
 
     def get_extra_context(self, request, instance=None):

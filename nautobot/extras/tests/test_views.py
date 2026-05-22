@@ -6376,6 +6376,28 @@ class ObjectMetadataTestCase(
             f"Expected redirect warning, got: {messages_list}",
         )
 
+    def test_create_view_redirects_when_query_params_do_not_resolve(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        bogus_uuid = "00000000-0000-0000-0000-000000000000"
+        nonexistent_ct_pk = str(ContentType.objects.order_by("-pk").first().pk + 9999)
+        for case_name, params in [
+            ("nonexistent content type", {"assigned_object_type": nonexistent_ct_pk, "assigned_object_id": bogus_uuid}),
+            ("non-numeric content type", {"assigned_object_type": "not-a-number", "assigned_object_id": bogus_uuid}),
+            (
+                "valid CT but nonexistent object",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": bogus_uuid},
+            ),
+        ]:
+            with self.subTest(case=case_name):
+                response = self.client.get(reverse("extras:objectmetadata_add"), data=params)
+                self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+                messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+                self.assertTrue(
+                    any("does not exist" in m for m in messages_list),
+                    f"[{case_name}] expected does-not-exist warning, got: {messages_list}",
+                )
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_widget_renders_text_input_for_text_metadata_type(self):
         """`value_widget` HTMX endpoint returns a CharField-backed widget for TYPE_TEXT."""
