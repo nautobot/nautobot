@@ -35,6 +35,7 @@ from nautobot.dcim.choices import (
     PowerPortTypeChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -4149,8 +4150,8 @@ class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
     def setUpTestData(cls):
         cls.status = Status.objects.get(name="Connected")
         Cable.objects.create(
-            termination_a=Interface.objects.first(),
-            termination_b=Interface.objects.last(),
+            termination_a=Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first(),
+            termination_b=Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).last(),
             status=cls.status,
         )
 

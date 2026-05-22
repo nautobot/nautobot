@@ -3606,7 +3606,9 @@ class CableTestCase(FilterTestCases.FilterTestCase):
     def test_is_disconnected(self):
         """A cable lacking either an A-side or B-side termination matches `is_disconnected=True`."""
         # Create a cable with only an A-side termination.
-        uncabled_iface = Interface.objects.filter(cable__isnull=True).first()
+        uncabled_iface = (
+            Interface.objects.filter(cable__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+        )
         cable_a_only = Cable.objects.create(termination_a=uncabled_iface, status=self.status_connected)
 
         with self.subTest("is_disconnected=True returns only the disconnected cable"):

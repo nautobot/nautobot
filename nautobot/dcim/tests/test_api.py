@@ -28,6 +28,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
     CableToCableTermination,
@@ -105,7 +106,10 @@ class Mixins:
             """
             Test tracing a device component's attached cable.
             """
-            obj = self.model.objects.first()
+            if self.model is Interface:
+                obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+            else:
+                obj = self.model.objects.first()
             peer_device = Device.objects.create(
                 location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
