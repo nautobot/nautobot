@@ -8,10 +8,11 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
+from nautobot.core.models import BaseManager, BaseModel, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
 from nautobot.core.utils.permissions import resolve_permission
@@ -30,7 +31,7 @@ __all__ = (
 #
 
 
-class UserQuerySet(CompositeKeyQuerySetMixin, models.QuerySet):
+class UserQuerySet(RestrictedQuerySet):
     """
     Add support for composite-keys to the User queryset.
 
@@ -215,6 +216,11 @@ class User(BaseModel, AbstractUser):
 #
 # Proxy models for admin
 #
+class AdminGroupManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    """
+    Custom manager for AdminGroup proxy model.
+    Supports Nautobot's restrict().
+    """
 
 
 class AdminGroup(Group):
@@ -222,9 +228,28 @@ class AdminGroup(Group):
     Proxy contrib.auth.models.Group for the admin UI
     """
 
+    objects = AdminGroupManager()
+
+    is_saved_view_model = True
+
     class Meta:
         verbose_name = "Group"
         proxy = True
+
+    @property
+    def present_in_database(self):
+        return self.pk is not None
+
+    def get_absolute_url(self, api=False):
+        view_name = "users-api:group-detail" if api else "users:group"
+        return reverse(view_name, kwargs={"pk": self.pk})
+
+
+Group.documentation_static_path = ""
+Group.is_metadata_associable_model = False
+Group.is_saved_view_model = True
+Group.present_in_database = property(lambda self: self.pk is not None)
+Group.get_absolute_url = AdminGroup.get_absolute_url
 
 
 #

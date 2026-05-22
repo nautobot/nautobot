@@ -8,6 +8,8 @@ from . import views
 app_name = "user"
 
 router = NautobotUIViewSetRouter()
+router.register("users", views.UserUIViewSet)
+router.register("groups", views.GroupUIViewSet, basename="group")
 router.register("object-permissions", views.ObjectPermissionUIViewSet)
 
 urlpatterns = [

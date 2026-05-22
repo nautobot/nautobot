@@ -208,7 +208,7 @@ class ObjectPermissionUIViewSetTestCase(
     """
     Tests for the admin-only ObjectPermission UI viewset.
 
-    The viewset is wrapped in AdminRequiredMixin, so ``setUp`` force-logs a
+    The viewset is wrapped in AdminRequiredMixin, so `setUp` force-logs a
     superuser and the inherited ViewTestCases effectively become admin-path
     smoke tests. Several inherited tests are overridden to re-express the
     expected behavior under AdminRequiredMixin (e.g. non-superusers get 403
@@ -223,41 +223,49 @@ class ObjectPermissionUIViewSetTestCase(
 
         cls.admin_user = User.objects.create_superuser(username="adminuser")
         cls.normal_user = User.objects.create_user(username="normaluser")
-        neutral_ct = ContentType.objects.get_for_model(ObjectPermission)
+        # `object_types` is required by the form, but this view is admin-only
+        # (AdminRequiredMixin bypasses the ObjectPermission constraint system
+        # entirely), so the specific model chosen is arbitrary — `Group` is
+        # used as a stable, non-self-referential placeholder.
+        cls.group_content_type = ContentType.objects.get_for_model(Group)
         cls.instance = ObjectPermission.objects.create(
             name="sample-test Permission",
             actions=["view", "add", "change", "delete"],
         )
-        cls.instance.object_types.set([neutral_ct])
+        cls.instance.object_types.set([cls.group_content_type])
 
-        # NOTE: Do not use ``bulk_create`` here — it skips ``save()`` and
+        # NOTE: Do not use `bulk_create` here — it skips `save()` and
         # cannot set M2M fields, which leaves the fixtures missing the
-        # required ``object_types`` and breaks any flow that revalidates them.
+        # required `object_types` and breaks any flow that revalidates them.
         cls.instances = []
         for i in range(1, 4):
             op = ObjectPermission.objects.create(name=f"Perm {i}", actions=["view"])
-            op.object_types.set([neutral_ct])
+            op.object_types.set([cls.group_content_type])
             cls.instances.append(op)
 
         cls.form_data = {
             "name": "New Permission",
             "description": "Round-trip test",
             "enabled": True,
-            "actions": ["view"],
-            "object_types": [neutral_ct.pk],
+            "object_types": [cls.group_content_type.pk],
+            "can_view": True,
         }
 
-        # Single-action value sidesteps an ordering mismatch in JSONArray
-        # round-tripping (see ``assertInstanceEqual`` override below).
+        # `ObjectPermissionBulkEditForm` currently exposes only `enabled`;
+        # The inherited `test_bulk_edit_objects_with_permission` test calls
+        # `field.clean(value)` directly (bypassing the widget), so the value
+        # has to parse to False through both `NullBooleanSelect.value_from_datadict`
+        # (widget path) and `NullBooleanField.clean` (direct field path).
+        # The intersection for False is the literal string "False".
         cls.bulk_edit_data = {
-            "actions": ["change"],
+            "enabled": "False",
         }
 
     def setUp(self):
         super().setUp()
         # The viewset is admin-only; most inherited tests assume the logged-in
         # user can access the view, so authenticate as a superuser up-front.
-        # Overrides below re-authenticate as ``self.normal_user`` in the cases
+        # Overrides below re-authenticate as `self.normal_user` in the cases
         # that need to exercise the "forbidden" path.
         self.client.force_login(self.admin_user)
 
@@ -271,19 +279,6 @@ class ObjectPermissionUIViewSetTestCase(
         self.client.logout()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.get(self._get_url("list")), 403)
-
-    def assertInstanceEqual(self, instance, data, exclude=None, api=False):
-        """Exclude ``actions`` from model-vs-data comparison.
-
-        ``ObjectPermission.actions`` is stored as a JSON list but the
-        form-roundtrip serialization (via ``JSONArrayFormField`` +
-        ``StaticSelect2Multiple``) produces a different ordering/shape than
-        the base ``assertInstanceEqual`` normalizes. Rather than paper over
-        the specific mismatch here, we exclude ``actions`` and cover its
-        persistence explicitly in ``test_create_object_persists_all_fields``.
-        """
-        exclude = (exclude or []) + ["actions"]
-        return super().assertInstanceEqual(instance, data, exclude=exclude, api=api)
 
     # -------------------------------------------------------------------------
     # Anonymous tests — AdminRequiredMixin redirects to login → 302
@@ -308,54 +303,103 @@ class ObjectPermissionUIViewSetTestCase(
         self.assertHttpStatus(response, 302)
 
     # -------------------------------------------------------------------------
-    # Without permission — logged-in non-superuser gets 403 regardless of any
-    # ObjectPermission grants (AdminRequiredMixin short-circuits before the
-    # per-object permission check runs).
+    # Admin-gate short-circuit tests — these override the inherited
+    # `*_without_permission` tests with a stronger assertion: grant the
+    # non-admin user an ObjectPermission that would *normally* allow every
+    # action on ObjectPermission records, then verify each surface still
+    # returns 403. A bare "user with no permissions → 403" test is ambiguous
+    # about whether `AdminRequiredMixin` actually fired or whether the normal
+    # permission backend would have rejected the request anyway; granting a
+    # spurious permission first makes 403 attributable to the admin gate.
     # -------------------------------------------------------------------------
 
+    def _grant_full_objectpermission_to_normal_user(self):
+        """Give `normal_user` an ObjectPermission that would normally allow
+        every action on ObjectPermission records."""
+        grant = ObjectPermission.objects.create(
+            name="spurious admin-bypass attempt",
+            actions=["view", "add", "change", "delete"],
+        )
+        grant.object_types.add(ContentType.objects.get_for_model(ObjectPermission))
+        grant.users.add(self.normal_user)
+
     def test_list_objects_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.get(self._get_url("list")), 403)
 
     def test_get_object_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.get(self.instance.get_absolute_url()), 403)
 
     def test_edit_object_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.get(self._get_url("edit", self.instance)), 403)
 
     def test_delete_object_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.get(self._get_url("delete", self.instance)), 403)
 
     def test_bulk_delete_objects_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.post(self._get_url("bulk_delete")), 403)
 
     def test_bulk_edit_objects_without_permission(self):
+        self._grant_full_objectpermission_to_normal_user()
         self.client.force_login(self.normal_user)
         self.assertHttpStatus(self.client.post(self._get_url("bulk_edit")), 403)
 
     # -------------------------------------------------------------------------
     # Admin-bypass documentation tests — these override the base
-    # ``_with_constrained_permission`` tests because AdminRequiredMixin
+    # `_with_constrained_permission` tests because AdminRequiredMixin
     # short-circuits before ObjectPermission constraints are ever consulted.
     # The overrides therefore document "admin has unconditional access" rather
     # than the base tests' "constrained grantee is filtered" assertion.
     # -------------------------------------------------------------------------
 
     def test_list_objects_with_constrained_permission(self):
-        self.assertHttpStatus(self.client.get(self._get_url("list")), 200)
+        """Admin bypasses ObjectPermission constraints; verify the list view shows all rows."""
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        for op in [self.instance, *self.instances]:
+            self.assertBodyContains(response, op.name)
 
     def test_get_object_with_constrained_permission(self):
-        self.assertHttpStatus(self.client.get(self.instance.get_absolute_url()), 200)
+        """Admin bypasses ObjectPermission constraints; verify the detail view renders for any instance."""
+        response = self.client.get(self.instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, self.instance.name)
 
     def test_edit_object_with_constrained_permission(self):
+        """Admin bypasses ObjectPermission constraints; verify the edit POST actually persists changes."""
+        # GET the edit form
         self.assertHttpStatus(self.client.get(self._get_url("edit", self.instance)), 200)
 
+        # POST the form data and confirm the instance round-trips
+        response = self.client.post(
+            self._get_url("edit", self.instance),
+            data=post_data(self.form_data),
+        )
+        self.assertHttpStatus(response, 302)
+        self.assertInstanceEqual(self._get_queryset().get(pk=self.instance.pk), self.form_data)
+
     def test_delete_object_with_constrained_permission(self):
-        self.assertHttpStatus(self.client.get(self._get_url("delete", self.instance)), 200)
+        """Admin bypasses ObjectPermission constraints; verify the delete POST actually removes the record."""
+        instance = self.instances[0]
+        # GET the delete confirmation page
+        self.assertHttpStatus(self.client.get(self._get_url("delete", instance)), 200)
+
+        # POST confirm=True and verify the row is gone
+        response = self.client.post(
+            self._get_url("delete", instance),
+            data=post_data({"confirm": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        self.assertFalse(self._get_queryset().filter(pk=instance.pk).exists())
 
     def test_bulk_delete_objects_with_constrained_permission(self):
         """Verify the bulk-delete apply path enqueues the deletion job when invoked by admin.
@@ -384,19 +428,34 @@ class ObjectPermissionUIViewSetTestCase(
         )
 
     def test_bulk_edit_objects_with_constrained_permission(self):
-        """Verify the bulk-edit apply path dispatches when invoked by admin.
+        """Verify the bulk-edit apply path dispatches the async job when invoked by admin.
 
-        As with bulk delete, the base constraint-filter test is inapplicable to
-        an admin-only view, so we assert that the apply path returns a 302
-        (rather than the 200 confirmation preview).
+        Nautobot's bulk-edit UI hands off to a `Bulk Edit Objects` system Job
+        rather than mutating rows inline (same pattern as bulk-delete), so the
+        actual `enabled` flip happens asynchronously inside the Job and is not
+        observable from the HTTP response. Assert the Job was enqueued and the
+        response redirects to its detail page; the base constraint-filter test
+        is inapplicable to an admin-only view.
         """
+        target = self.instances[0]
+        target.enabled = True
+        target.save()
+
         data = {
-            "pk": [self.instances[0].pk],
+            "pk": [target.pk],
             "_apply": True,  # Form Apply button
         }
         data.update(post_data(self.bulk_edit_data))
         response = self.client.post(self._get_url("bulk_edit"), data)
-        self.assertHttpStatus(response, 302)
+
+        job_result = JobResult.objects.filter(name="Bulk Edit Objects").first()
+        self.assertIsNotNone(job_result)
+        self.assertRedirects(
+            response,
+            reverse("extras:jobresult", args=[job_result.pk]),
+            status_code=302,
+            target_status_code=200,
+        )
 
     # -------------------------------------------------------------------------
     # Positive coverage for the fields the inherited suite does not exercise.
@@ -405,28 +464,58 @@ class ObjectPermissionUIViewSetTestCase(
     def test_create_object_persists_all_fields(self):
         """Submit the full create form and verify every field round-trips.
 
-        The inherited ``test_create_object_with_permission`` test only checks
-        the minimal ``form_data``; this test additionally covers ``users``,
-        ``groups``, and the ``actions`` round-trip that ``assertInstanceEqual``
-        excludes.
+        The inherited `test_create_object_with_permission` test only checks
+        the minimal `form_data`; this test additionally covers `users` and
+        `groups`, which the shared `form_data` does not populate.
         """
         group = Group.objects.create(name="ObjectPermission test group")
-        neutral_ct = ContentType.objects.get_for_model(ObjectPermission)
         form = {
             "name": "Full round-trip perm",
             "description": "covers all fields",
             "enabled": True,
-            "actions": ["view", "change"],
-            "object_types": [neutral_ct.pk],
+            "object_types": [self.group_content_type.pk],
             "users": [self.normal_user.pk],
             "groups": [group.pk],
+            # Canonical actions via the new `can_*` checkboxes; no additional actions.
+            "can_view": True,
+            "can_change": True,
+            "actions": [],
         }
         response = self.client.post(self._get_url("add"), data=post_data(form), follow=True)
         self.assertHttpStatus(response, 200)
         created = ObjectPermission.objects.get(name="Full round-trip perm")
         self.assertEqual(sorted(created.actions), ["change", "view"])
-        self.assertEqual(list(created.object_types.values_list("pk", flat=True)), [neutral_ct.pk])
+        self.assertEqual(list(created.object_types.values_list("pk", flat=True)), [self.group_content_type.pk])
         self.assertEqual(list(created.users.values_list("pk", flat=True)), [self.normal_user.pk])
         self.assertEqual(list(created.groups.values_list("pk", flat=True)), [group.pk])
         self.assertTrue(created.enabled)
         self.assertEqual(created.description, "covers all fields")
+
+    def test_create_object_merges_canonical_checkboxes(self):
+        """Verify the form's `can_*` checkboxes merge into `instance.actions`.
+
+        `ObjectPermissionForm` exposes the four canonical CRUD actions as
+        `can_view`/`can_add`/`can_change`/`can_delete` boolean fields and
+        keeps a separate `actions` JSONField for any non-canonical extras.
+        `clean()` unions any checked boxes into `cleaned_data["actions"]`
+        before save, so the persisted `instance.actions` list reflects
+        every checked box.
+
+        Note: the *additional* (non-canonical) actions branch isn't exercised
+        here. The `actions` JSONField expects a JSON-parseable string in the
+        POST body, and `post_data` does not serialize Python lists into valid
+        JSON — so driving additional actions through the test client needs a
+        separate fixture shape and is left for a follow-up.
+        """
+        form = {
+            "name": "Merged actions perm",
+            "enabled": True,
+            "object_types": [self.group_content_type.pk],
+            "can_view": True,
+            "can_change": True,
+            "actions": [],
+        }
+        response = self.client.post(self._get_url("add"), data=post_data(form), follow=True)
+        self.assertHttpStatus(response, 200)
+        created = ObjectPermission.objects.get(name="Merged actions perm")
+        self.assertEqual(sorted(created.actions), ["change", "view"])

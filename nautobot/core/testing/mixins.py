@@ -239,6 +239,29 @@ class NautobotTestCaseMixin:
             (job_result.traceback, list(job_result.job_log_entries.values_list("message", flat=True))),
         )
 
+    @staticmethod
+    def _normalize_jsonarray_for_compare(value):
+        """Coerce a JSONArrayField value (model side or form-data side) into a
+        sorted list of strings, so list/CSV-string/order differences don't trip
+        `assertInstanceEqual`.
+
+        Inputs handled:
+            - None                          → None
+            - "1,2,3"  (CSV, model side)    → ["1", "2", "3"]
+            - ""                            → []
+            - [1, 2, 3] / ("a", "b")        → ["1", "2", "3"] / ["a", "b"]
+            - anything else                 → returned unchanged
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            items = [s.strip() for s in value.split(",")] if value else []
+        elif isinstance(value, (list, tuple)):
+            items = list(value)
+        else:
+            return value
+        return sorted(str(item) for item in items)
+
     def assertInstanceEqual(self, instance, data, exclude=None, api=False):
         """
         Compare a model instance to a dictionary, checking that its attribute values match those specified
@@ -256,9 +279,23 @@ class NautobotTestCaseMixin:
         fields = [k for k in data.keys() if k not in exclude]
         model_dict = self.model_to_dict(instance, fields=fields, api=api)
 
+        # NEW: JSONArrayField has two valid form-input shapes (CSV string and
+        # Python list) and the form roundtrip does not guarantee ordering;
+        # normalize both sides below so comparison is shape- and order-insensitive.
+        jsonarray_fields = set()
+        for k in fields:
+            try:
+                field = instance._meta.get_field(k)
+            except FieldDoesNotExist:
+                continue
+            if isinstance(field, JSONField):
+                jsonarray_fields.add(k)
+
         new_model_dict = {}
         for k, v in model_dict.items():
-            if isinstance(v, list):
+            if k in jsonarray_fields:  # NEW
+                new_model_dict[k] = self._normalize_jsonarray_for_compare(v)
+            elif isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
                 new_model_dict[k] = sorted(v)
             elif k == "data_schema" and isinstance(v, str):
@@ -274,7 +311,9 @@ class NautobotTestCaseMixin:
         relevant_data = {}
         for k, v in data.items():
             if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
-                if isinstance(v, list):
+                if k in jsonarray_fields:  # NEW
+                    relevant_data[k] = self._normalize_jsonarray_for_compare(v)
+                elif isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
                     relevant_data[k] = sorted(v)
                 elif k == "data_schema" and isinstance(v, str):
