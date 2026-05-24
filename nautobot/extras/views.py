@@ -115,6 +115,7 @@ from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     ApprovalWorkflowStateChoices,
+    CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -1413,6 +1414,9 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if self.action in ("create", "update"):
+            context["custom_field_min_max_types"] = list(CustomFieldTypeChoices.MIN_MAX_TYPES)
+            context["custom_field_regex_types"] = list(CustomFieldTypeChoices.REGEX_TYPES)
+
             if request.POST:
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
 
