@@ -71,15 +71,35 @@ The `action` field indicates the path the server will take on `TERMINATE` when t
 }
 ```
 
+If the `JobResult` is already in a finished state, the preview endpoint still returns 200 OK with an informational response because no state-changing operation is attempted.
+
+Example response for a completed job:
+
+```json
+{
+    "detail": "Job is already finished. Nothing to do."
+}
+```
+
 #### Perform a revocation
 
-A `POST` request performs the revoke. On success the response is the updated `JobResult` (now in `REVOKED` state, with `revoked_by` and `date_done` set):
+A `POST` request performs the revoke.
 
 ```no-highlight
 curl -X POST \
 -H "Authorization: Token $TOKEN" \
 -H "Accept: application/json; version=1.3; indent=4" \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
+```
+
+On success the response is the updated `JobResult` (now in `REVOKED` state, with `revoked_by` and `date_done` set)
+
+If the `JobResult` is already in a finished state, the request returns 409 Conflict.
+
+```json
+{
+    "detail": "Job is already finished. Nothing to do."
+}
 ```
 
 #### A note on the `status` field after a `TERMINATE`
@@ -99,4 +119,5 @@ API clients that need the final `status` immediately should poll the `JobResult`
 | 200  | Preview returned successfully (`GET`) or revocation succeeded (`POST`).              |
 | 500  | The revoke strategy reported an error or the queue type is unsupported.              |
 | 403  | The caller lacks proper permissions. See [Permissions](#permissions) for full rules. |
-| 409  | The `JobResult` is already in a finished state and cannot be revoked.                |
+| 409  | A `POST` revoke request was made for a JobResult already in a finished state.        |
+| 500  | The revoke strategy reported an error or the queue type is unsupported.              |

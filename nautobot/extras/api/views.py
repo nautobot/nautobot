@@ -1207,7 +1207,7 @@ class JobResultViewSet(
         if not job_result.is_unready_state:
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
-                status=status.HTTP_409_CONFLICT,
+                status=status.HTTP_409_CONFLICT if request.method == "POST" else status.HTTP_200_OK,
             )
 
         strategy = RevokeFactory.get_strategy(job_result.queue_type)

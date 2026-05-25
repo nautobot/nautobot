@@ -3749,7 +3749,7 @@ class JobResultTest(
 
         with self.subTest("get"):
             response = self.client.get(url, **self.header)
-            self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertIn("already finished", response.data["detail"].lower())
 
     def test_revoke_non_owner_non_staff_denied_with_run_job_permission(self):
