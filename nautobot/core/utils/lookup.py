@@ -164,15 +164,19 @@ def get_route_for_model(model, action, api=False):
         model = get_model_from_name(model)
 
     suffix = "" if not api else "-api"
-    # The `contenttypes` and `auth` app doesn't provide REST API endpoints,
-    # but Nautobot provides one for the ContentType model in our `extras` and Group model in `users` app.
+    model_name = model._meta.model_name
+    concrete_model = model._meta.concrete_model
+
+    # The contenttypes and auth apps don't provide REST API endpoints,
+    # but Nautobot provides one for the ContentType model in extras and Group model in users.
     if model is ContentType:
         app_label = "extras"
-    elif model is Group:
+    elif concrete_model is Group:
         app_label = "users"
+        model_name = Group._meta.model_name
     else:
         app_label = model._meta.app_label
-    prefix = f"{app_label}{suffix}:{model._meta.model_name}"
+    prefix = f"{app_label}{suffix}:{model_name}"
     sep = ""
     if action != "":
         sep = "_" if not api else "-"
@@ -368,7 +372,8 @@ def get_model_for_view_name(view_name):
         delimiter = "-"
 
     model_name = model_name.split(delimiter)[0]  # device
-
+    if app_label == "users" and model_name == "group":
+        return Group
     try:
         model = apps.get_model(app_label=app_label, model_name=model_name)
         return model
