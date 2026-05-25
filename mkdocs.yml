@@ -606,7 +606,6 @@ nav:
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
           - Job Execution: "development/jobs/job-execution.md"
-          - Running Jobs Locally on Kubernetes: "development/jobs/job-k8s-locally.md"
           - Migration Guides:
               -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
@@ -716,7 +715,7 @@ nav:
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
           - HTMX: "development/core/htmx.md"
-          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
+          - Running Jobs Locally on Kubernete: "development/core/running-jobs-locally-kubernetes.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
