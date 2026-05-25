@@ -1,1 +1,1 @@
-Fixed `GET` revoke api when job was already in ready state. API now returns 409 instead of form with `REAP` or `TERMINATE` action.
+Fixed the `GET` revoke API behavior for JobResult objects already in a terminal state. The endpoint now returns an informational `200 OK` response with an informational response body instead of presenting a revoke preview with `REAP` or `TERMINATE` actions. `POST` requests against completed jobs continue to return `409 Conflict`.
