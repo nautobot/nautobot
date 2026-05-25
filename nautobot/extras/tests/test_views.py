@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.test import override_settings, RequestFactory, tag
+from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape, format_html
@@ -81,6 +81,7 @@ from nautobot.extras.models import (
     JobResult,
     MetadataType,
     Note,
+    ObjectChange,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -101,7 +102,6 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
-from nautobot.extras.views import ObjectChangeUIViewSet
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -4913,39 +4913,18 @@ class ObjectChangeTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.factory = RequestFactory()
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
-        cls.location = Location(name="Location 1", location_type=location_type, status=location_status)
-        cls.location.save()
+        location = Location(name="Location 1", location_type=location_type, status=location_status)
+        location.save()
 
         # Create three ObjectChanges
         user = User.objects.create_user(username="testuser2")
         for _ in range(1, 4):
-            oc = cls.location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+            oc = location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
             oc.user = user
             oc.request_id = uuid.uuid4()
             oc.save()
-
-    @classmethod
-    def _create_objectchange(cls, instance, user):
-        objectchange = instance.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
-        objectchange.user = user
-        objectchange.request_id = uuid.uuid4()
-        objectchange.save()
-        return objectchange
-
-    @classmethod
-    def _create_objectchange_for_user(cls, user):
-        return cls._create_objectchange(cls.location, user)
-
-    def _get_queryset_for(self, user):
-        request = self.factory.get(reverse("extras:objectchange_list"))
-        request.user = user
-        view = ObjectChangeUIViewSet()
-        view.request = request
-        view.action = "list"
-        return view.get_queryset()
 
     def test_objectchange_list(self):
         url = reverse("extras:objectchange_list")
@@ -4957,67 +4936,9 @@ class ObjectChangeTestCase(TestCase):
         self.assertHttpStatus(response, 200)
 
     def test_objectchange(self):
-        objectchange = self._create_objectchange_for_user(self.user)
+        objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
-
-    def test_objectchange_queryset_hides_staff_only_content_types_from_non_privileged_users(self):
-        """
-        ObjectChange records for content types marked ``is_staff_only_changelog_model = True``
-        (e.g. User, Group, Token, ObjectPermission) must be hidden from non-staff / non-superuser
-        viewers, regardless of who authored the change. Records for non-restricted content types
-        (e.g. Location) must remain visible to everyone.
-        """
-        staff_user = User.objects.create_user(username="objectchange-staff-user", is_staff=True)
-        superuser = User.objects.create_superuser(
-            username="objectchange-superuser",
-            email="objectchange-superuser@example.com",
-            password="password",  # noqa: S106  # hardcoded-password-func-arg -- ok as this is test code only
-        )
-
-        # is_staff alone does not grant view_objectchange (only is_superuser bypasses restrict()).
-        # Grant the model-level view permission so the staff_user subtest exercises the changed_object_type
-        # filter rather than the upstream permission check.
-        staff_view_perm = ObjectPermission.objects.create(name="objectchange-view-for-staff", actions=["view"])
-        staff_view_perm.object_types.add(ContentType.objects.get(app_label="extras", model="objectchange"))
-        staff_view_perm.users.add(staff_user)
-
-        # Non-restricted change (Location) authored by a staff user - must remain visible to everyone.
-        location_change_by_staff = self._create_objectchange(self.location, staff_user)
-
-        # Restricted changes (ObjectPermission) - must be hidden from non-privileged viewers, even
-        # when authored by the requesting user themselves.
-        own_perm = ObjectPermission.objects.create(name="own-perm-for-changelog-test", actions=["view"])
-        staff_perm = ObjectPermission.objects.create(name="staff-perm-for-changelog-test", actions=["view"])
-        own_restricted_change = self._create_objectchange(own_perm, self.user)
-        staff_restricted_change = self._create_objectchange(staff_perm, staff_user)
-
-        with self.subTest("non-staff / non-superuser viewer"):
-            queryset = self._get_queryset_for(self.user)
-            self.assertIn(location_change_by_staff, queryset)
-            self.assertNotIn(own_restricted_change, queryset)
-            self.assertNotIn(staff_restricted_change, queryset)
-
-        with self.subTest("staff viewer"):
-            queryset = self._get_queryset_for(staff_user)
-            self.assertIn(location_change_by_staff, queryset)
-            self.assertIn(own_restricted_change, queryset)
-            self.assertIn(staff_restricted_change, queryset)
-
-        with self.subTest("superuser viewer"):
-            queryset = self._get_queryset_for(superuser)
-            self.assertIn(location_change_by_staff, queryset)
-            self.assertIn(own_restricted_change, queryset)
-            self.assertIn(staff_restricted_change, queryset)
-
-        with self.subTest("deleting the author does not unhide a restricted change"):
-            # ObjectChange.user is on_delete=SET_NULL; a user-based filter would have leaked the
-            # record here. Content-type-based filtering must continue to hide it.
-            staff_user.delete()
-            staff_restricted_change.refresh_from_db()
-            self.assertIsNone(staff_restricted_change.user)
-            queryset = self._get_queryset_for(self.user)
-            self.assertNotIn(staff_restricted_change, queryset)
 
 
 class ObjectMetadataTestCase(

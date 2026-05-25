@@ -22,6 +22,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.models import CustomField, CustomFieldChoice, DynamicGroup, ObjectChange, Status, Tag
 from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.users.models import ObjectPermission, User
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -647,3 +648,72 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
             self.assertIsNone(snapshots["postchange"])
             self.assertEqual(snapshots["differences"]["removed"], oc_with_object_data_v2.object_data_v2)
             self.assertIsNone(snapshots["differences"]["added"])
+
+
+class ObjectChangeStaffOnlyChangelogTest(TestCase):
+    """
+    Tests for the `is_staff_only_changelog_model` filter enforced inside
+    `ObjectChange.objects.restrict()`. Records for content types marked
+    `is_staff_only_changelog_model = True` must be hidden from non-staff viewers,
+    regardless of who authored the change. `is_superuser` on its own is *not*
+    a bypass - only `is_staff` is.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.regular_user = User.objects.create_user(username="oc-restrict-regular")
+        cls.staff_user = User.objects.create_user(username="oc-restrict-staff", is_staff=True)
+        cls.superuser_only = User.objects.create_user(
+            username="oc-restrict-super-no-staff",
+            is_superuser=True,
+        )
+
+        # The staff-only filter runs *after* the standard view-permission gate. Grant
+        # view_objectchange to all three users so we exercise the filter, not the gate.
+        view_perm = ObjectPermission.objects.create(name="oc-restrict-view", actions=["view"])
+        view_perm.object_types.add(ContentType.objects.get(app_label="extras", model="objectchange"))
+        view_perm.users.add(cls.regular_user, cls.staff_user, cls.superuser_only)
+
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        location = Location.objects.create(
+            name="oc-restrict-location", location_type=location_type, status=location_status
+        )
+
+        # Non-restricted change (Location) - must remain visible to every viewer.
+        cls.location_change = location.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+        cls.location_change.user = cls.regular_user
+        cls.location_change.request_id = uuid.uuid4()
+        cls.location_change.save()
+
+        # Restricted change (ObjectPermission) - hidden from non-staff viewers.
+        sensitive_perm = ObjectPermission.objects.create(name="oc-restrict-sensitive", actions=["view"])
+        cls.sensitive_change = sensitive_perm.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE)
+        cls.sensitive_change.user = cls.staff_user
+        cls.sensitive_change.request_id = uuid.uuid4()
+        cls.sensitive_change.save()
+
+    def test_restrict_hides_staff_only_records_for_non_staff_viewers(self):
+        with self.subTest("regular user does not see staff-only records"):
+            queryset = ObjectChange.objects.restrict(self.regular_user, "view")
+            self.assertIn(self.location_change, queryset)
+            self.assertNotIn(self.sensitive_change, queryset)
+
+        with self.subTest("staff user sees everything"):
+            queryset = ObjectChange.objects.restrict(self.staff_user, "view")
+            self.assertIn(self.location_change, queryset)
+            self.assertIn(self.sensitive_change, queryset)
+
+        with self.subTest("is_superuser=True without is_staff is NOT a bypass"):
+            queryset = ObjectChange.objects.restrict(self.superuser_only, "view")
+            self.assertIn(self.location_change, queryset)
+            self.assertNotIn(self.sensitive_change, queryset)
+
+    def test_restrict_keeps_records_hidden_after_author_deletion(self):
+        # ObjectChange.user is on_delete=SET_NULL; the original author-based design leaked
+        # records when the author was deleted. The content-type-based filter must hold.
+        self.staff_user.delete()
+        self.sensitive_change.refresh_from_db()
+        self.assertIsNone(self.sensitive_change.user)
+        queryset = ObjectChange.objects.restrict(self.regular_user, "view")
+        self.assertNotIn(self.sensitive_change, queryset)

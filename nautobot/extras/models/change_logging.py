@@ -73,14 +73,14 @@ class ObjectChangeQuerySet(RestrictedQuerySet):
     """
     QuerySet for `ObjectChange` records that, in addition to the standard `RestrictedQuerySet` permission filtering,
     hides records whose `changed_object_type` belongs to a model marked `is_staff_only_changelog_model = True`
-    (see populate_model_features_registry()) when the requesting user is not staff or superuser.
+    (see populate_model_features_registry()) when the requesting user is not a staff member.
 
     Applies to every caller of `ObjectChange.objects.restrict(user, ...)` - UI views, REST API, GraphQL, etc.
     """
 
     def restrict(self, user, action="view"):
         queryset = super().restrict(user, action)
-        if user.is_authenticated and not (user.is_staff or user.is_superuser):
+        if not user.is_authenticated or not user.is_staff:
             restricted_content_types = ContentType.objects.filter(FeatureQuery("staff_only_changelog").get_query())
             queryset = queryset.exclude(changed_object_type__in=restricted_content_types)
         return queryset

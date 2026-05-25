@@ -1,1 +1,1 @@
-Restricted ObjectChange visibility so non-staff / non-superuser users can no longer see change log entries for staff-only models (User, Group, Token, ObjectPermission). Apps can opt their own models in by setting is_staff_only_changelog_model = True.
+Added an `is_staff_only_changelog_model` model attribute. When `True`, change-log entries for that model are hidden from non-staff users. Set to `True` by default on `User`, `Group`, `Token`, and `ObjectPermission`, all of which now record change-log entries; the new attribute keeps those entries restricted to staff users.
