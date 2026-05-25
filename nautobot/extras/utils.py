@@ -673,10 +673,31 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
 
 
 def build_kubernetes_api_client():
-    """Build an authenticated ApiClient using the in-cluster service account."""
+    """Build an authenticated ApiClient using the in-cluster service account.
+
+    When settings.KUBERNETES_VERIFY_SSL is False, TLS verification is disabled and
+    the CA cert path is ignored. This is intended for local development only. See
+    the comment in settings.py for the security implications.
+
+    Returns:
+        A configured kubernetes.client.ApiClient. The returned object is itself a
+        context manager (its __exit__ calls self.close()), so callers should use:
+
+            with build_kubernetes_api_client() as api_client:
+                ...
+    """
     configuration = kubernetes.client.Configuration()
     configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-    configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    if settings.KUBERNETES_VERIFY_SSL:
+        configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    else:
+        logger.warning(
+            "TLS verification is DISABLED for the Kubernetes API connection to %s. "
+            "This exposes the service account token attacks and must not be "
+            "used in production. Set _NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL=True to re-enable.",
+            configuration.host,
+        )
+        configuration.verify_ssl = False
     pod_token = settings.KUBERNETES_TOKEN_PATH
     with open(pod_token, "r", encoding="utf-8") as token_file:
         token = token_file.read().strip()

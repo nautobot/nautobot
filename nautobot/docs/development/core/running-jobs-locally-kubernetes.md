@@ -201,20 +201,14 @@ Set in your `dev.env` (or wherever you configure Nautobot):
 NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS=https://host.docker.internal:50675
 ```
 
-## Disable SSL verification in the Kubernetes client code
+## Disable SSL verification
 
 The local cluster's TLS certificate is issued for `127.0.0.1` / `kubernetes.default.svc`, **not** for `host.docker.internal`. Because we connect via `host.docker.internal`, the hostname does not match and verification fails. For local development we disable verification.
 
-In the function (`build_kubernetes_api_client` in `nautobot/extras/utils.py`), comment out the CA cert assignment and turn off SSL verification:
+Set the internal override in your `dev.env`:
 
-```python
-def build_kubernetes_api_client():
-    """Build an authenticated ApiClient using the in-cluster service account."""
-    configuration = kubernetes.client.Configuration()
-    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-    # configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH # <-- COMMENT OUT for local dev
-    configuration.verify_ssl = False                                   # <-- ADD for local dev
-...
+```bash
+NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL=false
 ```
 
 ## Start Nautobot and run a job
