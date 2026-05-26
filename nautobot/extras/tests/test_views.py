@@ -3439,6 +3439,52 @@ class JobTestCase(
             '<input type="checkbox" name="_ignore_singleton_lock" id="id__ignore_singleton_lock" checked>', content
         )
 
+    def test_rerun_job_restores_queue_for_all_queue_types(self):
+        """Verify rerun restores selected queue regardless of queue type."""
+
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        run_url = reverse(
+            "extras:job_run",
+            kwargs={"pk": self.test_required_args.pk},
+        )
+
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
+
+        for queue_type in JobQueueTypeChoices.values():
+            with self.subTest(queue_type=queue_type):
+                job_queue = JobQueue.objects.create(
+                    name=f"queue-{queue_type}",
+                    queue_type=queue_type,
+                )
+
+                self.test_required_args.job_queues.set([job_queue])
+
+                previous_result = JobResult.objects.create(
+                    job_model=self.test_required_args,
+                    user=self.user,
+                    task_kwargs={"var": "456"},
+                    celery_kwargs={
+                        "queue": job_queue.name,
+                    },
+                )
+
+                response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+
+                self.assertEqual(response.status_code, 200)
+
+                content = extract_page_body(response.content.decode(response.charset))
+
+                self.assertInHTML(
+                    f'<option value="{job_queue.pk}" selected>{job_queue}</option>',
+                    content,
+                )
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
         self.add_permissions("extras.run_job")
