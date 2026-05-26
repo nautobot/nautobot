@@ -137,6 +137,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x4 AOC Fanout": {
         "description": "1 trunk connector broken out to 4 individual legs",
@@ -149,6 +150,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x8 AOC Fanout": {
         "description": "1 trunk connector broken out to 8 individual legs",
@@ -161,6 +163,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "2x4 AOC Fanout": {
         "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
@@ -180,6 +183,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     # ── Fiber MPO Fanouts ──
     "MPO-8 → 4xLC Duplex": {
