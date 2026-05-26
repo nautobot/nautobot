@@ -57,6 +57,9 @@ class OptInFieldsMixin:
     Serializer mixin that adjusts its fields based on the `include` and `exclude_m2m` query parameters in a request.
 
     The serializer's `Meta.opt_in_fields` controls which fields are influenced by `include`.
+    The serializer's `Meta.default_m2m_fields` extends the global `DEFAULT_M2M_FIELDS` set
+    (which always includes `tags`, `content_types`, `object_types`) with additional ListSerializer /
+    ManyRelatedField sources that should be visible when the request does not set `exclude_m2m`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -113,9 +116,11 @@ class OptInFieldsMixin:
             # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
             exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
             if exclude_m2m is None or is_truthy(exclude_m2m):
+                default_m2m_fields = set(constants.DEFAULT_M2M_FIELDS)
+                default_m2m_fields.update(getattr(self.Meta, "default_m2m_fields", ()))
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
-                        if exclude_m2m is None and field_instance.source in constants.DEFAULT_M2M_FIELDS:
+                        if exclude_m2m is None and field_instance.source in default_m2m_fields:
                             continue
                         field_instance.write_only = True
 

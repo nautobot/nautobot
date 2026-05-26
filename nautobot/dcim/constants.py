@@ -121,6 +121,28 @@ BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
     }
 )
 
+# Per-type one-to-one FK field name on `CableToCableTermination` → ContentType natural key
+# (app_label, model) for its target model. At most one of these FKs may be non-null on each row;
+# enforced by a CheckConstraint on the model. The "exactly one" stricter requirement is enforced
+# in `clean()` — at the DB level the all-null state is allowed because Django's cascade-delete
+# machinery temporarily nulls the nullable FK before deleting the row, and a CHECK constraint
+# would block that intermediate step on MySQL.
+TERMINATION_FK_TO_CONTENT_TYPE = {
+    "circuit_termination": ("circuits", "circuittermination"),
+    "console_port": ("dcim", "consoleport"),
+    "console_server_port": ("dcim", "consoleserverport"),
+    "front_port": ("dcim", "frontport"),
+    "interface": ("dcim", "interface"),
+    "power_feed": ("dcim", "powerfeed"),
+    "power_outlet": ("dcim", "poweroutlet"),
+    "power_port": ("dcim", "powerport"),
+    "rear_port": ("dcim", "rearport"),
+}
+TERMINATION_FK_FIELDS = tuple(TERMINATION_FK_TO_CONTENT_TYPE)
+# Reverse map: ContentType natural key (app_label, model) → FK field name. Used by signal /
+# form / serializer code that needs to write to the right per-type FK given a termination instance.
+CONTENT_TYPE_TO_TERMINATION_FK = {ct: fk for fk, ct in TERMINATION_FK_TO_CONTENT_TYPE.items()}
+
 # AOC Ethernet Breakouts (strands_per_lane=1)
 # Fiber MPO Fanouts (strands_per_lane=2, duplex)
 DEFAULT_CABLE_TYPES = {

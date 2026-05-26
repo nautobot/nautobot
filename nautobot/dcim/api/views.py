@@ -3,12 +3,12 @@ import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.parsers import JSONParser, MultiPartParser
@@ -27,6 +27,7 @@ from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewname, validated_viewname
 from nautobot.dcim import filters
+from nautobot.dcim.constants import TERMINATION_FK_FIELDS
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -712,8 +713,25 @@ class CableTypeViewSet(NautobotModelViewSet):
     filterset_class = filters.CableTypeFilterSet
 
 
+# The runtime `CableSerializer.terminations` field is a read-only `SerializerMethodField` for
+# depth support, but the endpoint accepts a writable `terminations` payload via custom
+# `validate()` / `_apply_terminations()` logic. Advertise that writability to OpenAPI clients by
+# pointing the request schema at `WritableCableSerializer`, which differs only in declaring
+# `terminations` as a writable nested serializer field.
+@extend_schema_view(
+    create=extend_schema(request=serializers.WritableCableSerializer),
+    update=extend_schema(request=serializers.WritableCableSerializer),
+    partial_update=extend_schema(request=serializers.WritableCableSerializer),
+)
 class CableViewSet(NautobotModelViewSet):
-    queryset = Cable.objects.prefetch_related("terminations")
+    queryset = Cable.objects.prefetch_related(
+        Prefetch(
+            "terminations",
+            # `select_related`-ing the per-type FK columns lets the join-row serializer render every
+            # FK without an extra query per row (each row populates exactly one of them).
+            queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+        ),
+    )
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
@@ -729,7 +747,7 @@ class CableViewSet(NautobotModelViewSet):
 class CableToCableTerminationViewSet(NautobotModelViewSet):
     """API endpoint for the cable→termination join model."""
 
-    queryset = CableToCableTermination.objects.select_related("cable")
+    queryset = CableToCableTermination.objects.select_related("cable", *TERMINATION_FK_FIELDS)
     serializer_class = serializers.CableToCableTerminationSerializer
     filterset_class = filters.CableToCableTerminationFilterSet
 
