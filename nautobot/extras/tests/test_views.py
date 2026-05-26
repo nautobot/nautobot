@@ -1710,6 +1710,8 @@ class CustomLinkTestCase(
         for link in customlinks:
             link.save()
 
+        CustomLink.objects.update(last_updated=timezone.now() - timedelta(hours=1))
+
         cls.form_data = {
             "content_type": obj_type.pk,
             "name": "customlink-4",

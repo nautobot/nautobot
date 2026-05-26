@@ -355,6 +355,8 @@ class ObjectPermissionTest(APIViewTestCases.APIViewTestCase):
 
     def setUp(self):
         super().setUp()
+        self.user.is_staff = True
+        self.user.save()
         self.add_permissions("users.view_user")
 
     @classmethod
