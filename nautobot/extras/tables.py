@@ -1614,7 +1614,7 @@ class FileProxyTable(BaseTable):
     name = tables.Column(linkify=True)
     file = tables.Column(linkify=True)
     created = tables.DateTimeColumn()
-    actions = ButtonsColumn(FileProxy, buttons=("edit", "delete"))
+    actions = ButtonsColumn(FileProxy)
 
     class Meta(BaseTable.Meta):
         model = FileProxy
