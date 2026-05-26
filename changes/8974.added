@@ -1,6 +1,6 @@
-Added the `CableToCableTermination` model (exposed via `nautobot.dcim.models`), a join table between `Cable` and `CableTermination` instances that allows a cable to have more than two terminations (breakout-cable support).
+Added the `CableToCableTermination` model (exposed via `nautobot.dcim.models`), a join table between `Cable` and `CableTermination` instances that allows a cable to have more than two terminations (breakout-cable support). The model is exposed at REST API endpoint `/api/dcim/cables-to-cable-terminations/`.
 Added an `is_disconnected` boolean filter to `CableFilterSet` for selecting cables with no termination on one or both sides.
-Added a "Cables" detail tab on `CableType` (`/dcim/cable-types/<pk>/cables/`) listing all cables of that type.
+Added a "Cables" detail tab on `CableType` (`/dcim/cable-types/<pk>/cables/`) listing all cables of that type, and a `cable_count` column to `CableTypeTable`.
 Added `q` search filter support to `ConsoleConnectionFilterSet`, `InterfaceConnectionFilterSet`, and `PowerConnectionFilterSet`.
 Added `Cable.add_termination(termination, cable_end, connector=None)` for attaching a `CableTermination` to a saved `Cable` after creation (e.g. for additional breakout connectors that the single A/B `Cable.__init__` kwargs can't express).
 Added typed `ManyToManyField` reverse accessors to `Cable` (`cable.interfaces`, `cable.front_ports`, `cable.power_ports`, etc.), and a singular `cable_termination` reverse accessor on each `CableTermination` instance (e.g. `interface.cable_termination`) returning the connected join row.
