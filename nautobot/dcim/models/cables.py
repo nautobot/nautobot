@@ -454,9 +454,6 @@ class Cable(PrimaryModel):
     @property
     def breakout_eligible(self):
         """Whether this cable's termination types support breakout lane modeling."""
-
-        if not self.present_in_database:
-            return True  # New cable, no terminations yet
         for endpoint in self.terminations.all():
             term = endpoint.termination
             if term is not None and term._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES:

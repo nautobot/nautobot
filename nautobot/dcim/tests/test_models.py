@@ -1,5 +1,4 @@
 from decimal import Decimal
-from unittest import expectedFailure
 from unittest.mock import MagicMock, patch, PropertyMock
 import warnings
 
@@ -3256,6 +3255,15 @@ class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(ct.strands_per_lane, 2)
         self.assertEqual(len(ct.mapping), 4)  # auto-regenerated
 
+    def test_save_tolerates_stale_instance(self):
+        """If the underlying row has been deleted out from under a stale in-memory instance, `save()` still succeeds."""
+        ct = CableType.objects.create(name="Stale", a_connectors=1, b_connectors=2, total_lanes=2)
+        # Delete the row directly via the queryset, leaving `ct` in-memory with `_state.adding=False`
+        # (so `present_in_database` still returns True) but no matching DB row.
+        CableType.objects.filter(pk=ct.pk).delete()
+        ct.save()  # Should not raise (immutability check hits the `DoesNotExist` branch and skips)
+        self.assertTrue(CableType.objects.filter(pk=ct.pk).exists())
+
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
     model = Cable
@@ -3747,18 +3755,13 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         with context_managers.web_request_context(self.user):
             self.device1.delete()
 
-    @expectedFailure
-    def test_multilane_cable_pair_validation_iterates_all_lanes(self):
-        """A multi-lane cable's pair-wise validation should iterate all lane pairs, not just the first.
+    def test_multilane_cable_pair_validation_via_cabletocabletermination_clean(self):
+        """Per-lane `CableToCableTermination.clean()` catches pair-wise violations on non-primary lanes.
 
         Constructs a 2x2 cable where lane 1 (interface↔interface) is valid but lane 2 wires a
-        FrontPort to its corresponding RearPort — a pair-wise rule violation that *only* manifests
-        when all lanes are checked. Both terminations are breakout-compatible types so the existing
-        `cable_type`/`BREAKOUT_COMPATIBLE_TERMINATION_TYPES` check doesn't catch it.
-
-        Marked `expectedFailure` while Cable.clean() only validates the first A/B pair. When full
-        lane iteration is implemented, this test should start passing — at which point remove the
-        decorator.
+        FrontPort to its corresponding RearPort, then to itself. `Cable.clean()` only validates the
+        first A/B pair, so both violations are surfaced via the per-row `full_clean()` on the
+        lane-2 join row.
         """
         Cable.objects.all().delete()
 
@@ -3776,28 +3779,23 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             status=self.status,
         )
 
-        # Connector 2: FrontPort on A side, its corresponding RearPort on B side — pair check should fail.
+        # Connector 2 A-side: FrontPort. Its peer (B-side connector 2) will be validated below.
         CableToCableTermination.objects.create(
             cable=cable,
             cable_end="A",
             front_port=self.front_port1,
             connector=2,
         )
-        term2 = CableToCableTermination.objects.create(
-            cable=cable,
-            cable_end="B",
-            rear_port=self.rear_port1,
-            connector=2,
-        )
 
+        # B-side connector 2 = the FrontPort's corresponding RearPort → pair-rule violation.
+        term2 = CableToCableTermination(cable=cable, cable_end="B", rear_port=self.rear_port1, connector=2)
         with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):
-            cable.clean()
+            term2.full_clean()
 
-        term2.rear_port = None
-        term2.front_port = self.front_port1
-        term2.save()
+        # B-side connector 2 = the same FrontPort → self-connection violation.
+        term2 = CableToCableTermination(cable=cable, cable_end="B", front_port=self.front_port1, connector=2)
         with self.assertRaisesRegex(ValidationError, "Cannot connect front port to itself"):
-            cable.clean()
+            term2.full_clean()
 
     def test_cabletocabletermination_connector_defaults_to_one(self):
         """For a standard (non-breakout) cable, the join row's `connector` field defaults to 1."""
@@ -3886,6 +3884,17 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         row = CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
         # Re-clean the saved row; without the `present_in_database` exclusion this would self-compare.
         row.full_clean()  # Should not raise
+
+    def test_cabletocabletermination_peer_pair_skips_termination_less_peer(self):
+        """Peer rows with no termination FK set are skipped during pair validation."""
+        cable = Cable.objects.create(status=self.status)
+        # Bypass clean() to persist a B-side ghost row with no termination FK — only the DB
+        # "at most one" constraint is enforced here, so a zero-termination row is accepted.
+        CableToCableTermination.objects.create(cable=cable, cable_end="B", connector=1)
+        new_row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # Peer iteration finds the ghost row; `peer_term is None` triggers `continue`, so pair
+        # validation neither crashes nor reports an incompatibility.
+        new_row.full_clean()
 
     # Backward-compatibility query translation for `cable=`/`select_related("cable")` patterns.
     # The `cable` FK was replaced by the `CableToCableTermination` join; old queries are
