@@ -44,6 +44,13 @@ from nautobot.ipam.fields import VarbinaryIPField
 
 logger = logging.getLogger(__name__)
 
+# Maximum natural-key lookup paths to include in a single CSV-export annotate+values query.
+# This is a workaround for the fact that MySQL caps a single statement to no more than 61 joined tables,
+# which is a limit we can easily hit when annotating related objects involving a model like Device
+# (whose natural key can be arbitrarily long depending on the Location tree depth).
+# See also: https://github.com/nautobot/nautobot/issues/8454
+CSV_NATURAL_KEY_QUERY_CHUNK = 20
+
 
 class OptInFieldsMixin:
     """
@@ -166,17 +173,15 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         if self._is_csv_request() and self.instance:
             # Retrieve the natural key values of related fields in an optimized way.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
-            case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
             if isinstance(self.instance, models.QuerySet):
                 queryset = self.instance
             else:
                 # We would only need to run one additional query, making this a more efficient method of
                 # obtaining all the natural key values for this instance;
                 queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
-            self.natural_keys_values = {
-                item["pk"]: item
-                for item in queryset.annotate(**case_query).values(*all_related_fields_natural_key_lookups, "pk")
-            }
+            self.natural_keys_values = self._collect_natural_key_values(
+                queryset, all_related_fields_natural_key_lookups
+            )
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
@@ -251,6 +256,28 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 output_field=output_field(),
             )
         return case_query
+
+    def _collect_natural_key_values(self, queryset, lookups):
+        """
+        Perform as many `.annotate().values()` queries as needed to prefetch related fields' natural-key values.
+
+        Each query is limited in scope by `CSV_NATURAL_KEY_QUERY_CHUNK` to avoid exceeding MySQL's 61-table join limit.
+
+        Returns a dict (empty if no `lookups`) of `{pk: {"pk": <uuid>, lookup1: value1, lookup2: value2, ...}}`.
+        """
+        natural_keys_values = {}
+        if not lookups:
+            return natural_keys_values
+
+        for offset in range(0, len(lookups), CSV_NATURAL_KEY_QUERY_CHUNK):
+            chunk = lookups[offset : offset + CSV_NATURAL_KEY_QUERY_CHUNK]
+            case_query = self._build_query_case_for_natural_key_field_lookup(chunk)
+            for item in queryset.annotate(**case_query).values(*chunk, "pk"):
+                pk = item["pk"]
+                if pk not in natural_keys_values:
+                    natural_keys_values[pk] = {}
+                natural_keys_values[pk].update(item)
+        return natural_keys_values
 
     def _get_related_fields_natural_key_field_lookups(self):
         """Retrieve a list of field lookups for natural key fields of related models.
@@ -465,9 +492,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request() and self.natural_keys_values is not None:
-            if cleaned_natural_key_field_instance := self.natural_keys_values.get(instance.pk):
-                for key, value in data.items():
+        if self._is_csv_request():
+            for key, value in data.items():
+                if cleaned_natural_key_field_instance := self.natural_keys_values.get(instance.pk):
                     # FK field with natural_field_lookups
                     if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
                         key, cleaned_natural_key_field_instance
@@ -476,6 +503,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                     else:
                         # Not FK field
                         altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                else:
+                    altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
         else:
             altered_data = data
 

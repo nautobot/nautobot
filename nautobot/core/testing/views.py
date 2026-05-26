@@ -971,6 +971,48 @@ class ViewTestCases:
         def get_list_view(self):
             return lookup.get_view_for_model(self.model, view_type="List")
 
+        def get_display_verbose_name_plural(self):
+            """
+            Verbose-plural name asserted in display strings rendered by the list view (the
+            example-app banner, the "No X found" empty state, etc.).
+
+            Defaults to `self.model._meta.verbose_name_plural`. Override on test cases where the
+            list view's underlying queryset is over a different model than `self.model` (e.g. a
+            view that adapts CablePath rows for an Interface-shaped surface).
+            """
+            return self.model._meta.verbose_name_plural
+
+        def get_instance_display_text_content(self, instance):
+            """
+            Strings expected to appear as HTML element text content for `instance`.
+
+            These are matched with `>\\s*STRING\\s*<` to ensure they appear *inside* a tag, not as
+            part of an attribute value or URL — useful for short / generic display names where a
+            plain substring match would risk false positives.
+
+            Defaults to `instance.name` if it has one. Override on test cases where the rendered
+            table shows display text from a related object (e.g. a CablePath-backed view that
+            displays origin / destination interface names).
+            """
+            return [instance.name] if hasattr(instance, "name") else []
+
+        def get_instance_display_strings(self, instance):
+            """
+            Strings expected to appear anywhere in the rendered list-view content for `instance`.
+
+            Matched with a plain substring check — appropriate for unambiguous values like absolute
+            URLs. For short / generic display text, use `get_instance_display_text_content` instead
+            so the strict-regex check avoids false positives.
+
+            Defaults to `instance.get_absolute_url()` if it has one. Override on test cases where
+            the rendered table links related objects (e.g. a CablePath-backed view that displays
+            origin / destination interface URLs).
+            """
+            strings = []
+            with contextlib.suppress(AttributeError):
+                strings.append(instance.get_absolute_url())
+            return strings
+
         def test_list_view_has_filter_form(self):
             view = self.get_list_view()
             if hasattr(view, "filterset_form"):  # ObjectListView
@@ -1075,7 +1117,7 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
             instance1, instance2 = self._get_queryset().all()[:2]
-            if hasattr(self.model, "name") and instance1.name == instance2.name:
+            if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
 
@@ -1089,13 +1131,14 @@ class ViewTestCases:
             content = response.content.decode(response.charset)
             # There should be only one row in the table
             self.assertEqual(content.count("<tr "), 1)
-            if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
-                self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            with contextlib.suppress(AttributeError):
-                # Some models, such as ObjectMetadata, don't have a detail URL
-                if instance1.get_absolute_url() in content:
-                    self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            for s in self.get_instance_display_text_content(instance1):
+                self.assertRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+            for s in self.get_instance_display_strings(instance1):
+                self.assertIn(s, content, msg=content)
+            for s in self.get_instance_display_text_content(instance2):
+                self.assertNotRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+            for s in self.get_instance_display_strings(instance2):
+                self.assertNotIn(s, content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
@@ -1107,13 +1150,13 @@ class ViewTestCases:
             self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
-            self.assertBodyContains(response, f"No {self.model._meta.verbose_name_plural} found")
+            self.assertBodyContains(response, f"No {self.get_display_verbose_name_plural()} found")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
             instance1, instance2 = self._get_queryset().all()[:2]
-            if hasattr(self.model, "name") and instance1.name == instance2.name:
+            if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
 
@@ -1154,13 +1197,11 @@ class ViewTestCases:
             self.assertNotIn("Unknown filter field", content, msg=content)
             # There should be at least two rows in the table
             self.assertGreaterEqual(content.count("<tr "), 2)
-            if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            with contextlib.suppress(AttributeError):
-                # Some models, such as ObjectMetadata, don't have a detail URL
-                if instance1.get_absolute_url() in content:
-                    self.assertIn(instance2.get_absolute_url(), content, msg=content)
+            for instance in (instance1, instance2):
+                for s in self.get_instance_display_text_content(instance):
+                    self.assertRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+                for s in self.get_instance_display_strings(instance):
+                    self.assertIn(s, content, msg=content)
 
         def test_filter_form_fields_are_working(self):
             """
@@ -1298,7 +1339,8 @@ class ViewTestCases:
             if "example_app" in settings.PLUGINS:
                 with self.subTest("Assert example-app banner is present"):
                     self.assertIn(
-                        f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
+                        f"<div>You are viewing a table of {self.get_display_verbose_name_plural()}</div>",
+                        response_body,
                     )
 
             return response
@@ -1376,7 +1418,7 @@ class ViewTestCases:
             # Check app banner is rendered correctly
             self.assertBodyContains(
                 response,
-                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>",
+                f"<div>You are viewing a table of {self.get_display_verbose_name_plural()}</div>",
                 html=True,
             )
 

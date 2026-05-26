@@ -147,7 +147,7 @@ class NautobotTestCaseMixin:
             if api:
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
-                    ct = ContentType.objects.get(pk=value)
+                    ct = value if isinstance(value, ContentType) else ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
                 # Convert IPNetwork instances to strings

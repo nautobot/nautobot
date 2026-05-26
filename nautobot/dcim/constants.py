@@ -78,29 +78,33 @@ CABLE_TERMINATION_MODELS = Q(
     )
 )
 
+# Maps each cable-termination type to the list of types its other end may connect to. List order is
+# significant: the first entry is used as the default B-side type when creating a cable from a given
+# A-side type (see `CableForm._init_lane_fields`), so each list should lead with the most natural /
+# most common peer for that termination type.
 COMPATIBLE_TERMINATION_TYPES = {
     "circuittermination": ["interface", "frontport", "rearport", "circuittermination"],
     "consoleport": ["consoleserverport", "frontport", "rearport"],
     "consoleserverport": ["consoleport", "frontport", "rearport"],
     "interface": ["interface", "circuittermination", "frontport", "rearport"],
     "frontport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
     "powerfeed": ["powerport"],
     "poweroutlet": ["powerport"],
     "powerport": ["poweroutlet", "powerfeed"],
     "rearport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
 }
 
@@ -133,6 +137,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x4 AOC Fanout": {
         "description": "1 trunk connector broken out to 4 individual legs",
@@ -145,6 +150,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x8 AOC Fanout": {
         "description": "1 trunk connector broken out to 8 individual legs",
@@ -157,6 +163,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "2x4 AOC Fanout": {
         "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
@@ -176,6 +183,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     # ── Fiber MPO Fanouts ──
     "MPO-8 → 4xLC Duplex": {

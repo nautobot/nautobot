@@ -46,6 +46,7 @@
                                 data-bs-toggle="modal"
                                 data-bs-target="#embedded_action_modal"
                                 hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "create"}'
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
@@ -65,6 +66,7 @@
                                 data-bs-toggle="modal"
                                 data-bs-target="#embedded_action_modal"
                                 hx-get="{% url 'search_content_type' content_type=embedded_search_content_type %}{% if embedded_search_query_string %}?{{ embedded_search_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "search"}'
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"

@@ -28,8 +28,11 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -103,7 +106,10 @@ class Mixins:
             """
             Test tracing a device component's attached cable.
             """
-            obj = self.model.objects.first()
+            if self.model is Interface:
+                obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+            else:
+                obj = self.model.objects.first()
             peer_device = Device.objects.create(
                 location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
@@ -3299,6 +3305,32 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
 
+class CableTypeTest(APIViewTestCases.APIViewTestCase):
+    model = CableType
+    bulk_update_data = {
+        "description": "Updated description",
+    }
+    choices_fields = ["polarity_method"]
+
+    @classmethod
+    def setUpTestData(cls):
+        CableType.objects.create(name="Test Cable Type 1")
+        CableType.objects.create(name="Test Cable Type 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        CableType.objects.create(name="Test Cable Type 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+
+        cls.create_data = [
+            {"name": "Test Cable Type 4"},
+            {"name": "Test Cable Type 5", "a_connectors": 1, "b_connectors": 4, "total_lanes": 4},
+            {
+                "name": "Test Cable Type 6",
+                "a_connectors": 1,
+                "b_connectors": 8,
+                "total_lanes": 8,
+                "description": "8-lane breakout",
+            },
+        ]
+
+
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
     bulk_update_data = {
@@ -3365,6 +3397,22 @@ class CableTest(Mixins.BaseComponentTestMixin):
             label="Cable 3",
             status=statuses[0],
         )
+        # An un-terminated cable so the inherited serializer/CSV/list tests exercise the
+        # `CableSerializer._get_termination` "termination is None" short-circuit.
+        Cable.objects.create(label="Cable 4 (uncabled)", status=statuses[0])
+        # A breakout cable with two B-side terminations so the inherited serializer/CSV/list
+        # tests exercise the multi-lane representation path in `CableSerializer.to_representation`.
+        breakout_type = CableType.objects.create(
+            name="Cable API breakout 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(
+            termination_a=interfaces[3],
+            termination_b=interfaces[13],
+            cable_type=breakout_type,
+            label="Cable 5 (breakout)",
+            status=statuses[0],
+        )
+        breakout_cable.add_termination(interfaces[19], "B", connector=2)
 
         cls.create_data = [
             {
@@ -3390,6 +3438,76 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_b_id": interfaces[16].pk,
                 "status": statuses[1].pk,
                 "label": "Cable 6",
+            },
+        ]
+
+
+class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
+    """Tests for the `dcim.CableToCableTermination` REST endpoint."""
+
+    model = CableToCableTermination
+    # Join rows have no meaningful bulk-updatable fields: `cable`/`cable_end`/`connector` edits
+    # collide with the unique constraint, and the per-type FKs each have an `update_or_create`
+    # semantic better expressed via the Cable endpoint.
+    bulk_update_data = None
+    choices_fields = ["cable_end"]
+
+    def test_update_object(self):
+        self.skipTest(  # TODO: not sure I agree with this comment!
+            "Join rows aren't meaningfully updatable via REST: changing `cable`/`cable_end`/"
+            "`connector` collides with the unique constraint, and the per-type termination FKs "
+            "are better managed through the Cable endpoint."
+        )
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Cable Join API DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+            name="Cable Join API Device",
+            location=location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=device, name=f"eth{i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+            for i in range(10)
+        ]
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        # Three cables fully populated — yields 6 join rows for list/get/delete tests.
+        for i in range(3):
+            Cable.objects.create(termination_a=interfaces[i], termination_b=interfaces[i + 5], status=cable_status)
+
+        # Three empty cables + three free interfaces — one new join row per cable for `create_data`.
+        # (A non-breakout cable only allows one row per side at connector 1, so we use a separate
+        # cable per create payload rather than trying to stack rows on one cable.)
+        empty_cables = [Cable.objects.create(status=cable_status) for _ in range(3)]
+        cls.create_data = [
+            {
+                "cable": empty_cables[0].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[3].pk,
+            },
+            {
+                "cable": empty_cables[1].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[4].pk,
+            },
+            {
+                "cable": empty_cables[2].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[8].pk,
             },
         ]
 
