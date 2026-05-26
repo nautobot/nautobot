@@ -1,2 +1,0 @@
-Updated dependency `idna` to `3.16` to mitigate CVE-2026-45409. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
-Updated indirect development dependency `pymdown-extensions` to `10.21.3` to mitigate CVE-2026-46338.
