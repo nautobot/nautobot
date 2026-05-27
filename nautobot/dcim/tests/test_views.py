@@ -3,7 +3,6 @@ from decimal import Decimal
 import json
 import signal
 import unittest
-from unittest import expectedFailure
 import zoneinfo
 
 from constance.test import override_config
@@ -4608,18 +4607,14 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
-    @expectedFailure
+    @unittest.skipIf(
+        connection.vendor == "mysql",
+        "A residual N+1 from `term.parent` rendering appears on MySQL but not PostgreSQL. "
+        "Deferred until the upcoming device-component parent/device FK refactor, at which point "
+        "the cable-list prefetch chain can be extended through each per-type FK's device/module.",
+    )
     def test_list_view_query_count_does_not_grow_with_cable_count(self):
-        """Rendering the Cable list view must not run an extra query per cable (or per termination row).
-
-        Currently `@expectedFailure` because the `CABLE_TERMINATIONS_MULTI` template renders
-        `term.parent` per row, and `parent` on each termination subclass dereferences a separate
-        FK (e.g. `Interface.parent` → `device` / `module`) that the cable-list prefetch chain
-        does not yet `select_related`. When that's addressed (a separate piece of work — the
-        prefetch lives in the `terminations` Prefetch in `CableUIViewSet.queryset` and would
-        need to chain through each per-type FK's `device`/`module`), this test should start
-        passing and the decorator can be removed.
-        """
+        """Rendering the Cable list view must not run an extra query per cable (or per termination row)."""
         self.add_permissions("dcim.view_cable")
         list_url = self._get_url("list")
 
@@ -4637,9 +4632,9 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         baseline = count_queries()
 
-        # Add more cables (one of them a breakout with two B-side terminations) — six new
-        # join rows in total. If the list view's queryset doesn't `select_related` the per-type
-        # FK columns on the join rows, the count grows ~linearly with rows.
+        # Add more cables (one of them a breakout with two B-side terminations) — seven new
+        # join rows in total. If the list view's queryset doesn't fully eliminate the per-row
+        # N+1, the count grows ~linearly with rows.
         free_ifaces = list(
             Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:8]
         )
