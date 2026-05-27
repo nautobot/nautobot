@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.urls import reverse
 import graphene.types
@@ -551,6 +551,7 @@ class GraphQLSearchParameters(GraphQLTestCaseBase):
                 self.assertIn(field, params.keys())
 
 
+@tag("example_app")
 class GraphQLReservedFieldKwargFilters(TestCase):
     """Regression tests for filters whose names collide with reserved `graphene.Field` kwargs (#9021).
 
