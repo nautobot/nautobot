@@ -1204,10 +1204,10 @@ class JobResultViewSet(
         if job_result.user != request.user and not request.user.is_staff:
             raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
 
-        if not job_result.is_unready_state:
+        if not job_result.is_unready_state and request.method == "POST":
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
-                status=status.HTTP_409_CONFLICT if request.method == "POST" else status.HTTP_200_OK,
+                status=status.HTTP_409_CONFLICT,
             )
 
         strategy = RevokeFactory.get_strategy(job_result.queue_type)
@@ -1215,6 +1215,16 @@ class JobResultViewSet(
         job_is_running = strategy.is_alive(job_result)
 
         if request.method == "GET":
+            if not job_result.is_unready_state:
+                detail = {
+                    "message": f"Job '{job_result.name}' is already finished.",
+                    "action": "None",
+                    "action_description": "Job is already finished. Nothing to do.",
+                    "job_status": job_result.status,
+                    "timestamp": timezone.now().isoformat(),
+                }
+                return Response(detail, status=status.HTTP_200_OK)
+
             detail = {
                 "message": f"Are you sure you want to revoke '{job_result.name}'?",
                 "action": "TERMINATE" if job_is_running else "REAP",

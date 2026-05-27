@@ -58,7 +58,11 @@ curl -X GET \
 http://nautobot/api/extras/job-results/$JOB_RESULT_ID/revoke/
 ```
 
-The `action` field indicates the path the server will take on `TERMINATE` when the worker is alive, `REAP` when it has gone away.
+The `action` field indicates the path the server would take:
+
+- `TERMINATE` - the worker is alive and would receive a `SIGKILL`.
+- `REAP` - no worker is running; the `JobResult` would be marked revoked without signaling anything.
+- `None` - the job has already reached a ready state; no action would be taken.
 
 ```json
 {
@@ -71,13 +75,17 @@ The `action` field indicates the path the server will take on `TERMINATE` when t
 }
 ```
 
-If the `JobResult` is already in a finished state, the preview endpoint still returns 200 OK with an informational response because no state-changing operation is attempted.
+If the `JobResult` is already in a finished state, the preview endpoint still returns `200 OK`, since no state-changing operation is attempted. The `irreversible` field is omitted because there is nothing to undo.
 
-Example response for a completed job:
+Example response for a finished job:
 
 ```json
 {
-    "detail": "Job is already finished. Nothing to do."
+    "message": "Job '<jobresult_name>' is already finished.",
+    "action": "None",
+    "action_description": "Job is already finished. Nothing to do.",
+    "job_status": "SUCCESS",
+    "timestamp": "2026-05-14T11:00:12.060393+00:00"
 }
 ```
 
