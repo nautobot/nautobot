@@ -447,13 +447,17 @@ class Cable(PrimaryModel):
 
     @property
     def terminations_a(self):
-        """All A-side CableTermination rows."""
-        return self.terminations.filter(cable_end="A").order_by("connector")
+        """All A-side CableTermination rows.
+
+        Iterates `.all()` (honoring any prefetched `terminations` cache) and filters / sorts in
+        Python so a prefetched parent queryset doesn't suffer a per-cable DB round-trip here.
+        """
+        return sorted((e for e in self.terminations.all() if e.cable_end == "A"), key=lambda e: e.connector)
 
     @property
     def terminations_b(self):
-        """All B-side CableTermination rows."""
-        return self.terminations.filter(cable_end="B").order_by("connector")
+        """All B-side CableTermination rows. See `terminations_a` for the prefetch-honoring rationale."""
+        return sorted((e for e in self.terminations.all() if e.cable_end == "B"), key=lambda e: e.connector)
 
     # ─── Breakout lane properties ───
 

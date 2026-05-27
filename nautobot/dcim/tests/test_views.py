@@ -3,12 +3,15 @@ from decimal import Decimal
 import json
 import signal
 import unittest
+from unittest import expectedFailure
 import zoneinfo
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from django.db.models import F, Q
+from django.test.utils import CaptureQueriesContext
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
@@ -51,7 +54,7 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.filters import (
     ConsoleConnectionFilterSet,
     ControllerFilterSet,
@@ -4604,6 +4607,55 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "length": 50,
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
+
+    @expectedFailure
+    def test_list_view_query_count_does_not_grow_with_cable_count(self):
+        """Rendering the Cable list view must not run an extra query per cable (or per termination row).
+
+        Currently `@expectedFailure` because the `CABLE_TERMINATIONS_MULTI` template renders
+        `term.parent` per row, and `parent` on each termination subclass dereferences a separate
+        FK (e.g. `Interface.parent` → `device` / `module`) that the cable-list prefetch chain
+        does not yet `select_related`. When that's addressed (a separate piece of work — the
+        prefetch lives in the `terminations` Prefetch in `CableUIViewSet.queryset` and would
+        need to chain through each per-type FK's `device`/`module`), this test should start
+        passing and the decorator can be removed.
+        """
+        self.add_permissions("dcim.view_cable")
+        list_url = self._get_url("list")
+
+        def count_queries():
+            # The table body is fetched via HTMX after the page shell loads; only the HTMX
+            # request actually iterates the queryset, so the regular GET wouldn't exercise the
+            # per-row termination rendering we're trying to stress here.
+            with CaptureQueriesContext(connection) as ctx:
+                response = self.client.get(list_url, headers={"HX-Request": True})
+            self.assertEqual(response.status_code, 200)
+            content = response.content.decode("utf-8")
+            self.assertIn("A-Side Terminations", content)
+            self.assertIn("B-Side Terminations", content)
+            return len(ctx.captured_queries)
+
+        baseline = count_queries()
+
+        # Add more cables (one of them a breakout with two B-side terminations) — six new
+        # join rows in total. If the list view's queryset doesn't `select_related` the per-type
+        # FK columns on the join rows, the count grows ~linearly with rows.
+        free_ifaces = list(
+            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:8]
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        Cable.objects.create(termination_a=free_ifaces[0], termination_b=free_ifaces[1], status=cable_status)
+        Cable.objects.create(termination_a=free_ifaces[2], termination_b=free_ifaces[3], status=cable_status)
+        breakout_cable = Cable.objects.create(
+            termination_a=free_ifaces[4],
+            termination_b=free_ifaces[5],
+            cable_type=self.breakout_cable_type,
+            status=cable_status,
+        )
+        breakout_cable.add_termination(free_ifaces[6], "B", connector=2)
+
+        post = count_queries()
+        self.assertLessEqual(post, baseline, msg=f"baseline={baseline} post={post}")
 
     def test_delete_a_cable_which_has_a_peer_connection(self):
         """Test for https://github.com/nautobot/nautobot/issues/1694."""

@@ -727,8 +727,6 @@ class CableViewSet(NautobotModelViewSet):
     queryset = Cable.objects.prefetch_related(
         Prefetch(
             "terminations",
-            # `select_related`-ing the per-type FK columns lets the join-row serializer render every
-            # FK without an extra query per row (each row populates exactly one of them).
             queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
         ),
     )
