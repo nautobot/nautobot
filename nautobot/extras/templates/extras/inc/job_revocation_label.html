@@ -1,10 +1,14 @@
 {% load helpers %}
 
 {% if result.status == 'REVOKED' %}
-    {% if result.date_terminated %}
+    {% if result.revocation_type == 'terminated' %}
         <span class="badge bg-danger">Terminated</span>
-    {% else %}
+    {% elif result.revocation_type == 'reaped' %}
         <span class="badge bg-warning">Reaped</span>
+    {% elif result.revocation_type == 'force' %}
+        <span class="badge bg-body-secondary border">FORCE REVOKED</span>
+    {% else %}
+        <span class="badge bg-body-secondary border">{{ result.revocation_type }} (unrecognized)</span>
     {% endif %}
 {% else %}
     <span> {{ None | placeholder }} </span>

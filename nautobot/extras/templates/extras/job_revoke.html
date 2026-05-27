@@ -9,10 +9,17 @@
 {% block message %}
     <p>Are you sure you want to revoke <strong>{{ object.name }}</strong>?</p>
     <p>
-        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is: {% if job_is_running %}<strong>RUNNING</strong>{% else %}<strong>NOT RUNNING</strong>{% endif %}
+        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is:
+        {% if job_is_running is None %}
+            <strong>DEAD</strong>
+        {% elif liveness %}
+            <strong>RUNNING</strong>
+        {% else %}
+            <strong>NOT RUNNING</strong>
+        {% endif %}
     </p>
     <p>
-        Would you like revoke the job? Which will <strong>REAP</strong> or <strong>TERMINATE</strong> the job.
+        Would you like revoke the job? Which will <strong>REAP</strong>, <strong>TERMINATE</strong> or <strong>FORCE REVOKE</strong> the job.
     </p>
 
     <p>This action cannot be undone.</p>
@@ -28,6 +35,13 @@
                 <strong>TERMINATE:</strong> A SIGKILL signal will be sent to the worker running
                 this Job. The Job will stop immediately with no opportunity to clean up. Any
                 in-flight operations will be cut off.
+            </p>
+            <p>
+                <strong>FORCE REVOKE:</strong> Backend Celery or Kubernetes can
+                not be reached, so this Job's actual state cannot be confirmed. The
+                JobResult will be marked as revoked, but no kill signal can be sent.
+                If the Job is still running somewhere, it will continue until it
+                finishes on its own.
             </p>
         </div>
     </details>

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
+from typing import Callable
 
 from celery.exceptions import TaskRevokedError
 from django.conf import settings
@@ -10,7 +11,12 @@ import kubernetes.client
 
 from nautobot.core.celery import app as celery_app
 from nautobot.core.utils.logging import sanitize
-from nautobot.extras.choices import JobQueueTypeChoices, JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.choices import (
+    JobQueueTypeChoices,
+    JobResultStatusChoices,
+    JobRevocationTypeChoices,
+    LogLevelChoices,
+)
 from nautobot.extras.models import JobResult
 from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
@@ -28,7 +34,7 @@ class JobRevokeStrategy(ABC):
 
     @abstractmethod
     def is_alive(self, job_result: JobResult) -> bool | None:
-        """Return True/False if the backend can confirm the job's liveness, None if unknown."""
+        """True=alive, False=confirmed not alive, None=backend unreachable."""
 
     @abstractmethod
     def perform_reap(self, job_result: JobResult, user: User) -> bool:
@@ -38,19 +44,19 @@ class JobRevokeStrategy(ABC):
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
         """Send the backend-specific kill signal and mark the job revoked."""
 
-    def _should_reap(self, job_result) -> bool:
-        """Return True if the job should be reaped (marked revoked without a kill signal).
-
-        Args:
-            job_result: The `JobResult` to evaluate.
-
-        Returns:
-            True if the job should be reaped, False otherwise.
-        """
-        return job_result.is_unready_state and not self.is_alive(job_result)
+    def perform_force_revoke(self, job_result, user) -> bool:
+        """Force revoke mark dead job revoked."""
+        logger.info("Force revoke dead job %s by %s", job_result.pk, user)
+        job_result.log(
+            f"Force revoke dead job {job_result.pk} by {user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="revoking",
+        )
+        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_FORCE_REVOKED)
+        return True
 
     def _apply_termination_metadata(
-        self, job_result: JobResult, user: User, now_timestamp: None | datetime = None
+        self, job_result: JobResult, user: User, revocation_type: str, now_timestamp: None | datetime = None
     ) -> set[str]:
         """Fill in termination metadata fields on a locked `JobResult`.
 
@@ -61,6 +67,7 @@ class JobRevokeStrategy(ABC):
         Args:
             job_result: The locked `JobResult` to update (modified in place).
             user: The user requesting termination.
+            revocation_type: revocation type based on `JobRevocationTypeChoices`.
             now_timestamp: Optional timestamp to use for `date_done`. If not provided,
                 the current time will be used.
 
@@ -84,13 +91,17 @@ class JobRevokeStrategy(ABC):
             job_result.revoked_by_user_name = user.username
             changed.add("revoked_by_user_name")
 
+        if not job_result.revocation_type:
+            job_result.revocation_type = revocation_type
+            changed.add("revocation_type")
+
         return changed
 
-    def _mark_revoked(self, job_result: JobResult, user: User) -> tuple[JobResult, bool]:
+    def _mark_revoked(self, job_result: JobResult, user: User, revocation_type: str) -> tuple[JobResult, bool]:
         """Mark a `JobResult` as revoked, filling in only fields that aren't already set."""
         with transaction.atomic():
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_termination_metadata(job_result, user)
+            changed = self._apply_termination_metadata(job_result, user, revocation_type)
 
             job_result.status = JobResultStatusChoices.STATUS_REVOKED
             changed |= {"status"}
@@ -99,54 +110,82 @@ class JobRevokeStrategy(ABC):
 
         return job_result
 
-    def revoke(self, job_result, user) -> dict:
-        """Reap or kill a job and return the outcome.
-
-        Reaps when `should_reap` is True (no signal sent). Otherwise sends
-        the backend kill signal via `perform_termination`. Exceptions from
-        the kill path are caught and reported in the result.
+    def _resolve_action(self, alive: bool | None) -> tuple[Callable, str]:
+        """Map liveness to the matching perform_* method and revocation type.
 
         Args:
-            job_result: The `JobResult` to revoke.
-            user: The user requesting termination.
+            alive: True if the job is running, False if confirmed not running,
+                None if the backend was unreachable.
 
         Returns:
-            `{"job_result": JobResult, "error": str | None}`. `error` is
-            set only when `perform_termination` raised.
+            Tuple of (action, revocation_type) where action is the bound
+            `perform_*` method to invoke and revocation_type is the matching
+            `JobRevocationTypeChoices` value to record.
         """
-        # REAP
-        try:
-            if self._should_reap(job_result):
-                revoked = self.perform_reap(job_result, user)
-                return {"job_result": job_result, "error": None, "revoked": revoked}
-        except Exception as e:
-            logger.error("Reap failed for %s: %s", job_result.pk, e)
+        if alive is None:
+            return self.perform_force_revoke, JobRevocationTypeChoices.TYPE_FORCE_REVOKED
+        if alive is False:
+            return self.perform_reap, JobRevocationTypeChoices.TYPE_REAPED
+        return self.perform_termination, JobRevocationTypeChoices.TYPE_TERMINATED
+
+    def revoke(self, job_result, user) -> dict:
+        """Reap, terminate, or force-revoke a job and return the outcome.
+
+        Dispatches based on `is_alive`:
+        - True  `perform_termination` (send kill signal)
+        - False `perform_reap` (worker is gone; just mark revoked)
+        - None  `perform_force_revoke` (backend unreachable; mark revoked)
+
+        Exceptions from the chosen action are caught and reported in `error`.
+
+        Returns:
+            {
+                "job_result": JobResult,
+                "error": str | None,
+                "revoked": bool,
+            }
+        """
+        base = {
+            "job_result": job_result,
+            "error": None,
+            "revoked": False,
+        }
+
+        if not job_result.is_unready_state:
+            logger.info(
+                "Job %s is already in terminated state `%s` no action was taken.", job_result.pk, job_result.status
+            )
             job_result.log(
-                f"Reap failed for {job_result.pk}: {e}",
+                f"Job {job_result.pk} is already in terminated state `{job_result.status}` no action was taken",
+                grouping="revoking",
+            )
+            return base
+
+        alive = self.is_alive(job_result)
+        action, revocation_type = self._resolve_action(alive)
+
+        try:
+            revoked = action(job_result, user)
+        except Exception as e:
+            revocation_label = {"terminated": "Termination", "reaped": "Reap", "force": "Force Revoke"}
+            logger.error("%s failed for %s: %s", revocation_label[revocation_type], job_result.pk, e)
+            job_result.log(
+                f"{revocation_label[revocation_type]} failed for {job_result.pk}: {e}",
                 level_choice=LogLevelChoices.LOG_ERROR,
                 grouping="revoking",
             )
-            return {"job_result": job_result, "error": f"Reap failed: {e}", "revoked": False}
+            return {**base, "error": f"{revocation_label[revocation_type]} failed: {e}"}
 
-        # TERMINATE
-        try:
-            revoked = self.perform_termination(job_result, user)
-        except Exception as e:
-            logger.error("Termination failed for %s: %s", job_result.pk, e)
-            job_result.log(
-                f"Termination failed for {job_result.pk}: {e}",
-                level_choice=LogLevelChoices.LOG_ERROR,
-                grouping="revoking",
-            )
-            return {"job_result": job_result, "error": f"Termination failed: {e}", "revoked": False}
-
-        return {"job_result": job_result, "error": None, "revoked": revoked}
+        return {
+            **base,
+            "revoked": revoked,
+        }
 
 
 class CeleryStrategy(JobRevokeStrategy):
     "Termination strategy for jobs running on Celery workers."
 
-    def is_alive(self, job_result) -> bool:
+    def is_alive(self, job_result) -> bool | None:
         """
         Check whether a Celery worker is currently aware of (and likely processing)
         a given task.
@@ -165,7 +204,8 @@ class CeleryStrategy(JobRevokeStrategy):
                 - True if at least one worker reports the task ID.
                 - False if workers respond but none contain the task.
                 - False if the worker state could not be determined (e.g., no
-                replies or an exception occurred while querying workers).
+                replies).
+                - None if an exception occurred while querying workers
         """
         try:
             task_id = str(job_result.pk)
@@ -175,7 +215,7 @@ class CeleryStrategy(JobRevokeStrategy):
             job_result.log(
                 "Failed to query Celery workers: {e}", level_choice=LogLevelChoices.LOG_WARNING, grouping="revoking"
             )
-            return False
+            return None
         if replies is None:
             return False
         # replies shape: {worker_hostname: {task_id: [state, info]}}
@@ -197,7 +237,7 @@ class CeleryStrategy(JobRevokeStrategy):
         )
 
         with transaction.atomic():
-            job_result = self._mark_revoked(job_result, user)
+            job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
 
             exc = TaskRevokedError("revoked")
             job_result.result = {
@@ -237,7 +277,7 @@ class CeleryStrategy(JobRevokeStrategy):
         with transaction.atomic():
             now = timezone.now()
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_termination_metadata(job_result, user, now)
+            changed = self._apply_termination_metadata(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED, now)
 
             job_result.date_terminated = now
             changed.add("date_terminated")
@@ -313,10 +353,11 @@ class K8sStrategy(JobRevokeStrategy):
         )
         return pods.items[0] if pods.items else None
 
-    def is_alive(self, job_result) -> bool:
+    def is_alive(self, job_result) -> bool | None:
         """
         Return True if the K8s Job exists and is still progressing,
-        False if it's gone or has reached a failed, waiting or terminated state.
+        False if it's gone or has reached a failed, waiting or terminated state,
+        None if an exception occurred while querying kubernetes API.
         """
         job_name = self._job_name(job_result)
         namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
@@ -339,7 +380,7 @@ class K8sStrategy(JobRevokeStrategy):
                 level_choice=LogLevelChoices.LOG_WARNING,
                 grouping="revoking",
             )
-            return False
+            return None
 
         # container_statuses can be None/[] while the pod is being scheduled.
         # We use [0] because our pod_manifest only defines one container under
@@ -381,7 +422,7 @@ class K8sStrategy(JobRevokeStrategy):
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="revoking",
         )
-        self._mark_revoked(job_result, user)
+        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
         return True
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
@@ -405,7 +446,7 @@ class K8sStrategy(JobRevokeStrategy):
 
         with transaction.atomic():
             now = timezone.now()
-            job_result = self._mark_revoked(job_result, user)
+            job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
             job_result.date_terminated = now
             job_result.save(update_fields=["date_terminated"])
 
@@ -435,7 +476,7 @@ class UnknownStrategy(JobRevokeStrategy):
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="revoking",
         )
-        self._mark_revoked(job_result, user)
+        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
         return True
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:

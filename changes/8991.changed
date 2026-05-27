@@ -1,1 +1,0 @@
-Changed abstract `should_reap` to private `_should_reap` method in `JobRevokeStrategy` class.

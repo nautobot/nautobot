@@ -2321,17 +2321,13 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
             ).exists()
         )
 
-    def test_terminate_test_should_reap_True(self):
-        for status in JobResultStatusChoices.UNREADY_STATES:
-            with self.subTest(status=status):
-                job_result = self._make_job_result(status)
-                self.assertTrue(self.strategy._should_reap(job_result))
-
-    def test_terminate_test_should_reap_False(self):
+    def test_terminate_test_revoke_False(self):
         for status in JobResultStatusChoices.READY_STATES:
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
-                self.assertFalse(self.strategy._should_reap(job_result))
+                result = self.strategy.revoke(job_result, self.user)
+                self.assertIn("revoked", result)
+                self.assertFalse(result["revoked"])
 
     def test_factory_returns_celery_strategy_for_celery_queue(self):
         strategy = RevokeFactory.get_strategy(JobQueueTypeChoices.TYPE_CELERY)
@@ -2340,12 +2336,12 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
     # ------------------------------------------------------------------ #
     # Kill path: PENDING/STARTED + worker present -> SIGKILL sent.
     # ------------------------------------------------------------------ #
-    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy._should_reap")
-    def test_terminate_perform_termination_when_worker_alive(self, mock_should_reap):
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.is_alive")
+    def test_terminate_perform_termination_when_worker_alive(self, mock_is_alive):
         # Reap path is taken naturally (no real workers in tests with
-        # ALWAYS_EAGER, so is_alive() returns None -> should_reap is True).
-        # Therefore we have to mock should_reap to return False
-        mock_should_reap.return_value = False
+        # ALWAYS_EAGER, so is_alive() returns None.
+        # Therefore we have to mock is_alive to return True
+        mock_is_alive.return_value = True
         for status in JobResultStatusChoices.UNREADY_STATES:
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
@@ -2374,9 +2370,9 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 )
 
     @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.perform_termination")
-    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy._should_reap")
-    def test_terminate_returns_error_when_perform_termination_raises(self, mock_should_reap, mock_perform_termination):
-        mock_should_reap.return_value = False
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.is_alive")
+    def test_terminate_returns_error_when_perform_termination_raises(self, mock_is_alive, mock_perform_termination):
+        mock_is_alive.return_value = True
         mock_perform_termination.side_effect = RuntimeError("revoke blew up")
 
         for status in JobResultStatusChoices.UNREADY_STATES:
@@ -2409,12 +2405,9 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                     ).exists()
                 )
 
-    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy._should_reap")
     @mock.patch("nautobot.extras.jobs_revoke.celery_app.control.revoke")
-    def test_perform_termination_skips_when_job_in_ready_state(self, mock_celery_revoke, mock_should_reap):
-        """When the job is already terminal, perform_termination must not
-        send a revoke or touch the JobResult fields."""
-        mock_should_reap.return_value = False  # force the kill path
+    def test_perform_termination_skips_when_job_in_ready_state(self, mock_celery_revoke):
+        """When the job is already terminal, perform_termination must not send a revoke or touch the JobResult fields."""
 
         for status in JobResultStatusChoices.READY_STATES:
             with self.subTest(status=status):
@@ -2423,14 +2416,10 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 with (
                     self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
                 ):
-                    result = self.strategy.revoke(job_result, self.user)
+                    self.strategy.perform_termination(job_result, self.user)
 
                 # No celery app should have been fetched.
                 mock_celery_revoke.assert_not_called()
-
-                # Returned dict reports success with no error.
-                self.assertEqual(result["job_result"], job_result)
-                self.assertIsNone(result["error"])
 
                 # JobResult should be untouched.
                 job_result.refresh_from_db()
@@ -2439,6 +2428,34 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 self.assertIsNone(job_result.revoked_by)
                 self.assertFalse(job_result.revoked_by_user_name)
                 self.assertIsNone(job_result.date_terminated)
+
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
+                self.assertTrue(
+                    JobLogEntry.objects.filter(
+                        job_result=job_result,
+                        message__contains=f"Job {job_result.pk} is already in terminated state",
+                    ).exists()
+                )
+
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.is_alive")
+    def test_revoke_skips_when_job_in_ready_state(self, mock_is_alive):
+        """`revoke()` short-circuits on ready-state jobs without consulting the backend at all."""
+        for status in JobResultStatusChoices.READY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                with (
+                    self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
+                ):
+                    result = self.strategy.revoke(job_result, self.user)
+
+                mock_is_alive.assert_not_called()
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+                self.assertFalse(result["revoked"])
+                self.assertIsNone(result["revocation_type"])
 
                 self.assertTrue(
                     any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
@@ -2493,19 +2510,14 @@ class UnknownStrategyTestCase(_JobRevokeTestBase):
                 job_result = self._make_job_result(status)
                 self.assertFalse(self.strategy.is_alive(job_result))
 
-    def test_unknown_should_reap_true_for_unready_states(self):
-        """Unready jobs are always reapable under UnknownStrategy."""
-        for status in JobResultStatusChoices.UNREADY_STATES:
-            with self.subTest(status=status):
-                job_result = self._make_job_result(status)
-                self.assertTrue(self.strategy._should_reap(job_result))
-
-    def test_unknown_should_reap_false_for_ready_states(self):
+    def test_unknown_revoke_false_for_ready_states(self):
         """Already-terminal jobs must not be reaped."""
         for status in JobResultStatusChoices.READY_STATES:
             with self.subTest(status=status):
                 job_result = self._make_job_result(status)
-                self.assertFalse(self.strategy._should_reap(job_result))
+                result = self.strategy.revoke(job_result, self.user)
+                self.assertIn("revoked", result)
+                self.assertFalse(result["revoked"])
 
     def test_unknown_perform_terminate_false_always(self):
         """perform_termination return always False."""
@@ -2856,10 +2868,10 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertIsNone(job_result.date_terminated)
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._delete_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._should_reap")
-    def test_revoke_takes_reap_path(self, mock_should_reap, mock_delete):
-        """_should_reap=True perform_reap is used, date_terminated not set."""
-        mock_should_reap.return_value = True
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy.is_alive")
+    def test_revoke_takes_reap_path(self, mock_is_alive, mock_delete):
+        """is_alive=True perform_reap is used, date_terminated not set."""
+        mock_is_alive.return_value = False
         mock_delete.return_value = True
 
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2875,10 +2887,10 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertIsNone(job_result.date_terminated)
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._delete_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._should_reap")
-    def test_revoke_takes_terminate_path(self, mock_should_reap, mock_delete):
-        """_should_reap=False perform_termination is used, date_terminated set."""
-        mock_should_reap.return_value = False
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy.is_alive")
+    def test_revoke_takes_terminate_path(self, mock_is_alive, mock_delete):
+        """is_alive=False perform_termination is used, date_terminated set."""
+        mock_is_alive.return_value = True
         mock_delete.return_value = True
 
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
@@ -2894,10 +2906,10 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertIsNotNone(job_result.date_terminated)
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._delete_k8s_job")
-    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._should_reap")
-    def test_revoke_returns_error_when_terminate_raises(self, mock_should_reap, mock_delete):
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy.is_alive")
+    def test_revoke_returns_error_when_terminate_raises(self, mock_is_alive, mock_delete):
         """Backend error during terminate revoke() catches and reports."""
-        mock_should_reap.return_value = False
+        mock_is_alive.return_value = True
         mock_delete.side_effect = self._api_exception(500)
 
         job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)

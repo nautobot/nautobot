@@ -3351,6 +3351,30 @@ def render_jobresult_status(status):
     )
 
 
+def render_jobresult_revocation_type(revocation_type):
+    """
+    Render a Bootstrap-style label for a JobRevocationType.
+
+    Args:
+        revocation_type (str): The job result revocation type (e.g., "terminated", "reaped", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "terminated": ("bg-danger", "Terminated"),
+        "repead": ("bg-warning", "Reaped"),
+        "force": ("bg-body-secondary border", "Force Revoked"),
+    }
+
+    css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
+    return format_html(
+        '<span id="revocation-type-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
 class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Render a placeholder for certain fields if the job hasn't yet completed."""
@@ -3583,7 +3607,11 @@ class JobResultUIViewSet(
             fields=[
                 "date_terminated",
                 "revoked_by_user_name",
+                "revocation_type",
             ],
+            value_transforms={
+                "revocation_type": [render_jobresult_revocation_type],
+            },
         ),
         object_detail.ObjectFieldsPanel(
             label="Worker",

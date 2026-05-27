@@ -1332,7 +1332,6 @@ class JobResultTable(BaseTable):
     revocation_type = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
         verbose_name="Revocation Type",
-        orderable=False,
     )
 
     def render_summary(self, record):
