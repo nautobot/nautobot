@@ -3521,6 +3521,64 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
         self.assertLessEqual(count_queries(), baseline_queries)
 
+    def test_create_with_nonexistent_termination_id_returns_400(self):
+        """Posting with a `termination_a_id` that doesn't reference any row returns 400, not 500."""
+        # Same permission scope as the new `terminations` write path: legacy termination_a/b
+        # fields now also flow through `_apply_terminations` → `CableToCableTerminationSerializer`,
+        # which applies `.restrict()` on the per-type FKs.
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.view_cable",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        url = reverse("dcim-api:cable-list")
+        response = self.client.post(
+            url,
+            {
+                "status": cable_status.pk,
+                "termination_a_type": "dcim.interface",
+                "termination_a_id": "00000000-0000-0000-0000-000000000000",
+                "termination_b_type": "dcim.interface",
+                "termination_b_id": "00000000-0000-0000-0000-000000000001",
+                "label": "Cable with bogus terminations",
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # Legacy fields route through `_apply_terminations`, so the error surfaces under
+        # `terminations.<idx>.interface` rather than the legacy `termination_a_id` key.
+        self.assertIn("terminations", response.json())
+
+    def test_patch_with_legacy_termination_fields(self):
+        """PATCH on an existing cable updates connector-1 terminations via the legacy `termination_a_type/_id` fields."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        free_iface = (
+            Interface.objects.filter(cable_termination__isnull=True)
+            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+            .first()
+        )
+        existing_a_row = cable.terminations.get(cable_end="A", connector=1)
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {"termination_a_type": "dcim.interface", "termination_a_id": str(free_iface.pk)},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        existing_a_row.refresh_from_db()
+        self.assertEqual(existing_a_row.interface_id, free_iface.pk)
+
     def test_create_cable_with_terminations_payload(self):
         """POST a cable with a `terminations` list creates the cable and all listed join rows in one request."""
         # `terminations` is applied via nested `CableToCableTerminationSerializer`, which

@@ -51,7 +51,12 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, TERMINATION_FK_FIELDS
+from nautobot.dcim.constants import (
+    CABLE_TERMINATION_MODELS,
+    CONTENT_TYPE_TO_TERMINATION_FK,
+    RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
+    TERMINATION_FK_FIELDS,
+)
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -956,10 +961,14 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        # Both the legacy `termination_<side>_type`/`_id` fields and the new `terminations` payload
+        # describe the same underlying CableToCableTermination rows; normalize both into a single
+        # `_terminations_payload` list here so `create()` / `update()` have only one shape to apply.
         # `terminations` is declared read-only as a SerializerMethodField (so it appears in
         # responses and respects `?depth`), but it's also writable through this peek at
-        # `initial_data`. Defer per-entry validation to `_apply_terminations` so we can
-        # delegate it to `CableToCableTerminationSerializer` once we have the cable's pk.
+        # `initial_data`. Per-entry validation is deferred to `_apply_terminations` so it can be
+        # delegated to `CableToCableTerminationSerializer` once we have the cable's pk.
+        payload = self._legacy_termination_entries(attrs)
         if "terminations" in self.initial_data:
             raw = self.initial_data["terminations"]
             if not isinstance(raw, list):
@@ -967,7 +976,11 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             for idx, entry in enumerate(raw):
                 if not isinstance(entry, dict):
                     raise serializers.ValidationError({"terminations": {idx: "Each entry must be a dict."}})
-            attrs["_terminations_payload"] = raw
+            # If both legacy fields and a `terminations` payload are present, the `terminations`
+            # entries apply after the legacy ones — last writer wins on overlapping (cable_end, connector).
+            payload.extend(raw)
+        if payload:
+            attrs["_terminations_payload"] = payload
         return attrs
 
     def _apply_terminations(self, cable, raw_payload):
@@ -975,8 +988,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
         Each entry is matched on `(cable_end, connector)`. Setting all per-type FK fields to null
         (or omitting them) deletes the existing row. Otherwise the entry is handed to
-        `CableToCableTerminationSerializer` for create/update — which runs the model's full_clean
-        and surfaces any failure as a 400.
+        `CableToCableTerminationSerializer` for create/update.
         """
         for idx, entry in enumerate(raw_payload):
             cable_end = str(entry.get("cable_end") or "").upper()
@@ -1013,24 +1025,37 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             except serializers.ValidationError as exc:
                 raise serializers.ValidationError({"terminations": {idx: exc.detail}}) from exc
 
-    def create(self, validated_data):
-        # Extract termination fields (writable on the serializer but not on the Cable model)
+    def _legacy_termination_entries(self, validated_data):
+        """Pop and translate `termination_a/b_type/_id` into `_apply_terminations` entries (connector 1)."""
         term_a_type = validated_data.pop("termination_a_type", None)
         term_a_id = validated_data.pop("termination_a_id", None)
         term_b_type = validated_data.pop("termination_b_type", None)
         term_b_id = validated_data.pop("termination_b_id", None)
+        entries = []
+        for term_type, term_id, side in (
+            (term_a_type, term_a_id, "a"),
+            (term_b_type, term_b_id, "b"),
+        ):
+            if not (term_type and term_id):
+                continue
+            fk_name = CONTENT_TYPE_TO_TERMINATION_FK.get((term_type.app_label, term_type.model))
+            if fk_name is None:
+                raise serializers.ValidationError(
+                    {
+                        f"termination_{side}_type": (
+                            f"{term_type.app_label}.{term_type.model} is not a valid cable termination type."
+                        )
+                    }
+                )
+            entries.append({"cable_end": side.upper(), "connector": 1, fk_name: term_id})
+        return entries
+
+    def create(self, validated_data):
         terminations_payload = validated_data.pop("_terminations_payload", None)
-
         with transaction.atomic():
-            # Resolve termination objects and store on the instance for the signal handler
             cable = Cable(**validated_data)
-            if term_a_type and term_a_id:
-                cable._initial_termination_a = term_a_type.model_class().objects.get(pk=term_a_id)
-            if term_b_type and term_b_id:
-                cable._initial_termination_b = term_b_type.model_class().objects.get(pk=term_b_id)
-
             cable.validated_save()
-            if terminations_payload is not None:
+            if terminations_payload:
                 self._apply_terminations(cable, terminations_payload)
         return cable
 
@@ -1038,7 +1063,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         terminations_payload = validated_data.pop("_terminations_payload", None)
         with transaction.atomic():
             cable = super().update(instance, validated_data)
-            if terminations_payload is not None:
+            if terminations_payload:
                 self._apply_terminations(cable, terminations_payload)
         return cable
 
