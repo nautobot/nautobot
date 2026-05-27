@@ -1,1 +1,1 @@
-Updated `cryptography` dependency to `(>=48.0.0,<49)`.
+Updated `cryptography` dependency to `(>=46.0.7,<49)`.
