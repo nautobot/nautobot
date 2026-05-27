@@ -1,4 +1,5 @@
 from unittest import mock
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -318,18 +319,17 @@ class BulkEditDeleteChangeLogging(TestCase):
         child_b = Location.objects.create(
             name="Child B", location_type=location_type, status=location_status, parent=parent
         )
-        parent_pk, child_a_pk, child_b_pk = parent.pk, child_a.pk, child_b.pk
+        expected_pks = {parent.pk, child_a.pk, child_b.pk}
 
-        with web_request_context(self.user):
-            bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=parent_pk))
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
+            bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=parent.pk))
 
         delete_changes = get_changes_for_model(Location).filter(
             action=ObjectChangeActionChoices.ACTION_DELETE,
-            changed_object_id__in=[parent_pk, child_a_pk, child_b_pk],
+            request_id=change_id,
         )
-        self.assertEqual(delete_changes.count(), 3)
-        request_ids = {oc.request_id for oc in delete_changes}
-        self.assertEqual(len(request_ids), 1, "all cascade deletes should share the same request_id")
+        self.assertEqual({oc.changed_object_id for oc in delete_changes}, expected_pks)
         for oc in delete_changes:
             self.assertEqual(oc.user, self.user)
             self.assertEqual(oc.user_name, self.user.username)
@@ -352,13 +352,14 @@ class BulkEditDeleteChangeLogging(TestCase):
         )
         association_pk = association.pk
 
-        with web_request_context(self.user):
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
             bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=location.pk))
 
         assoc_changes = get_changes_for_model(ContactAssociation).filter(
-            action=ObjectChangeActionChoices.ACTION_DELETE, changed_object_id=association_pk
+            action=ObjectChangeActionChoices.ACTION_DELETE, request_id=change_id
         )
-        self.assertEqual(assoc_changes.count(), 1)
+        self.assertEqual({oc.changed_object_id for oc in assoc_changes}, {association_pk})
         self.assertEqual(assoc_changes.first().user, self.user)
 
     def test_bulk_delete_logs_notes(self):
@@ -371,13 +372,14 @@ class BulkEditDeleteChangeLogging(TestCase):
         note = Note.objects.create(assigned_object=location, user=self.user, note="A note on this location")
         note_pk = note.pk
 
-        with web_request_context(self.user):
+        change_id = uuid.uuid4()
+        with web_request_context(self.user, change_id=change_id):
             bulk_delete_with_bulk_change_logging(Location.objects.filter(pk=location.pk))
 
         note_changes = get_changes_for_model(Note).filter(
-            action=ObjectChangeActionChoices.ACTION_DELETE, changed_object_id=note_pk
+            action=ObjectChangeActionChoices.ACTION_DELETE, request_id=change_id
         )
-        self.assertEqual(note_changes.count(), 1)
+        self.assertEqual({oc.changed_object_id for oc in note_changes}, {note_pk})
         self.assertEqual(note_changes.first().user, self.user)
 
     def test_create_then_update(self):
