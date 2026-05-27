@@ -989,6 +989,9 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
                 ct_to_pks = {}
 
                 for cascade_model, instances in collector.data.items():
+                    # Gate on BaseModel (not ChangeLoggedModel) because BaseModel is what guarantees a UUID pk,
+                    # which the Note discovery below relies on. Whether a given object actually gets an ObjectChange
+                    # is decided by the guard in _build_objectchange.
                     if not issubclass(cascade_model, BaseModel):
                         continue
                     ct = ContentType.objects.get_for_model(cascade_model)
