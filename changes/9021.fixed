@@ -1,0 +1,1 @@
+Fixed a GraphQL schema build failure when a model's filterset exposes a filter whose name collides with a reserved `graphene.Field` keyword argument.
