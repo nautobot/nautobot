@@ -952,6 +952,10 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
 
     user = change_context.get_user()
+    user_name = user.username if user is not None else ""
+    request_id = change_context.change_id
+    context = change_context.context
+    context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
     model = qs.model
 
     def _build_objectchange(obj):
@@ -961,10 +965,10 @@ def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
         if oc is None:
             return None
         oc.user = user
-        oc.user_name = user.username if user is not None else ""
-        oc.request_id = change_context.change_id
-        oc.change_context = change_context.context
-        oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+        oc.user_name = user_name
+        oc.request_id = request_id
+        oc.change_context = context
+        oc.change_context_detail = context_detail
         return oc
 
     with transaction.atomic():
