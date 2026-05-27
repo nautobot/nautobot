@@ -11,8 +11,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import F, Q
-from django.test.utils import CaptureQueriesContext
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
 from netaddr import EUI

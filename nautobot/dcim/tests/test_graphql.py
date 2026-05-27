@@ -445,7 +445,7 @@ class GraphQLTestCase(TestCase):
 
             baseline = count_queries()
             # Add more cables and termination rows; if the GraphQL resolver chain has an N+1,
-            # this would push the query count up roughly proportionally to (cables × terminations).
+            # this would push the query count up roughly proportionally to (cables x terminations).
             extra_status = Status.objects.get_for_model(Interface).first()
             new_ifaces = [
                 Interface.objects.create(
