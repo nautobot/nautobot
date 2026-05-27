@@ -3731,7 +3731,7 @@ class JobResultTest(
         job_result.save(update_fields=["status"])
         return {"job_result": job_result, "error": None, "revoked": False}
 
-    def test_revoke_already_finished_returns_409(self):
+    def test_post_revoke_already_finished_returns_409(self):
         """A finished job cannot be revoked."""
         job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         job_result.user = self.user
@@ -3745,6 +3745,27 @@ class JobResultTest(
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn("already finished", response.data["detail"].lower())
+
+    def test_get_revoke_already_finished(self):
+        """A finished job cannot be revoked: POST returns 409, GET returns a NOOP preview."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["action"], "None")
+        self.assertEqual(response.data["job_status"], JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertIn("already", response.data["action_description"].lower())
+        self.assertNotIn("irreversible", response.data)
+        self.assertIn("message", response.data)
+        self.assertIn("timestamp", response.data)
 
     def test_revoke_non_owner_non_staff_denied_with_run_job_permission(self):
         """A user who is neither owner nor staff cannot revoke."""
