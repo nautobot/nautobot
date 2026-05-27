@@ -1,13 +1,16 @@
 from contextlib import contextmanager
 import importlib
-from importlib.util import find_spec, module_from_spec
+from importlib.util import find_spec
 from keyword import iskeyword
 import logging
 import os
 import pkgutil
 import sys
+import threading
 
 logger = logging.getLogger(__name__)
+
+_import_lock = threading.RLock()
 
 
 @contextmanager
@@ -23,15 +26,6 @@ def _temporarily_add_to_sys_path(path):
         yield
     finally:
         sys.path = old_sys_path
-
-
-def clear_module_from_sys_modules(module_name):
-    """
-    Remove the module and all its submodules from sys.modules.
-    """
-    for name in list(sys.modules.keys()):
-        if name == module_name or name.startswith(f"{module_name}."):
-            del sys.modules[name]
 
 
 def check_name_safe_to_import_privately(name: str) -> tuple[bool, str]:
@@ -63,6 +57,15 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
     This is used for importing Jobs from `JOBS_ROOT` and `GIT_ROOT` in such a way that they remain relatively
     self-contained and can be easily discarded and reloaded on the fly.
 
+    Loading is done in four phases so that every class defined under `path` has exactly one object identity
+    in `sys.modules` regardless of import order or where `register_jobs(...)` calls live in user code:
+
+    1. Discover every module name under `path` (filtered by `module_path` if set) without importing.
+    2. Bulk-clear all discovered names from `sys.modules` so there is no mixed-generation window.
+    3. Import each top-level discovered name via the standard import machinery, letting transitive
+       `from X import Y` cascades resolve to one consistent object per module.
+    4. Sweep any discovered modules the cascade did not transitively load.
+
     If you find yourself writing new code that uses this method, please pause and reconsider your life choices.
 
     Args:
@@ -72,49 +75,68 @@ def import_modules_privately(path, module_path=None, ignore_import_errors=True):
         ignore_import_errors (bool): Exceptions raised while importing modules will be caught and logged.
             If this is set as False, they will then be re-raised to be handled by the caller of this function.
     """
-    if module_path is None:
-        module_path = []
-        module_prefix = None
-    else:
-        module_prefix = ".".join(module_path)
-    with _temporarily_add_to_sys_path(path):
-        for finder, discovered_module_name, is_package in pkgutil.walk_packages([path], onerror=logger.error):
+    module_prefix = ".".join(module_path) if module_path else None
+
+    with _import_lock, _temporarily_add_to_sys_path(path):
+        # Phase 1: discover module names without importing.
+        discovered = []
+        for _finder, name, _is_package in pkgutil.walk_packages([path], onerror=logger.error):
             if module_prefix and not (
-                module_prefix.startswith(f"{discovered_module_name}.")  # my_repo/__init__.py
-                or discovered_module_name == module_prefix  # my_repo/jobs.py
-                or discovered_module_name.startswith(f"{module_prefix}.")  # my_repo/jobs/foobar.py
+                module_prefix.startswith(f"{name}.")  # ancestor of the target, e.g. my_repo/__init__.py
+                or name == module_prefix  # exact match, e.g. my_repo/jobs.py
+                or name.startswith(f"{module_prefix}.")  # descendant, e.g. my_repo/jobs/foobar.py
             ):
                 continue
             try:
-                existing_module = find_spec(discovered_module_name)
+                existing_module = find_spec(name)
             except (ModuleNotFoundError, ValueError):
                 existing_module = None
-            if existing_module is not None:
+            if existing_module is not None and existing_module.origin:
                 existing_module_path = os.path.realpath(existing_module.origin)
                 if not existing_module_path.startswith(path):
                     logger.error(
                         "Unable to load module %s from %s as it conflicts with existing module %s",
-                        discovered_module_name,
+                        name,
                         path,
                         existing_module_path,
                     )
                     continue
+            discovered.append(name)
 
-            if discovered_module_name in sys.modules:
-                clear_module_from_sys_modules(discovered_module_name)
+        if not discovered:
+            return []
 
+        # Phase 2: single bulk clear of every name we are about to load.
+        discovered_set = set(discovered)
+        for cached in list(sys.modules):
+            if cached in discovered_set or any(cached.startswith(f"{n}.") for n in discovered):
+                del sys.modules[cached]
+
+        loaded_modules = []
+
+        # Phase 3: import each top-level discovered name once. Python's import machinery resolves
+        # transitive `from X import Y` cascades, so every shared dependency lands in sys.modules
+        # exactly once.
+        top_level_names = sorted({n for n in discovered if "." not in n})
+        for name in top_level_names:
             try:
-                if not is_package:
-                    spec = finder.find_spec(discovered_module_name)
-                    if spec is None:
-                        raise ValueError("Unable to find module spec")
-                    module = module_from_spec(spec)
-                    sys.modules[discovered_module_name] = module
-                    spec.loader.exec_module(module)
-                else:
-                    module = importlib.import_module(discovered_module_name)
-                importlib.reload(module)
+                loaded_modules.append(importlib.import_module(name))
             except Exception as exc:
-                logger.error("Unable to load module %s from %s: %s", discovered_module_name, path, exc)
+                logger.error("Unable to load module %s from %s: %s", name, path, exc)
                 if not ignore_import_errors:
                     raise
+
+        # Phase 4: any discovered module the cascade did not transitively touch is loaded here.
+        # By now sys.modules has consistent versions of every shared dependency, so these cannot
+        # create divergent class objects.
+        for name in discovered:
+            if name in sys.modules:
+                continue
+            try:
+                loaded_modules.append(importlib.import_module(name))
+            except Exception as exc:
+                logger.error("Unable to load module %s from %s: %s", name, path, exc)
+                if not ignore_import_errors:
+                    raise
+
+    return loaded_modules
