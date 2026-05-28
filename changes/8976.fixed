@@ -1,1 +1,0 @@
-Fixed an exception when rendering an object list view whose viewset has no `filterset_class` configured.
