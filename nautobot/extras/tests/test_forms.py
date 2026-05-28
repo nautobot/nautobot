@@ -1286,13 +1286,13 @@ class ObjectMetadataFormTestCase(TestCase):
         form.clean()
         self.assertEqual(form.cleaned_data["value"], "2026-01-15")
 
-    def test_clean_flattens_datetime_value_to_iso_string_without_microseconds(self):
-        """`clean()` flattens a `datetime` to an ISO string and strips microseconds."""
+    def test_clean_flattens_datetime_value_to_iso_string(self):
+        """`clean()` flattens a `datetime` to an ISO string, preserving microseconds and tzinfo."""
         form = ObjectMetadataForm(instance=self.text_om)
         form.cleaned_data = {"value": datetime(2026, 1, 15, 10, 20, 30, 123456, tzinfo=timezone.utc)}
         form.clean()
-        # Microseconds stripped; tzinfo preserved as +00:00.
-        self.assertEqual(form.cleaned_data["value"], "2026-01-15T10:20:30+00:00")
+        # Microseconds preserved; tzinfo preserved as +00:00.
+        self.assertEqual(form.cleaned_data["value"], "2026-01-15T10:20:30.123456+00:00")
 
     def test_clean_leaves_non_date_value_unchanged(self):
         """`clean()` passes through values that aren't date/datetime instances."""

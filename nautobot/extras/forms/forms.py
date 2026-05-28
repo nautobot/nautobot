@@ -2210,7 +2210,7 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
         # date/datetime objects need to be flattened to ISO strings before model save.
         value = cleaned.get("value")
         if isinstance(value, datetime):
-            cleaned["value"] = value.replace(microsecond=0).isoformat()
+            cleaned["value"] = value.isoformat()
         elif isinstance(value, date):
             cleaned["value"] = value.isoformat()
         return cleaned
