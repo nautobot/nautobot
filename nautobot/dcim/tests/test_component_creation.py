@@ -53,10 +53,14 @@ class SkipAutoComponentCreationContextManagerTestCase(TestCase):
 
     def test_exception_safe(self):
         """An exception inside the block still restores the previous state."""
-        with self.assertRaises(RuntimeError):
+        raised = False
+        try:
             with SkipAutoComponentCreation():
                 self.assertTrue(is_auto_component_creation_suppressed())
                 raise RuntimeError("boom")
+        except RuntimeError:
+            raised = True
+        self.assertTrue(raised)
         self.assertFalse(is_auto_component_creation_suppressed())
 
     def test_isolated_across_threads(self):
