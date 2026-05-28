@@ -3364,7 +3364,7 @@ def render_jobresult_revocation_type(revocation_type):
     mapping = {
         "terminated": ("bg-danger", "Terminated"),
         "repead": ("bg-warning", "Reaped"),
-        "force": ("bg-body-secondary border", "Force Revoked"),
+        "abandoned": ("bg-body-secondary border", "Abandoned"),
     }
 
     css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
@@ -3605,7 +3605,7 @@ class JobResultUIViewSet(
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "date_terminated",
+                "date_revoked",
                 "revoked_by_user_name",
                 "revocation_type",
             ],
@@ -3865,14 +3865,14 @@ class JobResultUIViewSet(
             messages.info(request, "Job is already finished. Nothing to do.")
             return redirect(job_result.get_absolute_url())
 
-        job_is_running = strategy.is_alive(job_result)
+        job_liveness_state = strategy.liveness(job_result)
         if request.method == "GET":
             return render(
                 request,
                 "extras/job_revoke.html",
                 {
                     "object": job_result,
-                    "job_is_running": job_is_running,
+                    "job_liveness_state": job_liveness_state,
                     "timestamp": now(),
                     "return_url": job_result.get_absolute_url(),
                 },

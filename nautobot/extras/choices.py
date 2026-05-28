@@ -387,12 +387,12 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 class JobRevocationTypeChoices(ChoiceSet):
     TYPE_TERMINATED = "terminated"
     TYPE_REAPED = "reaped"
-    TYPE_FORCE_REVOKED = "force"
+    TYPE_ABANDONED = "abandoned"
 
     CHOICES = (
         (TYPE_TERMINATED, "Terminated"),
         (TYPE_REAPED, "Reaped"),
-        (TYPE_FORCE_REVOKED, "Force Revoked"),
+        (TYPE_ABANDONED, "Abandoned"),
     )
 
 

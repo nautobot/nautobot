@@ -740,12 +740,12 @@ class JobResultRevokePreviewSerializer(serializers.Serializer):
 
     message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
     action = serializers.ChoiceField(
-        choices=["TERMINATE", "REAP"],
-        help_text="TERMINATE if a worker is alive (SIGKILL); REAP if no worker is running.",
+        choices=["TERMINATE", "REAP", "ABANDON"],
+        help_text=("TERMINATE if worker alive; REAP if no worker; ABANDON if backend unreachable; "),
     )
     action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
     job_status = serializers.ChoiceField(
-        choices=["RUNNING", "NOT RUNNING"],
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN"],
         help_text="Current runtime status of the job's worker.",
     )
     irreversible = serializers.CharField(help_text="Warning that the action cannot be undone.")

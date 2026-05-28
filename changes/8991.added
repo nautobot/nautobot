@@ -4,4 +4,4 @@ Added helper method `build_kubernetes_api_client` to `extras.utils` to avoid dup
 Added `--env`/`-e` option to `invoke start`, `invoke debug` and `invoke restart` to pass environment variables to docker compose (e.g. `-e KEY=VALUE`, can be repeated).
 Added internal `NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL` environment variable to opt out of TLS verification on the Kubernetes API connection during local development.
 Added `revocation_type` to `JobResult` model to can easy say which of revacation type was done.
-Added `TYPE_FORCE_REVOKED` to `JobRevocationTypeChoices`.
+Added `TYPE_ABANDONED` to `JobRevocationTypeChoices`.

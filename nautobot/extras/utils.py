@@ -690,7 +690,7 @@ def build_kubernetes_api_client():
     configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
     if settings.KUBERNETES_VERIFY_SSL:
         configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
-    else:
+    else:  # pragma: no cover
         logger.warning(
             "TLS verification is DISABLED for the Kubernetes API connection to %s. "
             "This exposes the service account token attacks and must not be "

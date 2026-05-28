@@ -724,7 +724,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="terminated_job_results",
-        help_text="The user who initiated the kill action.",
+        help_text="The user who initiated the revoke action.",
     )
     # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
     revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
@@ -734,10 +734,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         blank=True,
         help_text="Revocation type of the Job being revoked",
     )
-    date_terminated = models.DateTimeField(
+    date_revoked = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Timestamp at which the job was forcibly terminated",
+        help_text="Timestamp at which the job was revoked",
     )
 
     objects = JobResultManager()

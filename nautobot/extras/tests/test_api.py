@@ -57,7 +57,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
-from nautobot.extras.jobs_revoke import CeleryStrategy
+from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -3793,8 +3793,8 @@ class JobResultTest(
         self.assertIn("Job can not be revoked by user without permission to run jobs.", response.data["detail"])
 
     @mock.patch.object(JobResult, "log")
-    def test_revoke_unsupported_queue_type_should_reap_job(self, mock_job_log):
-        """Unsuporrted queue type should reap job."""
+    def test_revoke_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
         self.user.is_staff = True
         self.user.save()
         self.add_permissions(
@@ -3808,14 +3808,14 @@ class JobResultTest(
         self.assertEqual(self.pending_job_result.status, "REVOKED")
 
         mock_job_log.assert_called_once_with(
-            f"Reaped dead job {self.pending_job_result.pk} by {self.user}",
+            f"Abandoned job {self.pending_job_result.pk} by {self.user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="revoking",
         )
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
-    def test_revoke_get_returns_terminate_preview(self, mock_revoke, mock_is_alive):
+    def test_revoke_get_returns_terminate_preview(self, mock_revoke, mock_liveness):
         """GET returns the revoke TERMINATE preview payload and does not invoke revoke."""
         self.pending_job_result.user = self.user
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -3830,9 +3830,9 @@ class JobResultTest(
         self.assertIn("TERMINATE", response.data["action"])
         mock_revoke.assert_not_called()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=False)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
-    def test_revoke_get_returns_reap_preview(self, mock_revoke, mock_is_alive):
+    def test_revoke_get_returns_reap_preview(self, mock_revoke, mock_liveness):
         """GET returns the revoke REAP preview payload and does not invoke revoke."""
         self.pending_job_result.user = self.user
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -3847,9 +3847,9 @@ class JobResultTest(
         self.assertIn("REAP", response.data["action"])
         mock_revoke.assert_not_called()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_staff_user_non_owner_with_run_job_permission_can_revoke(self, mock_revoke, mock_is_alive):
+    def test_revoke_staff_user_non_owner_with_run_job_permission_can_revoke(self, mock_revoke, mock_liveness):
         """A staff user non owner with permission can revoke."""
         self.user.is_staff = True
         self.user.save()
@@ -3863,9 +3863,9 @@ class JobResultTest(
         self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
         mock_revoke.assert_called_once()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_owner_run_job_permission_no_staff_user_can_revoke(self, mock_revoke, mock_is_alive):
+    def test_revoke_owner_run_job_permission_no_staff_user_can_revoke(self, mock_revoke, mock_liveness):
         """A owner with run_job permission can revoke."""
         self.user.is_staff = False
         self.user.save()
@@ -3882,9 +3882,9 @@ class JobResultTest(
         self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
         mock_revoke.assert_called_once()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": "Revoke failed: worker not responding."})
-    def test_revoke_strategy_error_returns_500(self, mock_revoke, mock_is_alive):
+    def test_revoke_strategy_error_returns_500(self, mock_revoke, mock_liveness):
         """When the revoke strategy returns an error, the endpoint returns 500 with the error detail."""
         self.user.is_staff = False
         self.user.save()
@@ -3902,9 +3902,9 @@ class JobResultTest(
         self.assertEqual(response.data["detail"], "Revoke failed: worker not responding.")
         mock_revoke.assert_called_once()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_no_action_termination_path)
-    def test_revoke_status_not_flipped_returns_409(self, mock_revoke, mock_is_alive):
+    def test_revoke_status_not_flipped_returns_409(self, mock_revoke, mock_liveness):
         """If the strategy reports success but the job didn't end up REVOKED, return 409."""
         self.user.is_staff = True
         self.user.save()

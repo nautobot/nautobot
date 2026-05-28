@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from enum import StrEnum
 import logging
 from typing import Callable
 
@@ -24,6 +25,16 @@ from nautobot.users.models import User
 logger = logging.getLogger(__name__)
 
 
+class JobLiveness(StrEnum):
+    RUNNING = "running"
+    NOT_RUNNING = "not_running"
+    UNKNOWN = "unknown"
+
+    @property
+    def display(self) -> str:
+        return self.value.replace("_", " ").upper()
+
+
 class JobRevokeStrategy(ABC):
     """Abstract base class for job termination strategies across different queues.
 
@@ -33,8 +44,19 @@ class JobRevokeStrategy(ABC):
     """
 
     @abstractmethod
-    def is_alive(self, job_result: JobResult) -> bool | None:
-        """True=alive, False=confirmed not alive, None=backend unreachable."""
+    def liveness(self, job_result: JobResult) -> JobLiveness:
+        """Report the job's liveness as observed by the backend.
+
+        Args:
+            job_result (JobResult): The job to check.
+
+        Returns:
+            JobLiveness: One of:
+                - JobLiveness.RUNNING: Backend confirms the job is currently executing.
+                - JobLiveness.NOT_RUNNING: Backend confirms the job is not executing
+                (e.g., worker not aware of it, pod terminated).
+                - JobLiveness.UNKNOWN: Backend could not be queried; liveness cannot be determined.
+        """
 
     @abstractmethod
     def perform_reap(self, job_result: JobResult, user: User) -> bool:
@@ -44,15 +66,18 @@ class JobRevokeStrategy(ABC):
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
         """Send the backend-specific kill signal and mark the job revoked."""
 
-    def perform_force_revoke(self, job_result, user) -> bool:
-        """Force revoke mark dead job revoked."""
-        logger.info("Force revoke dead job %s by %s", job_result.pk, user)
+    def perform_abandon(self, job_result, user) -> bool:
+        """Abandon a job whose backend is unreachable: mark revoked without
+        confirming its actual state. No kill signal is sent — if the job is
+        still executing somewhere, it will continue until it finishes on its own.
+        """
+        logger.info("Abandoned job %s by %s", job_result.pk, user)
         job_result.log(
-            f"Force revoke dead job {job_result.pk} by {user}",
+            f"Abandoned job {job_result.pk} by {user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="revoking",
         )
-        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_FORCE_REVOKED)
+        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_ABANDONED)
         return True
 
     def _apply_termination_metadata(
@@ -110,40 +135,42 @@ class JobRevokeStrategy(ABC):
 
         return job_result
 
-    def _resolve_action(self, alive: bool | None) -> tuple[Callable, str]:
-        """Map liveness to the matching perform_* method and revocation type.
+    def _resolve_action(self, liveness: JobLiveness) -> tuple[Callable, str]:
+        """Map liveness to the matching `perform_*` method and revocation type.
 
         Args:
-            alive: True if the job is running, False if confirmed not running,
-                None if the backend was unreachable.
+            liveness: The result of `self.liveness(job_result)`.
 
         Returns:
-            Tuple of (action, revocation_type) where action is the bound
-            `perform_*` method to invoke and revocation_type is the matching
+            Tuple `(action, revocation_type)` where `action` is the bound
+            `perform_*` method to invoke and `revocation_type` is the matching
             `JobRevocationTypeChoices` value to record.
         """
-        if alive is None:
-            return self.perform_force_revoke, JobRevocationTypeChoices.TYPE_FORCE_REVOKED
-        if alive is False:
-            return self.perform_reap, JobRevocationTypeChoices.TYPE_REAPED
-        return self.perform_termination, JobRevocationTypeChoices.TYPE_TERMINATED
+        return {
+            JobLiveness.RUNNING: (self.perform_termination, JobRevocationTypeChoices.TYPE_TERMINATED),
+            JobLiveness.NOT_RUNNING: (self.perform_reap, JobRevocationTypeChoices.TYPE_REAPED),
+            JobLiveness.UNKNOWN: (self.perform_abandon, JobRevocationTypeChoices.TYPE_ABANDONED),
+        }[liveness]
 
     def revoke(self, job_result, user) -> dict:
-        """Reap, terminate, or force-revoke a job and return the outcome.
+        """Terminate, reap, or abandon a job and return the outcome.
 
-        Dispatches based on `is_alive`:
-        - True  `perform_termination` (send kill signal)
-        - False `perform_reap` (worker is gone; just mark revoked)
-        - None  `perform_force_revoke` (backend unreachable; mark revoked)
+        Dispatches based on `self.liveness(job_result)`:
+            - JobLiveness.RUNNING: perform_termination (send kill signal)
+            - JobLiveness.NOT_RUNNING: perform_reap (worker is gone; mark revoked)
+            - JobLiveness.UNKNOWN: perform_abandon (backend unreachable; mark revoked)
 
         Exceptions from the chosen action are caught and reported in `error`.
 
+        Args:
+            job_result: The job result object to revoke.
+            user: The user requesting the revocation.
+
         Returns:
-            {
-                "job_result": JobResult,
-                "error": str | None,
-                "revoked": bool,
-            }
+            dict: A dictionary containing:
+                - job_result (JobResult): The updated job result.
+                - error (str | None): Error message if an exception occurred.
+                - revoked (bool): Whether the job was successfully marked as revoked.
         """
         base = {
             "job_result": job_result,
@@ -161,13 +188,13 @@ class JobRevokeStrategy(ABC):
             )
             return base
 
-        alive = self.is_alive(job_result)
-        action, revocation_type = self._resolve_action(alive)
+        job_liveness_state = self.liveness(job_result)
+        action, revocation_type = self._resolve_action(job_liveness_state)
 
         try:
             revoked = action(job_result, user)
         except Exception as e:
-            revocation_label = {"terminated": "Termination", "reaped": "Reap", "force": "Force Revoke"}
+            revocation_label = {"terminated": "Termination", "reaped": "Reap", "abandoned": "Abandon"}
             logger.error("%s failed for %s: %s", revocation_label[revocation_type], job_result.pk, e)
             job_result.log(
                 f"{revocation_label[revocation_type]} failed for {job_result.pk}: {e}",
@@ -185,7 +212,7 @@ class JobRevokeStrategy(ABC):
 class CeleryStrategy(JobRevokeStrategy):
     "Termination strategy for jobs running on Celery workers."
 
-    def is_alive(self, job_result) -> bool | None:
+    def liveness(self, job_result) -> JobLiveness:
         """
         Check whether a Celery worker is currently aware of (and likely processing)
         a given task.
@@ -195,17 +222,14 @@ class CeleryStrategy(JobRevokeStrategy):
         is still present in any worker's task list.
 
         Args:
-            job_result: An object representing the task result. It is expected
-                to have a primary key attribute `pk` corresponding to the
-                Celery task ID.
+            job_result: The task result. Its `pk` is used as the Celery task ID.
 
         Returns:
-            bool:
-                - True if at least one worker reports the task ID.
-                - False if workers respond but none contain the task.
-                - False if the worker state could not be determined (e.g., no
-                replies).
-                - None if an exception occurred while querying workers
+            JobLiveness: One of:
+                - JobLiveness.RUNNING: Backend confirms the job is currently executing.
+                - JobLiveness.NOT_RUNNING: Backend confirms the job is not executing
+                (e.g., worker not aware of it, pod terminated).
+                - JobLiveness.UNKNOWN: Backend could not be queried; liveness cannot be determined.
         """
         try:
             task_id = str(job_result.pk)
@@ -213,13 +237,18 @@ class CeleryStrategy(JobRevokeStrategy):
         except Exception as e:
             logger.warning("Failed to query Celery workers: %s", e)
             job_result.log(
-                "Failed to query Celery workers: {e}", level_choice=LogLevelChoices.LOG_WARNING, grouping="revoking"
+                f"Failed to query Celery workers: {e}",
+                level_choice=LogLevelChoices.LOG_WARNING,
+                grouping="revoking",
             )
-            return None
+            return JobLiveness.UNKNOWN
+
         if replies is None:
-            return False
+            return JobLiveness.NOT_RUNNING
+
         # replies shape: {worker_hostname: {task_id: [state, info]}}
-        return any(task_id in worker_tasks for worker_tasks in replies.values())
+        found = any(task_id in worker_tasks for worker_tasks in replies.values())
+        return JobLiveness.RUNNING if found else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result, user) -> bool:
         """Reap a dead Celery job: mark revoked without sending a signal.
@@ -279,8 +308,8 @@ class CeleryStrategy(JobRevokeStrategy):
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
             changed = self._apply_termination_metadata(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED, now)
 
-            job_result.date_terminated = now
-            changed.add("date_terminated")
+            job_result.date_revoked = now
+            changed.add("date_revoked")
 
             job_result.save(update_fields=list(changed))
 
@@ -353,11 +382,21 @@ class K8sStrategy(JobRevokeStrategy):
         )
         return pods.items[0] if pods.items else None
 
-    def is_alive(self, job_result) -> bool | None:
-        """
-        Return True if the K8s Job exists and is still progressing,
-        False if it's gone or has reached a failed, waiting or terminated state,
-        None if an exception occurred while querying kubernetes API.
+    def liveness(self, job_result) -> JobLiveness:
+        """Report whether the Kubernetes Job for this `job_result` is still progressing.
+
+        Looks up the Kubernetes Job and its first pod by name, then inspects
+        the container state to determine liveness.
+
+        Args:
+            job_result: The job result associated with the Kubernetes Job.
+
+        Returns:
+            JobLiveness: One of:
+                - JobLiveness.RUNNING: Job exists, has a pod, and the container is in a running state.
+                - JobLiveness.NOT_RUNNING: Job is missing (404), failed, has no pod yet,
+                lacks container status, or the container is waiting or terminated.
+                - JobLiveness.UNKNOWN: Kubernetes API returned a non-404 error; state cannot be determined.
         """
         job_name = self._job_name(job_result)
         namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
@@ -366,31 +405,32 @@ class K8sStrategy(JobRevokeStrategy):
             with build_kubernetes_api_client() as api_client:
                 k8s_job = self._read_k8s_job(api_client, job_name, namespace)
                 if k8s_job is None or k8s_job.status.failed:
-                    return False
+                    return JobLiveness.NOT_RUNNING
 
                 pod = self._read_first_pod_for_job(api_client, job_name, namespace)
                 if pod is None:
-                    return False
+                    return JobLiveness.NOT_RUNNING
         except kubernetes.client.exceptions.ApiException as e:
             if e.status == 404:
-                return False
+                return JobLiveness.NOT_RUNNING
             logger.warning("Kubernetes API error while checking job %s: %s", job_name, e)
             job_result.log(
                 f"Kubernetes API error while checking job {job_name}: {e}",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 grouping="revoking",
             )
-            return None
+            return JobLiveness.UNKNOWN
 
         # container_statuses can be None/[] while the pod is being scheduled.
         # We use [0] because our pod_manifest only defines one container under
         # spec.template.spec.containers.
         container_statuses = pod.status.container_statuses
         if not container_statuses:
-            return False
+            return JobLiveness.NOT_RUNNING
 
         # running, terminated, waiting
-        return bool(container_statuses[0].state.running)
+        is_running = bool(container_statuses[0].state.running)
+        return JobLiveness.RUNNING if is_running else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result: JobResult, user: User) -> bool:
         """Reap a dead K8s job: clean up leftover resources, then mark JobResult revoked."""
@@ -426,7 +466,7 @@ class K8sStrategy(JobRevokeStrategy):
         return True
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
-        """Delete the K8s job and mark the JobResult revoked and set date_terminated."""
+        """Delete the K8s job and mark the JobResult revoked and set date_revoked."""
 
         deleted = self._delete_k8s_job(job_result)
         if not deleted:
@@ -447,8 +487,8 @@ class K8sStrategy(JobRevokeStrategy):
         with transaction.atomic():
             now = timezone.now()
             job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
-            job_result.date_terminated = now
-            job_result.save(update_fields=["date_terminated"])
+            job_result.date_revoked = now
+            job_result.save(update_fields=["date_revoked"])
 
         logger.info("Job %s terminated by %s", job_result.pk, user)
         job_result.log(
@@ -460,27 +500,22 @@ class K8sStrategy(JobRevokeStrategy):
 class UnknownStrategy(JobRevokeStrategy):
     """Fallback strategy for queue types without a registered backend.
 
-    Has no way to reach a worker, so it always reports the job as not alive
-    and reaps it. Marks the JobResult revoked without sending any kill signal.
+    There is no backend to query for liveness, so liveness is always `UNKNOWN` and the orchestrator routes
+    the request to `perform_abandon`.
     """
 
-    def is_alive(self, job_result) -> bool:
+    def liveness(self, job_result) -> JobLiveness:
         """Always return False. There is no backend to query for liveness."""
-        return False
+        return JobLiveness.UNKNOWN
 
     def perform_reap(self, job_result, user) -> bool:
-        """Reap: mark revoked without sending a signal."""
-        logger.info("Reaped dead job %s by %s", job_result.pk, user)
-        job_result.log(
-            f"Reaped dead job {job_result.pk} by {user}",
-            level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
-        )
-        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
-        return True
+        """No-op; never reached. `liveness` is always `UNKNOWN`, so the
+        orchestrator routes to `perform_abandon` instead."""
+        return False
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
-        """No-op; never reached in normal flow. See class docstring."""
+        """No-op; never reached. `liveness` is always `UNKNOWN`, so the
+        orchestrator routes to `perform_abandon` instead."""
         return False
 
 
