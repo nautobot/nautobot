@@ -2525,6 +2525,13 @@ class UnknownStrategyTestCase(_JobRevokeTestBase):
                 job_result = self._make_job_result(status)
                 self.assertFalse(self.strategy.perform_termination(job_result, self.user))
 
+    def test_unknown_perform_reap_false_always(self):
+        """perform_termination return always False."""
+        for status in (*JobResultStatusChoices.UNREADY_STATES, *JobResultStatusChoices.READY_STATES):
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                self.assertFalse(self.strategy.perform_reap(job_result, self.user))
+
     def test_factory_returns_unknown_strategy_for_unregistered_queue_type(self):
         with self.subTest("unknown-queue-type"):
             strategy = RevokeFactory.get_strategy("not-a-queue-type")
@@ -2594,6 +2601,106 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         pod.status.container_statuses = [container_status]
         return pod
 
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
+    def test_delete_k8s_job_returns_true_on_success(self, mock_build_client, mock_batch_api_class):
+        """Successful delete_namespaced_job call returns True."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api_class.return_value = mock_batch_api
+
+        self.assertTrue(self.strategy._delete_k8s_job(job_result))
+        mock_batch_api.delete_namespaced_job.assert_called_once()
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
+    def test_delete_k8s_job_returns_false_on_404(self, mock_build_client, mock_batch_api_class):
+        """404 from delete_namespaced_job is swallowed and returns False."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api.delete_namespaced_job.side_effect = ApiException(status=404, reason="not found")
+        mock_batch_api_class.return_value = mock_batch_api
+
+        self.assertFalse(self.strategy._delete_k8s_job(job_result))
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
+    def test_delete_k8s_job_propagates_non_404(self, mock_build_client, mock_batch_api_class):
+        """Non-404 ApiException from delete_namespaced_job propagates."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api.delete_namespaced_job.side_effect = ApiException(status=500, reason="boom")
+        mock_batch_api_class.return_value = mock_batch_api
+
+        with self.assertRaises(ApiException):
+            self.strategy._delete_k8s_job(job_result)
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    def test_read_k8s_job_returns_job_on_success(self, mock_batch_api_class):
+        """Returns the V1Job object on success."""
+        fake_job = self._fake_job()
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api.read_namespaced_job.return_value = fake_job
+        mock_batch_api_class.return_value = mock_batch_api
+
+        result = self.strategy._read_k8s_job(mock.MagicMock(), "job-name", "ns")
+
+        self.assertIs(result, fake_job)
+        mock_batch_api.read_namespaced_job.assert_called_once_with(name="job-name", namespace="ns")
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    def test_read_k8s_job_returns_none_on_404(self, mock_batch_api_class):
+        """404 from read_namespaced_job returns None."""
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api.read_namespaced_job.side_effect = ApiException(status=404, reason="not found")
+        mock_batch_api_class.return_value = mock_batch_api
+
+        result = self.strategy._read_k8s_job(mock.MagicMock(), "job-name", "ns")
+
+        self.assertIsNone(result)
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.BatchV1Api")
+    def test_read_k8s_job_propagates_non_404(self, mock_batch_api_class):
+        """Non-404 ApiException from read_namespaced_job propagates."""
+        mock_batch_api = mock.MagicMock()
+        mock_batch_api.read_namespaced_job.side_effect = ApiException(status=500, reason="boom")
+        mock_batch_api_class.return_value = mock_batch_api
+
+        with self.assertRaises(ApiException):
+            self.strategy._read_k8s_job(mock.MagicMock(), "job-name", "ns")
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.CoreV1Api")
+    def test_read_first_pod_returns_pod_when_present(self, mock_core_api_class):
+        """Returns the first pod when list_namespaced_pod has items, with correct kwargs."""
+        fake_pod = self._fake_pod(running=True)
+        pod_list = mock.MagicMock()
+        pod_list.items = [fake_pod]
+        mock_core_api = mock.MagicMock()
+        mock_core_api.list_namespaced_pod.return_value = pod_list
+        mock_core_api_class.return_value = mock_core_api
+
+        result = self.strategy._read_first_pod_for_job(mock.MagicMock(), "job-name", "ns")
+
+        self.assertIs(result, fake_pod)
+        mock_core_api.list_namespaced_pod.assert_called_once_with(
+            namespace="ns",
+            label_selector="job-name=job-name",
+            limit=1,
+        )
+
+    @mock.patch("nautobot.extras.jobs_revoke.kubernetes.client.CoreV1Api")
+    def test_read_first_pod_returns_none_when_empty(self, mock_core_api_class):
+        """Returns None when list_namespaced_pod returns no items."""
+        pod_list = mock.MagicMock()
+        pod_list.items = []
+        mock_core_api = mock.MagicMock()
+        mock_core_api.list_namespaced_pod.return_value = pod_list
+        mock_core_api_class.return_value = mock_core_api
+
+        result = self.strategy._read_first_pod_for_job(mock.MagicMock(), "job-name", "ns")
+
+        self.assertIsNone(result)
+
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
     @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
@@ -2604,6 +2711,40 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         mock_read_pod.return_value = self._fake_pod(running=True)
 
         self.assertEqual(self.strategy.liveness(job_result), JobLiveness.RUNNING)
+
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
+    def test_liveness_returns_not_running_on_404_from_pod_lookup(self, mock_api_client, mock_read_job, mock_read_pod):
+        """404 raised while listing pods is treated as NOT_RUNNING by the outer except."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_read_job.return_value = self._fake_job(failed=None)
+        mock_read_pod.side_effect = ApiException(status=404, reason="not found")
+
+        self.assertEqual(self.strategy.liveness(job_result), JobLiveness.NOT_RUNNING)
+
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_first_pod_for_job")
+    @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
+    @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
+    def test_liveness_returns_unknown_on_api_error_from_pod_lookup(self, mock_api_client, mock_read_job, mock_read_pod):
+        """Non-404 ApiException while listing pods returns UNKNOWN and logs."""
+        job_result = self._make_job_result(JobResultStatusChoices.STATUS_STARTED)
+        mock_read_job.return_value = self._fake_job(failed=None)
+        mock_read_pod.side_effect = ApiException(status=500, reason="boom")
+
+        with self.assertLogs("nautobot.extras.jobs_revoke", level="WARNING") as log_cm:
+            self.assertEqual(self.strategy.liveness(job_result), JobLiveness.UNKNOWN)
+
+        self.assertTrue(
+            any("Kubernetes API error while checking job" in msg for msg in log_cm.output),
+            f"Expected a warning log, got: {log_cm.output}",
+        )
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                message__contains="Kubernetes API error while checking job",
+            ).exists()
+        )
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._read_k8s_job")
     @mock.patch("nautobot.extras.jobs_revoke.build_kubernetes_api_client")
