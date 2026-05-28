@@ -12,7 +12,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
 from django.db import models
-from django.db.models.fields.related_descriptors import ManyToManyDescriptor
+from django.db.models.fields.related_descriptors import ManyToManyDescriptor, ReverseManyToOneDescriptor
 from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -416,16 +416,23 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             # Eliminate all field names that start with "_" as those fields are not user-facing
             if field.startswith("_"):
                 return False
-            # These are expensive to look up, so we have decided not to include them on nested serializers
-            if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
+            # These are expensive to look up, so we have decided not to include them on nested serializers.
+            # Applies to forward M2M (`ManyToManyDescriptor`) and to reverse one-to-many accessors
+            # (`ReverseManyToOneDescriptor`, e.g. `Cable.terminations`) — the latter only surfaces when
+            # explicitly declared on the serializer, but it warrants the same suppression when nested.
+            if self.is_nested and isinstance(
+                getattr(self.Meta.model, field, None), (ManyToManyDescriptor, ReverseManyToOneDescriptor)
+            ):
                 return False
 
-            # Ignore M2M fields
+            # Skip M2M and reverse-FK (one-to-many) fields on CSV requests — they can't be flattened
+            # into a single CSV cell. ContentType M2M is specially handled and remains exportable.
             with contextlib.suppress(FieldDoesNotExist):
                 if self._is_csv_request():
                     field = self.Meta.model._meta.get_field(field)
-                    # ContentType is ManyToMany Field that is specially handled, Hence it can be exported/imported
                     if field.many_to_many and field.related_model is not ContentType:
+                        return False
+                    if field.one_to_many:
                         return False
             return True
 

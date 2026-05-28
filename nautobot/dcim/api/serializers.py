@@ -895,27 +895,6 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def get_terminations(self, obj):
         return CableToCableTerminationSerializer(obj.terminations.all(), many=True, context=self.context).data
 
-    @property
-    def fields(self):
-        fields = super().fields
-        # Drop `terminations` in two cases:
-        # 1. CSV renderer can't meaningfully flatten the nested per-row list — callers needing
-        #    per-row detail in CSV format hit `/api/dcim/cables-to-cable-terminations/?cable=<pk>`.
-        # 2. We're rendering as a nested serializer (e.g. embedded inside a higher-level response,
-        #    or as the `cable` FK of one of our own terminations) — including the full termination
-        #    list would recurse indefinitely through `CableToCableTermination.cable`.
-        if self.is_nested:
-            fields.pop("terminations", None)
-            return fields
-        request = self.context.get("request")
-        if request is not None:
-            renderer = getattr(request, "accepted_renderer", None)
-            if (renderer is not None and getattr(renderer, "format", None) == "csv") or request.query_params.get(
-                "format"
-            ) == "csv":
-                fields.pop("terminations", None)
-        return fields
-
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # Populate termination fields from model properties for read
