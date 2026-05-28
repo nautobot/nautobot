@@ -1204,7 +1204,7 @@ class JobResultViewSet(
         if job_result.user != request.user and not request.user.is_staff:
             raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
 
-        if request.method == "POST" and not job_result.is_unready_state:
+        if not job_result.is_unready_state and request.method == "POST":
             return Response(
                 {"detail": "Job is already finished. Nothing to do."},
                 status=status.HTTP_409_CONFLICT,
@@ -1215,6 +1215,16 @@ class JobResultViewSet(
         job_liveness_state = strategy.liveness(job_result)
 
         if request.method == "GET":
+            if not job_result.is_unready_state:
+                detail = {
+                    "message": f"Job '{job_result.name}' is already finished.",
+                    "action": "None",
+                    "action_description": "Job is already finished. Nothing to do.",
+                    "job_status": job_result.status,
+                    "timestamp": timezone.now().isoformat(),
+                }
+                return Response(detail, status=status.HTTP_200_OK)
+
             revoke_info = {
                 JobLiveness.RUNNING: {
                     "action": "TERMINATE",

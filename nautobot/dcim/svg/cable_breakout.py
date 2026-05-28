@@ -37,6 +37,9 @@ class BreakoutDiagramSVG:
     CONNECTOR_FONT_SIZE = 14
     LANE_LABEL_FONT_SIZE = 12
     LANE_LABEL_HEIGHT = LANE_LABEL_FONT_SIZE + 4
+    TERMINATION_LABEL_FONT_SIZE = 12
+    TERMINATION_LABEL_GAP = 8  # gap between connector edge and termination label
+    TERMINATION_LABEL_MAX_CHARS = 40  # truncate visible labels longer than this
     FONT_FAMILY = "var(--bs-font-sans-serif)"
 
     COLOR_LANE_CONNECTED = "var(--bs-success)"
@@ -91,6 +94,17 @@ class BreakoutDiagramSVG:
         lane_label_x_spacing = max(len(e.label) + 1 for e in self.entries) * self.LANE_LABEL_FONT_SIZE / 2
         self.line_area_width = max(self.MINIMUM_LINE_AREA_WIDTH, (max_parallel_lanes + 1) * lane_label_x_spacing)
 
+        # Reserve outer horizontal space for visible termination labels alongside each connector.
+        self.a_label_area_width = self._termination_label_area_width(self.a_labels)
+        self.b_label_area_width = self._termination_label_area_width(self.b_labels)
+
+    def _termination_label_area_width(self, labels):
+        """Pixel width to reserve for the visible termination labels on one side."""
+        if not labels:
+            return 0
+        max_len = min(max(len(label) for label in labels.values()), self.TERMINATION_LABEL_MAX_CHARS)
+        return self.TERMINATION_LABEL_GAP + max_len * self.TERMINATION_LABEL_FONT_SIZE / 2
+
     def _y_offset(self, position, total_positions, connector_height):
         """Vertical offset relative to a connector's center for the given 1-indexed lane position."""
         if total_positions == 1:  # single position, avoid dividing by zero
@@ -105,8 +119,15 @@ class BreakoutDiagramSVG:
         return max(h_a, h_b)
 
     def _total_width(self):
-        """Total width of the SVG - two connectors plus the line area between them."""
-        return self.CONNECTOR_WIDTH + self.line_area_width + self.CONNECTOR_WIDTH
+        """Total width of the SVG - two connectors plus the line area between them, plus
+        outer label areas on each side for the visible termination labels."""
+        return (
+            self.a_label_area_width
+            + self.CONNECTOR_WIDTH
+            + self.line_area_width
+            + self.CONNECTOR_WIDTH
+            + self.b_label_area_width
+        )
 
     def _connector_y_centers(self):
         """Calculate the Y centers for centered, evenly spaced connectors on each side of the diagram."""
@@ -173,10 +194,32 @@ class BreakoutDiagramSVG:
             )
             drawing.add(group)
 
+            # Visible termination label outside the connector box (left for A, right for B).
+            termination_label = labels.get(connector)
+            if termination_label:
+                if len(termination_label) > self.TERMINATION_LABEL_MAX_CHARS:
+                    termination_label = termination_label[: self.TERMINATION_LABEL_MAX_CHARS - 1] + "…"
+                if side == "A":
+                    text_x = x - self.TERMINATION_LABEL_GAP
+                    text_anchor = "end"
+                else:
+                    text_x = x + self.CONNECTOR_WIDTH + self.TERMINATION_LABEL_GAP
+                    text_anchor = "start"
+                drawing.add(
+                    drawing.text(
+                        termination_label,
+                        insert=(text_x, y_center + self.TERMINATION_LABEL_FONT_SIZE / 3),
+                        text_anchor=text_anchor,
+                        fill=self.COLOR_TEXT,
+                        font_size=f"{self.TERMINATION_LABEL_FONT_SIZE}px",
+                        font_family=self.FONT_FAMILY,
+                    )
+                )
+
     def _render_lane_lines(self, drawing, a_connector_y_centers, b_connector_y_centers, total_width):
         lines = []
-        line_a_x = self.CONNECTOR_WIDTH + self.LANE_X_GAP
-        line_b_x = total_width - self.CONNECTOR_WIDTH - self.LANE_X_GAP
+        line_a_x = self.a_label_area_width + self.CONNECTOR_WIDTH + self.LANE_X_GAP
+        line_b_x = total_width - self.b_label_area_width - self.CONNECTOR_WIDTH - self.LANE_X_GAP
         for entry in self.entries:
             line_a_y = a_connector_y_centers[entry.a_connector] + self._y_offset(
                 entry.a_position, self.a_positions, self.a_connector_height
@@ -258,7 +301,7 @@ class BreakoutDiagramSVG:
             side="A",
             positions=self.a_positions,
             connectors=self.a_connectors,
-            x=0,
+            x=self.a_label_area_width,
             connector_y_centers=a_connector_y_centers,
             connector_height=self.a_connector_height,
             labels=self.a_labels,
@@ -270,7 +313,7 @@ class BreakoutDiagramSVG:
             side="B",
             positions=self.b_positions,
             connectors=self.b_connectors,
-            x=total_width - self.CONNECTOR_WIDTH,
+            x=total_width - self.CONNECTOR_WIDTH - self.b_label_area_width,
             connector_y_centers=b_connector_y_centers,
             connector_height=self.b_connector_height,
             labels=self.b_labels,

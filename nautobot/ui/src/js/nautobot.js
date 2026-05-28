@@ -23,6 +23,8 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import htmx from 'htmx.org';
 window.htmx = htmx;
 
+import 'htmx-ext-json-enc';
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);

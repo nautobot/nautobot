@@ -1,4 +1,5 @@
 import Fuse from 'fuse.js';
+import htmx from 'htmx.org';
 import { createElement, rem } from './utils.js';
 
 const FORM_CONTROL_PADDING_X = rem(12);
@@ -7,8 +8,10 @@ const ICON_SIZE = rem(20);
 
 const BASE_SEARCH_INPUT_PADDING_X = `${FORM_CONTROL_PADDING_X + ICON_SIZE + GAP}rem`;
 
+const CONTENT_TYPE_LIVE_SEARCH_DEBOUNCE_DELAY = 500;
 const MAX_BADGE_COUNT = 1;
 const MAX_TYPEAHEAD_RESULT_COUNT = 3;
+const MIN_CONTENT_TYPE_LIVE_SEARCH_PHRASE_LENGTH = 2;
 
 export const initializeSearch = () => {
   const headerSearch = document.getElementById('header_search');
@@ -111,6 +114,13 @@ export const initializeSearch = () => {
     const input = createElement('input', {
       autocomplete: 'off',
       className: 'form-control w-100',
+      'hx-indicator': '#search_popup .htmx-indicator',
+      'hx-swap': 'afterbegin',
+      'hx-sync': 'this:replace',
+      'hx-target': '#search_popup form + div',
+      // This, as opposed to what ESLint believes, is not a script URL, but a valid HTMX syntax for `hx-vals` attribute.
+      // eslint-disable-next-line no-script-url
+      'hx-vals': 'javascript:{...Object.fromEntries([...new FormData(document.querySelector("#search_popup form"))])}',
       name: 'q',
       required: 'true',
       role: 'searchbox',
@@ -163,15 +173,34 @@ export const initializeSearch = () => {
     });
 
     /*
+     * This `spinner` element serves as HTMX `hx-indicator` to inform about requests in flight. Is it nothing else than
+     * just a standard recommended Bootstrap spinner structure wrapped in an additional `<div>...</div>`:
+     * https://getbootstrap.com/docs/5.3/components/spinners/#border-spinner
+     */
+    const spinner = createElement(
+      'div',
+      { className: 'htmx-indicator px-10 py-8' },
+      createElement(
+        'div',
+        { className: 'spinner-border spinner-border-sm fs-5 text-secondary', role: 'status' },
+        createElement('span', { className: 'visually-hidden' }, 'Loading...'),
+      ),
+    );
+
+    /*
      * `inputHeight` calculation below may seem obscure and in fact it would be simpler to do in SCSS, but since search
      * is mostly a JavaScript feature, let's not scatter its parts over multiple places. Anyway, the formula is:
      * `fontSize=0.875rem=14px * lineHeight=1.4375 + (paddingY=0.3125rem=5px + borderY=var(--bs-border-width)=0.0625rem=1px) * 2`
      */
     const inputHeight = `calc(0.875rem * 1.4375 + (0.3125rem + var(--bs-border-width)) * 2)`;
-    const results = createElement('div', {
-      className: 'bg-body mt-10 overflow-x-hidden overflow-y-auto pe-auto rounded w-100',
-      style: `max-height: calc(100% - 0.625rem - ${inputHeight});`, // `0.625rem` subtraction compensates for `mt-10`.
-    });
+    const results = createElement(
+      'div',
+      {
+        className: 'bg-body mt-10 overflow-x-hidden overflow-y-auto pe-auto rounded w-100',
+        style: `max-height: calc(100% - 0.625rem - ${inputHeight});`, // `0.625rem` subtraction compensates for `mt-10`.
+      },
+      spinner,
+    );
 
     const popup = createElement(
       'div',
@@ -231,11 +260,16 @@ export const initializeSearch = () => {
       [...badges.children].slice(0, -1 * MAX_BADGE_COUNT).forEach((child) => child.remove());
     };
 
-    const getResultItems = () => [...results.querySelectorAll('.nb-search-list-group-item')];
+    const getResultItems = () => [...results.querySelectorAll('.nb-search-list-group-item, .table > tbody > tr')];
 
     const isResultItemActive = (item) => item.classList.contains('active');
 
     const isResultItemTentativelySelected = (item) => item.getAttribute('aria-selected') === 'true';
+
+    const removeResultsList = (type) =>
+      results
+        .querySelectorAll(type ? `[data-nb-results-type="${type}"]` : ':scope > *')
+        .forEach((resultsList) => resultsList.remove());
 
     /*
      * There is a distinction between `class="... active"` and `aria-selected="true"` that needs to be called out here.
@@ -274,11 +308,22 @@ export const initializeSearch = () => {
       toggleResultsVisible(true); // Show results list when search input is clicked (not focused!).
     });
 
+    /*
+     * `timeoutRef` is required for debouncing HTMX requests to prevent bombarding the API with each character typed in
+     * the search input. Prefer React-style ref object over mutable variable declared with `let` or, even worse, `var`.
+     */
+    const timeoutRef = { current: null };
+
     input.addEventListener('input', () => {
+      clearTimeout(timeoutRef.current); // Clear debounce timeout, restore it below when certain requirements are met.
+      removeResultsList('typeahead'); // Remove typeahead results.
+      // Contrary to typeahead results, live search results are omitted here because they are asynchronous.
+      spinner.classList.toggle('htmx-request', false); // See the comment on the opposite logic below for more context.
       toggleResultsVisible(true); // Always force show results list when users are typing.
 
+      const hasBadges = badges.children.length > 0;
       const isPhraseIn = input.value.match(IN_REG_EXP);
-      if (isPhraseIn) {
+      if (!hasBadges && isPhraseIn) {
         /*
          * Phrases that start with `'in'` are treated as a special case of looking for the best searchable model match,
          * rather than executing a standard search query. Two scenarios are being covered here:
@@ -331,17 +376,40 @@ export const initializeSearch = () => {
             });
             return createElement('li', {}, itemButton);
           });
-          const typeaheadResults = createElement('ul', { className: 'nb-search-list-group' }, ...typeaheadResultItems);
-          [...results.querySelectorAll('.nb-search-list-group')].map((element) => element.remove());
-          results.appendChild(typeaheadResults);
+          const typeaheadResults = createElement(
+            'ul',
+            { className: 'nb-search-list-group', 'data-nb-results-type': 'typeahead' },
+            ...typeaheadResultItems,
+          );
+          results.insertBefore(typeaheadResults, spinner);
           return;
         }
 
-        results.replaceChildren(); // Remove all search results.
         return;
       }
 
-      results.replaceChildren(); // Remove all search results.
+      const isContentTypeLiveSearch =
+        badges.children.length > 0 && input.value.length >= MIN_CONTENT_TYPE_LIVE_SEARCH_PHRASE_LENGTH;
+      if (isContentTypeLiveSearch) {
+        const links = [...badges.children].map((badge) => badge.getAttribute('data-nb-link'));
+        /*
+         * Fool HTMX indicator into believing that there is a request in flight. In fact there will be an HTMX request
+         * made, but after debounce delay, while this logic shows the indicator immediately after typing a character.
+         */
+        spinner.classList.toggle('htmx-request', true);
+
+        // Debounce. For those unsure what debounce is: https://developer.mozilla.org/en-US/docs/Glossary/Debounce.
+        timeoutRef.current = setTimeout(() => {
+          links.forEach((link) => {
+            const source = '#search_popup form input'; // Trigger HTMX GET as it would be fired from search `input`.
+            // Get live search URL path and replace its trailing slash with an actual list view `link`.
+            const url = headerSearch.getAttribute('data-nb-live-search-path').replace(/\/+$/, link);
+            htmx.ajax('get', url, { source });
+          });
+        }, CONTENT_TYPE_LIVE_SEARCH_DEBOUNCE_DELAY);
+      } else {
+        removeResultsList('live-search');
+      }
     });
 
     // Most (if not all!) of the keyboard navigation is heavily inspired by Google Search.
@@ -431,11 +499,27 @@ export const initializeSearch = () => {
       }
     });
 
+    results.addEventListener('htmx:beforeSwap', () => {
+      // Remove all live search results before swapping HTML from the received HTMX response.
+      removeResultsList('live-search');
+      toggleResultsVisible(true); // Show results list when HTMX response is about to populate it with new entries.
+    });
+
+    results.addEventListener('htmx:afterSwap', () => {
+      /*
+       * After response HTML content swap, check if said content is wider than its container and in case it is, display
+       * a fade-out overlay at the right edge.
+       */
+      const resultsList = document.querySelector('[data-nb-results-type="live-search"]');
+      const shouldFadeOut = resultsList && resultsList.scrollWidth > resultsList.parentElement.scrollWidth;
+      resultsList?.classList.toggle('nb-live-search-results-fade-out', shouldFadeOut);
+    });
+
     // When mouse is moved over or leaves the `results` element, track the item highlight accordingly.
     const onMouseEvent = (event) => {
       const items = getResultItems();
       const active = items.find(isResultItemActive);
-      const hoveredOver = event.target.closest('.nb-search-list-group-item');
+      const hoveredOver = event.target.closest('.nb-search-list-group-item, .table > tbody > tr');
       /*
        * Clear *tentative* selection from the currently `active` item, but do not move it over to the next (`hoveredOver`)
        * active item. Remember that *tentative* selection is reserved exclusively for keyboard selection.

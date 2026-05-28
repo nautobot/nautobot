@@ -1,7 +1,43 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.utils import generate_cable_breakout_mapping, validate_cable_breakout_mapping
+from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.utils import (
+    disconnect_termination,
+    generate_cable_breakout_mapping,
+    validate_cable_breakout_mapping,
+)
+from nautobot.extras.models import Role, Status
+
+
+class DisconnectTerminationTestCase(TestCase):
+    """Additional coverage of `disconnect_termination()` — also covered in test_cablepaths.py for common flows."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Disconnect Test DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            name="DisconnectTestDevice",
+            device_type=device_type,
+            role=device_role,
+            location=location,
+            status=device_status,
+        )
+        cls.uncabled_interface = Interface.objects.create(
+            device=cls.device, name="eth0", status=Status.objects.get_for_model(Interface).first()
+        )
+
+    def test_disconnect_termination_with_none_returns_none(self):
+        """Passing `None` (e.g. from a caller that already cleared its reference) is a no-op."""
+        self.assertIsNone(disconnect_termination(None))
+
+    def test_disconnect_termination_on_uncabled_termination_returns_none(self):
+        """A termination that has no `CableToCableTermination` row is also a no-op."""
+        self.assertIsNone(disconnect_termination(self.uncabled_interface))
 
 
 class GenerateCableBreakoutMappingTestCase(TestCase):
@@ -26,6 +62,25 @@ class GenerateCableBreakoutMappingTestCase(TestCase):
         # B side fills 4 connectors, 2 positions each, in order
         self.assertEqual([e["b_connector"] for e in mapping], [1, 1, 2, 2, 3, 3, 4, 4])
         self.assertEqual([e["b_position"] for e in mapping], [1, 2, 1, 2, 1, 2, 1, 2])
+
+    def test_generate_cable_breakout_mapping_with_labels(self):
+        """Custom labels keyed by lane assignment are applied where the key matches, defaults elsewhere."""
+        labels = {
+            (1, 1, 1, 1): "Tx1",
+            (1, 4, 1, 4): "Rx1",
+            (9, 9, 9, 9): "ignored — no such lane",
+        }
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=1, total_lanes=4, labels=labels)
+        self.assertEqual(mapping[0]["label"], "Tx1")
+        self.assertEqual(mapping[1]["label"], "2")  # default
+        self.assertEqual(mapping[2]["label"], "3")  # default
+        self.assertEqual(mapping[3]["label"], "Rx1")
+
+    def test_generate_cable_breakout_mapping_none_labels(self):
+        """`labels=None` behaves the same as not providing the arg at all."""
+        default_mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        with_none = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2, labels=None)
+        self.assertEqual(default_mapping, with_none)
 
 
 class ValidateCableBreakoutMappingTestCase(TestCase):

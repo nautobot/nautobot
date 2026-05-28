@@ -36,7 +36,7 @@ export const setSelect2Value = (select2, value) => {
   });
 
   const nextValue = (() => {
-    if (value.length > 0) {
+    if (value?.length > 0) {
       const isMultiple = select2?.getAttribute('multiple') !== null;
       return isMultiple ? value.map((attributes) => attributes.value) : value?.[0]?.value;
     }

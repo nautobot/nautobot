@@ -30,6 +30,7 @@ from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -588,31 +589,31 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsolePort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsoleServerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerOutlet.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer").annotate(
+    queryset = Interface.objects.prefetch_related("cable_paths__destination").annotate(
         _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
     )
     serializer_class = serializers.InterfaceSerializer
@@ -658,23 +659,44 @@ class ModuleBayViewSet(NautobotModelViewSet):
 
 
 class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = ConsolePort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        ConsolePort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = PowerPort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        PowerPort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
 
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = Interface.objects.select_related("device", "_path").filter(
-        # Avoid duplicate connections by only selecting the lower PK in a connected pair
-        _path__destination_id__isnull=False,
-        pk__lt=F("_path__destination_id"),
-    )
+    """
+    Lists interface-to-interface connections.
+
+    Backed by a `CablePath` queryset so each connection (including each breakout lane) is one row.
+    The serializer adapts each `CablePath` to the Interface-shaped JSON contract this endpoint has
+    historically exposed (`interface_a`, `interface_b`, `connected_endpoint_reachable`).
+    """
+
+    queryset = CablePath.objects.filter(
+        origin_type__app_label="dcim",
+        origin_type__model="interface",
+        destination_type__app_label="dcim",
+        destination_type__model="interface",
+        # Canonicalize each iface↔iface pair; see InterfaceConnectionsListView for the rationale.
+        origin_id__lt=F("destination_id"),
+    ).prefetch_related("origin", "destination")
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
 
@@ -691,17 +713,25 @@ class CableTypeViewSet(NautobotModelViewSet):
 
 
 class CableViewSet(NautobotModelViewSet):
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
+    queryset = Cable.objects.prefetch_related("terminations")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
-        # DeviceInterface is not properly cleared of _path_id
+        # DeviceInterface is not properly cleared of its cable_paths
         queryset = super().get_queryset()
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+
+class CableToCableTerminationViewSet(NautobotModelViewSet):
+    """API endpoint for the cable→termination join model."""
+
+    queryset = CableToCableTermination.objects.select_related("cable")
+    serializer_class = serializers.CableToCableTerminationSerializer
+    filterset_class = filters.CableToCableTerminationFilterSet
 
 
 #
@@ -732,7 +762,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.prefetch_related("_cable_peer", "_path__destination")
+    queryset = PowerFeed.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 

@@ -3560,6 +3560,7 @@ class JobResultUIViewSet(
                     )
                     else None
                 ),
+                template_path="extras/inc/jobresult_revokejobbutton.html",
             ),
         ),
         extra_tabs=[

@@ -458,8 +458,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             {{% if "changelog" in buttons %}}
                 <li>
                     <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
-                        <span class="mdi mdi-history" aria-hidden="true"></span>
-                        Change Log
+                        <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
                     </a>
                 </li>
             {{% endif %}}
@@ -467,16 +466,14 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                 {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
                     <li>
                         <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
-                            <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                            Edit
+                            <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
                 {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
                     <li>
                         <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
-                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                            Delete
+                            <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
@@ -504,6 +501,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         template_code = self.template_code.format(
             app_label=app_label,
             model_name=model._meta.model_name,
+            verbose_name=model._meta.verbose_name,
             changelog_route=changelog_route,
             edit_route=edit_route,
             delete_route=delete_route,

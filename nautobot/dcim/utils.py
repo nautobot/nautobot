@@ -1,8 +1,10 @@
 from copy import deepcopy
+from typing import Optional
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.utils.html import format_html, format_html_join
 from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
@@ -10,7 +12,7 @@ from nautobot.core.choices import ColorChoices
 from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import DEFAULT_CABLE_TYPES
+from nautobot.dcim.constants import DEFAULT_CABLE_TYPES, NONCONNECTABLE_IFACE_TYPES
 
 
 def compile_path_node(ct_id, object_id):
@@ -188,8 +190,14 @@ def clear_default_cable_types(apps, schema_editor=None):
         CableType.objects.filter(name=name).delete()
 
 
-def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_lanes: int):
-    """Generate a default mapping from the given connector and lane counts."""
+def generate_cable_breakout_mapping(
+    a_connectors: int, b_connectors: int, total_lanes: int, labels: Optional[dict] = None
+):
+    """Generate a default mapping from the given connector and lane counts.
+
+    Optional `labels`: dict keyed by `(a_connector, a_position, b_connector, b_position)` → label string,
+    used in place of the default `str(lane_index + 1)` per lane.
+    """
     a_positions = total_lanes // a_connectors
     b_positions = total_lanes // b_connectors
     mapping = []
@@ -198,14 +206,16 @@ def generate_cable_breakout_mapping(a_connectors: int, b_connectors: int, total_
         for a_position in range(a_positions):
             b_connector = lane_index // b_positions
             b_position = lane_index % b_positions
+            # Change 0-indexed iterations to 1-indexed mapping entries!
+            entry_key = (a_connector + 1, a_position + 1, b_connector + 1, b_position + 1)
+            label = labels.get(entry_key) if labels else None
             mapping.append(
                 {
-                    # Change 0-indexed iterations to 1-indexed mapping entries!
-                    "label": str(lane_index + 1),
-                    "a_connector": a_connector + 1,
-                    "a_position": a_position + 1,
-                    "b_connector": b_connector + 1,
-                    "b_position": b_position + 1,
+                    "label": label or str(lane_index + 1),
+                    "a_connector": entry_key[0],
+                    "a_position": entry_key[1],
+                    "b_connector": entry_key[2],
+                    "b_position": entry_key[3],
                 }
             )
             lane_index += 1
@@ -316,3 +326,87 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         seen_labels.add(label)
 
     return mapping, a_connectors, b_connectors, total_lanes
+
+
+# Cable validation utilities
+
+
+def validate_cable_termination(termination, cable_id=None):
+    """Run per-termination validations independent of any peer.
+
+    Raises ValidationError if the termination is not a valid endpoint for a cable, namely:
+    * an Interface of a non-connectable type (virtual or wireless),
+    * a CircuitTermination attached to a provider network, or
+    * a termination already attached to a different cable than `cable_id`.
+    """
+    from nautobot.circuits.models import CircuitTermination
+    from nautobot.dcim.models import Interface
+
+    if termination is None:
+        return
+
+    if isinstance(termination, Interface) and termination.type in NONCONNECTABLE_IFACE_TYPES:
+        raise ValidationError(f"Cables cannot be terminated to {termination.get_type_display()} interfaces")
+
+    if isinstance(termination, CircuitTermination) and termination.provider_network_id is not None:
+        raise ValidationError("Circuit terminations attached to a provider network may not be cabled.")
+
+    if termination.present_in_database:
+        # Re-query through the join table rather than trusting an in-memory cable reference (which may be stale).
+        current_cable_id = (
+            type(termination)
+            .objects.filter(pk=termination.pk)
+            .values_list("cable_termination__cable_id", flat=True)
+            .first()
+        )
+        if current_cable_id and current_cable_id != cable_id:
+            raise ValidationError(f"{termination} already has a cable attached (#{current_cable_id})")
+
+
+# Cable disconnect utilities
+
+
+def disconnect_termination(termination):
+    """Disconnect a single termination from its cable without deleting the cable.
+
+    Removes the CableToCableTermination row for this termination; the post_delete signal handler
+    on `CableToCableTermination` rebuilds every CablePath that traversed the cable. The cable
+    itself and any other terminations on it are left intact. Returns the cable if successful,
+    None otherwise.
+
+    For breakout cables, this correctly preserves cable paths on the surviving lanes: only the
+    lane(s) involving the disconnected termination produce partial paths after the rebuild.
+    """
+    if not termination:
+        return None
+    cable_termination = getattr(termination, "cable_termination", None)
+    if cable_termination is None:
+        return None
+
+    cable = cable_termination.cable
+    # Wrap the row delete + signal-driven path rebuild in a transaction so a rebuild failure
+    # rolls the row deletion back too. Otherwise the cable could end up with stale CablePath
+    # rows referencing a now-deleted termination row.
+    with transaction.atomic():
+        cable_termination.delete()
+    return cable
+
+
+def power_ports_connected_to(target_queryset):
+    """Return a queryset of PowerPorts whose cable peer is one of the objects in `target_queryset`.
+
+    `target_queryset` must be a queryset of CableTermination subclass instances (typically
+    PowerOutlet or PowerFeed).
+    """
+    from nautobot.dcim.models import CableToCableTermination, PowerPort
+    from nautobot.dcim.models.cables import termination_fk_field
+
+    target_fk = termination_fk_field(target_queryset.model)
+
+    target_cables = CableToCableTermination.objects.filter(**{f"{target_fk}__in": target_queryset}).values("cable_id")
+
+    powerport_ids = CableToCableTermination.objects.filter(power_port__isnull=False, cable_id__in=target_cables).values(
+        "power_port_id"
+    )
+
+    return PowerPort.objects.filter(pk__in=powerport_ids)
