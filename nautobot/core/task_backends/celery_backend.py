@@ -28,10 +28,9 @@ if TYPE_CHECKING:
 def _build_celery_kwargs_dict(options: EnqueueOptions) -> dict[str, Any]:
     """Reconstruct the legacy ``nautobot_job_*`` kwargs dict from EnqueueOptions.
 
-    Until ProcrastinateBackend lands and the ``nautobot_job_*`` keys are
-    completely replaced by EnqueueOptions fields, the legacy dict is still the
-    interchange format between Nautobot's job lifecycle code and the NautobotTask
-    base class. The scheduler also constructs the same shape.
+    The legacy dict is the interchange format between Nautobot's job lifecycle
+    code and the NautobotTask base class; the scheduler constructs the same
+    shape. Kept here to preserve exact pre-existing dispatch behavior.
     """
     job_celery_kwargs: dict[str, Any] = {
         "nautobot_job_job_model_id": str(options.job_model_id) if options.job_model_id else None,

@@ -28,7 +28,7 @@ class DispatchResult:
     """
 
     task_id: UUID  # JobResult.task_id (same value used as Celery task_id under CeleryBackend)
-    backend: str   # "celery" | "procrastinate"
+    backend: str   # name of the backend that handled dispatch (e.g. "celery")
 
 
 @dataclass
@@ -50,13 +50,12 @@ class EnqueueOptions:
     user_id: Optional[UUID] = None
     job_model_id: Optional[UUID] = None
     schedule_id: Optional[UUID] = None
-    # Branch name for the nautobot_version_control plugin. Backends that
-    # propagate context (CeleryBackend via NautobotTask, ProcrastinateBackend
-    # via its own context wrapper) install this at task start.
+    # Branch name for the nautobot_version_control plugin. Backends install
+    # this at task start; CeleryBackend does it via NautobotTask.
     branch_name: Optional[str] = None
     # Escape hatch for backend-specific knobs we don't know about yet.
-    # CeleryBackend folds these into the apply_async() **kwargs.
-    # ProcrastinateBackend ignores them.
+    # CeleryBackend folds these into the apply_async() **kwargs; backends that
+    # don't understand a key are free to ignore it.
     extra: dict = field(default_factory=dict)
 
 
@@ -73,7 +72,7 @@ class TaskBackend(abc.ABC):
           an equivalent that writes to the same model)
     """
 
-    name: str  # subclass sets to "celery" or "procrastinate"
+    name: str  # subclass sets to e.g. "celery"
 
     @abc.abstractmethod
     def enqueue(
@@ -124,9 +123,9 @@ class TaskBackend(abc.ABC):
         """Return the periodic-task runner for this backend, or None if scheduling
         is handled out-of-band (e.g., ``celery beat`` as a separate process).
 
-        CeleryBackend returns None — celery beat is run as a separate service.
-        ProcrastinateBackend returns a custom runner that reads ``ScheduledJob``
-        rows and enqueues due jobs on each tick.
+        CeleryBackend returns None — celery beat runs as a separate service.
+        Backends without a separate scheduler process can return a runner that
+        reads ``ScheduledJob`` rows and enqueues due jobs on each tick.
         """
         return None
 
@@ -134,9 +133,10 @@ class TaskBackend(abc.ABC):
 class PeriodicRunner(abc.ABC):
     """Runs ScheduledJob rows on schedule.
 
-    Separate from TaskBackend because:
-      - Celery beat runs as its own OS process; CeleryBackend delegates entirely
-      - Procrastinate has no built-in DB-row-driven scheduler, so we ship one
+    Separate from TaskBackend because backends that delegate scheduling to an
+    external process (e.g., CeleryBackend → celery beat) don't need to
+    implement this; only backends that include their own DB-row-driven
+    scheduler do.
     """
 
     @abc.abstractmethod

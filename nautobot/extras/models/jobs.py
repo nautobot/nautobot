@@ -1035,9 +1035,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             # TODO: make this branch aware!
             return run_kubernetes_job_and_return_job_result(job_result, job_kwargs)
 
-        # Dispatch via the configured TaskBackend. Celery is the default (and historical)
-        # backend; Procrastinate is opt-in via NAUTOBOT_TASK_BACKEND=procrastinate.
-        # The CeleryBackend wrapper preserves prior dispatch behavior exactly; see
+        # Dispatch via the configured TaskBackend. Celery is the default (and only
+        # built-in) backend; alternative implementations can be selected by setting
+        # NAUTOBOT_TASK_BACKEND to a dotted import path of a TaskBackend subclass.
+        # CeleryBackend preserves prior dispatch behavior exactly; see
         # nautobot.core.task_backends.celery_backend for the lifted logic.
         from nautobot.core.task_backends import EnqueueOptions, get_task_backend
 
