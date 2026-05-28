@@ -147,6 +147,63 @@ urlpatterns = [
         ),
         name="devicetype_modulebaytemplate_add",
     ),
+    # ModuleType component template add routes (issue #8741)
+    path(
+        "module-types/<uuid:pk>/console-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-port-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/console-ports/"
+        ),
+        name="moduletype_consoleporttemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/console-server-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/console-server-port-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/console-server-ports/"
+        ),
+        name="moduletype_consoleserverporttemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/power-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-port-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/power-ports/"
+        ),
+        name="moduletype_powerporttemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/power-outlet-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/power-outlet-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/power-outlets/"
+        ),
+        name="moduletype_poweroutlettemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/interface-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/interface-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/interfaces/"
+        ),
+        name="moduletype_interfacetemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/front-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/front-port-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/front-ports/"
+        ),
+        name="moduletype_frontporttemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/rear-port-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/rear-port-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/rear-ports/"
+        ),
+        name="moduletype_rearporttemplate_add",
+    ),
+    path(
+        "module-types/<uuid:pk>/module-bay-templates/add/",
+        RedirectView.as_view(
+            url="/dcim/module-bay-templates/add/?module_type=%(pk)s&return_url=/dcim/module-types/%(pk)s/module-bays/"
+        ),
+        name="moduletype_modulebaytemplate_add",
+    ),
     # Console port templates
     path(
         "console-port-templates/add/",

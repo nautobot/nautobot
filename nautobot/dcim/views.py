@@ -1822,22 +1822,16 @@ class ModuleTypeFieldsPanel(object_detail.ObjectFieldsPanel):
 
 class ModuleTypeComponentAddButton(object_detail.Button):
     """
-    Button for adding components to a ModuleType via query-param-based add URLs.
+    Button for adding components to a ModuleType.
 
-    This subclass exists because ModuleType lacks dedicated per-object add routes
-    (e.g. dcim:moduletype_consoleporttemplate_add) that DeviceType has.
+    Uses dedicated per-object add routes (e.g. dcim:moduletype_consoleporttemplate_add)
+    that were added to match DeviceType's URL pattern.
     """
 
     def __init__(self, *, tab, **kwargs):
         self.tab = tab
-        super().__init__(link_includes_pk=False, **kwargs)
-
-    def get_link(self, context):
-        obj = get_obj_from_context(context, self.context_object_key)
-        if not obj:
-            return None
-        return_url = iri_to_uri(f"{obj.get_absolute_url()}?tab={self.tab}")
-        return reverse(self.link_name) + "?" + urlencode({"module_type": obj.pk, "return_url": return_url})
+        # Use per-object routes with PK in URL path instead of query params
+        super().__init__(link_includes_pk=True, **kwargs)
 
 
 class ModuleTypeUIViewSet(
@@ -1913,7 +1907,7 @@ class ModuleTypeUIViewSet(
                 children=(
                     ModuleTypeComponentAddButton(
                         weight=100,
-                        link_name="dcim:consoleporttemplate_add",
+                        link_name="dcim:moduletype_consoleporttemplate_add",
                         tab="consoleports",
                         label="Console Ports",
                         icon="mdi-console",
@@ -1921,7 +1915,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=200,
-                        link_name="dcim:consoleserverporttemplate_add",
+                        link_name="dcim:moduletype_consoleserverporttemplate_add",
                         tab="consoleserverports",
                         label="Console Server Ports",
                         icon="mdi-console-network-outline",
@@ -1929,7 +1923,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=300,
-                        link_name="dcim:powerporttemplate_add",
+                        link_name="dcim:moduletype_powerporttemplate_add",
                         tab="powerports",
                         label="Power Ports",
                         icon="mdi-power-plug-outline",
@@ -1937,7 +1931,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=400,
-                        link_name="dcim:poweroutlettemplate_add",
+                        link_name="dcim:moduletype_poweroutlettemplate_add",
                         tab="poweroutlets",
                         label="Power Outlets",
                         icon="mdi-power-socket",
@@ -1945,7 +1939,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=500,
-                        link_name="dcim:interfacetemplate_add",
+                        link_name="dcim:moduletype_interfacetemplate_add",
                         tab="interfaces",
                         label="Interfaces",
                         icon="mdi-ethernet",
@@ -1953,7 +1947,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=600,
-                        link_name="dcim:frontporttemplate_add",
+                        link_name="dcim:moduletype_frontporttemplate_add",
                         tab="frontports",
                         label="Front Ports",
                         icon="mdi-square-rounded-outline",
@@ -1961,7 +1955,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=700,
-                        link_name="dcim:rearporttemplate_add",
+                        link_name="dcim:moduletype_rearporttemplate_add",
                         tab="rearports",
                         label="Rear Ports",
                         icon="mdi-square-rounded-outline",
@@ -1969,7 +1963,7 @@ class ModuleTypeUIViewSet(
                     ),
                     ModuleTypeComponentAddButton(
                         weight=800,
-                        link_name="dcim:modulebaytemplate_add",
+                        link_name="dcim:moduletype_modulebaytemplate_add",
                         tab="modulebays",
                         label="Module Bays",
                         icon="mdi-tray",
