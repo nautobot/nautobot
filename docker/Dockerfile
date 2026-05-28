@@ -11,17 +11,17 @@ ARG ARCH=${TARGETARCH:-amd64}
 #      Nautobot source code into the Docker environment for live reloads and such while developing Nautobot.
 #    - installs Python package dependencies (including dev dependencies) to a virtualenv in /opt/nautobot/
 #    - installs Nautobot itself (and example apps) from /source/ in editable mode (to be overwritten by a volume mount)
-#    - runs Nautobot dev server as "root" user using the "development/nautobot_config.py" file.
+#    - runs Nautobot dev server as non-root user using the "development/nautobot_config.py" file.
 # 2. "final-dev"
 #    - base image for Nautobot apps development
 #    - installs Python package dependencies (including dev dependencies) to a virtualenv in /opt/nautobot/
 #    - installs Nautobot itself as a built wheel
-#    - runs Nautobot dev server as "nautobot" user using a freshly generated "nautobot_config.py" file.
+#    - runs Nautobot dev server as non-root user using a freshly generated "nautobot_config.py" file.
 # 3. "final"
 #    - production-ready Nautobot environment
 #    - installs Python package dependencies to a virtualenv in /opt/nautobot/
 #    - installs Nautobot itself as a built wheel
-#    - runs Nautobot uwsgi server as "nautobot" user using the same "nautobot_config.py" file as in final-dev.
+#    - runs Nautobot uwsgi server as non-root user using the same "nautobot_config.py" file as in final-dev.
 #
 # To create the above targets, we use the following intermediate stages to allow for parallelization and caching:
 #
@@ -63,13 +63,17 @@ RUN --mount=type=cache,target="/root/.cache/pip",sharing=locked \
 HEALTHCHECK --interval=10s --timeout=10s --start-period=5m --retries=3 CMD nautobot-server health_check
 
 # Generate nautobot user and its required dirs for later consumption
-RUN mkdir /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
+# OpenShift compatibility: Create directories with proper permissions for arbitrary UIDs
+RUN mkdir -p /opt/nautobot /opt/nautobot/.cache /prom_cache /source && \
     groupadd --gid 999 --system nautobot && \
     useradd --uid 999 --gid 999 --system --shell /bin/bash --create-home --home-dir /opt/nautobot nautobot && \
-    chown -R nautobot:nautobot /opt/nautobot /prom_cache /source
+    chmod -R g+rwX /opt/nautobot /prom_cache /source && \
+    chgrp -R 0 /opt/nautobot /prom_cache /source
 
 # Common entrypoint for all environments
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
+# Make entrypoint executable by group (OpenShift compatibility)
+RUN chmod g+x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 ################################ Stage: system-dev-dependencies (intermediate build target)
@@ -200,6 +204,9 @@ ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
 COPY --chown=nautobot:nautobot development/nautobot_config.py /opt/nautobot/nautobot_config.py
 
+# OpenShift compatibility: Use non-root user and ensure proper permissions
+USER nautobot
+
 # Run Nautobot development server by default
 EXPOSE 8080
 CMD ["nautobot-server", "runserver", "0.0.0.0:8080", "--insecure"]
@@ -218,18 +225,24 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip uninstall -y example-app example-app-with-view-override && \
     rm -rf /source/*
 
-USER nautobot
-
 WORKDIR /opt/nautobot
 
 # Don't send install metrics as this is a development target, not a deployment one
 ENV NAUTOBOT_INSTALLATION_METRICS_ENABLED=false
 
-RUN nautobot-server init
+# Create nautobot_config.py with proper OpenShift-compatible permissions before switching users
+# This ensures the config file can be written to and later mounted over by Helm
+RUN touch /opt/nautobot/nautobot_config.py && \
+    chown nautobot:nautobot /opt/nautobot/nautobot_config.py && \
+    chmod 664 /opt/nautobot/nautobot_config.py && \
+    chgrp 0 /opt/nautobot/nautobot_config.py && \
+    chmod g+w /opt/nautobot/nautobot_config.py
 
-# switch to root user for final-dev stage: https://github.com/nautobot/nautobot/issues/4300
-# hadolint ignore=DL3002
-USER root
+# Switch to non-root user for OpenShift security compliance
+USER nautobot
+
+# Initialize Nautobot configuration (now that file has proper permissions)
+RUN nautobot-server init
 
 # Run Nautobot development server by default
 EXPOSE 8080
@@ -245,7 +258,12 @@ COPY --from=python-dependencies /usr/local/bin /usr/local/bin
 
 COPY --from=build-nautobot --chown=nautobot:nautobot /source/dist /source/dist
 
-COPY --from=final-dev --chown=nautobot:nautobot /opt/nautobot/nautobot_config.py /opt/nautobot/nautobot_config.py
+# Create nautobot_config.py with proper permissions for OpenShift compatibility
+RUN touch /opt/nautobot/nautobot_config.py && \
+    chown nautobot:nautobot /opt/nautobot/nautobot_config.py && \
+    chmod 664 /opt/nautobot/nautobot_config.py && \
+    chgrp 0 /opt/nautobot/nautobot_config.py && \
+    chmod g+w /opt/nautobot/nautobot_config.py
 
 # DL3042 - run pip install with --no-cache-dir (https://github.com/hadolint/hadolint/issues/497)
 # hadolint ignore=DL3042
@@ -253,12 +271,17 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
     pip install --no-deps /source/dist/*.whl && \
     rm -rf /source/*
 
-USER nautobot
-
-# Generate self-signed SSL certs
+# Create SSL certificates with proper OpenShift permissions
+# OpenShift runs with random UIDs in group 0, so we need group read access
 RUN openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \
     '/C=US/ST=NY/L=NYC/O=Nautobot/CN=nautobot.local' \
-    -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt
+    -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt && \
+    chgrp 0 /opt/nautobot/nautobot.key /opt/nautobot/nautobot.crt && \
+    chmod 640 /opt/nautobot/nautobot.key && \
+    chmod 644 /opt/nautobot/nautobot.crt
+
+# OpenShift compatibility: Switch to non-root user
+USER nautobot
 
 # Set up Nautobot to run in production
 WORKDIR /opt/nautobot
