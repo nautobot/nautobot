@@ -2665,9 +2665,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     job_queue = None
                     if task_queue is not None:
                         try:
-                            job_queue = JobQueue.objects.get(
-                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
-                            )
+                            job_queue = JobQueue.objects.get(name=task_queue)
                         except JobQueue.DoesNotExist:
                             pass
                     initial["_job_queue"] = job_queue
