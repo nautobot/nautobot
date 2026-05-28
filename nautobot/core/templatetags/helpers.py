@@ -224,6 +224,7 @@ def render_markdown(value):
 
     # Sanitize rendered HTML
     html = nautobot_logging.clean_html(html)
+    html = f"""<div class="nb-markdown">{html}</div>"""
 
     return mark_safe(html)  # noqa: S308  # suspicious-mark-safe-usage, OK here since we sanitized the string earlier
 
