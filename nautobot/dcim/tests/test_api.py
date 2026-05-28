@@ -3688,7 +3688,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertIsNotNone(existing_a1_row.interface_id)
 
     def test_patch_cable_terminations_rejects_malformed_payload(self):
-        """Validation errors in the `terminations` payload come back as 400, not 500."""
+        """Each shape-validation branch in `_parse_terminations_payload` returns 400, not 500."""
         self.add_permissions(
             "dcim.change_cable",
             "dcim.add_cabletocabletermination",
@@ -3698,39 +3698,127 @@ class CableTest(Mixins.BaseComponentTestMixin):
         )
         cable = Cable.objects.get(label="Cable 1")
         url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
-        # Invalid side key.
+        bogus_uuid = "00000000-0000-0000-0000-000000000000"
+        cases = [
+            (
+                "top-level-not-a-dict",
+                # Old (pre-rewrite) list shape — should be rejected with a clear shape message.
+                [{"cable_end": "A", "connector": 1}],
+            ),
+            (
+                "invalid-side-key",
+                {"z": {"1": None}},
+            ),
+            (
+                "side-value-not-a-dict",
+                {"a": "not a dict"},
+            ),
+            (
+                "non-integer-connector-key",
+                {"a": {"first": None}},
+            ),
+            (
+                "slot-value-not-null-or-dict",
+                {"a": {"1": "not a dict either"}},
+            ),
+            (
+                "missing-object-type",
+                {"a": {"1": {"id": bogus_uuid}}},
+            ),
+            (
+                "missing-id",
+                {"a": {"1": {"object_type": "dcim.interface"}}},
+            ),
+            (
+                "malformed-object-type-no-dot",
+                {"a": {"1": {"object_type": "interface", "id": bogus_uuid}}},
+            ),
+            (
+                "non-termination-model",
+                {"a": {"1": {"object_type": "dcim.device", "id": bogus_uuid}}},
+            ),
+        ]
+        for case_name, terminations_payload in cases:
+            with self.subTest(case=case_name):
+                response = self.client.patch(
+                    url,
+                    {"terminations": terminations_payload},
+                    format="json",
+                    **self.header,
+                )
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("terminations", response.json())
+
+    def test_patch_cable_terminations_swap_termination_type(self):
+        """Changing an existing connector's termination *type* (e.g. Interface -> RearPort) clears the old per-type FK and sets the new one on the same row."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+            "dcim.view_rearport",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        existing_a_row = cable.terminations.get(cable_end="A", connector=1)
+        original_interface_id = existing_a_row.interface_id
+        self.assertIsNotNone(original_interface_id)
+        # Create a free RearPort on the same device — different termination type, free to use.
+        device = Interface.objects.get(pk=original_interface_id).device
+        rear_port = RearPort.objects.create(
+            device=device,
+            name="Type-swap RP",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=1,
+        )
+
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
         response = self.client.patch(
             url,
-            {"terminations": {"z": {"1": None}}},
+            {
+                "terminations": {
+                    "a": {"1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)}},
+                },
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # The same row was updated, not replaced — verify by primary key.
+        existing_a_row.refresh_from_db()
+        self.assertIsNone(existing_a_row.interface_id, "Stale interface FK should have been cleared on type swap")
+        self.assertEqual(existing_a_row.rear_port_id, rear_port.pk)
+        # Cable still has exactly one A-side row at connector 1 (no orphan / duplicate created).
+        self.assertEqual(cable.terminations.filter(cable_end="A", connector=1).count(), 1)
+
+    def test_patch_cable_terminations_delegated_validation_returns_400(self):
+        """Per-slot errors from `CableToCableTerminationSerializer` (e.g. nonexistent FK target) bubble as 400 with side/connector keying."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {
+                "terminations": {
+                    "a": {"1": {"object_type": "dcim.interface", "id": "00000000-0000-0000-0000-000000000000"}},
+                },
+            },
             format="json",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("terminations", response.json())
-        # Non-integer connector key.
-        response = self.client.patch(
-            url,
-            {"terminations": {"a": {"first": None}}},
-            format="json",
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        # Missing object_type / id on a non-null slot.
-        response = self.client.patch(
-            url,
-            {"terminations": {"a": {"1": {"object_type": "dcim.interface"}}}},
-            format="json",
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        # Unknown termination model.
-        response = self.client.patch(
-            url,
-            {"terminations": {"a": {"1": {"object_type": "dcim.device", "id": str(cable.pk)}}}},
-            format="json",
-            **self.header,
-        )
-        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        body = response.json()
+        # Error path is keyed by side then connector — clients can map the error directly back to
+        # the slot they sent.
+        self.assertIn("terminations", body)
+        self.assertIn("a", body["terminations"])
+        self.assertIn("1", body["terminations"]["a"])
 
     def test_typed_m2m_fields_absent_from_response(self):
         """The auto-generated typed M2M fields (`interfaces`, `front_ports`, etc.) must not appear in the GET response."""
