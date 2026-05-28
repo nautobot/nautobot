@@ -70,39 +70,54 @@ class GroupSerializer(ValidatedModelSerializer):
 
 
 class TokenSerializer(ValidatedModelSerializer, NotesSerializerMixin):
-    key = serializers.CharField(min_length=40, max_length=40, allow_blank=True, required=False)
+    key = serializers.CharField(min_length=40, max_length=40, allow_blank=True, required=False, write_only=True)
 
     class Meta:
         model = Token
-        exclude = ["user"]
+        fields = "__all__"
+        extra_kwargs = {
+            "user": {"required": False},
+        }
+
+    def validate_user(self, value):
+        """Non-staff users cannot create tokens for other users; ownership is immutable after creation."""
+        if self.instance is not None and value != self.instance.user:
+            raise serializers.ValidationError("Token ownership cannot be changed after creation.")
+        request_user = self.context["request"].user
+        if not request_user.is_staff and value != request_user:
+            raise serializers.ValidationError("Non-staff users cannot create tokens for other users.")
+        return value
+
+    def validate_key(self, value):
+        """The key is immutable after creation."""
+        if self.instance is not None and value and value != self.instance.key:
+            raise serializers.ValidationError("Token key cannot be changed after creation.")
+        return value
 
     def to_internal_value(self, data):
-        # Capture raw user input before super() strips it (Meta.exclude removes "user").
-        raw_user_input = data.get("user") if isinstance(data, dict) else None
-
         validated = super().to_internal_value(data)
 
-        if "key" not in validated and not self.instance:
-            validated["key"] = Token.generate_key()
-
-        request_user = self.context["request"].user
-
-        # Mirror TokenUIViewSet.form_save: staff/superusers may explicitly assign ownership;
-        # non-staff users are always restricted to themselves regardless of input.
-        if request_user.is_staff or request_user.is_superuser:
-            if raw_user_input:
-                User = get_user_model()
-                try:
-                    validated["user"] = User.objects.get(pk=raw_user_input)
-                except (User.DoesNotExist, ValueError, TypeError) as exc:
-                    raise ValidationError({"user": f"User {raw_user_input!r} does not exist."}) from exc
-            elif not self.instance:
-                validated["user"] = request_user
-            # else: editing without an explicit user= → preserve existing instance.user
-        else:
-            validated["user"] = request_user
+        # Default user/key on creation when not provided. On edit, leave both fields untouched
+        # if they weren't supplied so existing values are preserved.
+        if not self.instance:
+            if "user" not in validated:
+                validated["user"] = self.context["request"].user
+            if "key" not in validated:
+                validated["key"] = Token.generate_key()
 
         return validated
+
+    def to_representation(self, instance):
+        """Reveal the raw key only on creation; strip it from retrieve/list/update responses.
+
+        The `key` field is declared write_only so `super()` always omits it. We add it back to the
+        response on creation actions so callers can capture the generated value once.
+        """
+        data = super().to_representation(instance)
+        view = self.context.get("view")
+        if view and getattr(view, "action", None) in {"create", "bulk_create"} and instance.key:
+            data["key"] = instance.key
+        return data
 
 
 class ObjectPermissionSerializer(ValidatedModelSerializer):

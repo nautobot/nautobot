@@ -9,7 +9,13 @@ from timezone_field import TimeZoneFormField
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, BulkEditNullBooleanSelect, DateTimePicker, NullableDateField
+from nautobot.core.forms import (
+    BootstrapMixin,
+    BulkEditNullBooleanSelect,
+    DateTimePicker,
+    DynamicModelChoiceField,
+    NullableDateField,
+)
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.forms import BulkEditForm
 from nautobot.core.forms.widgets import StaticSelect2
@@ -37,14 +43,16 @@ class TokenForm(BootstrapMixin, forms.ModelForm):
         required=False,
         help_text="If no key is provided, one will be generated automatically.",
     )
-    user = forms.ModelChoiceField(queryset=get_user_model().objects.all(), required=False)
+    user = DynamicModelChoiceField(queryset=get_user_model().objects.all(), required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Never expose existing token keys in edit forms.
-        if self.instance and self.instance.present_in_database and "key" in self.fields:
-            self.fields.pop("key")
+        # On edit, never expose existing token keys and never allow user reassignment.
+        if self.instance and self.instance.present_in_database:
+            for field_name in ("key", "user"):
+                if field_name in self.fields:
+                    self.fields.pop(field_name)
 
     class Meta:
         model = Token

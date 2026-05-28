@@ -277,7 +277,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
     def test_edit_other_user_token_restriction(self):
         """
         Non-staff users cannot view or modify another user's tokens (404 even with permissions),
-        while superusers can administer any user's tokens (matching the UI viewset).
+        while staff users can administer any user's tokens (matching the UI viewset).
         """
         other_user_token = Token.objects.create(user=self.basic_auth_user_granted)
 
@@ -304,25 +304,53 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(len(Token.objects.filter(user=self.user)), previous_token_count)
 
-        self.user.is_superuser = True
+        self.user.is_staff = True
         self.user.save()
-        # Superusers can modify any user's token (matching the UI viewset's administration model).
+        # Staff users can modify any user's token (matching the UI viewset's administration model).
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"description": "Meep."}, format="json", **self.header
         )
         self.assertEqual(response.status_code, 200)
         other_user_token.refresh_from_db()
         self.assertEqual(other_user_token.description, "Meep.")
-        # Without an explicit user= in the payload, the existing owner is preserved.
         self.assertEqual(other_user_token.user, self.basic_auth_user_granted)
 
-        # Superusers can also explicitly reassign a token to another user.
-        previous_token_count = Token.objects.filter(user=self.user).count()
+        # Token ownership is immutable after creation, even for staff users.
         response = self.client.patch(
             self._get_detail_url(other_user_token), data={"user": self.user.id}, format="json", **self.header
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Token.objects.filter(user=self.user).count(), previous_token_count + 1)
+        self.assertEqual(response.status_code, 400)
+        other_user_token.refresh_from_db()
+        self.assertEqual(other_user_token.user, self.basic_auth_user_granted)
+
+    def test_cannot_change_key_on_existing_token(self):
+        """The token key is immutable after creation; PATCH with a different key must be rejected."""
+        self.user.is_staff = True
+        self.user.save()
+        self.add_permissions("users.change_token", "users.view_token")
+        token = Token.objects.create(user=self.user)
+        original_key = token.key
+
+        response = self.client.patch(self._get_detail_url(token), data={"key": "0" * 40}, format="json", **self.header)
+        self.assertEqual(response.status_code, 400)
+        token.refresh_from_db()
+        self.assertEqual(token.key, original_key)
+
+    def test_get_response_does_not_expose_key(self):
+        """Existing token key values must never appear in GET (retrieve or list) responses."""
+        self.user.is_staff = True
+        self.user.save()
+        self.add_permissions("users.view_token")
+        other_token = Token.objects.create(user=self.basic_auth_user_granted)
+
+        retrieve_response = self.client.get(self._get_detail_url(other_token), **self.header)
+        self.assertEqual(retrieve_response.status_code, 200)
+        self.assertNotIn("key", retrieve_response.data)
+
+        list_response = self.client.get(self._get_list_url(), **self.header)
+        self.assertEqual(list_response.status_code, 200)
+        for entry in list_response.data["results"]:
+            self.assertNotIn("key", entry)
 
     def test_list_tokens_restrictions(self):
         """

@@ -239,7 +239,7 @@ class TokenQuerySet(RestrictedQuerySet):
     """Apply Token-specific access restrictions on top of the standard permission filtering.
 
     Tokens are user-scoped credentials, so anonymous users never see any tokens and non-staff
-    users only see their own. Staff/superusers can manage all tokens (e.g. to revoke a leaked
+    users only see their own. Staff users can manage all tokens (e.g. to revoke a leaked
     user's key). Centralizing this here means the same rule applies to UI views, REST/GraphQL,
     and ORM call sites such as changelog access checks.
     """
@@ -248,7 +248,7 @@ class TokenQuerySet(RestrictedQuerySet):
         if not user.is_authenticated:
             return self.none()
         qs = super().restrict(user, action)
-        if not (user.is_staff or user.is_superuser):
+        if not user.is_staff:
             qs = qs.filter(user=user)
         return qs
 

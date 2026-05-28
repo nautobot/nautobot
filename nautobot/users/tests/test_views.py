@@ -260,6 +260,25 @@ class TokenUIViewSetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertNotIn("If no key is provided", response.content.decode(response.charset))
 
+    def test_non_staff_add_form_hides_user_field(self):
+        """Non-staff users cannot meaningfully pick a user, so the field is hidden on the add form."""
+        self.add_permissions("users.add_token", "users.view_token")
+        response = self.client.get(reverse("user:token_add"))
+        self.assertHttpStatus(response, 200)
+        form = response.context["form"]
+        self.assertNotIn("user", form.fields)
+
+    def test_staff_add_form_shows_user_field(self):
+        """Staff users can assign ownership at creation time, so the field is visible."""
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+        self.add_permissions("users.add_token", "users.view_token")
+        response = self.client.get(reverse("user:token_add"))
+        self.assertHttpStatus(response, 200)
+        form = response.context["form"]
+        self.assertIn("user", form.fields)
+
     def test_non_staff_list_only_shows_own_tokens(self):
         self.add_permissions("users.view_token")
         own_token = Token.objects.create(user=self.user, description="own-token-visible")

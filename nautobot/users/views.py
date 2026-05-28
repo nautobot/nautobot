@@ -23,10 +23,10 @@ from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.views.generic import GenericView
+from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.users.utils import serialize_user_without_config_and_views
 
-from ..core.views.mixins import GetReturnURLMixin
 from . import filters, tables
 from .api import serializers
 from .forms import (
@@ -344,19 +344,33 @@ class TokenUIViewSet(NautobotUIViewSet):
     )
 
     def form_save(self, form, **kwargs):
-        """Enforce ownership rules on the form instance, then delegate to the base save."""
+        """Enforce ownership rules on the form instance, then delegate to the base save.
+
+        Ownership is only set at creation time; existing tokens cannot be reassigned to another user.
+        """
         obj = form.instance
 
-        # Staff/superusers can assign ownership; others are always restricted to themselves.
-        if self.request.user.is_staff or self.request.user.is_superuser:
-            if form.cleaned_data.get("user"):
+        if not obj.present_in_database:
+            # Staff users can assign ownership on create; others are always restricted to themselves.
+            if self.request.user.is_staff and form.cleaned_data.get("user"):
                 obj.user = form.cleaned_data["user"]
-            elif not obj.user_id:
+            else:
                 obj.user = self.request.user
-        else:
-            obj.user = self.request.user
 
         return super().form_save(form, **kwargs)
+
+    def get_form_class(self, **kwargs):
+        """Hide the `user` field from non-staff users since they cannot meaningfully pick a value."""
+        form_class = super().get_form_class(**kwargs)
+        if form_class is not None and self.action in ("create", "update") and not self.request.user.is_staff:
+
+            class _NonStaffTokenForm(form_class):
+                def __init__(self, *args, **inner_kwargs):
+                    super().__init__(*args, **inner_kwargs)
+                    self.fields.pop("user", None)
+
+            return _NonStaffTokenForm
+        return form_class
 
 
 #
