@@ -7,19 +7,39 @@ import shutil
 import tempfile
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.models import BaseManager
 from nautobot.core.models.fields import AutoSlugField, LaxURLField, slugify_dashes_to_underscores
 from nautobot.core.models.generics import PrimaryModel
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import EnhancedURLValidator
-from nautobot.core.utils.git import GitRepo
+from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.git import GitRepo, validate_commit_hexsha, validate_git_ref
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately
 from nautobot.extras.utils import extras_features
 
 logger = logging.getLogger(__name__)
+
+
+class GitRepositoryManager(BaseManager.from_queryset(RestrictedQuerySet)):
+    def get_for_provided_contents(self, provided_contents_type):
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_provided_contents",
+            branch_aware=True,
+            provided_contents_type=provided_contents_type,
+        )
+        queryset = cache.get(cache_key)
+        if queryset is None:
+            queryset = self.get_queryset().filter(provided_contents__contains=provided_contents_type)
+            # cache invalidated explicitly by nautobot.extras.signals.invalidate_gitrepository_provided_contents_cache
+            cache.set(cache_key, queryset, timeout=None)
+        return queryset
 
 
 @extras_features(
@@ -75,6 +95,8 @@ class GitRepository(PrimaryModel):
     # the data types registered in registry['datasource_contents'].
     provided_contents = models.JSONField(encoder=DjangoJSONEncoder, default=list, blank=True)
 
+    objects = GitRepositoryManager()
+
     clone_fields = ["remote_url", "secrets_group", "provided_contents"]
 
     class Meta:
@@ -94,14 +116,22 @@ class GitRepository(PrimaryModel):
     def clean(self):
         super().clean()
 
+        try:
+            validate_git_ref(self.branch, field_name="branch")
+        except ValueError as exc:
+            raise ValidationError({"branch": str(exc)}) from exc
+        try:
+            validate_commit_hexsha(self.current_head, field_name="current_head")
+        except ValueError as exc:
+            raise ValidationError({"current_head": str(exc)}) from exc
+
         # Autogenerate slug now, rather than in pre_save(), if not set already, as we need to check it below.
         if self.slug == "":
             self._meta.get_field("slug").create_slug(self, add=(not self.present_in_database))
 
         if self.present_in_database and self.slug != self.__initial_slug:
             raise ValidationError(
-                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, "
-                f"requested slug is {self.slug}"
+                f"Slug cannot be changed once set. Current slug is {self.__initial_slug}, requested slug is {self.slug}"
             )
 
         if not self.present_in_database:
@@ -225,6 +255,11 @@ class GitRepository(PrimaryModel):
 
         if branch and head:
             raise ValueError("Cannot specify both branch and head")
+        # Validate up-front so a malformed value doesn't leak a temp dir created below.
+        if branch is not None:
+            validate_git_ref(branch, field_name="branch")
+        if head:
+            validate_git_ref(head, field_name="head")
 
         try:
             path_name = tempfile.mkdtemp(dir=path, prefix=self.slug)

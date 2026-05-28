@@ -14,19 +14,24 @@ from rest_framework.mixins import ListModelMixin
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.serializers import StatsSerializer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import bettertitle, validated_api_viewname, validated_viewname
 from nautobot.dcim import filters
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -36,6 +41,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -54,6 +60,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -164,6 +171,45 @@ class LocationViewSet(NautobotModelViewSet):
     )
     serializer_class = serializers.LocationSerializer
     filterset_class = filters.LocationFilterSet
+
+    @extend_schema(
+        filters=False,
+        responses={200: StatsSerializer(many=True)},
+    )
+    @action(detail=True, url_path="stats")
+    def stats(self, request, pk):
+        """Retrieve statistics for counts of related models associated to this Location and its descendants."""
+        obj = get_object_or_404(self.queryset, pk=pk)
+        descendants_pks = obj.cacheable_descendants_pks(include_self=True, restrict_to_user=request.user)
+        distinct = len(descendants_pks) > 1
+
+        result = []
+        for related_model, query in [
+            (Rack, "location__in"),
+            (Device, "location__in"),
+            (Prefix, "location__in"),
+            (VLAN, "location__in"),
+            (Circuit, "circuit_terminations__location__in"),
+            (VirtualMachine, "cluster__location__in"),
+        ]:
+            qs = related_model.objects.restrict(request.user, "view").filter(**{query: descendants_pks})
+            if distinct or related_model == Circuit:
+                qs = qs.distinct()
+            count = qs.count()
+            result.append(
+                {
+                    "title": bettertitle(related_model._meta.verbose_name_plural),
+                    "count": count,
+                    "ui_url": (
+                        reverse(validated_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                    "api_url": (
+                        reverse(validated_api_viewname(related_model, "list"), request=request) + f"?location={obj.pk}"
+                    ),
+                }
+            )
+
+        return Response(result)
 
 
 #
@@ -543,31 +589,31 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsolePort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = ConsoleServerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerPort.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.prefetch_related("_path__destination", "_cable_peer")
+    queryset = PowerOutlet.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("_path__destination", "_cable_peer").annotate(
+    queryset = Interface.objects.prefetch_related("cable_paths__destination").annotate(
         _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
     )
     serializer_class = serializers.InterfaceSerializer
@@ -613,23 +659,44 @@ class ModuleBayViewSet(NautobotModelViewSet):
 
 
 class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = ConsolePort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        ConsolePort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = PowerPort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
+    queryset = (
+        PowerPort.objects.select_related("device")
+        .prefetch_related("cable_paths__destination")
+        .filter(cable_paths__destination_id__isnull=False)
+        .distinct()
+    )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
 
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
-    queryset = Interface.objects.select_related("device", "_path").filter(
-        # Avoid duplicate connections by only selecting the lower PK in a connected pair
-        _path__destination_id__isnull=False,
-        pk__lt=F("_path__destination_id"),
-    )
+    """
+    Lists interface-to-interface connections.
+
+    Backed by a `CablePath` queryset so each connection (including each breakout lane) is one row.
+    The serializer adapts each `CablePath` to the Interface-shaped JSON contract this endpoint has
+    historically exposed (`interface_a`, `interface_b`, `connected_endpoint_reachable`).
+    """
+
+    queryset = CablePath.objects.filter(
+        origin_type__app_label="dcim",
+        origin_type__model="interface",
+        destination_type__app_label="dcim",
+        destination_type__model="interface",
+        # Canonicalize each iface↔iface pair; see InterfaceConnectionsListView for the rationale.
+        origin_id__lt=F("destination_id"),
+    ).prefetch_related("origin", "destination")
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
 
@@ -639,18 +706,32 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
 #
 
 
+class CableTypeViewSet(NautobotModelViewSet):
+    queryset = CableType.objects.all()
+    serializer_class = serializers.CableTypeSerializer
+    filterset_class = filters.CableTypeFilterSet
+
+
 class CableViewSet(NautobotModelViewSet):
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
+    queryset = Cable.objects.prefetch_related("terminations")
     serializer_class = serializers.CableSerializer
     filterset_class = filters.CableFilterSet
 
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
-        # DeviceInterface is not properly cleared of _path_id
+        # DeviceInterface is not properly cleared of its cable_paths
         queryset = super().get_queryset()
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+
+class CableToCableTerminationViewSet(NautobotModelViewSet):
+    """API endpoint for the cable→termination join model."""
+
+    queryset = CableToCableTermination.objects.select_related("cable")
+    serializer_class = serializers.CableToCableTerminationSerializer
+    filterset_class = filters.CableToCableTerminationFilterSet
 
 
 #
@@ -681,7 +762,7 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.prefetch_related("_cable_peer", "_path__destination")
+    queryset = PowerFeed.objects.prefetch_related("cable_paths__destination")
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 
@@ -844,3 +925,20 @@ class InterfaceVDCAssignmentViewSet(ModelViewSet):
     queryset = InterfaceVDCAssignment.objects.all()
     serializer_class = serializers.InterfaceVDCAssignmentSerializer
     filterset_class = filters.InterfaceVDCAssignmentFilterSet
+
+
+class ModuleFamilyViewSet(NautobotModelViewSet):
+    """API viewset for interacting with ModuleFamily objects."""
+
+    queryset = ModuleFamily.objects.annotate(
+        module_type_count=count_related(ModuleType, "module_family"),
+        module_bay_count=count_related(ModuleBay, "module_family"),
+    )
+    serializer_class = serializers.ModuleFamilySerializer
+    filterset_class = filters.ModuleFamilyFilterSet
+
+
+class DeviceClusterAssignmentViewSet(ModelViewSet):
+    queryset = DeviceClusterAssignment.objects.all()
+    serializer_class = serializers.DeviceClusterAssignmentSerializer
+    filterset_class = filters.DeviceClusterAssignmentFilterSet

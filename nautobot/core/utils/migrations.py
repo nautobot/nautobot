@@ -21,7 +21,7 @@ def check_for_duplicates_with_natural_key_fields_in_migration(model_class, natur
     if duplicate_records.exists():
         if len(natural_key_fields) > 1:
             print(
-                f"    Duplicate {model_class.__name__} attributes '{*natural_key_fields,}' detected: {list(duplicate_records.values_list(*natural_key_fields))}",
+                f"    Duplicate {model_class.__name__} attributes '{(*natural_key_fields,)}' detected: {list(duplicate_records.values_list(*natural_key_fields))}",
                 file=sys.stderr,
             )
         else:
@@ -71,10 +71,12 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
 
     This will replace the old content type with the new content type on the following models:
         - ComputedField.content_type
+        - ContactAssociation.associated_object_type
         - CustomLink.content_type
         - ExportTemplate.content_type
         - Note.assigned_object_type
         - ObjectChange.changed_object_type
+        - ObjectMetadata.assigned_object_type
         - Relationship.source_type
         - Relationship.destination_type
         - RelationshipAssociation.source_type
@@ -86,7 +88,9 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
         - CustomField.content_types
         - JobButton.content_types
         - JobHook.content_types
+        - MetadataType.content_types
         - ObjectPermission.object_types
+        - Role.content_types
         - Status.content_types
         - Tag.content_types
         - WebHook.content_types
@@ -101,16 +105,20 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
 
     """
     ComputedField = apps.get_model("extras", "ComputedField")
+    ContactAssociation = apps.get_model("extras", "ContactAssociation")
     CustomField = apps.get_model("extras", "CustomField")
     CustomLink = apps.get_model("extras", "CustomLink")
     ExportTemplate = apps.get_model("extras", "ExportTemplate")
     JobButton = apps.get_model("extras", "JobButton")
     JobHook = apps.get_model("extras", "JobHook")
+    MetadataType = apps.get_model("extras", "MetadataType")
     Note = apps.get_model("extras", "Note")
     ObjectChange = apps.get_model("extras", "ObjectChange")
+    ObjectMetadata = apps.get_model("extras", "ObjectMetadata")
     ObjectPermission = apps.get_model("users", "ObjectPermission")
     Relationship = apps.get_model("extras", "Relationship")
     RelationshipAssociation = apps.get_model("extras", "RelationshipAssociation")
+    Role = apps.get_model("extras", "Role")
     Status = apps.get_model("extras", "Status")
     Tag = apps.get_model("extras", "Tag")
     TaggedItem = apps.get_model("extras", "TaggedItem")
@@ -118,6 +126,9 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
 
     # Migrate ComputedField content type
     ComputedField.objects.filter(content_type=old_ct).update(content_type=new_ct)
+
+    # Migrate ContactAssociation content type
+    ContactAssociation.objects.filter(associated_object_type=old_ct).update(associated_object_type=new_ct)
 
     # Migrate CustomField content type
     for cf in CustomField.objects.filter(content_types=old_ct):
@@ -137,11 +148,18 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
     for job_hook in JobHook.objects.filter(content_types=old_ct):
         job_hook.content_types.add(new_ct)
 
+    # Migrate MetadataType content type
+    for metadata_type in MetadataType.objects.filter(content_types=old_ct):
+        metadata_type.content_types.add(new_ct)
+
     # Migrate Note content type
     Note.objects.filter(assigned_object_type=old_ct).update(assigned_object_type=new_ct)
 
     # Migrate ObjectChange content type
     ObjectChange.objects.filter(changed_object_type=old_ct).update(changed_object_type=new_ct)
+
+    # Migrate ObjectMetadata content type
+    ObjectMetadata.objects.filter(assigned_object_type=old_ct).update(assigned_object_type=new_ct)
 
     # Migrate ObjectPermission content type
     for object_permission in ObjectPermission.objects.filter(object_types=old_ct):
@@ -154,6 +172,10 @@ def migrate_content_type_references_to_new_model(apps, old_ct, new_ct):
     # Migration RelationshipAssociation content type
     RelationshipAssociation.objects.filter(source_type=old_ct).update(source_type=new_ct)
     RelationshipAssociation.objects.filter(destination_type=old_ct).update(destination_type=new_ct)
+
+    # Migrate Role content type
+    for role in Role.objects.filter(content_types=old_ct):
+        role.content_types.add(new_ct)
 
     # Migrate Status content type
     for status in Status.objects.filter(content_types=old_ct):

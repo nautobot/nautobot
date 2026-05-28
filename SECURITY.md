@@ -1,5 +1,9 @@
 # Nautobot Security Policy
 
+## Dependency and Maintenance Management
+
+For information about how we manage dependencies, including in our Docker images as well as backporting fixes to our LTM releases, please see our [Security and Maintenance Policy](./nautobot/docs/user-guide/administration/security/index.md).
+
 ## Security Announcements
 
 Join the `#nautobot` channel in the Network to Code Slack for messages about security and release announcements.

@@ -1,4 +1,5 @@
 from nautobot.core.apps import NautobotConfig
+from nautobot.extras.plugins import register_custom_validators
 
 
 class DCIMConfig(NautobotConfig):
@@ -7,6 +8,7 @@ class DCIMConfig(NautobotConfig):
     verbose_name = "DCIM"
     searchable_models = [
         "cable",
+        "cabletype",
         "controller",
         "device",
         "devicefamily",
@@ -14,6 +16,7 @@ class DCIMConfig(NautobotConfig):
         "devicetype",
         "location",
         "module",
+        "modulefamily",
         "moduletype",
         "powerfeed",
         "rack",
@@ -25,4 +28,7 @@ class DCIMConfig(NautobotConfig):
 
     def ready(self):
         super().ready()
+        from nautobot.dcim.custom_validators import custom_validators
+
+        register_custom_validators(custom_validators)
         import nautobot.dcim.signals  # noqa: F401  # unused-import -- but this import installs the signals

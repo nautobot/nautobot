@@ -11,20 +11,20 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.test import override_settings, TestCase
+from django.test import override_settings
 from django.test.client import RequestFactory
 from django.urls import reverse
 import graphene.types
 from graphene_django.registry import get_global_registry
 from graphene_django.settings import graphene_settings
-from graphql import get_default_backend, GraphQLError
-from graphql.error.located_error import GraphQLLocatedError
+from graphql import execute, get_introspection_query, graphql_sync, GraphQLError, parse
 import redis.exceptions
 from rest_framework import status
 
 from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
+    _make_filter_cache_key,
     generate_list_search_parameters,
     generate_schema_type,
 )
@@ -38,7 +38,8 @@ from nautobot.core.graphql.schema import (
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
 from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import create_test_user, NautobotTestClient
+from nautobot.core.testing import AssertNoRepeatedQueries, create_test_user, NautobotTestClient, TestCase
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
 from nautobot.dcim.graphql.types import DeviceType as DeviceTypeGraphQL
@@ -65,6 +66,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.graphql.types import StatusType
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContext,
@@ -99,7 +101,9 @@ User = get_user_model()
 
 class GraphQLTestCaseBase(TestCase):
     def setUp(self):
-        self.SCHEMA = graphene_settings.SCHEMA  # not a no-op; this causes the schema to be built when first called
+        self.SCHEMA = (
+            graphene_settings.SCHEMA.graphql_schema
+        )  # not a no-op; this causes the schema to be built when first called
 
 
 class GraphQLTestCase(GraphQLTestCaseBase):
@@ -109,7 +113,7 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         GraphQLQuery.objects.create(name="GQL 1", query="{ query: locations {name} }")
         GraphQLQuery.objects.create(name="GQL 2", query="query ($name: [String!]) { locations(name:$name) {name} }")
         self.location_type = LocationType.objects.get(name="Campus")
-        location_status = Status.objects.get_for_model(Location).first()
+        location_status = Status.objects.get_for_model(Location)[0]
         self.locations = (
             Location.objects.create(name="Location-1", location_type=self.location_type, status=location_status),
             Location.objects.create(name="Location-2", location_type=self.location_type, status=location_status),
@@ -119,9 +123,26 @@ class GraphQLTestCase(GraphQLTestCaseBase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query(self):
         query = "{ query: locations {name} }"
-        resp = execute_query(query, user=self.user).to_dict()
-        self.assertFalse(resp["data"].get("error"))
-        self.assertEqual(len(resp["data"]["query"]), Location.objects.all().count())
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(len(resp.data["query"]), Location.objects.all().count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_types_list(self):
+        """Test that querying for a list of content_types works even though ContentType has no restrict() method."""
+        query = "{ content_types { model } }"
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(len(resp.data["content_types"]), ContentType.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_type_single(self):
+        """Test that querying for a single content_type works even though ContentType has no restrict() method."""
+        ct = ContentType.objects.first()
+        query = f'{{ content_type(id: "{ct.pk}") {{ model }} }}'
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(resp.data["content_type"]["model"], ct.model)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -136,8 +157,8 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.locations[0]._custom_field_data = custom_field_data
         self.locations[0].save()
         query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
-        self.assertEqual(resp["data"]["locations"]["cf_custom_date_field"], custom_field_data)
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"})
+        self.assertEqual(resp.data["locations"]["cf_custom_date_field"], custom_field_data)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -152,28 +173,28 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.locations[0]._custom_field_data = custom_field_data
         self.locations[0].save()
         query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_json_field} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
-        self.assertEqual(resp["data"]["locations"]["cf_custom_json_field"], custom_field_data)
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"})
+        self.assertEqual(resp.data["locations"]["cf_custom_json_field"], custom_field_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
         query = "query ($name: [String!]) { locations(name:$name) {name} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Location-1"}).to_dict()
-        self.assertFalse(resp.get("error"))
-        self.assertEqual(len(resp["data"]["locations"]), 1)
+        resp = execute_query(query, user=self.user, variables={"name": "Location-1"})
+        self.assertIsNone(resp.errors)
+        self.assertEqual(len(resp.data["locations"]), 1)
 
     def test_execute_query_with_error(self):
         query = "THIS TEST WILL ERROR"
         with self.assertRaises(GraphQLError):
-            execute_query(query, user=self.user).to_dict()
+            execute_query(query, user=self.user)
 
     def test_execute_saved_query(self):
-        resp = execute_saved_query("GQL 1", user=self.user).to_dict()
-        self.assertFalse(resp["data"].get("error"))
+        resp = execute_saved_query("GQL 1", user=self.user)
+        self.assertIsNone(resp.errors)
 
     def test_execute_saved_query_with_variable(self):
-        resp = execute_saved_query("GQL 2", user=self.user, variables={"name": "location-1"}).to_dict()
-        self.assertFalse(resp["data"].get("error"))
+        resp = execute_saved_query("GQL 2", user=self.user, variables={"name": "location-1"})
+        self.assertIsNone(resp.errors)
 
     def test_graphql_types_registry(self):
         """Ensure models with graphql feature are registered in the graphene_django registry."""
@@ -186,8 +207,8 @@ class GraphQLTestCase(GraphQLTestCaseBase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_graphql_url_field(self):
         """Test the url field for all graphql types."""
-        schema = self.SCHEMA.introspect()
-        graphql_fields = schema["__schema"]["types"][0]["fields"]
+        introspection_query_result = graphql_sync(self.SCHEMA, get_introspection_query(descriptions=False))
+        graphql_fields = introspection_query_result.data["__schema"]["types"][0]["fields"]
         for graphql_field in graphql_fields:
             if graphql_field["type"]["kind"] == "LIST" or graphql_field["name"] == "content_type":
                 continue
@@ -208,12 +229,12 @@ class GraphQLTestCase(GraphQLTestCaseBase):
                     query = f'{{ query: {graphql_field["name"]}(id:"{obj.pk}") {{ url }} }}'
                     request = RequestFactory(SERVER_NAME="nautobot.example.com").post("/graphql/")
                     request.user = self.user
-                    resp = execute_query(query, request=request).to_dict()
+                    resp = execute_query(query, request=request)
                     self.assertIsNotNone(
-                        resp["data"]["query"]["url"], f"No url returned in graphql for {graphql_field['name']}"
+                        resp.data["query"]["url"], f"No url returned in graphql for {graphql_field['name']}"
                     )
                     self.assertTrue(
-                        resp["data"]["query"]["url"].endswith(f"/{obj.pk}/"),
+                        resp.data["query"]["url"].endswith(f"/{obj.pk}/"),
                         f"Mismatched url returned in graphql for {graphql_field['name']}",
                     )
 
@@ -228,15 +249,57 @@ class GraphQLUtilsTestCase(GraphQLTestCaseBase):
 class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
     def test_model_w_filterset(self):
         schema = generate_schema_type(app_name="dcim", model=Device)
-        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
+        self.assertIn(OptimizedNautobotObjectType, schema.__bases__)
         self.assertEqual(schema._meta.model, Device)
         self.assertEqual(schema._meta.filterset_class, DeviceFilterSet)
 
     def test_model_wo_filterset(self):
         schema = generate_schema_type(app_name="wrong_app", model=ChangeLoggedModel)
-        self.assertEqual(schema.__bases__[0], OptimizedNautobotObjectType)
+        self.assertIn(OptimizedNautobotObjectType, schema.__bases__)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
+
+
+class GraphQLGetNodePermissionTest(GraphQLTestCaseBase):
+    """Direct tests for `OptimizedNautobotObjectType.get_node()`.
+
+    These ensure that our object-level permission enforcement for ID/node
+    lookups is covered even when nested FK optimization behavior changes.
+    """
+
+    def test_get_node_enforces_object_permissions(self):
+        user = create_test_user("graphql_get_node_user")
+
+        # Status objects are associated with "content_types"; we include one here so the
+        # Status model is fully valid for GraphQL usage.
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        status_ct = ContentType.objects.get_for_model(Status)
+
+        allowed_status = Status.objects.create(name="AllowedStatusForGetNodeTest")
+        allowed_status.content_types.add(interface_ct)
+
+        denied_status = Status.objects.create(name="DeniedStatusForGetNodeTest")
+        denied_status.content_types.add(interface_ct)
+
+        allowed_status_perm = ObjectPermission.objects.create(
+            name="View Status allowed (get_node test)",
+            actions=["view"],
+            constraints={"name": allowed_status.name},
+        )
+        allowed_status_perm.object_types.add(status_ct)
+        allowed_status_perm.users.add(user)
+
+        info = types.SimpleNamespace(context=types.SimpleNamespace(user=user))
+
+        allowed_node = StatusType.get_node(info, str(allowed_status.pk))
+        self.assertIsNotNone(allowed_node)
+        self.assertEqual(allowed_node.name, allowed_status.name)
+
+        denied_node = StatusType.get_node(info, str(denied_status.pk))
+        self.assertIsNone(denied_node)
+
+        nonexistent_node = StatusType.get_node(info, str(uuid.uuid4()))
+        self.assertIsNone(nonexistent_node)
 
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
@@ -402,8 +465,12 @@ class GraphQLExtendSchemaRelationship(GraphQLTestCaseBase):
     def tearDown(self):
         """Ensure that relationship caches are cleared to avoid leakage into other tests."""
         with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_source.cache_key_prefix}.*")
-            cache.delete_pattern(f"{Relationship.objects.get_for_model_destination.cache_key_prefix}.*")
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_source', branch_aware=True)}(*)"
+            )
+            cache.delete_pattern(
+                f"{construct_cache_key(Relationship.objects, method_name='get_for_model_destination', branch_aware=True)}(*)"
+            )
 
     def test_extend_relationship_default_prefix(self):
         """Verify that relationships are correctly added to the schema."""
@@ -472,14 +539,15 @@ class GraphQLSearchParameters(GraphQLTestCaseBase):
     def test_search_parameters(self):
         fields = LocationFilterSet().filters.keys()
         params = generate_list_search_parameters(self.schema)
-        exclude_filters = ["type"]
+        args_filters = ["description"]
 
         for field in fields:
             field = str_to_var_name(field)
-            if field not in exclude_filters:
-                self.assertIn(field, params.keys())
-            else:
+            if field in args_filters:
                 self.assertNotIn(field, params.keys())
+                self.assertIn(field, params["args"].keys())
+            else:
+                self.assertIn(field, params.keys())
 
 
 class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
@@ -514,7 +582,7 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         cls.clients[3].credentials(HTTP_AUTHORIZATION=f"Token {cls.tokens[3].key}")
 
         cls.location_type = LocationType.objects.get(name="Campus")
-        location_status = Status.objects.get_for_model(Location).first()
+        location_status = Status.objects.get_for_model(Location)[0]
         cls.locations = (
             Location.objects.create(name="Location 1", location_type=cls.location_type, status=location_status),
             Location.objects.create(name="Location 2", location_type=cls.location_type, status=location_status),
@@ -527,24 +595,24 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         for i in range(2):
             # Rack permission
             rack_obj_permission = ObjectPermission.objects.create(
-                name=f"Permission Rack {i+1}",
+                name=f"Permission Rack {i + 1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"location__name": f"Location {i+1}"},
+                constraints={"location__name": f"Location {i + 1}"},
             )
             rack_obj_permission.object_types.add(rack_object_type)
             rack_obj_permission.groups.add(cls.groups[i])
             rack_obj_permission.users.add(cls.users[i])
 
             location_obj_permission = ObjectPermission.objects.create(
-                name=f"Permission Location {i+1}",
+                name=f"Permission Location {i + 1}",
                 actions=["view", "add", "change", "delete"],
-                constraints={"name": f"Location {i+1}"},
+                constraints={"name": f"Location {i + 1}"},
             )
             location_obj_permission.object_types.add(location_object_type)
             location_obj_permission.groups.add(cls.groups[i])
             location_obj_permission.users.add(cls.users[i])
 
-        rack_status = Status.objects.get_for_model(Rack).first()
+        rack_status = Status.objects.get_for_model(Rack)[0]
         cls.rack_grp1 = (
             Rack.objects.create(name="Rack 1-1", location=cls.locations[0], status=rack_status),
             Rack.objects.create(name="Rack 1-2", location=cls.locations[0], status=rack_status),
@@ -603,14 +671,14 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         """Validate that users can query based on their permissions."""
         # First user
         response = self.clients[0].post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
 
         # Second user
         response = self.clients[1].post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 2-1", "Rack 2-2"])
@@ -618,7 +686,7 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     def test_graphql_api_token_super_user(self):
         """Validate a superuser can query everything."""
         response = self.clients[2].post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
@@ -626,7 +694,7 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     def test_graphql_api_token_no_group(self):
         """Validate users with no permission are not able to query anything by default."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, [])
@@ -635,7 +703,7 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     def test_graphql_api_token_no_group_exempt(self):
         """Validate users with no permission are able to query based on the exempt permissions."""
         response = self.clients[3].post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2", "Rack 2-1", "Rack 2-2"])
@@ -643,18 +711,18 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
     def test_graphql_api_no_token(self):
         """Validate unauthenticated users are not able to query anything."""
         response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     def test_graphql_api_wrong_token(self):
         """Validate a wrong token return 403."""
         self.client.credentials(HTTP_AUTHORIZATION="Token zzzzzzzzzzabcdef0123456789abcdef01234567")
         response = self.client.post(self.api_url, {"query": self.get_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     def test_graphql_query_params(self):
         """Validate query parameters are available for a model."""
         response = self.clients[2].post(self.api_url, {"query": self.get_racks_params_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
@@ -663,14 +731,14 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         """Validate graphql variables are working as expected."""
         payload = {"query": self.get_racks_var_query, "variables": {"location": "Location 1"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 1-1", "Rack 1-2"])
 
         payload = {"query": self.get_racks_var_query, "variables": {"location": "Location 2"}}
         response = self.clients[2].post(self.api_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["racks"], list)
         names = [item["name"] for item in response.data["data"]["racks"]]
         self.assertEqual(names, ["Rack 2-1", "Rack 2-2"])
@@ -679,14 +747,14 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
         """Validate graphql query for a single object as opposed to a set of objects also works."""
         payload = {"query": self.get_rack_query, "variables": {"id": Rack.objects.first().pk}}
         response = self.clients[2].post(self.api_url, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["rack"], dict)
         self.assertEqual(response.data["data"]["rack"]["name"], Rack.objects.first().name)
 
     def test_graphql_query_multi_level(self):
         """Validate request with multiple levels return the proper information, following the permissions."""
         response = self.clients[0].post(self.api_url, {"query": self.get_locations_racks_query}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["locations"], list)
         self.assertGreater(len(response.data["data"]["locations"]), 0)
         location_names = [item["name"] for item in response.data["data"]["locations"]]
@@ -702,7 +770,7 @@ class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
             data=self.get_locations_racks_query,
             content_type="application/graphql",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsInstance(response.data["data"]["locations"], list)
         location_names = [item["name"] for item in response.data["data"]["locations"]]
         location_list = list(Location.objects.values_list("name", flat=True))
@@ -877,7 +945,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -887,7 +955,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             status=interface_status,
             role=interface_role,
@@ -967,7 +1035,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -976,7 +1044,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device2,
             mac_address="00:12:12:12:12:12",
             status=interface_status,
@@ -1000,12 +1068,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface31 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device3,
             status=interface_status,
             role=interface_role,
         )
-        cls.interface31 = Interface.objects.create(
+        cls.interface32 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device3,
@@ -1114,14 +1182,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.rm2ms_assoc_3.validated_save()
 
-        cls.backend = get_default_backend()
-
     def execute_query(self, query, variables=None):
-        document = self.backend.document_from_string(self.SCHEMA, query)
+        document = parse(query)
         if variables:
-            return document.execute(context_value=self.request, variable_values=variables)
+            return execute(schema=self.SCHEMA, document=document, context_value=self.request, variable_values=variables)
         else:
-            return document.execute(context_value=self.request)
+            return execute(schema=self.SCHEMA, document=document, context_value=self.request)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_circuit_terminations_cable_peer(self):
@@ -1453,9 +1519,7 @@ query {
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
 
-    @skip(
-        "Works in isolation, fails as part of the overall test suite due to issue #446, also something is broken with content types"
-    )
+    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_relationship_associations(self):
         """Test queries involving relationship associations."""
@@ -1524,7 +1588,7 @@ query {
 
         response = self.execute_query(query)
         self.assertEqual(len(response.errors), 1)
-        self.assertIsInstance(response.errors[0], GraphQLLocatedError)
+        self.assertIsInstance(response.errors[0], GraphQLError)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_locations_filter(self):
@@ -1800,6 +1864,11 @@ query {
                 Q(device=self.device1),
             ),
             (
+                f'type: "{PortTypeChoices.TYPE_8P8C}"',
+                Q(type=PortTypeChoices.TYPE_8P8C),
+            ),
+            # for backward compatibility:
+            (
                 f'_type: "{PortTypeChoices.TYPE_8P8C}"',
                 Q(type=PortTypeChoices.TYPE_8P8C),
             ),
@@ -1832,7 +1901,7 @@ query {
                 Q(device=self.device1),
             ),
             (
-                f'_type: "{PortTypeChoices.TYPE_8P8C}"',
+                f'type: "{PortTypeChoices.TYPE_8P8C}"',
                 Q(type=PortTypeChoices.TYPE_8P8C),
             ),
         )
@@ -2255,6 +2324,19 @@ query {
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())
 
+    def test_query_pagination_with_restricted_permissions(self):
+        # Test for https://github.com/nautobot/nautobot/issues/8155
+        self.user.is_superuser = False
+        self.user.save()
+        try:
+            self.add_permissions("dcim.view_manufacturer")
+            result = self.execute_query("query { manufacturers (limit: 1) { name } }")
+            self.assertIsNone(result.errors)
+            self.assertEqual(len(result.data.get("manufacturers", [])), 1)
+        finally:
+            self.user.is_superuser = True
+            self.user.save()
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_power_feeds_cable_peer(self):
         """Test querying power feeds for their cable peers"""
@@ -2438,9 +2520,56 @@ query {
         self.device1.primary_ip4 = self.ipaddr1
         self.device1.save()
         result = self.execute_query(query, variables={"device_id": str(self.device1.id)})
-        self.assertNotIn("error", str(result))
+        self.assertIsNone(result.errors)
         expected_interfaces_first = {"ip_addresses": [{"primary_ip4_for": [{"id": str(self.device1.id)}]}]}
         self.assertEqual(result.data["device"]["interfaces"][0], expected_interfaces_first)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_optimizer_reverse_lookup(self):
+        """
+        Test query optimization in the case of a query mixing reverse and forward nested lookups.
+
+        See https://github.com/nautobot/nautobot/issues/7651.
+        """
+        query = """query { tenant_groups { name tenants { name } } }"""
+        # Prewarm caches of Relationships and such to reduce variation in the number of queries below
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Run it again and assert that the optimized query is run.
+        # Before the fix for #7651 this would result in N+1 queries where N is the number of tenant-groups!
+        with self.assertNumQueries(2):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_filtered_nested_relation_no_n_plus_one(self):
+        """
+        Test that filtering a nested relation (e.g. interfaces with role filter on devices)
+        does not produce N+1 queries. The filterset should be evaluated once and cached,
+        and prefetched related objects should be filtered in memory.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/7146.
+        """
+        interface_role = Role.objects.get_for_model(Interface).first()
+        query = 'query { devices { name interfaces(role: "%s") { name } } }' % interface_role.name
+        # Prewarm caches
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        device_count = Device.objects.count()
+        self.assertGreater(device_count, 1, "Need multiple devices to verify N+1 is avoided")
+        # The query count should be constant regardless of the number of devices.
+        # Without the fix this would be ~3*N queries (interface fetch + 2 role lookups per device).
+        # With the fix: 1 devices query + 1 prefetch interfaces; the filterset is evaluated once
+        # and its matching PKs are cached on the request context for in-memory filtering.
+        with AssertNoRepeatedQueries(self, threshold=3):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Verify correctness: devices with the role should have matching interfaces
+        for device_data in result.data["devices"]:
+            device_obj = Device.objects.get(name=device_data["name"])
+            expected = set(device_obj.interfaces.filter(role=interface_role).values_list("name", flat=True))
+            actual = {iface["name"] for iface in device_data["interfaces"]}
+            self.assertEqual(actual, expected, f"Mismatch for device {device_data['name']}")
 
 
 class GraphQLTypeTestCase(UnitTestTestCase):
@@ -2455,3 +2584,38 @@ class GraphQLTypeTestCase(UnitTestTestCase):
         with self.assertRaises(GraphQLError) as cm:
             DateType.serialize(obj_not_accepted)
         self.assertIn("Received not compatible date", str(cm.exception))
+
+
+class MakeFilterCacheKeyTestCase(UnitTestTestCase):
+    def test_empty_kwargs(self):
+        self.assertEqual(_make_filter_cache_key({}), ())
+
+    def test_single_kwarg(self):
+        self.assertEqual(_make_filter_cache_key({"name": "test"}), (("name", "test"),))
+
+    def test_kwargs_sorted_by_key(self):
+        result = _make_filter_cache_key({"z_field": "last", "a_field": "first"})
+        self.assertEqual(result, (("a_field", "first"), ("z_field", "last")))
+
+    def test_list_values_converted_to_tuples(self):
+        result = _make_filter_cache_key({"tags": ["red", "blue"]})
+        self.assertEqual(result, (("tags", ("red", "blue")),))
+
+    def test_non_list_values_unchanged(self):
+        result = _make_filter_cache_key({"name": "test", "count": 5, "active": True})
+        self.assertEqual(result, (("active", True), ("count", 5), ("name", "test")))
+
+    def test_result_is_hashable(self):
+        result = _make_filter_cache_key({"tags": ["a", "b"], "name": "test"})
+        # Should be usable as a dict key
+        {result: True}
+
+    def test_same_kwargs_different_order_produce_same_key(self):
+        key1 = _make_filter_cache_key({"a": 1, "b": 2})
+        key2 = _make_filter_cache_key({"b": 2, "a": 1})
+        self.assertEqual(key1, key2)
+
+    def test_different_kwargs_produce_different_keys(self):
+        key1 = _make_filter_cache_key({"name": "foo"})
+        key2 = _make_filter_cache_key({"name": "bar"})
+        self.assertNotEqual(key1, key2)

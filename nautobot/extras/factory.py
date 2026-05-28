@@ -1,8 +1,9 @@
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 import json
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.urls import NoReverseMatch, reverse
 import factory
 import faker
 
@@ -137,8 +138,10 @@ class JobLogEntryFactory(BaseModelFactory):
     def created(self):
         if self.job_result.date_done:
             return faker.Faker().date_time_between_dates(
-                datetime_start=self.job_result.date_created, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
+                datetime_start=self.job_result.date_started, datetime_end=self.job_result.date_done, tzinfo=timezone.utc
             )
+        elif self.job_result.date_started:
+            return faker.Faker().past_datetime(start_date=self.job_result.date_started, tzinfo=timezone.utc)
         return faker.Faker().past_datetime(start_date=self.job_result.date_created, tzinfo=timezone.utc)
 
 
@@ -178,12 +181,13 @@ class JobResultFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
-        # TODO has_scheduled_job? has_meta? has_celery_kwargs?
+        has_celery_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        # TODO has_scheduled_job? has_meta?
 
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
     name = factory.Faker("word")
     task_name = factory.Faker("word")
-    # date_created and date_done are handled below
+    # date_created, date_started, and date_done are handled below
     user = factory.Maybe("has_user", random_instance(get_user_model()), None)
     status = factory.Iterator(
         [
@@ -194,7 +198,6 @@ class JobResultFactory(BaseModelFactory):
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
-    # TODO celery_kwargs?
     # TODO meta?
 
     @factory.lazy_attribute
@@ -210,23 +213,39 @@ class JobResultFactory(BaseModelFactory):
         return None
 
     @factory.post_generation
-    def date_created(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
-        if created:
-            if extracted:
-                self.date_created = extracted
-            else:
-                self.date_created = faker.Faker().date_time_between(
-                    start_date="-1y", end_date="now", tzinfo=timezone.utc
-                )
+    def dates(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
+        if not created:
+            return
+        if extracted:
+            return
+        # Fixed absolute dates with factory_boy's seeded random for full determinism.
+        # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        seconds_range = int((end - start).total_seconds())
+        timestamps = sorted(
+            start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
+        )
+        self.date_created, self.date_started, self.date_done = timestamps
 
-    @factory.post_generation
-    def date_done(self, created, extracted, **kwargs):  # pylint: disable=method-hidden
-        if created:
-            if extracted:
-                self.date_done = extracted
-            else:
-                # TODO, should we create "in progress" job results without a date_done value as well?
-                self.date_done = self.date_created + timedelta(minutes=faker.Faker().random_int())
+    @factory.lazy_attribute
+    def celery_kwargs(self):
+        if not self.has_celery_kwargs:
+            return {}
+
+        fake = faker.Faker()
+        kwargs = {
+            "nautobot_job_profile": fake.boolean(),
+            "nautobot_job_ignore_singleton_lock": fake.boolean(),
+            "nautobot_job_console_log": fake.boolean(),
+            "nautobot_job_queue_type": "celery",
+            "queue": fake.word(),
+        }
+        if self.job_model is not None:
+            kwargs["nautobot_job_job_model_id"] = str(self.job_model.id)
+        if self.user is not None:
+            kwargs["nautobot_job_user_id"] = str(self.user.id)
+        return kwargs
 
 
 class MetadataChoiceFactory(BaseModelFactory):
@@ -474,7 +493,12 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                self.time = faker.Faker().date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
+                # Fixed absolute dates with factory_boy's seeded random for full determinism.
+                # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+                start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+                end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+                seconds_range = int((end - start).total_seconds())
+                self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
 
 
 class RoleFactory(OrganizationalModelFactory):
@@ -556,10 +580,19 @@ class SavedViewFactory(BaseModelFactory):
     name = factory.LazyAttributeSequence(lambda o, n: f"Sample {o.view} Saved View - {n + 1}")
     owner = random_instance(User, allow_null=False)
     ct = random_instance(lambda: ContentType.objects.filter(FeatureQuery("saved_views").get_query()), allow_null=False)
-    view = factory.LazyAttribute(lambda o: f"{o.ct.app_label}:{o.ct.model}_list")
     config = factory.Faker("pydict")
     is_shared = NautobotBoolIterator()
+
     # is_global_default currently just defaults to False for all randomly generated saved views
+    @factory.lazy_attribute
+    def view(self):
+        view_name = f"{self.ct.app_label}:{self.ct.model}_list"
+        try:
+            reverse(view_name)
+        except NoReverseMatch:
+            # It might be a model from a plugin. i.e. example_app
+            view_name = "plugins:" + view_name
+        return view_name
 
 
 class StaticGroupAssociationFactory(OrganizationalModelFactory):

@@ -17,10 +17,14 @@ class LocationBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestC
     model_edit_data = {"description": "Test description"}
     model_filter_by = {"location_type": "External"}
     model_class = Location
+    model_expected_counts: dict[str, int] = {
+        "all": 5,
+        "filtered": 2,
+    }
+    all_count = 5
 
     def setup_items(self):
-        Location.objects.all().delete()
-
+        self.model_expected_counts["all"] = Location.objects.count() + self.all_count
         # Create locations for test
         self.create_location("Test Location Integration Test 1")
         self.create_location("Test Location Integration Test 2")

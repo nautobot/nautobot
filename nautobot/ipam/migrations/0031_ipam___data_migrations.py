@@ -17,7 +17,10 @@ def reverse_it(apps, schema_editor):
     Interface = apps.get_model("dcim", "Interface")
     VMInterface = apps.get_model("virtualization", "VMInterface")
 
-    ns_global = Namespace.objects.get(name="Global")
+    # This may be overly defensive, but it doesn't hurt to be safe.
+    ns_global, _ = Namespace.objects.get_or_create(
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
     Prefix.objects.update(namespace=ns_global)
     VRF.objects.update(namespace=ns_global)
     Namespace.objects.exclude(name=ns_global.name).delete()

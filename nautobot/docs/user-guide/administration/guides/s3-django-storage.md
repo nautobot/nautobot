@@ -45,28 +45,46 @@ The [`django-storages`](https://django-storages.readthedocs.io/en/stable/) libra
 In `nautobot_config.py` define the following configuration:
 
 ```python
-STORAGE_BACKEND = "storages.backends.s3.S3Storage"
-
-STORAGE_CONFIG = {
-    "AWS_ACCESS_KEY_ID": "...",
-    "AWS_SECRET_ACCESS_KEY": "...",
-    "AWS_STORAGE_BUCKET_NAME": "my-bucket-name",
-    "AWS_S3_REGION_NAME": "us-west-1",
-    "AWS_DEFAULT_ACL": "public-read",
-    "AWS_QUERYSTRING_AUTH": False,
-    "AWS_LOCATION": "subfolder/name/static/"
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": "...",
+            "secret_key": "...",
+            "bucket_name": "my-bucket-name",
+            "region_name": "us-west-1",
+            "default_acl": "public-read",
+            "querystring_auth": False,
+            "location": "subfolder/name/",
+            # ... additional options as needed
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            # base options as above...
+            "location": "other_subfolder/name/",
+            # ... additional options as needed
+        },
+    },
+    "nautobotjobfiles": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            # base options as above...
+            "location": "some_jobs_subfolder/",
+            # ... additional options as needed
+        },
+    },
 }
-JOB_FILE_IO_STORAGE = STORAGE_BACKEND
-STATICFILES_STORAGE = STORAGE_BACKEND
 ```
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not set, `boto3` [internally looks up IAM credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html).  Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
+If `access_key` and/or `secret_key` are not set, `boto3` [internally looks up IAM credentials](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html).  Using an [IAM Role for EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html?icmpid=docs_ec2_console) is highly recommended.
 
-The `STORAGE_CONFIG` has some valuable pieces of information.
+The `OPTIONS` has some valuable pieces of information.
 
 - Access Key and Secret Key are for authentication and authorization of the S3 bucket.
 - Storage bucket name is the S3 bucket name, within the bucket provided the aws location will be used to build the parent directory structure.
-    - In the example above the static files will be stored in `f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}"`
+    - In the example above the static files will be stored in `f"{bucket_name}.s3.amazonaws.com/{location}"`
 - Finally, region is where the s3 bucket resides.
 
 !!! info
@@ -105,7 +123,7 @@ class SoftwareFileAttachment(BaseModel):
         return f"{self.file}"
 ```
 
-The `models.FileField` alongside the `upload_to` argument can be used to store user uploaded files into the already established S3 bucket. With the configuration settings provided earlier in this article and the `upload_to=uploads/` attribute the software attachments will be stored at `f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION}/uploads/"`.
+The `models.FileField` alongside the `upload_to` argument can be used to store user uploaded files into the already established S3 bucket. With the configuration settings provided earlier in this article and the `upload_to=uploads/` attribute the software attachments will be stored at `f"{bucket_name}.s3.amazonaws.com/{location}/uploads/"`.
 
 The nice thing about using `django-storages` is the ease of use and the ability to easily extend storage backends. One use case for extending storage backends that has been used is to store certain App data attachments in its own S3 bucket with different permissions. If we take this concept to the example of `SoftwareFileAttachment` we can put the software images in their own S3 bucket by creating a custom storage backend that we can pass to our `models.FileField` model field.
 

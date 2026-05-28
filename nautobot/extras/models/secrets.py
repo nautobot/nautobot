@@ -141,6 +141,7 @@ class SecretsGroupAssociation(BaseModel):
     natural_key_field_names = ["secrets_group", "access_type", "secret_type", "secret"]
 
     documentation_static_path = "docs/user-guide/platform-functionality/secret.html"
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = (

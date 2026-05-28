@@ -1,7 +1,7 @@
 """Test cases for nautobot.core.config module."""
 
 from constance.test import override_config
-from django.test import override_settings, TestCase
+from django.test import override_settings, tag, TestCase
 
 from nautobot.apps import config as app_config
 from nautobot.core.utils import config
@@ -37,6 +37,7 @@ class GetSettingsOrConfigTestCase(TestCase):
         self.assertRaises(AttributeError, config.get_settings_or_config, "FAKE_SETTING")
 
 
+@tag("example_app")
 class GetAppSettingsOrConfigTestCase(TestCase):
     """Test the get_app_settings_or_config() helper function."""
 

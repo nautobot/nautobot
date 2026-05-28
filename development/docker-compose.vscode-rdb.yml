@@ -2,12 +2,17 @@
 ---
 services:
   nautobot:
+    ports:
+      - "8080:8080"
+      - "6899:6899"
     entrypoint: ""
     command: sh -c "
       pip install debugpy &&
       /docker-entrypoint.sh &&
       python -m debugpy --listen 0.0.0.0:6899 -m nautobot.core.cli runserver 0.0.0.0:8080 --insecure"
   celery_worker:
+    ports:
+      - "6898:6898"
     entrypoint: ""
     command: sh -c "
       pip install debugpy &&

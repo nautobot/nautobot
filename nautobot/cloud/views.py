@@ -31,6 +31,13 @@ from nautobot.cloud.forms import (
 from nautobot.cloud.models import CloudAccount, CloudNetwork, CloudResourceType, CloudService
 from nautobot.cloud.tables import CloudAccountTable, CloudNetworkTable, CloudResourceTypeTable, CloudServiceTable
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.breadcrumbs import (
+    Breadcrumbs,
+    context_object_attr,
+    InstanceBreadcrumbItem,
+    InstanceParentBreadcrumbItem,
+    ModelBreadcrumbItem,
+)
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.ipam.tables import PrefixTable
@@ -44,6 +51,16 @@ class CloudAccountUIViewSet(NautobotUIViewSet):
     serializer_class = CloudAccountSerializer
     table_class = CloudAccountTable
     form_class = CloudAccountForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(
+                    parent_key="provider",
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -64,6 +81,16 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
     table_class = CloudNetworkTable
     form_class = CloudNetworkForm
     bulk_update_form_class = CloudNetworkBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(model_key="object"),
+                InstanceBreadcrumbItem(
+                    instance=context_object_attr("parent"), should_render=context_object_attr("parent")
+                ),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -95,6 +122,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                         table_class=CloudNetworkTable,
                         table_filter="parent",
                         tab_id="children",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -112,6 +140,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                         table_filter="cloud_networks",
                         exclude_columns=("location_count", "vlan"),
                         tab_id="prefixes",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -130,6 +159,7 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                         related_field_name="cloud_network",
                         exclude_columns=("circuit_termination_a", "circuit_termination_z"),
                         tab_id="circuits",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -147,25 +177,42 @@ class CloudNetworkUIViewSet(NautobotUIViewSet):
                         table_filter="cloud_networks",
                         exclude_columns=("cloud_network_count"),
                         tab_id="cloud_services",
+                        include_paginator=True,
                     ),
                 ),
             ),
         ),
     )
 
-    @action(detail=True, url_path="children")
+    @action(detail=True, url_path="children", custom_view_base_action="view")
     def children(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="prefixes")
+    @action(
+        detail=True,
+        url_path="prefixes",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_prefix"],
+    )
     def prefixes(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="circuits")
+    @action(
+        detail=True,
+        url_path="circuits",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["circuits.view_circuit"],
+    )
     def circuits(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="cloud-services", url_name="cloud_services")
+    @action(
+        detail=True,
+        url_path="cloud-services",
+        url_name="cloud_services",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudservice"],
+    )
     def cloud_services(self, request, *args, **kwargs):
         return Response({})
 
@@ -178,6 +225,14 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
     table_class = CloudResourceTypeTable
     form_class = CloudResourceTypeForm
     bulk_update_form_class = CloudResourceTypeBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceParentBreadcrumbItem(parent_key="provider"),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -208,6 +263,7 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
                         table_class=CloudNetworkTable,
                         table_filter="cloud_resource_type",
                         tab_id="networks",
+                        include_paginator=True,
                     ),
                 ),
             ),
@@ -224,17 +280,28 @@ class CloudResourceTypeUIViewSet(NautobotUIViewSet):
                         table_class=CloudServiceTable,
                         table_filter="cloud_resource_type",
                         tab_id="services",
+                        include_paginator=True,
                     ),
                 ),
             ),
         ),
     )
 
-    @action(detail=True, url_path="networks")
+    @action(
+        detail=True,
+        url_path="networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudnetwork"],
+    )
     def networks(self, request, *args, **kwargs):
         return Response({})
 
-    @action(detail=True, url_path="services")
+    @action(
+        detail=True,
+        url_path="services",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudservice"],
+    )
     def services(self, request, *args, **kwargs):
         return Response({})
 
@@ -247,6 +314,14 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
     table_class = CloudServiceTable
     form_class = CloudServiceForm
     bulk_update_form_class = CloudServiceBulkEditForm
+    breadcrumbs = Breadcrumbs(
+        items={
+            "detail": [
+                ModelBreadcrumbItem(),
+                InstanceBreadcrumbItem(instance=context_object_attr("cloud_resource_type")),
+            ]
+        }
+    )
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
@@ -278,12 +353,19 @@ class CloudServiceUIViewSet(NautobotUIViewSet):
                         table_filter="cloud_services",
                         tab_id="cloud_networks",
                         add_button_route=None,
+                        include_paginator=True,
                     ),
                 ),
             ),
         ),
     )
 
-    @action(detail=True, url_path="cloud-networks", url_name="cloud_networks")
+    @action(
+        detail=True,
+        url_path="cloud-networks",
+        url_name="cloud_networks",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["cloud.view_cloudnetwork"],
+    )
     def cloud_networks(self, request, *args, **kwargs):
         return Response({})

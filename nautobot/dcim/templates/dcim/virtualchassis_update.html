@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load helpers %}
+{% load form_helpers %}
+
+{% block title %}{% if vc_form.instance %}Editing {{ vc_form.instance }}{% else %}New Virtual Chassis{% endif %}{% endblock %}
+
+{% block content %}
+    <form action="" method="post" enctype="multipart/form-data" class="h-100 vstack">
+        {% csrf_token %}
+        {{ pk_form.pk }}
+        {{ formset.management_form }}
+        <div class="row justify-content-center flex-fill">
+            <div class="col-xl-8 col-lg-10">
+                {% if vc_form.non_field_errors %}
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger-subtle border-danger text-body">
+                            <strong>Errors</strong>
+                        </div>
+                        <div class="card-body">
+                            {{ vc_form.non_field_errors }}
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="card">
+                    <div class="card-header"><strong>Virtual Chassis</strong></div>
+                    <div class="card-body">
+                        {% render_field vc_form.name %}
+                        {% render_field vc_form.domain %}
+                        {% render_field vc_form.master %}
+                    </div>
+                </div>
+                {% include 'inc/extras_features_edit_form_fields.html' with form=vc_form %}
+                <div class="card">
+                    <div class="card-header"><strong>Members</strong></div>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Rack/Unit</th>
+                                <th>Serial</th>
+                                <th>Position</th>
+                                <th>Priority</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for form in formset %}
+                                {% for field in form.hidden_fields %}
+                                    {{ field }}
+                                {% endfor %}
+                                {% with device=form.instance virtual_chassis=vc_form.instance %}
+                                    <tr>
+                                        <td>{{ device|hyperlinked_object }}</td>
+                                        <td>
+                                            {% if device.rack %}
+                                                {{ device.rack }} / {{ device.position }}
+                                            {% else %}
+                                                <span class="text-secondary">&mdash;</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ device.serial|placeholder }}</td>
+                                        <td>
+                                            {{ form.vc_position }}
+                                            {% if form.vc_position.errors %}
+                                                <br /><small class="text-danger">{{ form.vc_position.errors.0 }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {{ form.vc_priority }}
+                                            {% if form.vc_priority.errors %}
+                                                <br /><small class="text-danger">{{ form.vc_priority.errors.0 }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if virtual_chassis.present_in_database %}
+                                                {% if virtual_chassis.master != device %}
+                                                    <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}"
+                                                       class="btn btn-danger btn-sm">
+                                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                    </a>
+                                                {% else %}
+                                                    <a aria-disabled="true" class="btn btn-danger btn-sm disabled">
+                                                        <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="nb-form-sticky-footer">
+            <button type="submit" name="_update" class="btn btn-primary">
+                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                -->Update
+            </button>
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
+        </div>
+    </form>
+{% endblock %}

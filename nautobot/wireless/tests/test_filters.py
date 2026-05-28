@@ -27,7 +27,7 @@ class RadioProfileTestCase(FilterTestCases.FilterTestCase):
     ]
 
     def test_channel_width(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"channel_width": "80"}, self.queryset).qs,
             self.queryset.filter(channel_width__contains=[80]),
         )

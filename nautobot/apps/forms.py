@@ -9,6 +9,7 @@ from nautobot.core.forms import (
     ConfirmationForm,
     CSVModelForm,
     DynamicFilterForm,
+    EmbeddedActionsFormMixin,
     ImportForm,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -68,6 +69,12 @@ from nautobot.core.forms.widgets import (
     StaticSelect2Multiple,
     TimePicker,
 )
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
+from nautobot.dcim.form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -125,6 +132,7 @@ __all__ = (
     "CustomFieldModelCSVForm",
     "CustomFieldModelFilterFormMixin",
     "CustomFieldModelFormMixin",
+    "DataValidationModelFormMixin",
     "DatePicker",
     "DateTimePicker",
     "DynamicFilterForm",
@@ -132,6 +140,7 @@ __all__ = (
     "DynamicModelChoiceField",
     "DynamicModelChoiceMixin",
     "DynamicModelMultipleChoiceField",
+    "EmbeddedActionsFormMixin",
     "ExpandableIPAddressField",
     "ExpandableNameField",
     "IPAddressFormField",
@@ -140,6 +149,9 @@ __all__ = (
     "JSONArrayFormField",
     "JSONField",
     "LaxURLField",
+    "LocatableModelBulkEditFormMixin",
+    "LocatableModelFilterFormMixin",
+    "LocatableModelFormMixin",
     "MACAddressField",
     "MultiMatchModelMultipleChoiceField",
     "MultiValueCharField",

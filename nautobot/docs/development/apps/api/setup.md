@@ -55,3 +55,61 @@ The top level is the project root. Immediately within the root should exist seve
 * The app source directory, with the same name as your app.
 
 The app source directory contains all of the actual Python code and other resources used by your app. Its structure is left to the author's discretion, however it is recommended to follow best practices as outlined in the [Django documentation](https://docs.djangoproject.com/en/stable/intro/reusable-apps/). At a minimum, this directory **must** contain an `__init__.py` file containing an instance of Nautobot's `NautobotAppConfig` class.
+
+## Serving Apps Documentation
+
+The documentation for each installed Nautobot App is served dynamically through Django views and is restricted to authenticated users. This approach ensures that:
+
+* Works regardless of where the app is installed (editable install, virtualenv, system site-packages).
+* Access is protected by Django authentication.
+
+### File Structure
+
+Documentation for an app (e.g., example_app) is expected to be located inside the package:
+
+```no-highlight
+example_app/
+├── docs/
+│   ├── index.html
+│   ├── assets/
+      └── extra.css
+      └── nautobot_logo.svg
+```
+
+### Build Process using MkDocs
+
+If using MkDocs to compile Markdown documentation to HTML, you should ensure that `mkdocs.yml` defines `site_dir` to be the path `<app_name>/docs` so that the compiled HTML is correctly placed in that directory.
+
+```no-highlight
+mkdocs build --no-directory-urls --strict
+```
+
+### URL Routing
+
+The `docs_file` URL pattern defined in `nautobot.core.urls` is used for serving documentation files for all installed apps.
+
+`/docs/example-app/` — redirects to `/docs/example-app/index.html`, which serves the `example_app/docs/index.html` file.
+
+`/docs/example-app/assets/extra.css` — serves the requested file directly from `example_app/docs/` and its subdirectories (for example, `example_app/docs/assets/extra.css`).
+
+Each app’s own `docs/` endpoint (defined in its `urls.py`) redirects to this shared route using the appropriate `base_url` and `path="index.html"` parameters.
+
+All documentation files are served dynamically by AppDocsView, which enforces login.
+
+### Redirect for Each App
+
+Each app may define its own top-level `/docs/` URL that redirects to the appropriate app documentation:
+
+```python
+app_name = "example_app"
+app_config = apps.get_app_config(app_name)
+base_url = getattr(app_config, "base_url", None) or app_config.label
+path(
+    "docs/",
+    RedirectView.as_view(pattern_name="docs_index_redirect"),
+    {"app_base_url": base_url},
+    name="docs",
+)
+```
+
+This allows users to access `/plugins/example-app/docs/` (as was the recommended URL pattern in Nautobot 2.x) and have it redirect to the new `/docs/example-app/` URL.

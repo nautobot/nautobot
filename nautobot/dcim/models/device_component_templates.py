@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -9,14 +11,21 @@ from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, NaturalOr
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import REARPORT_POSITIONS_MAX, REARPORT_POSITIONS_MIN
+from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
+    REARPORT_POSITIONS_MAX,
+    REARPORT_POSITIONS_MIN,
+    VIRTUAL_IFACE_TYPES,
+    WIRELESS_IFACE_TYPES,
+)
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ContactMixin,
@@ -202,6 +211,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsolePortTemplate(ModularComponentTemplateModel):
     """
@@ -216,6 +227,8 @@ class ConsolePortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
@@ -230,6 +243,8 @@ class ConsoleServerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerPortTemplate(ModularComponentTemplateModel):
     """
@@ -249,6 +264,13 @@ class PowerPortTemplate(ModularComponentTemplateModel):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
+    power_factor = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=Decimal("0.95"),
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
+    )
 
     def instantiate(self, device, module=None):
         return self.instantiate_model(
@@ -258,6 +280,7 @@ class PowerPortTemplate(ModularComponentTemplateModel):
             type=self.type,
             maximum_draw=self.maximum_draw,
             allocated_draw=self.allocated_draw,
+            power_factor=self.power_factor,
         )
 
     def clean(self):
@@ -272,6 +295,8 @@ class PowerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerOutletTemplate(ModularComponentTemplateModel):
     """
@@ -324,6 +349,8 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class InterfaceTemplate(ModularComponentTemplateModel):
     """
@@ -338,7 +365,36 @@ class InterfaceTemplate(ModularComponentTemplateModel):
         blank=True,
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    port_type = models.CharField(
+        max_length=50, choices=PortTypeChoices, blank=True, help_text="Physical connector type"
+    )
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
+    speed = models.PositiveIntegerField(null=True, blank=True)
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
+
+    def clean(self):
+        super().clean()
+        self._validate_speed_and_duplex()
+
+    def _validate_speed_and_duplex(self):
+        """Validate speed (Kbps) and duplex based on interface type."""
+
+        is_lag = self.type == InterfaceTypeChoices.TYPE_LAG
+        is_virtual = self.type in VIRTUAL_IFACE_TYPES
+        is_wireless = self.type in WIRELESS_IFACE_TYPES
+
+        # Check settings by interface type
+        if self.speed and any([is_lag, is_virtual, is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
+
+        if self.duplex and any([is_lag, is_virtual, is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
+
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
+
+        if self.type in NONCONNECTABLE_IFACE_TYPES and self.port_type:
+            raise ValidationError({"port_type": "Virtual and wireless interfaces cannot have a port type."})
 
     def instantiate(self, device, module=None):
         try:
@@ -350,13 +406,18 @@ class InterfaceTemplate(ModularComponentTemplateModel):
             device=device,
             module=module,
             type=self.type,
+            port_type=self.port_type,
             mgmt_only=self.mgmt_only,
+            speed=self.speed,
+            duplex=self.duplex,
             status=status,
         )
 
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class FrontPortTemplate(ModularComponentTemplateModel):
     """
@@ -423,6 +484,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class RearPortTemplate(ModularComponentTemplateModel):
     """
@@ -450,6 +513,8 @@ class RearPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """
@@ -464,13 +529,13 @@ class DeviceBayTemplate(ComponentTemplateModel):
         return self.instantiate_model(model=DeviceBay, device=device)
 
     def clean(self):
-        if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:  # pylint: disable=no-member
+        if self.device_type and not self.device_type.is_parent_device:  # pylint: disable=no-member
             raise ValidationError(
-                f'Subdevice role of device type ({self.device_type}) must be set to "parent" to allow device bays.'
+                f'Subdevice role of device type ({self.device_type}) must be set to "parent" or "parent-child" to allow device bays.'
             )
 
 
-@extras_features("custom_validators")
+@extras_features("custom_validators", "graphql", "webhooks")
 class ModuleBayTemplate(ModularComponentTemplateModel):
     """Template for a slot in a Device or Module which can contain Modules."""
 
@@ -481,6 +546,18 @@ class ModuleBayTemplate(ModularComponentTemplateModel):
     )
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bay_templates",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay. Leave blank for no restriction.",
+    )
+    requires_first_party_modules = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
 
     natural_key_field_names = ["device_type", "module_type", "name"]
 
@@ -505,6 +582,8 @@ class ModuleBayTemplate(ModularComponentTemplateModel):
             position=self.position,
             label=self.label,
             description=self.description,
+            module_family=self.module_family,
+            requires_first_party_modules=self.requires_first_party_modules,
             _custom_field_data=custom_field_data,
         )
 

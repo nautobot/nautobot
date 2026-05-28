@@ -67,7 +67,7 @@ class IPNetworkFormField(forms.Field):
 class PrefixFilterFormField(MultiMatchModelMultipleChoiceField):
     @property
     def filter(self):
-        from nautobot.ipam.filters import PrefixFilter  # avoid circular definition
+        from nautobot.ipam.filter_mixins import PrefixFilter  # avoid circular definition
 
         return PrefixFilter
 

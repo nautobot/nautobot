@@ -1,6 +1,5 @@
 from collections.abc import Mapping
 from datetime import datetime, timedelta
-import json
 import logging
 from pathlib import Path
 import sys
@@ -9,14 +8,87 @@ from celery import current_app
 from celery.beat import _evaluate_entry_args, _evaluate_entry_kwargs, reraise, SchedulingError
 from celery.result import AsyncResult
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
 
-from nautobot.extras.choices import JobQueueTypeChoices
-from nautobot.extras.models import JobResult, ScheduledJob, ScheduledJobs
+from nautobot.extras.choices import (
+    JobQueueTypeChoices,
+    JobResultStatusChoices,
+    LogLevelChoices,
+    ScheduledJobStateChoices,
+)
+from nautobot.extras.constants import JOB_LOG_MAX_ABSOLUTE_URL_LENGTH, JOB_LOG_MAX_LOG_OBJECT_LENGTH
+from nautobot.extras.models import JobLogEntry, JobResult, ScheduledJob, ScheduledJobs
 from nautobot.extras.utils import run_kubernetes_job_and_return_job_result
 
 logger = logging.getLogger(__name__)
+
+
+def _user_exists(user_id):
+    """Return True if `user_id` is non-null and references an existing user row."""
+    if user_id is None:
+        return False
+    return get_user_model().objects.filter(pk=user_id).exists()
+
+
+def _record_missing_user_failure(model):
+    """
+    Record a failed JobResult for a ScheduledJob whose originating user is missing.
+
+    Used when celery beat fires a schedule whose `user` FK is null or refers to a
+    deleted user. We create a JobResult marked FAILURE so administrators have a
+    durable record of the missed run instead of a silent failure.
+
+    Also clears the in-memory `user_id` so that subsequent `model.save()` calls
+    (e.g. from `_disable`) cannot raise an FK violation when the FK is orphaned.
+    """
+    # If user_id points to a row that no longer exists (FK orphan, e.g. user was deleted via
+    # raw SQL bypassing on_delete=SET_NULL), any save() of this model will raise an
+    # IntegrityError. Patch the DB directly via queryset update, then null in-memory.
+    if model.user_id is not None:
+        ScheduledJob.objects.filter(pk=model.pk).update(user=None)
+        model.user_id = None
+
+    if model.job_model is None:
+        # Can't create a JobResult without a job_model FK; the scheduler will disable
+        # the entry below, which is the best we can do.
+        return
+    err_message = (
+        f"Scheduled job '{model.name}' cannot run: the originating user has been removed. "
+        "Use 'Assume Ownership' on the scheduled job detail view to reassign it."
+    )
+    try:
+        timestamp = timezone.now()
+        job_result = JobResult.objects.create(
+            name=model.job_model.name,
+            job_model=model.job_model,
+            scheduled_job=model,
+            user=None,
+            task_name=model.job_model.class_path,
+            status=JobResultStatusChoices.STATUS_FAILURE,
+            date_started=timestamp,
+            date_done=timestamp,
+            traceback=err_message,
+            # We are intentionally omitting JobResult fields that are not necessary
+            # as we only need it to create a JobLogEntry to log the failure.
+        )
+        log_object = str(model)[:JOB_LOG_MAX_LOG_OBJECT_LENGTH]
+        absolute_url = model.get_absolute_url()[:JOB_LOG_MAX_ABSOLUTE_URL_LENGTH]
+        JobLogEntry.objects.create(
+            job_result=job_result,
+            log_level=LogLevelChoices.LOG_ERROR,
+            grouping="main",
+            message=err_message,
+            log_object=log_object,
+            absolute_url=absolute_url,
+        )
+        job_result.count_logs_by_level()
+        job_result.save()
+    except Exception:  # pylint: disable=broad-except
+        # Never let a bookkeeping failure crash celery beat itself.
+        logger.exception("Failed to record missing-user JobResult for schedule %s", model.name)
 
 
 class NautobotScheduleEntry(ModelEntry):
@@ -25,6 +97,18 @@ class NautobotScheduleEntry(ModelEntry):
     nautobot.extras.models.ScheduledJob model
     """
 
+    def _disable(self, model):
+        """
+        Override of the parent ModelEntry._disable() method.
+
+        In addition to disabling the scheduled job (via the parent implementation),
+        sets the job's state to ERRORED to reflect that the schedule was disabled
+        due to an error condition.
+        """
+        super()._disable(model)
+        model.state = ScheduledJobStateChoices.ERRORED
+        model.save(update_fields=["state"])
+
     def __init__(self, model, app=None):  # pylint:disable=super-init-not-called  # we must copy-and-paste from super
         """Initialize the model entry."""
         # copy-paste from django_celery_beat.schedulers
@@ -32,7 +116,10 @@ class NautobotScheduleEntry(ModelEntry):
 
         # Nautobot-specific logic
         self.name = f"{model.name}_{model.pk}"
-        self.task = "nautobot.extras.jobs.run_job"
+        if model.celery_kwargs.get("nautobot_job_console_log", False):
+            self.task = "nautobot.extras.jobs.run_console_log_job_and_return_job_result"
+        else:
+            self.task = "nautobot.extras.jobs.run_job"
         try:
             # Nautobot scheduled jobs pass args/kwargs as constructed objects,
             # but Celery built-in jobs such as celery.backend_cleanup pass them as JSON to be parsed
@@ -57,13 +144,14 @@ class NautobotScheduleEntry(ModelEntry):
         # Nautobot-specific logic
         self.options = {"nautobot_job_scheduled_job_id": model.id, "headers": {}}
 
-        if model.user:
-            self.options["nautobot_job_user_id"] = model.user.id
+        if _user_exists(model.user_id):
+            self.options["nautobot_job_user_id"] = model.user_id
         else:
             logger.error(
                 "Disabling schedule %s with missing user",
                 self.name,
             )
+            _record_missing_user_failure(model)
             self._disable(model)
 
         if model.job_model:
@@ -85,12 +173,18 @@ class NautobotScheduleEntry(ModelEntry):
 
         if not model.last_run_at:
             model.last_run_at = self._default_now()
-            # if last_run_at is not set and
-            # model.start_time last_run_at should be in way past.
-            # This will trigger the job to run at start_time
-            # and avoid the heap block.
             if model.start_time:
-                model.last_run_at = model.last_run_at - timedelta(days=365 * 30)
+                # Set last_run_at to one minute before start_time so that celery's crontab
+                # remaining_delta (which uses strict less-than: last_run_at.minute < max(self.minute))
+                # correctly identifies the first crontab match at/after start_time as due.
+                model.last_run_at = model.start_time - timedelta(minutes=1)
+                # This replaces the upstream 30-year-ago hack from django-celery-beat PR #636,
+                # which was intended to avoid a "heap block" issue with interval-based schedules.
+                # That fix doesn't apply to Nautobot since we use DatabaseScheduler (max_interval=5s)
+                # and convert all schedules to crontab (ScheduledJob.to_cron()).
+                # The 30-year trick caused crontab-scheduled jobs to run once immediately (ASAP)
+                # before following their crontab schedule.
+                # See: https://github.com/nautobot/nautobot/issues/8316
 
         self.last_run_at = model.last_run_at
 
@@ -122,25 +216,37 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         entry = self.reserve(entry) if advance else entry
         task = self.app.tasks.get(entry.task)
 
+        # If the entry's options lack `nautobot_job_user_id`, the originating user is
+        # missing and `__init__` already recorded a failed JobResult and disabled the
+        # schedule. Skip dispatch so we don't fire a doomed task into celery for this
+        # tick — the next tick will not pick the entry up (enabled=False).
+        if isinstance(entry, NautobotScheduleEntry) and "nautobot_job_user_id" not in entry.options:
+            return None
+
         try:
+            if entry.kwargs is None:
+                raise ValueError("Job `kwargs` has to be defined. Now is set to `None`.")
+
             entry_args = _evaluate_entry_args(entry.args)
             entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
+
             if task:
                 scheduled_job = entry.model
                 job_queue = scheduled_job.job_queue
+
                 # Distinguish between Celery and Kubernetes job queues
                 if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                    celery_kwargs = dict(entry.options)
+                    celery_kwargs.setdefault("queue", job_queue.name)
                     job_result = JobResult.objects.create(
                         name=scheduled_job.job_model.name,
                         job_model=scheduled_job.job_model,
                         scheduled_job=scheduled_job,
                         user=scheduled_job.user,
                         task_name=scheduled_job.job_model.class_path,
-                        celery_kwargs=entry.options,
+                        celery_kwargs=celery_kwargs,
                     )
-                    job_result = run_kubernetes_job_and_return_job_result(
-                        job_queue, job_result, json.dumps(entry_kwargs)
-                    )
+                    job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
                     # Return an AsyncResult object to mimic the behavior of Celery tasks after the job is finished by Kubernetes Job Pod.
                     resp = AsyncResult(job_result.id)
                 else:
@@ -162,6 +268,19 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry.total_run_count = entry.model.total_run_count
             entry.model.save()
         return resp
+
+    def enabled_models_qs(self):
+        """
+        Replace the django-celery-beat 2.8.x implementation with a simpler (less optimal) one for now.
+
+        This should hopefully avoid issues like:
+
+        - https://github.com/celery/django-celery-beat/issues/894
+        - https://github.com/celery/django-celery-beat/issues/922
+        - https://github.com/celery/django-celery-beat/issues/927
+        - https://github.com/celery/django-celery-beat/issues/956
+        """
+        return self.Model.objects.enabled()
 
     def tick(self, *args, **kwargs):
         """

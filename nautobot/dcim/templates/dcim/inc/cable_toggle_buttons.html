@@ -1,16 +1,35 @@
+{% load helpers %}
 {% if perms.dcim.change_cable %}
     {% if cable.status.name == 'Connected' %}
-        <a href="#" class="btn btn-warning btn-xs cable-toggle connected" title="Mark planned" data="{{ cable.pk }}">
-            <i class="mdi mdi-lan-disconnect" aria-hidden="true"></i>
-        </a>
+        <li>
+            <a href="#" class="dropdown-item text-warning cable-toggle connected" data="{{ cable.pk }}">
+                <span class="mdi mdi-lan-pending me-4" aria-hidden="true"></span>Mark cable as Planned
+            </a>
+        </li>
     {% else %}
-        <a href="#" class="btn btn-success btn-xs cable-toggle" title="Mark installed" data="{{ cable.pk }}">
-            <i class="mdi mdi-lan-connect" aria-hidden="true"></i>
-        </a>
+        <li>
+            <a href="#" class="dropdown-item text-success cable-toggle" data="{{ cable.pk }}">
+                <span class="mdi mdi-lan-connect me-4" aria-hidden="true"></span>Mark cable as Connected
+            </a>
+        </li>
     {% endif %}
+    {% if termination and termination.cable_termination %}
+        <li>
+            <a href="#" class="dropdown-item text-warning cable-disconnect" data="{{ termination.cable_termination.pk }}">
+                <span class="mdi mdi-lan-disconnect me-4" aria-hidden="true"></span>Detach cable from {{ termination }}
+            </a>
+        </li>
+    {% endif %}
+    <li>
+        <a class="dropdown-item text-warning" href="{% url 'dcim:cable_edit' pk=cable.pk %}?return_url={{ request.path }}">
+            <span class="mdi mdi-link-edit me-4" aria-hidden="true"></span>Edit cable
+        </a>
+    </li>
 {% endif %}
 {% if perms.dcim.delete_cable %}
-    <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" title="Remove cable" class="btn btn-danger btn-xs">
-            <i class="mdi mdi-ethernet-cable-off" aria-hidden="true"></i>
-    </a>
+    <li>
+        <a href="{% url 'dcim:cable_delete' pk=cable.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
+            <span class="mdi mdi-ethernet-cable-off me-4" aria-hidden="true"></span>Delete cable
+        </a>
+    </li>
 {% endif %}

@@ -5,7 +5,7 @@
 Nautobot **Jobs** let you run your own Python inside Nautobot's execution engine.  
 They're perfect for one‑off data imports, consistency checks, scheduled sync tasks, or bulk edits that would be painful by hand.
 
-What Jobs **can** do: 
+What Jobs **can** do:
 
 - Touch Nautobot's database with the same ORM models you use elsewhere  
 - Talk to external devices or APIs  
@@ -57,24 +57,26 @@ class HelloWorldJob(jobs.Job):
 jobs.register_jobs(HelloWorldJob) # <- required in Nautobot 2.x
 ```
 
-!!! tip
-    Python files and packages created in `$JOBS_ROOT` are treated as Python modules by Nautobot. Nautobot will not import files from `$JOBS_ROOT` that conflict with an installed Python package or are invalid as a module name. This means that, for example, a file named `nautobot.py` will not be imported since it conflicts with the `nautobot` package.
-
 ### Visual Guide
 
-![Edit Job](../../media/development/jobs/edit-job.png)  
+![Edit Job](../../media/development/jobs/edit-job-light.png#only-light){ .on-glb }
+![Edit Job](../../media/development/jobs/edit-job-dark.png#only-dark){ .on-glb }
 **Edit the Job**: Navigate to **Jobs → Examples → Hello World**, select **Edit**.
 
-![Job Settings](../../media/development/jobs/enable-job.png)  
+![Job Settings](../../media/development/jobs/enable-job-light.png#only-light){ .on-glb }
+![Job Settings](../../media/development/jobs/enable-job-dark.png#only-dark){ .on-glb }
 **Enable the Job**: Scroll down to **Enable** the job, selecting the checkmark box, scroll down and **Update** the job.
 
-![Job Enabled](../../media/development/jobs/job-now-enabled.png)  
+![Job Enabled](../../media/development/jobs/job-now-enabled-light.png#only-light){ .on-glb }
+![Job Enabled](../../media/development/jobs/job-now-enabled-dark.png#only-dark){ .on-glb }
 **Job Now Enabled**: Now that the job is enabled, click on the job name.
 
-![Run Job](../../media/development/jobs/run-job.png)  
+![Run Job](../../media/development/jobs/run-job-light.png#only-light){ .on-glb }
+![Run Job](../../media/development/jobs/run-job-dark.png#only-dark){ .on-glb }
 **Run the Job**: Provide input if you like, then click **Run Job Now**.
 
-![Job Results](../../media/development/jobs/job-output.png)  
+![Job Results](../../media/development/jobs/job-output-light.png#only-light){ .on-glb }
+![Job Results](../../media/development/jobs/job-output-dark.png#only-dark){ .on-glb }
 **Job Results**: View real-time logs showing the Job's execution.
 
 ## Troubleshooting Common Issues

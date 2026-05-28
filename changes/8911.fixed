@@ -1,0 +1,2 @@
+Fixed `BreakoutDiagramSVG` to render multiple lanes between a pair of connectors when appropriate.
+Fixed `BreakoutDiagramSVG` to better render wide lane labels.

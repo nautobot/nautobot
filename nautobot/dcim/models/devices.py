@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -17,19 +18,26 @@ from nautobot.core.models import BaseManager, RestrictedQuerySet
 from nautobot.core.models.fields import JSONArrayField, LaxURLField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, OrganizationalModel, PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.templatetags.helpers import HTML_NONE
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    DeviceUniquenessChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
-from nautobot.extras.querysets import ConfigContextModelQuerySet
 from nautobot.extras.utils import extras_features
+from nautobot.wireless.models import (
+    ControllerManagedDeviceGroupRadioProfileAssignment,
+    ControllerManagedDeviceGroupWirelessNetworkAssignment,
+)
 
 from .device_components import (
     ConsolePort,
@@ -351,15 +359,15 @@ class DeviceType(PrimaryModel):
                     }
                 )
 
-        if (self.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT) and self.device_bay_templates.count():
+        if not self.is_parent_device and self.device_bay_templates.count():
             raise ValidationError(
                 {
-                    "subdevice_role": "Must delete all device bay templates associated with this device before "
+                    "subdevice_role": "Must delete all device bay templates associated with this device type before "
                     "declassifying it as a parent device."
                 }
             )
 
-        if self.u_height and self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD:
+        if self.u_height and self.is_child_device:
             raise ValidationError({"u_height": "Child device types must be 0U."})
 
     def save(self, *args, **kwargs):
@@ -385,12 +393,22 @@ class DeviceType(PrimaryModel):
         return f"{self.manufacturer.name} {self.model}"
 
     @property
+    def page_title(self):
+        return str(self)
+
+    @property
     def is_parent_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_PARENT
+        return self.subdevice_role in (
+            SubdeviceRoleChoices.ROLE_PARENT,
+            SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
 
     @property
     def is_child_device(self):
-        return self.subdevice_role == SubdeviceRoleChoices.ROLE_CHILD
+        return self.subdevice_role in (
+            SubdeviceRoleChoices.ROLE_CHILD,
+            SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
 
 
 #
@@ -560,13 +578,44 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Primary IPv6",
     )
-    cluster = models.ForeignKey(
+    clusters = models.ManyToManyField(
         to="virtualization.Cluster",
-        on_delete=models.SET_NULL,
         related_name="devices",
+        through="dcim.DeviceClusterAssignment",
         blank=True,
-        null=True,
     )
+
+    @property
+    def cluster(self):
+        """
+        Returns the only cluster assigned to this device.
+
+        Deprecated. Use `clusters` instead.
+
+        TODO: Remove this property in v4.0.0
+        """
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
+        return self.clusters.first()
+
+    @cluster.setter
+    def cluster(self, value):
+        """
+        Sets the clusters field to a single value.
+
+        Deprecated. Use `clusters` instead.
+
+        TODO: Remove this property in v4.0.0
+        """
+        # If the device hasn't been saved yet, defer the cluster assignment
+        if not self.present_in_database:
+            self._deferred_cluster = value
+            return
+
+        self.assign_cluster(value)
+
     virtual_chassis = models.ForeignKey(
         to="VirtualChassis",
         on_delete=models.SET_NULL,
@@ -582,7 +631,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
         verbose_name="Device Redundancy Group",
     )
-    device_redundancy_group_priority = models.PositiveSmallIntegerField(
+    device_redundancy_group_priority = models.PositiveIntegerField(
         blank=True,
         null=True,
         validators=[MinValueValidator(1)],
@@ -627,7 +676,7 @@ class Device(PrimaryModel, ConfigContextModel):
         null=True,
     )
 
-    objects = BaseManager.from_queryset(ConfigContextModelQuerySet)()
+    objects = BaseManager.from_queryset(DeviceQuerySet)()
 
     clone_fields = [
         "device_type",
@@ -637,26 +686,27 @@ class Device(PrimaryModel, ConfigContextModel):
         "location",
         "rack",
         "status",
-        "cluster",
+        "clusters",
         "secrets_group",
     ]
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def natural_key_field_names(cls):  # pylint: disable=no-self-argument
         """
-        When DEVICE_NAME_AS_NATURAL_KEY is set in settings or Constance, we use just the `name` for simplicity.
+        Check DEVICE_UNIQUENESS from settings or Constance and return proper field.
         """
-        if get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY"):
-            # opt-in simplified "pseudo-natural-key"
+        if get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.NAME:
+            # Simplified pseudo-natural key (opt-in for name-only uniqueness)
             return ["name"]
+        elif get_settings_or_config("DEVICE_UNIQUENESS") == DeviceUniquenessChoices.LOCATION_TENANT_NAME:
+            # Full natural key based on tenant, location, and name
+            return ["name", "tenant", "location"]
         else:
-            # true natural-key given current uniqueness constraints
-            return ["name", "tenant", "location"]  # location should be last since it's potentially variadic
+            return ["pk"]
 
     class Meta:
         ordering = ("_name",)  # Name may be null
         unique_together = (
-            ("location", "tenant", "name"),  # See validate_unique below
             ("rack", "position", "face"),
             ("virtual_chassis", "vc_position"),
         )
@@ -664,15 +714,19 @@ class Device(PrimaryModel, ConfigContextModel):
     def __str__(self):
         return self.display or super().__str__()
 
-    def validate_unique(self, exclude=None):
-        # Check for a duplicate name on a device assigned to the same Location and no Tenant. This is necessary
-        # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
-        # of the uniqueness constraint without manual intervention.
-        if self.name and hasattr(self, "location") and self.tenant is None:
-            if Device.objects.exclude(pk=self.pk).filter(name=self.name, location=self.location, tenant__isnull=True):
-                raise ValidationError({"name": "A device with this name already exists."})
+    def assign_cluster(self, cluster):
+        """
+        Assign a single cluster to the device.
+        """
+        if self.clusters.count() > 1:
+            raise self.clusters.model.MultipleObjectsReturned(
+                "Multiple Cluster objects returned. Please refer to clusters."
+            )
 
-        super().validate_unique(exclude)
+        if cluster is None:
+            self.clusters.clear()
+        else:
+            self.clusters.set([cluster])
 
     def clean(self):
         from nautobot.ipam import models as ipam_models  # circular import workaround
@@ -805,15 +859,20 @@ class Device(PrimaryModel, ConfigContextModel):
                 )
 
         # A Device can only be assigned to a Cluster in the same location or parent location, if any
-        if (
-            self.cluster is not None
-            and self.location is not None
-            and self.cluster.location is not None
-            and self.cluster.location not in self.location.ancestors(include_self=True)
-        ):
-            raise ValidationError(
-                {"cluster": f"The assigned cluster belongs to a location that does not include {self.location}."}
-            )
+        # Validate any pending cluster assignment that was deferred during creation
+        # Don't validate `self.clusters` here as that's a M2M and is updated out-of-step with `self.save()`
+        if self.location is not None and hasattr(self, "_deferred_cluster"):
+            cluster = self._deferred_cluster
+            if (
+                cluster is not None
+                and cluster.location is not None
+                and cluster.location not in self.location.ancestors(include_self=True)
+            ):
+                raise ValidationError(
+                    {
+                        "clusters": f"Cluster {cluster} belongs to a location, {cluster.location}, that does not include {self.location}."
+                    }
+                )
 
         # Validate virtual chassis assignment
         if self.virtual_chassis and self.vc_position is None:
@@ -827,7 +886,7 @@ class Device(PrimaryModel, ConfigContextModel):
             if existing_virtual_chassis and existing_virtual_chassis.master == self:
                 raise ValidationError(
                     {
-                        "virtual_chassis": f"The master device for the virtual chassis ({ existing_virtual_chassis}) may not be removed"
+                        "virtual_chassis": f"The master device for the virtual chassis ({existing_virtual_chassis}) may not be removed"
                     }
                 )
 
@@ -856,15 +915,30 @@ class Device(PrimaryModel, ConfigContextModel):
     def save(self, *args, **kwargs):
         is_new = not self.present_in_database
 
+        # to avoid circular import
+        from nautobot.dcim.custom_validators import DeviceUniquenessValidator
+
+        DeviceUniquenessValidator(self).clean()
+
         super().save(*args, **kwargs)
+
+        # Apply any pending cluster assignment that was deferred during creation
+        if hasattr(self, "_deferred_cluster"):
+            cluster = self._deferred_cluster
+            delattr(self, "_deferred_cluster")
+            self.assign_cluster(cluster)
 
         # If this is a new Device, instantiate all related components per the DeviceType definition
         if is_new:
             self.create_components()
 
-        # Update Location and Rack assignment for any child Devices
-        devices = Device.objects.filter(parent_bay__device=self)
-        for device in devices:
+        # Update Location and Rack assignment for all nested descendant Devices.
+        # We recurse from direct children only using get_children(), and not all_nested_devices,
+        # so each nested device is saved once. Iterating all_nested_devices and saving each would save
+        # grandchildren twice: once from parent's save(), once when the root loop reaches them.
+        # We keep full save() per device (signals, changelog) rather than bulk_update so that
+        # propagation remains visible in history and webhooks.
+        for device in self.get_children():
             save_child_device = False
             if device.location != self.location:
                 device.location = self.location
@@ -895,6 +969,10 @@ class Device(PrimaryModel, ConfigContextModel):
         instantiated_components = []
         for model, templates in component_models:
             model.objects.bulk_create([x.instantiate(device=self) for x in templates])
+        cache_key = construct_cache_key(self, method_name="has_device_bays", branch_aware=True)
+        cache.delete(cache_key)
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
+        cache.delete(cache_key)
         return instantiated_components
 
     create_components.alters_data = True
@@ -935,6 +1013,10 @@ class Device(PrimaryModel, ConfigContextModel):
         If this Device is a VirtualChassis member, return the VC master. Otherwise, return None.
         """
         return self.virtual_chassis.master if self.virtual_chassis else None
+
+    @property
+    def is_vc_master(self):
+        return self == self.get_vc_master()
 
     @property
     def vc_interfaces(self):
@@ -988,6 +1070,30 @@ class Device(PrimaryModel, ConfigContextModel):
         return Device.objects.filter(parent_bay__device=self.pk)
 
     @property
+    def has_device_bays(self) -> bool:
+        """
+        Cacheable property for determining whether this Device has any DeviceBays, and therefore may contain child Devices.
+        """
+        cache_key = construct_cache_key(self, method_name="has_device_bays", branch_aware=True)
+        device_bays_exists = cache.get(cache_key)
+        if device_bays_exists is None:
+            device_bays_exists = self.device_bays.exists()
+            cache.set(cache_key, device_bays_exists, timeout=5)
+        return device_bays_exists
+
+    @property
+    def has_module_bays(self) -> bool:
+        """
+        Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
+        """
+        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
+        module_bays_exists = cache.get(cache_key)
+        if module_bays_exists is None:
+            module_bays_exists = self.module_bays.exists()
+            cache.set(cache_key, module_bays_exists, timeout=5)
+        return module_bays_exists
+
+    @property
     def all_modules(self):
         """
         Return all child Modules installed in ModuleBays within this Device.
@@ -997,10 +1103,32 @@ class Device(PrimaryModel, ConfigContextModel):
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
         recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
         qs = Module.objects.all()
+        if not self.has_module_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
         query = Q()
         for level in range(recursion_depth):
             recursive_query = "parent_module_bay__parent_module__" * level
             query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
+        return qs.filter(query)
+
+    @property
+    def all_nested_devices(self):
+        """
+        Return all nested child Devices installed in DeviceBays within this Device.
+        """
+        # Supports Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device
+        # This query looks for devices that are installed in a device_bay and attached to this device
+        # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
+        recursion_depth = DEVICE_RECURSION_DEPTH_LIMIT
+        qs = Device.objects.all()
+        if not self.has_device_bays:
+            # Short-circuit to avoid an expensive nested query
+            return qs.none()
+        query = Q()
+        for level in range(recursion_depth):
+            recursive_query = "parent_bay__device__" * level
+            query = query | Q(**{f"{recursive_query}parent_bay__device": self})
         return qs.filter(query)
 
     @property
@@ -1059,6 +1187,57 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
         return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+
+    @property
+    def radio_profile_assignments(self):
+        """
+        Returns all Controller Managed Device Group Radio Profile Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupRadioProfileAssignment.objects.none()
+        return ControllerManagedDeviceGroupRadioProfileAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignments linked to this device group.
+        """
+        if self.controller_managed_device_group is None:
+            return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.none()
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group=self.controller_managed_device_group
+        )
+
+
+@extras_features("graphql")
+class DeviceClusterAssignment(BaseModel):
+    device = models.ForeignKey("dcim.Device", on_delete=models.CASCADE, related_name="cluster_assignments")
+    cluster = models.ForeignKey("virtualization.Cluster", on_delete=models.CASCADE, related_name="device_assignments")
+    is_metadata_associable_model = False
+    documentation_static_path = "docs/user-guide/core-data-model/dcim/device.html"
+
+    class Meta:
+        unique_together = ["device", "cluster"]
+        ordering = ["device", "cluster"]
+
+    def __str__(self):
+        return f"{self.device}: {self.cluster}"
+
+    def clean(self):
+        super().clean()
+        if self.device.location is not None and self.cluster.location is not None:
+            if self.cluster.location not in self.device.location.ancestors(include_self=True):
+                raise ValidationError(
+                    {
+                        "__all__": f"Cluster {self.cluster} belongs to a location, {self.cluster.location}, that does not include the location of device {self.device}, {self.device.location}"
+                    }
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
 
 #
@@ -1453,8 +1632,17 @@ class Controller(PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-muted">&mdash;</span>')
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+            return HTML_NONE
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in self.capabilities))
+
+    @property
+    def wireless_network_assignments(self):
+        """
+        Returns all Controller Managed Device Group Wireless Network Assignment linked to this controller.
+        """
+        return ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.filter(
+            controller_managed_device_group__controller=self
+        )
 
 
 @extras_features(
@@ -1541,13 +1729,37 @@ class ControllerManagedDeviceGroup(TreeModel, PrimaryModel):
 
     def get_capabilities_display(self):
         if not self.capabilities:
-            return format_html('<span class="text-muted">&mdash;</span>')
-        return format_html_join(" ", '<span class="label label-default">{}</span>', ((v,) for v in self.capabilities))
+            return HTML_NONE
+        return format_html_join(" ", '<span class="badge bg-secondary">{}</span>', ((v,) for v in self.capabilities))
 
 
 #
 # Modules
 #
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class ModuleFamily(PrimaryModel):
+    """
+    A ModuleFamily represents a classification of ModuleTypes.
+    It is used to enforce compatibility between ModuleBays and Modules.
+    """
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, unique=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "module families"
+
+    def __str__(self):
+        return self.name
 
 
 # TODO: 5840 - Translate comments field from devicetype library, Nautobot doesn't use that field for ModuleType
@@ -1577,14 +1789,24 @@ class ModuleType(PrimaryModel):
     """
 
     manufacturer = models.ForeignKey(to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="module_types")
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_types",
+        blank=True,
+        null=True,
+    )
     model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    front_image = models.ImageField(upload_to="moduletype-images", blank=True)
+    rear_image = models.ImageField(upload_to="moduletype-images", blank=True)
     comments = models.TextField(blank=True)
 
     clone_fields = [
         "manufacturer",
+        "module_family",
     ]
 
     class Meta:
@@ -1595,6 +1817,64 @@ class ModuleType(PrimaryModel):
 
     def __str__(self):
         return self.model
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Save references to the original front/rear images for newly-created instances.
+        # For instances loaded from the database, from_db() overrides these after __init__
+        # completes (Django sets _state.adding=False after __init__, so present_in_database
+        # is always False here for DB-loaded objects).
+        self._original_front_image = None
+        self._original_rear_image = None
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Capture original image values for instances loaded from the database.
+
+        __init__ cannot do this reliably because Django sets _state.adding=False
+        only after __init__ completes, making present_in_database always False
+        during __init__ for DB-loaded instances.
+        """
+        instance: "ModuleType" = super().from_db(db, field_names, values)
+        # Access __dict__ directly instead of the field descriptor to avoid triggering
+        # refresh_from_db() for deferred fields, which would call from_db() again and
+        # cause infinite recursion. Construct ImageFieldFile manually so that save()
+        # can call .delete() on the original if the image is replaced.
+        for attr in ("front_image", "rear_image"):
+            raw_name = instance.__dict__.get(attr) or None
+            field = cls._meta.get_field(attr)
+            setattr(
+                instance,
+                f"_original_{attr}",
+                field.attr_class(instance, field, raw_name) if raw_name else None,
+            )
+        return instance
+
+    def save(self, *args, **kwargs):
+        original_front_image = self._original_front_image
+        original_rear_image = self._original_rear_image
+
+        super().save(*args, **kwargs)
+
+        # Delete any previously uploaded image files that are no longer in use
+        if original_front_image and self.front_image != original_front_image:
+            original_front_image.delete(save=False)
+        if original_rear_image and self.rear_image != original_rear_image:
+            original_rear_image.delete(save=False)
+
+        # Update tracked originals to current values for subsequent saves
+        self._original_front_image = self.front_image
+        self._original_rear_image = self.rear_image
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+
+        # Delete any uploaded image files
+        if self.front_image:
+            self.front_image.delete(save=False)
+        if self.rear_image:
+            self.rear_image.delete(save=False)
 
     def to_yaml(self):
         data = OrderedDict(
@@ -1781,10 +2061,19 @@ class Module(PrimaryModel):
     def display(self):
         if self.location:
             return f"{self!s} at location {self.location}"
-        elif self.parent_module_bay.parent_device is not None:
+        if self.parent_module_bay.parent_device is not None:
             return f"{self.module_type!s} installed in {self.parent_module_bay.parent_device.display}"
-        else:
-            return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
+
+        return f"{self.module_type!s} installed in {self.parent_module_bay.parent_module.display}"
+
+    @property
+    def page_title(self):
+        if self.location:
+            return f"{self.location} {self.module_type!s}"
+        if self.parent_module_bay.parent_device is not None:
+            return f"{self.parent_module_bay.parent_device.display} {self.module_type!s}"
+
+        return f"{self.parent_module_bay.parent_module.module_type!s} {self.module_type!s}"
 
     @property
     def device(self):
@@ -1808,6 +2097,36 @@ class Module(PrimaryModel):
             if ContentType.objects.get_for_model(self) not in self.location.location_type.content_types.all():
                 raise ValidationError(
                     {"location": f'Modules may not associate to locations of type "{self.location.location_type}".'}
+                )
+
+        # Validate module family compatibility
+        if self.parent_module_bay and self.parent_module_bay.module_family:
+            if self.module_type.module_family != self.parent_module_bay.module_family:
+                module_family_name = self.parent_module_bay.module_family.name
+                if self.module_type.module_family is None:
+                    module_type_family = "not assigned to a family"
+                else:
+                    module_type_family = f"in the family {self.module_type.module_family.name}"
+                raise ValidationError(
+                    {
+                        "module_type": f"The selected module bay requires a module type in the family {module_family_name}, "
+                        f"but the selected module type is {module_type_family}."
+                    }
+                )
+
+        # Validate module manufacturer constraint
+        if self.parent_module_bay and self.parent_module_bay.requires_first_party_modules:
+            if self.parent_module_bay.parent_device:
+                parent_mfr = self.parent_module_bay.parent_device.device_type.manufacturer
+            elif self.parent_module_bay.parent_module:
+                parent_mfr = self.parent_module_bay.parent_module.module_type.manufacturer
+            else:
+                parent_mfr = None
+            if parent_mfr and self.module_type.manufacturer != parent_mfr:
+                raise ValidationError(
+                    {
+                        "module_type": "The selected module bay requires a module type from the same manufacturer as the parent device or module"
+                    }
                 )
 
     def save(self, *args, **kwargs):
@@ -1998,22 +2317,6 @@ class VirtualDeviceContext(PrimaryModel):
                     raise ValidationError(
                         {f"{field}": f"{ip} is not part of an interface that belongs to this VDC's device."}
                     )
-                # Note: The validation for primary IPs `validate_primary_ips` is commented out due to the order in which Django processes form validation with
-                # Many-to-Many (M2M) fields. During form saving, Django creates the instance first before assigning the M2M fields (in this case, interfaces).
-                # As a result, the primary_ips fields could fail validation at this point because the interfaces are not yet linked to the instance,
-                # leading to validation errors.
-                # interfaces = self.interfaces.all()
-                # if IPAddressToInterface.objects.filter(ip_address=ip, interface__in=interfaces).exists():
-                #     pass
-                # elif (
-                #     ip.nat_inside is None
-                #     or not IPAddressToInterface.objects.filter(
-                #         ip_address=ip.nat_inside, interface__in=interfaces
-                #     ).exists()
-                # ):
-                #     raise ValidationError(
-                #         {f"{field}": f"The specified IP address ({ip}) is not assigned to this Virtual Device Context."}
-                #     )
 
     def clean(self):
         super().clean()

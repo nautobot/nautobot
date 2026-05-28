@@ -47,9 +47,6 @@ This is a Job that demonstrates as many Job features as it can.
 - All of the Meta attributes.
 - All of the ScriptVariable types as Job inputs.
 - Etc."""
-        approval_required = True  # Default: False
-        # Set to True to make it so that another user must approve any run of this Job
-        # before it can be executed.
         dryrun_default = False  # Default: False
         # Set to True to default Job execution to "dry-run" mode.
         # Exactly what that means is up to the Job implementation.
@@ -279,7 +276,6 @@ class ExampleDryRunJob(Job):
     dryrun = DryRunVar()
 
     class Meta:
-        approval_required = True
         has_sensitive_variables = False
         description = "Example job to remove serial number on all devices, supports dryrun mode."
 
@@ -307,9 +303,6 @@ class ExampleDryRunJob(Job):
 class ExampleJob(Job):
     some_json_data = JSONVar(label="JSON", description="Example JSONVar for a job.", default={})
 
-    # specify template_name to override the default job scheduling template
-    template_name = "example_app/example_with_custom_template.html"
-
     class Meta:
         name = "Example job, does nothing"
         description = """
@@ -318,6 +311,9 @@ class ExampleJob(Job):
             *This is italicized*
         """
         has_sensitive_variables = False
+
+        # specify template_name to override the default job scheduling template
+        template_name = "example_app/example_with_custom_template.html"
 
     def run(self, some_json_data):  # pylint:disable=arguments-differ
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
@@ -345,12 +341,12 @@ class ExampleCustomFormJob(Job):
     # display a text area instead in the template.
     custom_job_data = StringVar(label="Input Data", description="Some input data", default="Lorem Ipsum")
 
-    # specify template_name to override the default job scheduling template
-    template_name = "example_app/custom_job_form.html"
-
     class Meta:
         name = "Custom form."
         has_sensitive_variables = False
+
+        # specify template_name to override the default job scheduling template
+        template_name = "example_app/custom_job_form.html"
 
     def run(self, custom_job_data):  # pylint:disable=arguments-differ
         """Run the job."""
@@ -358,7 +354,7 @@ class ExampleCustomFormJob(Job):
 
 
 class ExampleLoggingJob(Job):
-    interval = IntegerVar(default=4, description="The time in seconds to sleep.")
+    runtime = IntegerVar(default=4, description="The time in seconds to sleep.")
 
     class Meta:
         name = "Example logging job."
@@ -370,9 +366,9 @@ class ExampleLoggingJob(Job):
             "bulk",
         ]
 
-    def run(self, interval):  # pylint:disable=arguments-differ
-        self.logger.debug("Running for %s seconds.", interval)
-        for step in range(1, interval + 1):
+    def run(self, runtime):  # pylint:disable=arguments-differ
+        self.logger.debug("Running for %s seconds.", runtime)
+        for step in range(1, runtime + 1):
             time.sleep(1)
             self.logger.info("Step %s", step)
             print(f"stdout logging for step {step}, task: {self.request.id}")
@@ -382,7 +378,7 @@ class ExampleLoggingJob(Job):
             extra={"skip_db_logging": True},
         )
         self.logger.info("Success", extra={"object": self.job_model, "grouping": "job_run_success"})
-        return f"Ran for {interval} seconds"
+        return f"Ran for {runtime} seconds"
 
 
 class ExampleFileInputOutputJob(Job):

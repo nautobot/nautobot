@@ -1,9 +1,11 @@
 from collections.abc import Iterable
 
 from django.core.exceptions import ValidationError
+from django.utils.html import format_html, format_html_join
 import netaddr
 
 from nautobot.core.forms.utils import compress_range
+from nautobot.core.templatetags.helpers import add_html_id, HTML_NONE, hyperlinked_object
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.choices import PrefixTypeChoices
@@ -304,3 +306,27 @@ def retrieve_interface_or_vminterface_from_request(request):
         return obj, None
     except (interface_model.DoesNotExist, ValidationError):
         return None, f'{interface_model.__name__} with id "{interface_id}" not found.'
+
+
+def render_ip_with_nat(ip):
+    """Render an IP address plus its NAT inside/outside information if any."""
+    if ip is None:
+        return HTML_NONE
+
+    if ip.nat_inside is not None:
+        nat = format_html("(NAT for {})", hyperlinked_object(ip.nat_inside))
+    elif ip.nat_outside_list.exists():
+        nat = format_html(
+            "<br>NAT:<ul>{}</ul>",
+            format_html_join("\n", "<li>{}</li>", [[hyperlinked_object(nato)] for nato in ip.nat_outside_list.all()]),
+        )
+    else:
+        nat = ""
+
+    # TODO: replace auto-added "copy" button for this entire string with a button that just copies the host address
+    return format_html(
+        "{display} ({namespace}) {nat}",
+        display=add_html_id(hyperlinked_object(ip), f"ipv{ip.ip_version}"),
+        namespace=hyperlinked_object(ip.parent.namespace if ip.parent else None),
+        nat=nat,
+    )

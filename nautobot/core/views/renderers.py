@@ -12,11 +12,10 @@ from rest_framework import renderers
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
 from nautobot.core.forms import (
     restrict_form_fields,
-    SearchForm,
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
-from nautobot.core.templatetags.helpers import bettertitle, validated_viewname
+from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -80,6 +79,9 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
         queryset = view.alter_queryset(request)
+        htmx_request = request.headers.get("HX-Request", False)
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
         if view.action in ["list", "notes", "changelog"]:
             if view.action == "list":
@@ -97,11 +99,13 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 ):
                     view.hide_hierarchy_ui = True  # hide tree hierarchy if custom sort is used
                 table = table_class(
-                    queryset,
+                    queryset if htmx_request else queryset.none(),
                     table_changes_pending=table_changes_pending,
                     saved_view=self.saved_view,
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
+                    configurable=True,
+                    is_object_embedded_search_results=is_object_embedded_search_request,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                     table.columns.show("pk")
@@ -124,13 +128,16 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request, self.saved_view),
+                "per_page": get_paginate_count(
+                    request, self.saved_view, save_user_config=not is_object_embedded_search_request
+                ),
             }
             max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
-                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                    'Requested "per_page" is too large. '
+                    f"No more than {max_page_size} items may be displayed at a time.",
                 )
             return RequestConfig(request, paginate).configure(table)
         else:
@@ -206,7 +213,6 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         content_type = ContentType.objects.get_for_model(model)
         form = None
         table = None
-        search_form = None
         instance = None
         filter_form = None
         display_filter_params = []
@@ -228,7 +234,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset is not None:
                         filterset_filters = view.filterset.filters
                     else:
-                        filterset_filters = view.filterset.get_filters()
+                        filterset_filters = view.filterset_class.base_filters
                     display_filter_params = [
                         check_filter_for_display(filterset_filters, field_name, values)
                         for field_name, values in view.filter_params.items()
@@ -236,13 +242,12 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     if view.filterset_form_class is not None:
                         filter_form = view.filterset_form_class(view.filter_params, label_suffix="")
                 table = self.construct_table(view, request=request, permissions=permissions)
-                q_placeholder = "Search " + bettertitle(model._meta.verbose_name_plural)
-                search_form = SearchForm(data=view.filter_params, q_placeholder=q_placeholder)
             elif view.action == "destroy":
                 form = form_class(initial=request.GET)
             elif view.action in ["create", "update"]:
                 initial_data = normalize_querydict(request.GET, form_class=form_class)
-                form = form_class(instance=instance, initial=initial_data)
+                kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+                form = form_class(instance=instance, initial=initial_data, **kwargs)
                 restrict_form_fields(form, request.user)
             elif view.action == "bulk_destroy":
                 pk_list = getattr(view, "pk_list", [])
@@ -279,10 +284,10 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
 
         context = {
             "content_type": content_type,
+            "model": model,
             "form": form,
             "filter_form": filter_form,
             "dynamic_filter_form": self.get_dynamic_filter_form(view, request, filterset_class=view.filterset_class),
-            "search_form": search_form,
             "filter_params": display_filter_params,
             "object": instance,
             "obj": instance,  # NOTE: This context key is deprecated in favor of `object`.
@@ -294,20 +299,31 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             "table_config_form": TableConfigForm(table=table) if table else None,
             "verbose_name": queryset.model._meta.verbose_name,
             "verbose_name_plural": queryset.model._meta.verbose_name_plural,
+            "view_action": view.action,
+            "detail": False,
         }
+
+        self._set_context_from_method(view, "get_view_titles", context, "view_titles")
+        self._set_context_from_method(view, "get_breadcrumbs", context, "breadcrumbs")
+
         if view.detail:
             # If we are in a retrieve related detail view (retrieve and custom actions).
             try:
                 context["object_detail_content"] = view.object_detail_content
+                if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+                    component = view.object_detail_content.get_component_by_id(request.GET["component_id"])
+                    context["component"] = component
             except AttributeError:
                 # If the view does not have a object_detail_content attribute, set it to None.
                 context["object_detail_content"] = None
+
             context.update(common_detail_view_context(request, instance))
         if view.action == "list":
             # Construct valid actions for list view.
             valid_actions = self.validate_action_buttons(view, request)
             # Query SavedViews for dropdown button
             resolved_path = resolve(request.path)
+            # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
             list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
             saved_views = None
             if model.is_saved_view_model:
@@ -316,18 +332,22 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
             new_changes_not_applied = view_changes_not_saved(request, view, self.saved_view)
             context.update(
                 {
-                    "model": model,
                     "current_saved_view": self.saved_view,
                     "new_changes_not_applied": new_changes_not_applied,
                     "action_buttons": valid_actions,
                     "list_url": list_url,
                     "saved_views": saved_views,
-                    "title": bettertitle(model._meta.verbose_name_plural),
                 }
             )
         elif view.action in ["create", "update"]:
+            base_template = (
+                "components/htmx/object_embedded_create.html"
+                if request.headers.get("HX-Request", False)
+                else "generic/object_create_base.html"
+            )
             context.update(
                 {
+                    "base_template": base_template,
                     "editing": instance.present_in_database,
                 }
             )
@@ -363,4 +383,18 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         # See form_valid() for self.action == "bulk_create".
         self.template = data.get("template", view.get_template_name())
 
+        data["request"] = request
+
         return super().render(data, accepted_media_type=accepted_media_type, renderer_context=renderer_context)
+
+    @staticmethod
+    def _set_context_from_method(
+        view,
+        view_function,
+        context,
+        context_key,
+    ):
+        try:
+            context[context_key] = getattr(view, view_function)()
+        except AttributeError:
+            context[context_key] = None

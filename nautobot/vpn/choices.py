@@ -1,0 +1,277 @@
+"""Custom choices for the vpn models."""
+
+from nautobot.apps.choices import ChoiceSet
+
+
+class VPNTunnelStatusChoices(ChoiceSet):
+    STATUS_ACTIVE = "active"
+    STATUS_DOWN = "down"
+    STATUS_DEPRECATED = "deprecated"
+
+    CHOICES = (
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_DOWN, "Down"),
+        (STATUS_DEPRECATED, "Deprecated"),
+    )
+
+
+class VPNTunnelEndpointRoleChoices(ChoiceSet):
+    ROLE_PEER = "peer"
+    ROLE_HUB = "hub"
+    ROLE_SPOKE = "spoke"
+
+    CHOICES = (
+        (ROLE_PEER, "Peer"),
+        (ROLE_HUB, "Hub"),
+        (ROLE_SPOKE, "Spoke"),
+    )
+
+
+class IkeVersionChoices(ChoiceSet):
+    """Choices for the ike_version field on the VPNPhase1Policy model."""
+
+    ike_v1 = "IKEv1"
+    ike_v2 = "IKEv2"
+
+    CHOICES = (
+        (ike_v1, "IKEv1"),
+        (ike_v2, "IKEv2"),
+    )
+
+
+class EncryptionAlgorithmChoices(ChoiceSet):
+    """Choices for the encryption_algorithm field on the VPNPhase1Policy model."""
+
+    aes_128_cbc = "AES-128-CBC"
+    aes_128_gcm = "AES-128-GCM"
+    aes_192_cbc = "AES-192-CBC"
+    aes_192_gcm = "AES-192-GCM"
+    aes_256_cbc = "AES-256-CBC"
+    aes_256_gcm = "AES-256-GCM"
+    des = "DES"
+    a3des = "3DES"
+
+    CHOICES = (
+        (aes_128_cbc, "AES-128-CBC"),
+        (aes_128_gcm, "AES-128-GCM"),
+        (aes_192_cbc, "AES-192-CBC"),
+        (aes_192_gcm, "AES-192-GCM"),
+        (aes_256_cbc, "AES-256-CBC"),
+        (aes_256_gcm, "AES-256-GCM"),
+        (des, "DES"),
+        (a3des, "3DES"),
+    )
+
+
+class IntegrityAlgorithmChoices(ChoiceSet):
+    """Choices for the integrity_algorithm field on the VPNPhase1Policy model."""
+
+    md5 = "MD5"
+    sha1 = "SHA1"
+    sha256 = "SHA256"
+    sha384 = "SHA384"
+    sha512 = "SHA512"
+
+    CHOICES = (
+        (md5, "MD5"),
+        (sha1, "SHA1"),
+        (sha256, "SHA256"),
+        (sha384, "SHA384"),
+        (sha512, "SHA512"),
+    )
+
+
+class DhGroupChoices(ChoiceSet):
+    """Choices for the dh_group field on the VPNPhase1Policy model."""
+
+    group1 = "1"
+    group2 = "2"
+    group5 = "5"
+    group14 = "14"
+    group19 = "19"
+    group20 = "20"
+    group21 = "21"
+    group22 = "22"
+    group23 = "23"
+    group24 = "24"
+    group25 = "25"
+    group26 = "26"
+    group27 = "27"
+    group28 = "28"
+    group29 = "29"
+    group30 = "30"
+    group31 = "31"
+    group32 = "32"
+    group33 = "33"
+    group34 = "34"
+
+    CHOICES = (
+        (group1, "Group 1"),
+        (group2, "Group 2"),
+        (group5, "Group 5"),
+        (group14, "Group 14"),
+        (group19, "Group 19"),
+        (group20, "Group 20"),
+        (group21, "Group 21"),
+        (group22, "Group 22"),
+        (group23, "Group 23"),
+        (group24, "Group 24"),
+        (group25, "Group 25"),
+        (group26, "Group 26"),
+        (group27, "Group 27"),
+        (group28, "Group 28"),
+        (group29, "Group 29"),
+        (group30, "Group 30"),
+        (group31, "Group 31"),
+        (group32, "Group 32"),
+        (group33, "Group 33"),
+        (group34, "Group 34"),
+    )
+
+
+class AuthenticationMethodChoices(ChoiceSet):
+    """Choices for the authentication_method field on the VPNPhase1Policy model."""
+
+    psk = "PSK"
+    rsa = "RSA"
+    ecdsa = "ECDSA"
+    certificate = "Certificate"
+
+    CHOICES = (
+        (psk, "PSK"),
+        (rsa, "RSA"),
+        (ecdsa, "ECDSA"),
+        (certificate, "Certificate"),
+    )
+
+
+class EncapsulationChoices(ChoiceSet):
+    """Choices for the encapsulation field on the VPNTunnel model."""
+
+    ipsec_transport = "IPsec-Transport"
+    ipsec_tunnel = "IPsec-Tunnel"
+    ip_in_ip = "IP-in-IP"
+    gre = "GRE"
+    wireguard = "WireGuard"
+    l2tp = "L2TP"
+    pptp = "PPTP"
+    openvpn = "OpenVPN"
+    eoip = "EoIP"
+
+    CHOICES = (
+        (ipsec_transport, "IPsec-Transport"),
+        (ipsec_tunnel, "IPsec-Tunnel"),
+        (ip_in_ip, "IP-in-IP"),
+        (gre, "GRE"),
+        (wireguard, "WireGuard"),
+        (l2tp, "L2TP"),
+        (pptp, "PPTP"),
+        (openvpn, "OpenVPN"),
+        (eoip, "EoIP"),
+    )
+
+
+#
+# VPN service types
+#
+
+
+class VPNServiceTypeChoices(ChoiceSet):
+    """VPN service type choices for both tunnel and overlay use cases."""
+
+    TYPE_IPSEC = "ipsec"
+
+    # VPLS types
+    TYPE_VPWS = "vpws"
+    TYPE_VPLS = "vpls"
+
+    # VXLAN types
+    TYPE_VXLAN = "vxlan"
+    TYPE_VXLAN_EVPN = "vxlan-evpn"
+
+    # EVPN types
+    TYPE_MPLS_EVPN = "mpls-evpn"
+    TYPE_PBB_EVPN = "pbb-evpn"
+    TYPE_EVPN_VPWS = "evpn-vpws"
+
+    # E-Line types
+    TYPE_EPL = "epl"
+    TYPE_EVPL = "evpl"
+
+    # E-LAN types
+    TYPE_EPLAN = "ep-lan"
+    TYPE_EVPLAN = "evp-lan"
+
+    # E-Tree types
+    TYPE_EPTREE = "ep-tree"
+    TYPE_EVPTREE = "evp-tree"
+
+    # Other
+    TYPE_SPB = "spb"
+
+    CHOICES = (
+        ("Tunnel", ((TYPE_IPSEC, "IPSec"),)),
+        (
+            "VPLS",
+            (
+                (TYPE_VPWS, "VPWS"),
+                (TYPE_VPLS, "VPLS"),
+            ),
+        ),
+        (
+            "VXLAN",
+            (
+                (TYPE_VXLAN, "VXLAN"),
+                (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
+            ),
+        ),
+        (
+            "EVPN",
+            (
+                (TYPE_MPLS_EVPN, "MPLS EVPN"),
+                (TYPE_PBB_EVPN, "PBB EVPN"),
+                (TYPE_EVPN_VPWS, "EVPN VPWS"),
+            ),
+        ),
+        (
+            "E-Line",
+            (
+                (TYPE_EPL, "EPL"),
+                (TYPE_EVPL, "EVPL"),
+            ),
+        ),
+        (
+            "E-LAN",
+            (
+                (TYPE_EPLAN, "Ethernet Private LAN"),
+                (TYPE_EVPLAN, "Ethernet Virtual Private LAN"),
+            ),
+        ),
+        (
+            "E-Tree",
+            (
+                (TYPE_EPTREE, "Ethernet Private Tree"),
+                (TYPE_EVPTREE, "Ethernet Virtual Private Tree"),
+            ),
+        ),
+        ("Other", ((TYPE_SPB, "SPB"),)),
+    )
+
+    # Point-to-point service types (limited to 2 terminations)
+    P2P = (
+        TYPE_VPWS,
+        TYPE_EVPN_VPWS,
+        TYPE_EPL,
+        TYPE_EVPL,
+    )
+
+    # Types that use VNI (VXLAN Network Identifier) — range 1 to 16,777,214
+    # Only pure VXLAN types use the 24-bit VNI field (RFC 7348).
+    # MPLS EVPN, PBB EVPN, and EVPN VPWS use MPLS labels / route distinguishers, not VNIs.
+    VXLAN_TYPES = (
+        TYPE_VXLAN,
+        TYPE_VXLAN_EVPN,
+    )
+
+    VXLAN_VNI_MIN = 1
+    VXLAN_VNI_MAX = 16777214

@@ -10,6 +10,9 @@ from nautobot.core.settings_funcs import parse_redis_connection
 
 ALLOWED_HOSTS = ["nautobot.example.com"]
 
+# Do *not* send anonymized install metrics when migration or post_upgrade management commands are run while testing
+INSTALLATION_METRICS_ENABLED = False
+
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"
@@ -28,14 +31,6 @@ SECRET_KEY = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"  #
 
 # Use *different* redis_databases than the ones (0 and 1) used during non-automated-testing operations.
 CACHES["default"]["LOCATION"] = parse_redis_connection(redis_database=2)  # noqa: F405  # undefined-local-with-import-star-usage
-
-# Testing storages within cli.py
-STORAGE_CONFIG = {
-    "AWS_ACCESS_KEY_ID": "ASFWDAMWWOQMEOQMWPMDA<WPDA",
-    "AWS_SECRET_ACCESS_KEY": "ASFKMWADMsacasdaw/dawrt1231541231231",
-    "AWS_STORAGE_BUCKET_NAME": "nautobot",
-    "AWS_S3_REGION_NAME": "us-west-1",
-}
 
 # Use in-memory Constance backend instead of database backend so that settings don't leak between parallel tests.
 CONSTANCE_BACKEND = "constance.backends.memory.MemoryBackend"

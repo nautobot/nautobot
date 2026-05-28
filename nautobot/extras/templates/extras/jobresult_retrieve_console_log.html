@@ -1,0 +1,63 @@
+{% extends 'extras/jobresult_retrieve.html' %}
+
+{% block extra_tab_content %}
+    <div class="card h-100 mb-0">
+        <div class="card-header">
+            <strong>Console Log</strong>
+            {% if job_is_pending %}
+                <small class="nb-console-log-loading-in-progress text-secondary" id="job-status-message">(updating every 2 seconds...)</small>
+            {% endif %}
+            <div class="float-end">
+                <span id="job-status">{% include 'extras/inc/job_label.html' with result=object %}</span>
+            </div>
+        </div>
+
+        {% spaceless %}
+            <div class="card-body overflow-hidden">
+                <pre class="h-100 mb-0 overflow-y-auto" id="console-output" hx-on:load="this.scrollTop = this.scrollHeight">
+                    <code class="h-100">
+                        {% include "extras/inc/jobresult_console_log_lines.html" %}
+                    </code>
+                </pre>
+            </div>
+        {% endspaceless %}
+
+        {% if job_is_pending %}
+            <div
+                class="d-none"
+                id="htmx-poller"
+                hx-get="{% url 'extras:jobresult_job_console_entries' pk=object.pk %}"
+                hx-trigger="every 2s"
+                hx-select="#console-lines-wrapper > *"
+                hx-select-oob="#job-status,#job-status-message:outerHTML,#htmx-poller:outerHTML"
+                hx-swap="beforeend scroll:#console-output:bottom"
+                hx-target="#console-output code"
+                hx-vals="js:{last_timestamp: window.nb.jobResult.getLastTimestamp()}"
+            ></div>
+        {% endif %}
+    </div>
+
+    <script>
+        (() => {
+            const getContentContainer = () => document.querySelector('#console-output');
+
+            const getLastTimestamp = () => {
+                const lastLine = document.querySelector('.console-line[data-timestamp]:last-of-type');
+                return lastLine?.getAttribute('data-timestamp') ?? '{{ last_timestamp }}';
+            }
+
+            window.nb = window.nb || {};
+            window.nb.jobResult = { getLastTimestamp };
+
+            const scrollToBottom = () => {
+                const contentContainer = getContentContainer();
+                if (contentContainer) {
+                    contentContainer.scrollTop = contentContainer.scrollHeight;
+                }
+            }
+
+            // Initial scroll to bottom on page load
+            document.addEventListener('DOMContentLoaded', scrollToBottom);
+        })();
+    </script>
+{% endblock %}

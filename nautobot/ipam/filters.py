@@ -1,4 +1,5 @@
 import contextlib
+import ipaddress
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -8,6 +9,7 @@ import netaddr
 
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueNumberFilter,
     MultiValueUUIDFilter,
@@ -18,12 +20,15 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
+from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
-from nautobot.ipam import choices, formfields
-from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
+from nautobot.ipam import choices
+from nautobot.ipam.filter_mixins import PrefixFilter
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
+from nautobot.vpn.models import VPNTunnelEndpoint
 
 from .models import (
     IPAddress,
@@ -56,40 +61,7 @@ __all__ = (
 )
 
 
-class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
-    """
-    Filter that supports filtering a foreign key to Prefix by either its PK or by a literal `prefix` string.
-    """
-
-    field_class = formfields.PrefixFilterFormField
-
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("to_field_name", "pk")
-        kwargs.setdefault("label", "Prefix (ID or prefix string)")
-        kwargs.setdefault("queryset", Prefix.objects.all())
-        super().__init__(*args, **kwargs)
-
-    def get_filter_predicate(self, v):
-        # Null value filtering
-        if v is None:
-            return {f"{self.field_name}__isnull": True}
-
-        # If value is a model instance, stringify it to a pk.
-        if isinstance(v, Prefix):
-            v = v.pk
-
-        # Try to cast the value to a UUID to distinguish between PKs and prefix strings
-        v = str(v)
-        try:
-            uuid.UUID(v)
-            return {self.field_name: v}
-        except (AttributeError, TypeError, ValueError):
-            # It's a prefix string
-            prefixes_queryset = Prefix.objects.net_equals(v)
-            return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
-
-
-class NamespaceFilterSet(NautobotFilterSet):
+class NamespaceFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -112,39 +84,33 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
     import_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Import target (ID or name)",
     )
     export_targets = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
-        label="Export target (ID or name)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="devices",
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual Machine (ID or name)",
     )
     prefix = PrefixFilter(field_name="prefixes")
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
-        label="Virtual Device Context (ID or name)",
     )
 
     class Meta:
         model = VRF
-        fields = ["id", "name", "rd", "tags"]
+        fields = ["id", "name", "rd", "tags", "description"]
 
 
 class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
@@ -161,22 +127,18 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
-        label="VRF (ID or name)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual Machine (ID or name)",
     )
     virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
-        label="Virtual Device Context (ID or name)",
     )
 
     class Meta:
@@ -195,7 +157,6 @@ class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="name",
-        label="VRF (ID or name)",
     )
 
     class Meta:
@@ -261,6 +222,10 @@ class PrefixFilterSet(
         method="filter_prefix",
         label="Prefix",
     )
+    prefix_exact = MultiValueCharFilter(
+        method="filter_prefix_exact",
+        label="Prefix (exact, strict)",
+    )
     within = MultiValueCharFilter(
         method="search_within",
         label="Within prefix",
@@ -273,17 +238,33 @@ class PrefixFilterSet(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        prefers_id=True,
+        to_field_name="network",
+        method="filter_ancestors",
+        label="Prefixes which are ancestors of this prefix (ID or network string)",
+    )
+    prefix_and_descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Prefix.objects.all(),
+        prefers_id=True,
+        to_field_name="network",
+        method="filter_prefix_and_descendants",
+        label="Prefixes which are the given Prefix (ID or network string) and its descendants",
+    )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Assigned VRF (ID or RD)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="Present in VRF",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="vrfs__rd",
         queryset=VRF.objects.all(),
@@ -291,9 +272,8 @@ class PrefixFilterSet(
         to_field_name="rd",
         label="Present in VRF (RD)",
     )
-    vlan_id = django_filters.ModelMultipleChoiceFilter(
+    vlan_id = ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
-        label="VLAN (ID)",
     )
     vlan_vid = MultiValueNumberFilter(
         field_name="vlan__vid",
@@ -301,7 +281,6 @@ class PrefixFilterSet(
     )
     rir = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=RIR.objects.all(),
-        label="RIR (name or ID)",
         to_field_name="name",
     )
     has_rir = RelatedMembershipBooleanFilter(
@@ -309,10 +288,14 @@ class PrefixFilterSet(
         label="Has RIR",
     )
     type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Prefixes",
+    )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
@@ -326,12 +309,19 @@ class PrefixFilterSet(
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
-        label="Cloud Network (name or ID)",
+    )
+    vpn_tunnel_endpoints = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VPNTunnelEndpoint.objects.all(),
+        to_field_name="pk",
+        label="VPN Tunnel Endpoint ID",
+    )
+    vpn_tunnel_endpoints_name_contains = django_filters.CharFilter(
+        method="filter_vpntunnelendpoint_name_contains",
+        label="VPN Tunnel Endpoint Name Contains",
     )
 
     class Meta:
@@ -339,13 +329,34 @@ class PrefixFilterSet(
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
     def _strip_values(self, values):
-        return [value.strip() for value in values if value.strip()]
+        result = []
+        for value in values:
+            value = value.strip()
+            if is_uuid(value):
+                result.append(Prefix.objects.get(pk=value).prefix)
+            elif value:
+                result.append(value)
+        return result
 
     def filter_prefix(self, queryset, name, value):
         prefixes = self._strip_values(value)
         with contextlib.suppress(netaddr.AddrFormatError, ValueError):
             return queryset.net_equals(*prefixes)
         return queryset.none()
+
+    def filter_prefix_exact(self, queryset, name, value):
+        """
+        Strict version of `prefix` filter.
+        Rejects prefixes with host bits set (e.g. 10.32.0.34/28 vs 10.32.0.32/28).
+        """
+        prefixes = self._strip_values(value)
+
+        for prefix in prefixes:
+            try:
+                ipaddress.ip_network(prefix, strict=True)
+            except ValueError:
+                raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
+        return self.filter_prefix(queryset, name, value)
 
     def search_within(self, queryset, name, value):
         prefixes = self._strip_values(value)
@@ -376,6 +387,34 @@ class PrefixFilterSet(
             prefixes_queryset |= queryset.filter(query)
         return prefixes_queryset
 
+    def filter_ancestors(self, queryset, name, value):
+        if not value:
+            return queryset
+        prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
+        ancestor_ids = [ancestor.id for prefix in prefixes for ancestor in prefix.ancestors()]
+        return queryset.filter(pk__in=ancestor_ids)
+
+    def filter_prefix_and_descendants(self, queryset, name, value):
+        if not value:
+            return queryset
+        prefixes = Prefix.objects.filter(pk__in=[v.id for v in value])
+        descendant_ids = [descendant.id for prefix in prefixes for descendant in prefix.descendants(include_self=True)]
+        return queryset.filter(pk__in=descendant_ids)
+
+    def generate_query_filter_max_depth(self, value):
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
+        query = Q(**{param: False})
+        return query
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None or value < 1:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
+
     def generate_query_filter_present_in_vrf(self, value):
         if isinstance(value, (str, uuid.UUID)):
             value = VRF.objects.get(pk=value)
@@ -388,6 +427,9 @@ class PrefixFilterSet(
             return queryset.none
         params = self.generate_query_filter_present_in_vrf(value)
         return queryset.filter(params).distinct()
+
+    def filter_vpntunnelendpoint_name_contains(self, queryset, name, value):
+        return queryset.filter(vpn_tunnel_endpoints__name__contains=value)
 
 
 class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
@@ -419,13 +461,17 @@ class IPAddressFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    parent = django_filters.ModelMultipleChoiceFilter(
+    parent = ModelMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
     prefix = MultiValueCharFilter(
         method="search_by_prefix",
         label="Contained in prefix",
+    )
+    prefix_exact = MultiValueCharFilter(
+        method="search_by_prefix_exact",
+        label="Prefix (exact, strict)",
     )
     address = MultiValueCharFilter(
         method="filter_address",
@@ -437,12 +483,14 @@ class IPAddressFilterSet(
         to_field_name="rd",
         label="VRF (ID or RD)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf_id = django_filters.ModelChoiceFilter(
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         method="filter_present_in_vrf",
         label="VRF (ID)",
     )
+    # TODO: change to a multiple-value filter as a breaking change for dynamic groups and permissions definition
     present_in_vrf = django_filters.ModelChoiceFilter(
         field_name="parent__vrfs__rd",
         queryset=VRF.objects.all(),
@@ -473,25 +521,22 @@ class IPAddressFilterSet(
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
-        label="Interfaces (ID or name)",
     )
     vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
         to_field_name="name",
-        label="VM interfaces (ID or name)",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Namespace.objects.all(),
         field_name="parent__namespace",
         to_field_name="name",
-        label="Namespace (name or ID)",
     )
     has_interface_assignments = RelatedMembershipBooleanFilter(
         field_name="interfaces",
         method="_has_interface_assignments",
         label="Has Interface Assignments",
     )
-    nat_inside = django_filters.ModelMultipleChoiceFilter(
+    nat_inside = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="NAT (Inside)",
     )
@@ -500,10 +545,15 @@ class IPAddressFilterSet(
         label="Has NAT Inside",
     )
     ip_version = django_filters.NumberFilter()
+    services = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Service.objects.all(),
+        to_field_name="name",
+        label="Services (name or ID)",
+    )
 
     class Meta:
         model = IPAddress
-        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside"]
+        fields = ["id", "dns_name", "type", "tags", "mask_length", "nat_inside", "description"]
 
     def generate_query__has_interface_assignments(self, value):
         """Helper method used by DynamicGroups and by _assigned_to_interface method."""
@@ -518,9 +568,48 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
+    def _strip_prefix_values(self, values):
+        """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""
+        prefixes = []
+        for prefix in values:
+            prefix = prefix.strip()
+            if not prefix:
+                continue
+            if is_uuid(prefix):
+                prefixes.append(Prefix.objects.get(pk=prefix).prefix)
+            else:
+                prefixes.append(prefix)
+        return prefixes
+
     def search_by_prefix(self, queryset, name, value):
-        prefixes = [prefix.strip() for prefix in value if prefix.strip()]
+        prefixes = self._strip_prefix_values(value)
         return queryset.net_host_contained(*prefixes)
+
+    def search_by_prefix_exact(self, queryset, name, value):
+        """
+        Strict version of `prefix` filter.
+        Rejects prefixes with host bits set (e.g. 10.32.0.34/28 vs 10.32.0.32/28).
+        """
+        prefixes = self._strip_prefix_values(value)
+
+        # Validate network is on CIDR boundary
+        for prefix in prefixes:
+            if "/" not in str(prefix):
+                # If someone passes a host-only string here, treat it as invalid for "prefix_exact".
+                raise ValidationError(f"Invalid prefix_exact value (missing mask): {prefix}")
+
+            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
+                ip_network = netaddr.IPNetwork(str(prefix)).cidr
+                # cidr will always a proper network subnet; compare against original input
+                if str(ip_network) != str(prefix):
+                    raise ValidationError(
+                        f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}, did you mean {ip_network}?"
+                    )
+                continue
+
+            # Defensive programming in case there is logic missed above
+            raise ValidationError(f"Invalid prefix_exact value as it is not a subnet boundary: {prefix}.")
+        return self.search_by_prefix(queryset, name, prefixes)
 
     def filter_address(self, queryset, name, value):
         try:
@@ -569,15 +658,9 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
-        label="Interface (name or ID)",
-    )
-    ip_address = django_filters.ModelMultipleChoiceFilter(
-        queryset=IPAddress.objects.all(),
-        label="IP Address (ID)",
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VMInterface.objects.all(),
-        label="VM Interface (name or ID)",
     )
 
     class Meta:
@@ -614,7 +697,6 @@ class VLANFilterSet(
     )
     vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VLANGroup.objects.all(),
-        label="VLAN Group (name or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
@@ -627,7 +709,6 @@ class VLANFilterSet(
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
 
     class Meta:
@@ -662,7 +743,6 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
-        label="Locations (name or ID)",
     )
 
     class Meta:
@@ -680,12 +760,10 @@ class ServiceFilterSet(NautobotFilterSet):
     device = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Device.objects.all(),
         to_field_name="name",
-        label="Device (ID or name)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
-        label="Virtual machine (ID or name)",
     )
     ports = NumericArrayFilter(field_name="ports", lookup_expr="contains")
 

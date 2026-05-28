@@ -6,8 +6,7 @@ from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
 from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
-from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import VLAN, VRF
+from nautobot.ipam.models import VLAN, VLANGroup, VRF
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
     Cluster,
@@ -40,8 +39,6 @@ class ClusterTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTe
 
     @classmethod
     def setUpTestData(cls):
-        ClusterType.objects.all().delete()
-
         ClusterType.objects.create(name="Cluster Type 1")
         ClusterType.objects.create(name="Cluster Type 2")
         ClusterType.objects.create(name="Cluster Type 3")
@@ -63,11 +60,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @classmethod
     def setUpTestData(cls):
         location_type = LocationType.objects.get(name="Campus")
-        location_status = Status.objects.get_for_model(Location).first()
-        locations = (
-            Location.objects.create(name="Location 1", location_type=location_type, status=location_status),
-            Location.objects.create(name="Location 2", location_type=location_type, status=location_status),
-        )
+        locations = list(Location.objects.filter(location_type=location_type)[:2])
 
         clustergroups = ClusterGroupFactory.create_batch(2)
 
@@ -98,6 +91,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "devices": list(Device.objects.filter(location=locations[1]).values_list("pk", flat=True)[:3]),
             "comments": "Some comments",
             "tags": [t.pk for t in Tag.objects.get_for_model(Cluster)],
         }
@@ -107,6 +101,7 @@ class ClusterTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "cluster_type": clustertypes[1].pk,
             "tenant": None,
             "location": locations[1].pk,
+            "add_devices": list(Device.objects.filter(location=locations[1]).values_list("pk", flat=True)[:3]),
             "comments": "New comments",
         }
 
@@ -246,7 +241,7 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assert https://github.com/nautobot/nautobot/issues/3503 is fixed.
         self.add_permissions("virtualization.view_virtualmachine")
         url = self._get_url("list") + "?sort=primary_ip"
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"HX-Request": "true"})
         self.assertBodyContains(response, "Virtual Machine 1")
         self.assertBodyContains(response, "Virtual Machine 2")
         self.assertBodyContains(response, "Virtual Machine 3")
@@ -260,10 +255,11 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
         location = Location.objects.create(name="Location 1", location_type=location_type, status=location_status)
-        devicerole = Role.objects.get_for_model(Device).first()
+        devicerole = Role.objects.get_for_model(VirtualMachine).first()
         clustertype = ClusterType.objects.create(name="Cluster Type 1")
         cluster = Cluster.objects.create(name="Cluster 1", cluster_type=clustertype, location=location)
         vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        VirtualMachine.objects.all().delete()
         virtualmachines = (
             VirtualMachine.objects.create(name="Virtual Machine 1", cluster=cluster, role=devicerole, status=vm_status),
             VirtualMachine.objects.create(name="Virtual Machine 2", cluster=cluster, role=devicerole, status=vm_status),
@@ -289,7 +285,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects_parent_name = virtualmachines[0].name
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
-        vlan_group = VLANGroupFactory.create(location=location)
+        vlan_group = VLANGroup.objects.create(name="Test VLAN Group", location=location)
         vlans = (
             VLAN.objects.create(vid=1, name="VLAN1", location=location, status=vlan_status, vlan_group=vlan_group),
             VLAN.objects.create(vid=101, name="VLAN101", location=location, status=vlan_status, vlan_group=vlan_group),
@@ -358,7 +354,7 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "mode": InterfaceModeChoices.MODE_TAGGED,
             "untagged_vlan": vlans[0].pk,
             "tagged_vlans": [v.pk for v in vlans[1:4]],
-            "custom_field_1": "New Custom Field Data",
+            "cf_custom_field_1": "New Custom Field Data",
             "vrf": vrf.pk,
         }
 
@@ -371,3 +367,21 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    # VMInterfaceCreateForm has no `label_pattern` field, so the base label-pattern
+    # scenarios do not apply. The invalid-create case is surfaced via mtu range
+    # validation; the invalid-component case is surfaced via the unique-together
+    # check by reusing an existing VMInterface name on the parent VM.
+    expected_invalid_create_form_field = "mtu"
+    expected_invalid_component_form_field = "__all__"
+    expected_invalid_component_form_error = "VM interface with this Virtual machine and Name already exists"
+
+    def get_invalid_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["mtu"] = 100000
+        return data
+
+    def get_invalid_component_bulk_create_data(self):
+        data = self.bulk_create_data.copy()
+        data["name_pattern"] = "BRIDGE"
+        return data

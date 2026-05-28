@@ -18,18 +18,20 @@ Navigate to the custom fields page by clicking on **Extensibility -> Custom Fiel
     CustomField model's `slug` attribute was renamed to `key` (unique for all CustomField instances), which contains a GraphQL-safe string used as the key in the underlying custom field data dictionary.
 
     These aforementioned changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0. Note that if you have non-GraphQL-safe `slug` values in your database pre-migration, some of the resulting CustomField `key` values might be altered to ensure that `key` values for all CustomField instances are valid and unique.
-  
+
 #### Label
 
 The label is the human readable label of the custom field that will be displayed on the associated object detail view.
 
-![Custom Field Labels](./images/custom-fields/custom_field_detail_label.png)
+![Custom Field Labels](./images/custom-fields/custom_field_detail_label_light.png#only-light){ .on-glb }
+![Custom Field Labels](./images/custom-fields/custom_field_detail_label_dark.png#only-dark){ .on-glb }
 
 #### Grouping
 
 The optional grouping field allows you to group custom fields into collapsible menus.
 
-![Custom Field Grouping](./images/custom-fields/custom_field_detail_grouped.png)
+![Custom Field Grouping](./images/custom-fields/custom_field_detail_grouped-light.png#only-light){ .on-glb }
+![Custom Field Grouping](./images/custom-fields/custom_field_detail_grouped-dark.png#only-dark){ .on-glb }
 
 #### Key
 
@@ -47,7 +49,8 @@ Weight determines how custom fields are sorted in forms and object detail views.
 
 The description of a custom field is shown as a mouseover tooltip in object detail views and as help text under form fields.
 
-![Custom Field Edit](./images/custom-fields/custom_field_edit.png)
+![Custom Field Edit](./images/custom-fields/custom_field_edit_light.png#only-light){ .on-glb }
+![Custom Field Edit](./images/custom-fields/custom_field_edit_dark.png#only-dark){ .on-glb }
 
 #### Required
 
@@ -82,6 +85,13 @@ The list of content types to add this custom field to. Only models that inherit 
 
 !!! note
     When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../administration/installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
+
+#### Scope Filter
+
+The list of filters that will be applied to models from selected content types to show custom field only for subset of records.
+
+!!! note
+    Having more than 10 custom fields with scope filters enabled may impact performance when loading detail views for associated content types.
 
 ### Validation Rules
 
@@ -139,9 +149,11 @@ Must contain anything that is not whitespace
 
 The choices to be presented for `Selection` and `Multiple selection` custom field types. These are displayed in the order of the weight values supplied with the lowest weight on top. If regex validation is being used, these choices must match the regular expression.
 
-![Custom Field Choices](./images/custom-fields/custom_field_choices.png)
+![Custom Field Choices](./images/custom-fields/custom_field_choices_light.png#only-light){ .on-glb }
+![Custom Field Choices](./images/custom-fields/custom_field_choices_dark.png#only-dark){ .on-glb }
 
-![Custom Field Select](./images/custom-fields/custom_field_select.png)
+![Custom Field Select](./images/custom-fields/custom_field_select-light.png#only-light){ .on-glb }
+![Custom Field Choices](./images/custom-fields/custom_field_select-dark.png#only-dark){ .on-glb }
 
 ## Editing Custom Fields
 

@@ -43,6 +43,19 @@ from nautobot.core.settings_funcs import is_truthy, parse_redis_connection
 #     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
 # )
 
+# Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
+# CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
+#     "NAUTOBOT_CELERY_BEAT_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+# )
+
+# Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
+# CELERY_WORKER_READINESS_FILE = os.getenv(
+#     "NAUTOBOT_CELERY_WORKER_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_ready")
+# )
+
+# Celery health probes as files - if enabled, Celery worker health probes will be implemented as files
+# CELERY_HEALTH_PROBES_AS_FILES = is_truthy(os.getenv("NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES", "False"))
+
 # Celery broker URL used to tell workers where queues are located
 #
 # CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -94,7 +107,7 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # FQDNs that are considered trusted origins for secure, cross-domain, requests such as HTTPS POST.
 # If running Nautobot under a single domain, you may not need to set this variable;
 # if running on multiple domains, you *may* need to set this variable to more or less the same as ALLOWED_HOSTS above.
-# You also want to set this variable if you are facing CSRF validation issues such as 
+# You also want to set this variable if you are facing CSRF validation issues such as
 # 'CSRF failure has occured' or 'Origin checking failed - https://subdomain.example.com does not match any trusted origins.'
 # https://docs.djangoproject.com/en/stable/ref/settings/#csrf-trusted-origins
 #
@@ -261,12 +274,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     "icon_mask": os.getenv(
 #         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
 #     ),  # mono-chrome icon used for the mask-icon header
-#     "header_bullet": os.getenv(
-#         "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-#     ),  # bullet image used for various view headers
-#     "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-#     "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-#     "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 # }
 
 # Prepended to CSV, YAML and export template filenames (i.e. `nautobot_device.yml`)
@@ -358,11 +365,12 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-# if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-#     DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+# if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+#     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 # EVENT_BROKERS = {}
@@ -402,12 +410,6 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "{{ installation_metrics_enabled | default(True) }}"))
 
-# Storage backend to use for Job input files and Job output files.
-#
-# Note: the default is for backwards compatibility and it is recommended to change it if possible for your deployment.
-#
-# JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
-
 # Maximum size in bytes of any single file created by Job.create_file().
 #
 # JOB_CREATE_FILE_MAX_SIZE = 10 << 20
@@ -415,6 +417,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Default filters for Location list view
+#
+# if (
+#     "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+#     and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+# ):
+#     LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
 
 # Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to True to use the location name alone as the natural key for Location objects.
@@ -503,6 +513,19 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
 #     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
 
+# Default filters for Prefix list view
+#
+# if (
+#     "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+#     and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+# ):
+#     PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+# if (
+#     "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+#     and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+# ):
+#     PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
+
 # Publish a simple "no-index" robots.txt for Nautobot?
 # PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
 
@@ -560,16 +583,22 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #
 # SOCIAL_AUTH_POSTGRES_JSONFIELD = False
 
-# By default uploaded media is stored on the local filesystem. Using Django-storages is also supported. Provide the
-# class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG.
-# These default to None and {} respectively.
+# Storage of various file types
 #
-# STORAGE_BACKEND = 'storages.backends.s3.S3Storage'
-# STORAGE_CONFIG = {
-#     'AWS_ACCESS_KEY_ID': 'Key ID',
-#     'AWS_SECRET_ACCESS_KEY': 'Secret',
-#     'AWS_STORAGE_BUCKET_NAME': 'nautobot',
-#     'AWS_S3_REGION_NAME': 'eu-west-1',
+# STORAGES = {
+#     # The default storage backend, for things like user-uploaded image attachments, etc.
+#     "default": {
+#         "BACKEND": "django.core.files.storage.FileSystemStorage",
+#     },
+#     # The storage backend to use for static file serving
+#     "staticfiles": {
+#         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+#     },
+#     # The storage backend to use for Job input files and Job output files
+#     # Note: default is for backwards compatibility and it's recommended to change if possible for your deployment.
+#     "nautobotjobfiles": {
+#         "BACKEND": "db_file_storage.storage.DatabaseFileStorage",
+#     },
 # }
 
 # Reject invalid UI/API filter parameters, or discard them while logging a warning?
@@ -594,6 +623,23 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #     :type: str
 #     """
 #     return str(device_display_name).split(".")[0]
+
+# Webhook URL schemes permitted for the `payload_url` field. Defaults to HTTP and HTTPS.
+#
+# WEBHOOK_ALLOWED_SCHEMES = ["http", "https"]
+
+# Hostnames that Webhooks may target even if they would otherwise resolve into a blocked network range. Django
+# `ALLOWED_HOSTS`-style: literal hostnames or `.example.com` to match a domain and all of its subdomains. Use `*`
+# to disable network filtering entirely (not recommended).
+#
+# WEBHOOK_ALLOWED_HOSTS = []
+
+# Network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list (loopback,
+# link-local including cloud metadata endpoints such as 169.254.169.254, unspecified, multicast, and reserved)
+# is enforced unconditionally and cannot be disabled. Use this setting to extend it -- e.g. add the RFC1918
+# private ranges below for stricter posture in deployments that don't legitimately webhook into private networks.
+#
+# WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
 
 # A list of strings designating all applications that are enabled in this Django installation.
 # Each string should be a dotted Python path to an application configuration class (preferred),

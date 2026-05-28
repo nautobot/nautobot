@@ -72,10 +72,10 @@ IPADDRESS_MASK_LENGTH_CHOICES = add_blank_choice(
 #
 
 
-class NamespaceForm(LocatableModelFormMixin, NautobotModelForm):
+class NamespaceForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
     class Meta:
         model = Namespace
-        fields = ["name", "description", "location", "tags"]
+        fields = ["name", "description", "tenant", "location", "tags"]
 
 
 class NamespaceBulkEditForm(
@@ -84,18 +84,22 @@ class NamespaceBulkEditForm(
     NautobotBulkEditForm,
 ):
     pk = forms.ModelMultipleChoiceField(queryset=Namespace.objects.all(), widget=forms.MultipleHiddenInput())
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
     description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
 
     class Meta:
         model = Namespace
         nullable_fields = [
             "description",
+            "tenant",
             "location",
         ]
 
 
-class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm):
+class NamespaceFilterForm(LocatableModelFilterFormMixin, NautobotFilterForm, TenancyFilterForm):
     model = Namespace
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
+    field_order = ["q", "name", "tenant_group", "tenant"]
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False)
 
@@ -431,9 +435,11 @@ class PrefixFilterForm(
     field_order = [
         "q",
         "within_include",
+        "namespace",
         "type",
         "ip_version",
         "prefix_length",
+        "max_depth",
         "vrfs",
         "present_in_vrf_id",
         "status",
@@ -454,6 +460,7 @@ class PrefixFilterForm(
         ),
         label="Search within",
     )
+    namespace = DynamicModelMultipleChoiceField(queryset=Namespace.objects.all(), to_field_name="name", required=False)
     ip_version = forms.ChoiceField(
         required=False,
         choices=add_blank_choice(IPAddressVersionChoices),
@@ -465,6 +472,10 @@ class PrefixFilterForm(
         choices=PREFIX_MASK_LENGTH_CHOICES,
         label="Prefix length",
         widget=StaticSelect2(),
+    )
+    max_depth = forms.IntegerField(
+        required=False,
+        help_text="Maximum nesting depth within parent prefixes",
     )
     vrfs = DynamicModelMultipleChoiceField(
         queryset=VRF.objects.all(),

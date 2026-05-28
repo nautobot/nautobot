@@ -1,22 +1,28 @@
+from decimal import Decimal
 import re
+import warnings
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericRelation
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
-from django.db.models import Sum
+from django.db import models
+from django.db.models import Prefetch, Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ForeignKeyWithAutoRelatedName, MACAddressCharField, NaturalOrderingField
 from nautobot.core.models.generics import BaseModel, PrimaryModel
+from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceRedundancyGroupProtocolChoices,
     InterfaceStatusChoices,
@@ -26,15 +32,16 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
+    COPPER_TWISTED_PAIR_IFACE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
+from nautobot.dcim.utils import convert_watts_to_va, power_ports_connected_to
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
@@ -123,7 +130,7 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
-        ordering = ("device", "module", "_name")
+        ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
                 fields=("device", "name"),
@@ -211,50 +218,281 @@ class ModularComponentModel(ComponentModel):
             raise ValidationError("Either device or module must be set")
 
 
+class CableTerminationQuerySet(RestrictedQuerySet):
+    """RestrictedQuerySet with backward-compat translation for `cable=`-style lookups.
+
+    The `cable` FK is no longer a real field on CableTermination subclasses; cable membership lives
+    on the `CableToCableTermination` join model and is exposed via the `cable_termination` reverse
+    OneToOneField. To preserve common existing query patterns, this queryset translates
+    `cable`/`cable_id`/`cable__*`/`cable_id__*` lookup kwargs (and `select_related("cable")`) into
+    the equivalent `cable_termination__cable[...]` paths, with a `DeprecationWarning` for each
+    translated lookup.
+
+    Patterns NOT translated (use the explicit form on these instead):
+      * Q expressions referencing `cable` (use `Q(cable_termination__cable=...)`)
+      * `order_by("cable")` (use `order_by("cable_termination__cable")`)
+      * `values("cable")` / `values_list("cable")` (use `cable_termination__cable`)
+    """
+
+    @staticmethod
+    def _warn(old, new):
+        warnings.warn(
+            f"Querying CableTermination subclasses by `{old}` is deprecated; use `{new}` instead. "
+            "The `cable` field has been replaced with the `cable_termination` reverse OneToOneField.",
+            DeprecationWarning,
+            stacklevel=4,
+        )
+
+    @classmethod
+    def _translate_cable_kwargs(cls, kwargs):
+        out = {}
+        for key, value in kwargs.items():
+            if key == "cable":
+                if value is None:
+                    cls._warn("cable=None", "cable_termination__isnull=True")
+                    out["cable_termination__isnull"] = True
+                else:
+                    cls._warn("cable=...", "cable_termination__cable=...")
+                    out["cable_termination__cable"] = value
+            elif key == "cable_id":
+                if value is None:
+                    cls._warn("cable_id=None", "cable_termination__isnull=True")
+                    out["cable_termination__isnull"] = True
+                else:
+                    cls._warn("cable_id=...", "cable_termination__cable_id=...")
+                    out["cable_termination__cable_id"] = value
+            elif key == "cable__isnull":
+                cls._warn("cable__isnull=...", "cable_termination__isnull=...")
+                out["cable_termination__isnull"] = bool(value)
+            elif key.startswith("cable__"):
+                cls._warn(f"{key}=...", f"cable_termination__{key}=...")
+                out[f"cable_termination__cable__{key[len('cable__') :]}"] = value
+            elif key.startswith("cable_id__"):
+                cls._warn(f"{key}=...", f"cable_termination__{key}=...")
+                out[f"cable_termination__cable_id__{key[len('cable_id__') :]}"] = value
+            else:
+                out[key] = value
+        return out
+
+    @classmethod
+    def _translate_select_related_fields(cls, fields):
+        translated = []
+        for field in fields:
+            if field == "cable":
+                cls._warn('select_related("cable")', 'select_related("cable_termination__cable")')
+                translated.append("cable_termination__cable")
+            elif field.startswith("cable__"):
+                cls._warn(f'select_related("{field}")', f'select_related("cable_termination__{field}")')
+                translated.append(f"cable_termination__cable__{field[len('cable__') :]}")
+            else:
+                translated.append(field)
+        return translated
+
+    def filter(self, *args, **kwargs):
+        return super().filter(*args, **self._translate_cable_kwargs(kwargs))
+
+    def exclude(self, *args, **kwargs):
+        return super().exclude(*args, **self._translate_cable_kwargs(kwargs))
+
+    def get(self, *args, **kwargs):
+        return super().get(*args, **self._translate_cable_kwargs(kwargs))
+
+    def select_related(self, *fields):
+        return super().select_related(*self._translate_select_related_fields(fields))
+
+
+# Manager class wired to the translation queryset; concrete CableTermination subclasses set this
+# as their default `objects` manager.
+CableTerminationManager = BaseManager.from_queryset(CableTerminationQuerySet)
+
+
 class CableTermination(models.Model):
     """
     An abstract model inherited by all models to which a Cable can terminate (certain device components, PowerFeed, and
-    CircuitTermination instances). The `cable` field indicates the Cable instance which is terminated to this instance.
+    CircuitTermination instances).
 
-    `_cable_peer` is a GenericForeignKey used to cache the far-end CableTermination on the local instance; this is a
-    shortcut to referencing `cable.termination_b`, for example. `_cable_peer` is set or cleared by the receivers in
-    dcim.signals when a Cable instance is created or deleted, respectively.
+    Cable membership is recorded in the `CableToCableTermination` join model. Each concrete subclass gets a reverse
+    `cable_termination` accessor (a single related row, or `None`/`DoesNotExist` if not connected). The `cable`
+    property below is a backward-compat shorthand for `self.cable_termination.cable`.
+
+    Use `get_cable_peer()` (singular) or `get_cable_peers()` (plural; required for breakout cables) to look up the
+    far-end termination(s) via the CableToCableTermination join table.
+
+    Each concrete subclass overrides `objects = CableTerminationManager()` to enable backward-compat
+    `cable=...`/`select_related("cable")` query translation. (We don't put it here because Django's
+    MRO-based manager resolution would be overridden by `BaseModel.objects` for any subclass that
+    inherits from a non-abstract base earlier in the parent list.)
     """
-
-    cable = models.ForeignKey(
-        to="dcim.Cable",
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-    )
-    _cable_peer_type = models.ForeignKey(
-        to=ContentType,
-        on_delete=models.SET_NULL,
-        related_name="+",
-        blank=True,
-        null=True,
-    )
-    _cable_peer_id = models.UUIDField(blank=True, null=True)
-    _cable_peer = GenericForeignKey(ct_field="_cable_peer_type", fk_field="_cable_peer_id")
-
-    # Generic relations to Cable. These ensure that an attached Cable is deleted if the terminated object is deleted.
-    _cabled_as_a = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_a_type",
-        object_id_field="termination_a_id",
-    )
-    _cabled_as_b = GenericRelation(
-        to="dcim.Cable",
-        content_type_field="termination_b_type",
-        object_id_field="termination_b_id",
-    )
 
     class Meta:
         abstract = True
 
-    def get_cable_peer(self):
-        return self._cable_peer
+    # Whether this termination type can have a cable attached. Subclasses (notably Interface) may override
+    # this with a property to make it dependent on per-instance state.
+    is_connectable = True
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if getattr(self, "_pending_cable_disconnect", False):
+            # Clear the flag first to prevent re-entry from disconnect_termination's internal save calls.
+            self._pending_cable_disconnect = False
+            from nautobot.dcim.utils import disconnect_termination
+
+            if getattr(self, "cable_termination", None) is not None:
+                disconnect_termination(self)
+
+    @property
+    def cable(self):
+        """The Cable this termination is connected to, or None.
+
+        Backward-compat shorthand for `self.cable_termination.cable`. Issues up to two queries on first
+        access (one for the join-table row, one for the cable). Use
+        `select_related("cable_termination__cable")` on the parent queryset to avoid the queries.
+        """
+        if getattr(self, "_pending_cable_disconnect", False):
+            return None
+        ct = getattr(self, "cable_termination", None)
+        return ct.cable if ct is not None else None
+
+    @cable.setter
+    def cable(self, value):
+        """Backward-compat setter for `termination.cable = None` (disconnect).
+
+        Setting to None marks this termination for disconnect on the next ``save()``: the
+        CableToCableTermination row will be removed and dependent paths cleaned up at that point.
+        Setting to a Cable instance is not supported in the new model: use
+        ``Cable.objects.create(termination_a=..., termination_b=..., ...)`` to connect a termination,
+        or write the appropriate ``CableToCableTermination`` row directly.
+        """
+        if value is None:
+            self._pending_cable_disconnect = True
+        else:
+            raise NotImplementedError(
+                f"Connecting {self} to a Cable via `termination.cable = ...` is not supported. "
+                "Use Cable.objects.create(termination_a=..., termination_b=...) instead, or write a "
+                "CableToCableTermination row directly."
+            )
+
+    def get_cable_peer(self, peer_connector=None):
+        """Return the far-end termination of this cable.
+
+        For non-breakout cables, returns the single peer (or the first peer if multiple exist).
+
+        For breakout cables, pass `peer_connector` to select the termination on a specific
+        opposite-side connector. The connector number refers to the *peer's* side of the cable
+        — i.e. the side opposite to this termination. Returns None if no termination occupies
+        that connector (disconnected lane) or if `peer_connector` isn't a connector this
+        termination's connector maps to via the cable type's lane mapping.
+        """
+        rows = self._get_cable_peer_rows()
+        if peer_connector is None:
+            return rows[0].termination if rows and rows[0].termination is not None else None
+        for row in rows:
+            if row.connector == peer_connector:
+                return row.termination
+        return None
+
+    @property
+    def cable_peer(self):
+        """First far-end termination on the connected cable, or None.
+
+        For breakout/multi-termination cables, use `get_cable_peers()` to retrieve all peers.
+        """
+        return self.get_cable_peer()
+
+    def get_cable_peers(self):
+        """Return the opposite-side termination objects mapped to this termination's lane(s).
+
+        For standard cables, returns a list with one peer.
+        For breakout cables, returns peers mapped to this termination's connector via the template.
+
+        Reads `cable.terminations.all()` and filters / sorts in Python so callers can prefetch
+        the cable's terminations (with per-type FKs `select_related`'d) to avoid N+1 queries
+        when this is called for many rows in a table render. See
+        `CableTermination.optimize_queryset_for_cable_columns`.
+        """
+        return [row.termination for row in self._get_cable_peer_rows() if row.termination is not None]
+
+    def _get_cable_peer_rows(self):
+        """Return the opposite-side `CableToCableTermination` rows mapped to this termination's
+        lane(s), sorted by connector. Internal helper shared by `get_cable_peer` (which picks
+        one row by `peer_connector`) and `get_cable_peers` (which extracts terminations).
+
+        For breakout cables, only peer-side rows whose connector is reachable from this
+        termination's connector via the cable type's lane mapping are returned. For non-breakout
+        cables, all opposite-side rows are returned.
+        """
+        my_endpoint = getattr(self, "cable_termination", None)
+        if my_endpoint is None:
+            return []
+
+        cable = my_endpoint.cable
+        opposite_side = "B" if my_endpoint.cable_end == "A" else "A"
+
+        all_rows = cable.terminations.all()
+
+        if cable.cable_type_id and cable.cable_type.is_breakout:
+            origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
+            far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+            mapped_far_connectors = {
+                entry[far_side_key]
+                for entry in cable.cable_type.mapping
+                if entry[origin_side_key] == my_endpoint.connector
+            }
+            opposite_endpoints = [
+                ep for ep in all_rows if ep.cable_end == opposite_side and ep.connector in mapped_far_connectors
+            ]
+        else:
+            opposite_endpoints = [ep for ep in all_rows if ep.cable_end == opposite_side]
+
+        opposite_endpoints.sort(key=lambda ep: ep.connector or 0)
+        return opposite_endpoints
+
+    @classmethod
+    def cable_columns_select_related_fields(cls):
+        """
+        Return the list of `select_related` field paths needed for table renders of the `cable`
+        and `cable_peer` columns to avoid per-row queries against the join table / cable type.
+        """
+        return ["cable_termination__cable__cable_type"]
+
+    @classmethod
+    def cable_columns_prefetch_related_fields(cls):
+        """
+        Return the list of `prefetch_related` arguments (strings and/or `Prefetch` objects)
+        needed for table renders of the `cable_peer` column (and, for `PathEndpoint` subclasses,
+        the `connection` column) to avoid per-row queries.
+        """
+        from nautobot.dcim.models.cables import CableToCableTermination, TERMINATION_FK_FIELDS
+
+        prefetches = [
+            Prefetch(
+                "cable_termination__cable__terminations",
+                queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+            ),
+        ]
+        if issubclass(cls, PathEndpoint):
+            prefetches.append("cable_paths__destination")
+        return prefetches
+
+    @classmethod
+    def optimize_queryset_for_cable_columns(cls, queryset):
+        """
+        Apply `select_related` / `prefetch_related` to `queryset` so that table renders of the
+        `cable`, `cable_peer`, and (for PathEndpoint subclasses) `connection` columns avoid the
+        per-row N+1 queries that those accessors otherwise trigger.
+
+        Usage on a list view's `queryset`:
+
+            queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
+
+        For panel-based detail views that take `select_related_fields` / `prefetch_related_fields`
+        directly, use the underlying `cable_columns_select_related_fields()` /
+        `cable_columns_prefetch_related_fields()` classmethods instead.
+        """
+        queryset = queryset.select_related(*cls.cable_columns_select_related_fields())
+        queryset = queryset.prefetch_related(*cls.cable_columns_prefetch_related_fields())
+        return queryset
 
     @property
     def parent(self):
@@ -271,49 +509,55 @@ class PathEndpoint(models.Model):
     An abstract model inherited by any CableTermination subclass which represents the end of a CablePath; specifically,
     these include ConsolePort, ConsoleServerPort, PowerPort, PowerOutlet, Interface, PowerFeed, and CircuitTermination.
 
-    `_path` references the CablePath originating from this instance, if any. It is set or cleared by the receivers in
-    dcim.signals in response to changes in the cable path, and complements the `origin` GenericForeignKey field on the
-    CablePath model. `_path` should not be accessed directly; rather, use the `path` property.
-
-    `connected_endpoint()` is a convenience method for returning the destination of the associated CablePath, if any.
+    `cable_paths` is a GenericRelation to CablePath rows that have this instance as their origin. For non-breakout
+    cables there is at most one such row; for breakout cables there is one per fan-out lane.
     """
 
-    _path = ForeignKeyWithAutoRelatedName(
-        to="dcim.CablePath",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+    cable_paths = GenericRelation(
+        "dcim.CablePath",
+        content_type_field="origin_type",
+        object_id_field="origin_id",
+        related_query_name="origin_endpoint",
     )
 
     class Meta:
         abstract = True
 
     def trace(self):
-        if self._path is None:
+        path_obj = self.cable_paths.first()  # pylint: disable=no-member
+        if path_obj is None:
             return []
 
         # Construct the complete path
-        path = [self, *self._path.get_path()]  # pylint: disable=no-member
+        path = [self, *path_obj.get_path()]
         while (len(path) + 1) % 3:
             # Pad to ensure we have complete three-tuples (e.g. for paths that end at a RearPort)
             path.append(None)
-        path.append(self._path.destination)  # pylint: disable=no-member
+        path.append(path_obj.destination)
 
         # Return the path as a list of three-tuples (A termination, cable, B termination)
         return list(zip(*[iter(path)] * 3))
 
     @property
     def path(self):
-        return self._path
+        return self.cable_paths.first()  # pylint: disable=no-member
 
     @property
     def connected_endpoint(self):
         """
-        Caching accessor for the attached CablePath's destination (if any)
+        Return the attached CablePath's destination (if any)
         """
-        if not hasattr(self, "_connected_endpoint"):
-            self._connected_endpoint = self._path.destination if self._path else None
-        return self._connected_endpoint
+        path_obj = self.cable_paths.first()  # pylint: disable=no-member
+        return path_obj.destination if path_obj else None
+
+    def get_connected_endpoints(self):
+        """
+        Return destinations of all CablePaths originating from this endpoint.
+
+        For standard cables there is at most one destination. For breakout cables there is one
+        destination per fan-out lane. Unresolved or split paths contribute no destinations.
+        """
+        return [path.destination for path in self.cable_paths.all() if path.destination is not None]
 
 
 #
@@ -341,6 +585,8 @@ class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
         help_text="Physical port type",
     )
 
+    objects = CableTerminationManager()
+
 
 #
 # Console server ports
@@ -359,6 +605,8 @@ class ConsoleServerPort(ModularComponentModel, CableTermination, PathEndpoint):
         blank=True,
         help_text="Physical port type",
     )
+
+    objects = CableTerminationManager()
 
 
 #
@@ -397,6 +645,15 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         validators=[MinValueValidator(1)],
         help_text="Allocated power draw (watts)",
     )
+    power_factor = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=Decimal("0.95"),
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("1.00"))],
+        help_text="Power factor (0.01-1.00) for converting between watts (W) and volt-amps (VA). Defaults to 0.95.",
+    )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
@@ -411,46 +668,52 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         """
         Return the allocated and maximum power draw (in VA) and child PowerOutlet count for this PowerPort.
         """
+
         # Calculate aggregate draw of all child power outlets if no numbers have been defined manually
         if self.allocated_draw is None and self.maximum_draw is None:
-            poweroutlet_ct = ContentType.objects.get_for_model(PowerOutlet)
-            outlet_ids = PowerOutlet.objects.filter(power_port=self).values_list("pk", flat=True)
-            utilization = PowerPort.objects.filter(
-                _cable_peer_type=poweroutlet_ct, _cable_peer_id__in=outlet_ids
-            ).aggregate(
+            outlet_qs = PowerOutlet.objects.filter(power_port=self)
+            outlet_count = outlet_qs.count()
+            utilization = power_ports_connected_to(outlet_qs).aggregate(
                 maximum_draw_total=Sum("maximum_draw"),
                 allocated_draw_total=Sum("allocated_draw"),
             )
-            numerator = utilization["allocated_draw_total"] or 0
-            denominator = utilization["maximum_draw_total"] or 0
+
+            # Convert watts to VA for aggregated values
+            allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+            maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
+
             ret = {
-                "allocated": utilization["allocated_draw_total"] or 0,
-                "maximum": utilization["maximum_draw_total"] or 0,
-                "outlet_count": len(outlet_ids),
+                "allocated": allocated_va,
+                "maximum": maximum_va,
+                "outlet_count": outlet_count,
                 "legs": [],
                 "utilization_data": UtilizationData(
-                    numerator=numerator,
-                    denominator=denominator,
+                    numerator=allocated_va,
+                    denominator=maximum_va,
                 ),
             }
 
             # Calculate per-leg aggregates for three-phase feeds
-            if getattr(self._cable_peer, "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
+            if getattr(self.get_cable_peer(), "phase", None) == PowerFeedPhaseChoices.PHASE_3PHASE:
                 # Setup numerator and denominator for later display.
                 for leg, leg_name in PowerOutletFeedLegChoices:
-                    outlet_ids = PowerOutlet.objects.filter(power_port=self, feed_leg=leg).values_list("pk", flat=True)
-                    utilization = PowerPort.objects.filter(
-                        _cable_peer_type=poweroutlet_ct, _cable_peer_id__in=outlet_ids
-                    ).aggregate(
+                    leg_outlet_qs = PowerOutlet.objects.filter(power_port=self, feed_leg=leg)
+                    leg_outlet_count = leg_outlet_qs.count()
+                    utilization = power_ports_connected_to(leg_outlet_qs).aggregate(
                         maximum_draw_total=Sum("maximum_draw"),
                         allocated_draw_total=Sum("allocated_draw"),
                     )
+
+                    # Convert watts to VA for leg values
+                    leg_allocated_va = convert_watts_to_va(utilization["allocated_draw_total"], self.power_factor)
+                    leg_maximum_va = convert_watts_to_va(utilization["maximum_draw_total"], self.power_factor)
+
                     ret["legs"].append(
                         {
                             "name": leg_name,
-                            "allocated": utilization["allocated_draw_total"] or 0,
-                            "maximum": utilization["maximum_draw_total"] or 0,
-                            "outlet_count": len(outlet_ids),
+                            "allocated": leg_allocated_va,
+                            "maximum": leg_maximum_va,
+                            "outlet_count": leg_outlet_count,
                         }
                     )
 
@@ -461,13 +724,16 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
         else:
             denominator = 0
 
-        # Default to administratively defined values
+        # Convert administratively defined values from watts to VA
+        allocated_va = convert_watts_to_va(self.allocated_draw, self.power_factor)
+        maximum_va = convert_watts_to_va(self.maximum_draw, self.power_factor)
+
         return {
-            "allocated": self.allocated_draw or 0,
-            "maximum": self.maximum_draw or 0,
+            "allocated": allocated_va,
+            "maximum": maximum_va,
             "outlet_count": PowerOutlet.objects.filter(power_port=self).count(),
             "legs": [],
-            "utilization_data": UtilizationData(numerator=self.allocated_draw or 0, denominator=denominator),
+            "utilization_data": UtilizationData(numerator=allocated_va, denominator=denominator),
         }
 
 
@@ -502,6 +768,8 @@ class PowerOutlet(ModularComponentModel, CableTermination, PathEndpoint):
         blank=True,
         help_text="Phase (for three-phase feeds)",
     )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
@@ -576,6 +844,86 @@ class BaseInterface(RelationshipModel):
 
         return super().save(*args, **kwargs)
 
+    def add_ip_addresses(
+        self,
+        ip_addresses,
+        is_source=False,
+        is_destination=False,
+        is_default=False,
+        is_preferred=False,
+        is_primary=False,
+        is_secondary=False,
+        is_standby=False,
+    ):
+        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+            is_source (bool, optional): Is source address. Defaults to False.
+            is_destination (bool, optional): Is destination address. Defaults to False.
+            is_default (bool, optional): Is default address. Defaults to False.
+            is_preferred (bool, optional): Is preferred address. Defaults to False.
+            is_primary (bool, optional): Is primary address. Defaults to False.
+            is_secondary (bool, optional): Is secondary address. Defaults to False.
+            is_standby (bool, optional): Is standby address. Defaults to False.
+
+        Returns:
+            Number of instances added.
+        """
+        through_defaults = {
+            "is_source": is_source,
+            "is_destination": is_destination,
+            "is_default": is_default,
+            "is_preferred": is_preferred,
+            "is_primary": is_primary,
+            "is_secondary": is_secondary,
+            "is_standby": is_standby,
+        }
+
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        # This ensures that ips_to_add only contains IPs which need to be added to the interface. This ensures
+        # that len(ips_to_add) accurately represents the results of the action.
+        ips_to_add = set(ip_addresses) - set(self.ip_addresses.all())
+
+        if ips_to_add:
+            self.ip_addresses.add(*ips_to_add, through_defaults=through_defaults)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ips_to_add)
+
+    add_ip_addresses.alters_data = True
+
+    def remove_ip_addresses(self, ip_addresses):
+        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
+
+        Args:
+            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
+
+        Returns:
+            Number of instances removed.
+        """
+        if not isinstance(ip_addresses, (tuple, list)):
+            ip_addresses = [ip_addresses]
+
+        # The delete() call used previously (ref: https://github.com/nautobot/nautobot/issues/3236)
+        # meant that if None was passed in, it was silently ignored. Rather that raise an exception,
+        # this comprehension maintains backwards compatibility.
+        ip_addresses = {ip for ip in ip_addresses if ip is not None}
+
+        # This checks that the IPs passed in are actually on the interface. By populating
+        # ips_to_remove correctly, we ensure that the only IPs passed to remove() are IPs known
+        # to be on the interface. This ensures that len(ips_to_remove) accurately represents
+        # the results of the action.
+        ips_to_remove = ip_addresses & set(self.ip_addresses.all())
+
+        if ips_to_remove:
+            self.ip_addresses.remove(*ips_to_remove)  # pylint: disable=no-member  # Intf/VMIntf both have ip_addresses
+
+        return len(ips_to_remove)
+
+    remove_ip_addresses.alters_data = True
+
 
 @extras_features(
     "cable_terminations",
@@ -610,6 +958,12 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     )
     # todoindex:
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    port_type = models.CharField(
+        max_length=50,
+        choices=PortTypeChoices,
+        blank=True,
+        help_text="Physical connector type",
+    )
     # todoindex:
     mgmt_only = models.BooleanField(
         default=False,
@@ -644,9 +998,14 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         blank=True,
         verbose_name="IP Addresses",
     )
+    # Operational attributes (distinct from interface type capabilities)
+    speed = models.PositiveIntegerField(null=True, blank=True)
+    duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
+
+    objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", "module", CollateAsChar("_name"))
+        ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
 
     def clean(self):
         super().clean()
@@ -689,15 +1048,17 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
 
         # Virtual interfaces cannot be connected
-        if getattr(self, "type", None) in NONCONNECTABLE_IFACE_TYPES and (
-            self.cable or getattr(self, "circuit_termination", False)
-        ):
+        if self.type in NONCONNECTABLE_IFACE_TYPES and (self.cable or getattr(self, "circuit_termination", False)):
             raise ValidationError(
                 {
                     "type": "Virtual and wireless interfaces cannot be connected to another interface or circuit. "
                     "Disconnect the interface or choose a suitable type."
                 }
             )
+
+        # Virtual interfaces cannot have a port type
+        if self.type in NONCONNECTABLE_IFACE_TYPES and self.port_type:
+            raise ValidationError({"port_type": "Virtual and wireless interfaces cannot have a port type."})
 
         # Parent validation
         if self.parent_interface is not None:
@@ -778,72 +1139,21 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                         }
                     )
 
-    def add_ip_addresses(
-        self,
-        ip_addresses,
-        is_source=False,
-        is_destination=False,
-        is_default=False,
-        is_preferred=False,
-        is_primary=False,
-        is_secondary=False,
-        is_standby=False,
-    ):
-        """Add one or more IPAddress instances to this interface's `ip_addresses` many-to-many relationship.
+        # Speed/Duplex validation
+        self._validate_speed_and_duplex()
 
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-            is_source (bool, optional): Is source address. Defaults to False.
-            is_destination (bool, optional): Is destination address. Defaults to False.
-            is_default (bool, optional): Is default address. Defaults to False.
-            is_preferred (bool, optional): Is preferred address. Defaults to False.
-            is_primary (bool, optional): Is primary address. Defaults to False.
-            is_secondary (bool, optional): Is secondary address. Defaults to False.
-            is_standby (bool, optional): Is standby address. Defaults to False.
+    def _validate_speed_and_duplex(self):
+        """Validate speed (Kbps) and duplex based on interface type."""
 
-        Returns:
-            Number of instances added.
-        """
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                instance = self.ip_addresses.through(
-                    ip_address=ip,
-                    interface=self,
-                    is_source=is_source,
-                    is_destination=is_destination,
-                    is_default=is_default,
-                    is_preferred=is_preferred,
-                    is_primary=is_primary,
-                    is_secondary=is_secondary,
-                    is_standby=is_standby,
-                )
-                instance.validated_save()
-        return len(ip_addresses)
+        # Check settings by interface type
+        if self.speed and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"speed": "Speed is not applicable to this interface type."})
 
-    add_ip_addresses.alters_data = True
+        if self.duplex and any([self.is_lag, self.is_virtual, self.is_wireless]):
+            raise ValidationError({"duplex": "Duplex is not applicable to this interface type."})
 
-    def remove_ip_addresses(self, ip_addresses):
-        """Remove one or more IPAddress instances from this interface's `ip_addresses` many-to-many relationship.
-
-        Args:
-            ip_addresses (:obj:`list` or `IPAddress`): Instance of `nautobot.ipam.models.IPAddress` or list of `IPAddress` instances.
-
-        Returns:
-            Number of instances removed.
-        """
-        count = 0
-        if not isinstance(ip_addresses, (tuple, list)):
-            ip_addresses = [ip_addresses]
-        with transaction.atomic():
-            for ip in ip_addresses:
-                qs = self.ip_addresses.through.objects.filter(ip_address=ip, interface=self)
-                deleted_count, _ = qs.delete()
-                count += deleted_count
-        return count
-
-    remove_ip_addresses.alters_data = True
+        if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
+            raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
     @property
     def is_connectable(self):
@@ -977,7 +1287,7 @@ class InterfaceRedundancyGroupAssociation(BaseModel, ChangeLoggedModel):
         on_delete=models.CASCADE,
         related_name="interface_redundancy_group_associations",
     )
-    priority = models.PositiveSmallIntegerField()
+    priority = models.PositiveIntegerField()
     is_metadata_associable_model = False
 
     class Meta:
@@ -1013,6 +1323,8 @@ class FrontPort(ModularComponentModel, CableTermination):
     )
 
     natural_key_field_names = ["device", "module", "name", "rear_port", "rear_port_position"]
+
+    objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
         constraints = [
@@ -1054,6 +1366,8 @@ class RearPort(ModularComponentModel, CableTermination):
             MaxValueValidator(REARPORT_POSITIONS_MAX),
         ],
     )
+
+    objects = CableTerminationManager()
 
     def clean(self):
         super().clean()
@@ -1103,21 +1417,51 @@ class DeviceBay(ComponentModel):
         if self.device == self.installed_device:
             raise ValidationError("Cannot install a device into itself.")
 
-        # Check that the installed device is not already installed elsewhere
         if self.installed_device:
-            current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
-            if current_bay and current_bay != self:
+            self._validate_installed_device_parent_chain()
+
+    def _validate_installed_device_parent_chain(self):
+        """Validate this bay assignment against the parent chain.
+
+        Ensures:
+        - installed_device is not already an ancestor of this bay's device
+        - no existing loop in the parent chain
+        - device not already in another bay
+        - device type is child or parent-child
+        """
+        seen_device_ids = set()
+        parent_bay = DeviceBay.objects.filter(installed_device=self.device).first()
+        while parent_bay is not None:
+            parent_device = parent_bay.device
+            if parent_device == self.installed_device:
                 raise ValidationError(
-                    {
-                        "installed_device": f"Cannot install the specified device; device is already installed in {current_bay}"
-                    }
+                    "Installing this device would create a loop; it is already an ancestor of this bay's device."
                 )
-            if self.installed_device.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_CHILD:
+            if parent_device.pk in seen_device_ids:
                 raise ValidationError(
-                    {
-                        "installed_device": f'Cannot install device "{self.installed_device}"; device-type "{self.installed_device.device_type}" subdevice_role is not "child".'
-                    }
+                    "The device parent chain already contains a loop; fix existing data before making this assignment."
                 )
+            seen_device_ids.add(parent_device.pk)
+            parent_bay = DeviceBay.objects.filter(installed_device=parent_device).first()
+
+        current_bay = DeviceBay.objects.filter(installed_device=self.installed_device).first()
+        if current_bay and current_bay != self:
+            raise ValidationError(
+                {
+                    "installed_device": (
+                        f"Cannot install the specified device; device is already installed in {current_bay}"
+                    )
+                }
+            )
+        if not self.installed_device.device_type.is_child_device:
+            raise ValidationError(
+                {
+                    "installed_device": (
+                        f'Cannot install device "{self.installed_device}"; device-type '
+                        f'"{self.installed_device.device_type}" subdevice_role is not "child" or "parent-child".'
+                    )
+                }
+            )
 
 
 #
@@ -1218,6 +1562,18 @@ class ModuleBay(PrimaryModel):
         blank=True,
         null=True,
     )
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily",
+        on_delete=models.PROTECT,
+        related_name="module_bays",
+        blank=True,
+        null=True,
+        help_text="Module family that can be installed in this bay",
+    )
+    requires_first_party_modules = models.BooleanField(
+        default=False,
+        help_text="This bay will only accept modules from the same manufacturer as the parent device or module",
+    )
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
     _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
     position = models.CharField(
@@ -1228,7 +1584,7 @@ class ModuleBay(PrimaryModel):
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Physical label")
     description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
 
-    clone_fields = ["parent_device", "parent_module"]
+    clone_fields = ["parent_device", "parent_module", "module_family", "requires_first_party_modules"]
 
     # The recursive nature of this model combined with the fact that it can be a child of a
     # device or location makes our natural key implementation unusable, so just use the pk
@@ -1299,3 +1655,11 @@ class ModuleBay(PrimaryModel):
             self.position = self.name
 
     clean.alters_data = True
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.parent_device is not None:
+            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
+            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
+            cache.set(cache_key, True, timeout=5)

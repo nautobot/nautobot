@@ -1,4 +1,5 @@
-from nautobot.core.forms import BootstrapMixin
+from nautobot.core.forms import BootstrapMixin, EmbeddedActionsFormMixin
+from nautobot.data_validation.form_mixin import DataValidationModelFormMixin
 
 from .mixins import (
     ContactTeamModelFilterFormMixin,
@@ -19,7 +20,6 @@ __all__ = (
     "NautobotModelForm",
 )
 
-
 #
 # Nautobot base forms for use in most new custom model forms.
 #
@@ -28,6 +28,9 @@ __all__ = (
 class NautobotModelForm(
     BootstrapMixin,
     # The below must be listed *after* BootstrapMixin so that BootstrapMixin applies to their dynamic form fields
+    EmbeddedActionsFormMixin,
+    # EmbeddedActionsFormMixin position is critical here almost at the top to affect all dynamic model choice form fields
+    DataValidationModelFormMixin,
     CustomFieldModelFormMixin,
     DynamicGroupModelFormMixin,
     NoteModelFormMixin,
@@ -35,8 +38,8 @@ class NautobotModelForm(
 ):
     """
     This class exists to combine common functionality and is used to inherit from throughout the
-    codebase where all of BootstrapMixin, CustomFieldModelFormMixin, RelationshipModelFormMixin, and
-    NoteModelFormMixin are needed.
+    codebase where all of BootstrapMixin, EmbeddedActionsFormMixin, CustomFieldModelFormMixin,
+    RelationshipModelFormMixin, and NoteModelFormMixin are needed.
     """
 
 

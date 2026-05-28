@@ -1,0 +1,12 @@
+<div id="console-lines-wrapper">
+    {% include "extras/inc/jobresult_console_log_lines.html" %}
+</div>
+
+{% spaceless %}
+    <span id="job-status">{% include 'extras/inc/job_label.html' with result=job_result %}</span>
+{% endspaceless %}
+
+{% if not job_is_pending %}
+    <span id="job-status-message"></span>
+    <div id="htmx-poller"></div>
+{% endif %}

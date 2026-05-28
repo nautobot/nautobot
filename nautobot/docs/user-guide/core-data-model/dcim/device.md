@@ -12,6 +12,11 @@ Each device must be assigned a [location](location.md), device [role](../../plat
 
 Device names must be unique within a location, unless the device has been assigned to a tenant. Devices may also be unnamed.
 
+Devices installed in device bays can be nested across multiple levels; see [Device Types](devicetype.md) and [Device Bays](devicebay.md).
+
+!!! note
+    Updating a parent device location or rack will cascade saves to nested child devices, which can increase save time in deep hierarchies.
+
 When a device has one or more interfaces with IP addresses assigned, a primary IP for the device can be designated, for both IPv4 and IPv6.
 
 +/- 2.0.0
@@ -24,6 +29,19 @@ For Devices forming a group (Failover, Load-Sharing, Redundacy or similar) refer
 
 +++ 2.3.0
     Components from [modules](module.md) installed in [module bays](modulebay.md) on the device will also be shown in the device component lists. This includes modules that are in nested module bays. Device primary IP address can be designated from interfaces installed in modules.
+
++/- 3.0.0
+    The database-level uniqueness constraint ("location", "tenant", "name") on Device has been **removed**.
+    Uniqueness in this regard is now enforced at the application level through configurable validators.
+    A new Constance setting, `DEVICE_UNIQUENESS`, defines how devices are uniquely identified:
+    - `"location_tenant_name"` — Device uniqueness is enforced as a combination of Location + Tenant + Name (pre-3.0 behavior).
+    - `"name"` — Device names must be globally unique.
+    - `"none"` — No enforced uniqueness; other validation rules or custom validators may apply.
+    Note that **physical uniqueness constraints** such as rack position and virtual chassis position remain enforced at the database level, only the logical uniqueness constraint has been moved to application-level validation.
+    Additionally, the Constance setting `DEVICE_NAME_AS_NATURAL_KEY` has been deprecated. During migration, existing configurations using this setting will be translated to the appropriate `DEVICE_UNIQUENESS` value (`"name"` or `"location_tenant_name"`).
+
++/- 3.1.0
+    Devices installed in [device bays](devicebay.md) can now be nested more deeply than simply a child in a parent bay. The "Parent and Child" option for "Parent/child status" on [DeviceType](devicetype.md) can be used for Devices between the topmost Parent and the last Child.
 
 ## Developer API
 

@@ -1,14 +1,15 @@
-from django.conf import settings
-from django.db.models import QuerySet
+import logging
+from textwrap import dedent
+
+from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
-from django_tables2.data import TableData
-from django_tables2.rows import BoundRows
 from django_tables2.utils import Accessor
+from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
-from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import (
+    ApprovalButtonsColumn,
     BaseTable,
     BooleanColumn,
     ButtonsColumn,
@@ -20,11 +21,16 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
-from nautobot.core.templatetags.helpers import render_boolean, render_json, render_markdown
+from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import LogLevelChoices, MetadataTypeDataTypeChoices
+from .choices import JobResultStatusChoices, MetadataTypeDataTypeChoices
 from .models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -38,6 +44,7 @@ from .models import (
     ExternalIntegration,
     GitRepository,
     GraphQLQuery,
+    ImageAttachment,
     Job as JobModel,
     JobButton,
     JobHook,
@@ -56,6 +63,7 @@ from .models import (
     ScheduledJob,
     Secret,
     SecretsGroup,
+    SecretsGroupAssociation,
     StaticGroupAssociation,
     Status,
     Tag,
@@ -64,6 +72,16 @@ from .models import (
     Webhook,
 )
 from .registry import registry
+
+logger = logging.getLogger(__name__)
+
+APPROVAL_WORKFLOW_OBJECT = """
+{% if record.object_under_review and record.object_under_review.get_absolute_url %}
+    <a href="{{ record.object_under_review.get_absolute_url }}">{{ record.object_under_review }}</a>
+{% else %}
+    {{ record.object_under_review }}
+{% endif %}
+"""
 
 ASSIGNED_OBJECT = """
 {% load helpers %}
@@ -102,44 +120,92 @@ GITREPOSITORY_PROVIDES = """
 <span class="text-nowrap">
 {% for entry in datasource_contents %}
 <span style="display: inline-block" title="{{ entry.name|title }}"
-class="label label-{% if entry.content_identifier in record.provided_contents %}success{% else %}default{% endif %}">
+class="badge bg-{% if entry.content_identifier in record.provided_contents %}success{% else %}secondary{% endif %}">
 <i class="mdi {{ entry.icon }}"></i></span>
 {% endfor %}
 </span>
 """
 
 GITREPOSITORY_BUTTONS = """
-<button data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}" type="submit" class="btn btn-primary btn-xs sync-repository" title="Sync" {% if not perms.extras.change_gitrepository %}disabled="disabled"{% endif %}><i class="mdi mdi-source-branch-sync" aria-hidden="true"></i></button>
+<li>
+    <form action="{% url 'extras:gitrepository_sync' pk=record.pk %}" method="post">
+        {% csrf_token %}
+        <button class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %} type="submit">
+            <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+            Sync
+        </button>
+    </form>
+</li>
 """
 
+IMAGEATTACHMENT_NAME = """
+<span class="mdi mdi-file-image"></span>
+<a class="image-preview" href="{{ record.image.url }}" target="_blank">{{ record }}</a>
+"""
+
+IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
+
 JOB_BUTTONS = """
-<a href="{% url 'extras:job' pk=record.pk %}" class="btn btn-default btn-xs" title="Details"><i class="mdi mdi-information-outline" aria-hidden="true"></i></a>
-<a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
+<li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
 JOB_RESULT_BUTTONS = """
 {% load helpers %}
 {% if perms.extras.run_job %}
     {% if record.job_model and record.task_kwargs %}
-        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}"
-           class="btn btn-xs btn-success" title="Re-run job with same arguments.">
-            <i class="mdi mdi-repeat"></i>
-        </a>
+        <li>
+            <a href="{% url 'extras:job_run' pk=record.job_model.pk %}?kwargs_from_job_result={{ record.pk }}" class="dropdown-item text-success">
+                <span class="mdi mdi-repeat" aria-hidden="true"></span>
+                Re-run job with same arguments
+            </a>
+        </li>
     {% elif record.job_model is not None %}
-        <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="btn btn-primary btn-xs"
-           title="Run job">
-            <i class="mdi mdi-play"></i>
-        </a>
+        <li>
+            <a href="{% url 'extras:job_run' pk=record.job_model.pk %}" class="dropdown-item text-primary">
+                <span class="mdi mdi-play" aria-hidden="true"></span>
+                Run job
+            </a>
+        </li>
     {% else %}
-        <a href="#" class="btn btn-xs btn-default disabled" title="Job is not available, cannot be re-run">
-            <i class="mdi mdi-repeat-off"></i>
-        </a>
+        <li>
+            <a class="dropdown-item disabled" aria-disabled="true">
+                <span class="mdi mdi-repeat-off" aria-hidden="true"></span>
+                Job is not available, cannot be re-run
+            </a>
+        </li>
     {% endif %}
+    {% if record.is_unready_state %}
+        {% if record.user == request.user or request.user.is_staff %}
+            <li>
+                <a href="{% url 'extras:jobresult_revoke_job' pk=record.pk %}" class="dropdown-item text-danger">
+                    <span class="mdi mdi-close-circle" aria-hidden="true"></span>
+                    Revoke Job
+                </a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endif %}
+{% if perms.extras.view_joblogentry %}
+    <li>
+        <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_jobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:jobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
 {% endif %}
 """
 
 SCHEDULED_JOB_BUTTONS = """
-<a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="btn btn-default btn-xs" title="Job Results"><i class="mdi mdi-format-list-bulleted" aria-hidden="true"></i></a>
+<li><a href="{% url 'extras:jobresult_list' %}?scheduled_job={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
 OBJECTCHANGE_OBJECT = """
@@ -171,25 +237,349 @@ WEBHOOK_CONTENT_TYPES = """
 """
 
 SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS = """
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
-        title="Dry Run"
-        class="btn btn-primary btn-xs"{% if not perms.extras.run_job or not record.job_model.supports_dryrun %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-play"></i>
-</button>
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
-        title="Approve"
-        class="btn btn-success btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-check"></i>
-</button>
-<button type="button"
-        onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
-        title="Deny"
-        class="btn btn-danger btn-xs"{% if not perms.extras.run_job %} disabled="disabled"{% endif %}>
-    <i class="mdi mdi-close"></i>
-</button>
+<div class="dropdown">
+    <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_dry_run')"
+                class="dropdown-item{% if perms.extras.run_job and record.job_model.supports_dryrun %} text-primary"{% else %}" disabled{% endif %}
+            >
+                <span class="mdi mdi-play" aria-hidden="true"></span>
+                Dry Run
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_approve')"
+                class="dropdown-item{% if perms.extras.run_job %} text-success"{% else %}" disabled{% endif %}
+            >
+                <span class="mdi mdi-check" aria-hidden="true"></span>
+                Approve
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                onClick="handleDetailPostAction('{% url 'extras:scheduledjob_approval_request_view' pk=record.pk %}', '_deny')"
+                class="dropdown-item{% if perms.extras.run_job %} text-danger"{% else %}" disabled{% endif %}
+            >
+                <span class="mdi mdi-close" aria-hidden="true"></span>
+                Deny
+            </button>
+        </li>
+    </ul>
+</div>
 """
+
+#
+# Approval Workflow
+#
+
+
+class ApprovalWorkflowDefinitionTable(BaseTable):
+    """Table for ApprovalWorkflowDefinitionTable list view."""
+
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflowDefinition)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        fields = (
+            "pk",
+            "name",
+            "model_content_type",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "model_content_type",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageDefinitionTable(BaseTable):
+    """Table for ApprovalWorkflowStageDefinition list view."""
+
+    pk = ToggleColumn()
+    approval_workflow_definition = tables.Column(linkify=True)
+    name = tables.Column(linkify=True)
+    actions = ButtonsColumn(ApprovalWorkflowStageDefinition)
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        fields = (
+            "pk",
+            "approval_workflow_definition",
+            "sequence",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_definition",
+            "sequence",
+            "name",
+            "min_approvers",
+            "denial_message",
+            "approver_group",
+            "actions",
+        )
+
+
+class ApprovalWorkflowTable(BaseTable):
+    """Table for ApprovalWorkflow list view."""
+
+    pk = ToggleColumn()
+    approval_workflow_definition = tables.Column(linkify=True)
+    object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
+    object_under_review = tables.TemplateColumn(
+        template_code=APPROVAL_WORKFLOW_OBJECT,
+        verbose_name="Object Under Review",
+        order_by=["object_under_review_content_type", "object_under_review_object_id"],
+    )
+    user = tables.TemplateColumn(
+        template_code="{% if record.user %}{{record.user}}{% else %}{{ record.user_name }}{% endif %}",
+        verbose_name="User",
+    )
+    current_state = ChoiceFieldColumn()
+    actions = ApprovalButtonsColumn(ApprovalWorkflow, buttons=("detail", "changelog"))
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = (
+            "pk",
+            "object_under_review_content_type",
+            "object_under_review",
+            "user",
+            "current_state",
+            "approval_workflow_definition",
+        )
+        default_columns = (
+            "pk",
+            "object_under_review_content_type",
+            "object_under_review",
+            "user",
+            "current_state",
+            "approval_workflow_definition",
+            "actions",
+        )
+
+
+class ApprovalChoiceFieldColumn(ChoiceFieldColumn):
+    """
+    Render a ChoiceField value just like ChoiceFieldColumn, but only if the record should be rendered.
+    Otherwise, render a muted dash.
+    """
+
+    def render(self, *, record, bound_column, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        if record.should_render_state:
+            return super().render(record=record, bound_column=bound_column, value=value)
+        return HTML_NONE
+
+
+class ApprovalWorkflowStageTable(BaseTable):
+    """Table for ApprovalWorkflowStage list view."""
+
+    pk = ToggleColumn()
+    approval_workflow = tables.Column(linkify=True)
+    approval_workflow_stage_definition = tables.Column(linkify=True)
+    actions_needed = tables.TemplateColumn(
+        template_code="""
+        {% if record.remaining_approvals == 1 %}
+            {{ record.remaining_approvals }} more approval needed
+        {% elif record.remaining_approvals == 0 %}
+            <span class="text-secondary">&mdash;</span>
+        {% else %}
+            {{ record.remaining_approvals }} more approvals needed
+        {% endif %}
+        """,
+        orderable=False,
+        verbose_name="Actions Needed",
+    )
+    state = ApprovalChoiceFieldColumn()
+    actions = ApprovalButtonsColumn(
+        ApprovalWorkflowStage, buttons=("detail", "changelog", "comment", "approve", "deny")
+    )
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = (
+            "pk",
+            "approval_workflow",
+            "approval_workflow_stage_definition",
+            "actions_needed",
+            "state",
+            "decision_date",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "approval_workflow_stage_definition",
+            "actions_needed",
+            "state",
+            "decision_date",
+            "actions",
+        )
+
+
+class ApproverDashboardTable(ApprovalWorkflowStageTable):
+    """
+    ApprovalWorkflowStageTable modified for the approver dashboard.
+    """
+
+    pk = ToggleColumn()
+    approval_workflow = tables.TemplateColumn(
+        template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow.approval_workflow_definition.name }}</a>",
+        verbose_name="Workflow",
+    )
+    approval_workflow_stage = tables.TemplateColumn(
+        template_code="<a href={{record.approval_workflow.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
+        verbose_name="Current Stage",
+    )
+    approval_workflow__object_under_review_content_type = tables.Column(verbose_name="Object Type Under Review")
+    object_under_review = tables.TemplateColumn(
+        template_code="<a href={{record.approval_workflow.object_under_review.get_absolute_url }}>{{ record.approval_workflow.object_under_review }}</a>",
+        verbose_name="Object Under Review",
+        order_by=[
+            "approval_workflow__object_under_review_content_type",
+            "approval_workflow__object_under_review_object_id",
+        ],
+    )
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = (
+            "pk",
+            "approval_workflow__object_under_review_content_type",
+            "object_under_review",
+            "approval_workflow",
+            "approval_workflow_stage",
+            "actions_needed",
+            "state",
+            "decision_date",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow__object_under_review_content_type",
+            "object_under_review",
+            "approval_workflow",
+            "approval_workflow_stage",
+            "actions_needed",
+            "state",
+            "actions",
+        )
+
+
+class RelatedApprovalWorkflowStageTable(ApprovalWorkflowStageTable):
+    """
+    ApprovalWorkflowStageTable used in the detail view of ApprovalWorkflow detail view.
+    """
+
+    approval_workflow_stage = tables.TemplateColumn(
+        template_code="<a href={{record.get_absolute_url}}>{{ record.approval_workflow_stage_definition.name }}</a>",
+        verbose_name="Stage",
+    )
+    actions = ApprovalButtonsColumn(ApprovalWorkflowStage, buttons=("approve", "comment", "deny"))
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = (
+            "pk",
+            "approval_workflow",
+            "approval_workflow_stage",
+            "actions_needed",
+            "state",
+            "decision_date",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow",
+            "approval_workflow_stage",
+            "actions_needed",
+            "state",
+            "decision_date",
+            "actions",
+        )
+
+
+class ApprovalWorkflowStageResponseTable(BaseTable):
+    """Table for ApprovalWorkflowStageResponse list view."""
+
+    pk = ToggleColumn()
+    state = ChoiceFieldColumn()
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageResponse
+        fields = (
+            "pk",
+            "approval_workflow_stage",
+            "user",
+            "comments",
+            "state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_stage",
+            "user",
+            "comments",
+            "state",
+        )
+
+    def render_comments(self, value):
+        return render_markdown(value)
+
+
+class RelatedApprovalWorkflowStageResponseTable(ApprovalWorkflowStageResponseTable):
+    """Table for ApprovalWorkflowStageResponse list view."""
+
+    approval_workflow_stage = tables.TemplateColumn(
+        template_code="<a href={{record.approval_workflow_stage.get_absolute_url}}>{{ record.approval_workflow_stage.approval_workflow_stage_definition.name }}</a>",
+        verbose_name="Stage",
+    )
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageResponse
+        fields = (
+            "pk",
+            "approval_workflow_stage",
+            "user",
+            "comments",
+            "state",
+        )
+        default_columns = (
+            "pk",
+            "approval_workflow_stage",
+            "user",
+            "comments",
+            "state",
+            "actions",
+        )
 
 
 class ComputedFieldTable(BaseTable):
@@ -218,8 +608,9 @@ class ComputedFieldTable(BaseTable):
 class ConfigContextTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     is_active = BooleanColumn(verbose_name="Active")
+    actions = ButtonsColumn(ConfigContext)
 
     class Meta(BaseTable.Meta):
         model = ConfigContext
@@ -238,6 +629,7 @@ class ConfigContextTable(BaseTable):
             "tenant_groups",
             "tenants",
             "dynamic_groups",
+            "actions",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -245,7 +637,7 @@ class ConfigContextTable(BaseTable):
 class ConfigContextSchemaTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     actions = ButtonsColumn(ConfigContextSchema)
 
     class Meta(BaseTable.Meta):
@@ -266,19 +658,29 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     """
 
     def __init__(self, validator, data_field, *args, **kwargs):
+        kwargs.setdefault("orderable", False)
+        kwargs.setdefault("accessor", None)
+        kwargs.setdefault("exclude_from_export", True)
+        kwargs.setdefault("empty_values", ())
+
         super().__init__(*args, **kwargs)
+
         self.validator = validator
         self.data_field = data_field
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        data = getattr(record, self.data_field)
-        try:
-            self.validator.validate(data)
-        except JSONSchemaValidationError as e:
-            # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
+        data = getattr(record, self.data_field, None)
 
-        # Return a green check (like a boolean column)
+        validator = self.validator
+        # only call validate if this is a real validator
+        if not isinstance(validator, Draft7Validator):
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
+
+        try:
+            validator.validate(data)
+
+        except JSONSchemaValidationError as e:
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)
 
 
@@ -416,8 +818,8 @@ class DynamicGroupTable(BaseTable):
 class DynamicGroupMembershipTable(DynamicGroupTable):
     """Hybrid table for displaying info for both group and membership."""
 
-    description = tables.Column(accessor="group.description")
-    members = tables.Column(accessor="group.count", verbose_name="Group Members", orderable=False)
+    description = tables.Column(accessor="group__description")
+    members = tables.Column(accessor="group__count", verbose_name="Group Members", orderable=False)
 
     class Meta(BaseTable.Meta):
         model = DynamicGroupMembership
@@ -538,7 +940,9 @@ class StaticGroupAssociationTable(BaseTable):
 
     pk = ToggleColumn()
     dynamic_group = tables.Column(linkify=True)
-    associated_object = tables.Column(linkify=True, verbose_name="Associated Object")
+    associated_object = tables.Column(
+        linkify=True, verbose_name="Associated Object", order_by=["associated_object_type", "associated_object_id"]
+    )
     actions = ButtonsColumn(StaticGroupAssociation, buttons=["changelog", "delete"])
 
     class Meta(BaseTable.Meta):
@@ -550,7 +954,7 @@ class StaticGroupAssociationTable(BaseTable):
 class ExportTemplateTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    owner = tables.LinkColumn()
+    owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
 
     class Meta(BaseTable.Meta):
         model = ExportTemplate
@@ -610,22 +1014,23 @@ class GitRepositoryTable(BaseTable):
     name = tables.LinkColumn()
     remote_url = tables.Column(verbose_name="Remote URL")
     secrets_group = tables.Column(linkify=True)
-    last_sync_time = tables.DateTimeColumn(
-        empty_values=(), format=settings.SHORT_DATETIME_FORMAT, verbose_name="Sync Time"
-    )
+    last_sync_time = tables.DateTimeColumn(empty_values=(), short=True, verbose_name="Sync Time", orderable=False)
 
-    last_sync_user = tables.Column(empty_values=(), verbose_name="Sync By")
+    last_sync_user = tables.Column(empty_values=(), verbose_name="Sync By", orderable=False)
 
     class JobResultColumn(tables.TemplateColumn):
         def render(self, record, table, value, bound_column, **kwargs):
-            if str(record.pk) in table.context.get("job_results", {}):
-                table.context.update({"result": table.context["job_results"][str(record.pk)]})
-            else:
-                table.context.update({"result": None})
+            if hasattr(table, "context"):
+                if str(record.pk) in table.context.get("job_results", {}):
+                    table.context.update({"result": table.context["job_results"][str(record.pk)]})
+                else:
+                    table.context.update({"result": None})
             return super().render(record, table, value, bound_column, **kwargs)
 
-    last_sync_status = JobResultColumn(template_name="extras/inc/job_label.html", verbose_name="Sync Status")
-    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES)
+    last_sync_status = JobResultColumn(
+        template_name="extras/inc/job_label.html", verbose_name="Sync Status", orderable=False
+    )
+    provides = tables.TemplateColumn(GITREPOSITORY_PROVIDES, orderable=False)
     actions = ButtonsColumn(GitRepository, prepend_template=GITREPOSITORY_BUTTONS)
 
     class Meta(BaseTable.Meta):
@@ -654,14 +1059,16 @@ class GitRepositoryTable(BaseTable):
         )
 
     def render_last_sync_time(self, record):
-        if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            return self.context["job_results"][record.name].date_done  # pylint: disable=no-member
+        if hasattr(self, "context"):
+            if str(record.pk) in self.context.get("job_results", {}):
+                return self.context["job_results"][str(record.pk)].date_done
         return self.default
 
     def render_last_sync_user(self, record):
-        if record.name in self.context["job_results"]:  # pylint: disable=no-member
-            user = self.context["job_results"][record.name].user  # pylint: disable=no-member
-            return user
+        if hasattr(self, "context"):
+            if str(record.pk) in self.context.get("job_results", {}):
+                user = self.context["job_results"][str(record.pk)].user
+                return user
         return self.default
 
 
@@ -696,14 +1103,26 @@ class GraphQLQueryTable(BaseTable):
         )
 
 
+class ImageAttachmentTable(BaseTable):
+    pk = ToggleColumn()
+    name = tables.TemplateColumn(template_code=IMAGEATTACHMENT_NAME, verbose_name="Name")
+    size = tables.TemplateColumn(template_code=IMAGEATTACHMENT_SIZE)
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(ImageAttachment, buttons=("edit", "delete"))
+
+    class Meta(BaseTable.Meta):
+        model = ImageAttachment
+        fields = ("pk", "name", "size", "created", "actions")
+
+
 def log_object_link(value, record):
     return record.absolute_url or None
 
 
 def log_entry_color_css(record):
     if record.log_level.lower() in ("failure", "error", "critical"):
-        return "danger"
-    return record.log_level.lower()
+        return "table-danger"
+    return "table-" + record.log_level.lower()
 
 
 class JobTable(BaseTable):
@@ -717,11 +1136,11 @@ class JobTable(BaseTable):
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
+    console_log_default = BooleanColumn()
     description = tables.Column(accessor="description_first_line")
     dryrun_default = BooleanColumn()
     hidden = BooleanColumn()
     read_only = BooleanColumn()
-    approval_required = BooleanColumn()
     is_job_hook_receiver = BooleanColumn()
     is_job_button_receiver = BooleanColumn()
     supports_dryrun = BooleanColumn()
@@ -735,9 +1154,9 @@ class JobTable(BaseTable):
         accessor="latest_result",
         template_code="""
             {% if value %}
-                {{ value.date_created|date:settings.SHORT_DATETIME_FORMAT }} by {{ value.user }}
+                {{ value.date_created|date:"SHORT_DATETIME_FORMAT" }} by {{ value.user }}
             {% else %}
-                <span class="text-muted">Never</span>
+                <span class="text-secondary">Never</span>
             {% endif %}
         """,
         linkify=lambda value: value.get_absolute_url() if value else None,
@@ -753,7 +1172,7 @@ class JobTable(BaseTable):
 
     def render_name(self, value):
         return format_html(
-            '<span class="btn btn-primary btn-xs"><i class="mdi mdi-play"></i></span>{}',
+            '<span class="btn btn-primary btn-sm p-2 rounded-circle"><span class="mdi mdi-play"></span></span>{}',
             value,
         )
 
@@ -767,13 +1186,13 @@ class JobTable(BaseTable):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log_default",
             "description",
             "dryrun_default",
             "hidden",
             "read_only",
             "is_job_hook_receiver",
             "is_job_button_receiver",
-            "approval_required",
             "supports_dryrun",
             "soft_time_limit",
             "time_limit",
@@ -797,6 +1216,7 @@ class JobTable(BaseTable):
 
 class JobHookTable(BaseTable):
     pk = ToggleColumn()
+    enabled = BooleanColumn()
     name = tables.Column(linkify=True)
     content_types = tables.TemplateColumn(WEBHOOK_CONTENT_TYPES)
     job = tables.Column(linkify=True)
@@ -831,18 +1251,18 @@ class JobLogEntryTable(BaseTable):
     )
     log_object = tables.Column(verbose_name="Object", linkify=log_object_link)
     message = tables.Column(
-        attrs={"td": {"class": "rendered-markdown"}},
+        attrs={"td": {"class": "nb-rendered-markdown"}},
     )
 
     def render_log_level(self, value):
         log_level = value.lower()
-        # The css is label-danger for failure items.
+        # The css is bg-danger for failure items.
         if log_level in ["failure", "error", "critical"]:
             log_level = "danger"
         elif log_level == "debug":
-            log_level = "default"
+            log_level = "secondary"
 
-        return format_html('<label class="label label-{}">{}</label>', log_level, value)
+        return format_html('<label class="badge bg-{}">{}</label>', log_level, value)
 
     def render_message(self, value):
         return render_markdown(value)
@@ -855,7 +1275,7 @@ class JobLogEntryTable(BaseTable):
             "class": log_entry_color_css,
         }
         attrs = {
-            "class": "table table-hover table-headings",
+            "class": "table table-hover nb-table-headings",
             "id": "logs",
         }
 
@@ -889,7 +1309,10 @@ class JobQueueTable(BaseTable):
 class JobResultTable(BaseTable):
     pk = ToggleColumn()
     job_model = tables.Column(linkify=True)
-    date_created = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    date_created = tables.DateTimeColumn(linkify=True, short=True)
+    date_started = tables.DateTimeColumn(linkify=True, short=True)
+    date_done = tables.DateTimeColumn(linkify=True, short=True)
+    date_terminated = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -903,52 +1326,36 @@ class JobResultTable(BaseTable):
         linkify=True,
         verbose_name="Scheduled Job",
     )
+    duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Only calculate log counts for "summary" column if it's actually visible.
-        if self.columns["summary"].visible and isinstance(self.data.data, QuerySet):
-            self.data = TableData.from_data(
-                self.data.data.annotate(
-                    debug_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_DEBUG}
-                    ),
-                    success_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_SUCCESS}
-                    ),
-                    info_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_INFO}
-                    ),
-                    warning_log_count=count_related(
-                        JobLogEntry, "job_result", filter_dict={"log_level": LogLevelChoices.LOG_WARNING}
-                    ),
-                    error_log_count=count_related(
-                        JobLogEntry,
-                        "job_result",
-                        filter_dict={
-                            "log_level__in": [
-                                LogLevelChoices.LOG_FAILURE,
-                                LogLevelChoices.LOG_ERROR,
-                                LogLevelChoices.LOG_CRITICAL,
-                            ],
-                        },
-                    ),
-                )
-            )
-            self.data.set_table(self)
-            self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+    console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
+    revocation_type = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
+        verbose_name="Revocation Type",
+        orderable=False,
+    )
 
     def render_summary(self, record):
         """
         Define custom rendering for the summary column.
         """
+        # The *_log_count attributes will be calculated and updated at the end of a Job run when JobResult is saved.
+        # If the values are not present due to a running Job or are missing in any field, skip display.
+        if record.status not in JobResultStatusChoices.READY_STATES or None in [
+            record.debug_log_count,
+            record.success_log_count,
+            record.info_log_count,
+            record.warning_log_count,
+            record.error_log_count,
+        ]:
+            return ""
+
         return format_html(
-            """<label class="label label-default">{}</label>
-            <label class="label label-success">{}</label>
-            <label class="label label-info">{}</label>
-            <label class="label label-warning">{}</label>
-            <label class="label label-danger">{}</label>""",
+            """<label class="badge bg-secondary">{}</label>
+            <label class="badge bg-success">{}</label>
+            <label class="badge bg-info">{}</label>
+            <label class="badge bg-warning">{}</label>
+            <label class="badge bg-danger">{}</label>""",
             record.debug_log_count,
             record.success_log_count,
             record.info_log_count,
@@ -961,15 +1368,19 @@ class JobResultTable(BaseTable):
         fields = (
             "pk",
             "date_created",
+            "date_started",
+            "date_done",
+            "date_terminated",
+            "revoked_by",
             "name",
             "job_model",
             "scheduled_job",
             "duration",
-            "date_done",
             "user",
             "status",
             "summary",
             "actions",
+            "console_log",
         )
         default_columns = (
             "pk",
@@ -978,6 +1389,7 @@ class JobResultTable(BaseTable):
             "job_model",
             "user",
             "status",
+            "summary",
             "actions",
         )
 
@@ -1064,7 +1476,7 @@ class ObjectMetadataTable(BaseTable):
     )
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
-    value = tables.Column(empty_values=[])
+    value = tables.Column(empty_values=[], order_by=("_value",))
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
@@ -1116,7 +1528,7 @@ class NoteTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Note
-        fields = ("created", "last_updated", "note", "user_name")
+        fields = ("created", "last_updated", "note", "user_name", "actions")
 
     def render_note(self, value):
         return render_markdown(value)
@@ -1131,12 +1543,23 @@ class ScheduledJobTable(BaseTable):
     pk = ToggleColumn()
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
+    enabled = BooleanColumn()
+    state = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/scheduled_job_label.html' with scheduled_job=record %}",
+    )
     interval = tables.Column(verbose_name="Execution Type")
-    start_time = tables.DateTimeColumn(verbose_name="First Run", format=settings.SHORT_DATETIME_FORMAT)
-    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", format=settings.SHORT_DATETIME_FORMAT)
+    start_time = tables.DateTimeColumn(verbose_name="First Run", short=True)
+    last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", short=True)
     crontab = tables.Column()
     total_run_count = tables.Column(verbose_name="Total Run Count")
     actions = ButtonsColumn(ScheduledJob, buttons=("delete",), prepend_template=SCHEDULED_JOB_BUTTONS)
+    approval_state = tables.Column(empty_values=[], orderable=False)
+
+    def render_approval_state(self, record):
+        workflow = record.associated_approval_workflows.first()
+        if workflow is not None:
+            return format_html('<a href="{}">{}</a>', record.get_approval_workflow_url(), workflow.current_state)
+        return HTML_NONE
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
@@ -1145,20 +1568,25 @@ class ScheduledJobTable(BaseTable):
             "name",
             "total_run_count",
             "job_model",
+            "approval_state",
             "interval",
             "start_time",
             "last_run_at",
             "crontab",
             "time_zone",
             "actions",
+            "state",
         )
         default_columns = (
             "pk",
             "name",
             "job_model",
+            "enabled",
+            "approval_state",
             "interval",
             "last_run_at",
             "actions",
+            "state",
         )
 
 
@@ -1168,7 +1596,14 @@ class ScheduledJobApprovalQueueTable(BaseTable):
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.Column(verbose_name="Requested")
     user = tables.Column(verbose_name="Requestor")
-    actions = tables.TemplateColumn(SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS)
+    actions = tables.TemplateColumn(
+        SCHEDULED_JOB_APPROVAL_QUEUE_BUTTONS,
+        attrs={
+            "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
+            "tf": {"class": "nb-w-0"},
+            "th": {"class": "nb-actionable nb-w-0"},
+        },
+    )
 
     class Meta(BaseTable.Meta):
         model = ScheduledJob
@@ -1176,7 +1611,7 @@ class ScheduledJobApprovalQueueTable(BaseTable):
 
 
 class ObjectChangeTable(BaseTable):
-    time = tables.DateTimeColumn(linkify=True, format=settings.SHORT_DATETIME_FORMAT)
+    time = tables.DateTimeColumn(linkify=True, short=True)
     action = ChoiceFieldColumn()
     changed_object_type = tables.Column(verbose_name="Type")
     object_repr = tables.TemplateColumn(template_code=OBJECTCHANGE_OBJECT, verbose_name="Object")
@@ -1192,6 +1627,34 @@ class ObjectChangeTable(BaseTable):
             "object_repr",
             "request_id",
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only prefetch if all content types are valid
+        if all(ct.model_class() is not None for ct in ContentType.objects.all()):
+            self.add_conditional_prefetch("object_repr", "changed_object")
+        else:
+            error_message = dedent("""\
+                            One or more ContentType entries in the database are invalid.
+                            This will likely cause performance degradation when viewing the Object Change log.
+                            An administrator can follow these steps to resolve common issues:
+                             - Run `nautobot-server remove_stale_contenttypes`
+                             - Run `nautobot-server migrate <app_label> zero` for any app labels which no longer exist
+                             - Manually dropping tables for any models which have been removed from Nautobot or its plugins from your database
+                             - Run ```
+                                    from django.contrib.contenttypes.models import ContentType
+                                    qs = ContentType.objects.filter(
+                                        app_label__in=[
+                                            "<app_label_of_removed_plugin_1>",
+                                            "<app_label_of_removed_plugin_2>",
+                                        ]
+                                    ) | ContentType.objects.filter(model__icontains="<name_of_removed_model_1>")
+                                    # Review the queryset before running delete
+                                    qs.delete()
+                                   ```
+                            Please ensure you fully understand the implications of these actions before proceeding.
+                            """)
+            logger.warning(error_message)
 
 
 #
@@ -1259,7 +1722,7 @@ class RoleTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Role
-        fields = ["pk", "name", "color", "weight", "content_types", "description"]
+        fields = ["pk", "name", "color", "weight", "content_types", "description", "actions"]
 
 
 class RoleTableMixin(BaseTable):
@@ -1279,6 +1742,7 @@ class SecretTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tags = TagColumn(url_name="extras:secret_list")
+    actions = ButtonsColumn(Secret)
 
     class Meta(BaseTable.Meta):
         model = Secret
@@ -1288,6 +1752,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1295,6 +1760,7 @@ class SecretTable(BaseTable):
             "provider",
             "description",
             "tags",
+            "actions",
         )
 
     def render_provider(self, value):
@@ -1306,6 +1772,7 @@ class SecretsGroupTable(BaseTable):
 
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    actions = ButtonsColumn(SecretsGroup)
 
     class Meta(BaseTable.Meta):
         model = SecretsGroup
@@ -1313,12 +1780,25 @@ class SecretsGroupTable(BaseTable):
             "pk",
             "name",
             "description",
+            "actions",
         )
         default_columns = (
             "pk",
             "name",
             "description",
+            "actions",
         )
+
+
+class SecretsGroupAssociationTable(BaseTable):
+    secret = tables.Column(linkify=True)
+
+    class Meta:
+        model = SecretsGroupAssociation
+        fields = ("access_type", "secret_type", "secret")
+        default_columns = ("access_type", "secret_type", "secret")
+        # Avoid extra UI clutter
+        attrs = {"class": "table table-condensed"}
 
 
 #
@@ -1413,6 +1893,7 @@ class WebhookTable(BaseTable):
     type_update = BooleanColumn()
     type_delete = BooleanColumn()
     ssl_verification = BooleanColumn()
+    actions = ButtonsColumn(Webhook)
 
     class Meta(BaseTable.Meta):
         model = Webhook
@@ -1429,6 +1910,7 @@ class WebhookTable(BaseTable):
             "type_delete",
             "ssl_verification",
             "ca_file_path",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1437,6 +1919,7 @@ class WebhookTable(BaseTable):
             "payload_url",
             "http_content_type",
             "enabled",
+            "actions",
         )
 
 
@@ -1448,9 +1931,9 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
         attrs={"td": {"style": "width:20px;"}},
     )
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
-    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team.phone", verbose_name="Phone")
-    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team.email", verbose_name="E-Mail")
-    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
+    contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
+    contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
+    actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation
@@ -1479,7 +1962,9 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
 
 class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
     associated_object_type = tables.Column(verbose_name="Object Type")
-    associated_object = tables.Column(linkify=True, verbose_name="Object")
+    associated_object = tables.Column(
+        linkify=True, verbose_name="Object", order_by=["associated_object_type", "associated_object_id"]
+    )
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation

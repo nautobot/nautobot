@@ -1,8 +1,8 @@
 import logging
 
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -19,6 +19,7 @@ from nautobot.core.api import (
     ValidatedModelSerializer,
 )
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import GroupField
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -42,9 +43,15 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -103,6 +110,80 @@ from .fields import MultipleChoiceJSONField
 #
 
 logger = logging.getLogger(__name__)
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowDefinitionSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowDefinition Serializer."""
+
+    model_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowDefinition
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageDefinitionSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStageDefinition Serializer."""
+
+    approver_group = GroupField(
+        queryset=Group.objects.all(),
+        help_text="The group that will be assigned to approve this stage.",
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageDefinition
+        fields = "__all__"
+
+
+class ApprovalWorkflowSerializer(NautobotModelSerializer):
+    """ApprovalWorkflow Serializer."""
+
+    object_under_review_content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
+            "app_label", "model"
+        ),
+    )
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflow
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
+        fields = "__all__"
+
+
+class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
+    """ApprovalWorkflowStageResponse Serializer."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStageResponse
+        fields = "__all__"
 
 
 #
@@ -227,7 +308,7 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.filter(FeatureQuery("contacts").get_query()))
 
     class Meta:
         model = ContactAssociation
@@ -305,6 +386,9 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = CustomField
         fields = "__all__"
+        extra_kwargs = {
+            "scope_filter": {"read_only": False, "required": False},
+        }
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
@@ -471,6 +555,7 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
     class Meta:
         model = GitRepository
         fields = "__all__"
+        read_only_fields = ["current_head"]
 
 
 #
@@ -513,6 +598,7 @@ class GraphQLQueryInputSerializer(serializers.Serializer):
 
 class GraphQLQueryOutputSerializer(serializers.Serializer):
     data = serializers.DictField(default={})
+    errors = serializers.ListField(default=None)
 
 
 #
@@ -521,23 +607,16 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 
 
 class ImageAttachmentSerializer(ValidatedModelSerializer):
-    content_type = ContentTypeField(queryset=ContentType.objects.all())
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(app_label="dcim", model__in=["device", "location", "rack"])
+    )
 
     class Meta:
         model = ImageAttachment
         fields = "__all__"
-
-    def validate(self, attrs):
-        # Validate that the parent object exists
-        try:
-            attrs["content_type"].get_object_for_this_type(id=attrs["object_id"])
-        except ObjectDoesNotExist:
-            raise serializers.ValidationError(f"Invalid parent object: {attrs['content_type']} ID {attrs['object_id']}")
-
-        # Enforce model validation
-        super().validate(attrs)
-
-        return attrs
+        # image_height and image_width are auto-populated from the uploaded image via the ImageField's
+        # height_field/width_field declaration on the model, so clients must not supply them.
+        read_only_fields = ["image_height", "image_width"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -568,25 +647,6 @@ class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     class Meta:
         model = Job
         fields = "__all__"
-
-    def validate(self, attrs):
-        # note no validation for on creation of jobs because we do not support user creation of Job records via API
-        if self.instance:
-            has_sensitive_variables = attrs.get("has_sensitive_variables", self.instance.has_sensitive_variables)
-            approval_required = attrs.get("approval_required", self.instance.approval_required)
-
-            if approval_required and has_sensitive_variables:
-                error_message = "A job with sensitive variables cannot also be marked as requiring approval"
-                errors = {}
-
-                if "approval_required" in attrs:
-                    errors["approval_required"] = [error_message]
-                if "has_sensitive_variables" in attrs:
-                    errors["has_sensitive_variables"] = [error_message]
-
-                raise serializers.ValidationError(errors)
-
-        return super().validate(attrs)
 
 
 class JobQueueSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
@@ -628,10 +688,22 @@ class ScheduledJobSerializer(BaseModelSerializer):
     # queue is added to maintain backward compatibility with versions pre v2.4.
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
+    associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
+    state = ChoiceField(choices=ScheduledJobStateChoices, read_only=True)
 
     class Meta:
         model = ScheduledJob
-        fields = "__all__"
+        # Exclude database fields that are provided for parity with django-celery-beat but are otherwise unused
+        exclude = [
+            "clocked",
+            "exchange",
+            "expires",
+            "expire_seconds",
+            "headers",
+            "priority",
+            "routing_key",
+            "solar",
+        ]
 
 
 #
@@ -661,6 +733,25 @@ class JobRunResponseSerializer(serializers.Serializer):
 
     schedule = ScheduledJobSerializer(read_only=True, required=False)
     job_result = JobResultSerializer(read_only=True, required=False)
+
+
+class JobResultRevokePreviewSerializer(serializers.Serializer):
+    """Describes what a revoke action would do, returned by GET on the revoke endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    action = serializers.ChoiceField(
+        choices=["TERMINATE", "REAP", "None"],
+        help_text="TERMINATE if worker alive; REAP if no worker; None if job already finished.",
+    )
+    action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING", *JobResultStatusChoices.ALL_STATES],
+        help_text=("RUNNING or NOT RUNNING for unready jobs; for ready jobs, the terminal state."),
+    )
+    irreversible = serializers.CharField(
+        required=False, help_text="Warning that the action cannot be undone. Omitted when action is None."
+    )
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
 
 #

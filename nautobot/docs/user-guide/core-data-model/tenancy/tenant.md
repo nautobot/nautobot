@@ -8,6 +8,7 @@ A tenant represents a discrete grouping of resources used for administrative pur
 * Dynamic Groups
 * IP addresses
 * Locations
+* Namespaces
 * Prefixes
 * Racks
 * Rack reservations

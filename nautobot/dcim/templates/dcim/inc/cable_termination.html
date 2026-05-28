@@ -1,10 +1,10 @@
 {% load helpers %}
-<table class="table table-hover panel-body attr-table">
-    {% if termination.device %}
-        {# Device component #}
+<table class="table table-hover card-body attr-table">
+    {% if termination.device or termination.module %}
+        {# Device/module component #}
         <tr>
-            <td>Device</td>
-            <td>{{ termination.device|hyperlinked_object }}</td>
+            <td>{{ termination.parent|meta:"verbose_name"|capfirst }}</td>
+            <td>{{ termination.parent|hyperlinked_object }}</td>
         </tr>
         <tr>
             <td>Type</td>

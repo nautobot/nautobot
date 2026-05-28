@@ -47,7 +47,7 @@ class Command(BaseCommand):
         Draw a simple progress bar 20 increments wide illustrating the specified percentage.
         """
         bar_size = int(percentage / 5)
-        self.stdout.write(f"\r  [{'#' * bar_size}{' ' * (20-bar_size)}] {int(percentage)}%", ending="")
+        self.stdout.write(f"\r  [{'#' * bar_size}{' ' * (20 - bar_size)}] {int(percentage)}%", ending="")
 
     def handle(self, *model_names, **options):
         # If --force was passed, first delete all existing CablePaths
@@ -82,7 +82,10 @@ class Command(BaseCommand):
         for model in ENDPOINT_MODELS:
             origins = model.objects.filter(cable__isnull=False)
             if not options["force"]:
-                origins = origins.filter(_path__isnull=True)
+                # TODO (task #14): With breakout cables an origin can have some lanes traced and others not;
+                # cable_paths__isnull=True only skips origins with zero lanes traced. Revisit whether this
+                # "only retrace missing paths" optimization is still meaningful after the redesign.
+                origins = origins.filter(cable_paths__isnull=True)
             origins_count = origins.count()
             if not origins_count:
                 self.stdout.write(f"Found no missing {model._meta.verbose_name} paths; skipping")

@@ -38,6 +38,12 @@ In addition to monitoring the existence of a given Celery worker process ID, you
 !!! tip
     A Celery worker's name defaults to `celery@$HOSTNAME`, but you can override it by starting the worker with the `-n <name>` argument if needed.
 
+Furthermore you can enable the [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting, alongside the (optional)  [`CELERY_WORKER_HEARTBEAT_FILE`](../configuration/settings.md#celery_worker_heartbeat_file) and [`CELERY_WORKER_READINESS_FILE`](../configuration/settings.md#celery_worker_readiness_file) settings in order to enable and configure the filesystem paths that will be used to touch files. Those files can be used as liveness probes for the worker. As an example, by using the `find` command with it's `-mmin` parameter to check that the heartbeat file is there and modified the last minute.
+
+```shell
+[ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false
+```
+
 ### Nautobot Celery Beat
 
 In addition to monitoring the Celery Beat process ID, you can use the fact that Nautobot's custom Celery Beat scheduler respects the [`CELERY_BEAT_HEARTBEAT_FILE`](../configuration/settings.md#celery_beat_heartbeat_file) configuration setting, which specifies a filesystem path that will be repeatedly [`touch`ed](https://en.wikipedia.org/wiki/Touch_(command)) to update its last-modified timestamp so long as the scheduler is running. You can check this timestamp against the current system time to detect whether the Celery Beat scheduler is firing as expected. One way is using the `find` command with it's `-mmin` parameter, and checking whether it finds the expected file with a recent enough modification time (here, 0.1 minutes, or 6 seconds) or not:
@@ -62,6 +68,36 @@ Redis provides the [`redis-cli ping` CLI command](https://redis.io/commands/ping
 
 !!! tip
     If you have the Redis server configured to require a password, you will need to set the `REDISCLI_AUTH` environment variable to this password before `redis-cli ping` will be successful.
+
+If you have implemented a custom redis `CLIENT_CLASS` for use within `CACHES`, you can provide a custom health check to register. This must be in the format shown below.
+
+```python
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": parse_redis_connection(redis_database=1),
+        "OPTIONS": {
+            "CLIENT_CLASS": "my_app.redis.CustomRedisClient",
+            "CUSTOM_HEALTH_CHECK_CLASS": "my_app.redis.MyCustomRedisHealthCheck",
+        },
+    },
+}
+```
+
+In the example above a custom app named `my_app` is used to hold the custom implementation. An example check is shown below.
+
+```python
+from health_check.backends import BaseHealthCheckBackend
+from health_check.exceptions import ServiceUnavailable
+from netutils.ping import tcp_ping
+
+class MyCustomRedisHealthCheck(BaseHealthCheckBackend):
+    def check_status(self):
+        if not tcp_ping("198.51.100.100", 6379):
+            self.add_error(ServiceUnavailable("Custom Redis health check error"))
+```
+
+The result will now show up in `/health/` and via `nautobot-server health_check`.
 
 ## Deployments with systemd
 
@@ -128,6 +164,35 @@ livenessProbe:
       - "/bin/bash"
       - "-c"
       - "nautobot-server celery inspect ping --destination celery@$HOSTNAME"
+  periodSeconds: 60
+  timeoutSeconds: 10
+  failureThreshold: 3
+```
+
+It is advised though to enable the custom [`CELERY_HEALTH_PROBES_AS_FILES`](../configuration/settings.md#celery_health_probes_as_files) configuration setting in order to use files for probes in Kubernetes. That way even if you have concurrency of `1` in your environment, probes will still work:
+
+!!! warning
+    If you are using Celery version `5.6.1` breaks the creation of Worker's heartbeat file, but still generate readiness files as expected. Upgrading to Celery `5.6.2` resolves the issue. Affected Nautobot versions are `3.0.4` & `3.0.5`.
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      - "[ $(find $CELERY_WORKER_READINESS_FILE | wc -l) -eq 1 ] || false"
+  periodSeconds: 60
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+livenessProbe:
+  exec:
+    command:
+      - "/bin/bash"
+      - "-c"
+      # This is set to check if the file was changed in the last minute (-mmin -1),
+      # but you can use fractional minutes as well such as 0.1 for every 6 seconds
+      - "[ $(find $CELERY_WORKER_HEARTBEAT_FILE -mmin -1 | wc -l) -eq 1 ] || false"
   periodSeconds: 60
   timeoutSeconds: 10
   failureThreshold: 3

@@ -1,7 +1,7 @@
-from django.test import TestCase
 import netaddr
 
 from nautobot.core.forms.utils import parse_numeric_range
+from nautobot.core.testing import TestCase
 from nautobot.extras.models import Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.ipam.utils import add_available_ipaddresses, add_available_vlans

@@ -1,0 +1,1 @@
+Fixed a case where the Revoke Job button on the Job Result detail view wouldn't correctly refresh once status is ready.

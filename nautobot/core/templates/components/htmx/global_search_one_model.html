@@ -1,0 +1,26 @@
+{% load helpers %}
+
+<div id="{{ model|slugify }}-results-table">
+    {% if table %}
+        <h3 id="{{ name|lower }}">{{ name|bettertitle }}</h3>
+        {% include 'panel_table.html' with table=table %}
+        <a href="{{ url }}" class="btn btn-primary float-end">
+            <span class="mdi mdi-arrow-right-bold" aria-hidden="true"></span>
+            {% if table.page.has_next %}
+                See all {{ table.page.paginator.count }} results
+            {% else %}
+                Refine search
+            {% endif %}
+        </a>
+        <div class="clearfix"></div>
+    {% endif %}
+</div>
+
+<div id="{{ model|slugify }}-results-summary">
+    {% if table %}
+        <a href="#{{ name|lower }}" class="list-group-item">
+            {{ name|bettertitle }}
+            <span class="badge bg-primary">{{ table.page.paginator.count }}</span>
+        </a>
+    {% endif %}
+</div>

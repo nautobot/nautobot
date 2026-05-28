@@ -51,7 +51,7 @@ pg_dump -s nautobot > nautobot_schema.sql
 By default, Nautobot stores uploaded files (such as image attachments) in its media directory. To fully replicate an instance of Nautobot, you'll need to copy both the database and the media files.
 
 !!! note
-    These operations are not necessary if your installation is utilizing a [remote storage backend](../configuration/settings.md#storage_backend).
+    These operations are not necessary if your installation is utilizing a [remote storage backend](../configuration/settings.md#storages).
 
 ### Archive the Media Directory
 

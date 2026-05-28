@@ -7,8 +7,9 @@ def get_permission_for_model(model, action):
     """
     Resolve the named permission for a given model (or instance) and action (e.g. view or add).
 
-    :param model: A model or instance
-    :param action: View, add, change, or delete (string)
+    Args:
+        model (Any): A model or instance
+        action (str): View, add, change, or delete
     """
     if action not in ("view", "add", "change", "delete"):
         raise ValueError(f"Unsupported action: {action}")
@@ -21,7 +22,8 @@ def resolve_permission(name):
     Given a permission name, return the app_label, action, and model_name components. For example, "dcim.view_location"
     returns ("dcim", "view", "location").
 
-    :param name: Permission name in the format <app_label>.<action>_<model>
+    Args:
+        name (str): Permission name in the format `<app_label>.<action>_<model>`
     """
     try:
         app_label, codename = name.split(".")
@@ -37,7 +39,8 @@ def resolve_permission_ct(name):
     Given a permission name, return the relevant ContentType and action. For example, "dcim.view_location" returns
     (Location, "view").
 
-    :param name: Permission name in the format <app_label>.<action>_<model>
+    Args:
+        name (str): Permission name in the format `<app_label>.<action>_<model>`
     """
     app_label, action, model_name = resolve_permission(name)
     try:
@@ -52,7 +55,8 @@ def permission_is_exempt(name):
     """
     Determine whether a specified permission is exempt from evaluation.
 
-    :param name: Permission name in the format <app_label>.<action>_<model>
+    Args:
+        name (str): Permission name in the format `<app_label>.<action>_<model>`
     """
     app_label, action, model_name = resolve_permission(name)
 
@@ -78,7 +82,7 @@ def qs_filter_from_constraints(constraints, tokens=None):
         tokens (dict, optional): user tokens. Defaults to a None.
 
     Returns:
-        QuerySet object: A QuerySet of tuples or, an empty QuerySet if constraints are null.
+        (Q): QuerySet filter constructed from the given constraints, possibly empty.
     """
     if tokens is None:
         tokens = {}

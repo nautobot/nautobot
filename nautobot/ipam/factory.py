@@ -48,16 +48,19 @@ def random_route_distinguisher():
     - "<2-byte ASN>:<4-byte integer>"
     - "<IPv4 address>:<2-byte integer>"
     - "<4-byte ASN>:<2-byte integer>"
+
+    Note that we limit the generated RD to 20 characters max so as to avoid issues with the `bulk_rename` test cases,
+    which need to be able to append a character to the name without hitting max-length problems.
     """
     fake = faker.Faker()
     branch = fake.pyint(0, 2)
     if branch == 0:
         # 16-bit ASNs 64496-64511 are reserved for documentation and sample code
-        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
+        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"[:20]
     if branch == 1:
-        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
+        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"[:20]
     # 32-bit ASNs 4200000000-4294967294 are reserved for private use
-    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"
+    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"[:20]
 
 
 class RouteTargetFactory(PrimaryModelFactory):
@@ -278,8 +281,15 @@ class NamespaceFactory(PrimaryModelFactory):
 
     class Meta:
         model = Namespace
+        exclude = ("has_tenant", "has_description")
 
     name = UniqueFaker("text", max_nb_chars=20)  # could be up to CHARFIELD_MAX_LENGTH but that gets unwieldy fast
+
+    has_tenant = NautobotBoolIterator()
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
 
 
 class PrefixFactory(PrimaryModelFactory):

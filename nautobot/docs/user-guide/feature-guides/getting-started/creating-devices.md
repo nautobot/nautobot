@@ -29,12 +29,14 @@ To create a new Device, you will need an existing Device Role or need to create 
 To create a new Device Role:
 
 1. Click on **Organization** in the left sidebar menu
-2. Find **Roles** on the drop-down menu
-3. Select `+`
-4. In the `Add a new role` form, populate the `Name`
-5. Click on Create
+2. Under the **METADATA** section, select **Roles**
+    * From this page you can view any existing Roles
+3. Click on the `Add role` button and enter a `Name`
+4. Click on Create
 
-![Create a device role](../images/getting-started-nautobot-ui/3-create-role.png)
+![Create a device role](../images/getting-started-nautobot-ui/3-create-role-light.png#only-light){ .on-glb }
+![Create a device role](../images/getting-started-nautobot-ui/3-create-role-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/extras/roles/add/`"
 
 ## Creating a Manufacturer
 
@@ -47,12 +49,14 @@ To create a new Device Type, you will need an existing Manufacturer or need to c
 To create a new Manufacturer:
 
 1. Click on **Devices** in the left sidebar menu
-2. Find **Manufacturers** on the drop-down
-3. Select **+**
-4. In the `Add a new manufacturer` form, populate the `Name`
-5. Click on `Create`
+2. Under the **DEVICE TYPES** section, select **Manufacturers**
+    * From this page you can view any existing Manufacturers
+3. Click on the `Add manufacturer` button and enter a `Name`
+4. Click on `Create`
 
-![Create a manufacturer](../images/getting-started-nautobot-ui/2-create-manufacturer.png)
+![Create a manufacturer](../images/getting-started-nautobot-ui/2-create-manufacturer-light.png#only-light){ .on-glb }
+![Create a manufacturer](../images/getting-started-nautobot-ui/2-create-manufacturer-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/manufacturers/add/`"
 
 ## Creating a Device Type
 
@@ -66,13 +70,16 @@ To create a new Device, you will need an existing Device Type or need to create 
 To create a new Device Type:
 
 1. Click on **Devices** in the left sidebar menu
-2. Find **Device Types**
-3. Select **+** to go to the `Add a new device type` form
+2. Under the **DEVICE TYPES** section, select **Device Types**
+    * From this page you can view any existing Device Types
+3. Click on the `Add device type` button
 4. Select the `Manufacturer` from the drop-down selector
 5. Populate the `Model` (name)
 6. Click on `Create`
 
-![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type.png)
+![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type-light.png#only-light){ .on-glb }
+![Create a device type](../images/getting-started-nautobot-ui/4-create-device-type-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/device-types/add/`"
 
 ## Creating a Location Type
 
@@ -83,14 +90,17 @@ More information on Location Type is found in the [Locations](../../core-data-mo
 To create a new Location Type:
 
 1. Click on **Organization** in the left sidebar menu
-2. Find **Location Types**
-3. Select **+** to go to the `Add a new location type` form
+2. Under the **LOCATIONS** section, select **Location Types**
+    * From this page you can view any existing Location Types
+3. Click on the `+ Add Location Type` button
 4. Select a `Parent` Location Type if needed
 5. Populate the Location Type's `Name`
 6. Select the desired `Content Types` for this Location Type (in this case `dcim.device`).
 7. Click on `Create` at the bottom of the form
 
-![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type.png)
+![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type-light.png#only-light){ .on-glb }
+![Create a location type](../images/getting-started-nautobot-ui/1-create-location-type-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/location-types/add/`"
 
 ## Creating a Location
 
@@ -103,23 +113,27 @@ To create a new Device, you will need an existing Location or need to create a n
 To create a new Location:
 
 1. Click on **Organization** in the left sidebar menu
-2. Find **Locations**
-3. Select **+** to go to the `Add a new location` form
+2. Under the **LOCATIONS** section, select **Locations**
+    * From this page you can view any existing Locations
+3. Click on the `+ Add Location` button
 4. Select a `Location Type`
 5. Select a `Parent` Location if needed
 6. Populate the Location's `Name`
 7. Set the `Status` to `Active` in the drop-down selector
 8. Click on `Create` at the bottom of the form (not shown)
 
-![Create a location](../images/getting-started-nautobot-ui/6-create-location.png)
+![Create a location](../images/getting-started-nautobot-ui/6-create-location-light.png#only-light){ .on-glb }
+![Create a location](../images/getting-started-nautobot-ui/6-create-location-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/locations/add/`"
 
 ## Creating a Device
 
 To create a new Device:
 
 1. Click on **Devices** in the left sidebar menu
-2. Find **Devices**
-3. Select **+** to go to the `Add a new device` form
+2. Under the **DEVICES** section, select **Devices**
+    * From this page you can view any existing Devices
+3. Click on `Add device` button
 4. Populate the `Name`
 5. Select the `Role` from the drop-down selector
 6. Select the `Device Type` from the down-down selector
@@ -127,4 +141,6 @@ To create a new Device:
 8. Set the `Status` to the appropriate value in the drop-down selector
 9. Click on `Create` at the bottom of the form (not shown)
 
-![Create a device](../images/getting-started-nautobot-ui/5-create-device.png)
+![Create a device](../images/getting-started-nautobot-ui/5-create-device-light.png#only-light){ .on-glb }
+![Create a device](../images/getting-started-nautobot-ui/5-create-device-dark.png#only-dark){ .on-glb }
+[//]: # "`https://next.demo.nautobot.com/dcim/devices/add/`"

@@ -1,0 +1,17 @@
+{% load helpers %}
+{% load plugins %}
+
+{% if request.user.is_authenticated %}
+    {% if "BANNER_TOP"|settings_or_config %}
+        <div class="alert alert-info text-center" role="alert">
+            {{ "BANNER_TOP"|settings_or_config|render_markdown }}
+        </div>
+    {% endif %}
+{% endif %}
+{% if settings.MAINTENANCE_MODE %}
+    <div class="alert alert-warning text-center" role="alert">
+        <h4><span class="mdi mdi-alert me-4"></span>Maintenance Mode</h4>
+        <p>Nautobot is currently in maintenance mode. Functionality may be limited.</p>
+    </div>
+{% endif %}
+{% plugin_banners %}

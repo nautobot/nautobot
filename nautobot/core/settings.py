@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import os.path
 import platform
@@ -95,11 +96,12 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
 
 # Device names are not guaranteed globally-unique by Nautobot but in practice they often are.
-# Set this to True to use the device name alone as the natural key for Device objects.
-# Set this to False to use the sequence (name, tenant, location) as the natural key instead.
-#
-if "NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"] != "":
-    DEVICE_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_DEVICE_NAME_AS_NATURAL_KEY"])
+# Select how Devices are uniquely identified:
+#   - 'location_tenant_name': combination of Location + Tenant + Name
+#   - 'name': Device name must be globally unique
+#   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
+if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
+    DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -128,18 +130,21 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 if "NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE" in os.environ and os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"] != "":
     JOB_CREATE_FILE_MAX_SIZE = int(os.environ["NAUTOBOT_JOB_CREATE_FILE_MAX_SIZE"])
 
-# The storage backend to use for Job input files and Job output files
-JOB_FILE_IO_STORAGE = os.getenv("NAUTOBOT_JOB_FILE_IO_STORAGE", "db_file_storage.storage.DatabaseFileStorage")
-
 # The file path to a directory where locally installed Jobs can be discovered
 JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Default filters for Location list view
+if (
+    "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
 
 # `Location` names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to `True` to use the location `name` alone as the natural key for `Location` objects.
 # Set this to `False` to use the sequence `(name, parent__name, parent__parent__name, ...)` as the natural key instead.
 if "NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY" in os.environ and os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"] != "":
     LOCATION_NAME_AS_NATURAL_KEY = is_truthy(os.environ["NAUTOBOT_LOCATION_NAME_AS_NATURAL_KEY"])
-
 
 # Log Nautobot deprecation warnings. Note that this setting is ignored (deprecation logs always enabled) if DEBUG = True
 LOG_DEPRECATION_WARNINGS = is_truthy(os.getenv("NAUTOBOT_LOG_DEPRECATION_WARNINGS", "False"))
@@ -157,6 +162,7 @@ METRICS_AUTHENTICATED = is_truthy(os.getenv("NAUTOBOT_METRICS_AUTHENTICATED", "F
 METRICS_DISABLED_APPS = []
 if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRICS_DISABLED_APPS"] != "":
     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
+METRICS_EXPERIMENTAL_CACHING_DURATION = int(os.getenv("NAUTOBOT_METRICS_EXPERIMENTAL_CACHING_DURATION", "0"))
 
 # Napalm
 NAPALM_ARGS = {}
@@ -190,6 +196,18 @@ PLUGINS_CONFIG = {}
 # Prefer IPv6 addresses or IPv4 addresses in selecting a device's primary IP address? Default False
 if "NAUTOBOT_PREFER_IPV4" in os.environ and os.environ["NAUTOBOT_PREFER_IPV4"] != "":
     PREFER_IPV4 = is_truthy(os.environ["NAUTOBOT_PREFER_IPV4"])
+
+# Default filters for Prefix list view
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"] != ""
+):
+    PREFIX_LIST_DEFAULT_CONTAINER_ONLY = is_truthy(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_CONTAINER_ONLY"])
+if (
+    "NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH" in os.environ
+    and os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"] != ""
+):
+    PREFIX_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_PREFIX_LIST_DEFAULT_MAX_DEPTH"])
 
 # Publish a simple "no-index" robots.txt for Nautobot?
 PUBLISH_ROBOTS_TXT = is_truthy(os.getenv("NAUTOBOT_PUBLISH_ROBOTS_TXT", "True"))
@@ -269,9 +287,21 @@ SANITIZER_PATTERNS = [
     ),
 ]
 
-# Storage
-STORAGE_BACKEND = None
-STORAGE_CONFIG = {}
+# Storage of various file types
+STORAGES = {
+    # The default storage backend, for things like user-uploaded image attachments, etc.
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # The storage backend to use for static file serving
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    # The storage backend to use for Job input files and Job output files
+    "nautobotjobfiles": {
+        "BACKEND": "db_file_storage.storage.DatabaseFileStorage",
+    },
+}
 
 # Custom message to display on 4xx and 5xx error pages. Markdown and HTML are supported.
 # Default message directs the user to #nautobot on NTC's Slack community.
@@ -286,6 +316,31 @@ TEST_RUNNER = "nautobot.core.tests.runner.NautobotTestRunner"
 TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False"))
 # Pseudo-random number generator seed, for reproducibility of test results.
 TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
+
+# URL schemes that Webhooks are permitted to target. Defaults to HTTP and HTTPS only.
+WEBHOOK_ALLOWED_SCHEMES = ["http", "https"]
+if "NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES" in os.environ and os.environ["NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"] != "":
+    WEBHOOK_ALLOWED_SCHEMES = os.environ["NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"].split(_CONFIG_SETTING_SEPARATOR)
+
+# Hostnames that Webhooks may target even if they resolve into WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS.
+# Django ALLOWED_HOSTS-style: literal hostnames or `.example.com` to match a domain and all of its subdomains.
+# Use `*` to disable network filtering entirely (not recommended).
+WEBHOOK_ALLOWED_HOSTS = []
+if "NAUTOBOT_WEBHOOK_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"] != "":
+    WEBHOOK_ALLOWED_HOSTS = os.environ["NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"].split(_CONFIG_SETTING_SEPARATOR)
+
+# Network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list (loopback, link-local
+# including cloud metadata endpoints such as 169.254.169.254, unspecified, multicast, reserved) is enforced
+# unconditionally and cannot be disabled. Use this setting to extend it -- e.g. ["10.0.0.0/8", "192.168.0.0/16"] to
+# block RFC1918 ranges as well, for deployments that don't legitimately need to webhook into private networks.
+WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = []
+if (
+    "NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS" in os.environ
+    and os.environ["NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"] != ""
+):
+    WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = os.environ["NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"].split(
+        _CONFIG_SETTING_SEPARATOR
+    )
 
 #
 # Django Prometheus
@@ -311,9 +366,11 @@ REST_FRAMEWORK_VERSION = VERSION.rsplit(".", 1)[0]  # Use major.minor as API ver
 VERSION_MAJOR, VERSION_MINOR = [int(v) for v in REST_FRAMEWORK_VERSION.split(".")]
 # We support all major.minor API versions from 2.0 to the present latest version.
 # Similar logic exists in tasks.py, please keep them in sync!
-if VERSION_MAJOR != 2:
+if VERSION_MAJOR > 3:
     raise RuntimeError(f"REST_FRAMEWORK_ALLOWED_VERSIONS needs to be updated to handle version {VERSION_MAJOR}")
-REST_FRAMEWORK_ALLOWED_VERSIONS = [f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)]
+REST_FRAMEWORK_ALLOWED_VERSIONS = ["2.0", "2.1", "2.2", "2.3", "2.4"] + [
+    f"{VERSION_MAJOR}.{minor}" for minor in range(0, VERSION_MINOR + 1)
+]
 
 REST_FRAMEWORK = {
     "ALLOWED_VERSIONS": REST_FRAMEWORK_ALLOWED_VERSIONS,
@@ -402,16 +459,19 @@ SPECTACULAR_SETTINGS = {
         # These choice enums need to be overridden because they get assigned to different names with the same choice set and
         # result in this error:
         #   encountered multiple names for the same choice set
+        "ApprovalWorkflowStateChoices": "nautobot.extras.choices.ApprovalWorkflowStateChoices",
         "JobExecutionTypeIntervalChoices": "nautobot.extras.choices.JobExecutionType",
         # These choice enums need to be overridden because they get assigned to the `protocol` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "protocol".
         "InterfaceRedundancyGroupProtocolChoices": "nautobot.dcim.choices.InterfaceRedundancyGroupProtocolChoices",
         "ServiceProtocolChoices": "nautobot.ipam.choices.ServiceProtocolChoices",
+        "VirtualServerProtocolChoices": "nautobot.load_balancers.choices.ProtocolChoices",
         # These choice enums need to be overridden because they get assigned to the `mode` field and
         # result in this error:
         #    enum naming encountered a non-optimally resolvable collision for fields named "mode".
         "InterfaceModeChoices": "nautobot.dcim.choices.InterfaceModeChoices",
+        "VPNPhase2PolicyChoices": "nautobot.vpn.choices.DhGroupChoices",
         "WirelessNetworkModeChoices": "nautobot.wireless.choices.WirelessNetworkModeChoices",
     },
     # Create separate schema components for PATCH requests (fields generally are not `required` on PATCH)
@@ -445,8 +505,10 @@ DATABASES = {
 }
 
 # Ensure proper Unicode handling for MySQL
-if DATABASES["default"]["ENGINE"] == "django.db.backends.mysql":
-    DATABASES["default"]["OPTIONS"] = {"charset": "utf8mb4"}
+if "mysql" in DATABASES["default"]["ENGINE"]:
+    DATABASES["default"].setdefault("OPTIONS", {})["charset"] = "utf8mb4"
+    DATABASES["default"].setdefault("TEST", {})["CHARSET"] = "utf8mb4"
+    DATABASES["default"]["TEST"]["COLLATION"] = "utf8mb4_0900_ai_ci"
 
 # The secret key is used to encrypt session keys and salt passwords.
 SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "")
@@ -470,6 +532,7 @@ DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
 DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "False"))
 INTERNAL_IPS = ["127.0.0.1", "::1"]
 FORCE_SCRIPT_NAME = None
+FORMAT_MODULE_PATH = "nautobot.core.formats"
 
 TESTING = "test" in sys.argv
 
@@ -556,12 +619,15 @@ INSTALLED_APPS = [
     "db_file_storage",
     "nautobot.circuits",
     "nautobot.cloud",
+    "nautobot.data_validation",
     "nautobot.dcim",
-    "nautobot.ipam",
     "nautobot.extras",
+    "nautobot.ipam",
+    "nautobot.load_balancers",
     "nautobot.tenancy",
     "nautobot.users",
     "nautobot.virtualization",
+    "nautobot.vpn",
     "nautobot.wireless",
     "drf_spectacular",
     "drf_spectacular_sidecar",
@@ -614,6 +680,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.nav_menu",
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
@@ -633,6 +700,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "social_django.context_processors.backends",
                 "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.nav_menu",
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
@@ -670,6 +738,7 @@ MEDIA_URL = "media/"
 DATA_UPLOAD_MAX_NUMBER_FIELDS = None
 
 # Messages
+MESSAGE_STORAGE = "nautobot.core.messages.NautobotMessageStorage"
 MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
@@ -750,12 +819,15 @@ CONSTANCE_CONFIG = {
         help_text="Number of days to retain object changelog history.\nSet this to 0 to retain changes indefinitely.",
         field_type=int,
     ),
-    "DEVICE_NAME_AS_NATURAL_KEY": ConstanceConfigItem(
-        default=False,
-        help_text="Device names are not guaranteed globally-unique by Nautobot but in practice they often are. "
-        "Set this to True to use the device name alone as the natural key for Device objects. "
-        "Set this to False to use the sequence (name, tenant, location) as the natural key instead.",
-        field_type=bool,
+    "DEVICE_UNIQUENESS": ConstanceConfigItem(
+        default="location_tenant_name",
+        help_text=(
+            "Select how Devices are uniquely identified:\n"
+            "- 'location_tenant_name': combination of Location + Tenant + Name\n"
+            "- 'name': Device name must be globally unique\n"
+            "- 'none': No enforced uniqueness (rely on other validation rules or custom validators)"
+        ),
+        field_type=str,
     ),
     "DEPLOYMENT_ID": ConstanceConfigItem(
         default="",
@@ -765,8 +837,16 @@ CONSTANCE_CONFIG = {
     ),
     "JOB_CREATE_FILE_MAX_SIZE": ConstanceConfigItem(
         default=10 << 20,
-        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        help_text=mark_safe(
             "Maximum size (in bytes) of any single file generated by a <code>Job.create_file()</code> call."
+        ),
+        field_type=int,
+    ),
+    "LOCATION_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Location list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
         ),
         field_type=int,
     ),
@@ -796,9 +876,25 @@ CONSTANCE_CONFIG = {
         # Use custom field type defined above
         field_type="per_page_defaults_field",
     ),
+    "PREFIX_LIST_DEFAULT_CONTAINER_ONLY": ConstanceConfigItem(
+        default=False,
+        help_text=mark_safe(
+            "Enable a default <code>type=container</code> filter on Prefix list views.\n"
+            "Enabling this may improve performance when the number of records is large."
+        ),
+        field_type=bool,
+    ),
+    "PREFIX_LIST_DEFAULT_MAX_DEPTH": ConstanceConfigItem(
+        default=0,
+        help_text=mark_safe(
+            "Default <code>max_depth</code> filter value to use for Prefix list views (0 for no filter).\n"
+            "Setting this to a small value may improve performance when the number of records is large.",
+        ),
+        field_type=int,
+    ),
     "NETWORK_DRIVERS": ConstanceConfigItem(
         default={},
-        help_text=mark_safe(  # noqa: S308  # suspicious-mark-safe-usage, but this is a static string so it's safe
+        help_text=mark_safe(
             "Extend or override default Platform.network_driver translations provided by "
             '<a href="https://netutils.readthedocs.io/en/latest/user/lib_use_cases_lib_mapper/">netutils</a>. '
             "Enter a dictionary in JSON format, for example:\n"
@@ -820,6 +916,11 @@ CONSTANCE_CONFIG = {
         default=False,
         help_text="Whether to prefer IPv4 primary addresses over IPv6 primary addresses for devices.",
         field_type=bool,
+    ),
+    "RACK_DEFAULT_U_HEIGHT": ConstanceConfigItem(
+        default=42,
+        help_text="Default height in rack units (U) for newly created racks. Must be between 1 and 500.",
+        field_type=int,
     ),
     "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT": ConstanceConfigItem(
         default=22, help_text="Default height (in pixels) of a rack unit in a rack elevation diagram", field_type=int
@@ -860,10 +961,16 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
-    "Natural Keys": ["DEVICE_NAME_AS_NATURAL_KEY", "LOCATION_NAME_AS_NATURAL_KEY"],
+    "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
-    "Performance": ["JOB_CREATE_FILE_MAX_SIZE"],
+    "Performance": [
+        "JOB_CREATE_FILE_MAX_SIZE",
+        "LOCATION_LIST_DEFAULT_MAX_DEPTH",
+        "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
+        "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+    ],
     "Rack Elevation Rendering": [
+        "RACK_DEFAULT_U_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
         "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
@@ -918,6 +1025,7 @@ CACHES = {
         "TIMEOUT": int(os.getenv("NAUTOBOT_CACHES_TIMEOUT", "300")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CUSTOM_HEALTH_CHECK_CLASS": "",
             "PASSWORD": "",
         },
     }
@@ -935,6 +1043,19 @@ CELERY_BEAT_HEARTBEAT_FILE = os.getenv(
     "NAUTOBOT_CELERY_BEAT_HEARTBEAT_FILE",
     os.path.join(tempfile.gettempdir(), "nautobot_celery_beat_heartbeat"),
 )
+
+# Celery Worker heartbeat file path - will be touched by each worker process as a proof-of-health.
+CELERY_WORKER_HEARTBEAT_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_HEARTBEAT_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_heartbeat")
+)
+
+# Celery Worker readiness file path - will be created by each worker process once it's ready to accept tasks.
+CELERY_WORKER_READINESS_FILE = os.getenv(
+    "NAUTOBOT_CELERY_WORKER_READINESS_FILE", os.path.join(tempfile.gettempdir(), "nautobot_celery_worker_ready")
+)
+
+# Celery health probes as files - if enabled, Celery worker health probes will be implemented as files
+CELERY_HEALTH_PROBES_AS_FILES = is_truthy(os.getenv("NAUTOBOT_CELERY_HEALTH_PROBES_AS_FILES", "False"))
 
 # Celery broker URL used to tell workers where queues are located
 CELERY_BROKER_URL = os.getenv("NAUTOBOT_CELERY_BROKER_URL", parse_redis_connection(redis_database=0))
@@ -1026,12 +1147,8 @@ BRANDING_FILEPATHS = {
     "icon_mask": os.getenv(
         "NAUTOBOT_BRANDING_FILEPATHS_ICON_MASK", None
     ),  # mono-chrome icon used for the mask-icon header
-    "header_bullet": os.getenv(
-        "NAUTOBOT_BRANDING_FILEPATHS_HEADER_BULLET", None
-    ),  # bullet image used for various view headers
-    "nav_bullet": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAV_BULLET", None),  # bullet image used for nav menu headers
-    "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
-    "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
+    # "css": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_CSS", None),  # Custom global CSS
+    # "javascript": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_JAVASCRIPT", None),  # Custom global JavaScript
 }
 
 # Title to use in place of "Nautobot"
@@ -1139,20 +1256,31 @@ def silk_request_logging_intercept_logic(request):
 SILKY_INTERCEPT_FUNC = silk_request_logging_intercept_logic
 
 #
+# django-tables2
+#
+
+DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
+
+#
 # Kubernetes settings variables
 #
 
+# The file path for Job Queue configuration files (currently only used for Kubernetes Job manifests)
+JOB_QUEUE_PATH = os.getenv("NAUTOBOT_JOB_QUEUE_PATH", "/etc/nautobot/job-queues")
+
 # Host of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv("NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "")
+KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv(
+    "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "https://kubernetes.default.svc"
+)
 
 # A dictionary that stores the kubernetes pod manifest used to create a job pod in the kubernetes cluster
-KUBERNETES_JOB_MANIFEST = {}
+KUBERNETES_JOB_MANIFEST = json.loads(os.getenv("NAUTOBOT_KUBERNETES_JOB_MANIFEST", "{}"))
 
 # Name of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "")
+KUBERNETES_JOB_POD_NAME = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAME", "nautobot-job")
 
 # Namespace of the kubernetes pod created in the kubernetes cluster
-KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "")
+KUBERNETES_JOB_POD_NAMESPACE = os.getenv("NAUTOBOT_KUBERNETES_JOB_POD_NAMESPACE", "default")
 
 # File path to the SSL CA CERT used for authentication to create the job and job pod
 KUBERNETES_SSL_CA_CERT_PATH = os.getenv(

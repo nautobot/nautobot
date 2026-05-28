@@ -1,15 +1,132 @@
 """Test cases for nautobot.core.ui module."""
 
+import json
 from unittest.mock import patch
 
+from django.db.models import Sum
 from django.template import Context
 from django.test import RequestFactory
+from django.urls import reverse
 
-from nautobot.core.templatetags.helpers import HTML_NONE
+from nautobot.cloud.models import CloudNetwork, CloudResourceType, CloudService
+from nautobot.cloud.tables import CloudServiceTable
+from nautobot.cloud.views import CloudResourceTypeUIViewSet
+from nautobot.core.models.querysets import count_related
+from nautobot.core.templatetags.helpers import HTML_NONE, hyperlinked_object
 from nautobot.core.testing import TestCase
-from nautobot.core.ui.object_detail import BaseTextPanel, DataTablePanel, ObjectsTablePanel, Panel
-from nautobot.dcim.models import DeviceRedundancyGroup
+from nautobot.core.ui.choices import EChartsTypeChoices
+from nautobot.core.ui.echarts import (
+    EChartsBase,
+    queryset_to_nested_dict_keys_as_series,
+    queryset_to_nested_dict_records_as_series,
+)
+from nautobot.core.ui.object_detail import (
+    _JobModalButton,
+    _ObjectDetailAdvancedTab,
+    _ObjectDetailContactsTab,
+    _ObjectDetailDataComplianceTab,
+    _ObjectDetailMainTab,
+    _ObjectDetailMetadataTab,
+    BaseTextPanel,
+    DataTablePanel,
+    DistinctViewTab,
+    EChartsPanel,
+    ObjectDetailContent,
+    ObjectFieldsPanel,
+    ObjectsTablePanel,
+    ObjectTextPanel,
+    Panel,
+    PostButton,
+    SectionChoices,
+)
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, Location
+from nautobot.dcim.tables import DeviceModuleInterfaceTable
 from nautobot.dcim.tables.devices import DeviceTable
+from nautobot.dcim.views import DeviceUIViewSet
+from nautobot.ipam.models import Prefix
+from nautobot.ipam.views import PrefixUIViewSet
+
+
+class ObjectDetailContentTest(TestCase):
+    def test_component_iteration_and_ids(self):
+        """Test that components() iterator is comprehensive, and that component IDs are not repeated within a view."""
+        for odc in [DeviceUIViewSet.object_detail_content, PrefixUIViewSet.object_detail_content]:
+            with self.subTest(object_detail_content=odc):
+                seen_ids = set()
+                for component in odc.components():
+                    self.assertIsNotNone(component.component_id)
+                    self.assertNotIn(component.component_id, seen_ids)
+                    seen_ids.add(component.component_id)
+
+                    self.assertEqual(odc.get_component_by_id(component.component_id), component)
+
+                # Make sure we're reasonably comprehensive in `components()` implementation:
+                # Likely to increase as we componentize and enhance more, but unlikely to decrease!
+                self.assertGreaterEqual(len(seen_ids), 30)
+                for tab in odc.tabs:
+                    self.assertIn(tab.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(tab.component_id), tab)
+                    for panel in tab.panels:
+                        self.assertIn(panel.component_id, seen_ids)
+                        self.assertEqual(odc.get_component_by_id(panel.component_id), panel)
+                        if hasattr(panel, "components"):
+                            for component in panel.components():
+                                self.assertIn(component.component_id, seen_ids)
+                                self.assertEqual(odc.get_component_by_id(component.component_id), component)
+                for button in odc.extra_buttons:
+                    self.assertIn(button.component_id, seen_ids)
+                    self.assertEqual(odc.get_component_by_id(button.component_id), button)
+
+    def test_consistent_component_ids_across_odcs(self):
+        """Creating the same component class with the same kwargs in different views should have same component_id."""
+        odc1 = DeviceUIViewSet.object_detail_content
+        odc2 = PrefixUIViewSet.object_detail_content
+        tabs1 = [
+            tab
+            for tab in odc1.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+        tabs2 = [
+            tab
+            for tab in odc2.tabs
+            if isinstance(
+                tab,
+                (
+                    _ObjectDetailMainTab,
+                    _ObjectDetailAdvancedTab,
+                    _ObjectDetailContactsTab,
+                    _ObjectDetailMetadataTab,
+                    _ObjectDetailDataComplianceTab,
+                ),
+            )
+        ]
+
+        for tab1, tab2 in zip(tabs1, tabs2):
+            with self.subTest(tab1=tab1, tab2=tab2):
+                self.assertEqual(tab1.component_id, tab2.component_id)
+
+    def test_get_component_by_id_negative(self):
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(None))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id(0))
+        self.assertIsNone(DeviceUIViewSet.object_detail_content.get_component_by_id("00000000000000000000000000000000"))
+
+    def test_get_component_id_non_string_key(self):
+        """Verify that component ID generation handles non-string dictionary keys (None, Bool, Int) without crashing."""
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {None: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {True: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
+        echarts_panel = EChartsPanel(weight=100, chart_kwargs={"data": {123: "SOME DATA"}})
+        self.assertIsNotNone(echarts_panel.component_id)
 
 
 class DataTablePanelTest(TestCase):
@@ -68,6 +185,19 @@ class DataTablePanelTest(TestCase):
         )
 
 
+class ObjectFieldsPanelTest(TestCase):
+    def test_get_data_ignore_nonexistent_fields(self):
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=True)
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+        context = Context({"object": redundancy_group})
+        data = panel.get_data(context)
+        self.assertEqual(data, {"name": redundancy_group.name})  # no keys for nonexistent fields
+
+        panel = ObjectFieldsPanel(weight=100, fields=["name", "foo", "bar"], ignore_nonexistent_fields=False)
+        with self.assertRaises(AttributeError):
+            panel.get_data(context)
+
+
 class BaseTextPanelTest(TestCase):
     def test_init_set_object_params(self):
         # Test default settings
@@ -84,6 +214,7 @@ class BaseTextPanelTest(TestCase):
     def test_init_passes_args_and_kwargs(self, panel_init_mock):
         custom_template_path = "custom_template_path.html"
 
+        panel_init_mock.return_value = None
         BaseTextPanel(weight=100, body_content_template_path=custom_template_path)
 
         panel_init_mock.assert_called_once_with(weight=100, body_content_template_path=custom_template_path)
@@ -153,6 +284,20 @@ class BaseTextPanelTest(TestCase):
             panel.get_value({})
 
 
+class ObjectTextPanelTest(TestCase):
+    def test_render_body_content_hyperlinked_object(self):
+        device = Device.objects.first()
+        location = device.location
+        location.description = "An important location"
+        location.save()
+        panel = ObjectTextPanel(
+            weight=100, render_as=ObjectTextPanel.RenderOptions.HYPERLINKED_OBJECT, object_field="location"
+        )
+        context = Context({"object": device})
+        result = panel.render_body_content(context)
+        self.assertHTMLEqual(result, hyperlinked_object(location))
+
+
 class ObjectsTablePanelTest(TestCase):
     def setUp(self):
         super().setUp()
@@ -200,3 +345,589 @@ class ObjectsTablePanelTest(TestCase):
             panel.get_extra_context(context_data)
 
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
+
+
+class EChartsBaseTests(TestCase):
+    def setUp(self):
+        self.data_normalized = {"x": ["A", "B"], "series": [{"name": "S1", "data": [1, 2]}]}
+        self.data_nested = {
+            "Series1": {"x1": 10, "x2": 20},
+            "Series2": {"x1": 30, "x2": 40},
+        }
+        self.chart = EChartsBase()
+
+    def test_transform_data_internal_format(self):
+        data = {"x": ["A", "B"], "series": [{"name": "S1", "data": [1, 2]}]}
+        result = self.chart._transform_data(data)
+        self.assertEqual(result, data)
+
+    def test_transform_data_empty_dict(self):
+        result = self.chart._transform_data({})
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_transform_data_none_input(self):
+        result = self.chart._transform_data(None)
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_transform_data_nested_format(self):
+        data = {"Series1": {"x1": 5, "x2": 10}, "Series2": {"x1": 7, "x2": 14}}
+        expected = {
+            "x": ["x1", "x2"],
+            "series": [{"name": "Series1", "data": [5, 10]}, {"name": "Series2", "data": [7, 14]}],
+        }
+        result = self.chart._transform_data(data)
+        self.assertEqual(result, expected)
+
+    def test_transform_data_nested_format_mismatched_keys(self):
+        data = {"Series1": {"x1": 5, "x2": 10}, "Series2": {"x2": 14, "x3": 20}}
+        result = self.chart._transform_data(data)
+        # Should use union of all x labels and fill missing with 0
+        self.assertEqual(result["x"], ["x1", "x2", "x3"])
+        series1_data = next(s["data"] for s in result["series"] if s["name"] == "Series1")
+        series2_data = next(s["data"] for s in result["series"] if s["name"] == "Series2")
+        self.assertEqual(series1_data, [5, 10, 0])
+        self.assertEqual(series2_data, [0, 14, 20])
+
+    def test_transform_data_non_dict_input(self):
+        result = self.chart._transform_data([1, 2, 3])
+        self.assertEqual(result, {"x": [], "series": []})
+
+    def test_get_config_basic(self):
+        chart = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            header="Test Chart",
+            description="Test Description",
+            data=self.data_normalized,
+        )
+
+        config = chart.get_config()
+        self.assertEqual(config["title"]["text"], "Test Chart")
+        self.assertEqual(config["title"]["subtext"], "Test Description")
+        self.assertEqual(config["tooltip"], {})
+        self.assertEqual(
+            config["toolbox"],
+            {
+                "show": True,
+                "feature": {
+                    "dataView": {"readOnly": True, "show": True},
+                    "saveAsImage": {"name": "Test Chart", "show": True},
+                },
+            },
+        )
+        self.assertEqual(config["series"], [{"name": "S1", "data": [1, 2], "type": "bar"}])
+        self.assertEqual(config["xAxis"]["data"], ["A", "B"])
+
+    def test_get_config_with_raw_nested_data(self):
+        chart = EChartsBase(data=self.data_nested)
+        config = chart.get_config()
+        self.assertEqual(len(config["series"]), 2)
+        self.assertEqual(
+            config["series"],
+            [
+                {"name": "Series1", "data": [10, 20], "type": "bar"},
+                {"name": "Series2", "data": [30, 40], "type": "bar"},
+            ],
+        )
+        self.assertEqual(config["xAxis"]["data"], ["x1", "x2"])
+
+    def test_get_config_empty_data(self):
+        chart = EChartsBase(data={})
+        config = chart.get_config()
+        self.assertEqual(config["series"], [])
+        self.assertEqual(config["xAxis"]["data"], [])
+
+    def test_get_config_additional_config(self):
+        chart = EChartsBase(
+            data=self.data_normalized,
+        )
+        config = chart.get_config()
+        self.assertNotIn("grid", config)
+
+        chart = EChartsBase(data=self.data_normalized, additional_config={"grid": {"show": True}})
+        config = chart.get_config()
+        self.assertIn("grid", config)
+        self.assertEqual(config["grid"]["show"], True)
+
+    def test_get_config_with_legend(self):
+        legend = {"orient": "vertical", "right": 10, "top": "center"}
+        chart = EChartsBase(data=self.data_normalized, legend=legend)
+        config = chart.get_config()
+        self.assertEqual(config["legend"], legend)
+
+    def test_get_config_combined_charts(self):
+        chart2 = EChartsBase(data={"x": ["A"], "series": [{"name": "S2", "data": [3]}]})
+        chart1 = EChartsBase(data=self.data_normalized, combined_with=chart2)
+
+        config = chart1.get_config()
+        self.assertEqual(len(config["series"]), 2)
+        self.assertEqual(config["series"][0]["name"], "S1")
+        self.assertEqual(config["series"][1]["name"], "S2")
+
+    def test_get_config_combined_charts_with_complex_data(self):
+        chart2 = EChartsBase(
+            chart_type=EChartsTypeChoices.LINE,
+            data={
+                "Compliant": {"aaa1": 5, "dns1": 12, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            },
+        )
+        chart1 = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data={
+                "Compliant": {"aaa": 5, "dns": 12, "ntp": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp": 15},
+            },
+            combined_with=chart2,
+        )
+        config = chart1.get_config()
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0], {"name": "Compliant", "type": "bar", "data": [5, 12, 8]})
+        self.assertEqual(config["series"][1], {"name": "Non Compliant", "type": "bar", "data": [10, 20, 15]})
+        self.assertEqual(
+            config["series"][2],
+            {"name": "Compliant", "type": "line", "data": [5, 12, 8], "smooth": False, "lineStyle": {}},
+        )
+        self.assertEqual(
+            config["series"][3],
+            {"name": "Non Compliant", "type": "line", "data": [10, 20, 15], "smooth": False, "lineStyle": {}},
+        )
+
+    def test_get_config_with_context_callable_and_combined_chart(self):
+        def main_data(ctx):
+            return {
+                "Compliant": {"aaa1": ctx.get("aaa1_count", 0), "dns1": 13, "ntp1": 8},
+                "Non Compliant": {"aaa1": 10, "dns1": 20, "ntp1": 15},
+            }
+
+        def combined_data(ctx):
+            return {
+                "Compliant": {"aaa": 5, "dns": ctx.get("dns_count", 0), "ntp1": 8},
+                "Non Compliant": {"aaa": 10, "dns": 20, "ntp1": 15},
+            }
+
+        ctx = Context({"aaa1_count": 5, "dns_count": 12})
+        combined_chart = EChartsBase(chart_type=EChartsTypeChoices.LINE, data=combined_data)
+        main_chart = EChartsBase(
+            chart_type=EChartsTypeChoices.BAR,
+            data=main_data,
+            combined_with=combined_chart,
+        )
+        config = main_chart.get_config(context=ctx)
+        self.assertEqual(len(config["series"]), 4)
+
+        self.assertEqual(config["series"][0]["data"][0], 5)  # aaa1_count
+        self.assertEqual(config["series"][2]["data"][1], 12)  # dns_count
+
+    def test_get_config_with_context_callable(self):
+        def dynamic_data(ctx):
+            return {"data": {"Devices": ctx.get("device_count", 0)}}
+
+        ctx = Context({"device_count": 42})
+        chart = EChartsBase(chart_type=EChartsTypeChoices.PIE, data=dynamic_data)
+        config = chart.get_config(context=ctx)
+        # check that after getting config data doesn't change it's still dynami_data function
+        self.assertEqual(chart.data, dynamic_data)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 42)
+        ctx = Context({"device_count": 45})
+        config = chart.get_config(context=ctx)
+        self.assertEqual(config["series"][0]["data"][0]["value"], 45)
+
+    def test_get_config_with_context_ignored_when_data_is_not_callable(self):
+        ctx = Context({"some": "value"})
+        chart = EChartsBase(data=self.data_normalized)
+        config = chart.get_config(context=ctx)
+        self.assertEqual(config["series"][0]["data"], [1, 2])
+
+
+class QuerySetToNestedDictTests(TestCase):
+    def setUp(self):
+        self.qs = Location.objects.annotate(
+            device_count=count_related(Device, "location"), prefix_count=count_related(Prefix, "locations")
+        )
+
+    def test_records_as_series_basic_grouping(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data[location_name]["device_count"], location_name_device_count)
+        self.assertEqual(data[location_name]["prefix_count"], location_name_prefix_count)
+
+    def test_keys_as_series_basic_series(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="name", value_keys=["device_count", "prefix_count"]
+        )
+        location_name = self.qs.first().name
+        location_name_device_count = self.qs.get(name=location_name).device_count
+        location_name_prefix_count = self.qs.get(name=location_name).prefix_count
+
+        self.assertEqual(data["device_count"][location_name], location_name_device_count)
+        self.assertEqual(data["prefix_count"][location_name], location_name_prefix_count)
+
+    def test_records_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_records_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data[location_status]["device_count"], device_count_total)
+
+    def test_keys_as_series_accumulation(self):
+        # If repeats should sum up
+        data = queryset_to_nested_dict_keys_as_series(self.qs, record_key="status", value_keys=["device_count"])
+        location_status = str(self.qs.first().status)
+        device_count_total = self.qs.filter(status__name=location_status).aggregate(total=Sum("device_count"))["total"]
+        self.assertEqual(data["device_count"][location_status], device_count_total)
+
+    def test_records_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_records_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # "Nestable" and Not Nestable instead of True and False
+        self.assertIn("Nestable", data)
+        self.assertIn("Not Nestable", data)
+
+    def test_keys_as_series_nested_record_key(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            self.qs, record_key="location_type__nestable", value_keys=["device_count"]
+        )
+        # should map boolean to friendly labels
+        # In this case "Nestable" and Not Nestable instead of True and False
+        self.assertIn("Nestable", data["device_count"])
+        self.assertIn("Not Nestable", data["device_count"])
+
+    def test_records_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_records_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {})
+
+    def test_keys_as_series_empty_queryset(self):
+        data = queryset_to_nested_dict_keys_as_series(
+            Location.objects.none(), record_key="name", value_keys=["device_count"]
+        )
+        self.assertEqual(data, {"device_count": {}})
+
+
+class ObjectDetailContentExtraTabsTest(TestCase):
+    """
+    Test suite for verifying the behavior of ObjectDetailContent when rendering default and extra tabs.
+    """
+
+    user_permissions = ["cloud.view_cloudresourcetype", "cloud.view_cloudservice", "cloud.view_cloudnetwork"]
+
+    def setUp(self):
+        super().setUp()
+        self.factory = RequestFactory()
+        self.request = self.factory.get("/")
+        self.request.user = self.user
+        self.default_tabs_id = ["main", "advanced", "contacts", "dynamic_groups", "object_metadata", "data_compliance"]
+
+    def test_default_extra_tabs_exist(self):
+        """
+        Test the default set of tabs (main, advanced, contacts, dynamic_groups, object_metadata) is present.
+        """
+        content = ObjectDetailContent(
+            panels=[],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id))
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_extra_tabs_exist(self):
+        """
+        Test that extra tabs (e.g. "services") can be injected via the `extra_tabs` argument.
+        Validating that tab IDs are correctly combined when extra tabs are provided.
+        """
+        content = ObjectDetailContent(
+            panels=[],
+            extra_tabs=[
+                DistinctViewTab(
+                    weight=1000,
+                    tab_id="services",
+                    label="Cloud Services",
+                    url_name="cloud:cloudresourcetype_services",
+                    related_object_attribute="cloud_services",
+                    panels=(
+                        ObjectsTablePanel(
+                            section=SectionChoices.FULL_WIDTH,
+                            weight=100,
+                            table_class=CloudServiceTable,
+                            table_filter="cloud_resource_type",
+                            tab_id="services",
+                        ),
+                    ),
+                ),
+            ],
+        )
+
+        self.assertEqual(len(content.tabs), len(self.default_tabs_id) + 1)
+        tab_ids = [t.tab_id for t in content.tabs]
+        self.default_tabs_id.append("services")
+        self.assertListEqual(tab_ids, self.default_tabs_id)
+
+    def test_tab_id_url_as_action(self):
+        """
+        Test that when you create a panel with a tab_id that matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"/dcim/devices/{device_info.pk}/interfaces/"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
+
+    def test_tab_id_url_as_param(self):
+        """
+        Test that when you create a panel with a tab_id that does NOT matches a viewset action,
+        the return_url is constructed correctly.
+        """
+        self.add_permissions("dcim.add_interface", "dcim.change_interface")
+        device_info = Device.objects.first()
+
+        panel = DeviceUIViewSet.DeviceInterfacesTablePanel(
+            weight=100,
+            section=SectionChoices.FULL_WIDTH,
+            table_title="Interfaces",
+            table_class=DeviceModuleInterfaceTable,
+            table_attribute="vc_interfaces",
+            related_field_name="device",
+            tab_id="interfaces-not-exist",
+        )
+        context = {"request": self.request, "object": device_info}
+        panel_context = panel.get_extra_context(context)
+
+        return_url = f"&return_url=/dcim/devices/{device_info.pk}/?tab=interfaces-not-exist"
+        self.assertTrue(panel_context["body_content_table_add_url"].endswith(return_url))
+
+    def test_extra_tab_panel_context(self):
+        """
+        Confirming that extra tab panels produce the correct context,
+        including `url` and `body_content_table` populated with the expected related objects.
+        """
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        cloud_services = CloudService.objects.filter(cloud_resource_type=cloud_resource_type)
+
+        tab = DistinctViewTab(
+            weight=1000,
+            tab_id="services",
+            label="Cloud Services",
+            url_name="cloud:cloudresourcetype_services",
+            related_object_attribute="cloud_services",
+            panels=(
+                ObjectsTablePanel(
+                    section=SectionChoices.FULL_WIDTH,
+                    weight=100,
+                    table_class=CloudServiceTable,
+                    table_filter="cloud_resource_type",
+                    tab_id="services",
+                ),
+            ),
+        )
+        context = {"request": self.request, "object": cloud_resource_type}
+        extra_context = tab.get_extra_context(context)
+        self.assertIn("url", extra_context)
+        self.assertTrue(extra_context["url"].endswith("/services/"))
+
+        panel = tab.panels[0]
+        panel_context = panel.get_extra_context(context)
+
+        self.assertIn("body_content_table", panel_context)
+        table = panel_context["body_content_table"]
+        self.assertQuerySetEqual(cloud_services, table.data)
+
+    def test_tab_conditional_rendering(self):
+        """
+        Assert default tabs render on the main detail view but not sub-views, while distinct-view-tabs do the reverse.
+        """
+        cloud_resource_type = CloudResourceType.objects.get_for_model(CloudNetwork)[0]
+        content = CloudResourceTypeUIViewSet.object_detail_content
+
+        # Main detail view renders all base tabs and no DistinctViewTabs
+        request = self.factory.get(cloud_resource_type.get_absolute_url())
+        request.user = self.user
+        context_data = {
+            "request": request,
+            "user": self.user,
+            "object": cloud_resource_type,
+            "settings": {},
+            "csrf_token": "",
+            "perms": [],
+            "created_by": self.request.user,
+            "last_updated_by": self.request.user,
+            "view_action": "retrieve",
+            "detail": True,
+        }
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab):
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()
+            elif isinstance(tab, (_ObjectDetailMainTab, _ObjectDetailAdvancedTab)):  # other base tabs might not render
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+
+        # Distinct tab view renders its tab *only*
+        request = self.factory.get(reverse("cloud:cloudresourcetype_networks", kwargs={"pk": cloud_resource_type.pk}))
+        request.user = self.user
+        context_data["request"] = request
+        context_data["view_action"] = "networks"
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_networks":  # pylint: disable=no-member
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+            else:
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()
+
+        # Same, but for a different distinct view tab
+        request = self.factory.get(reverse("cloud:cloudresourcetype_services", kwargs={"pk": cloud_resource_type.pk}))
+        request.user = self.user
+        context_data["request"] = request
+        context_data["view_action"] = "services"
+        context = Context(context_data)
+        for tab in content.tabs:
+            if isinstance(tab, DistinctViewTab) and tab.url_name == "cloud:cloudresourcetype_services":  # pylint: disable=no-member
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertNotEqual(tab.render(context), "")
+                    panel_render.assert_called()
+            else:
+                with patch.object(tab.panels[0], "render", wraps=tab.panels[0].render) as panel_render:
+                    self.assertEqual(tab.render(context), "")
+                    panel_render.assert_not_called()
+
+
+class _JobModalButtonTest(TestCase):
+    """Test suite for the _JobModalButton UI component."""
+
+    def test_init_validation(self):
+        """Verify that class_path is a required argument."""
+        # Should raise TypeError if class_path is missing
+        with self.assertRaises(TypeError) as cm:
+            _JobModalButton(weight=100, label="Test")
+        self.assertIn("class_path is required", str(cm.exception))
+
+        # Should initialize fine with class_path
+        btn = _JobModalButton(weight=100, label="Run Test", class_path="nautobot.core.jobs.ValidateModelData")
+        self.assertEqual(btn.class_path, "nautobot.core.jobs.ValidateModelData")
+
+    def test_get_link(self):
+        """Verify get_link returns None because the button uses htmx to open a modal."""
+        btn = _JobModalButton(weight=100, label="Test", class_path="some.job")
+        self.assertIsNone(btn.get_link(Context({})))
+
+    def test_get_extra_context_and_mapping(self):
+        """Verify that initial_field_mapping correctly resolves object attributes into hx_vals."""
+        # Create a test object (Device)
+        device = Device.objects.first()
+
+        mapping = {"job_field_name": "name", "job_location": "location__name"}
+
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.SampleJob",
+            initial_field_mapping=mapping,
+            run_button_label="Execute!",
+            job_result_key="output_data",
+        )
+
+        context = Context({"object": device})
+        context = btn.get_extra_context(context)
+
+        # Check the generated hx-vals
+        self.assertIn("hx-vals", context["attributes"])
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+
+        # Check resolved mapping values
+        self.assertEqual(hx_vals["job_field_name"], device.name)
+        self.assertEqual(hx_vals["job_location"], device.location.name)
+
+        # Check static modal configuration
+        self.assertTrue(hx_vals["job_form_modal"])
+        self.assertEqual(hx_vals["run_button_label"], "Execute!")
+        self.assertEqual(hx_vals["job_result_key"], "output_data")
+
+        # Verify Bootstrap and HTMX target attributes
+        self.assertEqual(context["attributes"]["data-bs-toggle"], "modal")
+        self.assertEqual(context["attributes"]["data-bs-target"], "#nautobot-generic-modal")
+        self.assertEqual(context["attributes"]["hx-target"], "#modal-content-container")
+
+        # Verify URL generation
+        expected_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.SampleJob"})
+        self.assertEqual(context["attributes"]["hx-get"], expected_url)
+        # Since the class_path is not a real job, ensure disabled in attributes.
+        self.assertIn("disabled", context["attributes"])
+
+        # Ensure real job class paths are not disabled
+        real_job_btn = _JobModalButton(
+            weight=100,
+            label="Run Real Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        context = Context({"object": device})
+        context = real_job_btn.get_extra_context(context)
+        self.assertNotIn("disabled", context["attributes"])
+
+    def test_get_extra_context_no_leakage(self):
+        """Verify that state does not leak between multiple calls or instances."""
+        device = Device.objects.first()
+        context = Context({"object": device})
+
+        # 1. Create a button for a non-existent job (should be disabled)
+        btn_fail = _JobModalButton(weight=100, label="Fail", class_path="non.existent.job")
+        ctx_fail = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail["attributes"])
+        # Crucially: ensure the instance attribute didn't get polluted
+        self.assertIsNone(btn_fail.attributes)
+
+        # 2. Create a button for a real job (should be enabled)
+        btn_success = _JobModalButton(
+            weight=100,
+            label="Success",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            attributes={"custom": "value"},
+        )
+        ctx_success = btn_success.get_extra_context(context)
+
+        # Verify result in context
+        self.assertNotIn("disabled", ctx_success["attributes"])
+
+        # If we run the failed button again, it shouldn't affect the success instance
+        # and it should still be disabled in its own context
+        ctx_fail_again = btn_fail.get_extra_context(context)
+        self.assertIn("disabled", ctx_fail_again["attributes"])
+        self.assertNotIn("disabled", btn_success.attributes)
+
+
+class PostButtonTest(TestCase):
+    def test_render_uses_request_for_csrf_token_tag(self):
+        request = RequestFactory().get("/")
+        request.user = self.user
+
+        button = PostButton(weight=100, label="Submit")
+        html = button.render(Context({"request": request}))
+
+        self.assertIn('name="csrfmiddlewaretoken"', html)

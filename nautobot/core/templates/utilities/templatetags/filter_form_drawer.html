@@ -1,0 +1,226 @@
+{% load form_helpers %}
+{% load helpers %}
+{% load static %}
+
+<section class="nb-drawer" tabindex="-1" id="{{ filter_form_name }}_drawer">
+    <div class="nb-drawer-header">
+        <h1>Filters</h1>
+        <button type="button" class="btn-close" data-nb-dismiss="drawer" aria-label="Close"></button>
+    </div>
+    <div class="nb-drawer-body">
+        <ul id="filter-tabs" class="nav nav-tabs">
+            {% if filter_form %}
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link{% if filter_form %} active{% endif %}"  href="#default-filter" role="tab" data-bs-toggle="tab">
+                        Basic
+                    </a>
+                </li>
+            {% endif %}
+            {% if dynamic_filter_form %}
+                <li role="presentation" class="nav-item">
+                    <a class="nav-link position-relative{% if not filter_form %} active{% endif %}" href="#advanced-filter" role="tab" data-bs-toggle="tab">
+                        Advanced
+                        {% advanced_filter_indicator basic_filter_form=filter_form filter_params=filter_params %}
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+        <div class="tab-content h-100">
+            {% if filter_form %}
+                <div id="default-filter" role="tabpanel" class="tab-pane fade{% if filter_form %} show active{% endif %} h-100 p-20">
+                    {% include 'inc/search_panel.html' %}
+                </div>
+            {% endif %}
+            {% if dynamic_filter_form %}
+                <div id="advanced-filter" role="tabpanel" class="tab-pane fade{% if not filter_form %} show active{% endif %} h-100 p-20">
+                    <form class="h-100 vstack" id="dynamic-filter-form">
+                        <div class="align-content-start flex-fill pb-20">
+                            {{ dynamic_filter_form.management_form }}
+                            <div id="nb-add-filter-form">
+                                {% for field in dynamic_filter_form.0.visible_fields %}
+                                    <div class="nb-form-group nb-add-filter-form-field">
+                                        <label for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
+                                        {{ field }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <button class="nb-dynamic-filter-add btn btn-primary d-block ms-auto my-20" type="button">
+                                <span aria-hidden="true" class="mdi mdi-plus me-4"></span><!--
+                                -->Add Filter
+                            </button>
+                            <hr class="border-top my-20">
+                            {% include "inc/dynamic_filter_items.html" %}
+                        </div>
+
+                        <div class="d-print-none justify-content-between mb-n20 nb-form-sticky-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <span class="mdi mdi-check me-4" aria-hidden="true"></span><!--
+                                -->Apply Specified
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                                -->Clear All
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% block javascript %}
+    <script src="{% versioned_static 'js/filter_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
+    <script>
+
+        /**
+         * Get HTML elements for default and dynamic filter forms.
+         * @returns {object} Object with `defaultFilterForm` and `dynamicFilterForm` HTML elements or `null`,
+         *   depending on their actual existence in the DOM.
+         */
+        const getFilterForms = () => ({
+            defaultFilterForm: document.querySelector('#default-filter form'),
+            dynamicFilterForm: document.querySelector('#dynamic-filter-form'),
+        });
+
+        /**
+         * Check if submit event is from default filter form or other form on page.
+         * @param defaultFilterForm
+         * @param event
+         * @returns {boolean}
+         */
+        const isEventFromDefaultFilterFormField = (defaultFilterForm, event) => (
+            event.target.form === defaultFilterForm
+        )
+
+        /**
+         * Function to reinitialize select2 fields after changes on filter form.
+         * filter_form.js will call this function when re-initialization is needed.
+         * @param element
+         */
+        const reInitialize = element => {
+            initializeInputs(element);
+        }
+
+        /**
+         * Function to set name for newly created input after adding filter on advanced tab.
+         * filter_form.js will call this function to set correct filter input name
+         * @param input
+         * @param name
+         */
+        const setInputName = (input, name) => {
+            input.setAttribute('name', name);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const NON_FILTER_PARAMS = [
+                'all_filters_removed',
+                'clear_view',
+                'per_page',
+                'saved_view',
+                'sort',
+                'table_changes_pending',
+            ];
+
+            const prepopulateFilterSelectsFromURL = (() => {
+                const { defaultFilterForm } = getFilterForms();
+                const urlParams = new URLSearchParams(window.location.search);
+                // Only target Select2 controls inside the default filter form.
+                [...defaultFilterForm.querySelectorAll('select.nautobot-select2-multi-value-char')].forEach((el) => {
+                    const name = el.getAttribute('name');
+                    if (!name) { return; }
+                    const values = urlParams.getAll(name);
+                    if (!values.length) { return; }
+                    values.forEach((val) => {
+                        let found = Array.prototype.find.call(el.options, (opt) => {
+                            return String(opt.value) === String(val);
+                        });
+                        if (found) {
+                            found.selected = true;
+                        } else {
+                            el.add(new Option(val, val, true, true));
+                        }
+                    });
+                    if (window.jQuery && $(el).data('select2')) {
+                        $(el).trigger('change');
+                    }
+                });
+            })();
+
+            const isFilterForm = (target) => Boolean(target?.closest('#{{ filter_form_name }}_drawer'));
+
+            document.addEventListener('reset', (event) => {
+                if (isFilterForm(event.target)) {
+                    event.preventDefault();
+
+                    // Remove all filter query params from location search while keeping non-filter params intact.
+                    const searchParams = new URLSearchParams(window.location.search);
+                    const nextSearchParams = new URLSearchParams([
+                        ...[...searchParams].filter(
+                            ([property]) => NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
+                        ),
+                        ['all_filters_removed', 'true'],
+                    ]);
+
+                    location.assign(`?${nextSearchParams}`);
+                }
+            });
+
+            document.addEventListener('submit', (event) => {
+                if (isFilterForm(event.target)) {
+                    event.preventDefault();
+
+                    const { defaultFilterForm, dynamicFilterForm } = getFilterForms();
+
+                    /*
+                     * Just before the form submission automatically add filter selected in "Advanced" tab (if any)
+                     * which hasn't been manually applied for whatever reason (usually forgetfulness, speed, etc.).
+                     * This is a requested UX flavor.
+                     */
+                    const add = dynamicFilterForm.querySelector('button.nb-dynamic-filter-add');
+                    add.click();
+
+                    // Remove all field names which are not applied filters container descendants.
+                    [...dynamicFilterForm.querySelectorAll('input, select, textarea')].forEach((field) =>
+                        field.closest('.nb-dynamic-filter-items') ? undefined : field.removeAttribute('name'),
+                    );
+
+                    /*
+                     * Get the serialized data from the forms and:
+                     *   1) Filter out query params which values are empty e.g `?sam=&dan=2` becomes `dan=2`.
+                     *   2) Combine the two forms into a single set of data without duplicate entries.
+                     */
+                    const defaultFilterFormSearchParams = new URLSearchParams(new FormData(defaultFilterForm));
+                    const dynamicFilterFormSearchParams = new URLSearchParams(new FormData(dynamicFilterForm));
+                    const searchParams = new URLSearchParams(window.location.search);
+
+                    const nextSearchParams = new URLSearchParams([
+                        ...[...defaultFilterFormSearchParams].filter(([, value]) => value !== ''),
+                        ...[...dynamicFilterFormSearchParams].filter(
+                            ([property, value]) => value !== '' && !defaultFilterFormSearchParams.has(property, value),
+                        ),
+                        ...[...searchParams].filter(
+                            ([property]) => NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
+                        ),
+                    ]);
+
+                    if (nextSearchParams.has('saved_view')) {
+                        const all_filters_removed = [...nextSearchParams].every(([property]) =>
+                            NON_FILTER_PARAMS.includes(property),
+                        );
+
+                        if (all_filters_removed) {
+                            nextSearchParams.set('all_filters_removed', 'true');
+                        }
+                    }
+
+                    location.assign(`?${nextSearchParams}`);
+                }
+            });
+
+            const onSubmitOrReset = (event) => (isFilterForm(event.target) ? window.nb?.history?.saveState() : undefined);
+            document.addEventListener('reset', onSubmitOrReset);
+            document.addEventListener('submit', onSubmitOrReset);
+        });
+    </script>
+{% endblock %}

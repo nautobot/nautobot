@@ -1,6 +1,7 @@
 """Utilities for apps to implement test automation."""
 
 from nautobot.core.testing import (
+    AssertNoRepeatedQueries,
     create_job_result_and_run_job,
     get_job_class_and_model,
     run_job_for_testing,
@@ -9,7 +10,13 @@ from nautobot.core.testing import (
 from nautobot.core.testing.api import APITestCase, APITransactionTestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.forms import FormTestCases
-from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.testing.integration import (
+    BulkOperationsMixin,
+    BulkOperationsTestCases,
+    ObjectDetailsMixin,
+    ObjectsListMixin,
+    SeleniumTestCase,
+)
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.core.testing.models import ModelTestCases
@@ -29,6 +36,9 @@ __all__ = (
     "APITestCase",
     "APITransactionTestCase",
     "APIViewTestCases",
+    "AssertNoRepeatedQueries",
+    "BulkOperationsMixin",
+    "BulkOperationsTestCases",
     "FilterTestCases",
     "FormTestCases",
     "ModelTestCase",
@@ -37,6 +47,8 @@ __all__ = (
     "NautobotDataMigrationTest",
     "NautobotTestCaseMixin",
     "NautobotTestClient",
+    "ObjectDetailsMixin",
+    "ObjectsListMixin",
     "OpenAPISchemaTestCases",
     "SeleniumTestCase",
     "TestCase",

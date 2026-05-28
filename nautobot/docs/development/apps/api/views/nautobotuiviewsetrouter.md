@@ -18,18 +18,17 @@ router.register("yourappmodel", views.YourAppModelUIViewSet)
 
 urlpatterns = [
     # Extra urls that do not follow the patterns of `NautobotUIViewSetRouter` go here.
-    # changelog, notes and etc.
     ...
     path(
-        "yourappmodels/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="yourappmodel_changelog",
+        "yourappmodels/<uuid:pk>/ping/",
+        PingView.as_view(),
+        name="yourappmodel_ping",
         kwargs={"model": yourappmodel},
     ),
     path(
-        "yourappmodels/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="yourappmodel_notes",
+        "yourappmodels/<uuid:pk>/traceroute/",
+        TracerouteView.as_view(),
+        name="yourappmodel_traceroute",
         kwargs={"model": yourappmodel},
     ),
     ...

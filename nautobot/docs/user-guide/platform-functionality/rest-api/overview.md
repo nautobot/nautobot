@@ -323,11 +323,11 @@ In many (but not necessarily all) cases, as a convenience for users, the REST AP
 !!! warning "Many-to-many at scale"
     When Nautobot contains a substantial number of related records, the inclusion of many-to-many related objects in the REST API may impose a significant amount of performance overhead in terms of processing time and memory usage. For example, if you have many VRFs, each of which is associated to 1000 Prefixes, listing VRFs in the REST API would also by default retrieve, serialize, and list the 1000 Prefix records _per VRF retrieved_.
 
-To address the aforementioned performance/scalability concern, Nautobot supports the REST API query parameter `exclude_m2m`. When this parameter is specified (for example `GET /api/ipam/vrfs/?exclude_m2m=true`), many-to-many related objects will **not** be included in the REST API response, and in most cases will not even be retrieved from the database.
+To address the aforementioned performance/scalability concern, Nautobot excludes many-to-many related objects (except for `tags`, `content_types`, and `object_types`) by default in the REST API. If you need to include many-to-many related objects in the REST API response, you can specify the `exclude_m2m=False` query parameter.
 
 +++ 2.4.0 "Added support for the `exclude_m2m` query parameter"
 
-In a future Nautobot major release, a change in the REST API may make `exclude_m2m=true` the default behavior.
++/- 3.0.0 "Changed the default behavior of `exclude_m2m` to exclude many-to-many fields (except for `tags`, `content_types`, and `object_types`) by default"
 
 See also [Filtering Included Fields](filtering.md#filtering-included-fields).
 

@@ -3,6 +3,7 @@
 
 # Un-exclude specific things needed for the Docker build
 !development/nautobot_config.py
+!development/dolt-config.yaml
 !docker/docker-entrypoint.sh
 !docker/uwsgi.ini
 !examples

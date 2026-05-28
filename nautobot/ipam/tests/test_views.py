@@ -1,18 +1,19 @@
 import datetime
 import random
 
+from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Count
 from django.test import override_settings
 from django.urls import reverse
-from django.utils.html import strip_tags
+from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 from netaddr import IPNetwork
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
-from nautobot.core.testing import ModelViewTestCase, post_data, ViewTestCases
+from nautobot.core.testing import AssertNoRepeatedQueries, ModelViewTestCase, post_data, ViewTestCases
 from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import (
@@ -45,33 +46,36 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 
-class NamespaceTestCase(
-    ViewTestCases.GetObjectViewTestCase,
-    ViewTestCases.GetObjectChangelogViewTestCase,
-    ViewTestCases.GetObjectNotesViewTestCase,
-    ViewTestCases.CreateObjectViewTestCase,
-    ViewTestCases.EditObjectViewTestCase,
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.ListObjectsViewTestCase,
-    ViewTestCases.BulkEditObjectsViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
+class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Namespace
+    custom_action_required_permissions = {
+        "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
+        "ipam:namespace_prefixes": ["ipam.view_namespace", "ipam.view_prefix"],
+        "ipam:namespace_ip_addresses": ["ipam.view_namespace", "ipam.view_ipaddress"],
+    }
 
     @classmethod
     def setUpTestData(cls):
         locations = Location.objects.get_for_model(Namespace)
+        tenants = Tenant.objects.all()[:2]
 
-        cls.form_data = {"name": "Namespace X", "location": locations[0].pk, "description": "A new Namespace"}
+        cls.form_data = {
+            "name": "Namespace X",
+            "location": locations[0].pk,
+            "tenant": tenants[0].pk,
+            "description": "A new Namespace",
+        }
 
         cls.bulk_edit_data = {
             "description": "New description",
+            "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
 
@@ -109,6 +113,38 @@ class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "add_virtual_device_contexts": [vdcs[2].id, vdcs[3].id],
             "remove_virtual_device_contexts": [vdcs[0].id],
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_vrf_detail_no_n_plus_one_queries(self):
+        """Regression test for VRF detail view N+1 queries across all related-object panels."""
+        namespace = Namespace.objects.annotate(prefix_count=Count("prefixes")).filter(prefix_count__gte=15).first()
+        self.assertIsNotNone(namespace, "Test data requires a namespace with >=15 prefixes")
+        vrf = VRF.objects.create(name="VRF N+1 Regression", namespace=namespace)
+
+        for prefix in Prefix.objects.filter(namespace=namespace)[:15]:
+            vrf.prefixes.add(prefix)
+
+        targets = list(RouteTarget.objects.all()[:15])
+        self.assertGreaterEqual(len(targets), 15, "Test data requires >=15 route targets")
+        vrf.import_targets.set(targets)
+        vrf.export_targets.set(targets)
+
+        for device in Device.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, device=device)
+        for vm in VirtualMachine.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, virtual_machine=vm)
+        for vdc in VirtualDeviceContext.objects.all():
+            VRFDeviceAssignment.objects.create(vrf=vrf, virtual_device_context=vdc)
+        self.assertGreater(
+            VRFDeviceAssignment.objects.filter(vrf=vrf).count(),
+            10,
+            "Need >10 VRF device assignments to exceed AssertNoRepeatedQueries threshold",
+        )
+
+        url = reverse("ipam:vrf", kwargs={"pk": vrf.pk})
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
 
 
 class RouteTargetTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -160,7 +196,7 @@ class RIRTestCase(ViewTestCases.OrganizationalObjectViewTestCase):
                 if count > 1:
                     self.assertBodyContains(
                         response,
-                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge">{count}</a>',
+                        f'<a href="{prefix_list_url}?{urlencode({"rir": rir.name})}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(rir.prefixes.first()))
@@ -198,6 +234,10 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             "tags": [t.pk for t in Tag.objects.get_for_model(Prefix)],
         }
 
+        cls.update_data = cls.form_data.copy()
+        # Can't update `prefix` and `namespace` in the same edit request
+        cls.update_data["namespace"] = Prefix.objects.first().namespace.pk
+
         cls.bulk_edit_data = {
             "tenant": None,
             "status": cls.statuses[1].pk,
@@ -213,6 +253,22 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         }
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+        instance = self._get_queryset().first()
+        instance.parent = self._get_queryset().last()
+        self._get_queryset().bulk_update([instance], ["parent"], batch_size=1)
+
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_permission(self):
         """Test rendering of LinkedCountColumn for related fields with display_field override."""
         response = super().test_list_objects_with_permission()
@@ -225,10 +281,166 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
                 count = prefix.locations.count()
                 if count > 1:
                     self.assertBodyContains(
-                        response, f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge">{count}</a>'
+                        response,
+                        f'<a href="{locations_list_url}?prefixes={prefix.pk}" class="badge bg-primary">{count}</a>',
                     )
                 elif count == 1:
                     self.assertBodyContains(response, hyperlinked_object(prefix.locations.first(), "name"))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], PAGINATE_COUNT=1000)
+    def test_list_objects_default_filters(self):
+        """Test the PREFIX_LIST_DEFAULT_CONTAINER_ONLY and PREFIX_LIST_DEFAULT_MAX_DEPTH settings."""
+        self.add_permissions("ipam.view_prefix")
+        list_url = self.get_list_url()
+
+        with self.subTest("By default, all prefixes are listed"):
+            response = self.client.get(list_url, headers={"HX-Request": True})
+            for prefix in self._get_queryset().all():
+                self.assertBodyContains(response, str(prefix.pk))
+            # Indentation should be present in table rendering
+            self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_CONTAINER_ONLY, only container prefixes are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?type=container")
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?type=container")
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With PREFIX_LIST_DEFAULT_MAX_DEPTH, only prefixes to a maximum depth are listed"):
+            with override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=3):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=3")
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None or prefix.parent.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+            with override_config(PREFIX_LIST_DEFAULT_MAX_DEPTH=2):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=2")
+                for prefix in self._get_queryset().all():
+                    if prefix.parent is None or prefix.parent.parent is None:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With both settings, both should apply"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=4):
+                # Check for filtered prefix list and message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True}, follow=True)
+                self.assertRedirects(response, list_url + "?max_depth=4&type=container")
+                for prefix in self._get_queryset().all():
+                    if prefix.type == PrefixTypeChoices.TYPE_CONTAINER and (
+                        prefix.parent is None
+                        or prefix.parent.parent is None
+                        or prefix.parent.parent.parent is None
+                        or prefix.parent.parent.parent.parent is None
+                    ):
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("With neither setting, neither should apply"):
+            with override_config(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=False, PREFIX_LIST_DEFAULT_MAX_DEPTH=0):
+                # Check for un-filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url, headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    self.assertBodyContains(response, str(prefix.pk))
+                # Indentation should still be present in table rendering
+                self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True)
+
+        with self.subTest("Settings do not apply when explicit filters are present that flatten hierarchy"):
+            with override_settings(PREFIX_LIST_DEFAULT_CONTAINER_ONLY=True, PREFIX_LIST_DEFAULT_MAX_DEPTH=1):
+                prefix_status = Status.objects.get_for_model(Prefix).first()
+                # Check for filtered prefix list and no message in HTMX response
+                response = self.client.get(list_url + f"?status={prefix_status.name}", headers={"HX-Request": True})
+                for prefix in self._get_queryset().all():
+                    if prefix.status == prefix_status:
+                        self.assertBodyContains(response, str(prefix.pk))
+                    else:
+                        self.assertBodyContains(response, str(prefix.pk), count=0)
+                # Indentation and subtree filtering should NOT be present in table rendering,
+                # due to an applied filter that alters hierarchy
+                self.assertBodyContains(response, "nb-subtree", count=0)
+                self.assertBodyContains(response, "mdi-table-filter", count=0)
+
+        with self.subTest("Subtree is still rendered when explicit filters are present that preserve hierarchy"):
+            # Check for filtered prefix list and message in HTMX response
+            response = self.client.get(
+                list_url + "?ip_version=4&max_depth=1&type=container", headers={"HX-Request": True}
+            )
+            for prefix in self._get_queryset().all():
+                if prefix.ip_version == 4 and prefix.parent is None and prefix.type == PrefixTypeChoices.TYPE_CONTAINER:
+                    self.assertBodyContains(response, str(prefix.pk))
+                else:
+                    self.assertBodyContains(response, str(prefix.pk), count=0)
+            # Indentation should still be present in table rendering as the applied filter doesn't alter hierarchy
+            self.assertBodyContains(response, "nb-subtree")
+            self.assertBodyContains(response, "mdi-table-filter")
+
+    def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+        """Override base ListObjectsViewTestCase.test_table_with_indentation_is_removed_on_filter_or_sort for Prefix."""
+        self.user.is_superuser = True
+        self.user.save()
+
+        with self.subTest("Assert indentation is present"):
+            response = self.client.get(f"{self._get_url('list')}", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is removed on most filters"):
+            queryset = (
+                self._get_queryset().filter(parent__isnull=False).values_list(self.filter_on_field, flat=True)[:5]
+            )
+            filter_values = "&".join([f"{self.filter_on_field}={instance_value}" for instance_value in queryset])
+            response = self.client.get(f"{self._get_url('list')}?{filter_values}", headers={"HX-Request": "true"})
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is removed on sort"):
+            response = self.client.get(
+                f"{self._get_url('list')}?sort={self.sort_on_field}", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
+
+        with self.subTest("Assert indentation is present on hierarchy-preserving filter alone"):
+            response = self.client.get(f"{self._get_url('list')}?ip_version=4", headers={"HX-Request": "true"})
+            self.assertBodyContains(response, "nb-subtree")
+
+        with self.subTest("Assert indentation is not present on mixed filtering"):
+            response = self.client.get(
+                f"{self._get_url('list')}?ip_version=4&status=Active", headers={"HX-Request": "true"}
+            )
+            response_body = response.content.decode(response.charset)
+            self.assertNotIn("nb-subtree", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_empty_queryset(self):
@@ -252,133 +464,6 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertNotIn("Invalid filters were specified", content)
         for prefix in prefixes:
             self.assertNotIn(prefix.get_absolute_url(), content, msg=content)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_create_object_warnings(self):
-        """Test various object creation scenarios that should result in a warning to the user."""
-        Prefix.objects.create(
-            prefix="10.0.0.0/8",
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_CONTAINER,
-            status=self.statuses[1],
-        )
-        Prefix.objects.create(
-            prefix="10.0.0.0/16",
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_NETWORK,
-            status=self.statuses[1],
-        )
-        Prefix.objects.create(
-            prefix="10.0.0.0/24",
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_POOL,
-            status=self.statuses[1],
-        )
-        IPAddress.objects.create(
-            address="10.0.0.1/32",
-            status=Status.objects.get_for_model(IPAddress).first(),
-            namespace=self.namespace,
-        )
-        self.add_permissions("ipam.add_prefix")
-
-        common_data = {"namespace": self.namespace.pk, "status": self.statuses[0].pk}
-
-        with self.subTest("Creating a Pool as child of a Container raises a warning"):
-            data = {
-                "prefix": "10.1.0.0/16",
-                "type": PrefixTypeChoices.TYPE_POOL,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "10.1.0.0/16 is a Pool prefix but its parent 10.0.0.0/8 is a Container. "
-                "This will be considered invalid data in a future release. "
-                "Consider changing the type of 10.1.0.0/16 and/or 10.0.0.0/8 to resolve this issue.",
-                strip_tags(content),
-            )
-
-        # We could test for Pool-in-Pool, Container-in-Network, Network-in-Network, Container-in-Pool, and
-        # Network-in-Pool, but they all use the same code path and similar message
-
-        with self.subTest("Creating a Container that will have a Pool as its child raises a warning"):
-            data = {
-                "prefix": "10.0.0.0/20",
-                "type": PrefixTypeChoices.TYPE_CONTAINER,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "10.0.0.0/20 is a Container prefix and should not contain child prefixes of type Pool. "
-                "This will be considered invalid data in a future release. "
-                "Consider creating an intermediary Network prefix, or changing the type of its children to Network, "
-                "to resolve this issue.",
-                strip_tags(content),
-            )
-
-        with self.subTest("Creating a Network that will have another Network as its child raises a warning"):
-            data = {
-                "prefix": "10.0.0.0/12",
-                "type": PrefixTypeChoices.TYPE_NETWORK,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "10.0.0.0/12 is a Network prefix and should not contain child prefixes of types Container or Network. "
-                "This will be considered invalid data in a future release. "
-                "Consider changing the type of 10.0.0.0/12 to Container, or changing the type of its children to Pool, "
-                "to resolve this issue.",
-                strip_tags(content),
-            )
-
-        with self.subTest("Creating a Pool that will have any other Prefix as its child raises a warning"):
-            data = {
-                "prefix": "0.0.0.0/0",
-                "type": PrefixTypeChoices.TYPE_POOL,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "0.0.0.0/0 is a Pool prefix and should not contain other prefixes. "
-                "This will be considered invalid data in a future release. "
-                "Consider either changing the type of 0.0.0.0/0 to Container or Network, or deleting its children, "
-                "to resolve this issue.",
-                strip_tags(content),
-            )
-
-        with self.subTest("Creating a large Container that will contain IPs raises a warning"):
-            data = {
-                "prefix": "10.0.0.0/28",
-                "type": PrefixTypeChoices.TYPE_CONTAINER,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "10.0.0.0/28 is a Container prefix and should not directly contain IP addresses. "
-                "This will be considered invalid data in a future release. "
-                "Consider either changing the type of 10.0.0.0/28 to Network, or creating one or more child "
-                "prefix(es) of type Network to contain these IP addresses, to resolve this issue.",
-                strip_tags(content),
-            )
-
-        with self.subTest("Creating a small Container that will contain IPs raises a different warning"):
-            data = {
-                "prefix": "10.0.0.1/32",
-                "type": PrefixTypeChoices.TYPE_CONTAINER,
-            }
-            response = self.client.post(self._get_url("add"), data={**common_data, **data}, follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "10.0.0.1/32 is a Container prefix and should not directly contain IP addresses. "
-                "This will be considered invalid data in a future release. "
-                "Consider changing the type of 10.0.0.1/32 to Network to resolve this issue.",
-                strip_tags(content),
-            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_prefix_ipaddresses_table_list_includes_child_ips(self):
@@ -405,6 +490,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
             status=ip_status,
             namespace=self.namespace,
         )
+        # add this permission to can test button Add an IP Address
+        self.add_permissions("ipam.add_ipaddress")
         url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
@@ -412,10 +499,53 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
         self.assertIn("5.5.10.1/23", strip_tags(content))
         self.assertIn("5.5.10.4/23", strip_tags(content))
-        ip_address_tab = (
-            f'<li role="presentation" class="active"><a href="{url}">IP Addresses <span class="badge">2</span></a></li>'
-        )
+        ip_address_tab = f'<li class="nav-item" role="presentation"><a class="nav-link active" aria-current="page" href="{url}" aria-controls="ip-addresses" role="tab">IP Addresses <span class="badge bg-primary">2</span></a></li>'
         self.assertInHTML(ip_address_tab, content)
+        # Checks if the button is in the content.
+        add_ip_link = (
+            reverse("ipam:ipaddress_add")
+            + "?"
+            + urlencode({"address": "5.5.10.2/23", "namespace": str(self.namespace.pk)})
+        )
+        self.assertIn(f'href="{escape(add_ip_link)}"', content)
+        self.assertIn("Add an IP Address", content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_descendant_prefixes_table_list(self):
+        instance = Prefix.objects.create(
+            prefix="5.5.10.0/23",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        Prefix.objects.create(
+            prefix="5.5.10.0/30",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_POOL,
+            status=self.statuses[1],
+        )
+        # add this permission to can test button Add Child Prefix
+        self.add_permissions("ipam.add_prefix")
+        url = reverse("ipam:prefix_prefixes", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # This validates that both parent prefix and child prefix IPAddresses are present in parent prefix IPAddresses list
+        self.assertIn("5.5.10.0/30", strip_tags(content))
+        prefixes_tab = f'<li role="presentation" class="nav-item"><a class="nav-link active" href="{url}" aria-controls="prefixes" role="tab" aria-current="page">Descendant Prefixes <span class="badge bg-primary">1</span></a></li>'
+        self.assertInHTML(prefixes_tab, content)
+        # Checks if the button is in the content.
+        self.assertInHTML("""<span class="mdi mdi-plus-thick" aria-hidden="true"></span>Add Child Prefix""", content)
+
+    def test_prefix_children_action(self):
+        self.add_permissions("ipam.view_prefix")
+        pfx_with_children = Prefix.objects.filter(children__isnull=False).first()
+        self.assertIsNotNone(pfx_with_children)
+        url = reverse("ipam:prefix_children", kwargs={"pk": pfx_with_children.pk})
+        response = self.client.get(url)
+        self.assertTemplateUsed(response, "components/htmx/subtree_children.html")
+        for child in pfx_with_children.children.all():
+            self.assertBodyContains(response, str(child.pk))
 
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -427,7 +557,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.statuses = Status.objects.get_for_model(IPAddress)
         cls.prefix_status = Status.objects.get_for_model(Prefix).first()
         roles = Role.objects.get_for_model(IPAddress)
-        Prefix.objects.get_or_create(
+        cls.prefix, _ = Prefix.objects.get_or_create(
             prefix="192.0.2.0/24",
             defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
         )
@@ -453,6 +583,22 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "dns_name": "example",
             "description": "New description",
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_get_object_with_permission(self):
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
+        instance = self._get_queryset().first()
+        instance.parent = self.prefix
+        self._get_queryset().bulk_update([instance], ["parent"], batch_size=1)
+
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
 
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
@@ -511,7 +657,9 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "data": post_data(form_data),
         }
         response = self.client.post(**request)
-        self.assertBodyContains(response, "No suitable parent Prefix exists in this Namespace")
+        self.assertBodyContains(
+            response, f"No suitable parent Prefix for {instance.host} exists in Namespace {new_namespace}"
+        )
         # Create an exact copy of the parent prefix but in a different namespace. See if the re-parenting is successful
         new_parent = Prefix.objects.create(
             prefix=instance.parent.prefix,
@@ -523,41 +671,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertEqual(302, response.status_code)
         created_ip = IPAddress.objects.get(parent__namespace=new_namespace, address=instance.address)
         self.assertEqual(created_ip.parent, new_parent)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_create_object_warnings(self):
-        self.add_permissions("ipam.add_ipaddress")
-
-        Prefix.objects.create(
-            prefix="192.0.2.0/25",
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_CONTAINER,
-            status=self.prefix_status,
-        )
-
-        with self.subTest("Creating an IPAddress as a child of a larger Container prefix raises a warning"):
-            self.form_data["address"] = "192.0.2.98/28"
-            response = self.client.post(self._get_url("add"), data=post_data(self.form_data), follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "IP address 192.0.2.98/28 currently has prefix 192.0.2.0/25 as its parent, which is a Container. "
-                "This will be considered invalid data in a future release. "
-                "Consider creating an intermediate /28 prefix of type Network to resolve this issue.",
-                strip_tags(content),
-            )
-
-        with self.subTest("Creating an IP as a child of a same-size Container prefix raises a different warning"):
-            self.form_data["address"] = "192.0.2.2/25"
-            response = self.client.post(self._get_url("add"), data=post_data(self.form_data), follow=True)
-            self.assertHttpStatus(response, 200)
-            content = extract_page_body(response.content.decode(response.charset))
-            self.assertIn(
-                "IP address 192.0.2.2/25 currently has prefix 192.0.2.0/25 as its parent, which is a Container. "
-                "This will be considered invalid data in a future release. "
-                "Consider changing the prefix to type Network or Pool to resolve this issue.",
-                strip_tags(content),
-            )
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_create_ips(self):
@@ -840,6 +953,7 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         self.add_permissions("ipam.change_ipaddress")
         num_ips_before = IPAddress.objects.all().count()
         ips = IPAddress.objects.all().exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk])
+        self.assertGreaterEqual(len(ips), 6)
         ip_ct = ContentType.objects.get_for_model(IPAddress)
         locations = Location.objects.all()
         location_ct = ContentType.objects.get_for_model(Location)
@@ -1155,6 +1269,9 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
 class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = Service
+    allowed_number_of_tree_queries_per_view_type = {
+        "retrieve": 1,
+    }
 
     @classmethod
     def setUpTestData(cls):
@@ -1288,6 +1405,6 @@ class ServiceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_content = response.content.decode(response.charset)
         self.assertHttpStatus(response, 200)
         self.assertInHTML(
-            ' <strong class="panel-title">Ports</strong>: <ul class="errorlist"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
+            '<strong>Ports</strong>: <ul class="errorlist" id="id_ports_error"><li>invalid literal for int() with base 10: &#x27;[106&#x27;</li></ul>',
             response_content,
         )

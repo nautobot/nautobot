@@ -135,12 +135,8 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 [tasks]
   . nautobot.core.tasks.get_releases
-  . nautobot.extras.datasources.git.pull_git_repository_and_refresh_data
   . nautobot.extras.jobs.run_job
-  . nautobot.extras.tasks.delete_custom_field_data
   . nautobot.extras.tasks.process_webhook
-  . nautobot.extras.tasks.provision_field
-  . nautobot.extras.tasks.update_custom_field_choice_data
 
 [2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0
 [2021-07-01 21:32:40,690: INFO/MainProcess] mingle: searching for neighbors
@@ -169,6 +165,44 @@ Output:
 
 !!! note
     This is a built-in Django command. Please see the [official documentation on `collectstatic`](https://docs.djangoproject.com/en/stable/ref/django-admin/#collectstatic) for more information.
+
+### `check_job_approval_status`
+
+`nautobot-server check_job_approval_status`
+
+Checks for scheduled jobs and jobs that require approval.
+
+```no-highlight
+nautobot-server check_job_approval_status
+```
+
+Output (when failed):
+
+```no-highlight
+nautobot.core.management.commands.check_job_approval_status.ApprovalRequiredScheduledJobsError: These need to be approved (and run) or denied before upgrading to Nautobot v3, as the introduction of the approval workflows feature means that future scheduled-job approvals will be handled differently.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/stable/user-guide/platform-functionality/jobs/job-scheduling-and-approvals/#approval-via-the-ui
+Below is a list of affected scheduled jobs:
+    - ID: 0f8a0670-459b-430f-8c5e-a631888509d4, Name: test2
+```
+
+Output (with warning):
+
+```no-highlight
+Following jobs still have `approval_required=True`.
+These jobs will no longer trigger approval automatically.
+After upgrading to Nautobot 3.x, you should add an approval workflow definition(s) covering these jobs.
+Refer to the documentation: https://docs.nautobot.com/projects/core/en/next/user-guide/platform-functionality/approval-workflow/
+Affected jobs (Names):
+    - ExampleDryRunJob
+    - Example Job of Everything
+    - Export Object List
+```
+
+Output (when pass):
+
+```no-highlight
+No approval_required jobs or scheduled jobs found.
+```
 
 ### `createsuperuser`
 
@@ -407,14 +441,17 @@ Wrapping model clean methods for custom validators failed because the ContentTyp
 Operations to perform:
   Apply all migrations: admin, auth, circuits, contenttypes, dcim, extras, ipam, sessions, taggit, tenancy, users, virtualization
 Running migrations:
-  Applying contenttypes.0001_initial... OK
-  Applying auth.0001_initial... OK
-  Applying admin.0001_initial... OK
+  Applying ipam.0050_vlangroup_range...                          OK    (   0.1s)
+    Affected ipam.vlangroup                               20 rows  0.003s/record
+  Applying dcim.0063_interfacevdcassignment_virtualdevicecont... OK    (   0.2s)
+    Affected dcim.interfacevdcassignment                   0 rows
+    Affected dcim.virtualdevicecontext                     0 rows
+  Applying dcim.0064_virtualdevicecontext_status_data_migrati...
 ... (truncated for brevity of documentation) ...
 ```
 
 !!! note
-    This is a built-in Django command. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
+    This is a built-in Django command, although Nautobot has enhanced it to provide additional output when run. Please see the [official documentation on `migrate`](https://docs.djangoproject.com/en/stable/ref/django-admin/#migrate) for more information.
 
 ### `nbshell`
 
@@ -470,6 +507,7 @@ Performs common server post-upgrade operations using a single entrypoint.
 This will run the following management commands with default settings, in order:
 
 - `migrate`
+- `clear_cache`
 - `trace_paths`
 - `collectstatic`
 - `remove_stale_contenttypes`
@@ -479,7 +517,7 @@ This will run the following management commands with default settings, in order:
 - `refresh_dynamic_group_member_caches`
 
 !!! note
-    Commands listed here that are not covered in this document here are Django built-in commands.
+    Commands listed here that are not covered in this document here are Django built-in commands, with the exception of `clear_cache`, which is provided by Nautobot's dependency `django-extensions`.
 
 --- 2.0.0
     With the removal of `django-cacheops` from Nautobot, this command no longer runs `invalidate all`.
@@ -492,6 +530,12 @@ This will run the following management commands with default settings, in order:
 
 --- 2.1.1
     Removed the `--build_ui` flag.
+
++++ 3.0.10
+    Added `clear_cache` to this command's default behavior.
+
+`--no-clear-cache`
+Do not automatically clear the cache.
 
 `--no-clearsessions`  
 Do not automatically clean out expired sessions.
@@ -530,6 +574,9 @@ Operations to perform:
 Running migrations:
   No migrations to apply.
 
+Clearing cache...
+Cache "default" has been cleared!
+
 Generating cable paths...
 Found no missing circuit termination paths; skipping
 Found no missing console port paths; skipping
@@ -547,6 +594,13 @@ Collecting static files...
 Removing stale content types...
 
 Removing expired sessions...
+
+Sending installation metrics...
+Installation metrics are disabled by INSTALLATION_METRICS_ENABLED setting, skipping.
+
+Refreshing _content_type cache
+
+Refreshing dynamic group member caches...
 ```
 
 ### `refresh_dynamic_group_member_caches`
@@ -606,7 +660,7 @@ virtualization.VMInterface.name (_name)... 0
 Done.
 ```
 
-You may optionally specify or more specific models (each prefixed with its app_label) to renaturalize:
+You may optionally specify or more specific models (each prefixed with its `app_label`) to renaturalize:
 
 ```no-highlight
 nautobot-server renaturalize dcim.Device
@@ -637,7 +691,10 @@ nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 Run the job on the local system and not on a worker.
 
 `--data <data>`
-JSON string that populates the `data` variable of the job.
+JSON string that populates the `data` variable of the job. Defaults to `{}` (an empty dict). Passing `null` will result in a validation error.
+
++++ 3.2.0
+    The default value of `--data` is now `{}` instead of `None`. Job input validation is also stricter: passing `data=null` raises a `ValueError` rather than being silently treated as an empty input.
 
 ```no-highlight
 nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars
@@ -759,10 +816,13 @@ Finished.
 
 `nautobot-server validate_models`
 
-Validate all instances of a given model(s) by running a 'full_clean()' or 'validated_save()' on each object.
+Validate all instances of a given model(s) by running a `full_clean()` or `validated_save()` on each object.
 
 !!! warning
     Depending on the number of records in your database, this may take a long time to run.
+
+!!! tip
+    In Nautobot v3.0.0 and later, there is a system [Job](../../platform-functionality/jobs/index.md), `ValidateModelData`, that can be run by Nautobot users to provide similar functionality to this command without requiring shell access.
 
 ```no-highlight
 nautobot-server validate_models
@@ -819,27 +879,3 @@ Nautobot version: 2.2.0a1
 Django version: 3.2.24
 Configuration file: /opt/nautobot/nautobot_config.py
 ```
-
-### `webhook_receiver`
-
-`nautobot-server webhook_receiver`
-
-Start a simple listener to display received HTTP requests.
-
-`--port PORT`  
-Optional port number (default: `9000`)
-
-`--no-headers`  
-Hide HTTP request headers.
-
-```no-highlight
-nautobot-server webhook_receiver --port 9001 --no-headers
-```
-
-Example output:
-
-```no-highlight
-Listening on port http://localhost:9000. Stop with CONTROL-C.
-```
-
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.

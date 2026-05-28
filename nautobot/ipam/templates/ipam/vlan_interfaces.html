@@ -1,8 +1,8 @@
-{% extends 'ipam/vlan.html' %}
+{% extends 'generic/object_retrieve.html' %}
 
 {% block content %}
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-lg-12">
             {% include 'utilities/obj_table.html' with table=members_table table_template='panel_table.html' heading='Device Interfaces' parent=vlan %}
         </div>
     </div>

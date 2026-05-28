@@ -4,11 +4,13 @@ from nautobot.core.apps import (
     NavMenuItem,
     NavMenuTab,
 )
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 
 menu_items = (
     NavMenuTab(
         name="Organization",
-        weight=100,
+        icon=NavigationIconChoices.ORGANIZATION,
+        weight=NavigationWeightChoices.ORGANIZATION,
         groups=(
             NavMenuGroup(
                 name="Locations",
@@ -115,7 +117,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Devices",
-        weight=200,
+        icon=NavigationIconChoices.DEVICES,
+        weight=NavigationWeightChoices.DEVICES,
         groups=(
             NavMenuGroup(
                 name="Devices",
@@ -293,6 +296,22 @@ menu_items = (
                             ),
                         ),
                     ),
+                    NavMenuItem(
+                        link="dcim:modulefamily_list",
+                        name="Module Families",
+                        weight=300,
+                        permissions=[
+                            "dcim.view_modulefamily",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:modulefamily_add",
+                                permissions=[
+                                    "dcim.add_modulefamily",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(
@@ -391,6 +410,15 @@ menu_items = (
                 name="Connections",
                 weight=500,
                 items=(
+                    NavMenuItem(
+                        link="dcim:cabletype_list",
+                        name="Cable Types",
+                        weight=50,
+                        permissions=[
+                            "dcim.view_cabletype",
+                        ],
+                        buttons=(),
+                    ),
                     NavMenuItem(
                         link="dcim:cable_list",
                         name="Cables",
@@ -531,7 +559,8 @@ menu_items = (
     ),
     NavMenuTab(
         name="Power",
-        weight=600,
+        icon=NavigationIconChoices.POWER,
+        weight=NavigationWeightChoices.POWER,
         groups=(
             NavMenuGroup(
                 name="Power",

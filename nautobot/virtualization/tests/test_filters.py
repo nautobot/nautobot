@@ -3,7 +3,7 @@ from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer, Platform, SoftwareVersion
 from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import ServiceProtocolChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, Service, VLAN, VRF, VRFDeviceAssignment
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.filters import (
     ClusterFilterSet,
@@ -191,11 +191,11 @@ class ClusterTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
 
     def test_location(self):
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__in=params["location"])
         )
         params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(location__name__in=params["location"])
         )
 
@@ -219,8 +219,6 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         ("comments",),
         ("disk",),
         ("interfaces", "interfaces__id"),
-        ("location", "cluster__location__id"),
-        ("location", "cluster__location__name"),
         ("mac_address", "interfaces__mac_address"),
         ("memory",),
         ("name",),
@@ -446,6 +444,13 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         vms[0].tags.set(Tag.objects.get_for_model(VirtualMachine))
         vms[1].tags.set(Tag.objects.get_for_model(VirtualMachine)[:3])
 
+        cls.vrfs = (
+            VRF.objects.create(name="VRF 1", rd="1:1", namespace=cls.namespace),
+            VRF.objects.create(name="VRF 2", rd="1:2", namespace=cls.namespace),
+        )
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[0], vrf=cls.vrfs[0])
+        VRFDeviceAssignment.objects.create(virtual_machine=vms[1], vrf=cls.vrfs[1])
+
     def test_filters_generic(self):
         # Assign more than 2 different software versions to VirtualMachine before we test generic filters
         software_versions = list(SoftwareVersion.objects.all())
@@ -463,10 +468,26 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         params = {"comments": ["This is VM 1", "This is VM 2"]}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
 
+    def test_location(self):
+        params = {"location": [self.locations[0].pk]}
+        expected_location_pks = self.locations[0].cacheable_descendants_pks(include_self=True)
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(cluster__location__pk__in=expected_location_pks).distinct(),
+            ordered=False,
+        )
+
+        params = {"location": [self.locations[0].name]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(cluster__location__pk__in=expected_location_pks).distinct(),
+            ordered=False,
+        )
+
     def test_ip_addresses(self):
         ipaddresses = list(IPAddress.objects.filter(vm_interfaces__isnull=False)[:2])
         params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__ip_addresses__in=ipaddresses).distinct(),
         )
@@ -481,26 +502,41 @@ class VirtualMachineTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
     def test_has_primary_ip(self):
         params = {"has_primary_ip": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.exclude(primary_ip4__isnull=True, primary_ip6__isnull=True),
         )
         params = {"has_primary_ip": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(primary_ip4__isnull=True, primary_ip6__isnull=True),
         )
 
     def test_local_config_context_data(self):
         params = {"local_config_context_data": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(local_config_context_data__isnull=False),
         )
         params = {"local_config_context_data": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(local_config_context_data__isnull=True),
+        )
+
+    def test_vrfs(self):
+        params = {"vrfs": [self.vrfs[0].pk, self.vrfs[1].pk]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrfs__in=self.vrfs).distinct(),
+            ordered=False,
+        )
+
+        params = {"vrfs": [self.vrfs[0].rd, self.vrfs[1].rd]}
+        self.assertQuerysetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(vrfs__rd__in=params["vrfs"]).distinct(),
+            ordered=False,
         )
 
 
@@ -641,7 +677,7 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
 
     def test_mode(self):
         params = {"mode": [InterfaceModeChoices.MODE_ACCESS]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(mode=InterfaceModeChoices.MODE_ACCESS),
         )
@@ -649,19 +685,19 @@ class VMInterfaceTestCase(FilterTestCases.FilterTestCase):
     def test_ip_addresses(self):
         ipaddresses = list(IPAddress.objects.filter(vm_interfaces__isnull=False)[:2])
         params = {"ip_addresses": [ipaddresses[0].address, ipaddresses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(ip_addresses__in=ipaddresses),
         )
 
     def test_assigned_to_interface(self):
         params = {"enabled": "true"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(enabled=True),
         )
         params = {"enabled": "false"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(enabled=False),
         )

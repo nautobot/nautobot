@@ -7,7 +7,6 @@ from django.utils.hashable import make_hashable
 
 from nautobot.core.models.fields import ForeignKeyLimitedByContentTypes
 from nautobot.core.models.name_color_content_types import NameColorContentTypesModel
-from nautobot.core.utils.deprecation import class_deprecated
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 
@@ -98,17 +97,3 @@ class StatusField(ForeignKeyLimitedByContentTypes):
                 f"get_{self.name}_color",
                 partialmethod(_get_FIELD_color, field=self),
             )
-
-
-@class_deprecated(message="please directly declare `status = StatusField(...)` on your model instead")
-class StatusModel(models.Model):
-    """
-    Deprecated abstract base class for any model which may have statuses.
-
-    Just directly include a StatusField instead for any new models.
-    """
-
-    status = StatusField(null=True)  # for backward compatibility
-
-    class Meta:
-        abstract = True

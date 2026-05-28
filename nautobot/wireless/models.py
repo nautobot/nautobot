@@ -92,7 +92,7 @@ class RadioProfile(PrimaryModel):
     rx_power_min = models.IntegerField(
         blank=True,
         null=True,
-        verbose_name="Recieve Power Minimum",
+        verbose_name="Receive Power Minimum",
     )
 
     class Meta:

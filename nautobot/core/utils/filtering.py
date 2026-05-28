@@ -1,9 +1,13 @@
+import logging
 import re
+from typing import Any, Iterable, Mapping
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django_filters import (
     BooleanFilter,
     ChoiceFilter,
+    FilterSet,
     ModelMultipleChoiceFilter,
     MultipleChoiceFilter,
     NumberFilter,
@@ -11,11 +15,28 @@ from django_filters import (
 from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core import exceptions
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
+
+logger = logging.getLogger(__name__)
 
 # Check if field name contains a lookup expr
 # e.g `name__ic` has lookup expr `ic (icontains)` while `name` has no lookup expr
 CONTAINS_LOOKUP_EXPR_RE = re.compile(r"(?<=__)\w+")
+
+MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING = {
+    "approval_workflow_definitions": "approval_workflows",
+    "cables": "cable_terminations",
+    "data_compliance": "custom_validators",
+    "location_types": "locations",
+    "metadata_types": "metadata",
+    "min_max_validation_rules": "custom_validators",
+    "object_metadata": "metadata",
+    "regular_expression_validation_rules": "custom_validators",
+    "relationship_associations": "relationships",
+    "required_validation_rules": "custom_validators",
+    "static_group_associations": "dynamic_groups",
+    "unique_validation_rules": "custom_validators",
+}
 
 
 def build_lookup_label(field_name, _verbose_name):
@@ -92,6 +113,7 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
         BOOLEAN_CHOICES,
         DynamicModelMultipleChoiceField,
         MultipleContentTypeField,
+        MultiValueCharInput,
         StaticSelect2,
         StaticSelect2Multiple,
     )
@@ -112,7 +134,16 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(field, (MultiValueDecimalFilter, MultiValueFloatFilter)):
         form_field = forms.DecimalField()
     elif isinstance(field, NumberFilter):
-        form_field = forms.IntegerField()
+        # If "choices" are passed, then when 'exact' is used in an Advanced
+        # Filter, render a dropdown of choices instead of a free integer input
+        if field.lookup_expr == "exact" and getattr(field, "choices", None):
+            # Use a multi-value widget that allows both preset choices and free-form entries
+            form_field = forms.MultipleChoiceField(
+                choices=field.choices,
+                widget=MultiValueCharInput,
+            )
+        else:
+            form_field = forms.IntegerField()
     elif isinstance(field, ModelMultipleChoiceFilter):
         if getattr(field, "prefers_id", False):
             to_field_name = "id"
@@ -131,18 +162,11 @@ def get_filterset_parameter_form_field(model, parameter, filterset=None):
     elif isinstance(
         field, ContentTypeMultipleChoiceFilter
     ):  # While there are other objects using `ContentTypeMultipleChoiceFilter`, the case where
-        # models that have such a filter and the `verbose_name_plural` has multiple words is ony one: "dynamic groups".
+        # models that have such a filter and the `verbose_name_plural` does not match, we can lookup the feature name.
         from nautobot.core.models.fields import slugify_dashes_to_underscores  # Avoid circular import
 
         plural_name = slugify_dashes_to_underscores(model._meta.verbose_name_plural)
-
-        # Cable-connectable models use "cable_terminations", not "cables", as the feature name
-        if plural_name == "cables":
-            plural_name = "cable_terminations"
-        elif plural_name == "metadata_types":
-            plural_name = "metadata"
-        elif plural_name == "object_metadata":
-            plural_name = "metadata"
+        plural_name = MODEL_VERBOSE_NAME_PLURAL_TO_FEATURE_NAME_MAPPING.get(plural_name, plural_name)
         try:
             form_field = MultipleContentTypeField(choices_as_strings=True, feature=plural_name)
         except KeyError:
@@ -201,3 +225,68 @@ def _field_name_to_display(field_name):
     split_field = field_name.split("__") if "__" in field_name else field_name.split("_")
     words = " ".join(split_field)
     return words[0].upper() + words[1:]
+
+
+def build_filter_dict_from_filterset(
+    filterset_class: type[FilterSet],
+    form_data: Mapping[str, Any],
+    filter_fields: Iterable[str] | None = None,
+    *,
+    logs_prefix: object | None = None,
+) -> dict[str, Any]:
+    # Populate the filterset from the incoming `form_data`. The filterset's internal form is
+    # used for validation, will be used by us to extract cleaned data for final processing.
+    filterset = filterset_class(form_data)
+
+    # Use the auto-generated filterset form perform creation of the filter dictionary.
+    filterset_form = filterset.form
+
+    # Get the declared form for any overloaded form field definitions.
+    declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
+
+    # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
+    # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
+    # filterset form, but will also catch errors in case a user-created dict is provided instead.
+    if not filterset_form.is_valid():
+        raise ValidationError(filterset_form.errors)
+
+    logs_prefix = logs_prefix or filterset_class.__name__
+
+    # Perform some type coercions so that they are URL-friendly and reversible, excluding any
+    # empty/null value fields.
+    new_filter = {}
+    allowed_fields = filter_fields or filterset_form.fields.keys()
+
+    for field_name in allowed_fields:
+        field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
+        field_value = filterset_form.cleaned_data[field_name]
+
+        # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
+        # and literal FilterSet fields (ex: MultiValueCharFilter).
+        if isinstance(field, forms.ModelMultipleChoiceField):
+            if not field_value:
+                continue
+            field_to_query = field.to_field_name or "pk"
+            new_value = [getattr(item, field_to_query) for item in field_value]
+
+        elif isinstance(field, forms.ModelChoiceField):
+            if not field_value:
+                continue
+            field_to_query = field.to_field_name or "pk"
+            if isinstance(field_value, list):
+                new_value = [getattr(item, field_to_query) for item in field_value]
+            else:
+                new_value = getattr(field_value, field_to_query, None)
+
+        else:
+            new_value = field_value
+
+        # Don't store empty values like `None`, [], etc.
+        if new_value in (None, "", [], {}, ()):
+            logger.debug("[%s] Not storing empty value (%s) for %s", logs_prefix, field_value, field_name)
+            continue
+
+        logger.debug("[%s] Setting filter field {%s: %s}", logs_prefix, field_name, field_value)
+        new_filter[field_name] = new_value
+
+    return new_filter

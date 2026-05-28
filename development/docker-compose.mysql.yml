@@ -3,12 +3,21 @@ services:
   nautobot:
     environment:
       - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+    volumes:
+      # Add mariadb client configuration file to standard location
+      - ./mariadb-client.cnf:/etc/my.cnf
   celery_worker:
     environment:
       - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+    volumes:
+      # Add mariadb client configuration file to standard location
+      - ./mariadb-client.cnf:/etc/my.cnf
   celery_beat:
     environment:
       - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+    volumes:
+      # Add mariadb client configuration file to standard location
+      - ./mariadb-client.cnf:/etc/my.cnf
   db:
     image: mysql:8
     env_file:

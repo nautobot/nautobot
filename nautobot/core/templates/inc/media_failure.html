@@ -1,0 +1,73 @@
+{% load static %}
+
+<script>
+    (function initMediaFailure() {
+        // Create React-style `ref` reference to the media failure alert element.
+        const failureAlertRef = { current: null };
+
+        // Store all media failures inside `Map` containing `Set` values to ensure uniqueness of all reported failures.
+        const failures = new Map();
+
+        function handleFailure(element) {
+            const url = element.href || element.src || '';
+
+            if (url) {
+                // Update `failures` with a proper entry corresponding to the current media failure and update media failure alert.
+                const elements = failures.get(url) || new Set();
+                elements.add(element);
+                failures.set(url, elements);
+                updateFailureAlert();
+            }
+        }
+
+        function updateFailureAlert() {
+            const count = Array.from(failures.values()).reduce((count, elements) => count + elements.size, 0);
+
+            const innerHTML = `
+                <div style="margin: auto; max-width: 50rem;">
+                    <h2 style="margin-top: 0; text-align: center;">Static Media Failure</h2>
+                    <p><strong>${count}</strong> static media file${count > 1 ? 's' : ''} failed to load.</p>
+                    <p style="margin-bottom: 0;">
+                        Check whether
+                        <code><strong>nautobot-server collectstatic</strong></code>
+                        was run during the most recent upgrade and that the HTTP service (e.g. NGINX) is configured to serve static files.
+                        Refer to
+                        <a href="https://docs.nautobot.com/projects/core/en/v{{ settings.VERSION }}/installation/http-server/#static-media-failure" target="_blank">
+                            the installation documentation
+                        </a>
+                        for further guidance.
+                    </p>
+                </div>
+            `;
+
+            // If media failure alert already exists, just update its content and return early.
+            if (failureAlertRef.current) {
+                failureAlertRef.current.innerHTML = innerHTML;
+                return;
+            }
+
+            // If media failure alert does not exist yet, create one.
+            const alert = document.createElement('div');
+            alert.classList.add('alert', 'alert-danger', 'media-failure-banner');
+            alert.setAttribute('role', 'alert');
+            alert.innerHTML = innerHTML;
+
+            // Copy and hardcode Bootstrap `"alert alert-danger"` styles here to make the alert core styles independent of other CSS.
+            alert.style.setProperty('background-color', 'var(--bs-alert-bg, var(--bs-danger-bg-subtle, #fce8e8))');
+            alert.style.setProperty('border', 'var(--bs-alert-border, var(--bs-border-width, 0.0625rem) solid var(--bs-alert-border-color, var(--bs-danger-border-subtle, #f9d2d2)))');
+            alert.style.setProperty('border-radius', '0');
+            alert.style.setProperty('color', 'var(--bs-alert-color, var(--bs-danger-text-emphasis, #e01f1f))');
+            alert.style.setProperty('grid-area', 'banner-global-area');
+            alert.style.setProperty('padding', 'var(--bs-alert-padding-y, 1rem) 1.25rem');
+            alert.style.setProperty('position', 'relative');
+
+            // Update React-style `ref` to simplify later alert updates if required and place the alert as the first child of document body.
+            failureAlertRef.current = alert;
+            document.body.prepend(alert);
+        }
+
+        // Export `media` "API" to `window` global object to enable accessing it from other scripts.
+        window.nb = window.nb || {};
+        window.nb.media = { failures, handleFailure }
+    })();
+</script>

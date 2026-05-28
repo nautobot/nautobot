@@ -77,7 +77,7 @@ Added a `range` field on the `VLANGroup` model with a default value of `1-4094`.
 
 #### Saved Views ([#1758](https://github.com/nautobot/nautobot/issues/1758))
 
-Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/savedview.md) documentation for more details and on how to use saved views.
+Added the ability for users to save multiple configurations of list views (table columns, filtering, pagination and sorting) for ease of later use and reuse. Refer to the [Saved View](../user-guide/platform-functionality/user-interface/savedview.md) documentation for more details and on how to use saved views.
 
 #### Worker Status Page ([#5873](https://github.com/nautobot/nautobot/issues/5873))
 

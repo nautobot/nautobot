@@ -7,7 +7,7 @@ from nautobot.core.filters import (
     RelatedMembershipBooleanFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import ControllerManagedDeviceGroup
+from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
 from nautobot.tenancy.filters import TenancyModelFilterSetMixin
@@ -31,7 +31,6 @@ class SupportedDataRateFilterSet(BaseFilterSet):
     radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
-        label="Radio Profile (name or ID)",
     )
     has_radio_profiles = RelatedMembershipBooleanFilter(
         field_name="radio_profiles",
@@ -66,7 +65,11 @@ class RadioProfileFilterSet(NautobotFilterSet):
     controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Controller Managed Device Groups (name or ID)",
+    )
+    controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Device.objects.all(),
+        to_field_name="name",
     )
     has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
         field_name="controller_managed_device_groups",
@@ -99,12 +102,19 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
-        label="Secrets group (name or ID)",
     )
     controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Controller Managed Device Groups (name or ID)",
+    )
+    controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        queryset=Device.objects.all(),
+        to_field_name="name",
+    )
+    controller_managed_device_groups__controller = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Controller.objects.all(),
+        to_field_name="name",
     )
     has_controller_managed_device_groups = RelatedMembershipBooleanFilter(
         field_name="controller_managed_device_groups",
@@ -128,13 +138,11 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet(BaseFilterS
         field_name="controller_managed_device_group",
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Controller Managed Device Group (name or ID)",
     )
     wireless_network = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="wireless_network",
         queryset=models.WirelessNetwork.objects.all(),
         to_field_name="name",
-        label="Wireless Network (name or ID)",
     )
 
     class Meta:
@@ -153,13 +161,11 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet(BaseFilterSet)
         field_name="controller_managed_device_group",
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
-        label="Controller Managed Device Group (name or ID)",
     )
     radio_profile = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="radio_profile",
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
-        label="Radio Profile (name or ID)",
     )
 
     class Meta:

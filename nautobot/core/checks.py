@@ -6,6 +6,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import connections
 
+from nautobot.core.utils.config import get_settings_or_config
+from nautobot.dcim.choices import DeviceUniquenessChoices
+
 E002 = Error(
     "'nautobot.core.authentication.ObjectPermissionBackend' must be included in AUTHENTICATION_BACKENDS",
     id="nautobot.core.E002",
@@ -30,13 +33,45 @@ E005 = Error(
     obj=settings,
 )
 
-W005 = Warning(
-    "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="nautobot.core.W005",
+E006 = Error(
+    "The Data Validation Engine app has been moved directly into Nautobot Core.  Please remove 'nautobot_data_validation_engine' from PLUGINS and PLUGINS_CONFIG in your nautobot_config.py.  After running Nautobot migrations successfully, you can then also uninstall 'nautobot-data-validation-engine' from the Python environment.",
+    id="nautobot.core.E006",
     obj=settings,
 )
 
-MIN_POSTGRESQL_MAJOR_VERSION = 12
+# E007 and E008 are dynamically constructed inline below
+
+E009 = Error(
+    "You appear to have overridden settings.STORAGES incorrectly. "
+    "In addition to the Django standard keys of 'default' and 'staticfiles', "
+    "Nautobot also requires the key 'nautobotjobfiles' to define storage configuration for Job input/output files.",
+    hint='Nautobot defaults to setting STORAGES["nautobotjobfiles"]["BACKEND"] to '
+    '"db_file_storage.storage.DatabaseFileStorage", but in many cases you should override this. '
+    "Refer to https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
+    id="nautobot.core.E009",
+    obj=settings,
+)
+
+# E010 is dynamically constructed inline below
+
+# W005 was removed in v3.1.
+
+W006 = Warning(
+    "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
+    hint="This setting has been superseded by DEVICE_UNIQUENESS (see Device Constraints).",
+    id="nautobot.core.W006",
+    obj=settings,
+)
+
+W007 = Warning(
+    "Invalid DEVICE_UNIQUENESS configuration value.",
+    hint=f"DEVICE_UNIQUENESS must be one of: {', '.join(DeviceUniquenessChoices.values())}.",
+    id="nautobot.core.W007",
+)
+
+# W008 was removed in v3.1.
+
+MIN_POSTGRESQL_MAJOR_VERSION = 14
 MIN_POSTGRESQL_MINOR_VERSION = 0
 
 MIN_POSTGRESQL_VERSION = MIN_POSTGRESQL_MAJOR_VERSION * 10000 + MIN_POSTGRESQL_MINOR_VERSION
@@ -64,13 +99,6 @@ def check_release_check_url(app_configs, **kwargs):
             validator(settings.RELEASE_CHECK_URL)
         except ValidationError:
             return [E004]
-    return []
-
-
-@register(Tags.compatibility)
-def check_storage_config_and_backend(app_configs, **kwargs):
-    if settings.STORAGE_CONFIG and (settings.STORAGE_BACKEND is None):
-        return [W005]
     return []
 
 
@@ -135,6 +163,76 @@ def check_sanitizer_patterns(app_configs, **kwargs):
                     hint=str(exc),
                     obj=entry,
                     id="nautobot.core.E008",
+                )
+            )
+
+    return errors
+
+
+@register(Tags.compatibility)
+def check_data_validation_engine_installed(app_configs, **kwargs):
+    app_name = "nautobot_data_validation_engine"
+    if app_name in settings.PLUGINS or app_name in settings.PLUGINS_CONFIG:
+        return [E006]
+    return []
+
+
+@register(Tags.compatibility)
+def check_storages_includes_nautobotjobfiles(app_configs, **kwargs):
+    if "nautobotjobfiles" not in settings.STORAGES:
+        return [E009]
+    return []
+
+
+@register(Tags.compatibility)
+def check_deprecated_device_name_as_natural_key(app_configs, **kwargs):
+    """
+    Warn if the deprecated DEVICE_NAME_AS_NATURAL_KEY setting is still defined.
+
+    This setting existed prior to 3.0 and has been replaced by the
+    DEVICE_UNIQUENESS Constance configuration.
+    """
+    try:
+        get_settings_or_config("DEVICE_NAME_AS_NATURAL_KEY")
+        return [W006]
+    except AttributeError:
+        pass
+    return []
+
+
+@register(Tags.compatibility)
+def check_valid_value_for_device_uniqueness(app_configs, **kwargs):
+    """
+    Warn if the invalid value for DEVICE_UNIQUENESS is set.
+    """
+    try:
+        device_uniqueness = get_settings_or_config("DEVICE_UNIQUENESS")
+        if device_uniqueness not in DeviceUniquenessChoices.values():
+            return [W007]
+    except AttributeError:
+        return [W007]
+    return []
+
+
+@register(Tags.compatibility)
+def check_for_removed_storage_settings(app_configs, **kwargs):
+    """Warn if any removed storage settings are set."""
+    errors = []
+    for setting_name, replacement in [
+        ("DEFAULT_FILE_STORAGE", 'STORAGES["default"]["BACKEND"]'),
+        ("JOB_FILE_IO_STORAGE", 'STORAGES["nautobotjobfiles"]["BACKEND"]'),
+        ("STATICFILES_STORAGE", 'STORAGES["staticfiles"]["BACKEND"]'),
+        ("STORAGE_CONFIG", 'STORAGES[...]["OPTIONS"]'),
+        ("STORAGE_BACKEND", 'STORAGES["default"]["BACKEND"]'),
+    ]:
+        if settings.is_overridden(setting_name):
+            errors.append(
+                Error(
+                    msg=f"The setting {setting_name} is no longer supported in Nautobot 3.1 and later.",
+                    hint=f"You must migrate to setting {replacement} instead. Refer to "
+                    "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
+                    obj=settings,
+                    id="nautobot.core.E010",
                 )
             )
 

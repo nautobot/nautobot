@@ -194,6 +194,9 @@ class ButtonActionColorChoices(ChoiceSet):
     EXPORT = "success"
     IMPORT = "primary"
     INFO = "info"
+    RENAME = "warning"
+    RERUN = "success"
+    RUN = "primary"
     SUBMIT = "primary"
     SWAP = "primary"
 
@@ -210,6 +213,9 @@ class ButtonActionColorChoices(ChoiceSet):
         (EXPORT, "Export"),
         (IMPORT, "Import"),
         (INFO, "Info"),
+        (RENAME, "Rename"),
+        (RERUN, "Rerun"),
+        (RUN, "Run"),
         (SUBMIT, "Submit"),
         (SWAP, "Swap"),
     )
@@ -236,6 +242,7 @@ class ButtonActionIconChoices(ChoiceSet):
     LOCK = "mdi-lock"
     MAGNIFY = "mdi-magnify"
     NOTE = "mdi-note-text"
+    RENAME = "mdi-rename"
     SWAP = "mdi-swap-vertical"
     TRASH = "mdi-trash-can-outline"
 
@@ -256,6 +263,7 @@ class ButtonActionIconChoices(ChoiceSet):
         (LOCK, "Lock"),
         (MAGNIFY, "Magnify"),
         (NOTE, "Note"),
+        (RENAME, "Rename"),
         (SWAP, "Swap"),
         (TRASH, "Trash"),
     )

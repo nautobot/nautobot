@@ -41,10 +41,10 @@ def swap_status_initials(data):
 
 def convert_git_diff_log_to_list(logs):
     """
-    Convert Git diff log into a list splitted by \\n
+    Convert Git diff log into a list splitted by `\\n`
 
-    Example:
-        >>> git_log = "M\tindex.html\nR\tsample.txt"
+    Examples:
+        >>> git_log = "M\\tindex.html\\nR\\tsample.txt"
         >>> print(convert_git_diff_log_to_list(git_log))
         ["Modification - index.html", "Renaming - sample.txt"]
     """
@@ -54,6 +54,50 @@ def convert_git_diff_log_to_list(logs):
 
 class BranchDoesNotExist(Exception):
     pass
+
+
+# Upper bound for commit identifiers; matches `GitRepository.current_head`'s `max_length=48`.
+MAX_COMMIT_HEXSHA_LENGTH = 48
+MIN_COMMIT_HEXSHA_LENGTH = 4
+
+
+def validate_git_ref(value, field_name="branch"):
+    """Validate a git ref name (branch, tag, or commit identifier).
+
+    Rejects values that aren't strings, are empty, contain whitespace, or start with `-`
+    (which git CLI would parse as an option rather than a ref).
+
+    Raises:
+        ValueError: If `value` fails any of the above checks.
+    """
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be a non-empty string")
+    if any(c.isspace() for c in value):
+        raise ValueError(f"Invalid {field_name} {value!r}: must not contain whitespace")
+    if value.startswith("-"):
+        raise ValueError(f"Invalid {field_name} {value!r}: must not start with '-'")
+
+
+def validate_commit_hexsha(value, field_name="commit_hexsha"):
+    """Validate a (possibly abbreviated) commit hash.
+
+    Empty string and None are accepted as "no commit specified". Any non-empty value must be
+    a hexadecimal string of length 4-48 (matching `GitRepository.current_head`'s `max_length`).
+
+    Raises:
+        ValueError: If `value` is non-empty and not a valid hex commit identifier.
+    """
+    if not value:
+        return
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string if provided")
+    if not (MIN_COMMIT_HEXSHA_LENGTH <= len(value) <= MAX_COMMIT_HEXSHA_LENGTH) or not set(value).issubset(
+        string.hexdigits
+    ):
+        raise ValueError(
+            f"Invalid {field_name} {value!r}: "
+            f"must be {MIN_COMMIT_HEXSHA_LENGTH}-{MAX_COMMIT_HEXSHA_LENGTH} hexadecimal characters"
+        )
 
 
 class GitRepo:
@@ -67,7 +111,12 @@ class GitRepo:
             clone_initially (bool): True if the repo needs to be cloned
             branch (str): branch to checkout
             depth (int): depth of the clone
+
+        Raises:
+            ValueError: If `branch` is provided and contains whitespace or starts with `-`.
         """
+        if branch is not None:
+            validate_git_ref(branch, field_name="branch")
         self.url = url
         self.sanitized_url = sanitize(url)
         if os.path.isdir(path) and os.path.isdir(os.path.join(path, ".git")):
@@ -106,15 +155,32 @@ class GitRepo:
         If `commit_hexsha` is specified and `branch` is either a tag or a commit identifier, they must match.
         If `commit_hexsha` is specified and `branch` is a branch name, it must contain the specified commit.
 
+        Raises:
+            ValueError: If `branch` is empty, or if `branch` or `commit_hexsha` contain whitespace
+                or start with `-` (which git CLI would parse as an option).
+
         Returns:
             (str, bool): commit_hexsha the repo contains now, and whether any change occurred
         """
+        validate_git_ref(branch, field_name="branch")
+        # `commit_hexsha` is named for its primary use, but in practice callers (e.g.
+        # `GitRepository.clone_to_directory`) also pass tag names here. We only validate
+        # the shape needed to prevent CLI argument injection — strict hex validation lives
+        # on the model field where the value is genuinely a hash.
+        if commit_hexsha:
+            validate_git_ref(commit_hexsha, field_name="commit_hexsha")
+
         # Short-circuit logic - do we already have this commit checked out?
         if commit_hexsha and self.head.startswith(commit_hexsha):
             logger.debug(f"Commit {commit_hexsha} is already checked out.")
             return (self.head, False)
         # User might specify the commit as a "branch" name...
-        if not commit_hexsha and set(branch).issubset(string.hexdigits) and self.head.startswith(branch):
+        if (
+            not commit_hexsha
+            and len(branch) >= MIN_COMMIT_HEXSHA_LENGTH
+            and set(branch).issubset(string.hexdigits)
+            and self.head.startswith(branch)
+        ):
             logger.debug("Commit %s is already checked out.", branch)
             return (self.head, False)
 
@@ -122,7 +188,8 @@ class GitRepo:
         # Is `branch` actually a branch, a tag, or a commit? Heuristics:
         is_branch = branch in self.repo.remotes.origin.refs
         is_tag = branch in self.repo.tags
-        maybe_commit = set(branch).issubset(string.hexdigits)
+        # Hex-only strings shorter than MIN_COMMIT_HEXSHA_LENGTH could just as easily be ref names.
+        maybe_commit = len(branch) >= MIN_COMMIT_HEXSHA_LENGTH and set(branch).issubset(string.hexdigits)
         logger.debug(
             "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s",
             branch,
@@ -205,12 +272,19 @@ class GitRepo:
         )
 
     def diff_remote(self, branch):
+        """Diff the local working tree against the named remote branch/tag/commit.
+
+        Raises:
+            ValueError: If `branch` is empty, contains whitespace, or starts with `-`.
+        """
+        validate_git_ref(branch, field_name="branch")
         logger.debug("Fetching from remote.")
         self.fetch()
         # Is `branch` actually a branch, a tag, or a commit? Heuristics:
         is_branch = branch in self.repo.remotes.origin.refs
         is_tag = branch in self.repo.tags
-        maybe_commit = set(branch).issubset(string.hexdigits)
+        # Hex-only strings shorter than MIN_COMMIT_HEXSHA_LENGTH could just as easily be ref names.
+        maybe_commit = len(branch) >= MIN_COMMIT_HEXSHA_LENGTH and set(branch).issubset(string.hexdigits)
         logger.debug(
             "Branch %s --> is_branch: %s, is_tag: %s, maybe_commit: %s",
             branch,

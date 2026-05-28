@@ -1,5 +1,5 @@
-from collections import OrderedDict
-from datetime import date, datetime
+from collections import defaultdict, OrderedDict
+from datetime import date, datetime, timezone as datetime_timezone
 import json
 import logging
 import re
@@ -10,9 +10,11 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import RegexValidator, ValidationError
-from django.db import models, transaction
+from django.db import models
+from django.db.models import Model
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
+from jinja2 import TemplateError, TemplateSyntaxError
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -21,6 +23,7 @@ from nautobot.core.forms import (
     CSVChoiceField,
     CSVMultipleChoiceField,
     DatePicker,
+    DateTimePicker,
     JSONField,
     LaxURLField,
     MultiValueCharInput,
@@ -35,11 +38,13 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.data import render_jinja2
+from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.data import render_jinja2, validate_jinja2
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
+from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
-from nautobot.extras.tasks import delete_custom_field_data, update_custom_field_choice_data
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
@@ -48,20 +53,74 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model):
+    def get_for_model(self, model, get_queryset=True):
         """
         Return all ComputedFields assigned to the given model.
+
+        Returns a queryset by default, or a list if `get_queryset` param is False.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        cache_key = construct_cache_key(
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
+        list_cache_key = construct_cache_key(
+            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_type=content_type)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
+        if not get_queryset:
+            listing = list(queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
+            return listing
         return queryset
 
-    get_for_model.cache_key_prefix = "nautobot.extras.computedfield.get_for_model"
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` lookups."""
+        queryset = self.all().select_related("content_type")
+        listings = defaultdict(list)
+        for cf in queryset:
+            listings[f"{cf.content_type.app_label}.{cf.content_type.model}"].append(cf)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            cache_key = construct_cache_key(
+                self, method_name="get_for_model", branch_aware=True, model=label, listing=True
+            )
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, listings[label], timeout=None)
+
+    def bulk_create(self, objs, *args, **kwargs):
+        """Validate templates before saving."""
+        self._validate_templates_bulk(objs)
+        return super().bulk_create(objs, *args, **kwargs)
+
+    def bulk_update(self, objs, fields, *args, **kwargs):
+        """Validate templates before updating if template field is being modified."""
+        if "template" in fields:
+            self._validate_templates_bulk(objs)
+
+        return super().bulk_update(objs, fields, *args, **kwargs)
+
+    def _validate_templates_bulk(self, objs):
+        """Helper method to validate templates for multiple objects."""
+        errors = []
+        for obj in objs:
+            try:
+                obj.validate_template()
+            except ValidationError as exc:
+                message_list = [f"'{obj.label}': {x}" for x in exc.messages]
+                errors.extend(message_list)
+
+        if errors:
+            raise ValidationError(f"Template validation failed - {'; '.join(errors)}")
 
 
 @extras_features("graphql")
@@ -123,14 +182,7 @@ class ComputedField(
 
     def render(self, context):
         try:
-            rendered = render_jinja2(self.template, context)
-            # If there is an undefined variable within a template, it returns nothing
-            # Doesn't raise an exception either most likely due to using Undefined rather
-            # than StrictUndefined, but return fallback_value if None is returned
-            if rendered is None:
-                logger.warning("Failed to render computed field %s", self.key)
-                return self.fallback_value
-            return rendered
+            return render_jinja2(self.template, context)
         except Exception as exc:
             logger.warning("Failed to render computed field %s: %s", self.key, exc)
             return self.fallback_value
@@ -141,8 +193,25 @@ class ComputedField(
 
     def clean(self):
         super().clean()
+
+        self.validate_template()
+
         if self.key != "":
             check_if_key_is_graphql_safe(self.__class__.__name__, self.key)
+
+    def validate_template(self):
+        """
+        Validate that the template contains valid Jinja2 syntax.
+        """
+        try:
+            validate_jinja2(self.template)
+        except TemplateSyntaxError as exc:
+            raise ValidationError({"template": f"Template syntax error on line {exc.lineno}: {exc.message}"})
+        except TemplateError as exc:
+            raise ValidationError({"template": f"Template error: {exc}"})
+        except Exception as exc:
+            # System-level exceptions (very rare) - memory, recursion, encoding issues
+            raise ValidationError(f"Template validation failed: {exc}")
 
 
 class CustomFieldModel(models.Model):
@@ -226,7 +295,8 @@ class CustomFieldModel(models.Model):
 
     def get_custom_field_groupings(self, advanced_ui=None):
         """
-        Return a dictonary of custom fields grouped by the same grouping in the form
+        Return a dictonary of custom fields grouped by the same grouping in the form except fields
+        that shouldn't be rendered due to `scope_filter` set on given field.
         {
             <grouping_1>: [(cf1, <value for cf1>), (cf2, <value for cf2>), ...],
             ...
@@ -240,6 +310,8 @@ class CustomFieldModel(models.Model):
             fields = fields.filter(advanced_ui=advanced_ui)
 
         for field in fields:
+            if not field.should_render(instance=self):
+                continue
             data = (field, self.cf.get(field.key))
             record.setdefault(field.grouping, []).append(data)
         record = dict(sorted(record.items()))
@@ -257,7 +329,9 @@ class CustomFieldModel(models.Model):
                 logger.warning(f"Unknown field key '{field_key}' in custom field data for {self} ({self.pk}).")
                 continue
             try:
-                self._custom_field_data[field_key] = custom_fields[field_key].validate(value)
+                self._custom_field_data[field_key] = custom_fields[field_key].validate(
+                    value,
+                )
             except ValidationError as e:
                 raise ValidationError(f"Invalid value for custom field '{field_key}': {e.message}")
 
@@ -370,40 +444,107 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, exclude_filter_disabled=False):
+    def get_for_model(self, model, exclude_filter_disabled=False, get_queryset=True):
         """
         Return (and cache) all CustomFields assigned to the given model.
 
         Args:
             model (Model): The django model to which custom fields are registered
             exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
+            get_queryset (bool): Whether to return a QuerySet or a list.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = (
-            f"{self.get_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}.{exclude_filter_disabled}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            exclude_filter_disabled=exclude_filter_disabled,
         )
+        list_cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            exclude_filter_disabled=exclude_filter_disabled,
+            listing=True,
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, queryset, timeout=None)
+        if not get_queryset:
+            listing = list(queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
+            return listing
         return queryset
-
-    get_for_model.cache_key_prefix = "nautobot.extras.customfield.get_for_model"
 
     def keys_for_model(self, model):
         """Return list of all keys for CustomFields assigned to the given model."""
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.keys_for_model.cache_key_prefix}.{concrete_model._meta.label_lower}"
+        cache_key = construct_cache_key(
+            self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+        )
         keys = cache.get(cache_key)
         if keys is None:
             keys = list(self.get_for_model(model).values_list("key", flat=True))
-            cache.set(cache_key, keys)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(cache_key, keys, timeout=None)
         return keys
 
-    keys_for_model.cache_key_prefix = "nautobot.extras.customfield.keys_for_model"
+    def populate_list_caches(self):
+        """Populate all caches for `get_for_model(..., get_queryset=False)` and `keys_for_model` lookups."""
+        queryset = self.all().prefetch_related("content_types")
+        cf_listings = defaultdict(lambda: defaultdict(list))
+        key_listings = defaultdict(list)
+        for cf in queryset:
+            for ct in cf.content_types.all():
+                label = f"{ct.app_label}.{ct.model}"
+                cf_listings[label][False].append(cf)
+                if cf.filter_logic != CustomFieldFilterLogicChoices.FILTER_DISABLED:
+                    cf_listings[label][True].append(cf)
+                key_listings[label].append(cf.key)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            cache.set(
+                construct_cache_key(
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=True,
+                ),
+                cf_listings[label][True],
+                timeout=None,
+            )
+            cache.set(
+                construct_cache_key(
+                    self,
+                    method_name="get_for_model",
+                    branch_aware=True,
+                    model=label,
+                    exclude_filter_disabled=True,
+                    listing=False,
+                ),
+                cf_listings[label][False],
+                timeout=None,
+            )
+            cache.set(
+                construct_cache_key(self, method_name="keys_for_model", branch_aware=True, model=label),
+                key_listings[label],
+                timeout=None,
+            )
 
 
 @extras_features("webhooks")
@@ -465,8 +606,7 @@ class CustomField(
         blank=True,
         null=True,
         help_text=(
-            "Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "
-            '"Foo").'
+            'Default value for the field (must be a JSON value). Encapsulate strings with double quotes (e.g. "Foo").'
         ),
     )
     weight = models.PositiveSmallIntegerField(
@@ -500,6 +640,13 @@ class CustomField(
         'It will appear in the "Advanced" tab instead.',
     )
 
+    scope_filter = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        editable=False,
+        default=dict,
+        help_text="A JSON-encoded dictionary of filter parameters defining possible objects that can use this custom field.",
+    )
+
     objects = CustomFieldManager()
 
     clone_fields = [
@@ -524,10 +671,6 @@ class CustomField(
         return self.label
 
     @property
-    def choices_cache_key(self):
-        return f"nautobot.extras.customfield.choices.{self.pk}"
-
-    @property
     def choices(self) -> list[str]:
         """
         Cacheable shorthand for retrieving custom_field_choices values associated with this model.
@@ -537,11 +680,46 @@ class CustomField(
         """
         if self.type not in [CustomFieldTypeChoices.TYPE_SELECT, CustomFieldTypeChoices.TYPE_MULTISELECT]:
             return []
-        choices = cache.get(self.choices_cache_key)
+        cache_key = construct_cache_key(self, method_name="choices", branch_aware=True)
+        choices = cache.get(cache_key)
         if choices is None:
             choices = list(self.custom_field_choices.order_by("weight", "value").values_list("value", flat=True))
-            cache.set(self.choices_cache_key, choices)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_choices_cache
+            cache.set(cache_key, choices, timeout=None)
         return choices
+
+    def get_in_scope_queryset(self, queryset, job_logger=logger):
+        """
+        Return a filtered version of `queryset` containing only objects in scope for this field.
+
+        If `self.scope_filter` is empty, `queryset` is returned unchanged.  Falls back to returning
+        `queryset` unchanged if no filterset class exists for the model or the stored filter is invalid,
+        so that any pre-filtering applied by the caller is always preserved.
+        """
+        if not self.scope_filter:
+            return queryset
+
+        model = queryset.model
+        filterset_class = get_filterset_for_model(model)
+        if not filterset_class:
+            job_logger.warning(
+                "Custom field `%s` has scope_filter set but no filterset exists for %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+            )
+            return queryset
+
+        filterset = filterset_class(data=self.scope_filter, queryset=queryset)
+        if not filterset.form.is_valid():
+            job_logger.warning(
+                "Custom field `%s` has an invalid scope_filter for %s: %s; treating all objects as in-scope.",
+                self.key,
+                model._meta.label,
+                filterset.form.errors.as_text(),
+            )
+            return queryset
+
+        return filterset.qs
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -599,6 +777,9 @@ class CustomField(
                 {"default": f"The specified default value ({self.default}) is not listed as an available choice."}
             )
 
+        if self.required and self.scope_filter:
+            raise ValidationError({"required": "Scope filter can't be set, if field is required."})
+
     def to_form_field(
         self,
         set_initial=True,
@@ -651,6 +832,14 @@ class CustomField(
                 required=required,
                 initial=initial,
                 widget=DatePicker(),
+            )
+
+        # DateTime
+        elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+            field = forms.DateTimeField(
+                required=required,
+                initial=initial,
+                widget=DateTimePicker(),
             )
 
         # Text-like fields
@@ -739,7 +928,7 @@ class CustomField(
                 form_field.widget = MultiValueCharInput()
         return form_field
 
-    def validate(self, value):
+    def validate(self, value, enforce_required=True):
         """
         Validate a value according to the field's type validation rules.
 
@@ -798,6 +987,19 @@ class CustomField(
                     except ValueError:
                         raise ValidationError("Date values must be in the format YYYY-MM-DD.")
 
+            # Validate datetime
+            elif self.type == CustomFieldTypeChoices.TYPE_DATETIME:
+                if not isinstance(value, datetime):
+                    try:
+                        value = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                    except ValueError:
+                        raise ValidationError("DateTime values must be in ISO 8601 format.")
+                if value.tzinfo:
+                    value = value.astimezone(datetime_timezone.utc)
+                else:
+                    value = value.replace(tzinfo=datetime_timezone.utc)
+                return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+
             # Validate selected choice
             elif self.type == CustomFieldTypeChoices.TYPE_SELECT:
                 if value not in self.choices:
@@ -811,7 +1013,7 @@ class CustomField(
                         f"Invalid choice(s) ({value}). Available choices are: {', '.join(self.choices)}"
                     )
 
-        elif self.required:
+        elif self.required and enforce_required:
             raise ValidationError("Required field cannot be empty.")
 
         return value
@@ -826,18 +1028,88 @@ class CustomField(
 
         if content_types:
             # Circular Import
-            from nautobot.extras.signals import change_context_state
+            from nautobot.core.jobs import DeleteCustomFieldData
+            from nautobot.extras.customfields import enqueue_custom_field_job
 
-            change_context = change_context_state.get()
-            if change_context is None:
-                context = None
-            else:
-                context = change_context.as_dict(instance=self)
-                context["context_detail"] = "delete custom field data"
-            delete_custom_field_data.delay(self.key, content_types, context)
+            enqueue_custom_field_job(
+                DeleteCustomFieldData,
+                field_key=self.key,
+                content_types=list(content_types),
+            )
 
     def add_prefix_to_cf_key(self):
+        """
+        Add `cf_` prefix to the key for forms and filters usage
+        """
         return "cf_" + str(self.key)
+
+    @property
+    def scope_filter_model_class(self):
+        """
+        Property to fetch model class from first content types assigned to this field.
+        """
+        return self.content_types.all()[0].model_class()
+
+    @property
+    def scope_filter_prefixed(self):
+        """
+        Property to get the scope filter data with `scope-` prefix for forms usage.
+        """
+        if self.scope_filter:
+            return {f"scope-{name}": value for name, value in self.scope_filter.items()}
+        return {}
+
+    def should_render(self, instance: Model) -> bool:
+        """
+        This method is responsible for checking if custom field should be visible on instance DetailView,
+        according to the filters set in `self.scope_filter`.
+
+        Show field if:
+        - there is no `scope_filter` set
+        - `scope_filter` fields match all values from `instance` field,
+        checked by running queryset with PK and filterset based on `scope_filter`
+        - there is no filterset class for this model
+        - stored `scope_filter` data is invalid and will cause form errors
+
+        Hide field if queryset with applied PK and `scope_filter` field won't be found.
+        """
+        if not self.scope_filter:
+            return True
+
+        model_class = instance.__class__
+        filterset_class = get_filterset_for_model(model_class)
+        if not filterset_class:
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but there is no `filterset_class` for {model_class._meta.label}"
+            )
+            return True
+
+        filterset = filterset_class(
+            data=self.scope_filter,
+            queryset=model_class.objects.filter(pk=instance.pk),
+        )
+        filterset_form = filterset.form
+
+        if not filterset_form.is_valid():
+            logger.warning(
+                f"Custom field {self} has `scope_filter` set, but stored data is not valid: {filterset_form.errors.as_text()}"
+            )
+            return True
+
+        return filterset.qs.exists()
+
+    def set_scope_filter(self, form_data):
+        """
+        Set all desired fields from `form_data` into `scope_filter` dict.
+
+        Args:
+            form_data (dict): Dictionary of filter parameters, generally from a filter form's cleaned data.
+        """
+        model_class = self.scope_filter_model_class
+        filterset_class = get_filterset_for_model(model_class)
+
+        new_filter_dict = build_filter_dict_from_filterset(filterset_class, form_data)
+        self.scope_filter = new_filter_dict
 
 
 @extras_features(
@@ -895,21 +1167,14 @@ class CustomFieldChoice(BaseModel, ChangeLoggedModel):
 
         if self.value != database_object.value:
             # Circular Import
-            from nautobot.extras.signals import change_context_state
+            from nautobot.core.jobs import UpdateCustomFieldChoiceData
+            from nautobot.extras.customfields import enqueue_custom_field_job
 
-            change_context = change_context_state.get()
-            if change_context is None:
-                context = None
-            else:
-                context = change_context.as_dict(instance=self)
-                context["context_detail"] = "update custom field choice data"
-            transaction.on_commit(
-                lambda: update_custom_field_choice_data.delay(
-                    self.custom_field.pk,
-                    database_object.value,
-                    self.value,
-                    context,
-                )
+            enqueue_custom_field_job(
+                UpdateCustomFieldChoiceData,
+                field=str(self.custom_field.pk),
+                old_value=database_object.value,
+                new_value=self.value,
             )
 
     def delete(self, *args, **kwargs):

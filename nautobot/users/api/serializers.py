@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import Group
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -27,6 +28,8 @@ class UserSerializer(ValidatedModelSerializer):
         validated_data = super().validate(attrs)
         if mock_password:
             validated_data["password"] = None
+        elif "password" in validated_data:
+            validate_password(validated_data["password"], user=self.instance)
         return validated_data
 
     def create(self, validated_data):

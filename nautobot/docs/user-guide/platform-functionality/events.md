@@ -110,6 +110,7 @@ The data payload associated with events of any of the above topics has the follo
 
 * `nautobot.jobs.approval.approved` - A scheduled job that requires approval has been approved.
 * `nautobot.jobs.approval.denied` - A scheduled job that requires approval has been denied.
+* `nautobot.jobs.approval.canceled` - A scheduled job that requires approval has been canceled.
 
 The data payload associated with events of any of the above topics has the following keys:
 
@@ -141,7 +142,7 @@ The data payload associated with events of any of the above topics has the follo
                 "date_changed": "2024-10-28T08:25:32.640275Z",
                 "description": "",
                 "approval_required": true,
-                "approved_at": null,
+                "decision_date": null,
                 "crontab": "",
                 "job_model": {
                     "id": "d56857d7-d0b5-42e2-8bc5-b93c3cee4da9",
@@ -170,7 +171,6 @@ The data payload associated with events of any of the above topics has the follo
                     "is_job_hook_receiver": false,
                     "is_job_button_receiver": false,
                     "has_sensitive_variables": true,
-                    "approval_required": false,
                     "hidden": false,
                     "dryrun_default": false,
                     "read_only": false,
@@ -180,7 +180,6 @@ The data payload associated with events of any of the above topics has the follo
                     "grouping_override": false,
                     "name_override": false,
                     "description_override": false,
-                    "approval_required_override": false,
                     "dryrun_default_override": false,
                     "hidden_override": false,
                     "soft_time_limit_override": false,
@@ -216,7 +215,6 @@ The data payload associated with events of any of the above topics has the follo
                     "date_joined": "2024-10-28T08:25:32.617444Z",
                     "config_data": {}
                 },
-                "approved_by_user": null
             }
         }
      ```

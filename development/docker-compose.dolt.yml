@@ -1,0 +1,28 @@
+---
+services:
+  nautobot:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+  celery_worker:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+  celery_beat:
+    environment:
+      - "NAUTOBOT_DB_ENGINE=django_prometheus.db.backends.mysql"
+  db:
+    build:
+      context: "../"
+      dockerfile: "development/Dockerfile-dolt"
+    env_file:
+      - "dev.env"
+    volumes:
+      - "dolt_data:/var/lib/"
+      - "./dolt-config.yaml:/var/lib/nautobot/dolt-config.yaml"
+      - "./dolt-init.sql:/docker-entrypoint-initdb.d/dolt-init.sql"
+    healthcheck:
+      test: dolt -u $$NAUTOBOT_DB_USER -p $$NAUTOBOT_DB_PASSWORD --use-db $$NAUTOBOT_DB_NAME sql -q "show databases; select 'healthcheck';"  # yamllint disable-line rule:quoted-strings
+      timeout: "10s"
+      retries: 10
+
+volumes:
+  dolt_data: {}

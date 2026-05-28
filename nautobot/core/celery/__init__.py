@@ -5,24 +5,25 @@ from pathlib import Path
 import shutil
 import sys
 
-from celery import Celery, shared_task, signals
+from celery import bootsteps, Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
+from celery.worker.state import revoked as revoked_tasks
 from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
-from django.utils.module_loading import import_string
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
+import redis
 
 from nautobot import add_failure_logger, add_success_logger
+from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
-from nautobot.core.utils.module_loading import import_modules_privately
-from nautobot.extras.plugins.utils import import_object
-from nautobot.extras.registry import registry
+from nautobot.core.utils.module_loading import import_modules_privately, import_string_optional
+from nautobot.extras.registry import registry, registry_jobs_lock
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,62 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
 
+def _get_celery_queue_items(queue_name):
+    """Return the task IDs of all messages currently sitting in a Celery broker queue.
+
+    Connects directly to Redis (the broker) and reads the raw queue contents
+    via `LRANGE`. Each message is a JSON-encoded Celery envelope; the task ID
+    lives at `headers.id`.
+
+    Args:
+        queue_name: The name of the broker queue to read.
+
+    Returns:
+        A list of task ID strings, in queue order (head to tail).
+    """
+    r = redis.Redis.from_url(app.conf.broker_url, decode_responses=True)
+    raw_tasks = r.lrange(queue_name, 0, -1)
+
+    decoded = []
+    for raw in raw_tasks:
+        task = json.loads(raw)
+        decoded.append(task["headers"]["id"])
+    return decoded
+
+
+@signals.worker_ready.connect
+def load_revoked_on_start(sender=None, **kwargs):
+    """Re-apply the in-memory revoked set when a Celery worker boots.
+
+    Celery's revoked set lives in worker memory (`celery.worker.state.revoked`)
+    and is lost on restart. If a job was marked REVOKED in the DB while the
+    worker was down, the message could still be sitting in the broker queue
+    and would be picked up and executed on next start.
+
+    This handler runs once per worker on `worker_ready`: it reads every queue
+    the worker is consuming, finds messages whose `JobResult` is already in
+    REVOKED status, and adds those task IDs back to the in-memory revoked
+    set so Celery skips them when it dequeues them.
+
+    Connected via the `worker_ready` signal; not intended to be called directly.
+    """
+
+    from nautobot.extras.jobs import JobResult
+
+    queue_names = [q.name for q in sender.task_consumer.queues]
+    all_ids = []
+    for qname in queue_names:
+        all_ids.extend(_get_celery_queue_items(qname))
+
+    ids = JobResult.objects.filter(
+        status="REVOKED",
+        id__in=all_ids,
+    ).values_list("id", flat=True)
+
+    for tid in ids:
+        revoked_tasks.add(str(tid))
+
+
 @signals.import_modules.connect
 def import_jobs(sender=None, **kwargs):
     """
@@ -54,18 +111,20 @@ def import_jobs(sender=None, **kwargs):
 
     Note that app-provided jobs are automatically imported at startup time via NautobotAppConfig.ready()
     """
-    import nautobot.core.jobs  # noqa: F401
+    with registry_jobs_lock:
+        import nautobot.core.jobs
+        import nautobot.ipam.jobs  # noqa: F401
 
-    _import_jobs_from_jobs_root()
-    _import_dynamic_jobs_from_apps()
+        _import_jobs_from_jobs_root()
+        _import_dynamic_jobs_from_apps()
 
-    try:
-        _import_jobs_from_git_repositories()
-    except (
-        OperationalError,  # Database not present, as may be the case when running pylint-nautobot
-        ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
-    ):
-        pass
+        try:
+            _import_jobs_from_git_repositories()
+        except (
+            OperationalError,  # Database not present, as may be the case when running pylint-nautobot
+            ProgrammingError,  # Database not ready yet, as may be the case on initial startup and migration
+        ):
+            pass
 
 
 def _import_jobs_from_jobs_root():
@@ -95,7 +154,7 @@ def _import_jobs_from_jobs_root():
         except ProgrammingError:  # Database not ready yet, as may be the case on initial startup and migration
             pass
         # Else, it's presumably a JOBS_ROOT job
-        del registry["jobs"][job_class_path]
+        registry["jobs"].pop(job_class_path, None)
 
     # Load all modules in JOBS_ROOT
     import_modules_privately(path=os.path.realpath(settings.JOBS_ROOT))
@@ -138,7 +197,7 @@ def _import_dynamic_jobs_from_apps():
                 del sys.modules[job.__module__]
 
         # Load app jobs
-        app_config.features["jobs"] = import_object(f"{app_config.__module__}.{app_config.jobs}")
+        app_config.features["jobs"] = import_string_optional(f"{app_config.__module__}.{app_config.jobs}")
 
 
 def add_nautobot_log_handler(logger_instance, log_format=None):
@@ -216,10 +275,16 @@ def nautobot_kombu_json_loads_hook(data):
     """
     if "__nautobot_type__" in data:
         qual_name = data.pop("__nautobot_type__")
+        branch_name = data.pop("__nautobot_branch__", None)
         logger.debug("Performing nautobot deserialization for type %s", qual_name)
-        cls = import_string(qual_name)  # fully qualified dotted import path
+        cls = import_string_optional(qual_name)  # fully qualified dotted import path
         if cls:
-            return SimpleLazyObject(lambda: cls.objects.get(id=data["id"]))
+
+            def get_object():
+                with BranchContext(branch_name=branch_name, autocommit=False):
+                    return cls.objects.get(id=data["id"])
+
+            return SimpleLazyObject(get_object)
         else:
             raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
     else:
@@ -262,3 +327,48 @@ def register_jobs(*jobs):
     for job in jobs:
         if job.class_path not in registry["jobs"]:
             registry["jobs"][job.class_path] = job
+
+
+@signals.worker_ready.connect
+def worker_ready(**_):
+    if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+        return
+    WORKER_READINESS_FILE = Path(settings.CELERY_WORKER_READINESS_FILE)
+    WORKER_READINESS_FILE.touch(exist_ok=True)
+
+
+@signals.worker_shutdown.connect
+def worker_shutdown(**_):
+    if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+        return
+    WORKER_READINESS_FILE = Path(settings.CELERY_WORKER_READINESS_FILE)
+    WORKER_READINESS_FILE.unlink(missing_ok=True)
+
+
+class LivenessProbe(bootsteps.StartStopStep):
+    requires = {"celery.worker.components:Timer"}
+
+    def __init__(self, parent, **kwargs):
+        self.requests = []
+        self.tref = None
+        self.WORKER_HEARTBEAT_FILE = Path(settings.CELERY_WORKER_HEARTBEAT_FILE)
+
+    def start(self, parent):
+        if not settings.CELERY_HEALTH_PROBES_AS_FILES:
+            return
+        # This is a 1-second interval.
+        self.tref = parent.timer.call_repeatedly(
+            1.0,
+            self.update_worker_heartbeat_file,
+            (parent,),
+            priority=10,
+        )
+
+    def stop(self, parent):
+        self.WORKER_HEARTBEAT_FILE.unlink(missing_ok=True)
+
+    def update_worker_heartbeat_file(self, parent):
+        self.WORKER_HEARTBEAT_FILE.touch(exist_ok=True)
+
+
+app.steps["worker"].add(LivenessProbe)

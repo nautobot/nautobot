@@ -25,23 +25,13 @@ class HomeTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
         self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.logged_in = True
 
     def get_panel_permissions(self, panel_details):
         permissions = []
         for panel in panel_details.values():
             permissions.append(panel["permission"])
         return permissions
-
-    def test_login(self):
-        """
-        Perform a UI login.
-        """
-        # Wait for the page to render and make sure we got a body.
-        self.browser.visit(self.live_server_url)
 
     def test_homepage_render(self):
         """
@@ -53,7 +43,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
@@ -69,7 +59,7 @@ class HomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        columns_html = self.browser.find_by_css("div[class='homepage_column']")
+        columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
@@ -95,12 +85,13 @@ class HomeTestCase(SeleniumTestCase):
             if any(perm in self.get_panel_permissions(panel_details) for perm in user_permissions):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
-                        f".//div[@class='homepage_column']"
-                        f"/div[@class='panel panel-default']"
-                        f"/div[@class='panel-heading']"
+                        f"//div[@id='draggable-homepage-panels']"
+                        f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group']"
+                        f"/div[@class='card nb-draggable']"
+                        f"/div[@class='card-header nb-draggable-handle']"
                         f"/strong[contains(text(), '{panel_name}')]"
                         f"/../.."
-                        f"/div[@class='list-group collapse in collapsible-div']"
+                        f"/ul[@class='list-group collapse overflow-y-auto show']"
                     )
                     links = panel_element_to_search.links.find_by_text(item_name)
                     if item_details["permission"] in user_permissions:
@@ -108,5 +99,42 @@ class HomeTestCase(SeleniumTestCase):
                     else:
                         self.assertEqual(len(links), 0)
             else:
-                panel = self.browser.find_by_xpath(f".//div[@class='panel-heading']/strong[text()='{panel_name}']")
+                panel = self.browser.find_by_xpath(
+                    f"//div[@class='card-header nb-draggable-handle']/strong[text()='{panel_name}']"
+                )
                 self.assertEqual(len(panel), 0)
+
+    def test_homepage_layout_panels_collapse(self):
+        """
+        Confirm that homepage layout panels are collapsible and that their collapsed state is saved in user preferences.
+        """
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("circuits.view_circuit")
+
+        self.browser.visit(self.live_server_url)
+
+        organization_panel_xpath = "//div[contains(@class, 'nb-panel-group')][1]/div[@id='organization']"
+        circuits_panel_xpath = "//div[contains(@class, 'nb-panel-group')][2]/div[@id='circuits']"
+        collapsed_xpath = "/ul[not(contains(@class, 'show'))]"
+        expanded_xpath = "/ul[contains(@class, 'show')]"
+
+        # Assert that all panels are expanded by default.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + expanded_xpath, wait_time=10))
+
+        # Collapse the Circuits panel.
+        circuits_panel_button = self.browser.find_by_xpath(f"{circuits_panel_xpath}//span[@data-bs-toggle='collapse']")
+        circuits_panel_button.click()
+        # Assert that the Circuits panel is now collapsed.
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))
+
+        # Reload the page to make sure that user preferences with panels collapsed state were correctly saved.
+        self.browser.reload()
+
+        # Assert that the Circuits panel stays collapsed.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))

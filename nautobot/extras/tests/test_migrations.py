@@ -1,9 +1,21 @@
+from contextlib import redirect_stdout
+import io
 from unittest import skip, skipIf
 
 from django.db import connection
+from django.test import tag, TestCase
+from django.utils.timezone import now
+from django_test_migrations.migrator import Migrator
 
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    CustomFieldTypeChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+    ScheduledJobStateChoices,
+)
+from nautobot.extras.exceptions import ApprovalRequiredScheduledJobsError
 
 
 # https://github.com/nautobot/nautobot/issues/3435
@@ -112,6 +124,7 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
         self.assertEqual(cf_1.key, "a123_main_ave")
         self.assertEqual(cf_2.key, "a_456_main_ave")
 
+    @tag("example_app")
     @skip("Something bad is happening with the test data, suspecting bad merge")
     def test_custom_field_data_populated_correctly(self):
         location_0 = self.location.objects.get(name="Test Location 1")
@@ -154,3 +167,169 @@ class CustomFieldDataMigrationTest(NautobotDataMigrationTest):
                 "text_custom_field_4": None,
             },
         )
+
+
+@tag("migration_test")
+class TestFailingApprovalMigration(TestCase):
+    def setUp(self):
+        self.migrator = Migrator(database="default")
+        old_state = self.migrator.apply_initial_migration(("extras", "0124_add_joblogentry_index"))
+
+        Job = old_state.apps.get_model("extras", "Job")
+        ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")
+        JobQueue = old_state.apps.get_model("extras", "JobQueue")
+        User = old_state.apps.get_model("users", "User")
+
+        self.default_job_queue = JobQueue.objects.create(
+            name="Test Queue",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
+        self.job = Job.objects.create(
+            module_name="test_migration_job",
+            job_class_name="TestMigrationJob",
+            grouping="test",
+            name="test_job",
+            default_job_queue=self.default_job_queue,
+            approval_required=True,
+        )
+
+        self.user = User.objects.create(username="user1", is_active=True)
+        self.scheduled_job = ScheduledJob.objects.create(
+            name="Scheduled Job",
+            task="test_migration_job.TestMigrationJob",
+            job_model=self.job,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            approval_required=True,
+            start_time=now(),
+        )
+
+    def test_migration_fails_if_scheduled_jobs_have_approval_required(self):
+        with self.assertRaises(ApprovalRequiredScheduledJobsError) as cm:
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        self.assertIn("Migration aborted", str(cm.exception))
+        self.assertIn(self.scheduled_job.name, str(cm.exception))
+
+    def test_warning_output_for_jobs_with_approval_required(self):
+        self.scheduled_job.approval_required = False
+        self.scheduled_job.save()
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        output = f.getvalue()
+
+        self.assertIn("Migration passed", output)
+        self.assertIn(self.job.name, output)
+        self.assertNotIn(self.scheduled_job.name, output)
+
+    def test_migration_passes_cleanly_when_no_approval_required(self):
+        self.job.approval_required = False
+        self.job.save()
+        self.scheduled_job.approval_required = False
+        self.scheduled_job.save()
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            self.migrator.apply_tested_migration(("extras", "0127_remove_job_approval_required_and_more"))
+
+        output = f.getvalue()
+
+        self.assertIn("Migration passed: No approval_required jobs or scheduled jobs found.", output)
+        self.assertNotIn(self.job.name, output)
+        self.assertNotIn(self.scheduled_job.name, output)
+
+
+@tag("migration_test")
+class TestScheduledJobStateMigration(TestCase):
+    def setUp(self):
+        self.migrator = Migrator(database="default")
+        old_state = self.migrator.apply_initial_migration(("extras", "0140_scheduledjob_state"))
+
+        Job = old_state.apps.get_model("extras", "Job")
+        ScheduledJob = old_state.apps.get_model("extras", "ScheduledJob")
+        JobQueue = old_state.apps.get_model("extras", "JobQueue")
+        User = old_state.apps.get_model("users", "User")
+        ApprovalWorkflow = old_state.apps.get_model("extras", "ApprovalWorkflow")
+        ApprovalWorkflowDefinition = old_state.apps.get_model("extras", "ApprovalWorkflowDefinition")
+        ContentType = old_state.apps.get_model("contenttypes", "ContentType")
+
+        default_job_queue = JobQueue.objects.create(
+            name="Test Queue",
+            queue_type=JobQueueTypeChoices.TYPE_CELERY,
+        )
+        job = Job.objects.create(
+            module_name="test_migration_job",
+            job_class_name="TestMigrationJob",
+            grouping="test",
+            name="test_job",
+            default_job_queue=default_job_queue,
+        )
+        user = User.objects.create(username="user1", is_active=True)
+        scheduled_job_ct = ContentType.objects.get(app_label="extras", model="scheduledjob")
+
+        common = {
+            "task": "test_migration_job.TestMigrationJob",
+            "job_model": job,
+            "interval": JobExecutionType.TYPE_IMMEDIATELY,
+            "user": user,
+            "start_time": now(),
+        }
+
+        self.active_job = ScheduledJob.objects.create(name="active-job", enabled=True, **common)
+        self.pending_job = ScheduledJob.objects.create(name="pending-job", enabled=True, **common)
+        self.denied_job = ScheduledJob.objects.create(name="denied-job", enabled=False, **common)
+        self.canceled_job = ScheduledJob.objects.create(name="canceled-job", enabled=False, **common)
+        self.completed_job = ScheduledJob.objects.create(name="completed-job", enabled=False, **common)
+        self.completed_after_approval_job = ScheduledJob.objects.create(
+            name="completed-after-approval-job", enabled=False, **common
+        )
+
+        approval_workflow_definition = ApprovalWorkflowDefinition.objects.filter(
+            model_content_type=scheduled_job_ct,
+        ).first()
+
+        def make_workflow(scheduled_job, state):
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=approval_workflow_definition,
+                object_under_review_content_type=scheduled_job_ct,
+                object_under_review_object_id=scheduled_job.pk,
+                current_state=state,
+            )
+
+        make_workflow(self.pending_job, ApprovalWorkflowStateChoices.PENDING)
+        make_workflow(self.denied_job, ApprovalWorkflowStateChoices.DENIED)
+        make_workflow(self.canceled_job, ApprovalWorkflowStateChoices.CANCELED)
+        # completed_after_approval_job simulates a one-off that was approved and ran —
+        # workflow exists but in APPROVED state, so it doesn't affect status resolution
+        make_workflow(self.completed_after_approval_job, ApprovalWorkflowStateChoices.APPROVED)
+
+    def test_job_status(self):
+        new_state = self.migrator.apply_tested_migration(("extras", "0141_scheduledjob_state_data_migration"))
+        with self.subTest("active_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="active-job").state, ScheduledJobStateChoices.ACTIVE)
+
+        with self.subTest("pending_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="pending-job").state, ScheduledJobStateChoices.PENDING)
+
+        with self.subTest("denied_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="denied-job").state, ScheduledJobStateChoices.DENIED)
+
+        with self.subTest("canceled_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="canceled-job").state, ScheduledJobStateChoices.CANCELED)
+
+        with self.subTest("completed_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(ScheduledJob.objects.get(name="completed-job").state, ScheduledJobStateChoices.COMPLETED)
+
+        with self.subTest("completed_after_approval_job_status"):
+            ScheduledJob = new_state.apps.get_model("extras", "ScheduledJob")
+            self.assertEqual(
+                ScheduledJob.objects.get(name="completed-after-approval-job").state, ScheduledJobStateChoices.COMPLETED
+            )

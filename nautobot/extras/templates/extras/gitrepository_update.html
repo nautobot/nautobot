@@ -1,0 +1,31 @@
+{% extends 'generic/object_create.html' %}
+
+{% block buttons %}
+    {% if editing %}
+        <button type="submit" name="_dryrun_update" class="btn btn-warning">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Update &amp; Dry Run
+        </button>
+        <button type="submit" name="_update" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Update &amp; Sync
+        </button>
+    {% else %}
+        <button type="submit" name="_dryrun_create" class="btn btn-info">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create &amp; Dry Run
+        </button>
+        <button type="submit" name="_create" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create &amp; Sync
+        </button>
+        <button type="submit" name="_addanother" class="btn btn-primary">
+            <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+            -->Create and Add Another
+        </button>
+    {% endif %}
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
+{% endblock %}

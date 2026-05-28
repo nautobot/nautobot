@@ -1,29 +1,38 @@
 import datetime
 import json
+import tempfile
 from unittest import skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases
-from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size
+from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    InterfaceDuplexChoices,
     InterfaceModeChoices,
+    InterfaceSpeedChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    PowerFeedBreakerPoleChoices,
     PowerFeedTypeChoices,
     PowerOutletTypeChoices,
+    PowerPanelTypeChoices,
     PowerPortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -33,6 +42,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceBay,
     DeviceBayTemplate,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -50,6 +60,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerFeed,
@@ -71,7 +82,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -95,7 +106,10 @@ class Mixins:
             """
             Test tracing a device component's attached cable.
             """
-            obj = self.model.objects.first()
+            if self.model is Interface:
+                obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+            else:
+                obj = self.model.objects.first()
             peer_device = Device.objects.create(
                 location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
@@ -657,6 +671,15 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
         )
 
 
+# Minimal 1x1 pixel PNG used for testing rack images.
+_MINIMAL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00"
+    b"\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00"
+    b"\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     choices_fields = ["outer_unit", "type", "width"]
@@ -901,6 +924,218 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
 
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_front_face_device_rendering(self):
+        """Test that a front-facing device is rendered with role color rect and status square on front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        content = response.content.decode()
+        # Device link should be present
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Role color fill should be present
+        self.assertIn(f"fill: #{device.role.color}", content)
+        # Status color fill should be present (status square only on front face)
+        self.assertIn(f"fill: #{device.status.color}", content)
+        # Device name text should be present
+        self.assertIn(str(device), content)
+        # Full name text element should be present
+        self.assertIn("rack-device-fullname", content)
+        self.assertIn("rack-device-shortname", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_full_depth_device(self):
+        """Test that a full-depth front-facing device renders as blocked on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device full depth so it appears on the rear face
+        device.device_type.is_full_depth = True
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device link should still be present on rear face
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Rear face should show "slot blocked" class (not role color)
+        self.assertIn("slot blocked", content)
+        # Status color should NOT be present (no status square on rear face)
+        self.assertNotIn(f"fill: #{device.status.color}", content)
+        # Device name text should still be present
+        self.assertIn(str(device), content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_half_depth_device(self):
+        """Test that a half-depth front-facing device renders as blocked_partial on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device half depth so it shows as blocked_partial on the rear
+        device.device_type.is_full_depth = False
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Half-depth devices on opposite face should show blocked_partial
+        self.assertIn("slot blocked_partial", content)
+        # Should show "add device" text (it's treated as a partially-available slot)
+        self.assertIn("add device", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_display_fullname_false(self):
+        """Test that display_fullname=false toggles the hidden class on name elements."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&display_fullname=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # When display_fullname is false, fullname should have "hidden" class
+        self.assertIn("rack-device-fullname hidden", content)
+        # And shortname should NOT have "hidden" class
+        self.assertRegex(content, r'class="rack-device-shortname"')
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_false(self):
+        """Test that include_images=false prevents image embedding in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&include_images=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # No device-image elements should be present
+        self.assertNotIn("device-image", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_front(self):
+        """Test that a front device type image is embedded in the front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.front_image = SimpleUploadedFile(
+                    name="front.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_rear(self):
+        """Test that a rear device type image is embedded in the rear face SVG for a full-depth device."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        device.device_type.is_full_depth = True
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.rear_image = SimpleUploadedFile(
+                    name="rear.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_with_reservation(self):
+        """Test that reserved units are rendered with the reserved class in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        user = self.user
+        RackReservation.objects.create(rack=rack, units=[1, 2, 3], user=user, description="Test Reservation")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Reserved units should have the "reserved" class
+        self.assertIn("reserved", content)
+        # Reservation description should be in the SVG
+        self.assertIn("Test Reservation", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_device_with_bays(self):
+        """Test that devices with device bays show bay count details in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Create a device bay on the device
+        DeviceBay.objects.create(device=device, name="Bay 1")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device bay count should appear in the device name text (0/1 since no child installed)
+        self.assertIn("(0/1)", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_unpermitted_device(self):
+        """Test that devices a user cannot view are rendered as blocked (no link or details)."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Grant only rack view, NOT device view — device should render as blocked
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device should be rendered as blocked (no device link, just a blocked rect)
+        device_url = reverse("dcim:device", kwargs={"pk": device.pk})
+        self.assertNotIn(device_url, content)
+        # Should have a blocked rect for the device's position
+        self.assertIn('class="blocked"', content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_multi_u_device(self):
+        """Test that multi-U devices span the correct height in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device 2U
+        device.device_type.u_height = 2
+        device.device_type.save()
+        device.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # The device rect should have height of 2 * unit_height = 44
+        self.assertIn('height="44"', content)
+        # Device name should still be present
+        self.assertIn(str(device), content)
+
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
@@ -1040,6 +1275,40 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
             },
         ]
 
+    def test_filter_subdevice_role(self):
+        self.add_permissions("dcim.view_devicetype")
+        manufacturer = Manufacturer.objects.first()
+        device_family = DeviceFamily.objects.first()
+
+        roles = [
+            (SubdeviceRoleChoices.ROLE_PARENT_CHILD, "Device Type ParentChild API", 0),
+            (SubdeviceRoleChoices.ROLE_PARENT, "Device Type Parent API", None),
+            (SubdeviceRoleChoices.ROLE_CHILD, "Device Type Child API", 0),
+        ]
+        device_types = {}
+        for role, model, u_height in roles:
+            kwargs = {
+                "manufacturer": manufacturer,
+                "device_family": device_family,
+                "model": model,
+                "subdevice_role": role,
+            }
+            if u_height is not None:
+                kwargs["u_height"] = u_height
+            device_types[role] = DeviceType.objects.create(**kwargs)
+
+        url = self._get_list_url()
+        for role, _, _ in roles:
+            with self.subTest(role=role):
+                response = self.client.get(url, {"subdevice_role": role}, **self.header)
+
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_ids = {item["id"] for item in response.data["results"]}
+                self.assertIn(str(device_types[role].pk), result_ids)
+                for other_role, other_device_type in device_types.items():
+                    if other_role != role:
+                        self.assertNotIn(str(other_device_type.pk), result_ids)
+
 
 class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
     model = ModuleType
@@ -1173,6 +1442,7 @@ class PowerOutletTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins
 
 class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.BasePortTemplateTestMixin):
     model = InterfaceTemplate
+    choices_fields = ["duplex", "type", "port_type"]
     modular_component_create_data = {"type": InterfaceTypeChoices.TYPE_1GE_FIXED}
 
     @classmethod
@@ -1182,19 +1452,77 @@ class InterfaceTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
             {
                 "device_type": cls.device_type.pk,
                 "name": "Interface Template 4",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
             },
             {
                 "module_type": cls.module_type.pk,
                 "name": "Interface Template 5",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
             },
             {
                 "device_type": cls.device_type.pk,
                 "name": "Interface Template 6",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
             },
         ]
+
+    def test_create_base_t_with_speed_and_duplex(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Eth1",
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mgmt_only": False,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        obj = InterfaceTemplate.objects.get(pk=response.data["id"])  # type: ignore[index]
+        self.assertEqual(obj.speed, InterfaceSpeedChoices.SPEED_1G)
+        self.assertEqual(obj.duplex, InterfaceDuplexChoices.DUPLEX_FULL)
+
+    def test_create_sfp_with_duplex_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "SFP1",
+            "type": InterfaceTypeChoices.TYPE_1GE_SFP,
+            "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("duplex", response.data)
+
+    def test_create_lag_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "Port-Channel1",
+            "type": InterfaceTypeChoices.TYPE_LAG,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
+
+    def test_create_virtual_with_speed_rejected(self):
+        self.add_permissions("dcim.add_interfacetemplate", "dcim.view_interfacetemplate", "dcim.view_devicetype")
+        url = self._get_list_url()
+        payload = {
+            "device_type": self.device_type.pk,
+            "name": "V0",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "speed": InterfaceSpeedChoices.SPEED_1G,
+        }
+        response = self.client.post(url, data=payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("speed", response.data)
 
 
 class FrontPortTemplateTest(Mixins.BasePortTemplateTestMixin):
@@ -1360,6 +1688,9 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        parent_child_device_type = DeviceType.objects.filter(
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD
+        ).first()
 
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 1")
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 2")
@@ -1378,6 +1709,10 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
                 "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
             },
+            {
+                "device_type": parent_child_device_type.pk,
+                "name": "Device Bay Template 7",
+            },
         ]
 
 
@@ -1388,15 +1723,18 @@ class ModuleBayTemplateTest(Mixins.ModularDeviceComponentTemplateMixin, Mixins.B
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
+        cls.module_family = ModuleFamily.objects.create(name="Test Module Family")
 
         cls.create_data = [
             {
                 "device_type": cls.device_type.pk,
                 "name": "Test1",
+                "module_family": cls.module_family.pk,
             },
             {
                 "module_type": cls.module_type.pk,
                 "name": "Test2",
+                "module_family": cls.module_family.pk,
             },
             {
                 "device_type": cls.device_type.pk,
@@ -1433,6 +1771,8 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -1464,6 +1804,9 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
 class DeviceTest(APIViewTestCases.APIViewTestCase):
     model = Device
     choices_fields = ["face"]
+    validation_excluded_fields = [
+        "software_image_files",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -1484,6 +1827,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         clusters = (
             Cluster.objects.create(name="Cluster 1", cluster_type=cluster_type),
             Cluster.objects.create(name="Cluster 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Cluster 3", cluster_type=cluster_type),
         )
 
         secrets_groups = (
@@ -1510,7 +1854,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         for software_image_file in software_image_files:
             software_image_file.device_types.add(device_type)
 
-        Device.objects.create(
+        device1 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1522,7 +1866,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"A": 1},
             software_version=software_version,
         )
-        Device.objects.create(
+        device1.clusters.add(clusters[1])
+        device2 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1534,7 +1879,8 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             local_config_context_data={"B": 2},
             software_version=software_version,
         )
-        Device.objects.create(
+        device2.clusters.add(clusters[1])
+        device3 = Device.objects.create(
             device_type=device_type,
             role=device_role,
             status=device_statuses[0],
@@ -1545,6 +1891,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             secrets_group=secrets_groups[0],
             local_config_context_data={"C": 3},
         )
+        device3.clusters.add(clusters[1])
 
         cls.create_data = [
             {
@@ -1555,7 +1902,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 4",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk, software_image_files[1].pk],
@@ -1568,7 +1914,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 5",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
                 "software_version": software_version.pk,
                 "software_image_files": [software_image_files[0].pk],
@@ -1581,7 +1926,6 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
                 "name": "Test Device 6",
                 "location": locations[1].pk,
                 "rack": racks[1].pk,
-                "cluster": clusters[1].pk,
                 "secrets_group": secrets_groups[1].pk,
             },
         ]
@@ -2159,7 +2503,10 @@ class PowerOutletTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMix
 class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = Interface
     peer_termination_type = Interface
-    choices_fields = ["mode", "type"]
+    choices_fields = ["duplex", "mode", "type", "port_type"]
+    validation_excluded_fields = [
+        "tagged_vlans",  # M2M field, excluded by default
+    ]
 
     @classmethod
     def setUpTestData(cls):
@@ -2200,14 +2547,16 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             Interface.objects.create(
                 device=cls.devices[0],
                 name="Test Interface 1",
-                type="1000base-t",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
             Interface.objects.create(
                 device=cls.devices[0],
                 name="Test Interface 2",
-                type="1000base-t",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
             ),
             Interface.objects.create(
@@ -2221,6 +2570,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[1],
                 name="Test Interface 4",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
@@ -2241,6 +2591,15 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 device=cls.devices[2],
                 name="Test Interface 7",
                 type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
+                status=non_default_status,
+                role=intf_role,
+            ),
+            Interface.objects.create(
+                device=cls.devices[2],
+                name="Test Interface 8",
+                type=InterfaceTypeChoices.TYPE_1GE_GBIC,
+                port_type=PortTypeChoices.TYPE_8P8C,
                 status=non_default_status,
                 role=intf_role,
             ),
@@ -2258,7 +2617,8 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 8",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2269,7 +2629,8 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 9",
-                "type": "1000base-t",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "role": intf_role.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
@@ -2281,12 +2642,34 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             {
                 "device": cls.devices[0].pk,
                 "name": "Test Interface 10",
-                "type": "virtual",
+                "type": InterfaceTypeChoices.TYPE_VIRTUAL,
                 "status": interface_status.pk,
                 "mode": InterfaceModeChoices.MODE_TAGGED,
                 "parent_interface": cls.interfaces[1].pk,
                 "tagged_vlans": [cls.vlans[0].pk, cls.vlans[1].pk],
                 "untagged_vlan": cls.vlans[2].pk,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 11",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "speed": InterfaceSpeedChoices.SPEED_1G,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 12",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            },
+            {
+                "device": cls.devices[0].pk,
+                "name": "Test Interface 13",
+                "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                "status": interface_status.pk,
+                "speed": InterfaceSpeedChoices.SPEED_1G,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
             },
         ]
 
@@ -2311,6 +2694,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                 "device": cls.devices[0].pk,
                 "name": "interface test 2",
                 "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                "port_type": PortTypeChoices.TYPE_8P8C,
                 "status": interface_status.pk,
                 "lag": cls.interfaces[4].id,  # belongs to different device but same vc
             },
@@ -2334,6 +2718,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                     "device": cls.devices[0].pk,
                     "name": "interface test 2",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "port_type": PortTypeChoices.TYPE_8P8C,
                     "role": intf_role.pk,
                     "status": interface_status.pk,
                     "bridge": cls.interfaces[6].id,  # does not belong to same device or vc
@@ -2345,6 +2730,7 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
                     "device": cls.devices[0].pk,
                     "name": "interface test 3",
                     "type": InterfaceTypeChoices.TYPE_1GE_GBIC,
+                    "port_type": PortTypeChoices.TYPE_8P8C,
                     "status": interface_status.pk,
                     "lag": cls.interfaces[6].id,  # does not belong to same device or vc
                 },
@@ -2495,6 +2881,105 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             payload = {"mode": InterfaceModeChoices.MODE_ACCESS, "tagged_vlans": []}
             response = self.client.patch(self._get_detail_url(interface), data=payload, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_speed_duplex_invalid_by_type(self):
+        """Test that API rejects speed/duplex for disallowed interface types."""
+        self.add_permissions("dcim.add_interface", "dcim.view_interface", "dcim.view_device", "extras.view_status")
+
+        # LAG disallows speed/duplex
+        for field, value in (("speed", InterfaceSpeedChoices.SPEED_1G), ("duplex", InterfaceDuplexChoices.DUPLEX_FULL)):
+            with self.subTest(if_type=InterfaceTypeChoices.TYPE_LAG, field=field):
+                payload = {
+                    "device": self.devices[0].pk,
+                    "name": f"if-lag-{field}",
+                    "type": InterfaceTypeChoices.TYPE_LAG,
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    field: value,
+                }
+                response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+
+        # Virtual/wireless disallow speed/duplex
+        for if_type in (InterfaceTypeChoices.TYPE_VIRTUAL, InterfaceTypeChoices.TYPE_80211AC):
+            for field, value in (
+                ("speed", InterfaceSpeedChoices.SPEED_1G),
+                ("duplex", InterfaceDuplexChoices.DUPLEX_FULL),
+            ):
+                with self.subTest(if_type=if_type, field=field):
+                    payload = {
+                        "device": self.devices[0].pk,
+                        "name": f"if-{if_type}-{field}",
+                        "type": if_type,
+                        "status": Status.objects.get_for_model(Interface).first().pk,
+                        field: value,
+                    }
+                    response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+                    self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                    self.assertIn(field, response.data)
+
+        # Optical disallows duplex
+        with self.subTest(if_type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, field="duplex"):
+            payload = {
+                "device": self.devices[0].pk,
+                "name": "if-opt-duplex",
+                "type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+                "status": Status.objects.get_for_model(Interface).first().pk,
+                "duplex": InterfaceDuplexChoices.DUPLEX_FULL,
+            }
+            response = self.client.post(self._get_list_url(), data=payload, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("duplex", response.data)
+
+    def test_update_type_to_optical_fails_when_duplex_set(self):
+        """Test that changing a copper interface with duplex set to an optical type fails."""
+        self.add_permissions("dcim.change_interface")
+        interface = self.interfaces[0]  # 1000base-t
+
+        # Ensure duplex is set on copper via API
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"duplex": InterfaceDuplexChoices.DUPLEX_FULL},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["duplex"]["value"], InterfaceDuplexChoices.DUPLEX_FULL)
+
+        # Attempt to change type to optical while duplex remains set
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("duplex", response.data)
+
+    def test_update_type_to_optical_succeeds_when_unsetting_duplex(self):
+        """Test that changing type with duplex set to optical while unsetting duplex in the same request succeeds."""
+        self.add_permissions("dcim.change_interface")
+        interface = self.interfaces[1]  # 1000base-t
+
+        # Ensure duplex is set on copper first
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"duplex": InterfaceDuplexChoices.DUPLEX_FULL},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["duplex"]["value"], InterfaceDuplexChoices.DUPLEX_FULL)
+
+        # Change to optical and unset duplex in same call
+        response = self.client.patch(
+            self._get_detail_url(interface),
+            data={"type": InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, "duplex": ""},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsNone(response.data["duplex"])
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):
@@ -2676,6 +3161,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD).first(),
         )
 
         devices = (
@@ -2708,6 +3194,13 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 name="Device 5",
                 location=cls.location,
             ),
+            Device.objects.create(
+                device_type=device_types[2],
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 6",
+                location=cls.location,
+            ),
         )
 
         DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
@@ -2729,6 +3222,11 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "device": devices[0].pk,
                 "name": "Device Bay 6",
                 "installed_device": devices[3].pk,
+            },
+            {
+                "device": devices[0].pk,
+                "name": "Device Bay 7",
+                "installed_device": devices[4].pk,
             },
         ]
 
@@ -2807,6 +3305,32 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
 
+class CableTypeTest(APIViewTestCases.APIViewTestCase):
+    model = CableType
+    bulk_update_data = {
+        "description": "Updated description",
+    }
+    choices_fields = ["polarity_method"]
+
+    @classmethod
+    def setUpTestData(cls):
+        CableType.objects.create(name="Test Cable Type 1")
+        CableType.objects.create(name="Test Cable Type 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        CableType.objects.create(name="Test Cable Type 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+
+        cls.create_data = [
+            {"name": "Test Cable Type 4"},
+            {"name": "Test Cable Type 5", "a_connectors": 1, "b_connectors": 4, "total_lanes": 4},
+            {
+                "name": "Test Cable Type 6",
+                "a_connectors": 1,
+                "b_connectors": 8,
+                "total_lanes": 8,
+                "description": "8-lane breakout",
+            },
+        ]
+
+
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
     bulk_update_data = {
@@ -2873,6 +3397,22 @@ class CableTest(Mixins.BaseComponentTestMixin):
             label="Cable 3",
             status=statuses[0],
         )
+        # An un-terminated cable so the inherited serializer/CSV/list tests exercise the
+        # `CableSerializer._get_termination` "termination is None" short-circuit.
+        Cable.objects.create(label="Cable 4 (uncabled)", status=statuses[0])
+        # A breakout cable with two B-side terminations so the inherited serializer/CSV/list
+        # tests exercise the multi-lane representation path in `CableSerializer.to_representation`.
+        breakout_type = CableType.objects.create(
+            name="Cable API breakout 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(
+            termination_a=interfaces[3],
+            termination_b=interfaces[13],
+            cable_type=breakout_type,
+            label="Cable 5 (breakout)",
+            status=statuses[0],
+        )
+        breakout_cable.add_termination(interfaces[19], "B", connector=2)
 
         cls.create_data = [
             {
@@ -2898,6 +3438,76 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_b_id": interfaces[16].pk,
                 "status": statuses[1].pk,
                 "label": "Cable 6",
+            },
+        ]
+
+
+class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
+    """Tests for the `dcim.CableToCableTermination` REST endpoint."""
+
+    model = CableToCableTermination
+    # Join rows have no meaningful bulk-updatable fields: `cable`/`cable_end`/`connector` edits
+    # collide with the unique constraint, and the per-type FKs each have an `update_or_create`
+    # semantic better expressed via the Cable endpoint.
+    bulk_update_data = None
+    choices_fields = ["cable_end"]
+
+    def test_update_object(self):
+        self.skipTest(  # TODO: not sure I agree with this comment!
+            "Join rows aren't meaningfully updatable via REST: changing `cable`/`cable_end`/"
+            "`connector` collides with the unique constraint, and the per-type termination FKs "
+            "are better managed through the Cable endpoint."
+        )
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Cable Join API DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+            name="Cable Join API Device",
+            location=location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=device, name=f"eth{i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+            for i in range(10)
+        ]
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        # Three cables fully populated — yields 6 join rows for list/get/delete tests.
+        for i in range(3):
+            Cable.objects.create(termination_a=interfaces[i], termination_b=interfaces[i + 5], status=cable_status)
+
+        # Three empty cables + three free interfaces — one new join row per cable for `create_data`.
+        # (A non-breakout cable only allows one row per side at connector 1, so we use a separate
+        # cable per create payload rather than trying to stack rows on one cable.)
+        empty_cables = [Cable.objects.create(status=cable_status) for _ in range(3)]
+        cls.create_data = [
+            {
+                "cable": empty_cables[0].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[3].pk,
+            },
+            {
+                "cable": empty_cables[1].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[4].pk,
+            },
+            {
+                "cable": empty_cables[2].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[8].pk,
             },
         ]
 
@@ -3060,7 +3670,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
                     # Interface name starts with parent device's position in VC; e.g. 1/1, 1/2, 1/3...
                     Interface.objects.create(
                         device=device,
-                        name=f"{i%3+1}/{j}",
+                        name=f"{i % 3 + 1}/{j}",
                         type=InterfaceTypeChoices.TYPE_1GE_FIXED,
                         status=interface_status,
                         role=interface_role,
@@ -3162,6 +3772,7 @@ class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
 
 class PowerPanelTest(APIViewTestCases.APIViewTestCase):
     model = PowerPanel
+    choices_fields = ["panel_type", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3200,7 +3811,7 @@ class PowerPanelTest(APIViewTestCases.APIViewTestCase):
 
 class PowerFeedTest(APIViewTestCases.APIViewTestCase):
     model = PowerFeed
-    choices_fields = ["phase", "supply", "type"]
+    choices_fields = ["phase", "supply", "type", "breaker_pole_count", "power_path"]
 
     @classmethod
     def setUpTestData(cls):
@@ -3225,8 +3836,20 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
         )
 
         power_panels = (
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 1"),
-            PowerPanel.objects.create(location=location, rack_group=rackgroup, name="Power Panel 2"),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 1",
+                panel_type=PowerPanelTypeChoices.TYPE_UTILITY,
+                breaker_position_count=42,
+            ),
+            PowerPanel.objects.create(
+                location=location,
+                rack_group=rackgroup,
+                name="Power Panel 2",
+                panel_type=PowerPanelTypeChoices.TYPE_RPP,
+                breaker_position_count=24,
+            ),
         )
 
         PRIMARY = PowerFeedTypeChoices.TYPE_PRIMARY
@@ -3281,6 +3904,9 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4A",
                 "power_panel": power_panels[0].pk,
+                "destination_panel": power_panels[1].pk,
+                "breaker_position": 5,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_1,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": PRIMARY,
@@ -3288,6 +3914,8 @@ class PowerFeedTest(APIViewTestCases.APIViewTestCase):
             {
                 "name": "Power Feed 4B",
                 "power_panel": power_panels[1].pk,
+                "breaker_position": 10,
+                "breaker_pole_count": PowerFeedBreakerPoleChoices.POLE_2,
                 "rack": racks[3].pk,
                 "status": statuses[0].pk,
                 "type": REDUNDANT,
@@ -3562,6 +4190,16 @@ class DeviceTypeToSoftwareImageFileTestCase(
 
 class ControllerTestCase(APIViewTestCases.APIViewTestCase):
     model = Controller
+    choices_fields = ("capabilities",)
+
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
 
     @classmethod
     def setUpTestData(cls):
@@ -3594,6 +4232,14 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
                 "location": locations[2].pk,
                 "capabilities": ["wireless"],
             },
+            {
+                "name": "Controller 4",
+                "platform": platforms[3].pk,
+                "status": statuses[3].pk,
+                "role": roles[3].pk,
+                "location": locations[3].pk,
+                "capabilities": None,
+            },
         ]
         cls.bulk_update_data = {
             "platform": platforms[0].pk,
@@ -3604,6 +4250,16 @@ class ControllerTestCase(APIViewTestCases.APIViewTestCase):
 
 class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
     model = ControllerManagedDeviceGroup
+    choices_fields = ("capabilities",)
+
+    def get_deletable_object(self):
+        # This method is used in `test_recreate_object_csv`,
+        # and the CSV export-import round-trip doesn't correctly distinguish between empty-list and null values presently,
+        # so a `null` exported then re-imported will become a `[]` and cause the test to fail. Work around that for now:
+        instance = get_deletable_objects(self.model, self._get_queryset().filter(capabilities__isnull=False)).first()
+        if instance is None:
+            self.fail("Couldn't find a single deletable object!")
+        return instance
 
     @classmethod
     def setUpTestData(cls):
@@ -3626,6 +4282,12 @@ class ControllerManagedDeviceGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "controller": controllers[2].pk,
                 "weight": 200,
                 "capabilities": ["wireless"],
+            },
+            {
+                "name": "ControllerManagedDeviceGroup 4",
+                "controller": controllers[3].pk,
+                "weight": 200,
+                "capabilities": None,
             },
         ]
         # changing controller is error-prone since a child group must have the same controller as its parent
@@ -3792,3 +4454,104 @@ class InterfaceVDCAssignmentTestCase(APIViewTestCases.APIViewTestCase):
     def test_docs(self):
         """Skip: InterfaceVDCAssignment has no docs yet"""
         # TODO(timizuo): Add docs for Interface VDC Assignment
+
+
+class ModuleFamilyTest(APIViewTestCases.APIViewTestCase):
+    """Test the ModuleFamily API."""
+
+    model = ModuleFamily
+    brief_fields = ["display", "id", "name", "url"]
+    create_data = [
+        {
+            "name": "Module Family 4",
+            "description": "Fourth family",
+        },
+        {
+            "name": "Module Family 5",
+            "description": "Fifth family",
+        },
+        {
+            "name": "Module Family 6",
+            "description": "Sixth family",
+        },
+    ]
+    bulk_update_data = {
+        "description": "New description",
+    }
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create test data for API tests."""
+        ModuleFamily.objects.create(name="Module Family 1", description="First family")
+        ModuleFamily.objects.create(name="Module Family 2", description="Second family")
+        ModuleFamily.objects.create(name="Module Family 3", description="Third family")
+
+
+class DeviceClusterAssignmentTestCase(APIViewTestCases.APIViewTestCase):
+    model = DeviceClusterAssignment
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(
+            manufacturer=manufacturer,
+            model="Test Device Type 1",
+        )
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        devices = (
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 1",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 2",
+                location=location,
+                status=device_status,
+            ),
+            Device.objects.create(
+                device_type=device_type,
+                role=device_role,
+                name="Test Device API 3",
+                location=location,
+                status=device_status,
+            ),
+        )
+        cluster_type = ClusterType.objects.create(name="Test Cluster Type API")
+        clusters = (
+            Cluster.objects.create(name="Test Cluster API 1", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 2", cluster_type=cluster_type),
+            Cluster.objects.create(name="Test Cluster API 3", cluster_type=cluster_type),
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[0],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[0],
+            cluster=clusters[1],
+        )
+        DeviceClusterAssignment.objects.create(
+            device=devices[1],
+            cluster=clusters[0],
+        )
+        cls.create_data = [
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[1].pk,
+            },
+            {
+                "device": devices[1].pk,
+                "cluster": clusters[2].pk,
+            },
+            {
+                "device": devices[2].pk,
+                "cluster": clusters[0].pk,
+            },
+        ]

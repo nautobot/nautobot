@@ -18,7 +18,7 @@ import yaml
 
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, DeviceType, Location, Platform
+from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     LogLevelChoices,
     SecretsGroupAccessTypeChoices,
@@ -37,7 +37,7 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry, registry_jobs_lock
 from nautobot.extras.utils import refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
@@ -59,7 +59,7 @@ def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     """
     job_model = job_class().job_model
 
-    return JobResult.enqueue_job(job_model, user, repository=repository.pk)
+    return JobResult.enqueue_job(job_model, user, job_kwargs={"repository": repository.pk})
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
@@ -274,6 +274,7 @@ def update_git_config_contexts(repository_record, job_result):
         for filter_type in (
             "locations",
             "device_types",
+            "device_families",
             "roles",
             "platforms",
             "cluster_groups",
@@ -408,6 +409,7 @@ def import_config_context(context_data, repository_record, job_result):
     for key, model_class in [
         ("locations", Location),
         ("device_types", DeviceType),
+        ("device_families", DeviceFamily),
         ("roles", Role),
         ("platforms", Platform),
         ("cluster_groups", ClusterGroup),
@@ -466,6 +468,7 @@ def import_config_context(context_data, repository_record, job_result):
                     schema = ConfigContextSchema.objects.get(name=context_metadata["config_context_schema"])
                     context_record.config_context_schema = schema
                     modified = True
+                    save_needed = True
                 except ConfigContextSchema.DoesNotExist:
                     msg = f"ConfigContextSchema {context_metadata['config_context_schema']} does not exist."
                     logger.error(msg)
@@ -476,6 +479,7 @@ def import_config_context(context_data, repository_record, job_result):
             if context_record.config_context_schema is not None:
                 context_record.config_context_schema = None
                 modified = True
+                save_needed = True
 
         if context_record.data != data:
             context_record.data = data
@@ -720,8 +724,8 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
     After cloning/updating/deleting a GitRepository on disk, call this function to reload and reregister its Python.
 
     Args:
-        repository_slug (str): Repository slug (directory in GIT_ROOT) that was populated, updated, or deleted.
-        skip_reimport (bool): If True, unload existing jobs from this repository but do not re-import them.
+        repository_slug (str): Repository directory in GIT_ROOT that was updated or deleted.
+        skip_reimport (bool): If True, unload existing code from this repository but do not re-import it.
         ignore_import_errors (bool): If True, any exceptions raised in the import will be caught and logged.
             If False, exceptions will be re-raised after logging.
     """
@@ -733,32 +737,35 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
             return
         raise ValueError(f"The repository_slug {repository_slug!r} is invalid as it is {reason}")
 
-    # Unload any previous version of this module and its submodules if present
-    for job_class_path in list(registry["jobs"]):
-        if job_class_path.startswith(f"{repository_slug}."):
-            del registry["jobs"][job_class_path]
+    with registry_jobs_lock:
+        # Unload any previous version of this module and its submodules if present
+        for job_class_path in list(registry["jobs"]):
+            if job_class_path.startswith(f"{repository_slug}."):
+                registry["jobs"].pop(job_class_path, None)
 
-    if skip_reimport:
-        return
+        if skip_reimport:
+            return
 
-    try:
-        repository = GitRepository.objects.get(slug=repository_slug)
-        if "extras.job" in repository.provided_contents:
-            if not (
-                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
-                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
-            ):
-                logger.error("No `jobs` submodule found in Git repository %s", repository)
-                if not ignore_import_errors:
-                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
-            else:
-                import_modules_privately(
-                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
-                )
-    except GitRepository.DoesNotExist as exc:
-        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-        if not ignore_import_errors:
-            raise
+        try:
+            repository = GitRepository.objects.get(slug=repository_slug)
+            if "extras.job" in repository.provided_contents:
+                if not (
+                    os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                    or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+                ):
+                    logger.error("No `jobs` submodule found in Git repository %s", repository)
+                    if not ignore_import_errors:
+                        raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
+                else:
+                    import_modules_privately(
+                        settings.GIT_ROOT,
+                        module_path=[repository_slug, "jobs"],
+                        ignore_import_errors=ignore_import_errors,
+                    )
+        except GitRepository.DoesNotExist as exc:
+            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+            if not ignore_import_errors:
+                raise
 
 
 def refresh_git_jobs(repository_record, job_result, delete=False):
@@ -1058,6 +1065,19 @@ def delete_git_graphql_queries(repository_record, job_result, preserve=None):
                 job_result.log(error_msg, level_choice=LogLevelChoices.LOG_ERROR, grouping="graphql queries")
 
 
+def refresh_git_data_compliance_rules(repository_record, job_result, delete=False):  # pylint: disable=W0613
+    """Callback function for GitRepository updates - refresh all DataComplianceRules managed by this repository."""
+    from nautobot.data_validation.custom_validators import get_data_compliance_classes_from_git_repo
+
+    if "data_validation.data_compliance_rule" in repository_record.provided_contents:
+        for compliance_class in get_data_compliance_classes_from_git_repo(repository_record):
+            job_result.log(
+                f"Found class {compliance_class.__name__!s}",
+                level_choice=LogLevelChoices.LOG_INFO,
+                grouping="data compliance rules",
+            )
+
+
 # Register built-in callbacks for data types potentially provided by a GitRepository
 register_datasource_contents(
     [
@@ -1109,6 +1129,15 @@ register_datasource_contents(
                 icon="mdi-graphql",
                 weight=400,
                 callback=refresh_git_graphql_queries,
+            ),
+        ),
+        (
+            "extras.gitrepository",
+            DatasourceContent(
+                name="data compliance rules",
+                content_identifier="data_validation.data_compliance_rule",
+                icon="mdi-file-document-outline",
+                callback=refresh_git_data_compliance_rules,
             ),
         ),
     ]

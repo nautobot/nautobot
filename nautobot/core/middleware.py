@@ -8,6 +8,9 @@ from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
+from django_structlog.middlewares import RequestMiddleware
+from django_structlog.signals import bind_extra_request_failed_metadata
+import structlog
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (
@@ -136,6 +139,32 @@ class ExceptionHandlingMiddleware:
 
         # Handle exceptions that occur from REST API requests
         if is_api_request(request):
+            # Replicate django_structlog middleware behaviour for this middleware.
+            # Without this, stack traces for HTTP 500s from the API are lost.
+            # This is because returning something from the `process_exception` handler of a middleware causes
+            # the middlewares that are above this middleware not to be called [0].
+            # Re-ordering of the middlewares such that the django_structlog middleware is _below_ this middleware
+            # also has no effect, this is likely because that middleware does _not_ use `process_exception` but
+            # rather a mechanism based off of calling the middleware directly through `__call__`, which is in this
+            # case seems to never be called.
+            # [0] https://docs.djangoproject.com/en/4.2/topics/http/middleware/#process-exception
+            if "django_structlog.middlewares.RequestMiddleware" in settings.MIDDLEWARE:
+                logger = structlog.getLogger(__name__)
+                log_kwargs = {
+                    "code": 500,
+                    "request": RequestMiddleware.format_request(request),
+                }
+                bind_extra_request_failed_metadata.send(
+                    sender=self.__class__,
+                    request=request,
+                    logger=logger,
+                    exception=exception,
+                    log_kwargs=log_kwargs,
+                )
+                logger.exception(
+                    "request_failed",
+                    **log_kwargs,
+                )
             return rest_api_server_error(request)
 
         # Determine the type of exception. If it's a common issue, return a custom error page with instructions.

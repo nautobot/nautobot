@@ -1,4 +1,4 @@
-from .cables import Cable, CablePath
+from .cables import Cable, CablePath, CableToCableTermination, CableType
 from .device_component_templates import (
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
@@ -31,6 +31,7 @@ from .devices import (
     Controller,
     ControllerManagedDeviceGroup,
     Device,
+    DeviceClusterAssignment,
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
@@ -38,6 +39,7 @@ from .devices import (
     InterfaceVDCAssignment,
     Manufacturer,
     Module,
+    ModuleFamily,
     ModuleType,
     Platform,
     SoftwareImageFile,
@@ -54,6 +56,8 @@ __all__ = (
     "Cable",
     "CablePath",
     "CableTermination",
+    "CableToCableTermination",
+    "CableType",
     "ConsolePort",
     "ConsolePortTemplate",
     "ConsoleServerPort",
@@ -63,6 +67,7 @@ __all__ = (
     "Device",
     "DeviceBay",
     "DeviceBayTemplate",
+    "DeviceClusterAssignment",
     "DeviceFamily",
     "DeviceRedundancyGroup",
     "DeviceType",
@@ -81,6 +86,7 @@ __all__ = (
     "Module",
     "ModuleBay",
     "ModuleBayTemplate",
+    "ModuleFamily",
     "ModuleType",
     "PathEndpoint",
     "Platform",

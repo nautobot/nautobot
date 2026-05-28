@@ -1,14 +1,15 @@
 {% load form_helpers %}
-<div class="panel panel-default">
-    <div class="panel-heading"><strong>Cable</strong></div>
-    <div class="panel-body">
+<div class="card">
+    <div class="card-header"><strong>Cable</strong></div>
+    <div class="card-body">
+        {% render_field form.cable_type %}
         {% render_field form.status %}
         {% render_field form.type %}
         {% render_field form.label %}
         {% render_field form.color %}
-        <div class="form-group">
-            <label class="col-md-3 control-label" for="id_length">{{ form.length.label }}</label>
-            <div class="col-md-5">
+        <div class="mb-10 d-flex justify-content-center">
+            <label class="col-lg-3 col-form-label" for="id_length">{{ form.length.label }}</label>
+            <div class="col-lg-5">
                 {{ form.length }}
                 {% if form.length.errors %}
                     <ul>
@@ -18,7 +19,7 @@
                     </ul>
                 {% endif %}
             </div>
-            <div class="col-md-4">
+            <div class="col-lg-4">
                 {{ form.length_unit }}
                 {% if form.length_unit.errors %}
                     <ul>
@@ -30,5 +31,8 @@
             </div>
         </div>
     </div>
+</div>
+<div id="lane-terminations-container">
+    {% include 'dcim/inc/cable_lane_form.html' %}
 </div>
 {% include 'inc/extras_features_edit_form_fields.html' %}

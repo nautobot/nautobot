@@ -18,7 +18,7 @@ CIRCUIT_TERMINATION_PARENT = """
 {% if value.provider_network %}
 {{ value.provider_network|hyperlinked_object }}
 {% elif value.location %}
-{{ value.location|hyperlinked_object }}
+{{ value.location|hyperlinked_object:"name" }}
 {% elif value.cloud_network %}
 {{ value.cloud_network|hyperlinked_object }}
 {% else %}
@@ -171,7 +171,9 @@ class CircuitTerminationTable(BaseTable):
     location = tables.Column(linkify=True)
     provider_network = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
-    cable = tables.Column(linkify=True)
+    # `cable` is a property on CableTermination subclasses (resolved via the cable_termination
+    # join row), not a real model field, so the column is not DB-orderable.
+    cable = tables.Column(linkify=True, orderable=False)
 
     class Meta(BaseTable.Meta):
         model = CircuitTermination

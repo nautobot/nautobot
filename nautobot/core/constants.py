@@ -2,13 +2,13 @@ from copy import deepcopy
 
 import nh3
 
+LIVE_SEARCH_MAX_RESULTS = 10
+
 SEARCH_MAX_RESULTS = 15
 
 #
 # Filter lookup expressions
 #
-
-SEARCH_MAX_RESULTS = 15
 
 FILTER_CHAR_BASED_LOOKUP_MAP = {
     "n": "exact",
@@ -116,7 +116,13 @@ PAGINATE_COUNT_DEFAULT = 50
 # Models excluded from the global search list
 GLOBAL_SEARCH_EXCLUDE_LIST = [
     "anotherexamplemodel",
+    "approvalworkflow",
+    "approvalworkflowdefinition",
+    "approvalworkflowstage",
+    "approvalworkflowstagedefinition",
+    "approvalworkflowstageresponse",
     "cablepath",
+    "cabletocabletermination",
     "circuittermination",
     "circuittype",
     "clustergroup",
@@ -135,6 +141,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "customlink",
     "devicebay",
     "devicebaytemplate",
+    "deviceclusterassignment",
     "devicetypetosoftwareimagefile",
     "dynamicgroupmembership",
     "exporttemplate",
@@ -159,6 +166,7 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "jobqueue",
     "jobqueueassignment",
     "jobresult",
+    "jobconsoleentry",
     "locationtype",
     "manufacturer",
     "metadatachoice",
@@ -204,3 +212,9 @@ GLOBAL_SEARCH_EXCLUDE_LIST = [
     "vrfprefixassignment",
     "webhook",
 ]
+
+# M2M fields that are included by default in API responses if exclude_m2m is not provided
+DEFAULT_M2M_FIELDS = ["tags", "content_types", "object_types"]
+
+# Maximum number of homepage panels layout columns, for narrower device viewports columns will be wrapped.
+HOMEPAGE_PANELS_LAYOUT_COLUMNS = 4

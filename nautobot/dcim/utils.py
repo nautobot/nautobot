@@ -1,23 +1,18 @@
+from copy import deepcopy
+from typing import Optional
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from netutils.lib_mapper import (
-    ANSIBLE_LIB_MAPPER_REVERSE,
-    HIERCONFIG_LIB_MAPPER_REVERSE,
-    NAPALM_LIB_MAPPER_REVERSE,
-    NETMIKO_LIB_MAPPER_REVERSE,
-    NETUTILSPARSER_LIB_MAPPER_REVERSE,
-    NTCTEMPLATES_LIB_MAPPER_REVERSE,
-    PYATS_LIB_MAPPER_REVERSE,
-    PYNTC_LIB_MAPPER_REVERSE,
-    SCRAPLI_LIB_MAPPER_REVERSE,
-)
+from django.db import transaction
+from django.utils.html import format_html, format_html_join
+from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
 from nautobot.core.choices import ColorChoices
+from nautobot.core.templatetags.helpers import hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import NETUTILS_NETWORK_DRIVER_MAPPING_NAMES
+from nautobot.dcim.constants import DEFAULT_CABLE_TYPES, NONCONNECTABLE_IFACE_TYPES
 
 
 def compile_path_node(ct_id, object_id):
@@ -57,9 +52,9 @@ def cable_status_color_css(record):
         return ""
     else:
         CABLE_STATUS_TO_CSS_CLASS = {
-            ColorChoices.COLOR_GREEN: "success",
-            ColorChoices.COLOR_AMBER: "warning",
-            ColorChoices.COLOR_CYAN: "info",
+            ColorChoices.COLOR_GREEN: "table-success",
+            ColorChoices.COLOR_AMBER: "table-warning",
+            ColorChoices.COLOR_CYAN: "table-info",
         }
         status_color = record.cable.get_status_color().strip("#")
         return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
@@ -71,7 +66,7 @@ def get_network_driver_mapping_tool_names():
 
     Tool names are "ansible", "hier_config", "napalm", "netmiko", etc...
     """
-    network_driver_names = NETUTILS_NETWORK_DRIVER_MAPPING_NAMES.copy()
+    network_driver_names = set(NAME_TO_LIB_MAPPER_REVERSE.keys())
     network_driver_names.update(get_settings_or_config("NETWORK_DRIVERS", fallback={}).keys())
     return sorted(network_driver_names)
 
@@ -93,23 +88,7 @@ def get_all_network_driver_mappings():
             etc...
         }
     """
-    network_driver_mappings = {}
-
-    # initialize mapping from netutils library
-    for tool_name, mappings in (
-        ("ansible", ANSIBLE_LIB_MAPPER_REVERSE),
-        ("hier_config", HIERCONFIG_LIB_MAPPER_REVERSE),
-        ("napalm", NAPALM_LIB_MAPPER_REVERSE),
-        ("netmiko", NETMIKO_LIB_MAPPER_REVERSE),
-        ("netutils_parser", NETUTILSPARSER_LIB_MAPPER_REVERSE),
-        ("ntc_templates", NTCTEMPLATES_LIB_MAPPER_REVERSE),
-        ("pyats", PYATS_LIB_MAPPER_REVERSE),
-        ("pyntc", PYNTC_LIB_MAPPER_REVERSE),
-        ("scrapli", SCRAPLI_LIB_MAPPER_REVERSE),
-    ):
-        for normalized_name, mapped_name in mappings.items():
-            network_driver_mappings.setdefault(normalized_name, {})
-            network_driver_mappings[normalized_name][tool_name] = mapped_name
+    network_driver_mappings = deepcopy(NAME_TO_ALL_LIB_MAPPER)
 
     # add mappings from optional NETWORK_DRIVERS setting
     network_drivers_config = get_settings_or_config("NETWORK_DRIVERS", fallback={})
@@ -158,3 +137,276 @@ def validate_interface_tagged_vlans(instance, model, pk_set):
                 )
             }
         )
+
+
+def convert_watts_to_va(watts, power_factor):
+    """
+    Convert watts to VA using power factor.
+    """
+    if not watts:
+        return 0
+    return int(watts / power_factor)
+
+
+def render_software_version_and_image_files(instance, software_version, context):
+    display = hyperlinked_object(software_version)
+    overridden_software_image_files = instance.software_image_files.all()
+    if software_version is not None:
+        display += format_html(
+            '<ul class="software-image-hierarchy">{}</ul>',
+            format_html_join(
+                "\n",
+                "<li>{}{}</li>",
+                [
+                    [
+                        hyperlinked_object(img, "image_file_name"),
+                        " (overridden)" if overridden_software_image_files.exists() else "",
+                    ]
+                    for img in software_version.software_image_files.restrict(context["request"].user, "view")
+                ],
+            ),
+        )
+    if overridden_software_image_files.exists():
+        display += format_html(
+            "<br><strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
+            format_html_join(
+                "\n", "<li>{}</li>", [[hyperlinked_object(img)] for img in overridden_software_image_files.all()]
+            ),
+        )
+    return display
+
+
+def populate_default_cable_types(apps, schema_editor=None):
+    """Create default cable type records."""
+    CableType = apps.get_model("dcim", "CableType")
+    for name, defaults in DEFAULT_CABLE_TYPES.items():
+        CableType.objects.get_or_create(name=name, defaults=defaults)
+
+
+def clear_default_cable_types(apps, schema_editor=None):
+    """Delete default cable type records."""
+    CableType = apps.get_model("dcim", "CableType")
+    for name in DEFAULT_CABLE_TYPES.keys():
+        CableType.objects.filter(name=name).delete()
+
+
+def generate_cable_breakout_mapping(
+    a_connectors: int, b_connectors: int, total_lanes: int, labels: Optional[dict] = None
+):
+    """Generate a default mapping from the given connector and lane counts.
+
+    Optional `labels`: dict keyed by `(a_connector, a_position, b_connector, b_position)` → label string,
+    used in place of the default `str(lane_index + 1)` per lane.
+    """
+    a_positions = total_lanes // a_connectors
+    b_positions = total_lanes // b_connectors
+    mapping = []
+    lane_index = 0
+    for a_connector in range(a_connectors):
+        for a_position in range(a_positions):
+            b_connector = lane_index // b_positions
+            b_position = lane_index % b_positions
+            # Change 0-indexed iterations to 1-indexed mapping entries!
+            entry_key = (a_connector + 1, a_position + 1, b_connector + 1, b_position + 1)
+            label = labels.get(entry_key) if labels else None
+            mapping.append(
+                {
+                    "label": label or str(lane_index + 1),
+                    "a_connector": entry_key[0],
+                    "a_position": entry_key[1],
+                    "b_connector": entry_key[2],
+                    "b_position": entry_key[3],
+                }
+            )
+            lane_index += 1
+    return mapping
+
+
+def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connectors=None, total_lanes=None):
+    """Validate the mapping JSON structure and consistency with connector/position counts.
+
+    If any of `a_connectors`, `b_connectors`, or `total_lanes` is not provided, it will be
+    derived from the mapping itself (max `a_connector`/`b_connector` values, and `len(mapping)`
+    respectively). When provided, each is enforced against the mapping.
+
+    Missing `label` entries are filled in with the entry index as a string.
+    Raises ValidationError if the mapping is invalid.
+
+    Returns:
+        tuple: (mapping, a_connectors, b_connectors, total_lanes)
+    """
+
+    if not isinstance(mapping, list):
+        raise ValidationError({"mapping": "Mapping must be a JSON array."})
+
+    if total_lanes is not None and len(mapping) != total_lanes:
+        raise ValidationError({"mapping": f"Expected {total_lanes} lane definitions, but got {len(mapping)}."})
+    elif not mapping:
+        raise ValidationError({"mapping": "Empty mapping is not permitted."})
+
+    required_keys = {"a_connector", "a_position", "b_connector", "b_position"}
+    optional_keys = {"label"}
+
+    # First pass: structural checks (types, keys) so we can safely derive dimensions below.
+    for i, entry in enumerate(mapping):
+        if not isinstance(entry, dict):
+            raise ValidationError({"mapping": f"Entry {i} must be a JSON object."})
+
+        missing_keys = required_keys - set(entry.keys())
+        if missing_keys:
+            raise ValidationError(
+                {"mapping": f"Entry {i} is missing required keys: {', '.join(sorted(missing_keys))}."}
+            )
+
+        unknown_keys = set(entry.keys()) - required_keys - optional_keys
+        if unknown_keys:
+            raise ValidationError({"mapping": f"Entry {i} has unknown keys: {', '.join(sorted(unknown_keys))}"})
+
+        for key in required_keys:
+            if not isinstance(entry[key], int) or entry[key] < 1:
+                raise ValidationError({"mapping": f"Entry {i} key '{key}' must be a positive integer."})
+
+    if a_connectors is None:
+        a_connectors = max(e["a_connector"] for e in mapping)
+    if b_connectors is None:
+        b_connectors = max(e["b_connector"] for e in mapping)
+    if total_lanes is None:
+        total_lanes = len(mapping)
+
+    a_positions = total_lanes // a_connectors
+    b_positions = total_lanes // b_connectors
+
+    # Second pass: range and uniqueness checks, and fill in default labels.
+    seen_a_pairs = set()
+    seen_b_pairs = set()
+    seen_labels = set()
+
+    for i, entry in enumerate(mapping):
+        a_connector = entry["a_connector"]
+        a_position = entry["a_position"]
+        b_connector = entry["b_connector"]
+        b_position = entry["b_position"]
+
+        # Range checks - note that we already checked for typing and for values less than 1 in the first pass above
+        if a_connector > a_connectors:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: a_connector {a_connector} out of range [1, {a_connectors}]."}
+            )
+        if a_position > a_positions:
+            raise ValidationError({"mapping": f"Entry {i}: a_position {a_position} out of range [1, {a_positions}]."})
+        if b_connector > b_connectors:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: b_connector {b_connector} out of range [1, {b_connectors}]."}
+            )
+        if b_position > b_positions:
+            raise ValidationError({"mapping": f"Entry {i}: b_position {b_position} out of range [1, {b_positions}]."})
+
+        # Uniqueness checks
+        a_pair = (a_connector, a_position)
+        if a_pair in seen_a_pairs:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: Duplicate A-side (connector, position) pair: ({a_connector}, {a_position})."}
+            )
+        seen_a_pairs.add(a_pair)
+
+        b_pair = (b_connector, b_position)
+        if b_pair in seen_b_pairs:
+            raise ValidationError(
+                {"mapping": f"Entry {i}: Duplicate B-side (connector, position) pair: ({b_connector}, {b_position})."}
+            )
+        seen_b_pairs.add(b_pair)
+
+        if "label" not in entry:
+            entry["label"] = str(i)
+        label = entry["label"]
+        if not isinstance(label, str):
+            raise ValidationError({"mapping": f"Entry {i}: Label {label} must be a string"})
+        if label in seen_labels:
+            raise ValidationError({"mapping": f"Entry {i}: Duplicate label: {label}"})
+        seen_labels.add(label)
+
+    return mapping, a_connectors, b_connectors, total_lanes
+
+
+# Cable validation utilities
+
+
+def validate_cable_termination(termination, cable_id=None):
+    """Run per-termination validations independent of any peer.
+
+    Raises ValidationError if the termination is not a valid endpoint for a cable, namely:
+    * an Interface of a non-connectable type (virtual or wireless),
+    * a CircuitTermination attached to a provider network, or
+    * a termination already attached to a different cable than `cable_id`.
+    """
+    from nautobot.circuits.models import CircuitTermination
+    from nautobot.dcim.models import Interface
+
+    if termination is None:
+        return
+
+    if isinstance(termination, Interface) and termination.type in NONCONNECTABLE_IFACE_TYPES:
+        raise ValidationError(f"Cables cannot be terminated to {termination.get_type_display()} interfaces")
+
+    if isinstance(termination, CircuitTermination) and termination.provider_network_id is not None:
+        raise ValidationError("Circuit terminations attached to a provider network may not be cabled.")
+
+    if termination.present_in_database:
+        # Re-query through the join table rather than trusting an in-memory cable reference (which may be stale).
+        current_cable_id = (
+            type(termination)
+            .objects.filter(pk=termination.pk)
+            .values_list("cable_termination__cable_id", flat=True)
+            .first()
+        )
+        if current_cable_id and current_cable_id != cable_id:
+            raise ValidationError(f"{termination} already has a cable attached (#{current_cable_id})")
+
+
+# Cable disconnect utilities
+
+
+def disconnect_termination(termination):
+    """Disconnect a single termination from its cable without deleting the cable.
+
+    Removes the CableToCableTermination row for this termination; the post_delete signal handler
+    on `CableToCableTermination` rebuilds every CablePath that traversed the cable. The cable
+    itself and any other terminations on it are left intact. Returns the cable if successful,
+    None otherwise.
+
+    For breakout cables, this correctly preserves cable paths on the surviving lanes: only the
+    lane(s) involving the disconnected termination produce partial paths after the rebuild.
+    """
+    if not termination:
+        return None
+    cable_termination = getattr(termination, "cable_termination", None)
+    if cable_termination is None:
+        return None
+
+    cable = cable_termination.cable
+    # Wrap the row delete + signal-driven path rebuild in a transaction so a rebuild failure
+    # rolls the row deletion back too. Otherwise the cable could end up with stale CablePath
+    # rows referencing a now-deleted termination row.
+    with transaction.atomic():
+        cable_termination.delete()
+    return cable
+
+
+def power_ports_connected_to(target_queryset):
+    """Return a queryset of PowerPorts whose cable peer is one of the objects in `target_queryset`.
+
+    `target_queryset` must be a queryset of CableTermination subclass instances (typically
+    PowerOutlet or PowerFeed).
+    """
+    from nautobot.dcim.models import CableToCableTermination, PowerPort
+    from nautobot.dcim.models.cables import termination_fk_field
+
+    target_fk = termination_fk_field(target_queryset.model)
+
+    target_cables = CableToCableTermination.objects.filter(**{f"{target_fk}__in": target_queryset}).values("cable_id")
+
+    powerport_ids = CableToCableTermination.objects.filter(power_port__isnull=False, cable_id__in=target_cables).values(
+        "power_port_id"
+    )
+
+    return PowerPort.objects.filter(pk__in=powerport_ids)

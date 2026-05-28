@@ -1,7 +1,41 @@
 from celery import states
 
 from nautobot.core.choices import ChoiceSet
-from nautobot.core.utils.deprecation import class_deprecated_in_favor_of
+
+#
+# Approval Workflows
+#
+
+
+class ApprovalWorkflowStateChoices(ChoiceSet):
+    """
+    Choices for:
+    1. current_state field on the ApprovalWorkflow model.
+    2. state field on the ApprovalWorkflowStage model.
+    3. state field on the ApprovalWorkflowStageResponse model.
+    """
+
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    DENIED = "Denied"
+    CANCELED = "Canceled"
+    COMMENT = "Comment"
+
+    CHOICES = (
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (DENIED, "Denied"),
+        (CANCELED, "Canceled"),
+        (COMMENT, "Comment"),
+    )
+    CSS_CLASSES = {
+        PENDING: "info",
+        APPROVED: "success",
+        DENIED: "danger",
+        CANCELED: "warning",
+        COMMENT: "info",
+    }
+
 
 #
 # Banners (currently plugin-specific)
@@ -86,12 +120,14 @@ class CustomFieldTypeChoices(ChoiceSet):
     TYPE_MULTISELECT = "multi-select"
     TYPE_JSON = "json"
     TYPE_MARKDOWN = "markdown"
+    TYPE_DATETIME = "datetime"
 
     CHOICES = (
         (TYPE_TEXT, "Text"),
         (TYPE_INTEGER, "Integer"),
         (TYPE_BOOLEAN, "Boolean (true/false)"),
         (TYPE_DATE, "Date"),
+        (TYPE_DATETIME, "Date/time"),
         (TYPE_URL, "URL"),
         (TYPE_SELECT, "Selection"),
         (TYPE_MULTISELECT, "Multiple selection"),
@@ -127,7 +163,7 @@ class CustomFieldTypeChoices(ChoiceSet):
 
 
 class ButtonClassChoices(ChoiceSet):
-    CLASS_DEFAULT = "default"
+    CLASS_DEFAULT = "default"  # maps to "secondary" in v3 UI, but kept for backwards compatibility
     CLASS_PRIMARY = "primary"
     CLASS_SUCCESS = "success"
     CLASS_INFO = "info"
@@ -139,21 +175,11 @@ class ButtonClassChoices(ChoiceSet):
         (CLASS_DEFAULT, "Default"),
         (CLASS_PRIMARY, "Primary (blue)"),
         (CLASS_SUCCESS, "Success (green)"),
-        (CLASS_INFO, "Info (aqua)"),
+        (CLASS_INFO, "Info (blue)"),
         (CLASS_WARNING, "Warning (orange)"),
         (CLASS_DANGER, "Danger (red)"),
         (CLASS_LINK, "None (link)"),
     )
-
-
-#
-# CustomLinks
-#
-
-
-@class_deprecated_in_favor_of(ButtonClassChoices)
-class CustomLinkButtonClassChoices(ButtonClassChoices):
-    pass
 
 
 #
@@ -265,16 +291,21 @@ class JobResultStatusChoices(ChoiceSet):
     #: Set of all possible states.
     ALL_STATES = states.ALL_STATES
     #: Set of states meaning the task returned an exception.
+    # {RETRY, FAILURE, REVOKED}
     EXCEPTION_STATES = states.EXCEPTION_STATES
     #: State precedence.
     #: None represents the precedence of an unknown state.
     #: Lower index means higher precedence.
+    # [SUCCESS, FAILURE, None, REVOKED, STARTED, RECEIVED, REJECTED, RETRY, PENDING]
     PRECEDENCE = states.PRECEDENCE
     #: Set of exception states that should propagate exceptions to the user.
+    # {FAILURE, REVOKED}
     PROPAGATE_STATES = states.PROPAGATE_STATES
     #: Set of states meaning the task result is ready (has been executed).
+    # {SUCCESS, FAILURE, REVOKED}
     READY_STATES = states.READY_STATES
     #: Set of states meaning the task result is not ready (hasn't been executed).
+    # {PENDING, RECEIVED, STARTED, REJECTED, RETRY}
     UNREADY_STATES = states.UNREADY_STATES
 
     @staticmethod
@@ -332,6 +363,61 @@ class LogLevelChoices(ChoiceSet):
 
 
 #
+# JobConsoleEntry
+#
+
+
+class JobConsoleEntryOutputTypeChoices(ChoiceSet):
+    TYPE_OUTPUT = "output"
+    TYPE_STDOUT = "stdout"
+    TYPE_STDERR = "stderr"
+
+    CHOICES = (
+        (TYPE_OUTPUT, "Output"),
+        (TYPE_STDOUT, "Standard output"),
+        (TYPE_STDERR, "Standard error"),
+    )
+
+
+#
+# JobRevocationType
+#
+
+
+class JobRevocationTypeChoices(ChoiceSet):
+    TYPE_TERMINATED = "terminated"
+    TYPE_REAPED = "reaped"
+
+    CHOICES = (
+        (TYPE_TERMINATED, "Terminated"),
+        (TYPE_REAPED, "Reaped"),
+    )
+
+
+#
+# ScheduledJob
+#
+
+
+class ScheduledJobStateChoices(ChoiceSet):
+    ACTIVE = "active"
+    PENDING = "pending"
+    DENIED = "denied"
+    CANCELED = "canceled"
+    COMPLETED = "completed"
+    ERRORED = "errored"
+
+    CHOICES = (
+        (ACTIVE, "Active"),
+        (PENDING, "Pending Approval"),
+        (DENIED, "Approval Denied"),
+        (CANCELED, "Approval Canceled"),
+        (COMPLETED, "Completed"),
+        (ERRORED, "Errored"),
+    )
+
+
+#
 # Metadata
 #
 
@@ -345,14 +431,12 @@ class MetadataTypeDataTypeChoices(CustomFieldTypeChoices):
 
     TYPE_CONTACT_TEAM = "contact-or-team"
     # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-    TYPE_DATETIME = "datetime"
     TYPE_FLOAT = "float"
 
     CHOICES = (
         *CustomFieldTypeChoices.CHOICES,
         (TYPE_CONTACT_TEAM, "Contact or Team"),
         # TODO: these should be migrated to CustomFieldTypeChoices and support added in CustomField data
-        (TYPE_DATETIME, "Date/time"),
         (TYPE_FLOAT, "Floating point number"),
     )
 
@@ -483,22 +567,30 @@ class SecretsGroupAccessTypeChoices(ChoiceSet):
 
 
 class SecretsGroupSecretTypeChoices(ChoiceSet):
+    TYPE_AUTHKEY = "authentication-key"
+    TYPE_AUTHPROTOCOL = "authentication-protocol"
     TYPE_KEY = "key"
+    TYPE_NOTES = "notes"
     TYPE_PASSWORD = "password"  # noqa: S105  # hardcoded-password-string -- false positive
+    TYPE_PRIVALGORITHM = "private-algorithm"
+    TYPE_PRIVKEY = "private-key"
     TYPE_SECRET = "secret"  # noqa: S105  # hardcoded-password-string -- false positive
     TYPE_TOKEN = "token"  # noqa: S105  # hardcoded-password-string -- false positive
-    TYPE_USERNAME = "username"
     TYPE_URL = "url"
-    TYPE_NOTES = "notes"
+    TYPE_USERNAME = "username"
 
     CHOICES = (
+        (TYPE_AUTHKEY, "Authentication Key"),
+        (TYPE_AUTHPROTOCOL, "Authentication Protocol"),
         (TYPE_KEY, "Key"),
+        (TYPE_NOTES, "Notes"),
         (TYPE_PASSWORD, "Password"),
+        (TYPE_PRIVALGORITHM, "Private Algorithm"),
+        (TYPE_PRIVKEY, "Private Key"),
         (TYPE_SECRET, "Secret"),
         (TYPE_TOKEN, "Token"),
-        (TYPE_USERNAME, "Username"),
         (TYPE_URL, "URL"),
-        (TYPE_NOTES, "Notes"),
+        (TYPE_USERNAME, "Username"),
     )
 
 

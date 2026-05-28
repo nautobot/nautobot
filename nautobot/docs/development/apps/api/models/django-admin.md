@@ -17,4 +17,5 @@ class AnimalAdmin(NautobotModelAdmin):
 
 This will display the app and its model in the admin UI. Staff users can create, change, and delete model instances via the admin UI without needing to create a custom view.
 
-![Nautobot app in the admin UI](../../../../media/apps/app_admin_ui.png)
+![Nautobot app in the admin UI](../../../../media/apps/app_admin_ui_light.png#only-light){ .on-glb }
+![Nautobot app in the admin UI](../../../../media/apps/app_admin_ui_dark.png#only-dark){ .on-glb }

@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 RESOLVER_PREFIX = "resolve_"
 
 
+LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
+
+
 def generate_restricted_queryset():
     """
     Generate a function to return a restricted queryset compatible with the internal permissions system.
@@ -24,7 +27,7 @@ def generate_restricted_queryset():
     fail gracefully in that case.
     """
 
-    def get_queryset(queryset, info):
+    def get_queryset(cls, queryset, info):
         if not hasattr(queryset, "restrict"):
             logger.debug(f"Queryset {queryset} is not restrictable")
             return queryset
@@ -53,6 +56,16 @@ def generate_null_choices_resolver(name, resolver_name):
     return resolve_fields_w_choices
 
 
+def _make_filter_cache_key(kwargs):
+    """Build a hashable cache key from filter kwargs."""
+    items = []
+    for k, v in sorted(kwargs.items()):
+        if isinstance(v, list):
+            v = tuple(v)
+        items.append((k, v))
+    return tuple(items)
+
+
 def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     Generate function to resolve filtering of ManyToOne and ManyToMany related objects.
@@ -64,29 +77,36 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     """
     filterset_class = schema_type._meta.filterset_class
 
+    @gql_optimizer.resolver_hints(model_field=field_name)
     def resolve_filter(self, info, **kwargs):
+        field = getattr(self, field_name)
+
         if not filterset_class or not kwargs:
-            return getattr(self, field_name).all()
+            return field.all()
 
-        # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
         if "_type" in kwargs:
-            kwargs["type"] = kwargs.pop("_type")
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
 
-        resolved_obj = filterset_class(kwargs, getattr(self, field_name).all())
+        if not hasattr(info.context, "_gql_filter_cache"):
+            info.context._gql_filter_cache = {}
 
-        # Check result filter for errors.
-        if not resolved_obj.errors:
-            return resolved_obj.qs.all()
+        related_model = field.model
+        cache_key = (related_model._meta.label, field_name, _make_filter_cache_key(kwargs))
 
-        errors = {}
+        if cache_key not in info.context._gql_filter_cache:
+            resolved_obj = filterset_class(kwargs, related_model.objects.all())
 
-        # Build error message from results
-        # Error messages are collected from each filter object
-        for key in resolved_obj.errors:
-            errors[key] = resolved_obj.errors[key]
+            if resolved_obj.errors:
+                raise GraphQLError(str(dict(resolved_obj.errors)))
 
-        # Raising this exception will send the error message in the response of the GraphQL request
-        raise GraphQLError(errors)
+            # Cache the filterset evaluation per request to avoid N+1 queries.
+            info.context._gql_filter_cache[cache_key] = set(resolved_obj.qs.values_list("pk", flat=True))
+
+        matching_ids = info.context._gql_filter_cache[cache_key]
+        return [obj for obj in field.all() if obj.pk in matching_ids]
 
     resolve_filter.__name__ = resolver_name
     return resolve_filter
@@ -248,6 +268,9 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
 def generate_list_search_parameters(schema_type):
     """Generate list of query parameters for the list resolver based on a filterset."""
 
+    if schema_type in LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE:
+        return LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type]
+
     search_params = {
         "limit": graphene.Int(),
         "offset": graphene.Int(),
@@ -258,6 +281,8 @@ def generate_list_search_parameters(schema_type):
                 schema_type._meta.filterset_class,
             )
         )
+
+    LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE[schema_type] = search_params
 
     return search_params
 
@@ -277,9 +302,10 @@ def generate_single_item_resolver(schema_type, resolver_name):
     def single_resolver(self, info, **kwargs):
         obj_id = kwargs.get("id", None)
         if obj_id:
-            return gql_optimizer.query(
-                model.objects.restrict(info.context.user, "view").filter(pk=obj_id), info
-            ).first()
+            queryset = model.objects.all()
+            if hasattr(queryset, "restrict"):
+                queryset = queryset.restrict(info.context.user, "view")
+            return gql_optimizer.query(queryset.filter(pk=obj_id), info).first()
         return None
 
     single_resolver.__name__ = resolver_name
@@ -305,8 +331,19 @@ def generate_list_resolver(schema_type, resolver_name):
 
     def list_resolver(self, info, limit=None, offset=None, **kwargs):
         filterset_class = schema_type._meta.filterset_class
+
+        # Backwards-compatibility with Nautobot v2 - "_type" as a (now deprecated) alias for "type" filter
+        if "_type" in kwargs:
+            _type = kwargs.pop("_type")
+            if "type" not in kwargs:
+                kwargs["type"] = _type
+
+        queryset = model.objects.all()
+        if hasattr(queryset, "restrict"):
+            queryset = queryset.restrict(info.context.user, "view")
+
         if filterset_class is not None:
-            resolved_obj = filterset_class(kwargs, model.objects.restrict(info.context.user, "view").all())
+            resolved_obj = filterset_class(kwargs, queryset)
 
             # Check result filter for errors.
             if resolved_obj.errors:
@@ -318,11 +355,11 @@ def generate_list_resolver(schema_type, resolver_name):
                     errors[key] = resolved_obj.errors[key]
 
                 # Raising this exception will send the error message in the response of the GraphQL request
-                raise GraphQLError(errors)
+                raise GraphQLError(str(errors))
             qs = resolved_obj.qs.all()
 
         else:
-            qs = model.objects.restrict(info.context.user, "view").all()
+            qs = queryset
 
         if offset:
             qs = qs[offset:]
@@ -354,6 +391,7 @@ def generate_attrs_for_schema_type(schema_type):
     # Define Attributes for single item and list with their search parameters
     search_params = generate_list_search_parameters(schema_type)
     attrs[single_item_name] = graphene.Field(schema_type, id=graphene.ID())
+    # TODO: refactor to use DjangoListField instead of graphene.List (https://github.com/nautobot/nautobot/issues/4690)
     attrs[list_name] = graphene.List(schema_type, **search_params)
 
     # Define Resolvers for both single item and list

@@ -1,0 +1,8 @@
+{% load helpers %}
+
+{% include "components/panel/header_extra_content_table.html" %}
+
+<div class="float-end col-lg-2 d-print-none">
+    <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
+</div>
+<script src="{% versioned_static 'js/interface_filtering.js' %}"></script>

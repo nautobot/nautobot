@@ -22,6 +22,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
@@ -76,6 +77,7 @@ class DynamicGroup(PrimaryModel):
 
     objects = BaseManager.from_queryset(DynamicGroupQuerySet)()
     is_dynamic_group_associable_model = False
+    is_data_compliance_model = False
 
     clone_fields = ["content_type", "group_type", "filter", "tenant"]
 
@@ -224,7 +226,7 @@ class DynamicGroup(PrimaryModel):
                 new_modelform_field.widget = modelform_field.widget
                 modelform_field = new_modelform_field
 
-            # FIXME(jathan); Figure out how we can do this autoamtically from the FilterSet so we
+            # FIXME(jathan); Figure out how we can do this automatically from the FilterSet so we
             # don't have to munge it here.
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
@@ -524,53 +526,13 @@ class DynamicGroup(PrimaryModel):
         if invalid_filter_exist:
             raise ValidationError(error_message)
 
-        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
-        # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.filterset_class
         filterset_class.form_prefix = "filter"
-        filterset = filterset_class(form_data)
 
-        # Use the auto-generated filterset form perform creation of the filter dictionary.
-        filterset_form = filterset.form
-
-        # Get the declared form for any overloaded form field definitions.
-        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
-
-        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
-        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
-        # filterset form, but will also catch errors in case a user-created dict is provided instead.
-        if not filterset_form.is_valid():
-            raise ValidationError(filterset_form.errors)
-
-        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
-        # empty/null value fields.
-        new_filter = {}
-        for field_name in filter_fields:
-            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
-            field_value = filterset_form.cleaned_data[field_name]
-
-            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
-            # and literal FilterSet fields (ex: MultiValueCharFilter).
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = [getattr(item, field_to_query) for item in field_value]
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = getattr(field_value, field_to_query, None)
-
-            else:
-                new_value = field_value
-
-            # Don't store empty values like `None`, [], etc.
-            if new_value in (None, "", [], {}):
-                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
-                continue
-
-            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
-            new_filter[field_name] = new_value
-
-        self.filter = new_filter
+        new_filter_dict = build_filter_dict_from_filterset(
+            filterset_class, form_data, filter_fields, logs_prefix=self.name
+        )
+        self.filter = new_filter_dict
 
     set_filter.alters_data = True
 
@@ -590,7 +552,7 @@ class DynamicGroup(PrimaryModel):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
 
-        This form is used to popoulate and validate the filter dictionary.
+        This form is used to populate and validate the filter dictionary.
 
         If a form cannot be created for some reason (such as on a new instance when rendering the UI
         "add" view), this will return `None`.
@@ -628,6 +590,10 @@ class DynamicGroup(PrimaryModel):
         else:
             # Validate against the filterset's internal form validation.
             filterset = self.filterset_class(self.filter)  # pylint: disable=not-callable
+            # TODO: the below is more generous than one might expect. For example, passing a list of strings ["foo"]
+            # to a (single-input) CharFilter will quietly normalize the list to a string '["foo"]' instead of reporting
+            # any failure of is_valid(). We've had cases of such "should be invalid but isn't caught" DynamicGroups causing
+            # exceptions when trying to evaluate their membership; it would be good to be stricter here instead!
             if not filterset.is_valid():
                 raise ValidationError(filterset.errors)
 
@@ -660,6 +626,22 @@ class DynamicGroup(PrimaryModel):
                 raise ValidationError({"content_type": "ContentType cannot be changed once created"})
 
             # TODO limit most changes to self.group_type as well.
+
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroup record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.update_cached_members()` explicitly when ready.
+        """
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.update_cached_members()
+            for ancestor in self.get_ancestors():
+                ancestor.update_cached_members()
 
     def _generate_query_for_filter(self, filter_field, value):
         """
@@ -703,9 +685,12 @@ class DynamicGroup(PrimaryModel):
             # "ams02"]}`, the value being a list of location names (`["ams01", "ams02"]`).
             if value and isinstance(value, list) and isinstance(value[0], str) and not is_uuid(value[0]):
                 model_field = django_filters.utils.get_model_field(self._model, filter_field.field_name)
-                related_model = model_field.related_model
-                lookup_kwargs = {f"{to_field_name}__in": value}
-                gq_value = related_model.objects.filter(**lookup_kwargs)
+                if model_field is None:
+                    gq_value = value
+                else:
+                    related_model = model_field.related_model
+                    lookup_kwargs = {f"{to_field_name}__in": value}
+                    gq_value = related_model.objects.filter(**lookup_kwargs)
             else:
                 gq_value = value
             query |= filter_field.generate_query(gq_value)
@@ -748,7 +733,10 @@ class DynamicGroup(PrimaryModel):
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in filterset.data.items():
             filter_field = filterset.filters.get(field_name)
-            query &= self._generate_query_for_filter(filter_field, value)
+            if filter_field.exclude:
+                query &= ~self._generate_query_for_filter(filter_field, value)
+            else:
+                query &= self._generate_query_for_filter(filter_field, value)
 
         return query
 
@@ -806,7 +794,16 @@ class DynamicGroup(PrimaryModel):
     def _get_group_queryset(self):
         """Construct the queryset representing dynamic membership of this group."""
         query = self.generate_query()
-        return self.model.objects.filter(query)
+        # https://github.com/nautobot/nautobot/issues/7631
+        #     Some queries may result in duplicate records, hence the need for `.distinct()`.
+        #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
+        #     filters that can be applied, support for both MySQL and PostgreSQL, and limitations of the Django ORM,
+        #     I don't see a clear alternative at this time.
+        #
+        #     Additionally, due to the use of `.distinct()`, in combination with our use of `.only("id")`
+        #     on this queryset, e.g. in `_set_members()`, we also need to override any default model ordering on the
+        #     queryset in order to avoid SQL errors like "each EXCEPT query must have the same number of columns"
+        return self.model.objects.filter(query).order_by("id").distinct()
 
     # TODO: unused in core
     def add_child(self, child, operator, weight):
@@ -1163,12 +1160,26 @@ class DynamicGroupMembership(BaseModel):
         if self.group in self.parent_group.get_ancestors():
             raise ValidationError({"group": "Cannot add ancestor as a child"})
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, update_cached_members=True, **kwargs):
+        """
+        Save the DynamicGroupMembership record.
+
+        Args:
+            update_cached_members (bool): If True, (re)calculate the cached members set of the related group(s) immediately.
+                Note that this is potentially quite expensive if there will be a large change in the members set!
+                If False (recommended), you can call `self.parent_group.update_cached_members()` explicitly when ready.
+        """
         # For backwards compatibility
         if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
             self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
             self.parent_group.save()
-        return super().save(*args, **kwargs)
+
+        super().save(*args, **kwargs)
+
+        if update_cached_members:
+            self.parent_group.update_cached_members()
+            for ancestor in self.parent_group.get_ancestors():
+                ancestor.update_cached_members()
 
 
 class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
@@ -1209,6 +1220,7 @@ class StaticGroupAssociation(OrganizationalModel):
     is_contact_associable_model = False
     is_dynamic_group_associable_model = False
     is_saved_view_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = [["dynamic_group", "associated_object_type", "associated_object_id"]]

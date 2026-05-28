@@ -1,10 +1,21 @@
-from django.test import tag, TestCase
+import os
+from unittest.mock import patch
+
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.test import override_settings, RequestFactory, tag, TestCase
 from django.urls import resolve
 
+from nautobot.core.apps import NavMenuTab
 from nautobot.core.choices import ButtonActionColorChoices, ButtonActionIconChoices
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.context_processors import nav_menu
+from nautobot.core.testing.utils import get_expected_menu_item_name
+from nautobot.core.ui.choices import NavigationIconChoices, NavigationWeightChoices
 from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.module_loading import import_string_optional
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.dcim.models import Device
+from nautobot.extras.models import Job
 from nautobot.extras.registry import registry
 
 
@@ -35,16 +46,9 @@ class NavMenuTestCase(TestCase):
                                 "Interface Connections",
                                 "Console Connections",
                                 "Power Connections",
-                                "Job Approval Queue",
                                 "Wireless Controllers",
                             }:
-                                expected_name = bettertitle(view_model._meta.verbose_name_plural)
-                                if expected_name == "VM Interfaces":
-                                    expected_name = "Interfaces"
-                                elif expected_name == "Object Changes":
-                                    expected_name = "Change Log"
-                                elif expected_name == "Controller Managed Device Groups":
-                                    expected_name = "Device Groups"
+                                expected_name = get_expected_menu_item_name(view_model)
                                 self.assertEqual(item_details["name"], expected_name)
                             if item_url == get_route_for_model(view_model, "list"):
                                 # Not assertEqual as some menu items have additional permissions defined.
@@ -52,7 +56,8 @@ class NavMenuTestCase(TestCase):
                         except AttributeError:
                             # Not a model view?
                             self.assertIn(
-                                item_details["name"], {"Apps Marketplace", "Installed Apps", "Interface Connections"}
+                                item_details["name"],
+                                {"Apps Marketplace", "Installed Apps", "Interface Connections", "Device Constraints"},
                             )
 
                     for button, button_details in item_details["buttons"].items():
@@ -88,3 +93,142 @@ class NavMenuTestCase(TestCase):
                 else:
                     expected_perms[tab_name] |= group_perms
             self.assertEqual(expected_perms[tab_name], tab_details["permissions"])
+
+    def test_nav_menu_tabs_have_icon_and_weight(self):
+        """Ensure each NavMenuTab in every navigation.py has an icon and weight set, and any duplicates by name match."""
+        tabs_by_name = {}
+        for app in apps.get_app_configs():
+            if not app.name.startswith("nautobot."):
+                continue
+            nav_path = f"{app.name}.navigation.menu_items"
+            menu_items = import_string_optional(nav_path)
+            if menu_items is None:
+                continue
+            for tab in menu_items:
+                if not isinstance(tab, NavMenuTab):
+                    raise TypeError(f"Expected NavMenuTab instance in {nav_path}, got {type(tab)}")
+                tab_name = tab.name
+                icon = tab.icon
+                weight = tab.weight
+                with self.subTest(tab_name=tab_name, nav_path=nav_path):
+                    self.assertIsNotNone(tab_name, f"Tab in {nav_path} missing 'name'")
+                    self.assertIsNotNone(icon, f"Tab '{tab_name}' in {nav_path} missing 'icon'")
+                    self.assertIsNotNone(weight, f"Tab '{tab_name}' in {nav_path} missing 'weight'")
+                    if tab_name in tabs_by_name:
+                        prev_icon, prev_weight, prev_path = tabs_by_name[tab_name]
+                        self.assertEqual(
+                            icon,
+                            prev_icon,
+                            f"Tab '{tab_name}' has inconsistent icons: '{icon}' in {nav_path} vs '{prev_icon}' in {prev_path}",
+                        )
+                        self.assertEqual(
+                            weight,
+                            prev_weight,
+                            f"Tab '{tab_name}' has inconsistent weights: '{weight}' in {nav_path} vs '{prev_weight}' in {prev_path}",
+                        )
+                    else:
+                        tabs_by_name[tab_name] = (icon, weight, nav_path)
+
+    def test_icon_and_weight_class_attributes_match(self):
+        """
+        Ensure every class attribute in NavigationIconChoices is also in NavigationWeightChoices and vice versa.
+        If not, print the missing/extra attributes for easier debugging.
+        """
+        icon_attrs = {attr for attr in dir(NavigationIconChoices) if attr.isupper()}
+        weight_attrs = {attr for attr in dir(NavigationWeightChoices) if attr.isupper()}
+
+        only_in_icons = sorted(icon_attrs - weight_attrs)
+        only_in_weights = sorted(weight_attrs - icon_attrs)
+
+        if only_in_icons or only_in_weights:
+            msg = []
+            if only_in_icons:
+                msg.append(f"Class attributes only in NavigationIconChoices: {only_in_icons}")
+            if only_in_weights:
+                msg.append(f"Class attributes only in NavigationWeightChoices: {only_in_weights}")
+            self.fail("\n".join(msg))
+
+    def test_navigation_icons_have_svg(self):
+        """Ensure every NavigationIconChoices icon has a corresponding SVG file."""
+        missing = []
+        svg_dir = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..", "project-static", "nautobot-icons")
+        )
+        icon_attrs = [attr for attr in dir(NavigationIconChoices) if attr.isupper() and not attr == "CHOICES"]
+        for icon_attr in icon_attrs:
+            icon_name = getattr(NavigationIconChoices, icon_attr)
+            svg_path = os.path.join(svg_dir, f"{icon_name}.svg")
+            if not os.path.isfile(svg_path):
+                missing.append(svg_path)
+        self.assertFalse(missing, f"Missing SVG files for NavigationIconChoices: {missing}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_menu_item_is_active(self):
+        """Verify that the correct menu item is marked as active."""
+        User = get_user_model()
+        user = User.objects.create(username="User 1", is_active=True, is_superuser=True)
+        request_factory = RequestFactory()
+        request = request_factory.get("/dcim/devices/")
+        request.resolver_match = resolve("/dcim/devices/")
+        request.user = user
+
+        nav = nav_menu(request)["nav_menu"]
+
+        # Assert that only one menu item is active
+        active_items = {
+            f"{tabname}-{groupname}-{itemname}": itemvalue
+            for tabname, tabvalue in nav["tabs"].items()
+            for groupname, groupvalue in tabvalue["groups"].items()
+            for itemname, itemvalue in groupvalue["items"].items()
+            if itemvalue["is_active"]
+        }
+        self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+        # Assert that the correct devices menu item is active
+        self.assertTrue(nav["tabs"]["Devices"]["groups"]["Devices"]["items"]["/dcim/devices/"]["is_active"])
+
+        # Force get_model_for_view_name to return the Device model
+        with patch("nautobot.core.context_processors.lookup") as mock_lookup:
+            mock_lookup.get_model_for_view_name.return_value = Device
+            mock_lookup.get_route_for_model.return_value = "dcim:device_list"
+            request = request_factory.get("/extras/jobs/")
+            request.resolver_match = resolve("/extras/jobs/")
+            request.user = user
+
+            nav = nav_menu(request)["nav_menu"]
+
+            # Assert that only one menu item is active
+            active_items = {
+                f"{tabname}-{groupname}-{itemname}": itemvalue
+                for tabname, tabvalue in nav["tabs"].items()
+                for groupname, groupvalue in tabvalue["groups"].items()
+                for itemname, itemvalue in groupvalue["items"].items()
+                if itemvalue["is_active"]
+            }
+            self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+            # Assert that the menu item for the requested URL is active
+            self.assertTrue(nav["tabs"]["Jobs"]["groups"]["Jobs"]["items"]["/extras/jobs/"]["is_active"])
+
+        # Force get_model_for_view_name to return the Job model
+        with patch("nautobot.core.context_processors.lookup") as mock_lookup:
+            mock_lookup.get_model_for_view_name.return_value = Job
+            mock_lookup.get_route_for_model.return_value = "extras:job_list"
+            request = request_factory.get("/dcim/devices/")
+            request.resolver_match = resolve("/dcim/devices/")
+            request.user = user
+
+            nav = nav_menu(request)["nav_menu"]
+
+            # Assert that only one menu item is active
+            active_items = {
+                f"{tabname}-{groupname}-{itemname}": itemvalue
+                for tabname, tabvalue in nav["tabs"].items()
+                for groupname, groupvalue in tabvalue["groups"].items()
+                for itemname, itemvalue in groupvalue["items"].items()
+                if itemvalue["is_active"]
+            }
+            self.assertEqual(len(active_items), 1, msg=active_items.keys())
+
+            # Assert that the menu item for the requested URL is active
+            self.assertTrue(nav["tabs"]["Devices"]["groups"]["Devices"]["items"]["/dcim/devices/"]["is_active"])

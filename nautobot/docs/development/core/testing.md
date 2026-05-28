@@ -21,8 +21,13 @@ By Nautobot convention, **integration** tests must be [tagged](https://docs.djan
 
 Nautobot's Python-based **migration** tests are built around the `django-test-migrations` library and its `MigratorTestCase` class, which has the tag `migration_test`, therefore any test cases inheriting from that class do not need to be explicitly tagged.
 
-!!! info
+!!! info "`invoke migration-test`"
     There are also a set of "holistic" migration tests executable by the `invoke migration-test` command; these "tests" consist of nothing more than historical SQL dumps (in the `development/datasets/` directory) of a fully populated database state that can be used to populate an empty database before running a `nautobot-server migrate` command and confirming that it raises no errors. This sort of test is fairly crude; in most cases writing a specific `MigratorTestCase` subclass is to be preferred.
+
+Test cases that depend on the presence of the `example_app` example Nautobot App to function properly must be tagged with the tag `example_app`. Similarly those that depend on the `example_app_with_view_override` must be tagged accordingly as well.
+
+!!! tip "Running tests without the example Apps"
+    Because in some cases the presence of the example App(s) can cause side effects in the function of Nautobot itself, an alternate Nautobot test config file is provided that omits these Apps. Running `invoke tests --config-file nautobot/core/tests/nautobot_config_without_example_apps.py` will use this alternate config file, and will additionally automatically skip over the tests that are tagged `example_app` and/or `example_app_with_view_override` since those would be expected to fail in the absence of the example Apps. This can be a useful way to run the majority of the test suite against a "clean" Nautobot installation if interference from the example Apps is a potential concern.
 
 ## Base Classes and Code Location
 
@@ -132,3 +137,45 @@ To reduce the time taken between multiple test runs, a new argument has been add
 
 - Use more specific/feature-rich test assertion methods where available (e.g. `self.assertInHTML(fragment, html)` rather than `self.assertTrue(re.search(fragment, html))` or `assert re.search(fragment, html) is not None`).
 - Keep test case scope (especially in unit tests) small. Split test functions into smaller tests where possible; otherwise, use `self.subTest()` to delineate test blocks as appropriate.
+
+## Detecting N+1 Query Patterns
+
+The `AssertNoRepeatedQueries` context manager (available from `nautobot.core.testing`) detects N+1 query patterns by capturing all SQL queries within a block, normalizing them into structural templates, and failing the test if any template repeats more than the allowed threshold.
+
+### How It Works
+
+1. All SQL queries executed inside the `with` block are captured using Django's `CaptureQueriesContext`.
+2. Each query is normalized by replacing quoted string literals with `'?'` and `IN (...)` clauses with `IN (?)`, so queries that differ only in parameter values share the same template.
+3. If any template appears more than `threshold` times (default: 10), the test fails with a message listing the offending patterns, their counts, and the total query count.
+
+### Usage
+
+```python
+from nautobot.core.testing import AssertNoRepeatedQueries
+
+class MyTest(TestCase):
+    def test_no_n_plus_one(self):
+        with AssertNoRepeatedQueries(self, threshold=10):
+            # Execute the code path under test
+            response = self.client.get("/api/dcim/devices/")
+```
+
+`AssertNoRepeatedQueries` works with any code path that executes database queries, including views, API endpoints, jobs, and management commands.
+
+### Parameters
+
+- `test_case` - A `TestCase` instance whose `.fail()` method will be called on violations.
+- `threshold` - Maximum allowed repetitions of any single query template (default: `10`).
+
+### Accessing Captured Queries
+
+After the context manager exits, the raw SQL strings are available on the `captured_queries` attribute:
+
+```python
+with AssertNoRepeatedQueries(self, threshold=10) as ctx:
+    my_function()
+
+# Inspect the queries that were executed
+for sql in ctx.captured_queries:
+    print(sql)
+```

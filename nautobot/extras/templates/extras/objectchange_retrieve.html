@@ -1,0 +1,8 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+{% load static %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'js/editor.js' %}"></script>
+{% endblock %}

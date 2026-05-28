@@ -1,6 +1,6 @@
 from django.urls import reverse
 
-from nautobot.core.testing.integration import SeleniumTestCase, WebDriverWait
+from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Job, Status
 
@@ -8,42 +8,27 @@ from nautobot.extras.models import Job, Status
 class ClearableFileInputTestCase(SeleniumTestCase):
     def setUp(self):
         super().setUp()
-        self.user.is_superuser = True
-        self.user.save()
-        self.login(self.user.username, self.password)
-
-    def tearDown(self):
-        self.logout()
-        super().tearDown()
+        self.login_as_superuser()
 
     def _assert_file_picker(self, uri_to_visit: str, page_loaded_confirmation: str, file_input_selector_id: str):
         """
         Ensure clearable input file type has working clear and info display.
         """
         self.browser.visit(f"{self.live_server_url}{uri_to_visit}")
-        WebDriverWait(self.browser, 10).until(lambda driver: driver.is_text_present(page_loaded_confirmation))
+        self.assertTrue(self.browser.is_text_present(page_loaded_confirmation, wait_time=10))
 
         # Find the first file input button and scroll to it
-        front_image_button = self.browser.find_by_css("span.group-span-filestyle.input-group-btn").first
-        front_image_button.scroll_to()
-
-        # cancel button is NOT visible initially
-        self.assertFalse(self.browser.find_by_css("button.clear-button").first.visible)
+        front_image_file_input = self.browser.find_by_id(file_input_selector_id).first
+        self.scroll_element_into_view(element=front_image_file_input)
 
         # Test file text changes after selecting a file
-        file_selection_indicator_css = "div.bootstrap-filestyle input[type='text'].form-control"
-        self.assertEqual(self.browser.find_by_css(file_selection_indicator_css).first.value, "")
-        front_image_file_input = self.browser.find_by_id(file_input_selector_id).first
-        front_image_file_input.value = "/dev/null"
-        self.assertEqual(self.browser.find_by_css(file_selection_indicator_css).first.value, "null")
+        self.assertEqual(front_image_file_input.value, "")
+        front_image_file_input.fill("/dev/null")
+        self.assertEqual(front_image_file_input.value, "C:\\fakepath\\null")
 
-        # clear button is now visible
-        clear_button = self.browser.find_by_css("button.clear-button").first
-        self.assertTrue(clear_button.visible)
-
-        # clicking clearbutton should hide the button, and wipe the file input value
+        # clicking clearbutton should wipe the file input value
+        clear_button = self.browser.find_by_css(f"#{file_input_selector_id} + button").first
         clear_button.click()
-        self.assertFalse(clear_button.visible)
         self.assertEqual(front_image_file_input.value, "")
 
     def test_add_device_page(self):
@@ -82,6 +67,6 @@ class ClearableFileInputTestCase(SeleniumTestCase):
         )
         self._assert_file_picker(
             uri_to_visit=location_image_attach_uri,
-            page_loaded_confirmation="Image attachment",
+            page_loaded_confirmation="IMAGE ATTACHMENT",
             file_input_selector_id="id_image",
         )

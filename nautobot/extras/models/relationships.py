@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 
 from django import forms
@@ -22,6 +23,7 @@ from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
@@ -283,7 +285,9 @@ class RelationshipModel(models.Model):
                             Q(**side_query_params) | Q(**peer_side_query_params)
                         ).distinct()
                         if not relationship.has_many(peer_side):
-                            resp[side][relationship] = resp[side][relationship].first()
+                            resp[RelationshipSideChoices.SIDE_PEER][relationship] = resp[
+                                RelationshipSideChoices.SIDE_PEER
+                            ][relationship].first()
                 else:
                     # Maybe an uninstalled App?
                     # We can't provide a relevant queryset, but we can provide a descriptive string
@@ -422,31 +426,51 @@ class RelationshipModel(models.Model):
 class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, hidden=None):
+    def get_for_model(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return querysets or object lists.
 
-        Returns a tuple of source and destination scoped relationship querysets.
+        Returns a tuple of source and destination scoped relationship record querysets/lists.
         """
         return (
-            self.get_for_model_source(model, hidden=hidden),
-            self.get_for_model_destination(model, hidden=hidden),
+            self.get_for_model_source(model, hidden=hidden, get_queryset=get_queryset),
+            self.get_for_model_destination(model, hidden=hidden, get_queryset=get_queryset),
         )
 
-    def get_for_model_source(self, model, hidden=None):
+    def get_for_model_source(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the source side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model_source.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model_source",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
+        )
+        list_cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model_source",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
+            listing=True,
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -455,21 +479,44 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(source_hidden=hidden)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(cache_key, queryset, timeout=None)
+        if not get_queryset:
+            listing = list(queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
+            return listing
         return queryset
 
-    get_for_model_source.cache_key_prefix = "nautobot.extras.relationship.get_for_model_source"
-
-    def get_for_model_destination(self, model, hidden=None):
+    def get_for_model_destination(self, model, hidden=None, get_queryset=True):
         """
         Return all Relationships assigned to the given model for the destination side only.
 
         Args:
             model (Model): The django model to which relationships are registered
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
+            get_queryset (bool): Whether to return a queryset or an object list.
         """
         concrete_model = model._meta.concrete_model
-        cache_key = f"{self.get_for_model_destination.cache_key_prefix}.{concrete_model._meta.label_lower}.{hidden}"
+        cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model_destination",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
+        )
+        list_cache_key = construct_cache_key(
+            self,
+            method_name="get_for_model_destination",
+            branch_aware=True,
+            model=concrete_model._meta.label_lower,
+            hidden=hidden,
+            listing=True,
+        )
+        if not get_queryset:
+            listing = cache.get(list_cache_key)
+            if listing is not None:
+                return listing
         queryset = cache.get(cache_key)
         if queryset is None:
             content_type = ContentType.objects.get_for_model(concrete_model)
@@ -480,10 +527,14 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(destination_hidden=hidden)
-            cache.set(cache_key, queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(cache_key, queryset, timeout=None)
+        if not get_queryset:
+            listing = list(queryset)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+            cache.set(list_cache_key, listing, timeout=None)
+            return listing
         return queryset
-
-    get_for_model_destination.cache_key_prefix = "nautobot.extras.relationship.get_for_model_destination"
 
     def get_required_for_model(self, model):
         """
@@ -494,6 +545,50 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             Q(source_type=content_type, required_on=RelationshipRequiredSideChoices.SOURCE_SIDE_REQUIRED)
             | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)
         )
+
+    def populate_list_caches(self):
+        """Populate all relevant caches for `get_for_model(..., get_queryset=False)` and related lookups."""
+        queryset = self.all().select_related("source_type", "destination_type")
+        listings = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+        for rel in queryset:
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"]["None"].append(rel)
+            listings["source"][f"{rel.source_type.app_label}.{rel.source_type.model}"][str(rel.source_hidden)].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"]["None"].append(
+                rel
+            )
+            listings["destination"][f"{rel.destination_type.app_label}.{rel.destination_type.model}"][
+                str(rel.destination_hidden)
+            ].append(rel)
+        for ct in ContentType.objects.all():
+            label = f"{ct.app_label}.{ct.model}"
+            for hidden in ["None", "True", "False"]:
+                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
+                cache.set(
+                    construct_cache_key(
+                        self,
+                        method_name="get_for_model_source",
+                        branch_aware=True,
+                        model=label,
+                        hidden=hidden,
+                        listing=True,
+                    ),
+                    listings["source"][label][hidden],
+                    timeout=None,
+                )
+                cache.set(
+                    construct_cache_key(
+                        self,
+                        method_name="get_for_model_destination",
+                        branch_aware=True,
+                        model=label,
+                        hidden=hidden,
+                        listing=True,
+                    ),
+                    listings["destination"][label][hidden],
+                    timeout=None,
+                )
 
 
 class Relationship(

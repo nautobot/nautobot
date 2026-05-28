@@ -1,5 +1,32 @@
 # Release Notes
 
+## [3.2 - Summer 2026](version-3.2.md)
+
+TODO
+
+## [3.1 - April 2026](version-3.1.md)
+
+- Job Console Logging
+- Custom Field Scoping
+- Dependent Object Creation and Search
+- Tree List Views on Location and Prefix
+- Async Loading on all List Views
+- Async Loading on Global Search
+- Enhanced Configurable Columns
+- Bulk Rename Across All UI ViewSets
+
+## [3.0 - November 2025](version-3.0.md)
+
+- Major UI refresh: Bootstrap 5 migration, new navigation, and global search
+- Approval Workflow system for multi-stage job and change approvals
+- Load Balancer Models
+- VPN Models
+- Device Uniqueness Updates
+- Data Validation Engine integrated into core
+- Enhanced Search and updated Saved Views
+- ECharts integration for custom charting
+- Updated GraphQL UI and API
+
 ## [2.4 - January 2025](version-2.4.md)
 
 - Virtual Device Context Data Models

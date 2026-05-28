@@ -20,6 +20,9 @@ class ContactTeamSharedBase(PrimaryModel):
 
     comments = models.TextField(blank=True)
     is_contact_associable_model = False
+    is_data_compliance_model = False
+
+    natural_key_field_names = ["name"]
 
     class Meta:
         abstract = True
@@ -94,6 +97,7 @@ class ContactAssociation(OrganizationalModel):
     is_contact_associable_model = False
     is_dynamic_group_associable_model = False
     is_saved_view_model = False
+    is_data_compliance_model = False
 
     class Meta:
         unique_together = (

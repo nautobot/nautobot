@@ -68,6 +68,7 @@ class DeviceType(OptimizedNautobotObjectType):
     all_power_ports = graphene.List("nautobot.dcim.graphql.types.PowerPortType")
     all_power_outlets = graphene.List("nautobot.dcim.graphql.types.PowerOutletType")
     all_rear_ports = graphene.List("nautobot.dcim.graphql.types.RearPortType")
+    cluster = graphene.Field("nautobot.virtualization.graphql.types.ClusterType")
     common_vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
     dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
     primary_ip = graphene.Field("nautobot.ipam.graphql.types.IPAddressType")
@@ -121,20 +122,21 @@ class CableType(OptimizedNautobotObjectType):
     class Meta:
         model = Cable
         filterset_class = CableFilterSet
-        exclude = ["_termination_a_device", "_termination_b_device"]
 
     termination_a_type = graphene.String()
     termination_b_type = graphene.String()
 
     def resolve_termination_a_type(self, args):
-        if self.termination_a_type:
-            model = self.termination_a_type.model_class()  # pylint: disable=no-member
+        ct = self.termination_a_type
+        if ct:
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 
     def resolve_termination_b_type(self, args):
-        if self.termination_b_type:
-            model = self.termination_b_type.model_class()  # pylint: disable=no-member
+        ct = self.termination_b_type
+        if ct:
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 

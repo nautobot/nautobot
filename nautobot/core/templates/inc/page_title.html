@@ -1,0 +1,23 @@
+{% load static %}
+{% load helpers %}
+
+<h1 class="d-flex fs-2 gap-8 lh-sm py-6">
+    <img
+        alt="Nautobot chevron"
+        class="align-self-start flex-grow-0 flex-shrink-0 my-n4"
+        role="presentation"
+        src="{% static 'img/nautobot_chevron.svg' %}"
+        style="width: 1.5rem;"
+    />
+    {% if copy_title %}
+        <span class="d-flex gap-4">
+            <span id="copy_title">{{ title }}</span>{% saved_view_title %}
+            <button type="button" class="btn btn-secondary align-self-end nb-btn-inline-hover" data-clipboard-text="{{ title }}">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
+            </button>
+        </span>
+    {% else %}
+        {{ title }}
+    {% endif %}
+</h1>

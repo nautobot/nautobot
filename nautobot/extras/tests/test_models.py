@@ -4,18 +4,17 @@ import shutil
 import tempfile
 from unittest import expectedFailure, mock
 import uuid
-import warnings
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import ProtectedError
 from django.db.utils import IntegrityError
-from django.test import override_settings
-from django.test.utils import isolate_apps
+from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
@@ -23,11 +22,13 @@ from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
+from nautobot.core.celery.schedulers import NautobotScheduleEntry
 from nautobot.core.choices import ColorChoices
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
     Device,
+    DeviceFamily,
     DeviceType,
     Location,
     LocationType,
@@ -35,12 +36,15 @@ from nautobot.dcim.models import (
     Platform,
 )
 from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -53,6 +57,11 @@ from nautobot.extras.constants import (
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
 from nautobot.extras.models import (
+    ApprovalWorkflow,
+    ApprovalWorkflowDefinition,
+    ApprovalWorkflowStage,
+    ApprovalWorkflowStageDefinition,
+    ApprovalWorkflowStageResponse,
     ComputedField,
     ConfigContext,
     ConfigContextSchema,
@@ -64,6 +73,7 @@ from nautobot.extras.models import (
     FileProxy,
     GitRepository,
     Job as JobModel,
+    JobConsoleEntry,
     JobLogEntry,
     JobQueue,
     JobResult,
@@ -83,7 +93,6 @@ from nautobot.extras.models import (
     Team,
     Webhook,
 )
-from nautobot.extras.models.statuses import StatusModel
 from nautobot.extras.registry import registry
 from nautobot.extras.secrets.exceptions import SecretParametersError, SecretProviderError, SecretValueNotFoundError
 from nautobot.extras.tests.git_helper import create_and_populate_git_repository
@@ -96,9 +105,347 @@ from nautobot.virtualization.models import (
     VirtualMachine,
 )
 
-from example_app.jobs import ExampleJob
-
 User = get_user_model()
+
+
+class ApprovalWorkflowTest(ModelTestCases.BaseModelTestCase):
+    """
+    Tests for the ApprovalWorkflow model class.
+    """
+
+    model = ApprovalWorkflow
+
+    @classmethod
+    def setUpTestData(cls):
+        # Prepare the test data
+        cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
+        cls.approver_group_1 = Group.objects.create(name="Approver Group 1")
+        cls.approver_group_2 = Group.objects.create(name="Approver Group 2")
+        cls.approver_group_3 = Group.objects.create(name="Approver Group 3")
+        cls.users = (
+            User.objects.create(username="User 1", is_active=True),
+            User.objects.create(username="User 2", is_active=True),
+            User.objects.create(username="User 3", is_active=True, is_superuser=True),
+            User.objects.create(username="User 4", is_active=True),
+            User.objects.create(username="User 5", is_active=True),
+        )
+        job_model = JobModel.objects.get_for_class_path("pass_job.TestPassJob")
+        cls.scheduled_job = ScheduledJob.objects.create(
+            name="Test Pass Scheduled Job",
+            task="pass_job.TestPassJob",
+            job_model=job_model,
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=cls.users[0],
+            start_time=now(),
+        )
+        cls.approver_group_1.user_set.set([cls.users[0]])
+        cls.approver_group_2.user_set.set([cls.users[1], cls.users[2]])
+        cls.approver_group_3.user_set.set([cls.users[3], cls.users[4]])
+
+        # Create an Approval Workflow Definition
+        cls.approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Approval Workflow with Three Stages",
+            model_content_type=cls.scheduledjob_ct,
+            weight=1,
+        )
+        # Create three stages of the Approval Workflow Definition
+        cls.approval_workflow_stage_definition_1 = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
+            sequence=100,
+            name="Approval Workflow Stage Definition 1",
+            min_approvers=1,
+            denial_message="Stage 1 Denial Message",
+            approver_group=cls.approver_group_1,
+        )
+        cls.approval_workflow_stage_definition_2 = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
+            sequence=200,
+            name="Approval Workflow Stage Definition 2",
+            min_approvers=2,
+            denial_message="Stage 2 Denial Message",
+            approver_group=cls.approver_group_2,
+        )
+        cls.approval_workflow_stage_definition_3 = ApprovalWorkflowStageDefinition.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
+            sequence=300,
+            name="Approval Workflow Stage Definition 3",
+            min_approvers=2,
+            denial_message="Stage 3 Denial Message",
+            approver_group=cls.approver_group_3,
+        )
+
+        # Create an Approval Workflow
+        cls.approval_workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=cls.approval_workflow_definition,
+            object_under_review_content_type=cls.scheduledjob_ct,
+            object_under_review_object_id=cls.scheduled_job.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        # Create three Approval Workflow Stage Instances
+        cls.approval_workflow_stage_1 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            approval_workflow_stage_definition=cls.approval_workflow_stage_definition_1,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            approval_workflow_stage_definition=cls.approval_workflow_stage_definition_2,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3 = ApprovalWorkflowStage.objects.create(
+            approval_workflow=cls.approval_workflow,
+            approval_workflow_stage_definition=cls.approval_workflow_stage_definition_3,
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        # Create five Approval Workflow Stage Instance Response
+        cls.approval_workflow_stage_1_response_1 = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_stage_1,
+            user=cls.users[0],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2_response_1 = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_stage_2,
+            user=cls.users[1],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_2_response_2 = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_stage_2,
+            user=cls.users[2],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3_response_1 = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_stage_3,
+            user=cls.users[3],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+        cls.approval_workflow_stage_3_response_2 = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=cls.approval_workflow_stage_3,
+            user=cls.users[4],
+            state=ApprovalWorkflowStateChoices.PENDING,
+        )
+
+    def test_active_stage_property(self):
+        """
+        Test the active_stage property of the ApprovalWorkflow model.
+        """
+        # Test that the active stage is the one with the lowest sequence when all stages are pending
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_1)
+        # Test that the active stage is the second stage when the first stage is approved
+        self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_response_1.save()
+        self.assertEqual(self.approval_workflow_stage_1.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1.decision_date)
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_2)
+        # Test that the active stage remains the second stage when the second stage is denied
+        self.approval_workflow_stage_2_response_1.state = ApprovalWorkflowStateChoices.DENIED
+        self.approval_workflow_stage_2_response_1.save()
+        self.assertEqual(self.approval_workflow_stage_2.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_stage_2.decision_date)
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_2)
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.DENIED)
+
+    def test_approval_workflow_workflow_all_stages_are_approved(self):
+        """
+        Test the logic when all stage instances of an approval workflow are approved.
+        """
+        # One user approves the first stage
+        self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_response_1.save()
+        # Minimum approvers for the first stage is 1, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_1.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1.decision_date)
+        # Approval Workflow Instance should still be pending, stage 2 and stage 3 are not approved yet
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the second stage now
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_2)
+
+        # Two users approved the second stage
+        self.approval_workflow_stage_2_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_response_1.save()
+        self.approval_workflow_stage_2_response_2.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_response_2.save()
+        # Minimum approvers for the second stage is 2, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_2.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_2.decision_date)
+        # Approval Workflow Instance should still be pending, stage 3 is not approved yet
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the third stage now
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_3)
+
+        # Two users approved the third stage
+        self.approval_workflow_stage_3_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_3_response_1.save()
+        self.approval_workflow_stage_3_response_2.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_3_response_2.save()
+        # Minimum approvers for the third stage is 2, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_3.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_3.decision_date)
+        # Approval Workflow Instance should be approved since all stages are approved
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.APPROVED)
+        # No more stages to approve, so the active stage is now None
+        # and its decision date is updated because a terminal state has been reached
+        self.assertEqual(self.approval_workflow.active_stage, None)
+        self.assertIsNotNone(self.approval_workflow.decision_date)
+
+    def test_approval_workflow_one_stage_is_denied(self):
+        """
+        Test the logic when one of the stages of an approval workflow is denied.
+        """
+        # One user approves the first stage
+        self.approval_workflow_stage_1_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_1_response_1.save()
+        # Minimum approvers for the first stage is 1, so the stage should be approved
+        self.assertEqual(self.approval_workflow_stage_1.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertIsNotNone(self.approval_workflow_stage_1.decision_date)
+        # Approval Workflow Instance should still be pending
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+        # The active stage should be the second stage now
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_2)
+
+        # One user approved the second stage while another user denies it
+        self.approval_workflow_stage_2_response_1.state = ApprovalWorkflowStateChoices.APPROVED
+        self.approval_workflow_stage_2_response_1.save()
+        self.approval_workflow_stage_2_response_2.state = ApprovalWorkflowStateChoices.DENIED
+        self.approval_workflow_stage_2_response_2.save()
+        # One user denies the stage, so the stage should be denied
+        self.assertEqual(self.approval_workflow_stage_2.state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow_stage_2.decision_date)
+        # Approval Workflow Instance should be denied since one stage is denied
+        # and its decision date is updated because a terminal state has been reached
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.DENIED)
+        self.assertIsNotNone(self.approval_workflow.decision_date)
+        # The active stage should remain the second stage that is denied
+        self.assertEqual(self.approval_workflow.active_stage, self.approval_workflow_stage_2)
+
+    def test_approval_workflow_and_approval_workflow_definition_contenttype_mismatch(self):
+        # Create a Approval Workflow
+        scheduled_job_ct = ContentType.objects.get_for_model(ScheduledJob)
+        approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Scheduled Job Approval Workflow",
+            model_content_type=scheduled_job_ct,
+            weight=2,
+        )
+        approval_workflow = ApprovalWorkflow(
+            approval_workflow_definition=approval_workflow_definition,
+            object_under_review_content_type=ContentType.objects.get_for_model(JobModel),
+            object_under_review_object_id=JobModel.objects.last().pk,
+        )
+
+        with self.assertRaises(ValidationError) as cm:
+            approval_workflow.save()
+
+        self.assertIn(
+            f"The content type {approval_workflow.object_under_review_content_type} of "
+            f"the object under review does not match the content type {approval_workflow_definition.model_content_type} of the approval workflow definition.",
+            str(cm.exception),
+        )
+
+    def test_is_canceled(self):
+        with self.subTest("return False if Approval is not canceled"):
+            for state in [
+                ApprovalWorkflowStateChoices.PENDING,
+                ApprovalWorkflowStateChoices.APPROVED,
+                ApprovalWorkflowStateChoices.DENIED,
+            ]:
+                self.approval_workflow.current_state = state
+                self.approval_workflow.save()
+                self.assertFalse(self.approval_workflow.is_canceled)
+
+        with self.subTest("return True if Approval is canceled"):
+            self.approval_workflow.current_state = ApprovalWorkflowStateChoices.CANCELED
+            self.approval_workflow.save()
+            self.assertTrue(self.approval_workflow.is_canceled)
+
+    def test_is_active(self):
+        with self.subTest("return False if Approval is not in pending state"):
+            for state in [
+                ApprovalWorkflowStateChoices.APPROVED,
+                ApprovalWorkflowStateChoices.DENIED,
+                ApprovalWorkflowStateChoices.CANCELED,
+            ]:
+                self.approval_workflow.current_state = state
+                self.approval_workflow.save()
+                self.assertFalse(self.approval_workflow.is_active)
+
+        with self.subTest("return True if Approval is in pending state"):
+            self.approval_workflow.current_state = ApprovalWorkflowStateChoices.PENDING
+            self.approval_workflow.save()
+            self.assertTrue(self.approval_workflow.is_active)
+
+    @mock.patch("nautobot.extras.models.jobs.ScheduledJob.on_workflow_canceled")
+    def test_cancel_approval_workflow_for_scheduledjob(self, mock_on_workflow_canceled):
+        # check if all stages are in pending state
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        # save number of resposnes before cancel action
+        responses_count = ApprovalWorkflowStageResponse.objects.filter(
+            approval_workflow_stage__approval_workflow=self.approval_workflow
+        ).count()
+
+        # do cancel approval workflow
+        self.approval_workflow.cancel(user=self.users[0])
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
+        mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
+
+        # check if cancel action doesn't change anything in ApprovalWorkfloStages and ApprovalWorkflowStageResponse
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED).count(),
+        )
+        self.assertEqual(
+            responses_count,
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage__approval_workflow=self.approval_workflow
+            ).count(),
+        )
+
+    @mock.patch("nautobot.extras.models.jobs.ScheduledJob.on_workflow_canceled")
+    def test_cancel_approval_workflow_for_scheduledjob_with_approved_stage(self, mock_on_workflow_canceled):
+        done_state = ApprovalWorkflowStateChoices.APPROVED
+        # check if all stages are in pending state
+        self.assertEqual(
+            self.approval_workflow.approval_workflow_stages.count(),
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        pending_stage = self.approval_workflow.active_stage
+        pending_stage.state = done_state
+        pending_stage.save()
+        # check if 2 stages are in pending state
+        self.assertEqual(
+            2,
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.PENDING).count(),
+        )
+        # check if 1 stages are in approved state
+        self.assertEqual(1, self.approval_workflow.approval_workflow_stages.filter(state=done_state).count())
+        # save number of resposnes before cancel action
+        responses_count = ApprovalWorkflowStageResponse.objects.filter(
+            approval_workflow_stage__approval_workflow=self.approval_workflow
+        ).count()
+
+        # do cancel approval workflow
+        self.approval_workflow.cancel(user=self.users[0], comments="Cancel this.")
+        self.assertEqual(self.approval_workflow.current_state, ApprovalWorkflowStateChoices.CANCELED)
+        mock_on_workflow_canceled.assert_called_once_with(self.approval_workflow)
+
+        # check if 2 stages are in canceled state
+        self.assertEqual(
+            2,
+            self.approval_workflow.approval_workflow_stages.filter(state=ApprovalWorkflowStateChoices.CANCELED).count(),
+        )
+        # check if 1 stages are in approved state
+        self.assertEqual(1, self.approval_workflow.approval_workflow_stages.filter(state=done_state).count())
+        # check if cancel action add one ApprovalWorkflowStageResponse
+        self.assertEqual(
+            responses_count + 1,
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage__approval_workflow=self.approval_workflow
+            ).count(),
+        )
+        self.assertTrue(
+            ApprovalWorkflowStageResponse.objects.filter(user=self.users[0], comments="Cancel this.").exists(),
+        )
 
 
 class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
@@ -152,6 +499,10 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             access_type=SecretsGroupAccessTypeChoices.TYPE_GENERIC,
             secret_type=SecretsGroupSecretTypeChoices.TYPE_SECRET,
         )
+
+        # Template strings for validation testing (cannot be saved due to syntax errors)
+        self.invalid_template_unclosed_bracket = "{{ obj.name }"
+        self.invalid_template_unknown_tag = "{% unknowntag %}{{ obj.name }}{% endunknowntag %}"
 
     def test_render_method(self):
         rendered_value = self.good_computed_field.render(context={"obj": self.location1})
@@ -214,6 +565,218 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
             str(error.exception),
         )
 
+    def test_template_validation_invalid_syntax(self):
+        """
+        Test that ComputedField with invalid Jinja2 template syntax raises ValidationError.
+        """
+        # Invalid template with syntax error - unclosed bracket
+        invalid_computed_field = ComputedField(
+            label="Invalid Template Test",
+            key="invalid_template_test",
+            template=self.invalid_template_unclosed_bracket,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+        self.assertIn("line", str(error_dict["template"][0]))
+
+    def test_template_validation_invalid_tag(self):
+        """
+        Test that ComputedField with invalid Jinja2 tag raises ValidationError.
+        """
+        # Invalid template with unknown tag
+        invalid_computed_field = ComputedField(
+            label="Invalid Tag Test",
+            key="invalid_tag_test",
+            template=self.invalid_template_unknown_tag,
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            invalid_computed_field.full_clean()
+
+        # Check that the error message contains template-specific information
+        error_dict = context.exception.error_dict
+        self.assertIn("template", error_dict)
+        self.assertIn("Template syntax error", str(error_dict["template"][0]))
+
+    def test_bulk_create_valid_templates(self):
+        """Test that bulk_create works with valid templates."""
+        valid_fields = [
+            ComputedField(
+                label="Bulk Test 1",
+                key="bulk_test_1",
+                template="{{ obj.name }} - Test 1",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Bulk Test 2",
+                key="bulk_test_2",
+                template="{{ obj.id }} - Test 2",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        # Should not raise ValidationError
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+        self.assertEqual(len(created_fields), 2)
+
+    def test_bulk_create_invalid_templates(self):
+        """Test that bulk_create fails with invalid templates and reports all errors."""
+        invalid_fields = [
+            ComputedField(
+                label="Invalid Test 1",
+                key="invalid_test_1",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Test 2",
+                key="invalid_test_2",
+                template=self.invalid_template_unknown_tag,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(invalid_fields)
+
+        # Check that both errors are reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Test 1", error_message)
+        self.assertIn("Invalid Test 2", error_message)
+
+    def test_bulk_update_template_field(self):
+        """Test that bulk_update validates templates when template field is updated."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Update Test 1",
+                key="update_test_1",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Update Test 2",
+                key="update_test_2",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update with invalid templates
+        for field in created_fields:
+            field.template = self.invalid_template_unclosed_bracket
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that validation error occurred
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Update Test 1", error_message)
+        self.assertIn("Update Test 2", error_message)
+
+    def test_bulk_update_non_template_field(self):
+        """Test that bulk_update skips template validation when template field is not updated."""
+        # Create a field with invalid template (bypassing validation for this test)
+        field = ComputedField(
+            label="Non-template Update Test",
+            key="non_template_update_test",
+            template="{{ obj.name }}",  # Start with valid template
+            content_type=ContentType.objects.get_for_model(Device),
+        )
+        field.save()
+
+        # Manually set invalid template (simulating existing invalid data)
+        ComputedField.objects.filter(pk=field.pk).update(template=self.invalid_template_unclosed_bracket)
+        field.refresh_from_db()
+
+        # Update only the label field - should not trigger template validation
+        field.label = "Updated Label"
+        try:
+            ComputedField.objects.bulk_update([field], ["label"])
+        except ValidationError:
+            self.fail("bulk_update should not validate templates when template field is not being updated")
+
+    def test_bulk_create_mixed_valid_invalid(self):
+        """Test that bulk_create fails when mixing valid and invalid templates."""
+        mixed_fields = [
+            ComputedField(
+                label="Valid Mixed Test",
+                key="valid_mixed_test",
+                template="{{ obj.name }} - Valid",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Mixed Test",
+                key="invalid_mixed_test",
+                template=self.invalid_template_unclosed_bracket,
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_create(mixed_fields)
+
+        # Check that the invalid object is reported but valid one is not
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Mixed Test", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Mixed Test", error_message)
+
+        # Verify no objects were created (all-or-nothing behavior)
+        self.assertFalse(ComputedField.objects.filter(key="valid_mixed_test").exists())
+        self.assertFalse(ComputedField.objects.filter(key="invalid_mixed_test").exists())
+
+    def test_bulk_update_mixed_valid_invalid(self):
+        """Test that bulk_update fails when mixing valid and invalid template updates."""
+        # Create valid objects first
+        valid_fields = [
+            ComputedField(
+                label="Valid Update Mixed",
+                key="valid_update_mixed",
+                template="{{ obj.name }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+            ComputedField(
+                label="Invalid Update Mixed",
+                key="invalid_update_mixed",
+                template="{{ obj.id }}",
+                content_type=ContentType.objects.get_for_model(Device),
+            ),
+        ]
+        created_fields = ComputedField.objects.bulk_create(valid_fields)
+
+        # Update: one with valid template, one with invalid
+        created_fields[0].template = "{{ obj.name }} - Updated Valid"  # Valid
+        created_fields[1].template = self.invalid_template_unclosed_bracket  # Invalid
+
+        with self.assertRaises(ValidationError) as context:
+            ComputedField.objects.bulk_update(created_fields, ["template"])
+
+        # Check that only the invalid object is reported
+        error_message = str(context.exception)
+        self.assertIn("Template validation failed", error_message)
+        self.assertIn("Invalid Update Mixed", error_message)
+        # Valid object should not appear in error message
+        self.assertNotIn("Valid Update Mixed", error_message)
+
+        # Verify templates were not updated (all-or-nothing behavior)
+        created_fields[0].refresh_from_db()
+        created_fields[1].refresh_from_db()
+        self.assertEqual(created_fields[0].template, "{{ obj.name }}")  # Original template
+        self.assertEqual(created_fields[1].template, "{{ obj.id }}")  # Original template
+
 
 class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     """
@@ -226,8 +789,11 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        manufacturer = Manufacturer.objects.first()
-        cls.devicetype = DeviceType.objects.create(manufacturer=manufacturer, model="Device Type 1")
+        cls.manufacturer = Manufacturer.objects.first()
+        cls.devicefamily = DeviceFamily.objects.create(name="Device Family 1")
+        cls.devicetype = DeviceType.objects.create(
+            manufacturer=cls.manufacturer, model="Device Type 1", device_family=cls.devicefamily
+        )
         cls.devicerole = Role.objects.get_for_model(Device).first()
         root_location_type = LocationType.objects.create(name="Root Location Type")
         parent_location_type = LocationType.objects.create(name="Parent Location Type", parent=root_location_type)
@@ -335,6 +901,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             name="dynamic group", weight=100, data={"dynamic_group": 1}
         )
         dynamic_group_context.dynamic_groups.add(self.dynamic_groups)
+        cluster_group = ClusterGroup.objects.create(name="Cluster Group")
+        cluster_group_context = ConfigContext.objects.create(
+            name="cluster group", weight=100, data={"cluster_group": 1}
+        )
+        cluster_group_context.cluster_groups.add(cluster_group)
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster = Cluster.objects.create(
+            name="Cluster",
+            cluster_group=cluster_group,
+            cluster_type=cluster_type,
+            location=self.location,
+            tenant=self.tenant,
+        )
+        cluster_context = ConfigContext.objects.create(name="cluster", weight=100, data={"cluster": 1})
+        cluster_context.clusters.add(cluster)
 
         device = Device.objects.create(
             name="Device 2",
@@ -346,11 +927,21 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
             device_type=self.devicetype,
         )
         device.tags.add(self.tag)
+        device.clusters.add(cluster)
 
         annotated_queryset = Device.objects.filter(name=device.name).annotate_config_context_data()
         device_context = device.get_config_context()
         self.assertEqual(device_context, annotated_queryset[0].get_config_context())
-        for key in ["location", "platform", "tenant_group", "tenant", "tag", "dynamic_group"]:
+        for key in [
+            "location",
+            "platform",
+            "tenant_group",
+            "tenant",
+            "tag",
+            "dynamic_group",
+            "cluster_group",
+            "cluster",
+        ]:
             self.assertIn(key, device_context)
         # Add a device type constraint that does not match the device in question to the location config context
         # And make sure that location_context is not applied to it anymore.
@@ -579,9 +1170,9 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
     def test_multiple_tags_return_distinct_objects_with_seperate_config_contexts(self):
         """
         Tagged items use a generic relationship, which results in duplicate rows being returned when queried.
-        This is combatted by by appending distinct() to the config context querysets. This test creates a config
-        context assigned to two tags and ensures objects related by those same two tags result in only a single
-        config context record being returned.
+        This is combatted by by appending distinct() to the config context querysets. This test creates two config
+        contexts assigned to two different tags and ensures objects related by those same two tags result in both
+        config context records being returned.
 
         This test case is seperate from the above in that it deals with multiple config context objects in play.
 
@@ -642,6 +1233,157 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertNotIn("dynamic context 2", self.device.get_config_context().values())
         self.assertIn("dynamic context 2", device2.get_config_context().values())
         self.assertNotIn("dynamic context 1", device2.get_config_context().values())
+
+    def test_multiple_clusters_and_cluster_groups(self):
+        """
+        Device-to-cluster is a many-to-many relationship since Nautobot 3.0. Make sure things work as expected here.
+        """
+        cluster_group_1 = ClusterGroup.objects.create(name="Cluster Group 1")
+        cluster_type = ClusterType.objects.create(name="Cluster Type 1")
+        cluster_1 = Cluster.objects.create(
+            name="Cluster 1",
+            cluster_group=cluster_group_1,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_group_2 = ClusterGroup.objects.create(name="Cluster Group 2")
+        cluster_2 = Cluster.objects.create(
+            name="Cluster 2",
+            cluster_group=cluster_group_2,
+            cluster_type=cluster_type,
+            location=self.location,
+        )
+        cluster_context_1 = ConfigContext.objects.create(name="cluster_1", weight=100, data={"cluster_1": 1})
+        cluster_context_1.clusters.add(cluster_1)
+        cluster_context_2 = ConfigContext.objects.create(name="cluster_2", weight=200, data={"cluster_2": 2})
+        cluster_context_2.clusters.add(cluster_2)
+        cluster_context_12 = ConfigContext.objects.create(name="cluster_12", weight=300, data={"cluster_12": [1, 2]})
+        cluster_context_12.clusters.add(cluster_1)
+        cluster_context_12.clusters.add(cluster_2)
+        cluster_group_context_1 = ConfigContext.objects.create(
+            name="cluster_group_1", weight=1100, data={"cluster_group_1": 1}
+        )
+        cluster_group_context_1.cluster_groups.add(cluster_group_1)
+        cluster_group_context_2 = ConfigContext.objects.create(
+            name="cluster_group_2", weight=1200, data={"cluster_group_2": 2}
+        )
+        cluster_group_context_2.cluster_groups.add(cluster_group_2)
+        cluster_group_context_12 = ConfigContext.objects.create(
+            name="cluster_group_12", weight=1300, data={"cluster_group_12": [1, 2]}
+        )
+        cluster_group_context_12.cluster_groups.add(cluster_group_1)
+        cluster_group_context_12.cluster_groups.add(cluster_group_2)
+
+        device = Device.objects.create(
+            name="Device Clusters",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=self.devicetype,
+        )
+
+        with self.subTest("Device in single cluster"):
+            device.clusters.add(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in multiple clusters"):
+            device.clusters.add(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 7)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in single cluster again"):
+            device.clusters.remove(cluster_1)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 5)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertIn("cluster_2", context.keys())
+            self.assertIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertIn("cluster_group_2", context.keys())
+            self.assertIn("cluster_group_12", context.keys())
+
+        with self.subTest("Device in no clusters"):
+            device.clusters.remove(cluster_2)
+
+            self.assertEqual(ConfigContext.objects.get_for_object(device).count(), 1)  # including one from setUp()
+            context = device.get_config_context()
+            self.assertNotIn("cluster_1", context.keys())
+            self.assertNotIn("cluster_2", context.keys())
+            self.assertNotIn("cluster_12", context.keys())
+            self.assertNotIn("cluster_group_1", context.keys())
+            self.assertNotIn("cluster_group_2", context.keys())
+            self.assertNotIn("cluster_group_12", context.keys())
+
+    def test_device_family_context(self):
+        """
+        A config context assigned to the device's DeviceFamily is included in get_config_context().
+        """
+
+        # Create a Family-level context
+        cc_family = ConfigContext.objects.create(
+            name="Device Family 1",
+            weight=100,
+            data={
+                "device_family": "Device Family 1",
+            },
+        )
+        cc_family.device_families.add(self.devicefamily)
+        ctx1 = self.device.get_config_context()
+
+        # Create a second device for a negative test and verify that it does NOT receive the family context
+        device_type2 = DeviceType.objects.create(manufacturer=self.manufacturer, model="Device Type2")
+        device2 = Device.objects.create(
+            name="Device 2",
+            location=self.location,
+            tenant=self.tenant,
+            platform=self.platform,
+            role=self.devicerole,
+            status=self.device_status,
+            device_type=device_type2,
+        )
+        ctx2 = device2.get_config_context()
+
+        self.assertEqual(ctx1.get("device_family"), "Device Family 1")
+        self.assertEqual(ctx2.get("device_family"), None)
+
+    def test_get_for_object_inheritance(self):
+        """
+        Verify that get_for_object handles models inheriting from Device.
+        """
+
+        # We use an existing device but mock its model_name to something else, to emulate inheritance.
+        with mock.patch.object(self.device._meta, "model_name", "proxy_device"):
+            self.assertEqual(self.device._meta.model_name, "proxy_device")
+            contexts = ConfigContext.objects.get_for_object(self.device)
+            self.assertEqual(contexts.count(), 1)
+
+    def test_annotate_config_context_data_inheritance(self):
+        """
+        Verify that annotate_config_context_data() works for models inheriting from Device.
+        """
+
+        # Mock the model_name at the class level to prove issubclass() is used.
+        with mock.patch.object(Device._meta, "model_name", "proxy_device"):
+            annotated_device = Device.objects.filter(pk=self.device.pk).annotate_config_context_data().first()
+            self.assertEqual(self.device.get_config_context(), annotated_device.get_config_context())
 
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
@@ -1102,6 +1844,51 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
 
+    def test_clean_rejects_invalid_branch(self):
+        """`clean()` rejects branch values that are empty, contain whitespace, or start with '-'."""
+        for bad_value in ("", " main", "main\n", "--orphan"):
+            with self.subTest(branch=bad_value):
+                self.repo.branch = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("branch", handler.exception.message_dict)
+
+    def test_clean_rejects_invalid_current_head(self):
+        """`clean()` rejects non-empty `current_head` values that aren't valid hex commit identifiers."""
+        for bad_value in ("--detach", "deadbeef-not-hex", "abc", "z" * 40):
+            with self.subTest(current_head=bad_value):
+                self.repo.current_head = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("current_head", handler.exception.message_dict)
+
+    def test_clean_accepts_empty_current_head(self):
+        """Empty `current_head` is the default for un-synced repos and must remain accepted."""
+        self.repo.current_head = ""
+        self.repo.validated_save()
+
+    def test_clone_to_directory_rejects_invalid_inputs_without_tempdir_leak(self):
+        """`clone_to_directory()` must validate `branch`/`head` before creating its temp dir.
+
+        Otherwise an option-shaped or whitespace-containing value would only fail inside
+        `GitRepo`, by which point the empty temp dir has already been created and orphaned.
+        """
+        target_dir = tempfile.mkdtemp()
+        try:
+            cases = [
+                {"branch": "--upload-pack=evil"},
+                {"branch": " main"},
+                {"head": "--detach"},
+                {"head": "ref\nname"},
+            ]
+            for kwargs in cases:
+                with self.subTest(**kwargs):
+                    with self.assertRaises(ValueError):
+                        self.repo.clone_to_directory(path=target_dir, **kwargs)
+                    self.assertEqual(os.listdir(target_dir), [])
+        finally:
+            shutil.rmtree(target_dir, ignore_errors=True)
+
     def test_clone_to_directory_context_manager(self):
         """Confirm that the clone_to_directory_context() context manager method works as expected."""
         try:
@@ -1372,16 +2159,17 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
 
             with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
                 with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
-                    path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+                    self.repo.clone_to_directory(path=specified_path, head="non-existent")
 
             with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
                 with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
-                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
+                    self.repo.clone_to_directory(branch="main", head="valid-files")
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
 
 
+@tag("example_app")
 class JobModelTest(ModelTestCases.BaseModelTestCase):
     """
     Tests for the `Job` model class.
@@ -1397,6 +2185,8 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     def test_job_class(self):
+        from example_app.jobs import ExampleJob
+
         self.assertIsNotNone(self.local_job.job_class)
         self.assertEqual(self.local_job.job_class.description, "Validate job import")
 
@@ -1466,7 +2256,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             "description": "Overridden Description",
             "dryrun_default": not self.job_containing_sensitive_variables.dryrun_default,
             "hidden": not self.job_containing_sensitive_variables.hidden,
-            "approval_required": not self.job_containing_sensitive_variables.approval_required,
             "has_sensitive_variables": not self.job_containing_sensitive_variables.has_sensitive_variables,
             "soft_time_limit": 350,
             "time_limit": 650,
@@ -1533,20 +2322,6 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
             ).clean()
         self.assertIn("Name", str(handler.exception))
 
-        with self.assertRaises(ValidationError) as handler:
-            JobModel(
-                module_name="module_name",
-                job_class_name="JobClassName",
-                grouping="grouping",
-                has_sensitive_variables=True,
-                approval_required=True,
-                name="Job Class Name",
-            ).clean()
-        self.assertEqual(
-            handler.exception.message_dict["approval_required"][0],
-            "A job that may have sensitive variables cannot be marked as requiring approval",
-        )
-
     def test_default_job_queue_always_included_in_job_queues(self):
         default_job_queue = JobQueue.objects.first()
         job_queues = list(JobQueue.objects.exclude(pk=default_job_queue.pk))[:3]
@@ -1565,6 +2340,34 @@ class JobQueueTest(ModelTestCases.BaseModelTestCase):
     """
 
     model = JobQueue
+
+    def test_job_queue_name_rejects_path_traversal(self):
+        """Job queue name cannot contain '..' or path separators for any queue type."""
+        for queue_type in (JobQueueTypeChoices.TYPE_CELERY, JobQueueTypeChoices.TYPE_KUBERNETES):
+            with self.subTest(queue_type=queue_type, name="contains .."):
+                job_queue = JobQueue(
+                    name="../../etc",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="contains slash"):
+                job_queue = JobQueue(
+                    name="My/Job/Queue",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="valid name passes"):
+                job_queue = JobQueue(
+                    name="valid-queue-name",
+                    queue_type=queue_type,
+                )
+                job_queue.full_clean()
 
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
@@ -2046,19 +2849,20 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         """
         Test that overlapping scoped_fields of ObjectMetadata with same metadata_type/assigned_object is not allowed.
         """
+        ip = IPAddress.objects.filter(associated_object_metadata__isnull=True).first()
         ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=["host", "mask_length", "type", "role", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip.pk,
         )
         instance2 = ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
-            scoped_fields=[],
+            scoped_fields=[],  # permitted for now because we skipped calling clean()/validated_save()
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip.pk,
         )
         with self.assertRaises(ValidationError):
             # try scope all fields
@@ -2086,7 +2890,7 @@ class RoleTest(ModelTestCases.BaseModelTestCase):
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
 
         roles = Role.objects.filter(content_types__in=[device_ct, ipaddress_ct])
-        self.assertQuerysetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
+        self.assertQuerySetEqualAndNotEmpty(Role.objects.get_for_models([Device, IPAddress]), roles)
 
 
 class SavedViewTest(ModelTestCases.BaseModelTestCase):
@@ -2165,6 +2969,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="Crontab UTC Job",
             interval=JobExecutionType.TYPE_CUSTOM,
             crontab="0 17 * * *",
+            job_kwargs={},
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
@@ -2189,6 +2994,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off EST Job",
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            job_kwargs={},
         )
         self.one_off_immediately_job = ScheduledJob.create_schedule(
             job_model=self.job_model,
@@ -2196,6 +3002,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off IMMEDIATELY job",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             start_time=now(),
+            job_kwargs={},
         )
 
     def test_scheduled_job_queue_setter(self):
@@ -2439,6 +3246,387 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             with time_machine.travel("2024-03-10 17:00 -0400"):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
+
+    def test_on_workflow_initiated(self):
+        """Should set status to PENDING and disable the job."""
+        approval_workflow = mock.Mock()
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.daily_utc_job.on_workflow_initiated(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.PENDING)
+        self.assertTrue(self.daily_utc_job.approval_required)
+        self.assertFalse(self.daily_utc_job.enabled)
+
+    def test_on_workflow_approved(self):
+        """Should set status to ACTIVE, enable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_approved(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_on_workflow_denied(self):
+        """Should set status to DENIED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_denied(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.DENIED)
+        self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_last_run_at_not_set_on_save(self):
+        """Test that save() does not set a fake last_run_at for any interval type."""
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_utc_job, JobExecutionType.TYPE_CUSTOM),
+            (self.one_off_utc_job, JobExecutionType.TYPE_FUTURE),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+        for interval_type in [JobExecutionType.TYPE_WEEKLY, JobExecutionType.TYPE_HOURLY]:
+            with self.subTest(interval_type=interval_type):
+                job = ScheduledJob.objects.create(
+                    name=f"{interval_type} Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    interval=interval_type,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+                    time_zone=get_default_timezone(),
+                )
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+    def test_disabled_job_last_run_at_cleared(self):
+        """Test that disabling a job clears last_run_at."""
+        self.daily_utc_job.last_run_at = now()
+        self.daily_utc_job.save()
+        self.assertIsNotNone(self.daily_utc_job.last_run_at)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.assertIsNone(self.daily_utc_job.last_run_at)
+
+    def test_schedule_entry_sets_last_run_at(self):
+        """Test that NautobotScheduleEntry sets last_run_at to start_time - 1 minute when model has no last_run_at."""
+
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_est_job, JobExecutionType.TYPE_CUSTOM),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+                entry = NautobotScheduleEntry(model=job)
+                expected = job.start_time - timedelta(minutes=1)
+                self.assertEqual(entry.last_run_at, expected)
+
+    def test_schedule_entry_is_due_not_immediate(self):
+        """Test that new scheduled jobs with last_run_at=None do not run immediately.
+
+        Integration test verifying that NautobotScheduleEntry.is_due() (called by celery-beat
+        on each tick) correctly waits for the next crontab match instead of running ASAP.
+        Regression test for https://github.com/nautobot/nautobot/issues/8316
+        """
+
+        with self.subTest("TYPE_CUSTOM crontab job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                crontab_job = ScheduledJob.objects.create(
+                    name="Crontab Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_CUSTOM,
+                    start_time=datetime(year=2050, month=1, day=22, hour=11, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                    crontab="0 17 * * *",  # 5 PM UTC — 5 hours away from "now"
+                )
+                self.assertIsNone(crontab_job.last_run_at)
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_CUSTOM job should not be immediately due")
+                self.assertGreater(next_run_delay, 3600, "Next run delay should be hours away, not seconds")
+
+        with self.subTest("TYPE_CUSTOM crontab job should be due at crontab match time"):
+            with time_machine.travel("2050-01-22 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_CUSTOM job should be due when crontab matches")
+
+        with self.subTest("TYPE_DAILY job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                daily_job = ScheduledJob.objects.create(
+                    name="Daily Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_DAILY,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                )
+                self.assertIsNone(daily_job.last_run_at)
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_DAILY job should not be immediately due")
+
+        with self.subTest("TYPE_DAILY job should be due at scheduled time"):
+            with time_machine.travel("2050-01-23 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_DAILY job should be due at its scheduled time")
+
+    def test_custom_schedule_start_time_is_next_crontab_match(self):
+        """Test that create_schedule sets start_time to the next crontab match when no start_time is provided."""
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom No Start Time",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 17 * * *",  # 5 PM daily
+                job_kwargs={},
+            )
+            # start_time should be the next crontab match (2050-01-22 17:00 UTC), not ~now
+            self.assertEqual(job.start_time.hour, 17)
+            self.assertEqual(job.start_time.minute, 0)
+            self.assertEqual(job.start_time.date(), datetime(2050, 1, 22).date())
+
+    def test_custom_schedule_start_time_all_crontab_fields(self):
+        """Test that create_schedule correctly computes the next match for a fully specified crontab."""
+        # "5 4 3 2 1" = minute=5, hour=4, day_of_month=3, month=February, day_of_week=Monday
+        # Next Feb 3 from 2050-01-22 is 2050-02-03 at 04:05 UTC
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom All Fields",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                job_kwargs={},
+            )
+            self.assertEqual(job.start_time.minute, 5)
+            self.assertEqual(job.start_time.hour, 4)
+            self.assertEqual(job.start_time.month, 2)
+            self.assertEqual(job.start_time.day, 3)
+
+    def test_create_schedule_uses_extra_kwargs_when_job_kwargs_none(self):
+        """Ensure deprecated extra_kwargs are used when job_kwargs is None."""
+        extra_kwargs = {"foo": "bar"}
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Deprecated kwargs fallback",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                **extra_kwargs,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        self.assertEqual(job.kwargs.get("foo"), "bar")
+
+    def test_create_schedule_raises_when_no_kwargs_provided(self):
+        """Ensure ValueError is raised if both job_kwargs and extra_kwargs are missing."""
+        with self.assertRaises(ValueError) as err:
+            ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Missing kwargs",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    def test_on_workflow_canceled(self):
+        """Should set status to CANCELED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.assertIsNone(self.daily_utc_job.decision_date)
+        self.daily_utc_job.on_workflow_canceled(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.CANCELED)
+        self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_sets_completed_when_enabled_turned_off(self):
+        """When celery beat finishes a one-off job it sets enabled=False — status should flip to COMPLETED."""
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.COMPLETED)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_does_not_override_non_active_status_when_disabled(self):
+        """Disabling a job that is already PENDING/DENIED/CANCELED should not overwrite the status."""
+        for state in [
+            ScheduledJobStateChoices.PENDING,
+            ScheduledJobStateChoices.DENIED,
+            ScheduledJobStateChoices.CANCELED,
+        ]:
+            with self.subTest(state=state):
+                self.daily_utc_job.enabled = False
+                self.daily_utc_job.state = state
+                self.daily_utc_job.save()
+                self.daily_utc_job.refresh_from_db()
+                self.assertEqual(self.daily_utc_job.state, state)
+
+    def test_schedule_entry_records_failure_when_user_is_null(self):
+        """ScheduledJob with user=None should: create failed JobResult, disable, set state=ERRORED."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Null User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
+        job_results = JobResult.objects.filter(scheduled_job=scheduled_job)
+        self.assertEqual(job_results.count(), 1)
+        job_result = job_results.first()
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIsNone(job_result.user)
+        self.assertIn("originating user has been removed", job_result.traceback)
+        log_entries = JobLogEntry.objects.filter(job_result=job_result)
+        self.assertEqual(log_entries.count(), 1)
+        self.assertEqual(log_entries.first().log_level, "error")
+
+    def test_schedule_entry_records_failure_when_user_is_orphan_fk(self):
+        """When user_id refers to a deleted user (FK orphan), behave like user=None."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Orphan FK Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        # Simulate a FK orphan: a user_id that doesn't correspond to any auth_user row.
+        # We can't write the orphan to the DB on MySQL (FK enforced on UPDATE), so we
+        # mutate the in-memory model instead; the schedulers code reads from the in-memory
+        # model and that's the code path we want to verify.
+        scheduled_job.user_id = uuid.uuid4()
+
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.user_id)
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 1)
+
+    def test_schedule_entry_with_valid_user_does_not_record_failure(self):
+        """Sanity check: a valid user should not trigger the failure path."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Valid User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertTrue(scheduled_job.enabled)
+        self.assertEqual(entry.options["nautobot_job_user_id"], self.user.id)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_schedule_entry_missing_user_skips_jobresult_when_job_model_is_none(self):
+        """If both user and job_model are missing, no JobResult is created (can't construct one without job_model)."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="No Job Model Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        # job_model is required at the DB layer, but the in-memory mutation exercises the
+        # `_record_missing_user_failure` early-return path.
+        scheduled_job.job_model = None
+
+        NautobotScheduleEntry(model=scheduled_job)
+
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_schedule_entry_missing_user_swallows_jobresult_creation_failure(self):
+        """A failure during JobResult/JobLogEntry creation must not crash celery beat — the schedule is still disabled."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="JobResult Create Fails Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        with mock.patch(
+            "nautobot.core.celery.schedulers.JobResult.objects.create",
+            side_effect=RuntimeError("simulated bookkeeping failure"),
+        ):
+            # Must not propagate the exception.
+            NautobotScheduleEntry(model=scheduled_job)
+
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_apply_async_skips_dispatch_when_user_is_missing(self):
+        """When the entry lacks `nautobot_job_user_id`, apply_async returns None without dispatching."""
+        from nautobot.core.celery.schedulers import NautobotDatabaseScheduler
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Apply Async Skip Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
+        scheduler = mock.MagicMock(spec=NautobotDatabaseScheduler)
+        scheduler.app = entry.app
+        result = NautobotDatabaseScheduler.apply_async(scheduler, entry, advance=False)
+        self.assertIsNone(result)
+        # Verify the task was never dispatched.
+        scheduler.send_task.assert_not_called()
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
@@ -2930,31 +4118,15 @@ class StatusTest(ModelTestCases.BaseModelTestCase):
             self.status.save()
             self.assertEqual(str(self.status), test)
 
-    @isolate_apps("nautobot.extras.tests")
-    def test_deprecated_mixin_class(self):
-        """Test that inheriting from StatusModel raises a DeprecationWarning."""
-        with warnings.catch_warnings(record=True) as warn_list:
-            warnings.simplefilter("always")
-
-            class MyModel(StatusModel):  # pylint: disable=unused-variable
-                pass
-
-        self.assertEqual(len(warn_list), 1)
-        warning = warn_list[0]
-        self.assertTrue(issubclass(warning.category, DeprecationWarning))
-        self.assertIn("StatusModel is deprecated", str(warning))
-        self.assertIn("Instead of deriving MyModel from StatusModel", str(warning))
-        self.assertIn("please directly declare `status = StatusField(...)` on your model instead", str(warning))
-
 
 class TagTest(ModelTestCases.BaseModelTestCase):
     model = Tag
 
     def test_create_tag_unicode(self):
-        tag = Tag(name="Testing Unicode: 台灣")
-        tag.save()
+        instance = Tag(name="Testing Unicode: 台灣")
+        instance.save()
 
-        self.assertEqual(tag.name, "Testing Unicode: 台灣")
+        self.assertEqual(instance.name, "Testing Unicode: 台灣")
 
 
 class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
@@ -2986,6 +4158,26 @@ class JobLogEntryTest(TestCase):  # TODO: change to BaseModelTestCase
 
 
 class JobResultTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.job_result = JobResult.objects.create(
+            name="JobResultTest",
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result=None,
+            traceback=None,
+            date_done=None,
+        )
+
+    def _make_eager_result(self, **kwargs):
+        """Helper to create an unsaved eager JobResult-like object."""
+        defaults = {
+            "status": JobResultStatusChoices.STATUS_SUCCESS,
+            "result": "Default Eager Result",
+            "traceback": None,
+        }
+        defaults.update(kwargs)
+        return JobResult(**defaults)
+
     def test_passing_invalid_data_into_job_result(self):
         """JobResult.result was changed from TextField to JSONField in https://github.com/nautobot/nautobot/pull/4133/files.
         Assert passing json serializable and non-serializable data into JobResult.result"""
@@ -3011,6 +4203,399 @@ class JobResultTestCase(TestCase):
         job_result = JobResult.objects.create(name="ExampleJob1", user=None, result=data)
 
         self.assertEqual(JobResult.objects.get_task(job_result.pk), job_result)
+
+    def test_build_celery_kwargs_base_fields(self):
+        """_build_celery_kwargs should always include the core set of keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        task_queue = job_model.default_job_queue.name
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=task_queue,
+        )
+
+        self.assertEqual(result["nautobot_job_job_model_id"], str(job_model.id))
+        self.assertEqual(result["nautobot_job_user_id"], str(self.user.id))
+        self.assertEqual(result["queue"], task_queue)
+        self.assertEqual(result["nautobot_job_profile"], False)
+        self.assertEqual(result["nautobot_job_console_log"], False)
+        self.assertEqual(result["nautobot_job_ignore_singleton_lock"], False)
+        self.assertNotIn("nautobot_job_schedule_id", result)
+
+    def test_build_celery_kwargs_with_additional_options(self):
+        """_build_celery_kwargs should correctly pass through additional options."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 120
+        job_model.time_limit = 300
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            profile=True,
+            console_log=True,
+            ignore_singleton_lock=True,
+        )
+
+        self.assertTrue(result["nautobot_job_profile"])
+        self.assertTrue(result["nautobot_job_console_log"])
+        self.assertTrue(result["nautobot_job_ignore_singleton_lock"])
+        self.assertIn("soft_time_limit", result)
+        self.assertEqual(result["soft_time_limit"], 120)
+        self.assertIn("time_limit", result)
+        self.assertEqual(result["time_limit"], 300)
+
+    def test_build_celery_kwargs_with_schedule(self):
+        """_build_celery_kwargs should include nautobot_job_schedule_id when a schedule is provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        schedule = ScheduledJob.objects.create(
+            name="test_schedule",
+            task="pass_job.TestPassJob",
+            interval=JobExecutionType.TYPE_IMMEDIATELY,
+            user=self.user,
+            start_time=now(),
+        )
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            schedule=schedule,
+        )
+
+        self.assertIn("nautobot_job_schedule_id", result)
+        self.assertEqual(result["nautobot_job_schedule_id"], schedule.id)
+
+    def test_build_celery_kwargs_zero_time_limits_excluded(self):
+        """_build_celery_kwargs should NOT include soft_time_limit/time_limit when they are 0."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+        job_model.soft_time_limit = 0
+        job_model.time_limit = 0
+        job_model.save()
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+        )
+
+        self.assertNotIn("soft_time_limit", result)
+        self.assertNotIn("time_limit", result)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_are_merged(self):
+        """Extra celery_kwargs should be merged into the result."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        extra = {"countdown": 60, "expires": 3600}
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=extra,
+        )
+
+        self.assertEqual(result["countdown"], 60)
+        self.assertEqual(result["expires"], 3600)
+
+    def test_build_celery_kwargs_extra_celery_kwargs_override_defaults(self):
+        """Extra celery_kwargs can override default keys (e.g. queue), matching the existing TODO behaviour."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs={"queue": "custom_queue"},
+        )
+
+        self.assertEqual(result["queue"], "custom_queue")
+
+    def test_build_celery_kwargs_none_celery_kwargs_is_safe(self):
+        """Passing celery_kwargs=None should not raise and should not add unexpected keys."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        result = JobResult._build_celery_kwargs(
+            job_model=job_model,
+            user=self.user,
+            task_queue=job_model.default_job_queue.name,
+            celery_kwargs=None,
+        )
+
+        # Only the expected base keys should be present (plus any time limit keys if applicable)
+        expected_keys = {
+            "nautobot_job_job_model_id",
+            "nautobot_job_profile",
+            "nautobot_job_console_log",
+            "nautobot_job_user_id",
+            "nautobot_job_ignore_singleton_lock",
+            "nautobot_job_queue_type",
+            "queue",
+        }
+        self.assertEqual(set(result.keys()), expected_keys)
+
+    def test_higher_precedence_status_updates_job_result(self):
+        """Eager result with higher precedence should overwrite status and result."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="Eager Result Test1",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Eager Result Test1")
+        self.assertIsNotNone(self.job_result.date_done)
+
+    def test_lower_precedence_status_does_not_overwrite(self):
+        """Eager result with lower precedence should not overwrite job_result and status fields."""
+        self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        self.job_result.result = "Result Higher Precedence"
+        self.job_result.save()
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_PENDING,
+            result="Lower Precedence",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertEqual(self.job_result.result, "Result Higher Precedence")
+
+    def test_exception_result_copies_structured_exception(self):
+        """Exception results should be converted to structured exc_type / exc_message."""
+        exc = ValueError("Exception Test")
+
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_FAILURE,
+            result=exc,
+            traceback="traceback text",
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertEqual(
+            self.job_result.result,
+            {
+                "exc_type": "ValueError",
+                "exc_message": "Exception Test",
+            },
+        )
+        self.assertEqual(self.job_result.traceback, "traceback text")
+
+    def test_non_exception_result_without_traceback(self):
+        """Successful eager results should not set traceback."""
+        eager_result = self._make_eager_result(
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+            result="ok",
+            traceback=None,
+        )
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.result, "ok")
+        self.assertIsNone(self.job_result.traceback)
+
+    def test_date_done_is_not_overwritten_if_already_set(self):
+        """Existing date_done should not be replaced."""
+        existing_date = now()
+        self.job_result.date_done = existing_date
+        self.job_result.save()
+
+        eager_result = self._make_eager_result()
+
+        JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        self.job_result.refresh_from_db()
+        self.assertEqual(self.job_result.date_done, existing_date)
+
+    def test_save_is_always_called(self):
+        """JobResult.save() should always be called."""
+        eager_result = self._make_eager_result()
+
+        with mock.patch.object(JobResult, "save", autospec=True) as save_mock:
+            JobResult._sync_eager_result_to_job_result(self.job_result, eager_result)
+
+        save_mock.assert_called_once()
+
+    def test_console_log_property(self):
+        """console_log property should reflect nautobot_job_console_log from celery_kwargs."""
+
+        with self.subTest("Returns True when nautobot_job_console_log is True"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+            self.assertTrue(self.job_result.console_log)
+
+        with self.subTest("Returns False when nautobot_job_console_log is False"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": False}
+            self.assertFalse(self.job_result.console_log)
+
+        with self.subTest("Returns False when key is absent"):
+            self.job_result.celery_kwargs = {}
+            self.assertFalse(self.job_result.console_log)
+
+    def test_log_creates_job_console_entry_when_console_log_enabled(self):
+        """log() should create a JobConsoleEntry when nautobot_job_console_log is True."""
+        self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+        self.job_result.use_job_logs_db = False
+        self.job_result.save()
+
+        self.job_result.log("test message")
+
+        self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result, text="test message").count(), 1)
+
+    def test_log_does_not_create_job_console_entry_when_console_log_not_enabled(self):
+        """log() should not create a JobConsoleEntry when nautobot_job_console_log is False or absent."""
+        cases = [
+            {"nautobot_job_console_log": False},
+            {},
+        ]
+
+        for celery_kwargs in cases:
+            with self.subTest(celery_kwargs=celery_kwargs):
+                self.job_result.celery_kwargs = celery_kwargs
+                self.job_result.use_job_logs_db = False
+                self.job_result.save()
+
+                self.job_result.log("test message")
+
+                self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result).count(), 0)
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_enqueue):
+        """execute_job should fallback to extra_kwargs and log a warning when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+                foo="bar",
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs=None,
+            synchronous=True,
+        )
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_extract_celery_kwargs_is_are_in_extra_kwargs(self, mock_enqueue):
+        """execute_job should extract celery_kwargs when exist in extra_kwargs when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(job_model, self.user, foo="bar", celery_kwargs={"test": "test"})
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs={"test": "test"},
+            synchronous=True,
+        )
+
+    def test_execute_job_raises_when_no_kwargs(self):
+        """execute_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+            )
+
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    @mock.patch("nautobot.extras.jobs.run_job.apply")
+    @mock.patch("nautobot.extras.models.JobResult._sync_eager_result_to_job_result")
+    def test_enqueue_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_sync, mock_run_job_apply):
+        """enqueue_job should fallback to extra_kwargs and log a warning."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+                foo="bar",
+                synchronous=True,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        job_result = JobResult.objects.first()
+        mock_run_job_apply.assert_called_once_with(
+            args=[job_model.class_path],
+            kwargs={"foo": "bar"},
+            task_id=str(job_result.id),
+            **job_result.celery_kwargs,
+        )
+        mock_sync.assert_called_once()
+
+    def test_enqueue_job_raises_when_no_kwargs(self):
+        """enqueue_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    def test_queue_type_property(self):
+        """queue_type property should prefer celery_kwargs and fallback to JobQueue lookup."""
+
+        with self.subTest("Returns queue type from celery_kwargs when present"):
+            self.job_result.celery_kwargs = {"nautobot_job_queue_type": "celery", "queue": "test-default"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns queue type from JobQueue lookup"):
+            JobQueue.objects.create(
+                name="test-celery",
+                queue_type="celery",
+            )
+            self.job_result.celery_kwargs = {"queue": "test-celery"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns None when JobQueue does not exist"):
+            self.job_result.celery_kwargs = {"queue": "does-not-exist"}
+            self.assertIsNone(self.job_result.queue_type)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
@@ -3053,5 +4638,23 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
         conflicts = Webhook.check_for_conflicts(instance=self.webhooks[1], type_create=True)
         self.assertEqual(
             conflicts["type_create"],
-            [f"A webhook already exists for create on dcim | device to URL {self.url}"],
+            [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
         )
+
+    def test_clean_payload_url_validation(self):
+        """`Webhook.clean()` surfaces SSRF policy violations against the `payload_url` field."""
+        cases = [
+            ("bad scheme is rejected", "ftp://example.com/", False),
+            ("loopback ip literal is rejected", "http://127.0.0.1/", False),
+            ("link-local ip literal is rejected", "http://169.254.169.254/", False),
+            ("public url is accepted", "https://example.com/hooks/abc", True),
+        ]
+        for desc, payload_url, should_pass in cases:
+            with self.subTest(desc):
+                webhook = Webhook(name="test-webhook", type_create=True, payload_url=payload_url)
+                if should_pass:
+                    webhook.clean()
+                else:
+                    with self.assertRaises(ValidationError) as ctx:
+                        webhook.clean()
+                    self.assertIn("payload_url", ctx.exception.message_dict)

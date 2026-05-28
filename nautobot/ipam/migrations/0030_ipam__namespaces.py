@@ -10,6 +10,17 @@ import nautobot.extras.models.mixins
 import nautobot.ipam.models
 
 
+def create_default_namespace(apps, schema):
+    Namespace = apps.get_model("ipam", "Namespace")
+
+    namespace, _ = Namespace.objects.get_or_create(
+        name="Global", defaults={"description": "Default Global namespace. Created by Nautobot."}
+    )
+
+    # Populate the contextvars cache so that subsequent calls to get_default_namespace_pk() do not error out
+    nautobot.ipam.models.default_namespace_pk.set(namespace.pk)
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("extras", "0072_rename_model_fields"),
@@ -130,6 +141,8 @@ class Migration(migrations.Migration):
             name="ip_version",
             field=models.IntegerField(db_index=True, editable=False, null=True),
         ),
+        # We shouldn't mix data migrations with schema migrations, but we didn't catch this data dependency until much later
+        migrations.RunPython(create_default_namespace, migrations.RunPython.noop),
         migrations.AddField(
             model_name="prefix",
             name="namespace",

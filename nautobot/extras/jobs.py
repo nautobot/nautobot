@@ -7,7 +7,6 @@ import json
 import logging
 import os
 import sys
-import tempfile
 from textwrap import dedent
 from typing import final
 import warnings
@@ -29,6 +28,7 @@ from django.db.models.query import QuerySet
 from django.forms import ValidationError
 from django.utils.functional import classproperty
 import netaddr
+from prometheus_client import Counter
 import yaml
 
 from nautobot.core.celery import import_jobs, nautobot_task
@@ -39,6 +39,7 @@ from nautobot.core.forms import (
     JSONField,
 )
 from nautobot.core.forms.widgets import ClearableFileInput
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.logging import sanitize
 from nautobot.core.utils.lookup import get_model_from_name
@@ -49,6 +50,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
+from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
 from nautobot.extras.models import (
     FileProxy,
     Job as JobModel,
@@ -88,9 +90,34 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+started_jobs_counter = Counter(
+    name="nautobot_worker_started_jobs",
+    documentation="Job executions that started running",
+    labelnames=("job_class_name", "module_name"),
+)
+finished_jobs_counter = Counter(
+    name="nautobot_worker_finished_jobs",
+    documentation="Job executions that finished running",
+    labelnames=("job_class_name", "module_name", "status"),
+)
+exception_jobs_counter = Counter(
+    name="nautobot_worker_exception_jobs",
+    documentation="Job executions that raised an exception",
+    labelnames=("job_class_name", "module_name", "exception_type"),
+)
+singleton_conflict_counter = Counter(
+    name="nautobot_worker_singleton_conflict",
+    documentation="Job executions that ran into a singleton lock",
+    labelnames=("job_class_name", "module_name"),
+)
+
 
 class RunJobTaskFailed(Exception):
     """Celery task failed for some reason."""
+
+
+class JobExecutionForm(forms.Form):
+    """Base form for job execution fields."""
 
 
 class BaseJob:
@@ -107,8 +134,8 @@ class BaseJob:
         Metaclass attributes - subclasses can define any or all of the following attributes:
 
         - name (str)
+        - console_log_default (bool)
         - description (str)
-        - approval_required (bool)
         - dryrun_default (bool)
         - field_order (list)
         - has_sensitive_variables (bool)
@@ -144,22 +171,22 @@ class BaseJob:
             if self.celery_kwargs.get("nautobot_job_profile", False) is True:
                 import cProfile
 
-                # TODO: This should probably be available as a file download rather than dumped to the hard drive.
-                # Pending this: https://github.com/nautobot/nautobot/issues/3352
-                profiling_path = f"{tempfile.gettempdir()}/nautobot-jobresult-{self.job_result.id}.pstats"
+                profile_filename = f"nautobot-jobresult-{self.job_result.id}.pstats"
                 self.logger.info(
-                    "Writing profiling information to %s.", profiling_path, extra={"grouping": "initialization"}
+                    "Profiling job execution; results will be available for download upon completion.",
+                    extra={"grouping": "initialization"},
                 )
 
-                with cProfile.Profile() as pr:
-                    try:
-                        output = self.run(*args, **deserialized_kwargs)
-                    except Exception as err:
-                        pr.dump_stats(profiling_path)
-                        raise err
-                    else:
-                        pr.dump_stats(profiling_path)
-                        return output
+                pr = None
+                try:
+                    with cProfile.Profile() as pr:
+                        return self.run(*args, **deserialized_kwargs)
+                finally:
+                    if pr:
+                        import marshal
+
+                        pr.create_stats()
+                        self.create_file(profile_filename, content=marshal.dumps(pr.stats))
             else:
                 return self.run(*args, **deserialized_kwargs)
 
@@ -262,7 +289,7 @@ class BaseJob:
     @classproperty
     def singleton_cache_key(cls) -> str:  # pylint: disable=no-self-argument
         """Cache key for singleton jobs."""
-        return f"nautobot.extras.jobs.running.{cls.class_path}"
+        return construct_cache_key(cls, method_name="running", branch_aware=False, class_path=cls.class_path)
 
     @final
     @classproperty
@@ -345,6 +372,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def console_log_default(cls) -> bool:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("console_log_default", False, expected_type=bool)
+
+    @final
+    @classproperty
     def field_order(cls):  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("field_order", [], expected_type=(list, tuple))
 
@@ -352,11 +384,6 @@ class BaseJob:
     @classproperty
     def read_only(cls) -> bool:  # pylint: disable=no-self-argument
         return cls._get_meta_attr_and_assert_type("read_only", False, expected_type=bool)
-
-    @final
-    @classproperty
-    def approval_required(cls) -> bool:  # pylint: disable=no-self-argument
-        return cls._get_meta_attr_and_assert_type("approval_required", False, expected_type=bool)
 
     @final
     @classproperty
@@ -390,6 +417,11 @@ class BaseJob:
 
     @final
     @classproperty
+    def template_name(cls) -> str:  # pylint: disable=no-self-argument
+        return cls._get_meta_attr_and_assert_type("template_name", "", expected_type=str)
+
+    @final
+    @classproperty
     def properties_dict(cls) -> dict:  # pylint: disable=no-self-argument
         """
         Return all relevant classproperties as a dict.
@@ -399,14 +431,15 @@ class BaseJob:
         return {
             "name": cls.name,
             "grouping": cls.grouping,
+            "console_log_default": cls.console_log_default,
             "description": cls.description,
-            "approval_required": cls.approval_required,
             "hidden": cls.hidden,
             "soft_time_limit": cls.soft_time_limit,
             "time_limit": cls.time_limit,
             "has_sensitive_variables": cls.has_sensitive_variables,
             "task_queues": cls.task_queues,
             "is_singleton": cls.is_singleton,
+            "template_name": cls.template_name,
         }
 
     @final
@@ -461,19 +494,63 @@ class BaseJob:
     @classmethod
     def as_form(cls, data=None, files=None, initial=None, approval_view=False):
         """
-        Return a Django form suitable for populating the context data required to run this Job.
+        Return a Django form with job-specific fields only (Job Data section).
 
         `approval_view` will disable all fields from modification and is used to display the form
         during a approval review workflow.
         """
-
         form = cls.as_form_class()(data, files, initial=initial)
+
+        try:
+            job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
+        except JobModel.DoesNotExist:
+            logger.warning("No Job instance found in the database corresponding to %s", cls.class_path)
+            job_model = None
+
+        dryrun_default = cls.dryrun_default
+        if job_model is not None and job_model.dryrun_default_override:
+            dryrun_default = job_model.dryrun_default
+
+        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
+            form.fields["dryrun"].initial = dryrun_default
+
+        # https://github.com/PyCQA/pylint/issues/3484
+        if cls.field_order:  # pylint: disable=using-constant-test
+            form.order_fields(cls.field_order)
+
+        if approval_view:
+            for _, field in form.fields.items():
+                field.disabled = True
+
+        return form
+
+    @classmethod
+    def as_execution_form(cls, data=None, initial=None, approval_view=False):
+        """
+        Return a Django form with job execution fields only (Job Execution section):
+        _profile, _console_log, _job_queue, _ignore_singleton_lock.
+
+        `approval_view` will disable all fields from modification and is used to display the form
+        during a approval review workflow.
+        """
+        form = JobExecutionForm(data, initial=initial)
+
         form.fields["_profile"] = forms.BooleanField(
             required=False,
             initial=False,
             label="Profile job execution",
-            help_text="Profiles the job execution using cProfile and outputs a report to /tmp/",
+            help_text="Profiles the job execution using cProfile and attaches a report to the job result",
         )
+        form.fields["_profile"].widget.attrs["class"] = "form-check-input"
+
+        form.fields["_console_log"] = forms.BooleanField(
+            required=False,
+            initial=False,
+            label="Console Log execution",
+            help_text="When enabled, the job runs in a subprocess and streams stdout/stderr "
+            "to the console in real time.",
+        )
+        form.fields["_console_log"].widget.attrs["class"] = "form-check-input"
         # If the class already exists there may be overrides, so we have to check this.
         try:
             job_model = JobModel.objects.get(module_name=cls.__module__, job_class_name=cls.__name__)
@@ -490,6 +567,7 @@ class BaseJob:
                 label="Ignore singleton lock",
                 help_text="Allow this singleton job to run even when another instance is already running",
             )
+            form.fields["_ignore_singleton_lock"].widget.attrs["class"] = "form-check-input"
 
         if job_model is not None:
             job_queue_queryset = JobQueue.objects.filter(jobs=job_model)
@@ -507,15 +585,14 @@ class BaseJob:
             label="Job queue",
         )
 
-        dryrun_default = cls.dryrun_default
+        console_log_default = cls.console_log_default
         if job_model is not None:
             form.fields["_job_queue"].initial = job_model.default_job_queue.pk
-            if job_model.dryrun_default_override:
-                dryrun_default = job_model.dryrun_default
+            if job_model.console_log_default_override:
+                console_log_default = job_model.console_log_default
 
-        if cls.supports_dryrun and (not initial or "dryrun" not in initial):
-            # Set initial "dryrun" checkbox state based on the Meta parameter
-            form.fields["dryrun"].initial = dryrun_default
+        form.fields["_console_log"].initial = console_log_default
+
         if not settings.DEBUG:
             form.fields["_profile"].widget = forms.HiddenInput()
 
@@ -527,13 +604,6 @@ class BaseJob:
             # Set `disabled=True` on all fields
             for _, field in form.fields.items():
                 field.disabled = True
-
-        # Ensure non-Job-specific fields are still last after applying field_order
-        for field in ["_job_queue", "_profile", "_ignore_singleton_lock"]:
-            if field not in form.fields:
-                continue
-            value = form.fields.pop(field)
-            form.fields[field] = value
 
         return form
 
@@ -564,25 +634,40 @@ class BaseJob:
         These are converted back during job execution.
         """
 
-        return_data = {}
-        for field_name, value in data.items():
+        def _serialize_value(value):
+            """Recursively convert job kwargs into JSON-serializable primitives.
+
+            This is particularly important for Kubernetes job execution where `task_kwargs` is stored as JSON and
+            Django's JSON encoder will otherwise convert Django model instances into `__nautobot_type__` dicts.
+            """
+
             # MultiObjectVar
             if isinstance(value, QuerySet):
-                return_data[field_name] = list(value.values_list("pk", flat=True))
-            # ObjectVar
-            elif isinstance(value, Model):
-                return_data[field_name] = value.pk
-            # FileVar (Save each FileVar as a FileProxy)
-            elif isinstance(value, UploadedFile):
-                return_data[field_name] = BaseJob._save_file_to_proxy(value)
-            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
-            elif isinstance(value, netaddr.ip.BaseIP):
-                return_data[field_name] = str(value)
-            # Everything else...
-            else:
-                return_data[field_name] = value
+                return list(value.values_list("pk", flat=True))
 
-        return return_data
+            # ObjectVar
+            if isinstance(value, Model):
+                return value.pk
+
+            # FileVar (Save each FileVar as a FileProxy)
+            if isinstance(value, UploadedFile):
+                return BaseJob._save_file_to_proxy(value)
+
+            # IPAddressVar, IPAddressWithMaskVar, IPNetworkVar
+            if isinstance(value, netaddr.ip.BaseIP):
+                return str(value)
+
+            # Recurse into containers/dicts to handle nested Model instances (e.g. BulkEdit `form_data`).
+            if isinstance(value, dict):
+                return {k: _serialize_value(v) for k, v in value.items()}
+
+            if isinstance(value, (list, tuple, set)):
+                return [_serialize_value(v) for v in value]
+
+            # Everything else...
+            return value
+
+        return {field_name: _serialize_value(value) for field_name, value in data.items()}
 
     # TODO: can the deserialize_data logic be moved to NautobotKombuJSONEncoder?
     @classmethod
@@ -1198,6 +1283,9 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
                     extra={"object": job.job_model, "grouping": "initialization"},
                 )
             else:
+                singleton_conflict_counter.labels(
+                    job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+                ).inc()
                 # TODO 3.0: maybe change to logger.failure() and return cleanly, as this is an "acceptable" failure?
                 job.logger.error(
                     "Job %s is a singleton and already running.",
@@ -1281,6 +1369,9 @@ def run_job(self, job_class_path, *args, **kwargs):
 
     result = None
     status = None
+    started_jobs_counter.labels(
+        job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name
+    ).inc()
     try:
         before_start_result = job.before_start(self.request.id, args, kwargs)
         if not job._failed:
@@ -1297,6 +1388,9 @@ def run_job(self, job_class_path, *args, **kwargs):
             job.on_success(result, self.request.id, args, kwargs)
         else:
             job.on_failure(result, self.request.id, args, kwargs, None)
+        finished_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name, module_name=job.job_model.module_name, status=status
+        ).inc()
 
         job.after_return(status, result, self.request.id, args, kwargs, None)
 
@@ -1313,11 +1407,21 @@ def run_job(self, job_class_path, *args, **kwargs):
         # We don't want to overwrite the manual state update that we did above, so:
         raise Ignore()
 
-    except Reject:
+    except Reject as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_REJECTED
         raise
 
-    except Ignore:
+    except Ignore as exc:
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         status = status or JobResultStatusChoices.STATUS_IGNORED
         raise
 
@@ -1330,10 +1434,24 @@ def run_job(self, job_class_path, *args, **kwargs):
             "exc_type": type(exc).__name__,
             "exc_message": sanitize(str(exc)),
         }
+        exception_jobs_counter.labels(
+            job_class_name=job.job_model.job_class_name,
+            module_name=job.job_model.module_name,
+            exception_type=type(exc).__name__,
+        ).inc()
         raise
 
     finally:
         _cleanup_job(job, event_payload, status, kwargs)
+
+
+@nautobot_task(bind=True)
+def run_console_log_job_and_return_job_result(self, *args, **kwargs):
+    """
+    Execute job with real-time console output.
+    """
+    executor = JobConsoleLogExecutor(job_result_pk=self.request.id, job_kwargs=kwargs)
+    return executor.execute()
 
 
 def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
@@ -1385,6 +1503,6 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         elif get_job(job_model.class_path) is None:
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
         else:
-            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+            JobResult.enqueue_job(job_model, object_change.user, job_kwargs={"object_change": object_change.pk})
 
     return jobs_reloaded, jobhook_queryset

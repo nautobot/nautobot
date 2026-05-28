@@ -286,7 +286,7 @@ If you decide to use any [Nautobot Apps](../../../apps/index.md), they should be
 
     <a name="remote-file-storage"><h4>Remote File Storage</h4></a>
 
-    By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/settings.md#storage_backend) in `nautobot_config.py`.
+    By default, Nautobot will use the local filesystem to store uploaded files. To use a remote filesystem, install the [`django-storages`](https://django-storages.readthedocs.io/en/stable/) library and configure your [desired storage backend](../configuration/settings.md#storages) in `nautobot_config.py`.
 
     To use remote file storage, add `nautobot[remote_storage]` to your `local_requirements.txt` so that it can be installed and kept up to date:
 

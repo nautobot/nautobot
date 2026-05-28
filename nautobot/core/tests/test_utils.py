@@ -1,7 +1,4 @@
-import os
-import os.path
 import sys
-import tempfile
 from unittest import mock
 import uuid
 
@@ -12,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
+from django.test import override_settings, tag
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -20,13 +18,17 @@ from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
 from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import (
-    check_name_safe_to_import_privately,
-    clear_module_from_sys_modules,
-    import_modules_privately,
+from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
+from nautobot.data_validation import models as data_validation_models
+from nautobot.dcim import (
+    filters as dcim_filters,
+    forms as dcim_forms,
+    models as dcim_models,
+    tables,
+    views as dcim_views,
 )
-from nautobot.dcim import filters as dcim_filters, forms as dcim_forms, models as dcim_models, tables
 from nautobot.extras import models as extras_models, utils as extras_utils
 from nautobot.extras.choices import ObjectChangeActionChoices, RelationshipTypeChoices
 from nautobot.extras.filters import StatusFilterSet
@@ -34,7 +36,99 @@ from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
 
-from example_app.models import ExampleModel
+
+class ConstructCacheKeyTest(TestCase):
+    """
+    Validate the operation of construct_cache_key().
+    """
+
+    def test_construct_cache_key_basics(self):
+        # We don't in general care much about the specific structure of the key, but we do care that it's successful.
+
+        # Key for a model instance
+        instance = dcim_models.Location.objects.first()
+        self.assertIsNotNone(instance)
+        ck = construct_cache_key(instance, method_name="display")
+        self.assertIsInstance(ck, str)
+        # Model instance cache keys should use the content-type and the PK as part of the key
+        self.assertIn("dcim.location", ck)
+        self.assertIn(str(instance.pk), ck)
+        self.assertIn("display", ck)
+        # In the absence of the version-control App, branch_aware should be a no-op
+        self.assertEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
+        self.assertEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=False))
+
+        # Key for a model manager instance
+        self.assertIsInstance(construct_cache_key(dcim_models.Location.objects, method_name="max_depth"), str)
+        ck = construct_cache_key(extras_models.CustomField.objects, method_name="get_for_model")
+        self.assertIsInstance(ck, str)
+        self.assertIn("get_for_model", ck)
+        # Additional arbitrary params should modify the key
+        ck2 = construct_cache_key(extras_models.CustomField.objects, method_name="get_for_model", label="dcim.location")
+        self.assertIsInstance(ck2, str)
+        # The base (no extra params) key should be a prefix for the extended key.
+        # This is needed for cases where we are using cache.clear_pattern() in signals and the like.
+        self.assertTrue(ck2.startswith(ck))
+        # Both the param name and the param value should be present in the extended key
+        self.assertIn("label", ck2)
+        self.assertIn("dcim.location", ck2)
+
+        # Key for a model class
+        ck = construct_cache_key(data_validation_models.MinMaxValidationRule, method_name="get_for_model")
+        self.assertIsInstance(ck, str)
+        # Model class cache keys should use the content-type as part of the key
+        self.assertIn("data_validation.minmaxvalidationrule", ck)
+        self.assertIn("get_for_model", ck)
+
+        # Key for a non-model class
+        ck = construct_cache_key(extras_utils.FeatureQuery, method_name="list_subclasses")
+        self.assertIsInstance(ck, str)
+        # Non-model classes should use the module as part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("FeatureQuery", ck)
+        self.assertIn("list_subclasses", ck)
+
+        # Key for a non-model class instance
+        ck = construct_cache_key(extras_utils.FeatureQuery("graphql"), method_name="list_subclasses")
+        self.assertIsInstance(ck, str)
+        # Non-model classes should use the module as part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("FeatureQuery", ck)
+        self.assertIn("list_subclasses", ck)
+
+        # Key for a function
+        ck = construct_cache_key(extras_utils.change_logged_models_queryset)
+        self.assertIsInstance(ck, str)
+        # Functions should use the module as a part of the key
+        self.assertIn("nautobot.extras.utils", ck)
+        self.assertIn("change_logged_models_queryset", ck)
+
+    @override_settings(PLUGINS=["nautobot_version_control"])
+    def test_branch_aware_and_unaware(self):
+        instance = dcim_models.Location.objects.first()
+        self.assertIsNotNone(instance)
+
+        mock_active_branch = mock.MagicMock(return_value="some_branch_name")
+        mock_vc_utils = mock.Mock(active_branch=mock_active_branch)
+        with mock.patch.dict(sys.modules, {"nautobot_version_control.utils": mock_vc_utils}):
+            ck = construct_cache_key(instance, method_name="display", branch_aware=True)
+            self.assertIsInstance(ck, str)
+            self.assertIn("dcim.location", ck)
+            self.assertIn(str(instance.pk), ck)
+            self.assertIn("display", ck)
+            self.assertIn("some_branch_name", ck)
+
+            ck_unaware = construct_cache_key(instance, method_name="display", branch_aware=False)
+            self.assertIsInstance(ck_unaware, str)
+            self.assertIn("dcim.location", ck_unaware)
+            self.assertIn(str(instance.pk), ck_unaware)
+            self.assertIn("display", ck_unaware)
+            self.assertNotIn("some_branch_name", ck_unaware)
+
+            mock_active_branch.return_value = "another_branch"
+
+            self.assertNotEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
+            self.assertEqual(ck_unaware, construct_cache_key(instance, method_name="display", branch_aware=False))
 
 
 class DictToFilterParamsTest(TestCase):
@@ -86,6 +180,41 @@ class NormalizeQueryDictTest(TestCase):
             requests.normalize_querydict(
                 QueryDict("name=Sample Status&content_types=dcim.device"), filterset=StatusFilterSet()
             ),
+            {"name": ["Sample Status"], "content_types": ["dcim.device"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict({"name": ["Sample Status"], "content_types": ["1"]}, form_class=StatusForm),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.normalize_querydict(
+                requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+                form_class=StatusForm,
+            ),
+            {"name": "Sample Status", "content_types": ["1"]},
+        )
+
+
+class ConvertQueryDictToDictTest(TestCase):
+    """
+    Validate convert_querydict_to_dict() utility function.
+    """
+
+    def test_convert_querydict_to_dict(self):
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("foo=1&bar=2&bar=3&baz=")),
+            {"foo": ["1"], "bar": ["2", "3"], "baz": [""]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=1")),
+            {"name": ["Sample Status"], "content_types": ["1"]},
+        )
+
+        self.assertDictEqual(
+            requests.convert_querydict_to_dict(QueryDict("name=Sample Status&content_types=dcim.device")),
             {"name": ["Sample Status"], "content_types": ["dcim.device"]},
         )
 
@@ -186,6 +315,54 @@ class FlattenIterableTest(TestCase):
 class GetFooForModelTest(TestCase):
     """Tests for the various `get_foo_for_model()` functions."""
 
+    def test_get_user_from_instance_field_named_user(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=self.user,
+        )
+        self.assertEqual(lookup.get_user_from_instance(instance), self.user)
+
+    def test_get_user_from_instance_null_user_field(self):
+        instance = extras_models.Note.objects.create(
+            assigned_object_type=ContentType.objects.get_for_model(extras_models.Status),
+            assigned_object_id=extras_models.Status.objects.first().pk,
+            user=None,
+        )
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
+    def test_get_user_from_instance_no_user_field(self):
+        instance = extras_models.GraphQLQuery.objects.create(name="FizzBuzz", query="{devices { name }}")
+        self.assertIsNone(lookup.get_user_from_instance(instance))
+
+    def test_get_breadcrumbs_for_model(self):
+        breadcrumbs = lookup.get_breadcrumbs_for_model(dcim_models.Device)
+        self.assertEqual(breadcrumbs.items, dcim_views.DeviceUIViewSet.get_breadcrumbs(dcim_models.Device).items)
+        breadcrumbs = lookup.get_breadcrumbs_for_model(dcim_models.Device, view_type="")
+        self.assertEqual(
+            breadcrumbs.items, dcim_views.DeviceUIViewSet.get_breadcrumbs(dcim_models.Device, view_type="").items
+        )
+
+    def test_get_detail_view_components_context_for_model(self):
+        context = lookup.get_detail_view_components_context_for_model(dcim_models.Device)
+        self.assertEqual(
+            context["breadcrumbs"].items, lookup.get_breadcrumbs_for_model(dcim_models.Device, view_type="").items
+        )
+        self.assertEqual(
+            context["object_detail_content"], lookup.get_object_detail_content_for_model(dcim_models.Device)
+        )
+        self.assertEqual(
+            context["view_titles"].titles, lookup.get_view_titles_for_model(dcim_models.Device, view_type="").titles
+        )
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            (),  # default should be an empty list
+        )
+        self.assertEqual(
+            context["extra_detail_view_action_buttons"],
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+        )
+
     def test_get_filterset_for_model(self):
         """
         Test that `get_filterset_for_model` returns the right FilterSet for various inputs.
@@ -208,6 +385,22 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_form_for_model("dcim.location"), dcim_forms.LocationForm)
         self.assertEqual(lookup.get_form_for_model(dcim_models.Location), dcim_forms.LocationForm)
 
+    def test_get_object_detail_content_for_model(self):
+        self.assertEqual(
+            lookup.get_object_detail_content_for_model(dcim_models.Device),
+            dcim_views.DeviceUIViewSet.object_detail_content,
+        )
+
+    def test_get_extra_detail_view_action_buttons(self):
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            (),  # default should be an empty list
+        )
+        self.assertEqual(
+            lookup.get_extra_detail_view_action_buttons_for_model(dcim_models.Device),
+            dcim_views.DeviceUIViewSet.extra_detail_view_action_buttons,
+        )
+
     def test_get_related_field_for_models(self):
         """
         Test that `get_related_field_for_models` returns the appropriate field for various inputs.
@@ -227,10 +420,13 @@ class GetFooForModelTest(TestCase):
             # both primary_ip4 and primary_ip6 are candidates
             lookup.get_related_field_for_models(dcim_models.Device, ipam_models.IPAddress)
 
+    @tag("example_app")
     def test_get_route_for_model(self):
         """
         Test that `get_route_for_model` returns the appropriate URL route name for various inputs.
         """
+        from example_app.models import ExampleModel
+
         # UI
         self.assertEqual(lookup.get_route_for_model("dcim.device", "list"), "dcim:device_list")
         self.assertEqual(lookup.get_route_for_model(dcim_models.Device, "list"), "dcim:device_list")
@@ -278,10 +474,13 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_model_from_name("dcim.device"), dcim_models.Device)
         self.assertEqual(lookup.get_model_from_name("dcim.location"), dcim_models.Location)
 
+    @tag("example_app")
     def test_get_model_for_view_name(self):
         """
         Test that `get_model_for_view_name` returns the appropriate Model, if the colon separated view name provided.
         """
+        from example_app.models import ExampleModel
+
         with self.subTest("Test core UI view."):
             self.assertEqual(lookup.get_model_for_view_name("dcim:device_list"), dcim_models.Device)
             self.assertEqual(lookup.get_model_for_view_name("dcim:device"), dcim_models.Device)
@@ -313,6 +512,14 @@ class GetFooForModelTest(TestCase):
         self.assertEqual(lookup.get_table_class_string_from_view_name("dcim:location_list"), "LocationTable")
         # Testing unconventional table name
         self.assertEqual(lookup.get_table_class_string_from_view_name("ipam:prefix_list"), "PrefixDetailTable")
+
+    def test_get_view_titles_for_model(self):
+        view_titles = lookup.get_view_titles_for_model(dcim_models.Device)
+        self.assertEqual(view_titles.titles, dcim_views.DeviceUIViewSet.get_view_titles(dcim_models.Device).titles)
+        view_titles = lookup.get_view_titles_for_model(dcim_models.Device, view_type="")
+        self.assertEqual(
+            view_titles.titles, dcim_views.DeviceUIViewSet.get_view_titles(dcim_models.Device, view_type="").titles
+        )
 
 
 class IsTaggableTest(TestCase):
@@ -715,11 +922,11 @@ class LookupRelatedFunctionTest(TestCase):
             # Assert total ContentTypes generated by form_field is == total `content_types` generated by TaggableClassesQuery
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Tag, "content_types")
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
+            self.assertQuerySetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
 
             form_field = filtering.get_filterset_parameter_form_field(extras_models.JobHook, "content_types")
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
             )
 
@@ -727,7 +934,7 @@ class LookupRelatedFunctionTest(TestCase):
                 extras_models.ObjectMetadata, "assigned_object_type"
             )
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 form_field.queryset,
                 ContentType.objects.filter(extras_utils.FeatureQuery("metadata").get_query()).order_by(
                     "app_label", "model"
@@ -983,173 +1190,28 @@ class TestModuleLoadingUtils(TestCase):
                 self.assertFalse(permitted)
                 self.assertIsInstance(reason, str)
 
-    def _create_test_files(self, root_directory: str, contents: dict):
-        """Helper function to create arbitrary text files in a given directory."""
-        for relative_path, file_contents in contents.items():
-            os.makedirs(os.path.dirname(os.path.join(root_directory, relative_path)), exist_ok=True)
-            with open(os.path.join(root_directory, relative_path), "wt") as fd:
-                fd.write(file_contents)
+    def test_import_string_optional(self):
+        with self.subTest("Nonexistent module should return None"):
+            self.assertIsNone(import_string_optional("no_such_module.no_such_attribute"))
+            self.assertIsNone(import_string_optional("no_such_module.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.no_such_submodule.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_submodule.no_such_attribute"))
 
-    def test_import_modules_privately_jobs_root_case(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            try:
-                contents = {
-                    # Job file treated as a standalone module
-                    "some_jobs.py": 'name = "some_jobs"',
-                    # Job subdirectory treated as a package
-                    "my_jobs/__init__.py": '''\
-import my_jobs.some_submodule
-from . import relative_submodule
-name = "my_jobs"''',
-                    "my_jobs/some_submodule/__init__.py": 'name = "my_jobs.some_submodule"',
-                    "my_jobs/relative_submodule/__init__.py": 'name = "my_jobs.relative_submodule"',
-                    # Job file that shouldn't be loaded as it conflicts
-                    "tkinter.py": 'name = "tkinter"',
-                    # Job submodule that shouldn't be loaded as it conflicts
-                    "turtle/__init__.py": 'name = "turtle"',
-                }
-                self._create_test_files(tempdir, contents)
+        with self.subTest("Existing module but nonexistent attribute should return None"):
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("nautobot.core.no_such_attribute"))
+            self.assertIsNone(import_string_optional("sys.no_such_attribute"))
 
-                modules = import_modules_privately(tempdir, ignore_import_errors=False)
-                self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
-                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
-                if "some_jobs" not in sys.modules:
-                    self.fail("Valid module wasn't loaded from JOBS_ROOT")
-                if "my_jobs" not in sys.modules:
-                    self.fail("Valid package wasn't loaded from JOBS_ROOT")
-                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
-                    sys.modules["tkinter"]
-                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
-                    sys.modules["turtle"]
+        with self.subTest("Other import errors should propagate upward still"):
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.invalid_import.MyJob")
+            with self.assertRaises(ImportError):
+                import_string_optional("nautobot.extras.test_jobs.missing_import.MyJob")
 
-                self.assertEqual(sys.modules["some_jobs"].name, "some_jobs")
-                self.assertEqual(sys.modules["my_jobs"].name, "my_jobs")
-                self.assertEqual(sys.modules["my_jobs"].some_submodule.name, "my_jobs.some_submodule")
-                # self.assertEqual(sys.modules["my_jobs"].relative_submodule.name, "my_jobs.relative_submodule")
-
-            finally:
-                clear_module_from_sys_modules("some_jobs")
-                clear_module_from_sys_modules("my_jobs")
-
-                self.assertNotIn("some_jobs", sys.modules.keys())
-                self.assertNotIn("my_jobs", sys.modules.keys())
-                self.assertNotIn("my_jobs.some_submodule", sys.modules.keys())
-
-            # Test reloading of modules after code changes
-            try:
-                contents["some_jobs.py"] = 'name = "some_jobs_new"'
-                contents["my_jobs/__init__.py"] = '''\
-import my_jobs.some_submodule
-from . import relative_submodule
-name = "my_jobs_new"'''
-                contents["my_jobs/some_submodule/__init__.py"] = 'name = "my_jobs.some_submodule_new"'
-                self._create_test_files(tempdir, contents)
-
-                modules = import_modules_privately(tempdir, ignore_import_errors=False)
-                self.assertEqual(["my_jobs", "some_jobs"], sorted([module.__name__ for module in modules]))
-                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
-                if "some_jobs" not in sys.modules:
-                    self.fail("Valid module wasn't loaded from JOBS_ROOT")
-                if "my_jobs" not in sys.modules:
-                    self.fail("Valid package wasn't loaded from JOBS_ROOT")
-                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from JOBS_ROOT"):
-                    sys.modules["tkinter"]
-                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from JOBS_ROOT"):
-                    sys.modules["turtle"]
-
-                self.assertEqual(sys.modules["some_jobs"].name, "some_jobs_new")
-                self.assertEqual(sys.modules["my_jobs"].name, "my_jobs_new")
-                self.assertEqual(sys.modules["my_jobs"].some_submodule.name, "my_jobs.some_submodule_new")
-
-            finally:
-                clear_module_from_sys_modules("some_jobs")
-                clear_module_from_sys_modules("my_jobs")
-
-                self.assertNotIn("some_jobs", sys.modules.keys())
-                self.assertNotIn("my_jobs", sys.modules.keys())
-                self.assertNotIn("my_jobs.some_submodule", sys.modules.keys())
-
-    def test_import_modules_privately_git_repo_jobs_case(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            try:
-                contents = {
-                    # Repo that we intend to load
-                    "my_repo/__init__.py": 'name = "my_repo"',
-                    "my_repo/jobs/__init__.py": '''\
-import my_repo.jobs.some_jobs
-from . import some_other_jobs
-name = "my_repo.jobs"''',
-                    "my_repo/jobs/some_jobs.py": 'name = "my_repo.jobs.some_jobs"',
-                    "my_repo/jobs/some_other_jobs.py": 'name = "my_repo.jobs.some_other_jobs"',
-                    # A separate repo, not intended to be loaded
-                    "other_repo/__init__.py": "",
-                    # File that shouldn't be loaded as it conflicts
-                    "tkinter.py": "",
-                    # Package that shouldn't be loaded as it conflicts
-                    "turtle/__init__.py": "",
-                }
-                self._create_test_files(tempdir, contents)
-
-                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
-                self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
-                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
-                if "my_repo" not in sys.modules:
-                    self.fail("Valid repo wasn't loaded from GIT_ROOT")
-                if "my_repo.jobs" not in sys.modules:
-                    self.fail("Valid repo subdirectory wasn't loaded from GIT_ROOT")
-                with self.assertRaises(KeyError, msg="unexpected repo was loaded from GIT_ROOT"):
-                    sys.modules["other_repo"]
-                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
-                    sys.modules["tkinter"]
-                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
-                    sys.modules["turtle"]
-
-                self.assertEqual(sys.modules["my_repo"].name, "my_repo")
-                self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs")
-                self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs")
-                self.assertEqual(sys.modules["my_repo.jobs"].some_other_jobs.name, "my_repo.jobs.some_other_jobs")
-
-            finally:
-                clear_module_from_sys_modules("my_repo")
-
-                self.assertNotIn("my_repo", sys.modules.keys())
-                self.assertNotIn("my_repo.jobs", sys.modules.keys())
-
-            # Test reloading of modules after code changes
-            try:
-                contents["my_repo/__init__.py"] = 'name = "my_repo_new"'
-                contents["my_repo/jobs/__init__.py"] = '''\
-import my_repo.jobs.some_jobs
-from . import some_other_jobs
-name = "my_repo.jobs_new"'''
-                contents["my_repo/jobs/some_jobs.py"] = 'name = "my_repo.jobs.some_jobs_new"'
-                contents["my_repo/jobs/some_other_jobs.py"] = 'name = "my_repo.jobs.some_other_jobs_new"'
-                self._create_test_files(tempdir, contents)
-
-                modules = import_modules_privately(tempdir, module_path=["my_repo", "jobs"], ignore_import_errors=False)
-                self.assertEqual(["my_repo", "my_repo.jobs"], sorted([module.__name__ for module in modules]))
-                # assertIn/assertNotIn are super noisy when dealing with the huge sys.modules dict, so instead:
-                if "my_repo" not in sys.modules:
-                    self.fail("Valid repo wasn't loaded from GIT_ROOT")
-                if "my_repo.jobs" not in sys.modules:
-                    self.fail("Valid repo subdirectory wasn't loaded from GIT_ROOT")
-                with self.assertRaises(KeyError, msg="unexpected repo was loaded from GIT_ROOT"):
-                    sys.modules["other_repo"]
-                with self.assertRaises(KeyError, msg="conflicting module name was loaded unsafely from GIT_ROOT"):
-                    sys.modules["tkinter"]
-                with self.assertRaises(KeyError, msg="conflicting package name was loaded unsafely from GIT_ROOT"):
-                    sys.modules["turtle"]
-
-                self.assertEqual(sys.modules["my_repo"].name, "my_repo_new")
-                self.assertEqual(sys.modules["my_repo.jobs"].name, "my_repo.jobs_new")
-                self.assertEqual(sys.modules["my_repo.jobs"].some_jobs.name, "my_repo.jobs.some_jobs_new")
-                self.assertEqual(sys.modules["my_repo.jobs"].some_other_jobs.name, "my_repo.jobs.some_other_jobs_new")
-
-            finally:
-                clear_module_from_sys_modules("my_repo")
-
-                self.assertNotIn("my_repo", sys.modules.keys())
-                self.assertNotIn("my_repo.jobs", sys.modules.keys())
+        with self.subTest("Successful imports should succeed"):
+            self.assertEqual(
+                import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
+            )
 
 
 class TestQuerySetUtils(TestCase):

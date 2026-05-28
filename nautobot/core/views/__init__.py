@@ -1,6 +1,9 @@
 import contextlib
 import datetime
+from importlib import resources
+from itertools import groupby
 import logging
+import mimetypes
 import os
 import platform
 import posixpath
@@ -11,15 +14,21 @@ import time
 from db_file_storage.views import get_file
 from django.apps import apps
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import AccessMixin, LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.contenttypes.models import ContentType
-from django.http import HttpResponseForbidden, HttpResponseServerError, JsonResponse
+from django.core.cache import cache
+from django.http import (
+    FileResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+    HttpResponseServerError,
+    JsonResponse,
+)
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import NoReverseMatch, resolve, reverse
+from django.urls import NoReverseMatch, resolve, Resolver404, reverse
 from django.utils.encoding import smart_str
 from django.views.csrf import csrf_failure as _csrf_failure
 from django.views.decorators.csrf import requires_csrf_token
@@ -45,15 +54,33 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import SEARCH_MAX_RESULTS
-from nautobot.core.forms import SearchForm
+from nautobot.core.constants import HOMEPAGE_PANELS_LAYOUT_COLUMNS, LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
 from nautobot.core.releases import get_latest_release
+from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
+from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
+from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_route_for_model
+from nautobot.core.utils.lookup import (
+    get_filterset_for_model,
+    get_model_for_view_name,
+    get_model_from_name,
+    get_related_class_for_model,
+    get_route_for_model,
+    get_table_for_model,
+)
 from nautobot.core.utils.permissions import get_permission_for_model
+from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.views.mixins import UIComponentsMixin
+from nautobot.core.views.utils import (
+    generate_latest_with_cache,
+    is_metrics_experimental_caching_enabled,
+    METRICS_CACHE_KEY,
+)
 from nautobot.extras.forms import GraphQLQueryForm
 from nautobot.extras.models import FileProxy, GraphQLQuery, Status
+from nautobot.extras.plugins.urls import BASE_URL_TO_APP_LABEL
 from nautobot.extras.registry import registry
+from nautobot.extras.tables import StatusTable
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +97,7 @@ class HomeView(AccessMixin, TemplateView):
                 context[key] = data
 
         # Create standalone template
-        path = f'{details["template_path"]}{details["custom_template"]}'
+        path = f"{details['template_path']}{details['custom_template']}"
         if os.path.isfile(path):
             with open(path, "r") as f:
                 html = f.read()
@@ -101,7 +128,7 @@ class HomeView(AccessMixin, TemplateView):
         context = self.get_context_data()
         context.update(
             {
-                "search_form": SearchForm(),
+                "title": "Home",
                 "new_release": new_release,
             }
         )
@@ -132,7 +159,107 @@ class HomeView(AccessMixin, TemplateView):
                                     group_item_details["model"].objects.restrict(request.user, "view").count()
                                 )
 
+        # Filter panels by user permissions.
+        user_panels = [
+            kv_pair
+            for kv_pair in registry["homepage_layout"]["panels"].items()
+            if has_one_or_more_perms(request.user, kv_pair[1].get("permissions", []))
+        ]
+        user_config = request.user.get_config("homepage_layout.panels")
+        # Validate that user config is a list of fixed length, containing lists of objects with at least `id` property.
+        is_user_config_valid = (
+            isinstance(user_config, list)
+            and len(user_config) == HOMEPAGE_PANELS_LAYOUT_COLUMNS
+            and all(isinstance(panel.get("id"), str) for panel_group in user_config for panel in panel_group)
+        )
+
+        if is_user_config_valid:
+            # If `user_config` is found and valid, use it to group and order the panels according to user preferences.
+            # Create a list of nested empty lists representing panel layout columns.
+            panel_layout = [[] for i in range(0, HOMEPAGE_PANELS_LAYOUT_COLUMNS)]
+            for panel_group_index, panel_group in enumerate(user_config):
+                for panel in panel_group:
+                    # Find `(panel_name, panel_details)` key-value pair corresponding to the `panel` from user config.
+                    try:
+                        kv_pair = next(kv_pair for kv_pair in user_panels if slugify(kv_pair[0]) == panel.get("id"))
+                    except StopIteration:
+                        kv_pair = None
+                    if kv_pair:
+                        # If panel with given `id` exists and is available, append it to the current column layout and
+                        # enrich it with `collapsed` property from user config.
+                        panel_layout[panel_group_index].append(
+                            (kv_pair[0], {**kv_pair[1], "collapsed": panel.get("collapsed", False)})
+                        )
+            # Identify panels that should be displayed but are missing from `user_config`, and add them at the end.
+            used_panel_names = [kv_pair[0] for panel_group in panel_layout for kv_pair in panel_group]
+            missing_panels = [kv_pair for kv_pair in user_panels if kv_pair[0] not in used_panel_names]
+            panel_layout[-1] += missing_panels
+            # Convert panel key-value pairs to `dict`.
+            panel_layout = [dict(panel_group) for panel_group in panel_layout]
+            # Update user config to always keep it up to date with the latest homepage panel layout structure.
+            request.user.set_config(
+                "homepage_layout.panels",
+                [
+                    [
+                        {"id": slugify(kv_pair[0]), "collapsed": kv_pair[1].get("collapsed", False)}
+                        for kv_pair in panel_group.items()
+                    ]
+                    for panel_group in panel_layout
+                ],
+                commit=True,
+            )
+        else:
+            # If `user_config` is not found or is invalid, create a default panel layout.
+            request.user.clear_config("homepage_layout.panels", commit=True)
+            # Using an upside-down floor division here. Source: from https://stackoverflow.com/a/17511341.
+            panel_layout_rows = -(len(user_panels) // -HOMEPAGE_PANELS_LAYOUT_COLUMNS)
+            # Lambda key function is responsible by grouping the panels into equal chunks representing rows per column.
+            panel_layout = [
+                dict(panel_group)
+                for key, panel_group in groupby(
+                    user_panels, lambda panel: user_panels.index(panel) // panel_layout_rows
+                )
+            ]
+            # Make sure that there always is the exact expected number of columns in the `panel_layout`.
+            panel_layout.extend([{}] * (HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panel_layout)))
+
+        context.update({"homepage_layout_panels": panel_layout})
+
         return self.render_to_response(context)
+
+
+class AppDocsView(LoginRequiredMixin, View):
+    """
+    Serve documentation files for any pip-installed app from inside the package,
+    only for authenticated users.
+    """
+
+    def get(self, request, app_base_url, path="index.html"):
+        app_label = BASE_URL_TO_APP_LABEL.get(app_base_url)
+        if not app_label:
+            return JsonResponse({"detail": f"Unknown base_url '{app_base_url}'."}, status=404)
+        try:
+            base_dir = resources.files(app_label)
+        except ModuleNotFoundError:
+            return JsonResponse({"detail": f"App {app_label} not found."}, status=404)
+
+        # Dir to documentation inside the package
+        docs_dir = base_dir / "docs"
+        # Normalize path to avoid (../) etc.
+        normalized_path = posixpath.normpath(path).lstrip("/")
+        file_path = docs_dir / normalized_path
+
+        # Additional check to ensure the resolved path is still within docs_dir
+        if not file_path.resolve().is_relative_to(docs_dir.resolve()):
+            return JsonResponse({"detail": "Access denied."}, status=403)
+
+        if not file_path.is_file():
+            return JsonResponse({"detail": f"File {file_path} not found."}, status=404)
+
+        # Determine the MIME type based on the file extension and return the file as an HTTP response.
+        # This ensures that browsers interpret the file correctly (e.g., HTML, CSS, JS, images).
+        content_type, _ = mimetypes.guess_type(str(file_path))
+        return FileResponse(open(file_path, "rb"), content_type=content_type)
 
 
 class MediaView(AccessMixin, View):
@@ -154,8 +281,9 @@ class MediaView(AccessMixin, View):
         return self.handle_no_permission()
 
 
-class WorkerStatusView(UserPassesTestMixin, TemplateView):
+class WorkerStatusView(UserPassesTestMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/worker_status.html"
+    view_titles = Titles(titles={"*": "Nautobot Worker Status"})
 
     def test_func(self):
         return self.request.user.is_staff
@@ -266,13 +394,24 @@ class WorkerStatusView(UserPassesTestMixin, TemplateView):
                 "timeout": timeout,
                 "workers": workers,
             },
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_titles": self.get_view_titles(),
         }
 
         return self.render_to_response(context)
 
 
-class ThemePreviewView(LoginRequiredMixin, TemplateView):
+class ThemePreviewView(LoginRequiredMixin, UIComponentsMixin, TemplateView):
     template_name = "utilities/theme_preview.html"
+    view_titles = Titles(titles={"*": "Nautobot Theme Preview"})
+    breadcrumbs = Breadcrumbs(
+        items={
+            "generic": [
+                ViewNameBreadcrumbItem(view_name="home", label="Nautobot"),
+                ViewNameBreadcrumbItem(view_name="theme_preview", label="Theme Preview"),
+            ],
+        },
+    )
 
     def get_context_data(self, **kwargs):
         return {
@@ -280,6 +419,10 @@ class ThemePreviewView(LoginRequiredMixin, TemplateView):
             "object": Status.objects.first(),
             "verbose_name": Status.objects.all().model._meta.verbose_name,
             "verbose_name_plural": Status.objects.all().model._meta.verbose_name_plural,
+            "table": StatusTable(Status.objects.all()[:3]),
+            "view_titles": self.get_view_titles(),
+            "breadcrumbs": self.get_breadcrumbs(),
+            "view_action": "generic",
         }
 
 
@@ -292,73 +435,180 @@ class SearchView(AccessMixin, View):
 
         # No query
         if "q" not in request.GET:
+            return render(request, "search.html", {})
+
+        # Build the set of "app_label.modelname" strings, representing all models included in the global search,
+        # based on the `app_config.searchable_models` list (if any) defined by each app
+        searchable_models_set = set()
+        for app_config in apps.get_app_configs():
+            if hasattr(app_config, "searchable_models"):
+                searchable_models_set.update(
+                    f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
+                )
+
+        # Sort the searchable_models set into the below "logical" order:
+        # - Device
+        # - Location
+        # - Prefix
+        # - IPAddress
+        # - core models in alphabetical order by app_label.modelname
+        # - app models in alphabetical order by app_label.modelname
+        searchable_models = []
+        for initial_entry in ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"]:
+            if initial_entry in searchable_models_set:  # should always be true, but just in case
+                searchable_models.append(initial_entry)
+                searchable_models_set.remove(initial_entry)
+        # Remaining core models
+        for remaining_entry in sorted(searchable_models_set):
+            if remaining_entry.split(".", 1)[0] in settings.PLUGINS:
+                continue
+            searchable_models.append(remaining_entry)
+            searchable_models_set.remove(remaining_entry)
+        # Remaining app models
+        searchable_models += sorted(searchable_models_set)
+
+        if not request.headers.get("HX-Request", False):
+            # Initial page-load request
             return render(
                 request,
                 "search.html",
-                {
-                    "form": SearchForm(),
-                },
+                {"searchable_models": searchable_models},
             )
 
-        form = SearchForm(request.GET)
-        results = []
+        # HTMX request for searching a specific model class
+        label_lower = request.GET.get("model", searchable_models[0])
+        context = {
+            "name": None,
+            "model": label_lower,
+            "table": None,
+            "url": None,
+        }
+        if label_lower in searchable_models:
+            # Based on the label, reverse-lookup the list URL, then the view or UIViewSet
+            # corresponding to that URL, and finally the queryset, filterset, and table classes needed
+            # to find and display the model search results.
+            url = get_route_for_model(label_lower, "list")
+            try:
+                view_func = resolve(reverse(url)).func
+                context["url"] = f"{reverse(url)}?q={request.GET.get('q')}"
+                # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
+                view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
+                queryset = view_or_viewset.queryset.restrict(request.user, "view")
+                context["name"] = queryset.model._meta.verbose_name_plural
+                # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
+                filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
+                # For a UIViewSet, .table_class, for an ObjectListView, .table.
+                table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
 
-        if form.is_valid():
-            # Build the list of (app_label, modelname) tuples, representing all models included in the global search,
-            # based on the `app_config.searchable_models` list (if any) defined by each app
-            searchable_models = []
-            for app_config in apps.get_app_configs():
-                if hasattr(app_config, "searchable_models"):
-                    searchable_models += [(app_config.label, modelname) for modelname in app_config.searchable_models]
-
-            if form.cleaned_data["obj_type"]:
-                # Searching for a single type of object
-                obj_types = [form.cleaned_data["obj_type"]]
-            else:
-                # Searching all object types
-                obj_types = [model_info[1] for model_info in searchable_models]
-
-            for label, modelname in searchable_models:
-                if modelname not in obj_types:
-                    continue
-                # Based on the label and modelname, reverse-lookup the list URL, then the view or UIViewSet
-                # corresponding to that URL, and finally the queryset, filterset, and table classes needed
-                # to find and display the model search results.
-                url = get_route_for_model(f"{label}.{modelname}", "list")
-                try:
-                    view_func = resolve(reverse(url)).func
-                    # For UIViewSet, view_func.cls gets what we need; for an ObjectListView, view_func.view_class is it.
-                    view_or_viewset = getattr(view_func, "cls", getattr(view_func, "view_class", None))
-                    queryset = view_or_viewset.queryset.restrict(request.user, "view")
-                    # For a UIViewSet, .filterset_class, for an ObjectListView, .filterset.
-                    filterset = getattr(view_or_viewset, "filterset_class", getattr(view_or_viewset, "filterset", None))
-                    # For a UIViewSet, .table_class, for an ObjectListView, .table.
-                    table = getattr(view_or_viewset, "table_class", getattr(view_or_viewset, "table", None))
-
-                    # Construct the results table for this object type
-                    filtered_queryset = filterset({"q": form.cleaned_data["q"]}, queryset=queryset).qs
+                # Construct the results table for this object type
+                if filterset is not None and table is not None:
+                    filtered_queryset = filterset({"q": request.GET.get("q")}, queryset=queryset).qs
                     table = table(filtered_queryset, hide_hierarchy_ui=True, orderable=False)
                     table.paginate(per_page=SEARCH_MAX_RESULTS)
 
                     if table.page:
-                        results.append(
-                            {
-                                "name": queryset.model._meta.verbose_name_plural,
-                                "table": table,
-                                "url": f"{reverse(url)}?q={form.cleaned_data.get('q')}",
-                            }
-                        )
-                except NoReverseMatch:
-                    messages.error(request, f'Missing URL "{url}" - unable to show search results for {modelname}.')
+                        context["table"] = table
 
-        return render(
-            request,
-            "search.html",
-            {
-                "form": form,
-                "results": results,
-            },
-        )
+            except NoReverseMatch:
+                logger.error('Missing URL "%s" - unable to show search results for %s.', url, label_lower)
+
+        return render(request, "components/htmx/global_search_one_model.html", context)
+
+
+class SearchContentTypeView(AccessMixin, View):
+    def get(self, request, content_type):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            model = get_model_from_name(content_type)
+            filterset_class = get_filterset_for_model(model)
+            filterset_form = get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm")
+            filter_form = filterset_form(
+                auto_id="embedded_id_%s", initial=normalize_querydict(request.GET, filterset=filterset_class())
+            )
+            return render(
+                request,
+                "components/htmx/object_embedded_search.html",
+                {"filter_form": filter_form, "model": model},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class LiveSearchView(AccessMixin, View):
+    def get(self, request, path):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if path is None:
+            return HttpResponseBadRequest("List view `path` is missing in the requested URL.")
+
+        if request.headers.get("HX-Request", False):
+            restricted_queryset = None
+            table = None
+
+            try:
+                view_name = resolve(f"/{path}").view_name
+                model = get_model_for_view_name(view_name)
+                filterset = get_filterset_for_model(model)
+                table_class = get_table_for_model(model)
+            except (Resolver404, TypeError, ValueError):
+                filterset = None
+                table_class = None
+
+            if filterset and table_class:
+                filtered_queryset = filterset(request.GET).qs
+                if filtered_queryset:
+                    restricted_queryset = (
+                        filtered_queryset.restrict(request.user, "view")
+                        if hasattr(filtered_queryset, "restrict")
+                        else filtered_queryset
+                    )
+                    table = table_class(
+                        restricted_queryset,
+                        # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
+                        attrs={"class": "table nb-table-headings"},
+                        hide_hierarchy_ui=True,
+                        configurable=False,
+                        orderable=False,
+                        row_attrs={
+                            # Event handlers and attributes below are defined in order to imitate anchor link behavior.
+                            "role": "link",
+                            "tabindex": 0,
+                            "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
+                            "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
+                        },
+                    )
+                    # Hide unnecessary "pk" and "actions" columns, if they would otherwise be displayed.
+                    for column in ["pk", "actions"]:
+                        if column in table.columns:
+                            table.columns.hide(column)
+                    table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
+            return render(
+                request,
+                "components/htmx/live_search_results.html",
+                {"table": table},
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class MessagesView(AccessMixin, View):
+    def get(self, request):
+        # if user is not authenticated, redirect to login page
+        # when attempting to search
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+
+        if request.headers.get("HX-Request", False):
+            return render(request, "components/htmx/messages.html")
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
 class StaticMediaFailureView(View):  # NOT using LoginRequiredMixin here as this may happen even on the login page
@@ -416,7 +666,9 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     return HttpResponseForbidden(t.render(context), content_type="text/html")
 
 
-class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
+class CustomGraphQLView(LoginRequiredMixin, UIComponentsMixin, GraphQLView):
+    view_titles = Titles(titles={"*": "GraphiQL"})
+
     def render_graphiql(self, request, **data):
         query_name = request.GET.get("name")
         if query_name:
@@ -424,6 +676,8 @@ class CustomGraphQLView(LoginRequiredMixin, GraphQLView):
             data["editing"] = True
         data["saved_graphiql_queries"] = GraphQLQuery.objects.all()
         data["form"] = GraphQLQueryForm
+        data["breadcrumbs"] = self.get_breadcrumbs()
+        data["view_titles"] = self.get_view_titles()
         return render(request, self.graphiql_template, data)
 
 
@@ -435,8 +689,17 @@ class NautobotAppMetricsCollector(Collector):
     def collect(self):
         """Collect metrics from plugins."""
         start = time.time()
-        for metric_generator in registry["app_metrics"]:
-            yield from metric_generator()
+        cached_lines = cache.get(METRICS_CACHE_KEY)
+        if not is_metrics_experimental_caching_enabled() or not cached_lines:
+            # If caching is disabled or no cache is found, generate metrics
+            for metric_generator in registry["app_metrics"]:
+                yield from metric_generator()
+        else:
+            # We stash the cached lines on the instance of the collector so that we can
+            # avoid a potential race condition where the cache expires between
+            # the time we check for it and the time we go to use it
+            # in generate_latest_with_cache()
+            self.local_cache = cached_lines
         gauge = GaugeMetricFamily("nautobot_app_metrics_processing_ms", "Time in ms to generate the app metrics")
         duration = time.time() - start
         gauge.add_metric([], format(duration * 1000, ".5f"))
@@ -485,7 +748,13 @@ class NautobotMetricsView(APIView):
         except ValueError:
             # Collector already registered, we are running without multiprocessing
             pass
-        metrics_page = generate_latest(prometheus_registry)
+
+        if is_metrics_experimental_caching_enabled():
+            # Use the vendored version of generate_latest with Caching support
+            metrics_page = generate_latest_with_cache(prometheus_registry)
+        else:
+            # Use the original version of generate_latest to generate the metrics
+            metrics_page = generate_latest(prometheus_registry)
         return Response(metrics_page, content_type=CONTENT_TYPE_LATEST)
 
 
@@ -503,13 +772,14 @@ def get_file_with_authorization(request, *args, **kwargs):
     return get_file(request, *args, **kwargs)
 
 
-class AboutView(AccessMixin, TemplateView):
+class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
     """
     Nautobot About View which displays general information about Nautobot and contact details
     for Network to Code.
     """
 
     template_name = "about.html"
+    view_titles = Titles(titles={"*": "About Nautobot"})
 
     def get(self, request, *args, **kwargs):
         # Redirect user to login page if not authenticated
@@ -537,6 +807,8 @@ class AboutView(AccessMixin, TemplateView):
                 "new_release": new_release,
                 "support_contract_active": support_contract_active,
                 "support_expiration_date": support_expiration_date,
+                "view_titles": self.get_view_titles(),
+                "breadcrumbs": self.get_breadcrumbs(),
             }
         )
 
@@ -547,3 +819,4 @@ class RenderJinjaView(LoginRequiredMixin, TemplateView):
     """Render a Jinja template with context data."""
 
     template_name = "utilities/render_jinja2.html"
+    extra_context = {"view_titles": Titles(titles={"*": "Jinja Template Renderer"})}

@@ -109,6 +109,7 @@ class ObjectChange(BaseModel):
 
     documentation_static_path = "docs/user-guide/platform-functionality/change-logging.html"
     natural_key_field_names = ["pk"]
+    hide_in_diff_view = True
 
     class Meta:
         ordering = ["-time"]
@@ -152,6 +153,10 @@ class ObjectChange(BaseModel):
 
     def __str__(self):
         return f"{self.changed_object_type} {self.object_repr} {self.get_action_display().lower()} by {self.user_name}"
+
+    @property
+    def page_title(self):
+        return f"{self.object_repr} - {self.time.strftime('%Y-%m-%d %H:%M')}"
 
     def save(self, *args, **kwargs):
         # Record the user's name and the object's representation as static strings

@@ -50,7 +50,7 @@ def _get_registered_content(obj, method, template_context, return_html=True):
         content = getattr(instance, method)()
         if not return_html:
             for i, content in enumerate(content):
-                objects.append({f"{plugin_name}:{i+1}": content})
+                objects.append({f"{plugin_name}:{i + 1}": content})
         else:
             html += content
 

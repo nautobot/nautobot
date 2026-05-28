@@ -1,9 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
+    ModelMultipleChoiceFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
@@ -39,22 +39,21 @@ class UserFilterSet(BaseFilterSet):
     )
     # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
     #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
-    groups_id = django_filters.ModelMultipleChoiceFilter(
+    groups_id = ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group (ID)",
     )
-    groups = django_filters.ModelMultipleChoiceFilter(
+    groups = ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
-        label="Group (name)",
     )
     has_object_changes = RelatedMembershipBooleanFilter(
         field_name="object_changes",
         label="Has Changes",
     )
-    object_changes = django_filters.ModelMultipleChoiceFilter(
+    object_changes = ModelMultipleChoiceFilter(
         field_name="object_changes",
         queryset=ObjectChange.objects.all(),
         label="Object Changes (ID)",
@@ -66,17 +65,15 @@ class UserFilterSet(BaseFilterSet):
     object_permissions = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="name",
         queryset=ObjectPermission.objects.all(),
-        label="Object Permission (ID or name)",
     )
     has_rack_reservations = RelatedMembershipBooleanFilter(
         field_name="rack_reservations",
         label="Has Rack Reservations",
     )
     # TODO(timizuo): Since RackReservation has no natural-key field, NaturalKeyOrPKMultipleChoiceFilter can't be used
-    rack_reservations_id = django_filters.ModelMultipleChoiceFilter(
+    rack_reservations_id = ModelMultipleChoiceFilter(
         field_name="rack_reservations",
         queryset=RackReservation.objects.all(),
-        label="Rack Reservation (ID)",
     )
 
     class Meta:
@@ -104,16 +101,15 @@ class ObjectPermissionFilterSet(BaseFilterSet, NameSearchFilterSet):
     users = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
         to_field_name="username",
-        label="User (ID or username)",
     )
     # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
     #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
-    groups_id = django_filters.ModelMultipleChoiceFilter(
+    groups_id = ModelMultipleChoiceFilter(
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group (ID)",
     )
-    groups = django_filters.ModelMultipleChoiceFilter(
+    groups = ModelMultipleChoiceFilter(
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",

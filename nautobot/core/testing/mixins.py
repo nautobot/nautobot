@@ -5,7 +5,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ObjectDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
@@ -16,9 +16,10 @@ from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import utils
-from nautobot.core.utils import permissions
+from nautobot.core.utils import deprecation, permissions
 from nautobot.extras import management, models as extras_models
-from nautobot.extras.choices import JobResultStatusChoices
+from nautobot.extras.choices import JobResultStatusChoices, RelationshipSideChoices
+from nautobot.ipam.models import default_namespace_pk
 from nautobot.users import models as users_models
 
 # Use the proper swappable User model
@@ -81,6 +82,7 @@ class NautobotTestCaseMixin:
         """
         super().tearDown()
         cache.clear()
+        default_namespace_pk.set(None)
 
     def prepare_instance(self, instance):
         """
@@ -100,6 +102,28 @@ class NautobotTestCaseMixin:
         for attr in fields:
             if hasattr(instance, attr) and attr not in model_dict:
                 model_dict[attr] = getattr(instance, attr)
+            elif attr.startswith("cf_"):
+                # Handle custom fields specifically
+                model_dict[attr] = instance._custom_field_data.get(attr[3:])
+            elif attr.startswith("cr_"):
+                # Handle relationship associations specifically
+                relationship_key, peer_side = attr[3:].rsplit("__", 1)
+                relationship = extras_models.Relationship.objects.get(key=relationship_key)
+                if relationship.has_many(peer_side):
+                    model_dict[attr] = sorted(
+                        getattr(assoc, f"{peer_side}_id")
+                        for assoc in extras_models.RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{f"{RelationshipSideChoices.OPPOSITE[peer_side]}_id": instance.pk},
+                        )
+                    )
+                else:
+                    model_dict[attr] = extras_models.RelationshipAssociation.objects.filter(
+                        relationship=relationship,
+                        **{f"{RelationshipSideChoices.OPPOSITE[peer_side]}_id": instance.pk},
+                    ).first()
+                    if model_dict[attr] is not None:
+                        model_dict[attr] = getattr(model_dict[attr], f"{peer_side}_id")
 
         for key, value in list(model_dict.items()):
             try:
@@ -123,7 +147,7 @@ class NautobotTestCaseMixin:
             if api:
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
-                    ct = ContentType.objects.get(pk=value)
+                    ct = value if isinstance(value, ContentType) else ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
                 # Convert IPNetwork instances to strings
@@ -156,10 +180,28 @@ class NautobotTestCaseMixin:
         """
         for name in names:
             ct, action = permissions.resolve_permission_ct(name)
-            obj_perm = users_models.ObjectPermission(name=name, actions=[action], **kwargs)
+            obj_perm, _ = users_models.ObjectPermission.objects.get_or_create(name=name, actions=[action], **kwargs)
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ct)
+
+    def remove_permissions(self, *names, **kwargs):
+        """
+        Remove a set of permissions. Accepts permission names in the form <app>.<action>_<model>.
+        Additional keyword arguments will be passed to the ObjectPermission constructor to allow creating more detailed permissions.
+
+        Examples:
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup")
+            >>> remove_permissions("ipam.add_vlangroup", "ipam.view_vlangroup", constraints={"pk": "uuid-1234"})
+        """
+        for name in names:
+            _, action, _ = permissions.resolve_permission(name)
+            try:
+                obj_perm = users_models.ObjectPermission.objects.get(name=name, actions=[action], **kwargs)
+                obj_perm.delete()
+            except ObjectDoesNotExist:
+                # Permission does not exist, so nothing to remove
+                pass
 
     #
     # Custom assertions
@@ -178,6 +220,8 @@ class NautobotTestCaseMixin:
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
+                if "form" in response.data:
+                    err_message += f"\n{response.data['form'].errors}"
             # Attempt to extract form validation errors from the response HTML
             elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
                 err_message += f"\n{form_errors}"
@@ -202,10 +246,11 @@ class NautobotTestCaseMixin:
         Compare a model instance to a dictionary, checking that its attribute values match those specified
         in the dictionary.
 
-        :param instance: Python object instance
-        :param data: Dictionary of test data used to define the instance
-        :param exclude: List of fields to exclude from comparison (e.g. passwords, which get hashed)
-        :param api: Set to True is the data is a JSON representation of the instance
+        Args:
+            instance (Model): Django model instance
+            data (dict): Dictionary of test data used to define the instance
+            exclude (Optional[List[str]]): List of fields to exclude from comparison (e.g. passwords, which get hashed)
+            api (bool): Set to True is the data is a JSON representation of the instance
         """
         if exclude is None:
             exclude = []
@@ -217,7 +262,10 @@ class NautobotTestCaseMixin:
         for k, v in model_dict.items():
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
-                new_model_dict[k] = sorted(v)
+                if k == "mapping":  # CableType, a list of dicts, not sortable
+                    new_model_dict[k] = json.dumps(v, sort_keys=True)
+                else:
+                    new_model_dict[k] = sorted(v)
             elif k == "data_schema" and isinstance(v, str):
                 # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                 new_model_dict[k] = self.standardize_json(v)
@@ -230,10 +278,13 @@ class NautobotTestCaseMixin:
         # Omit any dictionary keys which are not instance attributes or have been excluded
         relevant_data = {}
         for k, v in data.items():
-            if hasattr(instance, k) and k not in exclude:
+            if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
-                    relevant_data[k] = sorted(v)
+                    if k == "mapping":  # CableType, a list of dicts, not sortable
+                        new_model_dict[k] = json.dumps(v, sort_keys=True)
+                    else:
+                        relevant_data[k] = sorted(v)
                 elif k == "data_schema" and isinstance(v, str):
                     # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                     relevant_data[k] = self.standardize_json(v)
@@ -245,13 +296,17 @@ class NautobotTestCaseMixin:
 
         self.assertEqual(new_model_dict, relevant_data)
 
-    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
-        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+    def assertQuerySetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerySetEqual with additional logic to assert input queryset and values are not empty"""
 
-        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(qs), 0, "QuerySet cannot be empty")
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
-        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+        return self.assertQuerySetEqual(qs, values, *args, **kwargs)
+
+    @deprecation.method_deprecated_in_favor_of(assertQuerySetEqualAndNotEmpty)
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        return self.assertQuerySetEqualAndNotEmpty(qs, values, *args, **kwargs)
 
     class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
         """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""

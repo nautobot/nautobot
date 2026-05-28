@@ -28,9 +28,10 @@ def flatten_dict(d, prefix="", separator="."):
     """
     Flatten nested dictionaries into a single level by joining key names with a separator.
 
-    :param d: The dictionary to be flattened
-    :param prefix: Initial prefix (if any)
-    :param separator: The character to use when concatenating key names
+    Args:
+        d (dict): The dictionary to be flattened
+        prefix (str): Initial prefix (if any)
+        separator (str): The character to use when concatenating key names
     """
     ret = {}
     for k, v in d.items():
@@ -46,8 +47,10 @@ def flatten_iterable(iterable):
     """
     Flatten a nested iterable such as a list of lists, keeping strings intact.
 
-    :param iterable: The iterable to be flattened
-    :returns: generator
+    Args:
+        iterable (Iterable): The iterable to be flattened
+
+    Yields: str
     """
     for i in iterable:
         if hasattr(i, "__iter__") and not isinstance(i, str):
@@ -90,6 +93,19 @@ def merge_dicts_without_collision(d1, d2):
         if d1[k] != d2[k]:
             raise ValueError(f'Conflicting values for key "{k}": ({d1[k]!r}, {d2[k]!r})')
     return {**d1, **d2}
+
+
+def validate_jinja2(template_code):
+    """
+    Parse a Jinja2 template to validate its syntax. Returns True if the template is valid.
+
+    Raises:
+        jinja2.TemplateSyntaxError: If the template is syntactically invalid.
+    """
+    rendering_engine = engines["jinja"]
+    rendering_engine.env.parse(template_code)
+
+    return True
 
 
 def render_jinja2(template_code, context):

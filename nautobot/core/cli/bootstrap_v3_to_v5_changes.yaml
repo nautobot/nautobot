@@ -1,0 +1,314 @@
+- "Bootstrap v3": btn-default
+  "Bootstrap v5": btn-secondary
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')btn-default(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": btn-lg
+  "Bootstrap v5": btn
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')btn-lg(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": btn-xs
+  "Bootstrap v5": btn-sm
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')btn-xs(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": caret
+  "Bootstrap v5": mdi mdi-chevron-down
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')caret(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": center-block
+  "Bootstrap v5": d-block mx-auto
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')center-block(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": checkbox
+  "Bootstrap v5": form-check
+  "Search Regex": |
+    `(?<!type=)("|')([^"']*)(?<=\s|"|')checkbox(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": checkbox-inline
+  "Bootstrap v5": form-check-input
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')checkbox-inline(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": close
+  "Bootstrap v5": btn-close
+  "Search Regex": |
+    `(?<=class=)("|')([^"']*)(?<=\s|"|')close(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": col-*-offset-*
+  "Bootstrap v5": offset-*-*
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')col-(xs|sm|md|lg|x?xl)-offset-\d{1,2}(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": control-label
+  "Bootstrap v5": col-form-label
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')control-label(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": dropdown-menu-left
+  "Bootstrap v5": dropdown-menu-start
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')dropdown-menu-left(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": dropdown-menu-right
+  "Bootstrap v5": dropdown-menu-end
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')dropdown-menu-right(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": form-control-static
+  "Bootstrap v5": form-control-plaintext
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')form-control-static(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": form-group
+  "Bootstrap v5": mb-10 d-flex justify-content-center
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')form-group(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": help-block
+  "Bootstrap v5": form-text
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')help-block(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": hidden
+  "Bootstrap v5": d-none
+  "Search Regex": |
+    `(?<!type=)("|')([^"']*)(?<=\s|"|')hidden(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label
+  "Bootstrap v5": badge
+  "Search Regex": |
+    `(?<=class=)("|')([^"']*)(?<=\s|"|')label(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-default
+  "Bootstrap v5": bg-default
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-default(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-danger
+  "Bootstrap v5": bg-danger
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-danger(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-info
+  "Bootstrap v5": bg-info
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-info(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-primary
+  "Bootstrap v5": bg-primary
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-primary(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-success
+  "Bootstrap v5": bg-success
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-success(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-transparent
+  "Bootstrap v5": bg-transparent
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-transparent(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": label-warning
+  "Bootstrap v5": bg-warning
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')label-warning(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": noprint
+  "Bootstrap v5": d-print-none
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')noprint(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": panel
+  "Bootstrap v5": card
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')panel(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": panel-body
+  "Bootstrap v5": card-body
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')panel-body(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": panel-footer
+  "Bootstrap v5": card-footer
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')panel-footer(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": panel-heading
+  "Bootstrap v5": card-header
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')panel-heading(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": pull-left
+  "Bootstrap v5": float-start
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')pull-left(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": pull-right
+  "Bootstrap v5": float-end
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')pull-right(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": sr-only
+  "Bootstrap v5": visually-hidden
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')sr-only(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": sr-only-focusable
+  "Bootstrap v5": visually-hidden-focusable
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')sr-only-focusable(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": text-left
+  "Bootstrap v5": text-start
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')text-left(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": text-muted
+  "Bootstrap v5": text-secondary
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')text-muted(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": text-right
+  "Bootstrap v5": text-end
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')text-right(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": accordion-toggle
+  "Bootstrap v5": nb-collapse-toggle
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')accordion-toggle(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": accordion-toggle-all
+  "Bootstrap v5": data-nb-toggle
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')accordion-toggle-all(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": banner-bottom
+  "Bootstrap v5": nb-banner-bottom
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')banner-bottom(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": btn-inline
+  "Bootstrap v5": nb-btn-inline-hover
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')btn-inline(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": color-block
+  "Bootstrap v5": nb-color-block
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')color-block(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": description
+  "Bootstrap v5": nb-description
+  "Search Regex": |
+    `(?<=class=)("|')([^"']*)(?<=\s|"|')description(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": editor-container
+  "Bootstrap v5": nb-editor-container
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')editor-container(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": loading
+  "Bootstrap v5": nb-loading
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')loading(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": report-stats
+  "Bootstrap v5": nb-report-stats
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')report-stats(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": required
+  "Bootstrap v5": nb-required
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')required(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": right-side-panel
+  "Bootstrap v5": nb-right-side-panel
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')right-side-panel(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": software-image-hierarchy
+  "Bootstrap v5": nb-software-image-hierarchy
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')software-image-hierarchy(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": style-line
+  "Bootstrap v5": nb-style-line
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')style-line(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": table-headings
+  "Bootstrap v5": nb-table-headings
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')table-headings(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tile
+  "Bootstrap v5": nb-tile
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tile(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tile-description
+  "Bootstrap v5": nb-tile-description
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tile-description(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tile-footer
+  "Bootstrap v5": nb-tile-footer
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tile-footer(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tile-header
+  "Bootstrap v5": nb-tile-header
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tile-header(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tiles
+  "Bootstrap v5": nb-tiles
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tiles(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": tree-hierarchy
+  "Bootstrap v5": nb-tree-hierarchy
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')tree-hierarchy(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": filter-container
+  "Bootstrap v5": removed
+  "Search Regex": |
+    `("|')([^"']*)(?<=\s|"|')filter-container(?=\s|"|')([^"']*)("|')`
+
+- "Bootstrap v3": data-backdrop
+  "Bootstrap v5": data-bs-backdrop
+  "Search Regex": |
+    `data-backdrop`
+
+- "Bootstrap v3": data-dismiss
+  "Bootstrap v5": data-bs-dismiss
+  "Search Regex": |
+    `data-dismiss`
+
+- "Bootstrap v3": data-target
+  "Bootstrap v5": data-bs-target
+  "Search Regex": |
+    `data-target`
+
+- "Bootstrap v3": data-title
+  "Bootstrap v5": data-bs-title
+  "Search Regex": |
+    `data-title`
+
+- "Bootstrap v3": data-toggle
+  "Bootstrap v5": data-bs-toggle
+  "Search Regex": |
+    `data-toggle`
+
+- "Bootstrap v3": Breadcrumbs, Dropdowns, Tabs
+  "Bootstrap v5": breadcrumb-item, dropdown-item, nav-item, nav-link
+  "Search Regex": |
+    `(?s)<li((?!<li|</li>|breadcrumb-item).)*(?=<a|<button)((?!<li|</li>|breadcrumb-item|dropdown-item|nav-item|nav-link).)*</li>`

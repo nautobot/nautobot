@@ -1,92 +1,105 @@
 {% load helpers %}
 
 {% if object.pk %}
-    <div class="panel panel-default">
-        <div class="panel-heading">
+    <div class="card">
+        <div class="card-header">
             <strong>Object Details</strong>
+            <a class="btn stretched-link nb-collapse-toggle" data-bs-toggle="collapse" href="#object_details" role="button" aria-expanded="true" aria-controls="object_details">
+                <span class="mdi mdi-chevron-down"></span>
+            </a>
         </div>
-        <table class="table table-hover panel-body attr-table">
-            <tbody>
-                <tr>
-                    <td>UUID</td>
-                    <td>
-                        <span class="hover_copy">
-                            <span id="uuid_copy">{{ object.id }}</span>
-                            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
-                                <span class="mdi mdi-content-copy"></span>
-                            </button>
-                        </span>
-                    </td>
-                </tr>
-                {% if object.natural_slug %}
+        <div id="object_details" class="collapse show">
+            <table class="table table-hover attr-table">
+                <tbody>
                     <tr>
-                        <td>Natural Slug</td>
+                        <td>UUID</td>
                         <td>
-                            <span class="hover_copy">
-                                <span id="natural_slug_copy">{{ object.natural_slug }}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#natural_slug_copy">
-                                    <span class="mdi mdi-content-copy"></span>
+                            <span>
+                                <span id="uuid_copy">{{ object.id }}</span>
+                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                    <span class="visually-hidden">Copy</span>
                                 </button>
                             </span>
                         </td>
                     </tr>
-                {% endif %}
-                {% if object.slug %}
-                    <tr>
-                        <td>Slug</td>
-                        <td>
-                            <span class="hover_copy">
-                                <span id="slug_copy">{{ object.slug }}</span>
-                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
-                                    <span class="mdi mdi-content-copy"></span>
-                                </button>
-                            </span>
-                        </td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-    <div class="panel panel-default">
-        <div class="panel-heading">
-            <strong>Data Provenance</strong>
-        </div>
-        <table class="table table-hover panel-body attr-table">
-            <tbody>
-                {% if object.created %}
-                    <tr>
-                        <td>Created</td>
-                        <td>{{ object.created }}</td>
-                    </tr>
-                {% endif %}
-                {% if object.last_updated %}
-                    <tr>
-                        <td>Updated</td>
-                        <td>{{ object.last_updated }}</td>
-                    </tr>
-                {% endif %}
-                <tr>
-                    <td>Created By</td>
-                    <td>{{ created_by | placeholder }}</td>
-                </tr>
-                <tr>
-                    <td>Last Updated By</td>
-                    <td>{{ last_updated_by | placeholder }}</td>
-                </tr>
-                {% with api_view=object|validated_api_viewname:'detail' %}
-                    {% if api_view %}
+                    {% if object.natural_slug %}
                         <tr>
-                            <td>View in API Browser</td>
+                            <td>Natural Slug</td>
                             <td>
-                                <a href="{% url api_view object.id %}" target="_blank">
-                                    <span class="mdi mdi-open-in-new"></span>
-                                </a>
+                                <span>
+                                    <span id="natural_slug_copy">{{ object.natural_slug }}</span>
+                                    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#natural_slug_copy">
+                                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                        <span class="visually-hidden">Copy</span>
+                                    </button>
+                                </span>
                             </td>
                         </tr>
                     {% endif %}
-                {% endwith %}
-            </tbody>
-        </table>
+                    {% if object.slug %}
+                        <tr>
+                            <td>Slug</td>
+                            <td>
+                                <span>
+                                    <span id="slug_copy">{{ object.slug }}</span>
+                                    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#slug_copy">
+                                        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                                        <span class="visually-hidden">Copy</span>
+                                    </button>
+                                </span>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card mt-16">
+        <div class="card-header">
+            <strong>Data Provenance</strong>
+            <a class="btn stretched-link nb-collapse-toggle" data-bs-toggle="collapse" href="#data_provenance" role="button" aria-expanded="true" aria-controls="data_provenance">
+                <span class="mdi mdi-chevron-down"></span>
+            </a>
+        </div>
+        <div id="data_provenance" class="collapse show">
+            <table class="table table-hover attr-table">
+                <tbody>
+                    {% if object.created %}
+                        <tr>
+                            <td>Created</td>
+                            <td><span data-bs-toggle="tooltip" title="Created at">{{ object.created }}</span></td>
+                        </tr>
+                    {% endif %}
+                    {% if object.last_updated %}
+                        <tr>
+                            <td>Updated</td>
+                            <td><span data-bs-toggle="tooltip" title="Last updated">{{ object.last_updated }}</span></td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Created By</td>
+                        <td>{{ created_by | placeholder }}</td>
+                    </tr>
+                    <tr>
+                        <td>Last Updated By</td>
+                        <td>{{ last_updated_by | placeholder }}</td>
+                    </tr>
+                    {% with api_view=object|validated_api_viewname:'detail' %}
+                        {% if api_view %}
+                            <tr>
+                                <td>View in API Browser</td>
+                                <td>
+                                    <a href="{% url api_view object.id %}" target="_blank">
+                                        <span class="mdi mdi-open-in-new"></span>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endwith %}
+                </tbody>
+            </table>
+        </div>
     </div>
     {% include 'inc/custom_fields/panel.html' with custom_fields=object.get_custom_field_groupings_advanced computed_fields=object.get_computed_fields_grouping_advanced computed_fields_advanced_ui=True %}
     {% include 'inc/relationships/panel_override.html' with relationships_fields_override=object.get_relationships_data_advanced_fields %}

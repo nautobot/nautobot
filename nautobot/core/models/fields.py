@@ -34,7 +34,7 @@ class MACAddressCharField(models.CharField):
                 self.validators.remove(validator)
 
     def deconstruct(self):
-        name, path, args, kwargs = super().deconstruct()
+        name, path, args, kwargs = super().deconstruct()  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         del kwargs["max_length"]
         return name, path, args, kwargs
 
@@ -237,15 +237,16 @@ class ColorField(models.CharField):
 
     def formfield(self, **kwargs):
         kwargs["widget"] = widgets.ColorSelect
-        return super().formfield(**kwargs)
+        return super().formfield(**kwargs)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class NaturalOrderingField(models.CharField):
     """
     A field which stores a naturalized representation of its target field, to be used for ordering its parent model.
 
-    :param target_field: Name of the field of the parent model to be naturalized
-    :param naturalize_function: The function used to generate a naturalized value (optional)
+    Args:
+        target_field (str): Name of the field of the parent model to be naturalized
+        naturalize_function (function): The function used to generate a naturalized value (optional)
     """
 
     description = "Stores a representation of its target field suitable for natural ordering"
@@ -266,7 +267,9 @@ class NaturalOrderingField(models.CharField):
         return naturalized_value
 
     def deconstruct(self):
-        kwargs = super().deconstruct()[3]  # Pass kwargs from CharField
+        kwargs = super().deconstruct()[  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
+            3
+        ]  # Pass kwargs from CharField
         kwargs["naturalize_function"] = self.naturalize_function
         return (
             self.name,
@@ -293,7 +296,7 @@ class JSONArrayField(models.JSONField):
         super().__init__(**kwargs)
 
     def set_attributes_from_name(self, name):
-        super().set_attributes_from_name(name)
+        super().set_attributes_from_name(name)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         self.base_field.set_attributes_from_name(name)
 
     @property
@@ -306,7 +309,7 @@ class JSONArrayField(models.JSONField):
             if not isinstance(value, (list, tuple)):
                 raise ValueError(f"value {value} is not list or tuple")
             value = [self.base_field.get_prep_value(v) for v in value]
-        return super().get_prep_value(value)
+        return super().get_prep_value(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
     def deconstruct(self):
         """
@@ -319,7 +322,7 @@ class JSONArrayField(models.JSONField):
          * A list of positional arguments.
          * A dict of keyword arguments.
         """
-        name, path, args, kwargs = super().deconstruct()
+        name, path, args, kwargs = super().deconstruct()  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         kwargs.update(
             {
                 "base_field": self.base_field.clone(),
@@ -362,7 +365,7 @@ class JSONArrayField(models.JSONField):
         """
         Validate `value` and raise ValidationError if necessary.
         """
-        super().validate(value, model_instance)
+        super().validate(value, model_instance)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         for part in value:
             self.base_field.validate(part, model_instance)
 
@@ -371,7 +374,7 @@ class JSONArrayField(models.JSONField):
         Runs all validators against `value` and raise ValidationError if necessary.
         Some validators can't be created at field initialization time.
         """
-        super().run_validators(value)
+        super().run_validators(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         for part in value:
             self.base_field.run_validators(part)
 
@@ -385,7 +388,7 @@ class JSONArrayField(models.JSONField):
         if self.base_field.choices:
             defaults["choices"] = self.base_field.choices
         defaults.update(**kwargs)
-        return super().formfield(**defaults)
+        return super().formfield(**defaults)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class LaxURLField(models.URLField):
@@ -457,7 +460,7 @@ class PositiveRangeNumberTextField(models.TextField):
         """
         Validate `value` and raise ValidationError if necessary.
         """
-        super().validate(value, model_instance)
+        super().validate(value, model_instance)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
         if (self.min_boundary is not None and self.expanded[0] < self.min_boundary) or (
             self.max_boundary is not None and self.expanded[-1] > self.max_boundary
@@ -469,7 +472,7 @@ class PositiveRangeNumberTextField(models.TextField):
             )
 
     def formfield(self, **kwargs):
-        return super().formfield(
+        return super().formfield(  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
             **{
                 "widget": TextInput,
                 **kwargs,

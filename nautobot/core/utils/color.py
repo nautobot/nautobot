@@ -19,9 +19,10 @@ def foreground_color(bg_color):
     """
     Return the ideal foreground color (black or white) for a given background color in hexadecimal RGB format.
     """
+    THRESHOLD = 150
     bg_color = bg_color.strip("#")
     r, g, b = hex_to_rgb(bg_color)
-    if r * 0.299 + g * 0.587 + b * 0.114 > 186:
+    if r * 0.299 + g * 0.587 + b * 0.114 > THRESHOLD:
         return "000000"
     else:
         return "ffffff"

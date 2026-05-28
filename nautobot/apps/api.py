@@ -24,6 +24,7 @@ from nautobot.core.api.routers import AuthenticatedAPIRootView as APIRootView, O
 from nautobot.core.api.schema import NautobotAutoSchema
 from nautobot.core.api.serializers import (
     OptInFieldsMixin,
+    StatsSerializer,
     TreeModelSerializerMixin,
 )
 from nautobot.core.api.utils import (
@@ -73,6 +74,7 @@ __all__ = (
     "ReadOnlyModelViewSet",
     "RelationshipModelSerializerMixin",
     "SerializedPKRelatedField",
+    "StatsSerializer",
     "TaggedModelSerializerMixin",
     "TimeZoneSerializerField",
     "TreeModelSerializerMixin",

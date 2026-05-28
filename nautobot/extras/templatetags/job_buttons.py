@@ -13,11 +13,11 @@ from nautobot.extras.models import Job, JobButton, JobQueue
 register = template.Library()
 
 GROUP_DROPDOWN = """
-<div class="btn-group">
-  <button type="button" class="btn btn-sm btn-{group_button_class} dropdown-toggle" data-toggle="dropdown">
-    {group_name} <span class="caret"></span>
+<div class="dropdown d-inline-flex align-middle">
+  <button type="button" class="btn btn-{group_button_class} dropdown-toggle" data-bs-toggle="dropdown">
+    {group_name} <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
   </button>
-  <ul class="dropdown-menu pull-right">
+  <ul class="dropdown-menu dropdown-menu-end">
     {grouped_buttons}
   </ul>
 </div>
@@ -33,7 +33,7 @@ HIDDEN_INPUTS = """
 """
 
 NO_CONFIRM_BUTTON = """
-<button type="submit" form="form_id_{button_id}" class="btn btn-sm btn-{button_class}" {disabled}>{button_text}</button>
+<button type="submit" form="form_id_{button_id}" class="btn btn-{button_class} {menu_item}" {disabled}>{button_text}</button>
 """
 
 NO_CONFIRM_FORM = """
@@ -43,7 +43,7 @@ NO_CONFIRM_FORM = """
 """
 
 CONFIRM_BUTTON = """
-<button type="button" class="btn btn-sm btn-{button_class}" data-toggle="modal" data-target="#confirm_modal_id_{button_id}" {disabled}>
+<button type="button" class="btn btn-{button_class} {menu_item}" data-bs-toggle="modal" data-bs-target="#confirm_modal_id_{button_id}" {disabled}>
   {button_text}
 </button>
 """
@@ -53,8 +53,8 @@ CONFIRM_MODAL = """
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="confirm_modal_label_{button_id}">Confirmation</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="form_id_{button_id}" action="{button_url}" method="post" class="form">
         <div class="modal-body">
@@ -62,7 +62,7 @@ CONFIRM_MODAL = """
           Run Job <strong>'{job}'</strong> with object <strong>'{object}'</strong>?
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Confirm</button>
         </div>
       </form>
@@ -71,7 +71,7 @@ CONFIRM_MODAL = """
 </div>
 """
 
-SAFE_EMPTY_STR = mark_safe("")  # noqa: S308  # suspicious-mark-safe-usage -- this one is safe
+SAFE_EMPTY_STR = mark_safe("")
 
 
 def _render_job_button_for_obj(job_button, obj, context, content_type):
@@ -94,8 +94,9 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     except Exception as exc:
         return (
             format_html(
-                '<a class="btn btn-sm btn-{}" disabled="disabled" title="{}"><i class="mdi mdi-alert"></i> {}</a>\n',
-                "default" if not job_button.group_name else "link",
+                '<a aria-disabled="true" class="btn btn-{} disabled" title="{}">'
+                '<span class="mdi mdi-alert"></span> {}</a>\n',
+                "secondary" if not job_button.group_name else "link dropdown-item",
                 exc,
                 job_button.name,
             ),
@@ -123,12 +124,13 @@ def _render_job_button_for_obj(job_button, obj, context, content_type):
     template_args = {
         "button_id": job_button.pk,
         "button_text": text_rendered,
-        "button_class": job_button.button_class if not job_button.group_name else "link",
+        "button_class": job_button.button_class_css_class if not job_button.group_name else "link",
         "button_url": reverse("extras:job_run", kwargs={"pk": job_button.job.pk}),
         "object": obj,
         "job": job_button.job,
         "hidden_inputs": hidden_inputs,
         "disabled": "" if (has_run_perm and job_button.job.installed and job_button.job.enabled) else "disabled",
+        "menu_item": "dropdown-item" if job_button.group_name else "",
     }
 
     if job_button.confirmation:
@@ -170,7 +172,7 @@ def job_buttons(context, obj):
 
     # Add grouped buttons to template
     for group_name, buttons in group_names.items():
-        group_button_class = buttons[0].button_class
+        group_button_class = buttons[0].button_class_css_class
 
         buttons_rendered = SAFE_EMPTY_STR
 

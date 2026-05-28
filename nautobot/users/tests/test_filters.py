@@ -112,13 +112,13 @@ class UserTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_staff(self):
         params = {"is_staff": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(is_staff=True)
         )
 
     def test_is_active(self):
         params = {"is_active": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(is_active=True)
         )
 

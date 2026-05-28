@@ -60,6 +60,6 @@ class NameColorContentTypesModel(
     def get_color_display(self):
         if self.color:
             return format_html(
-                '<span class="label color-block" style="background-color: #{}">&nbsp;</span>', self.color
+                '<span class="label nb-color-block" style="background-color: #{}">&nbsp;</span>', self.color
             )
         return helpers.placeholder(self.color)

@@ -1,4 +1,5 @@
 import logging
+import math
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +19,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    CableTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -31,7 +33,14 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    NONCONNECTABLE_IFACE_TYPES,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.models import (
+    CableType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -49,6 +58,7 @@ from nautobot.dcim.models import (
     Module,
     ModuleBay,
     ModuleBayTemplate,
+    ModuleFamily,
     ModuleType,
     Platform,
     PowerOutletTemplate,
@@ -62,6 +72,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
@@ -135,6 +146,42 @@ def get_random_software_version_for_device_type(device_type):
     return factory.random.randgen.choice(qs) if qs.exists() else None
 
 
+class CableTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = CableType
+        exclude = ("has_description", "has_manufacturer", "has_part_number")
+
+    name = UniqueFaker("word")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    has_manufacturer = NautobotBoolIterator()
+    manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
+    has_part_number = NautobotBoolIterator()
+    part_number = factory.Maybe("has_part_number", UniqueFaker("bothify", text="???-####"), "")
+    has_embedded_transceivers = NautobotBoolIterator()
+
+    a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
+    # Model requires a_connectors <= b_connectors
+    b_connectors = factory.LazyAttribute(
+        lambda o: factory.random.randgen.randint(o.a_connectors, CABLE_BREAKOUT_MAX_CONNECTORS)
+    )
+    # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
+    total_lanes = factory.LazyAttribute(
+        lambda o: (
+            math.lcm(o.a_connectors, o.b_connectors)
+            * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+        )
+    )
+    is_shuffle = NautobotBoolIterator()
+    strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
+    polarity_method = factory.LazyFunction(
+        lambda: factory.random.randgen.choice(CableTypePolarityMethodChoices.values())
+    )
+    mapping = factory.LazyAttribute(
+        lambda o: generate_cable_breakout_mapping(o.a_connectors, o.b_connectors, o.total_lanes)
+    )
+
+
 class DeviceFactory(PrimaryModelFactory):
     class Meta:
         model = Device
@@ -184,7 +231,7 @@ class DeviceFactory(PrimaryModelFactory):
     )
     device_redundancy_group_priority = factory.Maybe(
         "has_device_redundancy_group",
-        factory.Faker("pyint", min_value=1, max_value=500),
+        factory.Faker("pyint", min_value=1, max_value=65535),
     )
 
     controller_managed_device_group = random_instance(ControllerManagedDeviceGroup)
@@ -315,10 +362,13 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     is_full_depth = NautobotBoolIterator()
 
-    # If randomly a subdevice, also set subdevice_role to "child". We might want to reconsider this.
+    # If randomly a subdevice, also set subdevice_role to "child" or "parent-child". We might want to reconsider this.
     subdevice_role = factory.Maybe(
         "is_subdevice_child",
-        SubdeviceRoleChoices.ROLE_CHILD,
+        factory.Faker(
+            "random_element",
+            elements=[SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD],
+        ),
         factory.Faker("random_element", elements=["", SubdeviceRoleChoices.ROLE_PARENT]),
     )
 
@@ -615,7 +665,7 @@ class RackFactory(PrimaryModelFactory):
     has_role = NautobotBoolIterator()
     role = factory.Maybe("has_role", random_instance(lambda: Role.objects.get_for_model(Rack)), None)
 
-    location = random_instance(lambda: Location.objects.get_for_model(VLANGroup), allow_null=False)
+    location = random_instance(lambda: Location.objects.get_for_model(Rack), allow_null=False)
 
     has_rack_group = NautobotBoolIterator()  # TODO there's no RackGroupFactory yet...
     rack_group = factory.Maybe("has_rack_group", random_instance(RackGroup), None)
@@ -633,7 +683,7 @@ class RackFactory(PrimaryModelFactory):
     type = factory.Maybe("has_type", factory.Faker("random_element", elements=RackTypeChoices.values()), "")
 
     width = factory.Faker("random_element", elements=RackWidthChoices.values())
-    u_height = factory.Faker("pyint", min_value=10, max_value=100)
+    u_height = factory.Faker("pyint", min_value=10, max_value=RACK_U_HEIGHT_MAXIMUM)
     desc_units = NautobotBoolIterator()
 
     has_outer_width = NautobotBoolIterator()
@@ -742,7 +792,7 @@ class ControllerFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     platform = random_instance(Platform)
     location = random_instance(lambda: Location.objects.get_for_model(Controller), allow_null=False)
@@ -769,7 +819,7 @@ class ControllerManagedDeviceGroupFactory(PrimaryModelFactory):
     capabilities = factory.Maybe(
         "has_capabilities",
         factory.Faker("random_elements", elements=ControllerCapabilitiesChoices.values(), unique=True),
-        [],
+        None,
     )
     weight = factory.Faker("pyint", min_value=1, max_value=1000)
 
@@ -787,6 +837,7 @@ class ModuleTypeFactory(PrimaryModelFactory):
         exclude = ("has_part_number", "has_comments")
 
     manufacturer = random_instance(Manufacturer, allow_null=False)
+    module_family = random_instance(ModuleFamily, allow_null=True)
 
     has_part_number = NautobotBoolIterator()
     part_number = factory.Maybe("has_part_number", factory.Faker("ean", length=8), "")
@@ -917,8 +968,18 @@ class InterfaceTemplateFactory(ModularDeviceComponentTemplateFactory):
     class Meta:
         model = InterfaceTemplate
 
+    class Params:
+        has_port_type = NautobotBoolIterator()
+
     type = factory.Faker("random_element", elements=InterfaceTypeChoices.values())
     name = factory.Sequence(lambda n: f"Interface {n}")
+
+    @factory.lazy_attribute
+    def port_type(self):
+        if self.type in NONCONNECTABLE_IFACE_TYPES or not self.has_port_type:
+            return ""
+
+        return factory.random.randgen.choice(PortTypeChoices.values())
 
 
 class FrontPortTemplateFactory(ModularDeviceComponentTemplateFactory):
@@ -968,6 +1029,15 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
         "has_device_type",
         factory.LazyAttribute(lambda o: o.device_type.module_bay_templates.count() + 1),
         factory.LazyAttribute(lambda o: o.module_type.module_bay_templates.count() + 1),
+    )
+
+    class Params:
+        has_module_family = NautobotBoolIterator()
+
+    module_family = factory.Maybe(
+        "has_module_family",
+        random_instance(ModuleFamily),
+        None,
     )
 
 

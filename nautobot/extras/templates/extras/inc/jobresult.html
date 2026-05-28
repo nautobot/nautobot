@@ -1,93 +1,10 @@
 {% load helpers %}
-{% load custom_links %}
-{% load form_helpers %}
-{% load ajax_table %}
-{% load render_table from django_tables2 %}
-{% load log_levels %}
-{% load plugins %}
-{% load static %}
+{% load ui_framework %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Summary of Results</strong>
+{% if result %}
+    {% render_default_panels_for_object result %}
+{% else %}
+    <div class="alert alert-warning">
+        No synchronization JobResult found.
     </div>
-    <table class="table table-hover panel-body">
-            <tr>
-                <td>Job Description</td>
-                <td>{{ result.job_model.description | render_markdown | placeholder }}</td>
-            </tr>
-        <tr>
-            <td>Status</td>
-            <td><span id="pending-result-label">{% include 'extras/inc/job_label.html' with result=result %}</span></td>
-        </tr>
-        <tr>
-            <td>Started at</td>
-            <td>{{ result.date_created | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>User</td>
-            <td>{{ result.user | placeholder }}</td>
-        </tr>
-        <tr>
-            <td>Duration</td>
-            <td>
-            {% if result.date_created and not result.date_done %}
-                <img src="{% static 'img/ajax-loader.gif' %}">
-            {% else %}
-                {{ result.duration | placeholder}}
-            {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <td>Return Value</td>
-            <td>
-            {% if result.date_created and not result.date_done %}
-                <img src="{% static 'img/ajax-loader.gif' %}">
-            {% else %}
-                {% if result.result %}
-                    <pre>{{ result.result | render_json }}</pre>
-                {% else %}
-                    {{ result.result | placeholder }}
-                {% endif %}
-            {% endif %}
-            </td>
-        </tr>
-        {% if result.files.exists %}
-            <tr>
-                <td>File Output(s)</td>
-                <td>
-                    <ul>
-                        {% for file_proxy in result.files.all %}
-                            {% if file_proxy.file %}
-                                <li>
-                                    <a
-                                    {% if settings.JOB_FILE_IO_STORAGE == "db_file_storage.storage.DatabaseFileStorage" %}
-                                        href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
-                                    {% else %}
-                                        href="{{ file_proxy.file.url }}"
-                                    {% endif %}
-                                        download="{{ file_proxy.name }}">
-                                        {{ file_proxy.name }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                </td>
-            </tr>
-        {% endif %}
-    </table>
-</div>
-
-
-<div class="panel panel-default">
-    <div class="panel-heading">
-        <strong>Logs</strong>
-        <div class="pull-right noprint">
-            <input class="form-control" id="log-filter" type="text" placeholder="Filter log level or message" title="Filter log level or message" style="height: 23px" />
-        </div>
-    </div>
-    {% if result and result.pk %}
-        {% ajax_table "log_table" "extras:jobresult_log-table" pk=result.pk %}
-    {% endif %}
-</div>
+{% endif %}
