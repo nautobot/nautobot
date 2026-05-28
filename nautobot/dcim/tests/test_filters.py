@@ -31,6 +31,7 @@ from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TY
 from nautobot.dcim.filters import (
     CableFilterSet,
     CableTypeFilterSet,
+    ConsoleConnectionFilterSet,
     ConsolePortFilterSet,
     ConsolePortTemplateFilterSet,
     ConsoleServerPortFilterSet,
@@ -47,6 +48,7 @@ from nautobot.dcim.filters import (
     DeviceTypeToSoftwareImageFileFilterSet,
     FrontPortFilterSet,
     FrontPortTemplateFilterSet,
+    InterfaceConnectionFilterSet,
     InterfaceFilterSet,
     InterfaceRedundancyGroupAssociationFilterSet,
     InterfaceRedundancyGroupFilterSet,
@@ -62,6 +64,7 @@ from nautobot.dcim.filters import (
     ModuleFilterSet,
     ModuleTypeFilterSet,
     PlatformFilterSet,
+    PowerConnectionFilterSet,
     PowerFeedFilterSet,
     PowerOutletFilterSet,
     PowerOutletTemplateFilterSet,
@@ -80,6 +83,8 @@ from nautobot.dcim.filters import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -1037,13 +1042,13 @@ class PathEndpointModelTestMixin:
             params = {"connected": True}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_path__is_active=True),
+                self.queryset.filter(cable_paths__is_active=True).distinct(),
             )
         with self.subTest("connected: False"):
             params = {"connected": False}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)),
+                self.queryset.filter(Q(cable_paths__isnull=True) | Q(cable_paths__is_active=False)).distinct(),
             )
 
 
@@ -2070,7 +2075,7 @@ class ConsolePortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTest
     filterset = ConsolePortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
     ]
 
     @classmethod
@@ -2118,7 +2123,7 @@ class ConsoleServerPortTestCase(
     filterset = ConsoleServerPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
     ]
 
     @classmethod
@@ -2165,7 +2170,7 @@ class PowerPortTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
         ("allocated_draw",),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("maximum_draw",),
         ("power_outlets", "power_outlets__id"),
         ("power_outlets", "power_outlets__name"),
@@ -2216,7 +2221,7 @@ class PowerOutletTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTest
     filterset = PowerOutletFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("feed_leg",),
         ("power_port", "power_port__id"),
     ]
@@ -2269,7 +2274,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         ("bridge", "bridge__name"),
         ("bridged_interfaces", "bridged_interfaces__id"),
         ("bridged_interfaces", "bridged_interfaces__name"),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("child_interfaces", "child_interfaces__id"),
         ("child_interfaces", "child_interfaces__name"),
         ("description",),
@@ -2867,7 +2872,7 @@ class FrontPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterT
     filterset = FrontPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("rear_port", "rear_port__id"),
         ("rear_port", "rear_port__name"),
         ("rear_port_position",),
@@ -3017,7 +3022,7 @@ class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTe
     filterset = RearPortFilterSet
     generic_filter_tests = [
         *ModularDeviceComponentTestMixin.generic_filter_tests,
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("front_ports", "front_ports__id"),
         ("front_ports", "front_ports__name"),
         ("positions",),
@@ -3060,11 +3065,11 @@ class RearPortTestCase(ModularDeviceComponentTestMixin, FilterTestCases.FilterTe
         # Cables
         Cable.objects.create(
             termination_a=rear_ports[0],
-            termination_b=rear_ports[3],
+            termination_b=rear_ports[1],
             status=status_connected,
         )
         Cable.objects.create(
-            termination_a=rear_ports[1],
+            termination_a=rear_ports[3],
             termination_b=rear_ports[4],
             status=status_connected,
         )
@@ -3378,8 +3383,6 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         ("length",),
         ("status", "status__id"),
         ("status", "status__name"),
-        ("termination_a_id",),
-        ("termination_b_id",),
         ("type",),
     ]
 
@@ -3450,14 +3453,17 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         )
 
         interface_status = Status.objects.get_for_model(Interface).first()
+        # Factory-generated interfaces have arbitrary types; pick a connectable one per device so the
+        # `Cable.objects.create(...)` calls below pass the new pair-compatibility check.
+        connectable = Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         interfaces = (
-            Interface.objects.get(device__name="Device 1"),
-            Interface.objects.get(device__name="Device 2"),
-            Interface.objects.get(device__name="Device 3"),
-            Interface.objects.get(device__name="Device 4"),
-            Interface.objects.get(device__name="Device 5"),
-            Interface.objects.get(device__name="Device 6"),
-            Interface.objects.get(device__name="Device 7"),
+            connectable.filter(device__name="Device 1").first(),
+            connectable.filter(device__name="Device 2").first(),
+            connectable.filter(device__name="Device 3").first(),
+            connectable.filter(device__name="Device 4").first(),
+            connectable.filter(device__name="Device 5").first(),
+            connectable.filter(device__name="Device 6").first(),
+            connectable.filter(device__name="Device 7").first(),
             Interface.objects.create(
                 device=devices[0],
                 name="Test Interface 8",
@@ -3504,6 +3510,15 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         console_port = ConsolePort.objects.filter(device=devices[2]).first()
         console_server_port = ConsoleServerPort.objects.filter(device=devices[5]).first()
 
+        # CableType for boolean filter test coverage (`has_cable_type`).
+        cls.cable_type = CableType(
+            name="Filter test cable type",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+        )
+        cls.cable_type.validated_save()  # populates mapping via clean()
+
         # Cables
         cables = (
             Cable.objects.create(
@@ -3515,6 +3530,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 color="aa1409",
                 length=10,
                 length_unit=CableLengthUnitChoices.UNIT_FOOT,
+                cable_type=cls.cable_type,
             ),
             Cable.objects.create(
                 termination_a=interfaces[1],
@@ -3587,9 +3603,35 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             self.filterset(params, self.queryset).qs, self.queryset.filter(length_unit=CableLengthUnitChoices.UNIT_FOOT)
         )
 
+    def test_is_disconnected(self):
+        """A cable lacking either an A-side or B-side termination matches `is_disconnected=True`."""
+        # Create a cable with only an A-side termination.
+        uncabled_iface = (
+            Interface.objects.filter(cable__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+        )
+        cable_a_only = Cable.objects.create(termination_a=uncabled_iface, status=self.status_connected)
+
+        with self.subTest("is_disconnected=True returns only the disconnected cable"):
+            result = self.filterset({"is_disconnected": True}, self.queryset).qs
+            self.assertIn(cable_a_only, result)
+            for cable in result:
+                has_a = CableToCableTermination.objects.filter(cable=cable, cable_end="A").exists()
+                has_b = CableToCableTermination.objects.filter(cable=cable, cable_end="B").exists()
+                self.assertFalse(has_a and has_b, msg=f"{cable} is fully connected, should not match")
+
+        with self.subTest("is_disconnected=False excludes the disconnected cable"):
+            result = self.filterset({"is_disconnected": False}, self.queryset).qs
+            self.assertNotIn(cable_a_only, result)
+            for cable in result:
+                self.assertTrue(
+                    CableToCableTermination.objects.filter(cable=cable, cable_end="A").exists()
+                    and CableToCableTermination.objects.filter(cable=cable, cable_end="B").exists(),
+                    msg=f"{cable} is missing a side, should not match",
+                )
+
     def test_device(self):
         """Test that the device filter returns all cables for a device and its modules."""
-        interfaces = list(Interface.objects.filter(cable__isnull=True)[:3])
+        interfaces = list(Interface.objects.filter(cable__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:3])
         manufacturer = Manufacturer.objects.first()
         device_type = DeviceType.objects.create(
             manufacturer=manufacturer, model="Test Device Filter for Cable Device Type"
@@ -3676,28 +3718,28 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"rack_id": [self.racks[0].pk, self.racks[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__rack__in=[self.racks[0], self.racks[1]])
-                | self.queryset.filter(_termination_b_device__rack__in=[self.racks[0], self.racks[1]]),
+                self.queryset.filter(
+                    terminations___termination_device__rack__in=[self.racks[0], self.racks[1]]
+                ).distinct(),
             )
             params = {"rack_id": ["null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__rack__isnull=True)
-                | self.queryset.filter(_termination_b_device__rack__isnull=True),
+                self.queryset.filter(terminations___termination_device__rack__isnull=True).distinct(),
             )
         with self.subTest("rack"):
             params = {"rack": [self.racks[0].name, self.racks[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__rack__in=[self.racks[0], self.racks[1]])
-                | self.queryset.filter(_termination_b_device__rack__in=[self.racks[0], self.racks[1]]),
+                self.queryset.filter(
+                    terminations___termination_device__rack__in=[self.racks[0], self.racks[1]]
+                ).distinct(),
             )
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
             params = {"rack": ["null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__rack__isnull=True)
-                | self.queryset.filter(_termination_b_device__rack__isnull=True),
+                self.queryset.filter(terminations___termination_device__rack__isnull=True).distinct(),
             )
 
     def test_location(self):
@@ -3706,15 +3748,17 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"location": [self.locations[0].name, self.locations[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__location__in=[self.locations[0], self.locations[1]])
-                | self.queryset.filter(_termination_b_device__location__in=[self.locations[0], self.locations[1]]),
+                self.queryset.filter(
+                    terminations___termination_device__location__in=[self.locations[0], self.locations[1]]
+                ).distinct(),
             )
         with self.subTest("location_id"):
             params = {"location_id": [self.locations[0].pk, self.locations[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(_termination_a_device__location__in=[self.locations[0], self.locations[1]])
-                | self.queryset.filter(_termination_b_device__location__in=[self.locations[0], self.locations[1]]),
+                self.queryset.filter(
+                    terminations___termination_device__location__in=[self.locations[0], self.locations[1]]
+                ).distinct(),
             )
 
     def test_tenant(self):
@@ -3724,37 +3768,29 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
-                ),
+                self.queryset.filter(terminations___termination_device__tenant__in=tenants).distinct(),
             )
             params = {"tenant_id": [tenants[0].pk, "null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
-                    Q(_termination_a_device__tenant=tenants[0])
-                    | Q(_termination_b_device__tenant=tenants[0])
-                    | Q(_termination_a_device__tenant__isnull=True)
-                    | Q(_termination_b_device__tenant__isnull=True)
-                ),
+                    Q(terminations___termination_device__tenant=tenants[0])
+                    | Q(terminations___termination_device__tenant__isnull=True)
+                ).distinct(),
             )
         with self.subTest("tenant"):
             params = {"tenant": [tenants[0].name, tenants[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    Q(_termination_a_device__tenant__in=tenants) | Q(_termination_b_device__tenant__in=tenants)
-                ),
+                self.queryset.filter(terminations___termination_device__tenant__in=tenants).distinct(),
             )
             params = {"tenant": [tenants[0].name, "null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(
-                    Q(_termination_a_device__tenant=tenants[0])
-                    | Q(_termination_b_device__tenant=tenants[0])
-                    | Q(_termination_a_device__tenant__isnull=True)
-                    | Q(_termination_b_device__tenant__isnull=True)
-                ),
+                    Q(terminations___termination_device__tenant=tenants[0])
+                    | Q(terminations___termination_device__tenant__isnull=True)
+                ).distinct(),
             )
 
     def test_termination_type(self):
@@ -3767,39 +3803,62 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"termination_a_type": [type_interface, type_console_port]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_a_type__model__in=["interface", "consoleport"]),
+                self.queryset.filter(
+                    Q(terminations__cable_end="A", terminations__interface__isnull=False)
+                    | Q(terminations__cable_end="A", terminations__console_port__isnull=False)
+                ).distinct(),
             )
         with self.subTest("termination_a_type: interface"):
             params = {"termination_a_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_a_type__model__in=["interface"]),
+                self.queryset.filter(terminations__cable_end="A", terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_b_type: interface, console_server_port"):
             params = {"termination_b_type": [type_interface, type_console_server_port]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_b_type__model__in=["interface", "consoleserverport"]),
+                self.queryset.filter(
+                    Q(terminations__cable_end="B", terminations__interface__isnull=False)
+                    | Q(terminations__cable_end="B", terminations__console_server_port__isnull=False)
+                ).distinct(),
             )
         with self.subTest("termination_b_type: interface"):
             params = {"termination_b_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_b_type__model__in=["interface"]),
+                self.queryset.filter(terminations__cable_end="B", terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_type: interface"):
             params = {"termination_type": [type_interface]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_a_type__model__in=["interface"])
-                | self.queryset.filter(termination_b_type__model__in=["interface"]),
+                self.queryset.filter(terminations__interface__isnull=False).distinct(),
             )
         with self.subTest("termination_type: console_port, console_server_port"):
             params = {"termination_type": [type_console_port, type_console_server_port]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(termination_a_type__model__in=["consoleport", "consoleserverport"])
-                | self.queryset.filter(termination_b_type__model__in=["consoleport", "consoleserverport"]),
+                self.queryset.filter(
+                    Q(terminations__console_port__isnull=False) | Q(terminations__console_server_port__isnull=False)
+                ).distinct(),
+            )
+
+    def test_termination_a_id_and_b_id(self):
+        """Test the termination_a_id and termination_b_id filters."""
+        a_endpoints = list(CableToCableTermination.objects.filter(cable_end="A")[:2])
+        b_endpoints = list(CableToCableTermination.objects.filter(cable_end="B")[:2])
+        with self.subTest("termination_a_id"):
+            params = {"termination_a_id": [str(ep.termination_id) for ep in a_endpoints]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(pk__in=[ep.cable_id for ep in a_endpoints]),
+            )
+        with self.subTest("termination_b_id"):
+            params = {"termination_b_id": [str(ep.termination_id) for ep in b_endpoints]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(pk__in=[ep.cable_id for ep in b_endpoints]),
             )
 
 
@@ -3827,7 +3886,7 @@ class PowerFeedTestCase(PathEndpointModelTestMixin, FilterTestCases.FilterTestCa
         ("available_power",),
         ("breaker_pole_count",),
         ("breaker_position",),
-        ("cable", "cable__id"),
+        ("cable", "cable_termination__cable__id"),
         ("comments",),
         ("destination_panel", "destination_panel__id"),
         ("destination_panel", "destination_panel__name"),
@@ -4720,3 +4779,171 @@ class DeviceClusterAssignmentTestCase(FilterTestCases.FilterTestCase):
             DeviceClusterAssignment.objects.create(device=devices[1], cluster=clusters[2]),
             DeviceClusterAssignment.objects.create(device=devices[2], cluster=clusters[0]),
         )
+
+
+class _ConnectionFilterSetTestMixin:
+    """Shared device/port setup helpers for the per-port connection filtersets."""
+
+    @classmethod
+    def _make_device(cls, name):
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model=f"DT for {name}")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        return Device.objects.create(
+            name=name, device_type=device_type, role=device_role, location=location, status=device_status
+        )
+
+
+class ConsoleConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """Exercise ConsoleConnectionFilterSet (search + device/location filters)."""
+
+    filterset = ConsoleConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_a = cls._make_device("Connection Console Device Alpha")
+        cls.device_b = cls._make_device("Connection Console Device Bravo")
+        cls.device_c = cls._make_device("Connection Console Device Charlie")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.cp_a = ConsolePort.objects.create(device=cls.device_a, name="CP-keyword-alpha")
+        cls.cp_b = ConsolePort.objects.create(device=cls.device_b, name="CP-2")
+        cls.cp_c = ConsolePort.objects.create(device=cls.device_c, name="CP-3")
+        Cable.objects.create(
+            termination_a=cls.cp_a,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_b, name="CSP-1"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.cp_b,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_a, name="CSP-2"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.cp_c,
+            termination_b=ConsoleServerPort.objects.create(device=cls.device_c, name="CSP-3"),
+            status=cable_status,
+        )
+        # Mirror the queryset shape used by `ConsoleConnectionsListView`. The filterset itself
+        # doesn't add DISTINCT — the view does — so we omit it here to keep the base test's
+        # `test_no_distinct_on_empty_filter_params` check meaningful.
+        cls.queryset = ConsolePort.objects.filter(cable_paths__isnull=False)
+
+
+class PowerConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """Exercise PowerConnectionFilterSet (search + device/location filters)."""
+
+    filterset = PowerConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.device_a = cls._make_device("Connection Power Device Alpha")
+        cls.device_b = cls._make_device("Connection Power Device Bravo")
+        cls.device_c = cls._make_device("Connection Power Device Charlie")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.pp_a = PowerPort.objects.create(device=cls.device_a, name="PP-keyword-alpha")
+        cls.pp_b = PowerPort.objects.create(device=cls.device_b, name="PP-2")
+        cls.pp_c = PowerPort.objects.create(device=cls.device_c, name="PP-3")
+        Cable.objects.create(
+            termination_a=cls.pp_a,
+            termination_b=PowerOutlet.objects.create(device=cls.device_b, name="PO-1"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.pp_b,
+            termination_b=PowerOutlet.objects.create(device=cls.device_a, name="PO-2"),
+            status=cable_status,
+        )
+        Cable.objects.create(
+            termination_a=cls.pp_c,
+            termination_b=PowerOutlet.objects.create(device=cls.device_c, name="PO-3"),
+            status=cable_status,
+        )
+        cls.queryset = PowerPort.objects.filter(cable_paths__isnull=False)
+
+
+class InterfaceConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, FilterTestCases.FilterTestCase):
+    """
+    Exercise InterfaceConnectionFilterSet, which operates on `CablePath` rows; the `q` filter is
+    implemented as a custom method (not a `SearchFilter`) because CablePath has no name fields,
+    so the base `test_q_filter_valid` skips and we cover the search behavior explicitly below.
+    """
+
+    filterset = InterfaceConnectionFilterSet
+    generic_filter_tests = ()
+
+    @classmethod
+    def setUpTestData(cls):
+
+        iface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.device_alpha = cls._make_device("Conn Iface Device Alpha")
+        cls.device_bravo = cls._make_device("Conn Iface Device Bravo")
+        cls.device_charlie = cls._make_device("Conn Iface Device Charlie")
+
+        cls.iface_alpha = Interface.objects.create(
+            device=cls.device_alpha, name="IF-keyword-alpha", status=iface_status, type="1000base-t"
+        )
+        cls.iface_bravo = Interface.objects.create(
+            device=cls.device_bravo, name="IF-bravo", status=iface_status, type="1000base-t"
+        )
+        cls.iface_charlie = Interface.objects.create(
+            device=cls.device_charlie, name="IF-charlie", status=iface_status, type="1000base-t"
+        )
+        iface_alpha_2 = Interface.objects.create(
+            device=cls.device_alpha, name="IF-alpha-2", status=iface_status, type="1000base-t"
+        )
+        iface_bravo_2 = Interface.objects.create(
+            device=cls.device_bravo, name="IF-bravo-2", status=iface_status, type="1000base-t"
+        )
+        iface_charlie_2 = Interface.objects.create(
+            device=cls.device_charlie, name="IF-charlie-2", status=iface_status, type="1000base-t"
+        )
+        # 3 iface↔iface connections so the base FilterTestCase has enough rows for its [:2] / id
+        # slicing tests.
+        # Connection 1: Alpha ↔ Bravo (one endpoint matches "keyword-alpha"; other matches "Bravo")
+        Cable.objects.create(termination_a=cls.iface_alpha, termination_b=cls.iface_bravo, status=cable_status)
+        # Connection 2: another Bravo iface ↔ Charlie (control — neither endpoint matches "keyword-alpha")
+        Cable.objects.create(termination_a=iface_bravo_2, termination_b=cls.iface_charlie, status=cable_status)
+        # Connection 3: Alpha2 ↔ Charlie2 (additional row for negate-lookup tests)
+        Cable.objects.create(termination_a=iface_alpha_2, termination_b=iface_charlie_2, status=cable_status)
+
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        cls.queryset = CablePath.objects.filter(
+            origin_type=iface_ct, destination_type=iface_ct, origin_id__lt=F("destination_id")
+        )
+
+    def test_q_matches_interface_name_either_endpoint(self):
+        """`q` matches a connection when EITHER endpoint's interface name matches."""
+        result = self.filterset({"q": "keyword-alpha"}, self.queryset).qs.distinct()
+        self.assertEqual(result.count(), 1)
+        cp = result.first()
+        endpoint_pks = {cp.origin_id, cp.destination_id}
+        self.assertIn(self.iface_alpha.pk, endpoint_pks)
+        self.assertIn(self.iface_bravo.pk, endpoint_pks)
+
+    def test_q_matches_device_name_either_endpoint(self):
+        """`q` matches a connection when EITHER endpoint's parent device name matches."""
+        # Connections 2 and 3 both involve device_charlie; connection 1 doesn't.
+        result = self.filterset({"q": "Charlie"}, self.queryset).qs.distinct()
+        self.assertEqual(result.count(), 2)
+        for cp in result:
+            self.assertIn(
+                self.device_charlie.pk,
+                {cp.origin.device.pk, cp.destination.device.pk},
+                msg=f"Charlie not on either endpoint of {cp}",
+            )
+
+    def test_q_whitespace_only_input_returns_unfiltered_queryset(self):
+        unfiltered_count = self.queryset.count()
+        result = self.filterset({"q": "   "}, self.queryset).qs
+        self.assertEqual(result.count(), unfiltered_count)
+
+    def test_location_whitespace_only_input_returns_unfiltered_queryset(self):
+        unfiltered_count = self.queryset.count()
+        result = self.filterset({"location": "   "}, self.queryset).qs
+        self.assertEqual(result.count(), unfiltered_count)
