@@ -2493,8 +2493,7 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 job_result.refresh_from_db()
                 self.assertEqual(job_result.status, "REVOKED")
                 self.assertEqual(job_result.revoked_by, self.user)
-                # date_revoked should be only set when action is terminate
-                self.assertIsNone(job_result.date_revoked)
+                self.assertIsNotNone(job_result.date_revoked)
 
 
 class UnknownStrategyTestCase(_JobRevokeTestBase):
@@ -2555,8 +2554,7 @@ class UnknownStrategyTestCase(_JobRevokeTestBase):
                 self.assertEqual(job_result.status, "REVOKED")
                 self.assertEqual(job_result.revoked_by, self.user)
                 self.assertEqual(job_result.revoked_by_user_name, self.user.username)
-                # No SIGKILL is sent, so date_revoked must remain unset.
-                self.assertIsNone(job_result.date_revoked)
+                self.assertIsNotNone(job_result.date_revoked)
                 self.assertIsNotNone(job_result.date_done)
 
                 self.assertTrue(
@@ -2848,7 +2846,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
                 self.assertEqual(job_result.revoked_by, self.user)
                 self.assertEqual(job_result.revoked_by_user_name, self.user.username)
                 self.assertIsNotNone(job_result.date_done)
-                self.assertIsNone(job_result.date_revoked)
+                self.assertIsNotNone(job_result.date_revoked)
                 self.assertTrue(
                     JobLogEntry.objects.filter(
                         job_result=job_result,
@@ -2873,7 +2871,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
                 self.assertEqual(job_result.revoked_by, self.user)
                 self.assertEqual(job_result.revoked_by_user_name, self.user.username)
                 self.assertIsNotNone(job_result.date_done)
-                self.assertIsNone(job_result.date_revoked)
+                self.assertIsNotNone(job_result.date_revoked)
                 self.assertTrue(
                     JobLogEntry.objects.filter(
                         job_result=job_result,
@@ -3020,7 +3018,7 @@ class K8sStrategyTestCase(_JobRevokeTestBase):
         self.assertEqual(job_result.revoked_by, self.user)
         self.assertEqual(job_result.revoked_by_user_name, self.user.username)
         self.assertIsNotNone(job_result.date_done)
-        self.assertIsNone(job_result.date_revoked)
+        self.assertIsNotNone(job_result.date_revoked)
 
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy._delete_k8s_job")
     @mock.patch("nautobot.extras.jobs_revoke.K8sStrategy.liveness")

@@ -80,12 +80,12 @@ class JobRevokeStrategy(ABC):
         self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_ABANDONED)
         return True
 
-    def _apply_termination_metadata(
+    def _apply_revoke_metadata(
         self, job_result: JobResult, user: User, revocation_type: str, now_timestamp: None | datetime = None
     ) -> set[str]:
         """Fill in termination metadata fields on a locked `JobResult`.
 
-        Sets `date_done`, `revoked_by`, `revoked_by_user_name`, and
+        Sets `date_done`, `date_revoked`, `revoked_by`, `revoked_by_user_name`, and
         only if they are not already set. Caller is responsible
         for the surrounding transaction/lock and for calling `save()`.
 
@@ -108,6 +108,10 @@ class JobRevokeStrategy(ABC):
             job_result.date_done = now_timestamp
             changed.add("date_done")
 
+        if job_result.date_revoked is None:
+            job_result.date_revoked = now_timestamp
+            changed.add("date_revoked")
+
         if job_result.revoked_by is None:
             job_result.revoked_by = user
             changed.add("revoked_by")
@@ -126,7 +130,7 @@ class JobRevokeStrategy(ABC):
         """Mark a `JobResult` as revoked, filling in only fields that aren't already set."""
         with transaction.atomic():
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_termination_metadata(job_result, user, revocation_type)
+            changed = self._apply_revoke_metadata(job_result, user, revocation_type)
 
             job_result.status = JobResultStatusChoices.STATUS_REVOKED
             changed |= {"status"}
@@ -283,7 +287,7 @@ class CeleryStrategy(JobRevokeStrategy):
 
         Fires a `revoke(terminate=True, signal="SIGKILL")` control message to
         whichever worker holds the task, then records the revocation on the
-        `JobResult` via `_apply_termination_metadata`. Any exception from the revoke call
+        `JobResult` via `_apply_revoke_metadata`. Any exception from the revoke call
         propagates — the orchestrator in `revoke` catches it and reports
         the failure to the caller.
 
@@ -304,15 +308,9 @@ class CeleryStrategy(JobRevokeStrategy):
 
         task_id = str(job_result.pk)
         with transaction.atomic():
-            now = timezone.now()
             job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_termination_metadata(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED, now)
-
-            job_result.date_revoked = now
-            changed.add("date_revoked")
-
+            changed = self._apply_revoke_metadata(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
             job_result.save(update_fields=list(changed))
-
             celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
 
         logger.info("Job %s terminated by %s", job_result.pk, user)
@@ -485,10 +483,7 @@ class K8sStrategy(JobRevokeStrategy):
                 return False
 
         with transaction.atomic():
-            now = timezone.now()
             job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
-            job_result.date_revoked = now
-            job_result.save(update_fields=["date_revoked"])
 
         logger.info("Job %s terminated by %s", job_result.pk, user)
         job_result.log(

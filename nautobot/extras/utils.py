@@ -14,6 +14,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
@@ -691,6 +692,8 @@ def build_kubernetes_api_client():
     if settings.KUBERNETES_VERIFY_SSL:
         configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
     else:  # pragma: no cover
+        if not settings.DEBUG:
+            raise ImproperlyConfigured("KUBERNETES_VERIFY_SSL=False is only permitted when DEBUG=True. ")
         logger.warning(
             "TLS verification is DISABLED for the Kubernetes API connection to %s. "
             "This exposes the service account token attacks and must not be "

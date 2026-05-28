@@ -1521,16 +1521,16 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             user=user,
             status=JobResultStatusChoices.STATUS_REVOKED,
             revocation_type=JobRevocationTypeChoices.TYPE_REAPED,
-            date_revoked=None,
+            date_revoked=now(),
         )
-        # "force revoked"
+        # "abandoned"
         JobResult.objects.create(
             job_model=job,
             name=job.class_path,
             user=user,
             status=JobResultStatusChoices.STATUS_REVOKED,
             revocation_type=JobRevocationTypeChoices.TYPE_ABANDONED,
-            date_revoked=None,
+            date_revoked=now(),
         )
 
         self.assertQuerySetEqualAndNotEmpty(
