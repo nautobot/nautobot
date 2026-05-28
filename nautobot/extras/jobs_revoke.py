@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 import logging
 from typing import Callable
 
@@ -25,7 +25,7 @@ from nautobot.users.models import User
 logger = logging.getLogger(__name__)
 
 
-class JobLiveness(StrEnum):
+class JobLiveness(Enum):
     RUNNING = "running"
     NOT_RUNNING = "not_running"
     UNKNOWN = "unknown"
