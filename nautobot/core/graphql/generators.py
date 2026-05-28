@@ -20,7 +20,7 @@ LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
 
 
 def _graphql_selection_requests_field(info, field_name):
-    """Return True if the immediate selection set of this GraphQL field requests ``field_name``."""
+    """Return True if the immediate selection set of this GraphQL field requests `field_name`."""
     for node in info.field_nodes:
         if not node.selection_set:
             continue
