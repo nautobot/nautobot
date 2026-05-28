@@ -3444,47 +3444,79 @@ class CableTest(Mixins.BaseComponentTestMixin):
         ]
 
     def test_terminations_field_on_standard_cable(self):
-        """A standard (non-breakout) cable's `terminations` field lists its A- and B-side join rows."""
+        """A standard (non-breakout) cable's `terminations` field exposes side-keyed brief reps at default depth."""
         self.add_permissions("dcim.view_cable")
         cable = Cable.objects.get(label="Cable 1")
         url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
-        self.assertEqual(len(terminations), 2)
-        sides = {row["cable_end"]: row for row in terminations}
-        self.assertEqual(sides["A"]["connector"], 1)
-        self.assertEqual(sides["B"]["connector"], 1)
-        self.assertIsNotNone(sides["A"]["interface"])
-        self.assertIsNotNone(sides["B"]["interface"])
+        # Side/connector keying — non-breakout cables have exactly one A- and one B-side connector.
+        self.assertEqual(set(terminations), {"a", "b"})
+        self.assertEqual(set(terminations["a"]), {"1"})
+        self.assertEqual(set(terminations["b"]), {"1"})
+        # Each slot at default depth is the brief rep of the termination (mirrors termination_a/b).
+        a_slot = terminations["a"]["1"]
+        b_slot = terminations["b"]["1"]
+        self.assertEqual(a_slot["object_type"], "dcim.interface")
+        self.assertEqual(b_slot["object_type"], "dcim.interface")
+        for key in ("id", "url"):
+            self.assertIn(key, a_slot)
+            self.assertIn(key, b_slot)
 
     def test_terminations_field_on_breakout_cable(self):
-        """A breakout cable's `terminations` field lists every join row, including secondary lanes."""
+        """A breakout cable's `terminations` field surfaces every connector slot, with `null` for uncabled ones."""
         self.add_permissions("dcim.view_cable")
         cable = Cable.objects.get(label="Cable 5 (breakout)")
         url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
-        # 1 A-side connector + 2 B-side connectors (from setUpTestData)
-        self.assertEqual(len(terminations), 3)
-        b_connectors = sorted(row["connector"] for row in terminations if row["cable_end"] == "B")
-        self.assertEqual(b_connectors, [1, 2])
+        # 1 A-side connector + 2 B-side connectors (from setUpTestData) — all slots present, fully cabled.
+        self.assertEqual(set(terminations["a"]), {"1"})
+        self.assertEqual(set(terminations["b"]), {"1", "2"})
+        self.assertIsNotNone(terminations["b"]["1"])
+        self.assertIsNotNone(terminations["b"]["2"])
+
+    def test_terminations_field_uncabled_breakout_slot_is_null(self):
+        """An uncabled connector on a breakout cable surfaces as an explicit `null` slot."""
+        self.add_permissions("dcim.view_cable")
+        breakout_type = CableType.objects.create(
+            name="Cable API partial breakout 1x4", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        free_ifaces = list(
+            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:2]
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cable = Cable.objects.create(
+            termination_a=free_ifaces[0],
+            termination_b=free_ifaces[1],
+            cable_type=breakout_type,
+            status=cable_status,
+        )
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations["b"]), {"1", "2", "3", "4"})
+        self.assertIsNotNone(terminations["b"]["1"])
+        # Slots 2-4 weren't cabled — expect explicit nulls, not absent keys.
+        for connector in ("2", "3", "4"):
+            self.assertIsNone(terminations["b"][connector])
 
     def test_terminations_field_respects_depth(self):
-        """`?depth=1` expands nested termination objects within each `terminations` row, not just URLs."""
+        """`?depth>=1` expands each slot from a brief rep into the full nested termination serializer."""
         self.add_permissions("dcim.view_cable")
         cable = Cable.objects.get(label="Cable 1")
         url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk}) + "?depth=1"
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
-        self.assertGreaterEqual(len(terminations), 1)
-        # Depth=1 should expand the per-row termination FK from `{id, object_type, url}` into a full
-        # nested Interface serializer payload (which carries fields like `name`).
-        a_row = next(row for row in terminations if row["cable_end"] == "A")
-        self.assertIsInstance(a_row["interface"], dict)
-        self.assertIn("name", a_row["interface"])
+        # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
+        # serializer payload (which carries fields like `name`).
+        a_slot = terminations["a"]["1"]
+        self.assertIsInstance(a_slot, dict)
+        self.assertIn("name", a_slot)
 
     def test_list_query_count_does_not_grow_with_cable_count(self):
         """Listing cables must not run an extra query per cable (or per termination row) for the `terminations` field."""
@@ -3580,7 +3612,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertEqual(existing_a_row.interface_id, free_iface.pk)
 
     def test_create_cable_with_terminations_payload(self):
-        """POST a cable with a `terminations` list creates the cable and all listed join rows in one request."""
+        """POST a cable with a `terminations` dict creates the cable and all listed connector slots in one request."""
         # `terminations` is applied via nested `CableToCableTerminationSerializer`, which
         # applies `.restrict()` on the per-type FK fields — so the test user needs view
         # permission on the related models in addition to add_cable.
@@ -3599,10 +3631,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
         payload = {
             "status": cable_status.pk,
             "label": "Cable via terminations",
-            "terminations": [
-                {"cable_end": "A", "connector": 1, "interface": str(free_ifaces[0].pk)},
-                {"cable_end": "B", "connector": 1, "interface": str(free_ifaces[1].pk)},
-            ],
+            "terminations": {
+                "a": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)}},
+                "b": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)}},
+            },
         }
         response = self.client.post(url, payload, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
@@ -3613,7 +3645,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertEqual({r.interface_id for r in rows}, {free_ifaces[0].pk, free_ifaces[1].pk})
 
     def test_patch_cable_terminations_add_replace_delete(self):
-        """PATCH with `terminations` adds new rows, replaces existing FKs, and deletes when no FK is set."""
+        """PATCH with `terminations` replaces specified slots, deletes those set to null, and leaves others alone."""
         self.add_permissions(
             "dcim.change_cable",
             "dcim.add_cabletocabletermination",
@@ -3633,12 +3665,14 @@ class CableTest(Mixins.BaseComponentTestMixin):
         response = self.client.patch(
             url,
             {
-                "terminations": [
-                    # Replace B-connector-1 with a different interface.
-                    {"cable_end": "B", "connector": 1, "interface": str(free_iface.pk)},
-                    # Delete B-connector-2 (already has a termination from setUpTestData).
-                    {"cable_end": "B", "connector": 2},
-                ],
+                "terminations": {
+                    "b": {
+                        # Replace B-connector-1 with a different interface.
+                        "1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
+                        # Delete B-connector-2 (already has a termination from setUpTestData).
+                        "2": None,
+                    },
+                },
             },
             format="json",
             **self.header,
@@ -3664,31 +3698,35 @@ class CableTest(Mixins.BaseComponentTestMixin):
         )
         cable = Cable.objects.get(label="Cable 1")
         url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
-        # Bad cable_end.
+        # Invalid side key.
         response = self.client.patch(
             url,
-            {"terminations": [{"cable_end": "Z", "connector": 1}]},
+            {"terminations": {"z": {"1": None}}},
             format="json",
             **self.header,
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("terminations", response.json())
-        # Two FKs set on one row.
-        free_ifaces = list(
-            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:2]
-        )
+        # Non-integer connector key.
         response = self.client.patch(
             url,
-            {
-                "terminations": [
-                    {
-                        "cable_end": "A",
-                        "connector": 1,
-                        "interface": str(free_ifaces[0].pk),
-                        "front_port": str(free_ifaces[1].pk),  # nonsense — Interface is not a FrontPort
-                    },
-                ]
-            },
+            {"terminations": {"a": {"first": None}}},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # Missing object_type / id on a non-null slot.
+        response = self.client.patch(
+            url,
+            {"terminations": {"a": {"1": {"object_type": "dcim.interface"}}}},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # Unknown termination model.
+        response = self.client.patch(
+            url,
+            {"terminations": {"a": {"1": {"object_type": "dcim.device", "id": str(cable.pk)}}}},
             format="json",
             **self.header,
         )
