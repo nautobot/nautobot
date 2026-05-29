@@ -140,6 +140,7 @@ from .models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -168,7 +169,6 @@ from .models import (
     UserSavedViewAssociation,
     Webhook,
 )
-from nautobot.extras.models.models import FileProxy
 from .registry import registry
 
 logger = logging.getLogger(__name__)
