@@ -70,6 +70,7 @@ class Command(BaseCommand):
         self.leaves = [self._device(f"DEMO-LEAF-{i:02d}", self.dt_leaf) for i in range(1, 5)]
         self.servers = [self._device(f"DEMO-SRV-{i:02d}", self.dt_server) for i in range(1, 3)]
         self.patch1 = self._device("DEMO-PATCH-01", self.dt_patch)
+        self.patch2 = self._device("DEMO-PATCH-02", self.dt_patch)
 
         self._create_cable_types()
 
@@ -83,6 +84,7 @@ class Command(BaseCommand):
         self._scenario_7_aggregation_perspective()
         self._scenario_8_reverse_fanout_perspective()
         self._scenario_9_polarity_shuffle()
+        self._scenario_10_complex_multi_hop_path()
 
         self.stdout.write(self.style.SUCCESS("Demo data created successfully."))
         self.stdout.write(f"  Location: {self.location}")
@@ -444,4 +446,89 @@ class Command(BaseCommand):
                 (a_trunks[1], "A", 2),
                 (b_trunks[1], "B", 2),
             ],
+        )
+
+    def _scenario_10_complex_multi_hop_path(self):
+        """Complex multi-hop trace exercising pass-throughs, grouped nodes, and multi-segment cables.
+
+        Topology:
+            SPINE-01 Ethernet11/1 (400G QSFP-DD)
+                │   1x4 breakout cable
+            ┌───┴───┬───┬───┐
+            B1      B2  B3  B4
+            │       │   │   │
+            ├───────┤  PATCH-01 Front-LC-1  PATCH-01 Front-LC-2
+            │       │   ╲     │  pass-through to Rear-MPO-1 (positions 1, 2)
+        LEAF-01  LEAF-01  Rear-MPO-1
+        Eth7/1   Eth7/2       │
+                              │  MPO cable
+                              ▼
+                         PATCH-02 Rear-MPO-1
+                          ╱     ╲  pass-through to Front-LC-1/Front-LC-2
+                  Front-LC-1   Front-LC-2
+                          │           │  LC cables
+                  LEAF-02 Eth7/1   LEAF-03 Eth7/1
+
+        Lanes B1/B2 land directly on the same leaf (exercises `grouped_node` colspan).
+        Lanes B3/B4 traverse two patch panels with FrontPort↔RearPort pass-throughs.
+        """
+        spine = self._interface(self.spine1, "Ethernet11/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
+
+        # B1, B2 — direct to LEAF-01 (same device → grouped node on the renderer).
+        leaf1_eth1 = self._interface(self.leaves[0], "Ethernet7/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
+        leaf1_eth2 = self._interface(self.leaves[0], "Ethernet7/2", InterfaceTypeChoices.TYPE_100GE_QSFP28)
+
+        # B3, B4 — to PATCH-01 Front-LC ports paired with a single MPO rear port.
+        patch1_rear_mpo = self._rear_port(self.patch1, "Rear-MPO-1", positions=2, port_type=PortTypeChoices.TYPE_MPO)
+        patch1_front_lc1 = self._front_port(
+            self.patch1, "Front-LC-1", patch1_rear_mpo, position=1, port_type=PortTypeChoices.TYPE_LC
+        )
+        patch1_front_lc2 = self._front_port(
+            self.patch1, "Front-LC-2", patch1_rear_mpo, position=2, port_type=PortTypeChoices.TYPE_LC
+        )
+
+        self._cable(
+            label="DEMO-BKO-COMPLEX-PATH",
+            term_a=spine,
+            term_b=leaf1_eth1,
+            cable_type=self.ct_1x4,
+            type_choice=CableTypeChoices.TYPE_DAC_PASSIVE,
+            extra_terminations=[
+                (leaf1_eth2, "B", 2),
+                (patch1_front_lc1, "B", 3),
+                (patch1_front_lc2, "B", 4),
+            ],
+        )
+
+        # PATCH-02 mirrors PATCH-01: one MPO rear port with two LC front ports.
+        patch2_rear_mpo = self._rear_port(self.patch2, "Rear-MPO-1", positions=2, port_type=PortTypeChoices.TYPE_MPO)
+        patch2_front_lc1 = self._front_port(
+            self.patch2, "Front-LC-1", patch2_rear_mpo, position=1, port_type=PortTypeChoices.TYPE_LC
+        )
+        patch2_front_lc2 = self._front_port(
+            self.patch2, "Front-LC-2", patch2_rear_mpo, position=2, port_type=PortTypeChoices.TYPE_LC
+        )
+
+        # MPO trunk between the two patch panels' rear ports.
+        self._cable(
+            label="DEMO-MPO-PATCH1-PATCH2",
+            term_a=patch1_rear_mpo,
+            term_b=patch2_rear_mpo,
+            type_choice=CableTypeChoices.TYPE_MMF,
+        )
+
+        # LC cables from PATCH-02's front ports to the destination leaves.
+        leaf2_eth1 = self._interface(self.leaves[1], "Ethernet7/1", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
+        leaf3_eth1 = self._interface(self.leaves[2], "Ethernet7/1", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
+        self._cable(
+            label="DEMO-PATCH2-LC1-LEAF2",
+            term_a=patch2_front_lc1,
+            term_b=leaf2_eth1,
+            type_choice=CableTypeChoices.TYPE_SMF,
+        )
+        self._cable(
+            label="DEMO-PATCH2-LC2-LEAF3",
+            term_a=patch2_front_lc2,
+            term_b=leaf3_eth1,
+            type_choice=CableTypeChoices.TYPE_SMF,
         )
