@@ -95,7 +95,6 @@ from nautobot.dcim.tables import (
     VirtualDeviceContextTable,
 )
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.models.models import FileProxy
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -169,6 +168,7 @@ from .models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from nautobot.extras.models.models import FileProxy
 from .registry import registry
 
 logger = logging.getLogger(__name__)
