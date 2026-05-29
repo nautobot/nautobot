@@ -3,7 +3,17 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-lg-5 col-md-12">
+        <div class="col-lg-6 col-md-12">
+            {% if trace_svg %}
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Cable Trace</strong>
+                    </div>
+                    <div class="card-body text-center" style="overflow-x: auto;">
+                        {{ trace_svg|safe }}
+                    </div>
+                </div>
+            {% else %}
             <div class="nb-cable-trace">
                 {% with traced_path=path.origin.trace %}
                     {% for near_end, cable, far_end in traced_path %}
@@ -78,8 +88,9 @@
                     {% endfor %}
                 {% endwith %}
             </div>
+            {% endif %}
         </div>
-        <div class="col-lg-7 col-md-12">
+        <div class="col-lg-6 col-md-12">
 
             <div class="card">
                 <div class="card-header">

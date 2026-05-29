@@ -5695,8 +5695,12 @@ class PathTraceView(generic.ObjectView):
             else:
                 path = related_paths.first()
 
-        # SVG trace diagram rendering will be added back in a follow-up; leave the slot empty for now.
+        # Render the SVG trace diagram from the active path's origin (if there is one).
         trace_svg = ""
+        if path is not None and getattr(path, "origin", None) is not None:
+            from nautobot.dcim.svg.path_trace import CableTraceSVG
+
+            trace_svg = CableTraceSVG(path.origin, base_url=request.build_absolute_uri("/").rstrip("/")).render()
 
         return {
             "path": path,
