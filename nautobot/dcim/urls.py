@@ -28,6 +28,7 @@ router = NautobotUIViewSetRouter()
 router.register("cables", views.CableUIViewSet)
 router.register("cable-types", views.CableTypeUIViewSet)
 router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
+router.register("console-server-port-templates", views.ConsoleServerPortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
@@ -148,37 +149,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Console server port templates
-    path(
-        "console-server-port-templates/add/",
-        views.ConsoleServerPortTemplateCreateView.as_view(),
-        name="consoleserverporttemplate_add",
-    ),
-    path(
-        "console-server-port-templates/edit/",
-        views.ConsoleServerPortTemplateBulkEditView.as_view(),
-        name="consoleserverporttemplate_bulk_edit",
-    ),
-    path(
-        "console-server-port-templates/rename/",
-        views.ConsoleServerPortTemplateBulkRenameView.as_view(),
-        name="consoleserverporttemplate_bulk_rename",
-    ),
-    path(
-        "console-server-port-templates/delete/",
-        views.ConsoleServerPortTemplateBulkDeleteView.as_view(),
-        name="consoleserverporttemplate_bulk_delete",
-    ),
-    path(
-        "console-server-port-templates/<uuid:pk>/edit/",
-        views.ConsoleServerPortTemplateEditView.as_view(),
-        name="consoleserverporttemplate_edit",
-    ),
-    path(
-        "console-server-port-templates/<uuid:pk>/delete/",
-        views.ConsoleServerPortTemplateDeleteView.as_view(),
-        name="consoleserverporttemplate_delete",
     ),
     # Power port templates
     path(

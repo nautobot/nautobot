@@ -1,5 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 
 from nautobot.core.graphql import execute_query
 from nautobot.core.testing import create_test_user, TestCase
@@ -12,6 +14,7 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CableType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -341,6 +344,125 @@ class GraphQLTestCase(TestCase):
             self.assertEqual(len(resp.data["cables"]), 1)
             self.assertIsNone(resp.data["cables"][0]["termination_a_type"])
             self.assertIsNone(resp.data["cables"][0]["termination_b_type"])
+
+        with self.subTest("cables expose their per-row terminations with cable_end / connector"):
+            query = """
+            query {
+                cables {
+                    id
+                    label
+                    terminations {
+                        cable_end
+                        connector
+                        interface { name }
+                    }
+                }
+            }
+            """
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            test_cable = next(c for c in resp.data["cables"] if c["id"] == str(cable.pk))
+            rows = {(r["cable_end"], r["connector"]): r for r in test_cable["terminations"]}
+            self.assertEqual(rows[("A", 1)]["interface"]["name"], "eth2")
+            self.assertEqual(rows[("B", 1)]["interface"]["name"], "eth3")
+
+        with self.subTest("breakout cables expose all lane terminations"):
+            interface_status = Status.objects.get_for_model(Interface).first()
+            extra_ifaces = [
+                Interface.objects.create(
+                    device=self.device,
+                    name=f"breakout-eth{i}",
+                    status=interface_status,
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                )
+                for i in range(3)
+            ]
+            breakout_type = CableType.objects.create(
+                name="GraphQL 1x2 breakout", a_connectors=1, b_connectors=2, total_lanes=2
+            )
+            breakout = Cable.objects.create(
+                termination_a=extra_ifaces[0],
+                termination_b=extra_ifaces[1],
+                cable_type=breakout_type,
+                label="GraphQL Breakout",
+                status=cable_status,
+            )
+            breakout.add_termination(extra_ifaces[2], "B", connector=2)
+            query = (
+                'query { cables(id: "' + str(breakout.pk) + '") '
+                "{ terminations { cable_end connector interface { name } } } }"
+            )
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            rows = {
+                (r["cable_end"], r["connector"]): r["interface"]["name"] for r in resp.data["cables"][0]["terminations"]
+            }
+            self.assertEqual(rows[("A", 1)], "breakout-eth0")
+            self.assertEqual(rows[("B", 1)], "breakout-eth1")
+            self.assertEqual(rows[("B", 2)], "breakout-eth2")
+
+        with self.subTest("interface exposes its singular cable_termination join row with cable_end/connector"):
+            query = """
+            query {
+                interfaces {
+                    name
+                    cable_termination { cable_end connector cable { label } }
+                }
+            }
+            """
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            by_name = {i["name"]: i for i in resp.data["interfaces"]}
+            self.assertEqual(by_name["eth2"]["cable_termination"]["cable_end"], "A")
+            self.assertEqual(by_name["eth2"]["cable_termination"]["connector"], 1)
+            self.assertEqual(by_name["eth2"]["cable_termination"]["cable"]["label"], "GraphQL Test Cable")
+            self.assertIsNone(by_name["eth0"]["cable_termination"])
+
+        with self.subTest(
+            "cables expose their typed M2M (e.g. interfaces) listing all attached terminations of that type"
+        ):
+            query = 'query { cables(id: "' + str(breakout.pk) + '") { interfaces { name } } }'
+            resp = execute_query(query, user=self.user)
+            self.assertIsNone(resp.errors)
+            iface_names = sorted(i["name"] for i in resp.data["cables"][0]["interfaces"])
+            self.assertEqual(iface_names, ["breakout-eth0", "breakout-eth1", "breakout-eth2"])
+
+        with self.subTest("cables → terminations → termination FK does not grow query count with cable count"):
+            cables_query = """
+            query {
+                cables {
+                    id
+                    terminations { cable_end connector interface { name } }
+                }
+            }
+            """
+
+            def count_queries():
+                with CaptureQueriesContext(connection) as ctx:
+                    resp = execute_query(cables_query, user=self.user)
+                self.assertIsNone(resp.errors)
+                return len(ctx.captured_queries)
+
+            baseline = count_queries()
+            # Add more cables and termination rows; if the GraphQL resolver chain has an N+1,
+            # this would push the query count up roughly proportionally to (cables x terminations).
+            extra_status = Status.objects.get_for_model(Interface).first()
+            new_ifaces = [
+                Interface.objects.create(
+                    device=self.device,
+                    name=f"queryload-eth{i}",
+                    status=extra_status,
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                )
+                for i in range(4)
+            ]
+            for i in range(0, 4, 2):
+                Cable.objects.create(
+                    termination_a=new_ifaces[i],
+                    termination_b=new_ifaces[i + 1],
+                    status=cable_status,
+                )
+            self.assertLessEqual(count_queries(), baseline)
 
 
 class GraphQLFKPermissionTest(GraphQLTestCase):

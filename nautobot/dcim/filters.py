@@ -33,8 +33,10 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
 )
 from nautobot.dcim.constants import (
+    CONTENT_TYPE_TO_TERMINATION_FK,
     MODULE_RECURSION_DEPTH_LIMIT,
     NONCONNECTABLE_IFACE_TYPES,
+    TERMINATION_FK_FIELDS,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
@@ -101,7 +103,6 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.dcim.models.cables import _TERMINATION_FK_TO_NATURAL_KEY, TERMINATION_FK_FIELDS
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
@@ -1693,13 +1694,13 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         q = Q()
         for label in value:
             app_label, model = label.split(".")
-            for fk, nk in _TERMINATION_FK_TO_NATURAL_KEY.items():
-                if nk == (app_label, model):
-                    clause = Q(**{f"{fk}__isnull": False})
-                    if cable_end:
-                        clause &= Q(cable_end=cable_end)
-                    q |= clause
-                    break
+            fk = CONTENT_TYPE_TO_TERMINATION_FK.get((app_label, model))
+            if fk is None:
+                continue
+            clause = Q(**{f"{fk}__isnull": False})
+            if cable_end:
+                clause &= Q(cable_end=cable_end)
+            q |= clause
         return q
 
     def generate_query__termination_type(self, value):

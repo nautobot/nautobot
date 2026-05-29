@@ -78,6 +78,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
+from nautobot.dcim.constants import TERMINATION_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
@@ -114,6 +115,7 @@ from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
+    CableToCableTermination,
     CableType,
     ConsolePort,
     ConsolePortTemplate,
@@ -2369,37 +2371,20 @@ class ConsolePortTemplateUIViewSet(
 #
 
 
-class ConsoleServerPortTemplateCreateView(generic.ComponentCreateView):
+class ConsoleServerPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.ConsoleServerPortTemplateBulkEditForm
+    filterset_class = filters.ConsoleServerPortTemplateFilterSet
+    form_class = forms.ConsoleServerPortTemplateForm
+    serializer_class = serializers.ConsoleServerPortTemplateSerializer
+    table_class = tables.ConsoleServerPortTemplateTable
     queryset = ConsoleServerPortTemplate.objects.all()
-    form = forms.ConsoleServerPortTemplateCreateForm
-    model_form = forms.ConsoleServerPortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class ConsoleServerPortTemplateEditView(generic.ObjectEditView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    model_form = forms.ConsoleServerPortTemplateForm
-
-
-class ConsoleServerPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-
-
-class ConsoleServerPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    table = tables.ConsoleServerPortTemplateTable
-    form = forms.ConsoleServerPortTemplateBulkEditForm
-    filterset = filters.ConsoleServerPortTemplateFilterSet
-
-
-class ConsoleServerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-
-
-class ConsoleServerPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    table = tables.ConsoleServerPortTemplateTable
-    filterset = filters.ConsoleServerPortTemplateFilterSet
+    create_form_class = forms.ConsoleServerPortTemplateCreateForm
 
 
 #
@@ -5568,7 +5553,14 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related("terminations")
+    queryset = Cable.objects.prefetch_related(
+        Prefetch(
+            "terminations",
+            # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
+            # `terminations_b` columns render every FK without an extra query per row.
+            queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+        ),
+    )
     action_buttons = ("add", "import", "export")
 
     def get_queryset(self):
