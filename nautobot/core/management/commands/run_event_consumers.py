@@ -9,8 +9,8 @@ For each consumer registered in ``settings.EVENT_CONSUMERS``:
 3. Spawns a worker thread that calls ``consumer.subscribe(consumer.include_topics)`` and
    iterates ``consumer.read()``. For each ``ConsumedEvent``: applies ``exclude_topics``
    filtering, looks up matching bindings, enqueues each matching Job via
-   ``JobResult.enqueue_job(...)``, then acks the source event (or nacks if enqueueing
-   raised).
+   ``JobResult.enqueue_job(...)`` — spreading the event's ``payload`` as the Job's own
+   kwargs — then acks the source event (or nacks if enqueueing raised).
 
 Handles ``SIGTERM`` / ``SIGINT`` cleanly: sets a shared shutdown event, calls
 ``consumer.close()`` on each consumer, and joins all worker threads with a configurable
@@ -252,14 +252,13 @@ class Command(BaseCommand):
         try:
             for binding in matched:
                 job_model = job_models_by_path[binding["job_class_path"]]
+                # Pass the event payload straight through as the Job's own kwargs. The payload
+                # is expected to be a mapping of the bound Job's input variable names to values.
                 JobResult.enqueue_job(
                     job_model,
                     user,
-                    topic=event.topic,
-                    payload=event.payload,
-                    headers=event.headers,
-                    source_consumer=name,
                     task_queue=binding.get("queue"),
+                    **event.payload,
                 )
         except Exception:  # pylint: disable=broad-except
             logger.exception("Consumer %s: failed to enqueue Job(s) for topic %s; nacking", name, event.topic)

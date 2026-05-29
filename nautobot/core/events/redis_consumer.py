@@ -19,6 +19,7 @@ and the consumer side ::
         "RedisConsumer": {
             "CLASS": "nautobot.core.events.RedisEventConsumer",
             "OPTIONS": {"url": "redis://localhost:6379/0"},
+            "PASSWORD": os.getenv("NAUTOBOT_REDIS_PASSWORD", ""),
             "TOPICS": {"INCLUDE": ["nautobot.create.dcim.device"]},
             "SECRETS_GROUP": "event-consumer-creds",
             "JOB_BINDINGS": [
@@ -54,14 +55,20 @@ class RedisEventConsumer(EventConsumer):
     channel patterns.
     """
 
-    def __init__(self, *args, url, **kwargs):
+    def __init__(self, *args, url, password=None, **kwargs):
         """Initialize the consumer.
 
         Args:
             url (str): The Redis URL to connect to (e.g., ``redis://host:6379/0``).
+            password (str, optional): Password used to authenticate to Redis. Supplied via
+                the consumer's top-level ``PASSWORD`` setting and passed straight through to
+                the Redis client. Takes effect when the URL does not already embed a password.
         """
         self.url = url
-        self.connection = redis.StrictRedis.from_url(self.url, decode_responses=True)
+        connection_kwargs = {"decode_responses": True}
+        if password is not None:
+            connection_kwargs["password"] = password
+        self.connection = redis.StrictRedis.from_url(self.url, **connection_kwargs)
         self.pubsub = self.connection.pubsub()
         self._shutdown = threading.Event()
         super().__init__(*args, **kwargs)

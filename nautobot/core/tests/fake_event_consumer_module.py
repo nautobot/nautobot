@@ -21,5 +21,5 @@ class FakeEventConsumerJob(EventConsumerJob):
         name = "Fake Event Consumer Job"
         description = "Fixture for run_event_consumers tests."
 
-    def process_event(self, *, topic, payload, headers, source_consumer):
-        return {"topic": topic, "payload": payload}
+    def process_event(self, **kwargs):
+        return kwargs

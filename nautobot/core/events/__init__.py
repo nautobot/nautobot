@@ -250,7 +250,9 @@ def load_event_consumers(event_consumer_configs):
         event_consumer_configs (dict): Mapping of consumer-name to consumer config dict.
             Each value must contain ``CLASS`` (dotted path to an ``EventConsumer``
             subclass) and may contain ``OPTIONS`` (kwargs), ``TOPICS`` (``INCLUDE`` /
-            ``EXCLUDE`` lists), ``SECRETS_GROUP`` (str), ``USER_ACCESS_TYPE`` (str),
+            ``EXCLUDE`` lists), ``PASSWORD`` (str, passed to the consumer as a
+            ``password`` kwarg for authenticating the broker connection),
+            ``SECRETS_GROUP`` (str), ``USER_ACCESS_TYPE`` (str),
             ``USER_SECRET_TYPE`` (str), and ``JOB_BINDINGS`` (list of binding dicts).
     """
     for consumer_name, consumer_cfg in event_consumer_configs.items():
@@ -276,6 +278,10 @@ def load_event_consumers(event_consumer_configs):
                 f"instead a '{type(exclude_topics).__name__}' was provided"
             )
         options.update({"include_topics": include_topics, "exclude_topics": exclude_topics})
+
+        password = consumer_cfg.get("PASSWORD")
+        if password is not None:
+            options.setdefault("password", password)
 
         job_bindings_cfg = consumer_cfg.get("JOB_BINDINGS", [])
         if not isinstance(job_bindings_cfg, (list, tuple)):

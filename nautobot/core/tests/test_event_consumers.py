@@ -47,7 +47,8 @@ from nautobot.extras.models import Job, JobQueue, Secret, SecretsGroup, SecretsG
 class _BufferingEventConsumer(EventConsumer):
     """In-memory ``EventConsumer`` used by tests."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, password=None, **kwargs):
+        self.password = password
         self.subscribed_topics = None
         self.acked = []
         self.nacked = []
@@ -213,6 +214,33 @@ class LoadEventConsumersTest(TestCase):
         self.assertEqual(entry["job_bindings"][0]["job_class_path"], "my_app.jobs.HandleDeviceCreated")
         self.assertEqual(entry["job_bindings"][0]["queue"], "event-dispatch")
 
+    def test_load_event_consumers_passes_password(self):
+        """A top-level ``PASSWORD`` is forwarded to the consumer as a ``password`` kwarg."""
+        load_event_consumers(
+            {
+                "RedisConsumer": {
+                    "CLASS": "nautobot.core.tests.test_event_consumers._BufferingEventConsumer",
+                    "PASSWORD": "sup3rs3cret",
+                    "TOPICS": {"INCLUDE": ["nautobot.create.*"]},
+                }
+            }
+        )
+        self.assertEqual(len(_EVENT_CONSUMERS), 1)
+        self.assertEqual(_EVENT_CONSUMERS[0]["consumer"].password, "sup3rs3cret")
+
+    def test_load_event_consumers_omits_password_when_absent(self):
+        """When no ``PASSWORD`` is configured, the consumer receives no ``password`` kwarg."""
+        load_event_consumers(
+            {
+                "RedisConsumer": {
+                    "CLASS": "nautobot.core.tests.test_event_consumers._BufferingEventConsumer",
+                    "TOPICS": {"INCLUDE": ["nautobot.create.*"]},
+                }
+            }
+        )
+        self.assertEqual(len(_EVENT_CONSUMERS), 1)
+        self.assertIsNone(_EVENT_CONSUMERS[0]["consumer"].password)
+
     def test_load_event_consumers_does_not_query_orm(self):
         """The guardrail: ``load_event_consumers`` runs before ``django.setup()`` in production,
         so it must not perform any ORM access. Future contributors who accidentally add a
@@ -353,42 +381,32 @@ class EventConsumerJobTest(TestCase):
         self.assertNotIn(class_path, registry["jobs"])
 
     def test_event_consumer_job_run_delegates_to_process_event(self):
-        """``run`` should forward its kwargs to ``process_event`` and return its result."""
+        """``run`` should forward the payload kwargs to ``process_event`` and return its result."""
 
         class _MyJob(EventConsumerJob):
             class Meta:
                 hidden = True
                 has_sensitive_variables = False
 
-            def process_event(self, *, topic, payload, headers, source_consumer):
-                return {
-                    "topic": topic,
-                    "payload": payload,
-                    "headers": headers,
-                    "source_consumer": source_consumer,
-                }
+            def process_event(self, *, cleanup_types, max_age=None):
+                return {"cleanup_types": cleanup_types, "max_age": max_age}
 
-        result = _MyJob().run(
-            topic="nautobot.create.dcim.device",
-            payload={"name": "rtr-1"},
-            headers={"x-request-id": "abc"},
-            source_consumer="RedisConsumer",
-        )
-        self.assertEqual(result["topic"], "nautobot.create.dcim.device")
-        self.assertEqual(result["payload"], {"name": "rtr-1"})
-        self.assertEqual(result["headers"], {"x-request-id": "abc"})
-        self.assertEqual(result["source_consumer"], "RedisConsumer")
+        result = _MyJob().run(cleanup_types=["extras.ObjectChange"], max_age=None)
+        self.assertEqual(result["cleanup_types"], ["extras.ObjectChange"])
+        self.assertIsNone(result["max_age"])
 
-    def test_event_consumer_job_run_defaults_headers_to_empty_dict(self):
+    def test_event_consumer_job_run_forwards_arbitrary_payload_kwargs(self):
+        """The payload is spread as kwargs, so ``process_event(**kwargs)`` receives it verbatim."""
+
         class _MyJob(EventConsumerJob):
             class Meta:
                 hidden = True
                 has_sensitive_variables = False
 
-            def process_event(self, *, topic, payload, headers, source_consumer):
-                return headers
+            def process_event(self, **kwargs):
+                return kwargs
 
-        self.assertEqual(_MyJob().run(topic="x", payload={}), {})
+        self.assertEqual(_MyJob().run(a=1, b="two"), {"a": 1, "b": "two"})
 
     def test_event_consumer_job_process_event_must_be_overridden(self):
         """Calling ``run`` on a subclass that forgot to override ``process_event`` raises."""
@@ -399,7 +417,7 @@ class EventConsumerJobTest(TestCase):
                 has_sensitive_variables = False
 
         with self.assertRaises(NotImplementedError) as cm:
-            _ForgotToOverride().run(topic="x", payload={})
+            _ForgotToOverride().run()
         self.assertIn("_ForgotToOverride must implement process_event", str(cm.exception))
 
 
@@ -671,9 +689,11 @@ class RunEventConsumersCommandTest(TransactionTestCase):
 
         self.assertEqual(mock_enqueue.call_count, 1)
         _args, kwargs = mock_enqueue.call_args
-        self.assertEqual(kwargs["topic"], "nautobot.create.dcim.device")
-        self.assertEqual(kwargs["payload"], {"name": "rtr"})
-        self.assertEqual(kwargs["source_consumer"], "C1")
+        # The event payload is spread as the Job's own kwargs; no event-envelope keys are passed.
+        self.assertEqual(kwargs["name"], "rtr")
+        self.assertNotIn("topic", kwargs)
+        self.assertNotIn("payload", kwargs)
+        self.assertNotIn("source_consumer", kwargs)
         self.assertEqual(len(consumer.acked), 1)
         self.assertEqual(len(consumer.nacked), 0)
 
@@ -733,10 +753,9 @@ class RunEventConsumersCommandTest(TransactionTestCase):
             "--shutdown-timeout",
             "2",
         )
-        # Only C2 ran (and the only event was on its outbox); the only mock_enqueue call
-        # should report source_consumer="C2".
+        # Only C2 ran (and the only event was on its outbox); it should have acked the event.
         self.assertEqual(mock_enqueue.call_count, 1)
-        self.assertEqual(mock_enqueue.call_args.kwargs["source_consumer"], "C2")
+        self.assertEqual(len(consumer2.acked), 1)
 
     def test_command_consumer_name_filter_no_match(self):
         self._register_consumer(name="C1")

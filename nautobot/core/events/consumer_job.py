@@ -8,16 +8,22 @@ The Job framework (``nautobot.extras.jobs``) already imports ``publish_event`` f
 is fully initialized.
 """
 
-from nautobot.apps.jobs import Job, JSONVar, StringVar
+from nautobot.apps.jobs import Job
 
 
 class EventConsumerJob(Job):
     """Abstract base class for Jobs that process events consumed from external brokers.
 
-    Apps subclass this and override ``process_event()``. The framework handles wiring the
-    event topic, payload, headers, and source-consumer name into Job kwargs; standard
-    ``self.logger`` logging; ``JobResult`` persistence and UI visibility; and permission
-    integration via the user resolved from the configured ``SecretsGroup``.
+    The ``run_event_consumers`` command spreads the consumed event's ``payload`` as this
+    Job's keyword arguments — i.e. the payload is expected to be a mapping of input-variable
+    names to values. Subclasses therefore declare their own Job ``Var`` fields matching the
+    payload keys (exactly as a normal Job would) and override ``process_event()`` to handle
+    them. The event envelope (topic, headers, source-consumer name) is intentionally **not**
+    passed through; only the payload reaches the Job.
+
+    The base class still provides standard ``self.logger`` logging, ``JobResult``
+    persistence and UI visibility, and permission integration via the user resolved from the
+    configured ``SecretsGroup``.
 
     This base class is **not** registered with the Jobs registry (its ``Meta.hidden`` is
     ``True`` and it is never passed to ``register_jobs()``), so it does not appear in the
@@ -29,27 +35,19 @@ class EventConsumerJob(Job):
         has_sensitive_variables = False
         description = "Abstract base for Jobs invoked by the event-consumer framework."
 
-    topic = StringVar(description="Event topic that triggered this Job")
-    payload = JSONVar(description="Event payload as published by the source broker")
-    headers = JSONVar(description="Event headers / metadata", required=False, default=dict)
-    source_consumer = StringVar(
-        description="Name of the registered EventConsumer that received this event",
-        required=False,
-    )
-
-    def run(self, *, topic, payload, headers=None, source_consumer=None):  # pylint: disable=arguments-differ
+    def run(self, **kwargs):  # pylint: disable=arguments-differ
         """Delegate to ``process_event``.
 
-        Override ``process_event`` instead of ``run`` unless you need to customize the
-        full Job lifecycle.
+        The keyword arguments are the consumed event's ``payload`` spread out by the
+        ``run_event_consumers`` command. Override ``process_event`` instead of ``run``
+        unless you need to customize the full Job lifecycle.
         """
-        return self.process_event(
-            topic=topic,
-            payload=payload,
-            headers=headers or {},
-            source_consumer=source_consumer,
-        )
+        return self.process_event(**kwargs)
 
-    def process_event(self, *, topic, payload, headers, source_consumer):
-        """Handle a single consumed event. Subclasses MUST override this method."""
+    def process_event(self, **kwargs):
+        """Handle a single consumed event. Subclasses MUST override this method.
+
+        Args:
+            **kwargs: The consumed event's ``payload``, mapped to the Job's input variables.
+        """
         raise NotImplementedError(f"{type(self).__name__} must implement process_event() to handle events")
