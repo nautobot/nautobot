@@ -217,7 +217,7 @@ With all the configuration in place, bring up the Nautobot stack:
 
 ```bash
 invoke start \
-  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH= \
+  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH=<path_to_your_k8s_token> \
   -e DESC_KUBERNETES_TOKEN_PATH=$NAUTOBOT_KUBERNETES_TOKEN_PATH
 ```
 
@@ -225,7 +225,7 @@ Or, if you want to attach a debugger to the Django process:
 
 ```bash
 invoke debug \
-  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH= \
+  -e SRC_KUBERNETES_TOKEN_LOCAL_PATH=<path_to_your_k8s_token> \
   -e DESC_KUBERNETES_TOKEN_PATH=$NAUTOBOT_KUBERNETES_TOKEN_PATH
 ```
 

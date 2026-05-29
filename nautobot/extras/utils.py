@@ -705,8 +705,8 @@ def build_kubernetes_api_client():
     with open(pod_token, "r", encoding="utf-8") as token_file:
         token = token_file.read().strip()
     # configure API Key authorization: BearerToken
-    configuration.api_key_prefix["authorization"] = "Bearer"
-    configuration.api_key["authorization"] = token
+    configuration.api_key_prefix["BearerToken"] = "Bearer"
+    configuration.api_key["BearerToken"] = token
     return kubernetes.client.ApiClient(configuration)
 
 
