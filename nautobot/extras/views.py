@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import urlencode
 from django.template.loader import get_template, render_to_string, TemplateDoesNotExist
@@ -3222,24 +3222,31 @@ class ObjectChangeLogView(generic.GenericView):
 class FileProxyUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
-    ObjectEditViewMixin,
     ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
 ):
     queryset = FileProxy.objects.all()
     filterset_class = filters.FileProxyFilterSet
     filterset_form_class = forms.FileProxyFilterForm
-    form_class = forms.FileProxyForm
     serializer_class = serializers.FileProxySerializer
     table_class = tables.FileProxyTable
-    action_buttons = (
-        "add",
-        "export",
-    )
+    action_buttons = ("export",)
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[object_detail.ObjectFieldsPanel(weight=100, section=SectionChoices.LEFT_HALF, fields="__all__")]
     )
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="download",
+        url_name="download",
+        custom_view_base_action="view",
+    )
+    def download(self, request, pk=None):
+        file_proxy = self.get_object()
+        return FileResponse(file_proxy.file.open("rb"), as_attachment=True)
 
 
 #

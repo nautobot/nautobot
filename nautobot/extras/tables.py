@@ -1611,10 +1611,13 @@ class ObjectChangeTable(BaseTable):
 class FileProxyTable(BaseTable):
     """Table for listing FileProxy objects."""
 
+    pk = ToggleColumn()
     name = tables.Column(linkify=True)
-    file = tables.Column(linkify=True)
+    file = tables.Column(
+        linkify=("extras:fileproxy_download", {"pk": tables.A("pk")}),
+    )
     created = tables.DateTimeColumn()
-    actions = ButtonsColumn(FileProxy)
+    actions = ButtonsColumn(FileProxy, buttons=("delete",))
 
     class Meta(BaseTable.Meta):
         model = FileProxy

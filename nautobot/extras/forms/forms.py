@@ -15,7 +15,6 @@ from django.urls.base import reverse, reverse_lazy
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.core.forms import (
     add_blank_choice,
     APISelect,
@@ -34,7 +33,6 @@ from nautobot.core.forms import (
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
-    NullableDateField,
     SlugField,
     StaticSelect2,
     StaticSelect2Multiple,
@@ -178,7 +176,6 @@ __all__ = (
     "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
     "FileProxyFilterForm",
-    "FileProxyForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GitRepositoryForm",
@@ -1206,30 +1203,18 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
     )
 
 
-class FileProxyForm(BootstrapMixin, forms.ModelForm):
-    """Form for creating and editing FileProxy objects."""
-
-    class Meta:
-        model = FileProxy
-        fields = (
-            "name",
-            "file",
-        )
-
-
 class FileProxyFilterForm(BootstrapMixin, forms.Form):
     """FileProxy basic filter form."""
 
     model = FileProxy
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
-    created = NullableDateField(required=False, label="Uploaded at", widget=DatePicker())
     job = DynamicModelMultipleChoiceField(
         queryset=Job.objects.all(),
         required=False,
         label="Job",
     )
-    job_result = NaturalKeyOrPKMultipleChoiceFilter(
+    job_result_id = DynamicModelMultipleChoiceField(
         queryset=JobResult.objects.all(),
         required=False,
         label="Job Result",

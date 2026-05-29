@@ -652,7 +652,6 @@ class FileProxy(BaseModel, ChangeLoggedModel):
 
     name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     file = models.FileField(upload_to=_upload_to, storage=_job_storage)
-    created = models.DateTimeField(auto_now_add=True)
     job_result = models.ForeignKey(to=JobResult, null=True, blank=True, on_delete=models.CASCADE, related_name="files")
     is_data_compliance_model = False
     is_saved_view_model = True

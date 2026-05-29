@@ -189,7 +189,7 @@ class NavigationWeightChoices(ChoiceSet):
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
     APPROVAL_WORKFLOWS = 1200
-    ADMINISTRATION = 1250
+    ADMINISTRATION = 3000
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
