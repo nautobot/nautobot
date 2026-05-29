@@ -38,6 +38,7 @@ from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
+    TERMINATION_FK_FIELDS,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
@@ -463,7 +464,7 @@ class CableTermination(models.Model):
         needed for table renders of the `cable_peer` column (and, for `PathEndpoint` subclasses,
         the `connection` column) to avoid per-row queries.
         """
-        from nautobot.dcim.models.cables import CableToCableTermination, TERMINATION_FK_FIELDS
+        from nautobot.dcim.models.cables import CableToCableTermination
 
         prefetches = [
             Prefetch(
