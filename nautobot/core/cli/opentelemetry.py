@@ -1,5 +1,7 @@
 """Enable OTEL Tracing."""
 
+import logging
+
 from opentelemetry import metrics, trace
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
@@ -18,6 +20,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from nautobot import __version__
 from nautobot.core import settings
 
+logger = logging.getLogger(__name__)
+
 
 def instrument():
     """Instrument Nautobot."""
@@ -30,26 +34,38 @@ def instrument():
             trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
         if "otlp" in settings.OTEL_TRACES_EXPORTER:
-            otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
-            if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            if not settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+                logger.warning(
+                    "OTEL_TRACES_EXPORTER includes 'otlp' but OTEL_EXPORTER_OTLP_ENDPOINT is not set; "
+                    "skipping the OTLP trace exporter to avoid connection errors."
+                )
             else:
-                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+                otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
+                if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+                    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+                else:
+                    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-                otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
-            trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(OTLPSpanExporter(**otlp_settings)))
+                    otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
+                trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(OTLPSpanExporter(**otlp_settings)))
 
     if settings.OTEL_METRICS_EXPORTER and "none" not in settings.OTEL_METRICS_EXPORTER:
         readers = []
         if "otlp" in settings.OTEL_METRICS_EXPORTER:
-            otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
-            if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
-                from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            if not settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+                logger.warning(
+                    "OTEL_METRICS_EXPORTER includes 'otlp' but OTEL_EXPORTER_OTLP_ENDPOINT is not set; "
+                    "skipping the OTLP metric exporter to avoid connection errors."
+                )
             else:
-                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+                otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
+                if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+                    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+                else:
+                    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 
-                otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
-            readers.append(PeriodicExportingMetricReader(OTLPMetricExporter(**otlp_settings)))
+                    otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
+                readers.append(PeriodicExportingMetricReader(OTLPMetricExporter(**otlp_settings)))
         if "console" in settings.OTEL_METRICS_EXPORTER:
             readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
         meter_provider = MeterProvider(resource=resource, metric_readers=readers)

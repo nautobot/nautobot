@@ -134,13 +134,31 @@ The Nautobot development folder has a sample configuration of using the OpenTele
 
 The `docker-compose.observability.yml` file has all of the items necessary to start observing logs, traces, and metrics. All of the necessary config files for Grafana, Mimir, OTEL, Promtail, and Tempo are included as well.
 
+### Viewing trace hierarchies
+
+The `console` trace exporter (`OTEL_TRACES_EXPORTER=console`) emits each span as a flat, individual JSON object to stdout as it completes. Spans are not nested - the parent-child relationship is encoded via the `parent_id` field on each span object. This format is useful for confirming that spans are being emitted, but it does not produce a tree view.
+
+To see the full nested waterfall hierarchy (HTTP request span containing the GraphQL span, with database and Redis child spans beneath it), send traces to a visualization backend such as Grafana Tempo via the OTLP exporter. Tempo reconstructs the tree from the `parent_id` references and displays it as a familiar trace waterfall. The development observability stack described above provides this out of the box.
+
 ## Security Considerations
 
-### Sensitive data in spans
+### Sensitive data in spans and logs
 
-The GraphQL middleware records the full query document and variables in span attributes. If GraphQL variables contain sensitive values (for example, credentials or tokens passed as input), those values will appear in the trace backend.
+Several instrumentation layers record request and query content. The values are captured verbatim, both as span attributes (exported to the trace backend) and, for GraphQL, in a structured INFO log entry:
 
-To mitigate this, apply attribute filtering at the collector before export using the `attributes` processor:
+- **GraphQL** - The `graphql.document` (full query text) and `graphql.variables` attributes are recorded for every request to `/graphql` and `/api/graphql`. Nautobot's GraphQL schema is read-only, so secret *values* stored in Nautobot are not submitted by clients. However, the query document and variables still contain user-supplied **filter and search terms** (for example, `secrets(name: "prod-db-root-password")` or a `q` search string). These terms may themselves be sensitive, and apps that register custom GraphQL mutations would have their input arguments captured here as well.
+- **Database** - The `db.statement` attribute on every SQL query span contains the full query text, including literal values bound into the statement.
+
+If telemetry is routed to an external backend, account for this in your data-handling and retention policy.
+
+OpenTelemetry does not provide a single SDK setting to globally redact attribute values; the vendor-neutral approach is to filter at the collector before export. The OpenTelemetry Collector provides four standard processors for this:
+
+- `attributes` - remove, hash, or modify specific named attributes.
+- `redaction` - delete all attributes *except* those on an allow-list.
+- `filter` - drop entire spans, logs, or metrics matching a condition.
+- `transform` - rewrite values with regular expressions (for example, masking patterns that look like tokens).
+
+For example, to strip GraphQL variables and hash the SQL statement before export, add an `attributes` processor to the `otel-collector.yaml` traces pipeline:
 
 ```yaml
 processors:
@@ -148,9 +166,16 @@ processors:
     actions:
       - key: graphql.variables
         action: delete
+      - key: db.statement
+        action: hash
+
+service:
+  pipelines:
+    traces:
+      processors: [attributes]
 ```
 
-Alternatively, configure tail-based sampling rules at the collector to exclude traces containing specific operation types.
+As a coarse, SDK-side safety net you can also cap how much of any single attribute value is recorded by setting the standard `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` environment variable (an integer character limit; unlimited by default). This truncates long values such as large query documents before they leave the process, but it does not selectively redact - use collector-side processors for targeted redaction.
 
 ### Outbound propagation to untrusted services
 

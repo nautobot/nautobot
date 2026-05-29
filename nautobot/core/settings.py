@@ -1303,8 +1303,16 @@ KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTE
 
 OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
 OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
-OTEL_TRACES_EXPORTER = os.getenv("OTEL_TRACES_EXPORTER", "otlp").split(",")
-OTEL_METRICS_EXPORTER = os.getenv("OTEL_METRICS_EXPORTER", "otlp").split(",")
+OTEL_TRACES_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_TRACES_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
+OTEL_METRICS_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_METRICS_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
 
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")

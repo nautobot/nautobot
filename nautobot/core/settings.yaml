@@ -1555,12 +1555,18 @@ properties:
       - "none"
     default:
     - "otlp"
-    description: "Set how to export OpenTelemetry metrics in comma-separated format."
+    description: >-
+      A list of OpenTelemetry metrics exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_METRICS_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_METRICS_EXPORTER"
     version_added: "3.2.0"
   OTEL_PYTHON_DJANGO_INSTRUMENT:
     type: "boolean"
     default: false
-    description: "Setting this to true enables OpenTelemetry Metrics including propagating the Traceparent header in API requests."
+    description: >-
+      Setting this to true enables OpenTelemetry instrumentation (traces, metrics, and logs) for
+      Nautobot, including propagating the Traceparent header in API requests.
     version_added: "3.2.0"
   OTEL_PYTHON_LOG_CORRELATION:
     type: "boolean"
@@ -1579,7 +1585,11 @@ properties:
       - "none"
     default:
     - "otlp"
-    description: "Set how to export OpenTelemetry traces in comma-separated format."
+    description: >-
+      A list of OpenTelemetry trace exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_TRACES_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_TRACES_EXPORTER"
     version_added: "3.2.0"
   PAGINATE_COUNT:
     default: 50

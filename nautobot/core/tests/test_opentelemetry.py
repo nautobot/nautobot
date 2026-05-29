@@ -1,6 +1,7 @@
 """Tests for OpenTelemetry instrumentation in Nautobot."""
 
 import json
+import os
 from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory
@@ -56,6 +57,85 @@ class InstrumentFunctionTest(testing.TestCase):
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
 
 
+class InstrumentExporterBranchTest(testing.TestCase):
+    """Verify instrument() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard."""
+
+    def setUp(self):
+        super().setUp()
+        self._original_provider = otel_trace.get_tracer_provider()
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+            instrumentor().uninstrument()
+
+    def tearDown(self):
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+            instrumentor().uninstrument()
+        otel_trace.set_tracer_provider(self._original_provider)
+        super().tearDown()
+
+    def _patch_settings(self, **overrides):
+        """Patch instrument()'s view of settings with sensible defaults that disable noisy layers."""
+        defaults = {
+            "OTEL_TRACES_EXPORTER": ["none"],
+            "OTEL_METRICS_EXPORTER": ["none"],
+            "OTEL_EXPORTER_OTLP_ENDPOINT": "",
+            "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+            "OTEL_EXPORTER_OTLP_INSECURE": False,
+            "OTEL_PYTHON_LOG_CORRELATION": False,
+        }
+        defaults.update(overrides)
+        return patch.multiple("nautobot.core.cli.opentelemetry.settings", **defaults)
+
+    def test_otlp_trace_exporter_skipped_when_endpoint_unset(self):
+        """The OTLP trace exporter must be skipped (with a warning) when the endpoint is empty."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            with self._patch_settings(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
+                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                    instrument()
+
+        mock_exporter.assert_not_called()
+        self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
+
+    def test_otlp_metric_exporter_skipped_when_endpoint_unset(self):
+        """The OTLP metric exporter must be skipped (with a warning) when the endpoint is empty."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_exporter:
+            with self._patch_settings(OTEL_METRICS_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
+                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                    instrument()
+
+        mock_exporter.assert_not_called()
+        self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
+
+    def test_otlp_trace_exporter_created_when_endpoint_set(self):
+        """The OTLP trace exporter must be constructed with the configured endpoint when it is set."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            with self._patch_settings(
+                OTEL_TRACES_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+                OTEL_EXPORTER_OTLP_INSECURE=True,
+            ):
+                instrument()
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
+
+    def test_console_trace_exporter_used_without_endpoint(self):
+        """The console trace exporter does not require an endpoint and must be attached regardless."""
+        with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_exporter:
+            with self._patch_settings(OTEL_TRACES_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
+                instrument()
+
+        mock_exporter.assert_called_once()
+
+    def test_none_exporter_attaches_no_trace_processors(self):
+        """When OTEL_TRACES_EXPORTER is 'none', neither OTLP nor console exporters are constructed."""
+        with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_console:
+            with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_otlp:
+                with self._patch_settings(OTEL_TRACES_EXPORTER=["none"]):
+                    instrument()
+
+        mock_console.assert_not_called()
+        mock_otlp.assert_not_called()
+
+
 class APITraceGenerationTest(testing.APITestCase):
     """Verify that OpenTelemetry spans are generated when an API endpoint is called."""
 
@@ -64,6 +144,11 @@ class APITraceGenerationTest(testing.APITestCase):
         self._exporter = InMemorySpanExporter()
         self._provider = TracerProvider()
         self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
+        # DjangoInstrumentor.instrument() is a no-op when the OTEL_PYTHON_DJANGO_INSTRUMENT environment
+        # variable is the string "False" (as it is in the default development environment). Force it on for
+        # the duration of this test so instrumentation actually attaches regardless of the ambient value.
+        self._env_patcher = patch.dict(os.environ, {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True"})
+        self._env_patcher.start()
         DjangoInstrumentor().uninstrument()
         DjangoInstrumentor().instrument(tracer_provider=self._provider)
         self.client.handler.load_middleware()
@@ -71,6 +156,7 @@ class APITraceGenerationTest(testing.APITestCase):
     def tearDown(self):
         DjangoInstrumentor().uninstrument()
         self.client.handler.load_middleware()
+        self._env_patcher.stop()
         super().tearDown()
 
     def test_api_request_generates_span(self):
