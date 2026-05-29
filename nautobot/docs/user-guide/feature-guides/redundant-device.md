@@ -91,8 +91,151 @@ TODO: Insert UML here
 | `vc_priority` | Integer (0–255) | No | Election priority for master role; higher values win (vendor behavior varies) |
 
 ### Sample API
+
 ### Sample Design Builder
+
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a two-member Cisco StackWise virtual chassis (`jcy-stackwise-01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`, and the stack ports between members are wired together using `"!connect_cable"` against the refs on switch 1.
+
+```
+devices:
+    # Switch 1 of the stack
+  - "!create_or_update:name": "jcy-stackwise-01"
+    location__name: "JCY"
+    status__name: "Active"
+    device_type__model: "C9300-48P"
+    role__name: "Access Switch"
+    "!ref": "sw1"
+    # Virtual chassis attributes
+    vc_position: 1
+    vc_priority: 15
+    # Virtual chassis creation with deferred assignment (Device created first then VC created with switch 1 as master)
+    virtual_chassis:
+      "!create_or_update:name": "jcy-stackwise-01"
+      domain: "jcy-stackwise-01"
+      master: "!ref:sw1"
+      deferred: true
+      "!ref": "virtual_chassis"
+    # Interfaces (subset for brevity)
+    interfaces:
+      - "!create_or_update:name": "GigabitEthernet0/0"
+        type: "1000base-t"
+        status__name: "Active"
+        mgmt_only: true
+        description: "Management Interface"
+        ip_address_assignments:
+          - "!create_or_update:ip_address__address": "192.168.1.10/24"
+            ip_address:
+              "!create_or_update:address": "192.168.1.10/24"
+              "!create_or_update:parent": "192.168.1.0/24"
+              status__name: "Active"
+              "!ref": "sw1_mgmt_ip"
+      - "!create_or_update:name": "StackPort1/1"
+        type: "cisco-stackwise-480"
+        status__name: "Active"
+        "!ref": "sw1_stackport_1"
+      - "!create_or_update:name": "StackPort1/2"
+        type: "cisco-stackwise-480"
+        status__name: "Active"
+        "!ref": "sw1_stackport_2"
+      - "!create_or_update:name": "Port-channel1"
+        type: "lag"
+        status__name: "Active"
+        mode: "tagged"
+        description: "Cross-stack uplink LAG to upstream distribution"
+        "!ref": "po1"
+      - "!create_or_update:name": "TenGigabitEthernet1/1/1"
+        type: "10gbase-x-sfpp"
+        status__name: "Active"
+        description: "Uplink"
+        lag: "!ref:po1"
+    # Deferred IP assignment to avoid dependency issues with interface creation/assignment
+    primary_ip4:
+      "address": "!ref:sw1_mgmt_ip"
+      deferred: true
+
+    # Switch 2 of the stack
+  - "!create_or_update:name": "jcy-stackwise-01:2"
+    location__name: "JCY"
+    status__name: "Active"
+    device_type__model: "C9300-48P"
+    role__name: "Access Switch"
+    # VC assignment to existing VC with switch 1 as master
+    virtual_chassis: "!ref:virtual_chassis"
+    # VC attributes
+    vc_position: 2
+    vc_priority: 14
+    # interfaces (subset for brevity)
+    interfaces:
+      - "!create_or_update:name": "GigabitEthernet0/0"
+        type: "1000base-t"
+        status__name: "Active"
+        mgmt_only: true
+        description: "Management"
+        vrf: "!ref:mgmt_vrf"
+      - "!create_or_update:name": "StackPort2/1"
+        type: "cisco-stackwise-480"
+        status__name: "Active"
+        "!connect_cable":
+          status__name: "Connected"
+          to: "!ref:sw1_stackport_2"
+      - "!create_or_update:name": "StackPort2/2"
+        type: "cisco-stackwise-480"
+        status__name: "Active"
+        "!connect_cable":
+          status__name: "Connected"
+          to: "!ref:sw1_stackport_1"
+      - "!create_or_update:name": "TenGigabitEthernet2/1/1"
+        type: "10gbase-x-sfpp"
+        status__name: "Active"
+        description: "Uplink"
+        lag: "!ref:po1"
+    # No primary IP assignment on switch 2 to avoid conflicts with switch 1 management IP
+```
+
 ### GraphQL
+
+The following query retrieves a virtual chassis by name and uses the master device's `vc_interfaces` field to return every interface across all chassis members in a single flat list. `vc_interfaces` on the VC master expands to the master's own interfaces plus the non-management interfaces of every other member, so there is no need to walk `members -> interfaces` separately.
+
+```graphql
+query ($vc_name: [String]) {
+  virtual_chassis(name: $vc_name) {
+    name
+    domain
+    master {
+      name
+      vc_interfaces {
+        name
+        type
+        enabled
+        mac_address
+        mode
+        description
+        device {
+          name
+          vc_position
+        }
+        lag {
+          name
+        }
+        ip_addresses {
+          address
+        }
+      }
+    }
+  }
+}
+```
+
+Query variables:
+
+```json
+{
+  "vc_name": "jcy-stackwise-01"
+}
+```
+
+!!! note
+    Because `vc_interfaces` is a property on the `Device` model, the same query can be run directly against the master device (e.g. `query { devices(name: ["jcy-stackwise-01"]) { vc_interfaces { ... } } }`) without going through `virtual_chassis` at all. Querying the `virtual_chassis` object is useful when you also need chassis-level attributes such as `domain` or want to confirm the master before traversing its interfaces.
 
 ===================
 ### Dual-chassis Single Control Plane
