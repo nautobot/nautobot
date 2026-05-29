@@ -242,7 +242,7 @@ class CeleryStrategy(JobRevokeStrategy):
             logger.warning("Failed to query Celery workers: %s", e)
             job_result.log(
                 f"Failed to query Celery workers: {e}",
-                level_choice=LogLevelChoices.LOG_WARNING,
+                level_choice=LogLevelChoices.LOG_ERROR,
                 grouping="revoking",
             )
             return JobLiveness.UNKNOWN
@@ -414,7 +414,7 @@ class K8sStrategy(JobRevokeStrategy):
             logger.warning("Kubernetes API error while checking job %s: %s", job_name, e)
             job_result.log(
                 f"Kubernetes API error while checking job {job_name}: {e}",
-                level_choice=LogLevelChoices.LOG_WARNING,
+                level_choice=LogLevelChoices.LOG_ERROR,
                 grouping="revoking",
             )
             return JobLiveness.UNKNOWN

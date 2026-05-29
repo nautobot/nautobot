@@ -1231,7 +1231,18 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = [
+            "id",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_revoked",
+            "name",
+            "status",
+            "user",
+            "revoked_by",
+            "scheduled_job",
+        ]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):

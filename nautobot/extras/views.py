@@ -3363,7 +3363,7 @@ def render_jobresult_revocation_type(revocation_type):
     """
     mapping = {
         "terminated": ("bg-danger", "Terminated"),
-        "repead": ("bg-warning", "Reaped"),
+        "reaped": ("bg-warning", "Reaped"),
         "abandoned": ("bg-body-secondary border", "Abandoned"),
     }
 
