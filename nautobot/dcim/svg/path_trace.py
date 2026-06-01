@@ -271,6 +271,19 @@ class CableTraceSVG:
 
         return (parent_key, lines)
 
+    def _cell_group_key(self, cell):
+        """Return the parent grouping key for a `node`/`passthrough_node` cell, else None.
+
+        Adjacent cells of the same type sharing this key collapse into one device box spanning the
+        columns (the leg terminations sit side by side). A pass-through node groups by its arriving
+        termination's parent (its departing port is on the same device).
+        """
+        if cell["type"] == "node" and cell.get("termination") is not None:
+            return self._get_parent_info(cell["termination"])[0]
+        if cell["type"] == "passthrough_node" and cell.get("arriving") is not None:
+            return self._get_parent_info(cell["arriving"])[0]
+        return None
+
     def _fit_text(self, text, max_width, font_size=None):
         """Truncate `text` with an ellipsis if its estimated rendered width exceeds `max_width` px.
 
@@ -462,7 +475,7 @@ class CableTraceSVG:
                 cell = raw_rows[row_idx][col_idx]
                 cell.setdefault("continuation", False)
 
-        # Step 4: Group consecutive same-parent node cells into colspan.
+        # Step 4: Group consecutive same-parent node (or pass-through node) cells into a colspan.
         rows = []
         for raw_row in raw_rows:
             row = list(raw_row)
@@ -470,38 +483,47 @@ class CableTraceSVG:
             col_idx = 0
             while col_idx < column_count:
                 cell = row[col_idx]
-                if cell["type"] == "node" and cell.get("termination") is not None:
-                    parent_key = self._get_parent_info(cell["termination"])[0]
-                    span_end = col_idx + 1
-                    while span_end < column_count:
-                        next_cell = row[span_end]
-                        if next_cell["type"] == "node" and next_cell.get("termination") is not None:
-                            if (
-                                self._get_parent_info(next_cell["termination"])[0] == parent_key
-                                and parent_key is not None
-                            ):
-                                span_end += 1
-                                continue
-                        break
+                group_key = self._cell_group_key(cell)
+                if group_key is None:
+                    col_idx += 1
+                    continue
 
-                    colspan = span_end - col_idx
-                    if colspan > 1:
-                        terminations = [row[spanned_col]["termination"] for spanned_col in range(col_idx, span_end)]
+                # Span adjacent cells of the same type sharing the parent grouping key.
+                span_end = col_idx + 1
+                while (
+                    span_end < column_count
+                    and row[span_end]["type"] == cell["type"]
+                    and self._cell_group_key(row[span_end]) == group_key
+                ):
+                    span_end += 1
+
+                colspan = span_end - col_idx
+                if colspan > 1:
+                    spanned = range(col_idx, span_end)
+                    if cell["type"] == "node":
                         row[col_idx] = {
                             "type": "grouped_node",
                             "col": col_idx,
                             "colspan": colspan,
-                            "terminations": terminations,
-                            "parent_key": parent_key,
+                            "terminations": [row[c]["termination"] for c in spanned],
+                            "parent_key": group_key,
                             "continuation": False,
                         }
-                        for spanned_col in range(col_idx + 1, span_end):
-                            row[spanned_col] = {"type": "spanned", "col": spanned_col, "continuation": False}
-                        col_idx = span_end
-                    else:
-                        cell["colspan"] = 1
-                        col_idx += 1
+                    else:  # passthrough_node
+                        row[col_idx] = {
+                            "type": "grouped_passthrough_node",
+                            "col": col_idx,
+                            "colspan": colspan,
+                            "arriving": [row[c]["arriving"] for c in spanned],
+                            "departing": [row[c]["departing"] for c in spanned],
+                            "parent_key": group_key,
+                            "continuation": False,
+                        }
+                    for spanned_col in range(col_idx + 1, span_end):
+                        row[spanned_col] = {"type": "spanned", "col": spanned_col, "continuation": False}
+                    col_idx = span_end
                 else:
+                    cell["colspan"] = 1
                     col_idx += 1
 
             rows.append(row)
@@ -654,7 +676,7 @@ class CableTraceSVG:
                 row_h = max(row_h, self.TERM_H / 2 + self.NODE_H)
             elif cell["type"] == "grouped_node":
                 row_h = max(row_h, self.TERM_H / 2 + self.NODE_H)
-            elif cell["type"] == "passthrough_node":
+            elif cell["type"] in ("passthrough_node", "grouped_passthrough_node"):
                 # Arriving termination + free text area + departing termination.
                 row_h = max(row_h, 2 * self.TERM_H + self.NODE_TEXT_AREA_H)
             elif cell["type"] == "cable":
@@ -731,6 +753,9 @@ class CableTraceSVG:
 
             elif cell["type"] == "passthrough_node":
                 self._draw_passthrough_node(dwg, cx, y, cell["arriving"], cell["departing"])
+
+            elif cell["type"] == "grouped_passthrough_node":
+                self._draw_grouped_passthrough_node(dwg, y, cell, col_centers)
 
     # ──────────────────────────────────────────────
     # Cell drawing primitives
@@ -880,6 +905,39 @@ class CableTraceSVG:
             self._draw_termination_box(dwg, col_centers[start_col + term_index], y, termination)
 
         return box_y + self.NODE_H
+
+    def _draw_grouped_passthrough_node(self, dwg, y, cell, col_centers):
+        """Draw a pass-through device box spanning multiple columns.
+
+        Like `_draw_grouped_node_cell`, but with the arriving termination boxes side by side at the
+        top and the departing termination boxes side by side at the bottom (e.g. a patch panel whose
+        front ports pass through to rear ports across several breakout legs).
+        """
+        arriving = cell["arriving"]
+        departing = cell["departing"]
+        start_col = cell["col"]
+        colspan = cell["colspan"]
+        half_term_h = self.TERM_H / 2
+        text_area_h = self.NODE_TEXT_AREA_H
+        box_h = half_term_h + text_area_h + half_term_h
+
+        first_cx = col_centers[start_col]
+        last_cx = col_centers[start_col + colspan - 1]
+        group_cx = (first_cx + last_cx) / 2
+
+        box_w = (last_cx - first_cx) + self.TERM_W + self.GAP_Y * 2
+        box_x = first_cx - self.TERM_W / 2 - self.GAP_Y
+        box_y = y + half_term_h
+        departing_y = box_y + box_h - half_term_h
+        text_area_top = box_y + half_term_h
+
+        self._draw_parent_box(dwg, box_x, box_y, box_w, box_h, group_cx, text_area_top, text_area_h, arriving[0])
+        for term_index, termination in enumerate(arriving):
+            self._draw_termination_box(dwg, col_centers[start_col + term_index], y, termination)
+        for term_index, termination in enumerate(departing):
+            self._draw_termination_box(dwg, col_centers[start_col + term_index], departing_y, termination)
+
+        return departing_y + self.TERM_H
 
     def _draw_cable(self, dwg, cx, y, cable, near_end=None, far_end=None):
         """Draw a cable segment with color bar, label, breakout lane info, and status badge."""
