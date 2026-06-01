@@ -5218,19 +5218,22 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
 #
 
 
-class InventoryItemListView(generic.ObjectListView):
-    queryset = InventoryItem.objects.all()
-    filterset = filters.InventoryItemFilterSet
-    filterset_form = forms.InventoryItemFilterForm
-    table = tables.InventoryItemTable
+class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin, NautobotUIViewSet):
+    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version")
+    filterset_class = filters.InventoryItemFilterSet
+    filterset_form_class = forms.InventoryItemFilterForm
+    bulk_update_form_class = forms.InventoryItemBulkEditForm
+    create_form_class = forms.InventoryItemCreateForm
+    form_class = forms.InventoryItemForm
+    serializer_class = serializers.InventoryItemSerializer
+    table_class = tables.InventoryItemTable
+    create_template_name = "dcim/inventoryitem_add.html"
     action_buttons = ("import", "export")
-
-
-class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
     device_breadcrumb_url = "dcim:device_inventory"
 
     def get_extra_context(self, request, instance):
+        if instance is None or self.action != "retrieve":
+            return super().get_extra_context(request, instance)
         # Software images
         if instance.software_version is not None:
             software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
@@ -5243,45 +5246,11 @@ class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
             **super().get_extra_context(request, instance),
         }
 
-
-class InventoryItemEditView(generic.ObjectEditView):
-    queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_edit.html"
-
-
-class InventoryItemCreateView(generic.ComponentCreateView):
-    queryset = InventoryItem.objects.all()
-    form = forms.InventoryItemCreateForm
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_add.html"
-
-
-class InventoryItemDeleteView(generic.ObjectDeleteView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = InventoryItem.objects.all()
-    table = tables.InventoryItemTable
-
-
-class InventoryItemBulkEditView(generic.BulkEditView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    filterset = filters.InventoryItemFilterSet
-    table = tables.InventoryItemTable
-    form = forms.InventoryItemBulkEditForm
-
-
-class InventoryItemBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkDeleteView(generic.BulkDeleteView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    table = tables.InventoryItemTable
-    template_name = "dcim/inventoryitem_bulk_delete.html"
-    filterset = filters.InventoryItemFilterSet
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object and selected_object.device:
+            return selected_object.device.display
+        return ""
 
 
 #

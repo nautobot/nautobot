@@ -1,5 +1,2 @@
-{% extends 'generic/object_bulk_destroy.html' %}
-
-{% block message_extra %}
-    <p class="text-center text-danger"><span class="mdi mdi-alert"></span> This will also delete all child inventory items of those listed.</p>
-{% endblock %}
+{% extends 'dcim/inventoryitem_bulk_destroy.html' %}
+{% comment %}4.0 TODO: remove this template, which only exists for backward compatibility with 3.0 and earlier{% endcomment %}
