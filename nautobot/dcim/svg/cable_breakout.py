@@ -41,6 +41,9 @@ class BreakoutDiagramSVG:
     TERMINATION_LABEL_GAP = 8  # gap between connector edge and termination label
     TERMINATION_LABEL_MAX_CHARS = 40  # truncate visible labels longer than this
     FONT_FAMILY = "var(--bs-font-sans-serif)"
+    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
+    # reserve horizontal space for labels; 0.65 covers uppercase-heavy strings.
+    FONT_WIDTH_RATIO = 0.65
 
     COLOR_LANE_CONNECTED = "var(--bs-success)"
     COLOR_LANE_DISCONNECTED = "var(--bs-tertiary-color)"
@@ -91,7 +94,9 @@ class BreakoutDiagramSVG:
         # Line area width scales with the largest group of parallel lanes so that
         # staggered labels within a single (a, b) pair don't overlap horizontally.
         max_parallel_lanes = max((len(g) for g in self.lane_groups.values()), default=1)
-        lane_label_x_spacing = max(len(e.label) + 1 for e in self.entries) * self.LANE_LABEL_FONT_SIZE / 2
+        lane_label_x_spacing = (
+            max(len(e.label) + 1 for e in self.entries) * self.LANE_LABEL_FONT_SIZE * self.FONT_WIDTH_RATIO
+        )
         self.line_area_width = max(self.MINIMUM_LINE_AREA_WIDTH, (max_parallel_lanes + 1) * lane_label_x_spacing)
 
         # Reserve outer horizontal space for visible termination labels alongside each connector.
@@ -103,7 +108,7 @@ class BreakoutDiagramSVG:
         if not labels:
             return 0
         max_len = min(max(len(label) for label in labels.values()), self.TERMINATION_LABEL_MAX_CHARS)
-        return self.TERMINATION_LABEL_GAP + max_len * self.TERMINATION_LABEL_FONT_SIZE / 2
+        return self.TERMINATION_LABEL_GAP + max_len * self.TERMINATION_LABEL_FONT_SIZE * self.FONT_WIDTH_RATIO
 
     def _y_offset(self, position, total_positions, connector_height):
         """Vertical offset relative to a connector's center for the given 1-indexed lane position."""

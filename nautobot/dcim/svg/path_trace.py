@@ -5,9 +5,11 @@ origin to its destination(s), including breakout fan-outs, pass-through ports, m
 and unconnected breakout lanes. See `CableTraceSVG` for the public entry point.
 """
 
+from django.contrib.contenttypes.models import ContentType
+from django.utils.html import mark_safe
 import svgwrite
 
-from django.contrib.contenttypes.models import ContentType
+from nautobot.core.templatetags.helpers import fgcolor
 
 
 class CableTraceSVG:
@@ -30,7 +32,9 @@ class CableTraceSVG:
 
     # Layout: overall dimensions
     MAX_WIDTH = 400
-    COL_WIDTH = 140
+    # Column pitch must be >= NODE_W so adjacent device boxes in different columns don't overlap;
+    # the extra ~20 px gives a visible gap between distinct devices.
+    COL_WIDTH = 200
     INITIAL_HEIGHT = 800
     INITIAL_FANOUT_HEIGHT = 2000
     EMPTY_HEIGHT = 60
@@ -40,10 +44,14 @@ class CableTraceSVG:
     NODE_H = 50
     NODE_BORDER_RADIUS = 6
 
-    # Layout: termination sub-box
-    TERM_W = 120
+    # Layout: termination sub-box. TERM_W bumped to fit longer port / circuit termination names
+    # without immediate truncation; values that still overflow get clipped to an ellipsis with
+    # the full string available on hover via a `<title>` element.
+    TERM_W = 160
     TERM_H = 26
     TERM_BORDER_RADIUS = 4
+    # Horizontal padding inside the termination box; the usable text area is `TERM_W - 2 * TERM_TEXT_PAD`.
+    TERM_TEXT_PAD = 6
 
     # Layout: cable segment
     CABLE_H = 120
@@ -60,11 +68,18 @@ class CableTraceSVG:
     TEXT_VERTICAL_OFFSET = 4
     TRACE_END_PADDING = 6
     TRACE_END_HEIGHT = 20
+    # Minimum reserve for cable labels/badges hanging off the rightmost column. Actual reserve
+    # is sized to the longest cable label found in the trace; this is the floor used when no
+    # cables (or only very short ones) are present.
+    LABEL_RIGHT_RESERVE_MIN = 120
 
     # Typography
     FONT_FAMILY = "system-ui, -apple-system, sans-serif"
     FONT_SIZE = 12
     FONT_SIZE_SM = 10
+    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
+    # size badge backgrounds; 0.65 covers uppercase-heavy strings.
+    FONT_WIDTH_RATIO = 0.65
 
     # Line widths
     FORK_LINE_WIDTH = 2
@@ -224,6 +239,35 @@ class CableTraceSVG:
 
         return (parent_key, parent_name, detail, parent_url)
 
+    def _fit_text(self, text, max_width, font_size=None):
+        """Truncate `text` with an ellipsis if its estimated rendered width exceeds `max_width` px.
+
+        Width estimate uses the `font_size * FONT_WIDTH_RATIO` heuristic; callers should attach the
+        un-truncated `text` as a `<title>` tooltip for full discoverability when truncation occurs.
+        """
+        if not text:
+            return ""
+        font_size = font_size or self.FONT_SIZE
+        max_chars = max(int(max_width / (font_size * self.FONT_WIDTH_RATIO)), 1)
+        if len(text) <= max_chars:
+            return text
+        # Reserve one slot for the ellipsis glyph.
+        return text[: max(max_chars - 1, 1)] + "…"
+
+    def _max_cable_label_width(self, header_cable, column_entries):
+        """Estimate the widest cable label that will be drawn to the right of any column center."""
+        labels = []
+        if header_cable is not None:
+            labels.append(str(header_cable))
+        for entries in column_entries:
+            for entry in entries:
+                if entry.get("type") == "cable" and entry.get("cable") is not None:
+                    labels.append(str(entry["cable"]))
+        if not labels:
+            return 0
+        max_chars = max(len(label) for label in labels)
+        return max_chars * self.FONT_SIZE * self.FONT_WIDTH_RATIO
+
     def _cable_lane_info(self, cable, termination):
         """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
         if cable is None or termination is None:
@@ -273,11 +317,6 @@ class CableTraceSVG:
             {"type": "empty", "col": int, "continuation": bool}
         """
         column_count = len(self.fanout_paths)
-
-        col_width = self.COL_WIDTH
-        total_width = max(column_count * col_width, self.MAX_WIDTH)
-        x_offset = max((total_width - column_count * col_width) / 2, 0)
-        col_centers = [x_offset + (col_idx + 0.5) * col_width for col_idx in range(column_count)]
 
         near_end, cable, _ = self.traced_path[0] if self.traced_path else (None, None, None)
         cable_color = f"#{cable.color}" if cable and cable.color else self.COLOR_CABLE_DEFAULT
@@ -340,6 +379,25 @@ class CableTraceSVG:
                     entry_index += 1
 
             column_entries.append(entries)
+
+        # Layout: now that we know every cable label in the trace, size the canvas to fit them
+        # and center the column band horizontally within `total_width`.
+        col_width = self.COL_WIDTH
+        # Leftmost / rightmost overhang relative to a column center.
+        left_overhang = max(self.NODE_W / 2, 0)
+        right_overhang = (
+            self.LABEL_OFFSET_X
+            + self._max_cable_label_width(header["cable"], column_entries)
+            + self.GAP_Y * 2  # safety margin: width estimation is a fraction-of-em approximation
+        )
+        right_overhang = max(right_overhang, self.LABEL_RIGHT_RESERVE_MIN, left_overhang)
+        # `content_extent` is the actual horizontal range from leftmost node edge to rightmost label edge,
+        # measured relative to the first column's center.
+        content_extent = (column_count - 1) * col_width + left_overhang + right_overhang
+        total_width = max(content_extent, self.MAX_WIDTH)
+        # Center the content band; first column's center sits at `left_overhang + extra/2`.
+        first_col_x = left_overhang + max((total_width - content_extent) / 2, 0)
+        col_centers = [first_col_x + col_idx * col_width for col_idx in range(column_count)]
 
         # Step 2: Normalize into rows (pad with empty cells).
         max_depth = max((len(entries) for entries in column_entries), default=0)
@@ -491,7 +549,7 @@ class CableTraceSVG:
             y = self._draw_trace_end(dwg, trunk_cx, y, incomplete=True)
             dwg["height"] = f"{y + self.GAP_Y}px"
             dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
-            return dwg.tostring()
+            return mark_safe(dwg.tostring())  # noqa: S308
 
         cable_color = header["cable_color"]
         is_breakout_fanout = bool(cable.cable_type_id) and len(col_centers) > 1
@@ -555,7 +613,7 @@ class CableTraceSVG:
         dwg["height"] = f"{y + self.GAP_Y}px"
         dwg["width"] = f"{total_width}px"
         dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
-        return dwg.tostring()
+        return mark_safe(dwg.tostring())  # noqa: S308
 
     def _compute_row_height(self, row):
         row_h = 0
@@ -667,31 +725,38 @@ class CableTraceSVG:
         )
 
         text_center_y = text_area_top + text_area_h / 2
+        # Usable text area inside the device box, after the NODE_BORDER_RADIUS rounded corners eat
+        # a few pixels at each end. Detail line is rendered at FONT_SIZE_SM so fits a few more chars.
+        text_area_w = box_w - 2 * self.NODE_BORDER_RADIUS
         if parent_name:
+            display_name = self._fit_text(parent_name, text_area_w)
             link = dwg.a(href=parent_url, target="_top")
-            link.add(
-                dwg.text(
-                    parent_name,
-                    insert=(text_cx, text_center_y - self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
-                    text_anchor="middle",
-                    fill=self.COLOR_LINK,
-                    font_size=f"{self.FONT_SIZE}px",
-                    font_family=self.FONT_FAMILY,
-                    font_weight="bold",
-                )
+            name_el = dwg.text(
+                display_name,
+                insert=(text_cx, text_center_y - self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
+                text_anchor="middle",
+                fill=self.COLOR_LINK,
+                font_size=f"{self.FONT_SIZE}px",
+                font_family=self.FONT_FAMILY,
+                font_weight="bold",
             )
+            if display_name != parent_name:
+                name_el.set_desc(title=parent_name)
+            link.add(name_el)
             dwg.add(link)
         if parent_detail:
-            dwg.add(
-                dwg.text(
-                    parent_detail,
-                    insert=(text_cx, text_center_y + self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
-                    text_anchor="middle",
-                    fill=self.COLOR_TEXT_MUTED,
-                    font_size=f"{self.FONT_SIZE_SM}px",
-                    font_family=self.FONT_FAMILY,
-                )
+            display_detail = self._fit_text(parent_detail, text_area_w, font_size=self.FONT_SIZE_SM)
+            detail_el = dwg.text(
+                display_detail,
+                insert=(text_cx, text_center_y + self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
+                text_anchor="middle",
+                fill=self.COLOR_TEXT_MUTED,
+                font_size=f"{self.FONT_SIZE_SM}px",
+                font_family=self.FONT_FAMILY,
             )
+            if display_detail != parent_detail:
+                detail_el.set_desc(title=parent_detail)
+            dwg.add(detail_el)
 
     def _draw_node(self, dwg, cx, y, termination, term_position="top", is_last=False):
         """Draw a device node with one termination box (top or bottom)."""
@@ -851,9 +916,8 @@ class CableTraceSVG:
 
     def _draw_status_badge(self, dwg, x, y, status_name, bg_color):
         """Draw a Bootstrap-style badge pill with colored background and contrasting text."""
-        from nautobot.core.templatetags.helpers import fgcolor
 
-        text_width = len(status_name) * 6.5
+        text_width = len(status_name) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO
         badge_w = text_width + 12
         badge_h = self.FONT_SIZE_SM + 6
         badge_r = 4
@@ -887,6 +951,7 @@ class CableTraceSVG:
         is_active = termination == self.origin
         termination_url = self._url(termination) if termination else "#"
         termination_name = str(termination)
+        display_name = self._fit_text(termination_name, self.TERM_W - 2 * self.TERM_TEXT_PAD)
 
         border_color = self.COLOR_ACTIVE_BORDER if is_active else self.COLOR_TERM_BORDER
         border_width = 3 if is_active else 1
@@ -903,17 +968,19 @@ class CableTraceSVG:
             )
         )
         link = dwg.a(href=termination_url, target="_top")
-        link.add(
-            dwg.text(
-                termination_name,
-                insert=(cx, y + self.TERM_H / 2 + self.TEXT_VERTICAL_OFFSET),
-                text_anchor="middle",
-                fill=self.COLOR_LINK,
-                font_size=f"{self.FONT_SIZE}px",
-                font_family=self.FONT_FAMILY,
-                font_weight="bold",
-            )
+        text_el = dwg.text(
+            display_name,
+            insert=(cx, y + self.TERM_H / 2 + self.TEXT_VERTICAL_OFFSET),
+            text_anchor="middle",
+            fill=self.COLOR_LINK,
+            font_size=f"{self.FONT_SIZE}px",
+            font_family=self.FONT_FAMILY,
+            font_weight="bold",
         )
+        # Browser tooltip with the full name — useful when the rendered text was truncated.
+        if display_name != termination_name:
+            text_el.set_desc(title=termination_name)
+        link.add(text_el)
         dwg.add(link)
 
     def _draw_trace_end(self, dwg, cx, y, incomplete=False):
@@ -951,4 +1018,4 @@ class CableTraceSVG:
                 font_family=self.FONT_FAMILY,
             )
         )
-        return dwg.tostring()
+        return mark_safe(dwg.tostring())  # noqa: S308

@@ -471,7 +471,7 @@ class Command(BaseCommand):
 
         Lanes B1/B2 land directly on the same leaf (exercises `grouped_node` colspan).
         Lanes B3/B4 traverse two patch panels with FrontPort↔RearPort pass-throughs.
-        """
+        """  # noqa: RUF002
         spine = self._interface(self.spine1, "Ethernet11/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
 
         # B1, B2 — direct to LEAF-01 (same device → grouped node on the renderer).
