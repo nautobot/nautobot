@@ -110,45 +110,51 @@ class MetadataType(PrimaryModel):
         if self.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
             return None
         if self.data_type == MetadataTypeDataTypeChoices.TYPE_INTEGER:
-            return forms.IntegerField(required=required, initial=initial)
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
-            return forms.FloatField(required=required, initial=initial)
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
-            return forms.NullBooleanField(
+            field = forms.IntegerField(required=required, initial=initial)
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_FLOAT:
+            field = forms.FloatField(required=required, initial=initial)
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
+            field = forms.NullBooleanField(
                 required=required,
                 initial=initial,
                 widget=StaticSelect2(choices=((None, "---------"), (True, "True"), (False, "False"))),
             )
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
-            return NullableDateField(required=required, initial=initial, widget=DatePicker())
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
-            return forms.DateTimeField(required=required, initial=initial, widget=DateTimePicker())
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_URL:
-            return LaxURLField(required=required, initial=initial)
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_TEXT:
-            return forms.CharField(required=required, initial=initial, max_length=CHARFIELD_MAX_LENGTH)
-        if self.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
-            return CommentField(required=required, initial=initial, widget=SmallTextarea, label="")
-        if self.data_type in (
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_DATE:
+            field = NullableDateField(required=required, initial=initial, widget=DatePicker())
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_DATETIME:
+            field = forms.DateTimeField(required=required, initial=initial, widget=DateTimePicker())
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_URL:
+            field = LaxURLField(required=required, initial=initial)
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_TEXT:
+            field = forms.CharField(required=required, initial=initial, max_length=CHARFIELD_MAX_LENGTH)
+        elif self.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
+            field = CommentField(required=required, initial=initial, widget=SmallTextarea, label="")
+        elif self.data_type in (
             MetadataTypeDataTypeChoices.TYPE_SELECT,
             MetadataTypeDataTypeChoices.TYPE_MULTISELECT,
         ):
             choices = [(c.value, c.value) for c in self.choices.all()]
             if self.data_type == MetadataTypeDataTypeChoices.TYPE_SELECT:
-                return forms.ChoiceField(
+                field = forms.ChoiceField(
                     choices=add_blank_choice(choices),
                     required=required,
                     initial=initial,
                     widget=StaticSelect2(),
                 )
-            return forms.MultipleChoiceField(
-                choices=choices,
-                required=required,
-                initial=initial,
-                widget=StaticSelect2Multiple(),
-            )
-        # Fall back to raw JSON for TYPE_JSON and any unhandled type.
-        return JSONFormField(required=required, initial=initial)
+            else:
+                field = forms.MultipleChoiceField(
+                    choices=choices,
+                    required=required,
+                    initial=initial,
+                    widget=StaticSelect2Multiple(),
+                )
+        else:
+            # Fall back to raw JSON for TYPE_JSON and any unhandled type.
+            field = JSONFormField(required=required, initial=initial)
+        css_classes = field.widget.attrs.get("class", "")
+        if "form-control" not in css_classes:
+            field.widget.attrs["class"] = ("form-control " + css_classes).strip()
+        return field
 
 
 @extras_features(

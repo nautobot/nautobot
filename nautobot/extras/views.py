@@ -4273,9 +4273,6 @@ class ObjectMetadataUIViewSet(
             if field is not None:
                 field.label = "Value"
                 field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
-                css_classes = field.widget.attrs.get("class", "")
-                if "form-control" not in css_classes:
-                    field.widget.attrs["class"] = ("form-control " + css_classes).strip()
 
         class _ValueOnlyForm(django_forms.Form):
             pass
