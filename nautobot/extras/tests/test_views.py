@@ -6227,34 +6227,126 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = ObjectMetadata
 
+    @classmethod
+    def setUpTestData(cls):
+        text_mdt = MetadataType.objects.create(
+            name="Test Text Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_TEXT,
+        )
+        text_mdt.content_types.set(ContentType.objects.all())
+
+        contact_team_mdt = MetadataType.objects.create(
+            name="Test Contact Or Team Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+        )
+        contact_team_mdt.content_types.set(ContentType.objects.all())
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ip_ct = ContentType.objects.get_for_model(IPAddress)
+
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 1",
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 2",
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 3",
+            scoped_fields=["name"],
+            assigned_object_type=device_ct,
+            assigned_object_id=Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 4",
+            scoped_fields=["type"],
+            assigned_object_type=ip_ct,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        cls.contact_team_instance_with_contact = ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            contact=Contact.objects.first(),
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        cls.contact_team_instance_with_team = ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            team=Team.objects.first(),
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        target_location = Location.objects.filter(associated_object_metadata__isnull=True).last()
+        cls.form_data = {
+            "metadata_type": text_mdt.pk,
+            "contact": None,
+            "team": None,
+            "assigned_object_type": location_ct.pk,
+            "assigned_object_id": target_location.pk,
+            "scoped_fields": "time_zone",
+            "value": "new test value",
+        }
+        # The create view requires assigned_object_type / assigned_object_id query params on GET
+        # (entry must come from the parent object's Metadata tab); stash them for test overrides.
+        cls._create_url_query = f"assigned_object_type={location_ct.pk}&assigned_object_id={target_location.pk}"
+        cls.update_data = {
+            "scoped_fields": "status",
+            "value": "updated test value",
+        }
+        cls.text_mdt = text_mdt
+        cls.contact_team_mdt = contact_team_mdt
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(metadata_type=self.text_mdt)
+
+    def _get_url(self, action, instance=None):
+        url = super()._get_url(action, instance=instance)
+        if action == "add":
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{self._create_url_query}"
+        return url
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_column_in_list_view_rendered_correctly(self):
-        """
-        GET a list of objects as an authenticated user with permission to view the objects.
-        """
-        instance1 = self._get_queryset().filter(contact__isnull=False).first()
-        instance2 = self._get_queryset().filter(team__isnull=False).first()
+        instance1 = self.contact_team_instance_with_contact
+        instance2 = self.contact_team_instance_with_team
 
-        # Try GET to permitted objects
-        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        list_url = self._get_url("list") + f"?metadata_type={self.contact_team_mdt.pk}"
+        response = self.client.get(list_url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Check if the contact or team absolute url is rendered in the ObjectListView table
         self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
         self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
-        # TODO check if other types of values are rendered correctly
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
         instance1 = self._get_queryset().first()
         instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
-        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
 
-        # Add object-level permission
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
@@ -6264,14 +6356,156 @@ class ObjectMetadataTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        # Try GET with object-level permission
         response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
-        # fields and if they are rendered.
         self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_view_redirects_without_query_params(self):
+        """The create view requires `assigned_object_type` + `assigned_object_id` in the URL
+        query string (entry is from the parent object's Metadata tab). Without them, GET should
+        redirect to the list view rather than rendering a form the user can't actually use."""
+        self.add_permissions("extras.add_objectmetadata")
+        response = self.client.get(reverse("extras:objectmetadata_add"))
+        self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("parent object's detail view" in m for m in messages_list),
+            f"Expected redirect warning, got: {messages_list}",
+        )
+
+    def test_create_view_redirects_when_query_params_do_not_resolve(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        bogus_uuid = "00000000-0000-0000-0000-000000000000"
+        nonexistent_ct_pk = str(ContentType.objects.order_by("-pk").first().pk + 9999)
+        for case_name, params in [
+            ("nonexistent content type", {"assigned_object_type": nonexistent_ct_pk, "assigned_object_id": bogus_uuid}),
+            ("non-numeric content type", {"assigned_object_type": "not-a-number", "assigned_object_id": bogus_uuid}),
+            (
+                "valid CT but nonexistent object",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": bogus_uuid},
+            ),
+            (
+                "malformed UUID for object id",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": "ppp"},
+            ),
+        ]:
+            with self.subTest(case=case_name):
+                with self.assertLogs("nautobot.extras.views", level="DEBUG") as captured_logs:
+                    response = self.client.get(reverse("extras:objectmetadata_add"), data=params)
+                self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+                messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+                self.assertTrue(
+                    any("does not exist" in m for m in messages_list),
+                    f"[{case_name}] expected does-not-exist warning, got: {messages_list}",
+                )
+                self.assertTrue(
+                    any("could not resolve assigned object" in log for log in captured_logs.output),
+                    f"[{case_name}] expected debug log entry, got: {captured_logs.output}",
+                )
+
+    def test_create_view_honors_return_url_on_validation_failure(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        return_url = "/dcim/devices/"  # any safe local URL
+        response = self.client.get(
+            reverse("extras:objectmetadata_add"),
+            data={
+                "assigned_object_type": str(location_ct.pk),
+                "assigned_object_id": "ppp",  # malformed UUID
+                "return_url": return_url,
+            },
+        )
+        self.assertRedirects(response, return_url, fetch_redirect_response=False)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_renders_text_input_for_text_metadata_type(self):
+        """`value_widget` HTMX endpoint returns a CharField-backed widget for TYPE_TEXT."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            data={"metadata_type": str(self.text_mdt.pk)},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # TYPE_TEXT renders an <input type="text"> with the field name `value`.
+        self.assertIn('name="value"', content)
+        # Help text mentions the resolved metadata type's display name.
+        self.assertIn(str(self.text_mdt), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_contact_team_metadata_type(self):
+        """For CONTACT_TEAM types, `MetadataType.to_form_field` returns None, so the value
+        widget endpoint renders an empty fragment (no input). HTMX swaps in nothing, removing
+        any prior value input."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            data={"metadata_type": str(self.contact_team_mdt.pk)},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset).strip()
+        self.assertNotIn('name="value"', content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_missing_metadata_type(self):
+        """No `metadata_type` query param → empty fragment, no crash."""
+        response = self.client.get(
+            reverse("extras:objectmetadata_value_widget"),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn('name="value"', response.content.decode(response.charset))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_invalid_metadata_type(self):
+        """Bogus pk or non-existent metadata_type → swallow via the view's try/except, return
+        an empty fragment instead of raising."""
+        for bogus in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
+            with self.subTest(metadata_type=bogus):
+                response = self.client.get(
+                    reverse("extras:objectmetadata_value_widget"),
+                    data={"metadata_type": bogus},
+                    headers={"HX-Request": "true"},
+                )
+                self.assertHttpStatus(response, 200)
+                self.assertNotIn('name="value"', response.content.decode(response.charset))
+
+    def test_object_metadata_fields_panel_delegates_value_rendering_to_model(self):
+        """The panel's render_value override delegates `_value` rendering to
+        ObjectMetadata.get_value_display() so URL/Markdown/JSON/etc. produce type-appropriate output
+        (per-type rendering itself is unit-tested on the model)."""
+        from django.template import Context
+
+        from nautobot.extras.views import _ObjectMetadataFieldsPanel
+
+        panel = _ObjectMetadataFieldsPanel(
+            weight=100,
+            fields=["metadata_type", "_value"],
+        )
+        text_instance = self._get_queryset().first()
+        context = Context({"object": text_instance})
+        self.assertEqual(
+            panel.render_value("_value", text_instance._value, context),
+            text_instance.get_value_display(),
+        )
+
+    def test_object_metadata_fields_panel_hide_if_unset_drops_irrelevant_rows(self):
+        """`_value`, `contact`, and `team` are listed in `hide_if_unset` on the configured panel.
+
+        This is what makes the detail view drop the meaningless row depending on data_type:
+        - For CONTACT_TEAM records, `_value` is always None and gets hidden.
+        - For all other types, `contact`/`team` are always None and get hidden.
+        """
+        from nautobot.extras.views import ObjectMetadataUIViewSet
+
+        panel = ObjectMetadataUIViewSet.object_detail_content.panels[0]
+        self.assertIn("_value", panel.hide_if_unset)
+        self.assertIn("contact", panel.hide_if_unset)
+        self.assertIn("team", panel.hide_if_unset)
 
 
 class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):

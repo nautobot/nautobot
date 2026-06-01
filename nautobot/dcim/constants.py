@@ -78,29 +78,33 @@ CABLE_TERMINATION_MODELS = Q(
     )
 )
 
+# Maps each cable-termination type to the list of types its other end may connect to. List order is
+# significant: the first entry is used as the default B-side type when creating a cable from a given
+# A-side type (see `CableForm._init_lane_fields`), so each list should lead with the most natural /
+# most common peer for that termination type.
 COMPATIBLE_TERMINATION_TYPES = {
     "circuittermination": ["interface", "frontport", "rearport", "circuittermination"],
     "consoleport": ["consoleserverport", "frontport", "rearport"],
     "consoleserverport": ["consoleport", "frontport", "rearport"],
     "interface": ["interface", "circuittermination", "frontport", "rearport"],
     "frontport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
     "powerfeed": ["powerport"],
     "poweroutlet": ["powerport"],
     "powerport": ["poweroutlet", "powerfeed"],
     "rearport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
 }
 
@@ -116,6 +120,28 @@ BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
         "rearport",
     }
 )
+
+# Per-type one-to-one FK field name on `CableToCableTermination` → ContentType natural key
+# (app_label, model) for its target model. At most one of these FKs may be non-null on each row;
+# enforced by a CheckConstraint on the model. The "exactly one" stricter requirement is enforced
+# in `clean()` — at the DB level the all-null state is allowed because Django's cascade-delete
+# machinery temporarily nulls the nullable FK before deleting the row, and a CHECK constraint
+# would block that intermediate step on MySQL.
+TERMINATION_FK_TO_CONTENT_TYPE = {
+    "circuit_termination": ("circuits", "circuittermination"),
+    "console_port": ("dcim", "consoleport"),
+    "console_server_port": ("dcim", "consoleserverport"),
+    "front_port": ("dcim", "frontport"),
+    "interface": ("dcim", "interface"),
+    "power_feed": ("dcim", "powerfeed"),
+    "power_outlet": ("dcim", "poweroutlet"),
+    "power_port": ("dcim", "powerport"),
+    "rear_port": ("dcim", "rearport"),
+}
+TERMINATION_FK_FIELDS = tuple(TERMINATION_FK_TO_CONTENT_TYPE)
+# Reverse map: ContentType natural key (app_label, model) → FK field name. Used by signal /
+# form / serializer code that needs to write to the right per-type FK given a termination instance.
+CONTENT_TYPE_TO_TERMINATION_FK = {ct: fk for fk, ct in TERMINATION_FK_TO_CONTENT_TYPE.items()}
 
 # AOC Ethernet Breakouts (strands_per_lane=1)
 # Fiber MPO Fanouts (strands_per_lane=2, duplex)
@@ -133,6 +159,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x4 AOC Fanout": {
         "description": "1 trunk connector broken out to 4 individual legs",
@@ -145,6 +172,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "1x8 AOC Fanout": {
         "description": "1 trunk connector broken out to 8 individual legs",
@@ -157,6 +185,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     "2x4 AOC Fanout": {
         "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
@@ -176,6 +205,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
+        "has_embedded_transceivers": True,
     },
     # ── Fiber MPO Fanouts ──
     "MPO-8 → 4xLC Duplex": {
