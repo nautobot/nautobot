@@ -304,18 +304,22 @@ class CableTraceSVG:
         return text[: max(max_chars - 1, 1)] + "…"
 
     def _max_cable_label_width(self, header_cable, column_entries):
-        """Estimate the widest cable label that will be drawn to the right of any column center."""
-        labels = []
+        """Estimate the widest cable label/detail line drawn to the right of any column center."""
+        widths = []
+
+        def add(cable, near_end, far_end):
+            # The bold name renders at FONT_SIZE; the detail lines below it at FONT_SIZE_SM.
+            widths.append(len(str(cable)) * self.FONT_SIZE * self.FONT_WIDTH_RATIO)
+            for detail in self._cable_detail_lines(cable, near_end, far_end):
+                widths.append(len(detail) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO)
+
         if header_cable is not None:
-            labels.append(str(header_cable))
+            add(header_cable, None, None)
         for entries in column_entries:
             for entry in entries:
                 if entry.get("type") == "cable" and entry.get("cable") is not None:
-                    labels.append(str(entry["cable"]))
-        if not labels:
-            return 0
-        max_chars = max(len(label) for label in labels)
-        return max_chars * self.FONT_SIZE * self.FONT_WIDTH_RATIO
+                    add(entry["cable"], entry.get("near"), entry.get("far"))
+        return max(widths, default=0)
 
     def _cable_lane_info(self, cable, termination):
         """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
@@ -331,6 +335,27 @@ class CableTraceSVG:
             ):
                 return row
         return None
+
+    def _cable_detail_lines(self, cable, near_end=None, far_end=None):
+        """Muted detail lines drawn beneath a cable's name: type, cable type, and breakout lane info.
+
+        The breakout lane info is only included for cables with a `cable_type` when both endpoints
+        are known (i.e. when called from a rendered segment, not for the header trunk).
+        """
+        lines = []
+        if cable.type:
+            lines.append(cable.get_type_display())
+        if cable.cable_type_id:
+            lines.append(str(cable.cable_type))
+        if cable.cable_type_id and near_end and far_end:
+            near_row = self._cable_lane_info(cable, near_end)
+            far_row = self._cable_lane_info(cable, far_end)
+            if near_row is not None and near_row.connector is not None:
+                breakout_text = f"Breakout: {near_row.cable_end}{near_row.connector}"
+                if far_row is not None and far_row.connector is not None:
+                    breakout_text += f" → {far_row.cable_end}{far_row.connector}"
+                lines.append(breakout_text)
+        return lines
 
     # ──────────────────────────────────────────────
     # Phase 1: Build the matrix
@@ -997,43 +1022,42 @@ class CableTraceSVG:
         label_x = cx + self.CABLE_BAR_W / 2 + self.LABEL_OFFSET_X
         label_y = y + bar_h / 2
 
-        link = dwg.a(href=cable_url, target="_top")
-        link.add(
-            dwg.text(
-                str(cable),
-                insert=(label_x, label_y - self.TEXT_VERTICAL_OFFSET),
-                fill=self.COLOR_LINK,
-                font_size=f"{self.FONT_SIZE}px",
-                font_family=self.FONT_FAMILY,
-                font_weight="bold",
-            )
+        # The label is a vertical stack — bold cable name, muted detail lines, then the status badge
+        # — centered on the cable bar's midpoint so it sits between the terminations above and below.
+        detail_lines = self._cable_detail_lines(cable, near_end, far_end)
+        line_step = self.TEXT_LINE_SPACING + 2
+        row_count = 1 + len(detail_lines) + 1  # name + details + status badge
+        # Vertical center of the first (top) row, working back from the bar midpoint.
+        first_row_cy = label_y - (row_count - 1) * line_step / 2
+
+        # Cable name (bold link).
+        self._add_text(
+            dwg,
+            str(cable),
+            label_x,
+            first_row_cy + self.TEXT_VERTICAL_OFFSET,
+            "start",
+            self.FONT_SIZE,
+            "bold",
+            url=cable_url,
         )
-        dwg.add(link)
+        # Muted detail lines (type, cable type, breakout lane info).
+        for row_index, detail in enumerate(detail_lines, start=1):
+            self._add_text(
+                dwg,
+                detail,
+                label_x,
+                first_row_cy + row_index * line_step + self.TEXT_VERTICAL_OFFSET,
+                "start",
+                self.FONT_SIZE_SM,
+                "normal",
+            )
 
-        # Breakout lane info (only for cables with a cable_type and both endpoints known).
-        next_line_y = label_y + self.LABEL_OFFSET_X
-        if cable.cable_type_id and near_end and far_end:
-            near_row = self._cable_lane_info(cable, near_end)
-            far_row = self._cable_lane_info(cable, far_end)
-            if near_row is not None and near_row.connector is not None:
-                breakout_text = f"Breakout: {near_row.cable_end}{near_row.connector}"
-                if far_row is not None and far_row.connector is not None:
-                    breakout_text += f" → {far_row.cable_end}{far_row.connector}"
-                dwg.add(
-                    dwg.text(
-                        breakout_text,
-                        insert=(label_x, next_line_y),
-                        fill=self.COLOR_TEXT_MUTED,
-                        font_size=f"{self.FONT_SIZE_SM}px",
-                        font_family=self.FONT_FAMILY,
-                    )
-                )
-                next_line_y += self.TEXT_LINE_SPACING + 2
-
+        # Status badge on the last row (positioned by its vertical center).
         status = cable.status if hasattr(cable, "status") else None
         status_name = status.name if status else "Unknown"
         status_color = f"#{status.color}" if status and status.color else self.COLOR_TEXT_MUTED
-        self._draw_status_badge(dwg, label_x, next_line_y, status_name, status_color)
+        self._draw_status_badge(dwg, label_x, first_row_cy + (row_count - 1) * line_step, status_name, status_color)
 
         return y + bar_h
 
