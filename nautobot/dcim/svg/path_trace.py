@@ -9,7 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.html import mark_safe
 import svgwrite
 
-from nautobot.core.templatetags.helpers import fgcolor
+from nautobot.core.templatetags.helpers import bettertitle, fgcolor
 
 
 class CableTraceSVG:
@@ -59,12 +59,16 @@ class CableTraceSVG:
 
     # Layout: termination sub-box. TERM_W is wide enough to fit most port / circuit termination
     # names without truncation; values that still overflow get clipped to an ellipsis with the
-    # full string available on hover via a `<title>` element. TERM_H holds a single line of text.
+    # full string available on hover via a `<title>` element.
     TERM_W = 230
-    TERM_H = 30
     TERM_BORDER_RADIUS = 5
     # Horizontal padding inside the termination box; the usable text area is `TERM_W - 2 * TERM_TEXT_PAD`.
     TERM_TEXT_PAD = 8
+    # Vertical padding above and below the termination box's stacked text block.
+    TERM_TEXT_PAD_Y = 6
+    # TERM_H holds two stacked lines: the bold termination name plus a "<verbose name> (<type>)"
+    # detail line (mirroring trace/termination.html), with vertical padding.
+    TERM_H = FONT_SIZE + TEXT_LINE_SPACING + 2 * TERM_TEXT_PAD_Y
 
     # Layout: node (device/circuit/panel box)
     NODE_W = 260
@@ -72,11 +76,12 @@ class CableTraceSVG:
     # Vertical padding above and below the stacked text block within a node box.
     NODE_TEXT_PAD_Y = 8
     # NODE_TEXT_AREA_H is the free vertical span reserved for a node's stacked text block: the bold
-    # name (FONT_SIZE) plus up to two detail lines (FONT_SIZE_SM each, e.g. a device's
-    # manufacturer/type and its location/rack), with padding so the text clears the box edges and
-    # any termination sub-boxes. NODE_H adds the half-termination overlap a single (top- or
-    # bottom-) termination box contributes beyond the text area.
-    NODE_TEXT_AREA_H = FONT_SIZE + 2 * TEXT_LINE_SPACING + 2 * NODE_TEXT_PAD_Y
+    # name (FONT_SIZE) plus up to three detail lines (FONT_SIZE_SM each — e.g. a device's
+    # manufacturer/type, location, and rack), with padding so the text clears the box edges and any
+    # termination sub-boxes. The height is fixed (sized for the tallest node) so rows stay aligned
+    # when they mix node types; shorter nodes just center their text with extra padding. NODE_H adds
+    # the half-termination overlap a single (top- or bottom-) termination box contributes beyond it.
+    NODE_TEXT_AREA_H = FONT_SIZE + 3 * TEXT_LINE_SPACING + 2 * NODE_TEXT_PAD_Y
     NODE_H = NODE_TEXT_AREA_H + TERM_H // 2
 
     # Layout: cable segment
@@ -226,48 +231,43 @@ class CableTraceSVG:
     def _get_parent_info(self, termination):
         """Extract a termination's grouping key and the text block to render for its parent node.
 
-        Returns `(key, lines)`. `lines` is a list of *lines* drawn stacked inside the node box,
-        mirroring the multi-line `dcim/trace/*.html` partials: line 0 is the bold, linked parent
-        name and any further lines are detail. Each line is a list of `(text, url)` segments drawn
-        side by side, where `url` is `None` for plain text or an absolute URL to render that
-        segment as a link. `key` groups same-device nodes via the parent's globally-unique UUID;
-        `termination.parent` handles device, module, circuit, and power_panel.
+        Returns `(key, lines)`. `lines` is a list of `(text, url)` tuples drawn stacked inside the
+        node box, mirroring the multi-line `dcim/trace/*.html` partials: line 0 is the bold parent
+        name and any further lines are detail. `url` is `None` for plain text or an absolute URL to
+        render the line as a link. `key` groups same-device nodes via the parent's globally-unique
+        UUID; `termination.parent` handles device, module, circuit, and power_panel.
         """
         if termination is None:
             return None, []
 
         parent = getattr(termination, "parent", None)
         if parent is None:
-            return (None, [[(str(termination), "#")]])
+            return (None, [(str(termination), "#")])
 
         parent_key = str(parent.pk)
         # Line 0: the linked parent name. Detail lines are appended below per parent type.
-        lines = [[(str(parent), self._url(parent))]]
+        lines = [(str(parent), self._url(parent))]
 
         if hasattr(parent, "device_type"):
-            # Device — manufacturer + device type, then location / rack (see trace/device.html).
-            lines.append([(f"{parent.device_type.manufacturer} {parent.device_type}", None)])
+            # Device — manufacturer + device type, then location and rack each on their own line
+            # (see trace/device.html; split onto separate lines so each centers cleanly).
+            lines.append((f"{parent.device_type.manufacturer} {parent.device_type}", None))
             location = getattr(parent, "location", None)
             rack = getattr(parent, "rack", None)
-            location_rack = []
             if location:
-                location_rack.append((str(location), self._url(location)))
+                lines.append((str(location), self._url(location)))
             if rack:
-                if location_rack:
-                    location_rack.append((" / ", None))
-                location_rack.append((str(rack), self._url(rack)))
-            if location_rack:
-                lines.append(location_rack)
+                lines.append((str(rack), self._url(rack)))
         elif hasattr(parent, "provider"):
             # Circuit — name is the cid, then "Circuit" and the linked provider (see trace/circuit.html).
-            lines.append([("Circuit", None)])
-            lines.append([(str(parent.provider), self._url(parent.provider))])
+            lines.append(("Circuit", None))
+            lines.append((str(parent.provider), self._url(parent.provider)))
         else:
             # PowerPanel / Module / other — verbose name, then linked location if any (see trace/powerpanel.html).
-            lines.append([(parent._meta.verbose_name.title(), None)])
+            lines.append((parent._meta.verbose_name.title(), None))
             location = getattr(parent, "location", None)
             if location is not None:
-                lines.append([(str(location), self._url(location))])
+                lines.append((str(location), self._url(location)))
 
         return (parent_key, lines)
 
@@ -736,64 +736,55 @@ class CableTraceSVG:
     # Cell drawing primitives
     # ──────────────────────────────────────────────
 
-    def _draw_segmented_line(self, dwg, cx, baseline_y, segments, font_size, max_width, font_weight="normal"):
-        """Draw one line of `(text, url)` segments, centered as a group around `cx` at `baseline_y`.
+    def _add_text(self, dwg, text, x, baseline_y, anchor, font_size, font_weight, url=None, title=None):
+        """Add one `<text>` element (wrapped in a link when `url` is set) and an optional tooltip."""
+        element = dwg.text(
+            text,
+            insert=(x, baseline_y),
+            text_anchor=anchor,
+            fill=self.COLOR_LINK if url else self.COLOR_TEXT_MUTED,
+            font_size=f"{font_size}px",
+            font_family=self.FONT_FAMILY,
+            font_weight=font_weight,
+        )
+        if title:
+            element.set_desc(title=title)
+        if url:
+            link = dwg.a(href=url, target="_top")
+            link.add(element)
+            dwg.add(link)
+        else:
+            dwg.add(element)
 
-        Segments with a `url` render as blue links; the rest render as muted plain text. When the
-        composed line is too wide to fit `max_width`, it falls back to a single truncated,
-        non-linked line carrying the full text as a `<title>` tooltip.
+    def _draw_text_line(self, dwg, cx, baseline_y, text, url, font_size, max_width, font_weight="normal"):
+        """Draw a single line of text centered at `cx`, as a blue link when `url` is set.
+
+        Text wider than `max_width` is truncated to an ellipsis with the full text preserved as a
+        `<title>` tooltip.
         """
-        full_text = "".join(text for text, _url in segments)
-        if not full_text:
+        if not text:
             return
+        fitted = self._fit_text(text, max_width, font_size=font_size)
+        title = text if fitted != text else None
+        self._add_text(dwg, fitted, cx, baseline_y, "middle", font_size, font_weight, url=url, title=title)
 
-        fitted = self._fit_text(full_text, max_width, font_size=font_size)
-        if fitted != full_text:
-            # Too wide for per-segment layout. Render one truncated line with the full text as a
-            # tooltip; a single-segment line keeps its link/link-color, otherwise it falls back to
-            # muted plain text.
-            sole_url = segments[0][1] if len(segments) == 1 else None
-            element = dwg.text(
-                fitted,
-                insert=(cx, baseline_y),
-                text_anchor="middle",
-                fill=self.COLOR_LINK if sole_url else self.COLOR_TEXT_MUTED,
-                font_size=f"{font_size}px",
-                font_family=self.FONT_FAMILY,
-                font_weight=font_weight,
-            )
-            element.set_desc(title=full_text)
-            if sole_url:
-                link = dwg.a(href=sole_url, target="_top")
-                link.add(element)
-                dwg.add(link)
-            else:
-                dwg.add(element)
-            return
+    def _draw_text_block(self, dwg, text_cx, area_top, area_h, max_width, lines):
+        """Draw `lines` stacked and vertically centered within the span [area_top, area_top+area_h].
 
-        # Lay segments out left-to-right with text_anchor="start", centering the group. Segment
-        # widths use the same fraction-of-em estimate as `_fit_text`.
-        char_width = font_size * self.FONT_WIDTH_RATIO
-        segment_x = cx - (len(full_text) * char_width) / 2
-        for text, url in segments:
-            if not text:
-                continue
-            element = dwg.text(
-                text,
-                insert=(segment_x, baseline_y),
-                text_anchor="start",
-                fill=self.COLOR_LINK if url else self.COLOR_TEXT_MUTED,
-                font_size=f"{font_size}px",
-                font_family=self.FONT_FAMILY,
-                font_weight=font_weight,
+        Each line is a `(text, url)` tuple. Line 0 is the bold name (FONT_SIZE); the remaining lines
+        are smaller detail text (FONT_SIZE_SM). Centering the block within `area_h` yields the
+        padding above and below.
+        """
+        text_center_y = area_top + area_h / 2
+        line_count = len(lines)
+        for line_index, (text, url) in enumerate(lines):
+            baseline_y = (
+                text_center_y + (line_index - (line_count - 1) / 2) * self.TEXT_LINE_SPACING + self.TEXT_VERTICAL_OFFSET
             )
-            if url:
-                link = dwg.a(href=url, target="_top")
-                link.add(element)
-                dwg.add(link)
+            if line_index == 0:
+                self._draw_text_line(dwg, text_cx, baseline_y, text, url, self.FONT_SIZE, max_width, font_weight="bold")
             else:
-                dwg.add(element)
-            segment_x += len(text) * char_width
+                self._draw_text_line(dwg, text_cx, baseline_y, text, url, self.FONT_SIZE_SM, max_width)
 
     def _draw_parent_box(self, dwg, box_x, box_y, box_w, box_h, text_cx, text_area_top, text_area_h, termination):
         """Draw a parent (device/circuit/panel) box with a centered, stacked text block.
@@ -818,22 +809,10 @@ class CableTraceSVG:
             )
         )
 
-        text_center_y = text_area_top + text_area_h / 2
         # Usable text width inside the box, after the NODE_BORDER_RADIUS rounded corners eat a few
         # pixels at each end. Detail lines render at FONT_SIZE_SM so they fit a few more chars.
         text_area_w = box_w - 2 * self.NODE_BORDER_RADIUS
-        line_count = len(lines)
-        for line_index, segments in enumerate(lines):
-            baseline_y = (
-                text_center_y + (line_index - (line_count - 1) / 2) * self.TEXT_LINE_SPACING + self.TEXT_VERTICAL_OFFSET
-            )
-            # Line 0 is the bold parent name; remaining lines are smaller detail text.
-            if line_index == 0:
-                self._draw_segmented_line(
-                    dwg, text_cx, baseline_y, segments, self.FONT_SIZE, text_area_w, font_weight="bold"
-                )
-            else:
-                self._draw_segmented_line(dwg, text_cx, baseline_y, segments, self.FONT_SIZE_SM, text_area_w)
+        self._draw_text_block(dwg, text_cx, text_area_top, text_area_h, text_area_w, lines)
 
     def _draw_node(self, dwg, cx, y, termination, term_position="top", is_last=False):
         """Draw a device node with one termination box (top or bottom)."""
@@ -1026,12 +1005,10 @@ class CableTraceSVG:
         )
 
     def _draw_termination_box(self, dwg, cx, y, termination):
-        """Draw a single termination sub-box at the given position."""
+        """Draw a single termination sub-box: bold linked name plus a "<verbose name> (<type>)" line."""
         termination_x = cx - self.TERM_W / 2
         is_active = termination == self.origin
         termination_url = self._url(termination) if termination else "#"
-        termination_name = str(termination)
-        display_name = self._fit_text(termination_name, self.TERM_W - 2 * self.TERM_TEXT_PAD)
 
         border_color = self.COLOR_ACTIVE_BORDER if is_active else self.COLOR_TERM_BORDER
         border_width = 3 if is_active else 1
@@ -1047,21 +1024,18 @@ class CableTraceSVG:
                 stroke_width=border_width,
             )
         )
-        link = dwg.a(href=termination_url, target="_top")
-        text_el = dwg.text(
-            display_name,
-            insert=(cx, y + self.TERM_H / 2 + self.TEXT_VERTICAL_OFFSET),
-            text_anchor="middle",
-            fill=self.COLOR_LINK,
-            font_size=f"{self.FONT_SIZE}px",
-            font_family=self.FONT_FAMILY,
-            font_weight="bold",
-        )
-        # Browser tooltip with the full name — useful when the rendered text was truncated.
-        if display_name != termination_name:
-            text_el.set_desc(title=termination_name)
-        link.add(text_el)
-        dwg.add(link)
+
+        # Line 0: the linked name; line 1: the model verbose name plus type display, if any
+        # (mirrors trace/termination.html).
+        lines = [(str(termination), termination_url)]
+        if termination is not None:
+            detail = bettertitle(termination._meta.verbose_name)
+            type_display = getattr(termination, "get_type_display", None)
+            if getattr(termination, "type", None) and callable(type_display):
+                detail = f"{detail} ({type_display()})"
+            lines.append((detail, None))
+
+        self._draw_text_block(dwg, cx, y, self.TERM_H, self.TERM_W - 2 * self.TERM_TEXT_PAD, lines)
 
     def _draw_trace_end(self, dwg, cx, y, incomplete=False):
         """Draw the trace completion indicator at the bottom of a finished trace."""
