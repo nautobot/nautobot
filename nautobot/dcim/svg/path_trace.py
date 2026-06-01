@@ -30,73 +30,89 @@ class CableTraceSVG:
         svg_string = diagram.render()
     """
 
-    # Layout: overall dimensions
-    MAX_WIDTH = 400
-    # Column pitch must be >= NODE_W so adjacent device boxes in different columns don't overlap;
-    # the extra ~20 px gives a visible gap between distinct devices.
-    COL_WIDTH = 200
-    INITIAL_HEIGHT = 800
-    INITIAL_FANOUT_HEIGHT = 2000
-    EMPTY_HEIGHT = 60
-
-    # Layout: node (device/circuit/panel box)
-    NODE_W = 180
-    NODE_H = 50
-    NODE_BORDER_RADIUS = 6
-
-    # Layout: termination sub-box. TERM_W bumped to fit longer port / circuit termination names
-    # without immediate truncation; values that still overflow get clipped to an ellipsis with
-    # the full string available on hover via a `<title>` element.
-    TERM_W = 160
-    TERM_H = 26
-    TERM_BORDER_RADIUS = 4
-    # Horizontal padding inside the termination box; the usable text area is `TERM_W - 2 * TERM_TEXT_PAD`.
-    TERM_TEXT_PAD = 6
-
-    # Layout: cable segment
-    CABLE_H = 120
-    CABLE_BAR_W = 4
-
-    # Layout: pass-through
-    PASSTHROUGH_H = 24
+    # Typography. These match Nautobot's standard 14 / 12 px font sizes and act as the base unit
+    # for the text-coupled layout constants below (line spacing, box heights, text areas), so the
+    # whole diagram scales with the font if these change.
+    FONT_FAMILY = "var(--bs-font-sans-serif)"
+    FONT_SIZE = 14
+    FONT_SIZE_SM = 12
+    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
+    # estimate text widths for truncation and badge sizing; 0.65 covers uppercase-heavy strings.
+    FONT_WIDTH_RATIO = 0.65
 
     # Layout: spacing and offsets
-    GAP_Y = 4
-    LABEL_OFFSET_X = 8
-    FORK_DROP_LENGTH = 12  # GAP_Y * 3 — vertical drop from fork bar to first row
-    TEXT_LINE_SPACING = 10
-    TEXT_VERTICAL_OFFSET = 4
-    TRACE_END_PADDING = 6
-    TRACE_END_HEIGHT = 20
+    GAP_Y = 5
+    LABEL_OFFSET_X = 10
+    # Baseline-to-baseline spacing for stacked detail lines; tied to the (larger) base font size so
+    # consecutive lines aren't crowded.
+    TEXT_LINE_SPACING = FONT_SIZE
+    # Downward shift from a vertical center to a text baseline (≈ half the cap height) so a line of
+    # text appears vertically centered at its target y.
+    TEXT_VERTICAL_OFFSET = 5
+    FORK_DROP_LENGTH = 3 * GAP_Y  # vertical drop from fork bar to first row
+    TRACE_END_PADDING = 5
+    TRACE_END_HEIGHT = 25
     # Minimum reserve for cable labels/badges hanging off the rightmost column. Actual reserve
     # is sized to the longest cable label found in the trace; this is the floor used when no
     # cables (or only very short ones) are present.
-    LABEL_RIGHT_RESERVE_MIN = 120
+    LABEL_RIGHT_RESERVE_MIN = 140
 
-    # Typography
-    FONT_FAMILY = "system-ui, -apple-system, sans-serif"
-    FONT_SIZE = 12
-    FONT_SIZE_SM = 10
-    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
-    # size badge backgrounds; 0.65 covers uppercase-heavy strings.
-    FONT_WIDTH_RATIO = 0.65
+    # Layout: termination sub-box. TERM_W is wide enough to fit most port / circuit termination
+    # names without truncation; values that still overflow get clipped to an ellipsis with the
+    # full string available on hover via a `<title>` element. TERM_H holds a single line of text.
+    TERM_W = 230
+    TERM_H = 30
+    TERM_BORDER_RADIUS = 5
+    # Horizontal padding inside the termination box; the usable text area is `TERM_W - 2 * TERM_TEXT_PAD`.
+    TERM_TEXT_PAD = 8
+
+    # Layout: node (device/circuit/panel box)
+    NODE_W = 260
+    NODE_BORDER_RADIUS = 8
+    # Vertical padding above and below the stacked text block within a node box.
+    NODE_TEXT_PAD_Y = 8
+    # NODE_TEXT_AREA_H is the free vertical span reserved for a node's stacked text block: the bold
+    # name (FONT_SIZE) plus up to two detail lines (FONT_SIZE_SM each, e.g. a device's
+    # manufacturer/type and its location/rack), with padding so the text clears the box edges and
+    # any termination sub-boxes. NODE_H adds the half-termination overlap a single (top- or
+    # bottom-) termination box contributes beyond the text area.
+    NODE_TEXT_AREA_H = FONT_SIZE + 2 * TEXT_LINE_SPACING + 2 * NODE_TEXT_PAD_Y
+    NODE_H = NODE_TEXT_AREA_H + TERM_H // 2
+
+    # Layout: cable segment
+    CABLE_H = 140
+    CABLE_BAR_W = 5
+
+    # Layout: pass-through
+    PASSTHROUGH_H = 30
+
+    # Layout: overall dimensions
+    MAX_WIDTH = 465
+    # Column pitch must be >= NODE_W so adjacent device boxes in different columns don't overlap;
+    # the extra ~20 px gives a visible gap between distinct devices.
+    COL_WIDTH = 280
+    INITIAL_HEIGHT = 900
+    INITIAL_FANOUT_HEIGHT = 2350
+    EMPTY_HEIGHT = 70
 
     # Line widths
     FORK_LINE_WIDTH = 2
 
-    # Colors
-    COLOR_NODE_BG = "#f8f9fa"
-    COLOR_NODE_BORDER = "#dee2e6"
-    COLOR_TERM_BG = "#e9ecef"
-    COLOR_TERM_BORDER = "#adb5bd"
-    COLOR_ACTIVE_BORDER = "#198754"
-    COLOR_TEXT = "#212529"
-    COLOR_TEXT_MUTED = "#6c757d"
-    COLOR_LINK = "#0d6efd"
-    COLOR_CABLE_DEFAULT = "#606060"
-    COLOR_SUCCESS = "#198754"
-    COLOR_DANGER = "#dc3545"
-    COLOR_WARNING = "#ffc107"
+    # Colors. Bootstrap theme variables (not hard-coded hex) so the diagram follows light/dark mode
+    # via `data-bs-theme`; the inline SVG resolves these against the surrounding document. The
+    # chosen variables match the previous hard-coded light-mode values.
+    COLOR_NODE_BG = "var(--bs-secondary-bg)"
+    COLOR_NODE_BORDER = "var(--bs-border-color)"
+    COLOR_TERM_BG = "var(--bs-tertiary-bg)"
+    COLOR_TERM_BORDER = "var(--bs-border-color)"
+    COLOR_ACTIVE_BORDER = "var(--bs-success)"
+    COLOR_TEXT = "var(--bs-body-color)"
+    COLOR_TEXT_MUTED = "var(--bs-secondary-color)"
+    COLOR_LINK = "var(--bs-link-color)"
+    COLOR_CABLE_DEFAULT = "var(--bs-secondary-color)"
+    COLOR_SUCCESS = "var(--bs-success)"
+    COLOR_DANGER = "var(--bs-danger)"
+    COLOR_WARNING = "var(--bs-warning)"
 
     def __init__(self, origin, base_url=""):
         self.origin = origin
@@ -208,36 +224,52 @@ class CableTraceSVG:
             return "#"
 
     def _get_parent_info(self, termination):
-        """Extract parent info for a termination: grouping key, display name, detail, and URL.
+        """Extract a termination's grouping key and the text block to render for its parent node.
 
-        Returns (key, name, detail, url). Key groups same-device nodes; uses `termination.parent`
-        which handles device, module, circuit, and power_panel.
+        Returns `(key, lines)`. `lines` is a list of *lines* drawn stacked inside the node box,
+        mirroring the multi-line `dcim/trace/*.html` partials: line 0 is the bold, linked parent
+        name and any further lines are detail. Each line is a list of `(text, url)` segments drawn
+        side by side, where `url` is `None` for plain text or an absolute URL to render that
+        segment as a link. `key` groups same-device nodes via the parent's globally-unique UUID;
+        `termination.parent` handles device, module, circuit, and power_panel.
         """
         if termination is None:
-            return None, None, None, None
+            return None, []
 
         parent = getattr(termination, "parent", None)
         if parent is None:
-            return (None, str(termination), "", "#")
+            return (None, [[(str(termination), "#")]])
 
         parent_key = str(parent.pk)
-        parent_name = str(parent)
-        parent_url = self._url(parent)
+        # Line 0: the linked parent name. Detail lines are appended below per parent type.
+        lines = [[(str(parent), self._url(parent))]]
 
         if hasattr(parent, "device_type"):
-            # Device — show manufacturer / device type.
-            detail = f"{parent.device_type.manufacturer} / {parent.device_type}"
+            # Device — manufacturer + device type, then location / rack (see trace/device.html).
+            lines.append([(f"{parent.device_type.manufacturer} {parent.device_type}", None)])
+            location = getattr(parent, "location", None)
+            rack = getattr(parent, "rack", None)
+            location_rack = []
+            if location:
+                location_rack.append((str(location), self._url(location)))
+            if rack:
+                if location_rack:
+                    location_rack.append((" / ", None))
+                location_rack.append((str(rack), self._url(rack)))
+            if location_rack:
+                lines.append(location_rack)
         elif hasattr(parent, "provider"):
-            # Circuit — prefix key to avoid PK collisions with devices.
-            parent_key = f"c:{parent.pk}"
-            parent_name = f"{parent.provider} / {parent.cid}"
-            detail = "Circuit"
+            # Circuit — name is the cid, then "Circuit" and the linked provider (see trace/circuit.html).
+            lines.append([("Circuit", None)])
+            lines.append([(str(parent.provider), self._url(parent.provider))])
         else:
-            # PowerPanel or other — use verbose name as detail.
-            parent_key = f"{parent._meta.model_name}:{parent.pk}"
-            detail = parent._meta.verbose_name.title()
+            # PowerPanel / Module / other — verbose name, then linked location if any (see trace/powerpanel.html).
+            lines.append([(parent._meta.verbose_name.title(), None)])
+            location = getattr(parent, "location", None)
+            if location is not None:
+                lines.append([(str(location), self._url(location))])
 
-        return (parent_key, parent_name, detail, parent_url)
+        return (parent_key, lines)
 
     def _fit_text(self, text, max_width, font_size=None):
         """Truncate `text` with an ellipsis if its estimated rendered width exceeds `max_width` px.
@@ -623,8 +655,8 @@ class CableTraceSVG:
             elif cell["type"] == "grouped_node":
                 row_h = max(row_h, self.TERM_H / 2 + self.NODE_H)
             elif cell["type"] == "passthrough_node":
-                text_area_h = self.TEXT_LINE_SPACING * 3
-                row_h = max(row_h, self.TERM_H + text_area_h)
+                # Arriving termination + free text area + departing termination.
+                row_h = max(row_h, 2 * self.TERM_H + self.NODE_TEXT_AREA_H)
             elif cell["type"] == "cable":
                 row_h = max(row_h, self.CABLE_H)
             elif cell["type"] == "passthrough":
@@ -704,13 +736,75 @@ class CableTraceSVG:
     # Cell drawing primitives
     # ──────────────────────────────────────────────
 
-    def _draw_device_box(self, dwg, box_x, box_y, box_w, box_h, text_cx, text_area_top, text_area_h, termination):
-        """Draw a device/circuit/panel box with centered name and detail text.
+    def _draw_segmented_line(self, dwg, cx, baseline_y, segments, font_size, max_width, font_weight="normal"):
+        """Draw one line of `(text, url)` segments, centered as a group around `cx` at `baseline_y`.
 
-        Shared primitive for all node types — callers handle termination box placement, this
-        draws only the device background and text.
+        Segments with a `url` render as blue links; the rest render as muted plain text. When the
+        composed line is too wide to fit `max_width`, it falls back to a single truncated,
+        non-linked line carrying the full text as a `<title>` tooltip.
         """
-        _parent_key, parent_name, parent_detail, parent_url = self._get_parent_info(termination)
+        full_text = "".join(text for text, _url in segments)
+        if not full_text:
+            return
+
+        fitted = self._fit_text(full_text, max_width, font_size=font_size)
+        if fitted != full_text:
+            # Too wide for per-segment layout. Render one truncated line with the full text as a
+            # tooltip; a single-segment line keeps its link/link-color, otherwise it falls back to
+            # muted plain text.
+            sole_url = segments[0][1] if len(segments) == 1 else None
+            element = dwg.text(
+                fitted,
+                insert=(cx, baseline_y),
+                text_anchor="middle",
+                fill=self.COLOR_LINK if sole_url else self.COLOR_TEXT_MUTED,
+                font_size=f"{font_size}px",
+                font_family=self.FONT_FAMILY,
+                font_weight=font_weight,
+            )
+            element.set_desc(title=full_text)
+            if sole_url:
+                link = dwg.a(href=sole_url, target="_top")
+                link.add(element)
+                dwg.add(link)
+            else:
+                dwg.add(element)
+            return
+
+        # Lay segments out left-to-right with text_anchor="start", centering the group. Segment
+        # widths use the same fraction-of-em estimate as `_fit_text`.
+        char_width = font_size * self.FONT_WIDTH_RATIO
+        segment_x = cx - (len(full_text) * char_width) / 2
+        for text, url in segments:
+            if not text:
+                continue
+            element = dwg.text(
+                text,
+                insert=(segment_x, baseline_y),
+                text_anchor="start",
+                fill=self.COLOR_LINK if url else self.COLOR_TEXT_MUTED,
+                font_size=f"{font_size}px",
+                font_family=self.FONT_FAMILY,
+                font_weight=font_weight,
+            )
+            if url:
+                link = dwg.a(href=url, target="_top")
+                link.add(element)
+                dwg.add(link)
+            else:
+                dwg.add(element)
+            segment_x += len(text) * char_width
+
+    def _draw_parent_box(self, dwg, box_x, box_y, box_w, box_h, text_cx, text_area_top, text_area_h, termination):
+        """Draw a parent (device/circuit/panel) box with a centered, stacked text block.
+
+        Shared primitive for all node types — callers handle termination box placement, this draws
+        only the box background and the lines from `_get_parent_info` (bold linked name on top,
+        detail lines below). `text_area_top`/`text_area_h` describe the free vertical span between
+        any termination boxes (or box edges); the text block is centered within it, which yields
+        the padding above and below.
+        """
+        _parent_key, lines = self._get_parent_info(termination)
 
         dwg.add(
             dwg.rect(
@@ -725,38 +819,21 @@ class CableTraceSVG:
         )
 
         text_center_y = text_area_top + text_area_h / 2
-        # Usable text area inside the device box, after the NODE_BORDER_RADIUS rounded corners eat
-        # a few pixels at each end. Detail line is rendered at FONT_SIZE_SM so fits a few more chars.
+        # Usable text width inside the box, after the NODE_BORDER_RADIUS rounded corners eat a few
+        # pixels at each end. Detail lines render at FONT_SIZE_SM so they fit a few more chars.
         text_area_w = box_w - 2 * self.NODE_BORDER_RADIUS
-        if parent_name:
-            display_name = self._fit_text(parent_name, text_area_w)
-            link = dwg.a(href=parent_url, target="_top")
-            name_el = dwg.text(
-                display_name,
-                insert=(text_cx, text_center_y - self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
-                text_anchor="middle",
-                fill=self.COLOR_LINK,
-                font_size=f"{self.FONT_SIZE}px",
-                font_family=self.FONT_FAMILY,
-                font_weight="bold",
+        line_count = len(lines)
+        for line_index, segments in enumerate(lines):
+            baseline_y = (
+                text_center_y + (line_index - (line_count - 1) / 2) * self.TEXT_LINE_SPACING + self.TEXT_VERTICAL_OFFSET
             )
-            if display_name != parent_name:
-                name_el.set_desc(title=parent_name)
-            link.add(name_el)
-            dwg.add(link)
-        if parent_detail:
-            display_detail = self._fit_text(parent_detail, text_area_w, font_size=self.FONT_SIZE_SM)
-            detail_el = dwg.text(
-                display_detail,
-                insert=(text_cx, text_center_y + self.TEXT_LINE_SPACING / 2 + self.TEXT_VERTICAL_OFFSET),
-                text_anchor="middle",
-                fill=self.COLOR_TEXT_MUTED,
-                font_size=f"{self.FONT_SIZE_SM}px",
-                font_family=self.FONT_FAMILY,
-            )
-            if display_detail != parent_detail:
-                detail_el.set_desc(title=parent_detail)
-            dwg.add(detail_el)
+            # Line 0 is the bold parent name; remaining lines are smaller detail text.
+            if line_index == 0:
+                self._draw_segmented_line(
+                    dwg, text_cx, baseline_y, segments, self.FONT_SIZE, text_area_w, font_weight="bold"
+                )
+            else:
+                self._draw_segmented_line(dwg, text_cx, baseline_y, segments, self.FONT_SIZE_SM, text_area_w)
 
     def _draw_node(self, dwg, cx, y, termination, term_position="top", is_last=False):
         """Draw a device node with one termination box (top or bottom)."""
@@ -765,17 +842,19 @@ class CableTraceSVG:
         if term_position == "top":
             term_y = y
             box_y = y + half_term_h
+            # Free text span runs from the termination box's bottom edge to the box's bottom edge.
             text_area_top = box_y + half_term_h
-            text_area_h = self.NODE_H - self.TERM_H
+            text_area_h = self.NODE_TEXT_AREA_H
             total_bottom = box_y + self.NODE_H
         else:
             box_y = y
             term_y = y + self.NODE_H - half_term_h
+            # Free text span runs from the box's top edge to the termination box's top edge.
             text_area_top = box_y
-            text_area_h = self.NODE_H - self.TERM_H
+            text_area_h = self.NODE_TEXT_AREA_H
             total_bottom = term_y + self.TERM_H
 
-        self._draw_device_box(
+        self._draw_parent_box(
             dwg,
             cx - self.NODE_W / 2,
             box_y,
@@ -805,9 +884,9 @@ class CableTraceSVG:
         box_x = first_cx - self.TERM_W / 2 - self.GAP_Y
         box_y = y + half_term_h
         text_area_top = box_y + half_term_h
-        text_area_h = self.NODE_H - self.TERM_H
+        text_area_h = self.NODE_TEXT_AREA_H
 
-        self._draw_device_box(
+        self._draw_parent_box(
             dwg,
             box_x,
             box_y,
@@ -891,14 +970,14 @@ class CableTraceSVG:
     def _draw_passthrough_node(self, dwg, cx, y, arriving_termination, departing_termination):
         """Draw a device node with arriving port at top and departing port at bottom."""
         half_term_h = self.TERM_H / 2
-        text_area_h = self.TEXT_LINE_SPACING * 3
+        text_area_h = self.NODE_TEXT_AREA_H
         box_h = half_term_h + text_area_h + half_term_h
 
         box_y = y + half_term_h
         departing_y = box_y + box_h - half_term_h
         text_area_top = box_y + half_term_h
 
-        self._draw_device_box(
+        self._draw_parent_box(
             dwg,
             cx - self.NODE_W / 2,
             box_y,
@@ -918,9 +997,10 @@ class CableTraceSVG:
         """Draw a Bootstrap-style badge pill with colored background and contrasting text."""
 
         text_width = len(status_name) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO
-        badge_w = text_width + 12
-        badge_h = self.FONT_SIZE_SM + 6
-        badge_r = 4
+        # Pad the pill horizontally/vertically relative to the font size it wraps.
+        badge_w = text_width + self.FONT_SIZE_SM
+        badge_h = self.FONT_SIZE_SM + self.GAP_Y
+        badge_r = self.TERM_BORDER_RADIUS
 
         dwg.add(
             dwg.rect(
