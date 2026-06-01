@@ -2665,9 +2665,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     job_queue = None
                     if task_queue is not None:
                         try:
-                            job_queue = JobQueue.objects.get(
-                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
-                            )
+                            job_queue = JobQueue.objects.get(name=task_queue)
                         except JobQueue.DoesNotExist:
                             pass
                     initial["_job_queue"] = job_queue
@@ -3245,9 +3243,11 @@ class ScheduledJobUIViewSet(
         ):
             messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
             return redirect(obj.get_absolute_url())
+
         obj.user = request.user
-        obj.enabled = True
-        obj.state = ScheduledJobStateChoices.ACTIVE
+        if obj.state == ScheduledJobStateChoices.ERRORED:
+            obj.enabled = True
+            obj.state = ScheduledJobStateChoices.ACTIVE
         obj.validated_save()
         messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
         return redirect(obj.get_absolute_url())
