@@ -2500,6 +2500,23 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         field = mt.to_form_field()
         self.assertIs(type(field), JSONFormField)
 
+    def test_to_form_field_applies_form_control(self):
+        """The returned field's widget always carries Bootstrap's `form-control` class so callers
+        don't need to re-apply it after late-stage swaps (e.g. in `ObjectMetadataForm._adapt_value_field`
+        or the HTMX `value_widget` endpoint)."""
+        for data_type in (
+            MetadataTypeDataTypeChoices.TYPE_TEXT,
+            MetadataTypeDataTypeChoices.TYPE_INTEGER,
+            MetadataTypeDataTypeChoices.TYPE_BOOLEAN,
+            MetadataTypeDataTypeChoices.TYPE_DATE,
+            MetadataTypeDataTypeChoices.TYPE_URL,
+            MetadataTypeDataTypeChoices.TYPE_JSON,
+        ):
+            with self.subTest(data_type=data_type):
+                mt = MetadataType.objects.create(name=f"MT FC {data_type}", data_type=data_type)
+                field = mt.to_form_field()
+                self.assertIn("form-control", field.widget.attrs.get("class", ""))
+
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
     model = ObjectChange

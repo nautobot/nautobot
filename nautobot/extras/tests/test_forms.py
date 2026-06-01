@@ -1391,6 +1391,20 @@ class ObjectMetadataFormTestCase(TestCase):
     def test_direct_field_names_helper_returns_empty_for_missing_content_type(self):
         self.assertEqual(_direct_field_names_for_content_type(None), [])
 
+    def test_adapt_value_field_has_form_control(self):
+        form = ObjectMetadataForm(instance=self.text_om)
+        self.assertIn("form-control", form.fields["value"].widget.attrs.get("class", ""))
+
+    def test_create_form_display_field_has_form_control(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": location_ct.pk,
+                "assigned_object_id": self.location.pk,
+            }
+        )
+        self.assertIn("form-control", form.fields["assigned_object_display"].widget.attrs.get("class", ""))
+
     def test_bound_form_with_invalid_metadata_type_pk_silently_skips_value_field_swap(self):
         location_ct = ContentType.objects.get_for_model(Location)
         for val in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
