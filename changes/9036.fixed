@@ -1,0 +1,1 @@
+Fixed missing `form-control` styling on the `Value` and `Assigned object` fields in the ObjectMetadata create/edit form.
