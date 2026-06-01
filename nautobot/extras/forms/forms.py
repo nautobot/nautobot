@@ -2202,7 +2202,14 @@ class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
             return
         new_field.label = "Value"
         new_field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+        self._apply_form_control(new_field)
         self.fields["value"] = new_field
+
+    @staticmethod
+    def _apply_form_control(field):
+        css_classes = field.widget.attrs.get("class", "")
+        if "form-control" not in css_classes:
+            field.widget.attrs["class"] = ("form-control " + css_classes).strip()
 
     def clean(self):
         cleaned = super().clean()
@@ -2308,6 +2315,7 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
                     initial=str(obj),
                     disabled=True,
                 )
+                self._apply_form_control(display_field)
                 # Insert the display field where assigned_object_id used to sit so visual order matches.
                 reordered = {}
                 for name, field in self.fields.items():
