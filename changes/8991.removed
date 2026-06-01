@@ -1,0 +1,1 @@
+Removed `should_reap` method from `JobRevokeStrategy` class.

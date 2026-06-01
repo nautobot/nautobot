@@ -1311,7 +1311,7 @@ class JobResultTable(BaseTable):
     date_created = tables.DateTimeColumn(linkify=True, short=True)
     date_started = tables.DateTimeColumn(linkify=True, short=True)
     date_done = tables.DateTimeColumn(linkify=True, short=True)
-    date_terminated = tables.DateTimeColumn(linkify=True, short=True)
+    date_revoked = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -1331,7 +1331,6 @@ class JobResultTable(BaseTable):
     revocation_type = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
         verbose_name="Revocation Type",
-        orderable=False,
     )
 
     def render_summary(self, record):
@@ -1369,7 +1368,7 @@ class JobResultTable(BaseTable):
             "date_created",
             "date_started",
             "date_done",
-            "date_terminated",
+            "date_revoked",
             "revoked_by",
             "name",
             "job_model",
