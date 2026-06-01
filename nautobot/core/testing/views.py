@@ -2316,7 +2316,7 @@ class ViewTestCases:
 
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
             pk_list = [obj.pk for obj in self.cabled_objects]
-            cable_pks = [obj.cable.pk for obj in self.cabled_objects]
+            cable_pks = [obj.cable_id for obj in self.cabled_objects]
 
             data = {"pk": pk_list, "_confirm": True, "confirm": True}
             response = self.client.post(self._get_url("bulk_disconnect"), data)
@@ -2343,7 +2343,7 @@ class ViewTestCases:
 
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
             cabled = self.cabled_objects[0]
-            cable_pk = cabled.cable.pk
+            cable_pk = cabled.cable_id
 
             data = {
                 "pk": [cabled.pk, self.uncabled_object.pk],
