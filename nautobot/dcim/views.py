@@ -5669,6 +5669,9 @@ class CableUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CableFilterSet
     filterset_form_class = forms.CableFilterForm
     form_class = forms.CableForm
+    # The "Add cable" form gains a per-operation Count (number of cables). Editing an existing cable
+    # still uses the plain CableForm (no count).
+    create_form_class = forms.CableCreateForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
     queryset = Cable.objects.prefetch_related(
@@ -5765,6 +5768,149 @@ class CableUIViewSet(NautobotUIViewSet):
                 "parent_field": result["meta"]["parent_field"],
                 "term_field": result["meta"]["term_field"],
             },
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-fill",
+        url_name="lane_fill",
+        custom_view_base_action="view",
+    )
+    def lane_fill(self, request):
+        """HTMX: fill every connector on one side of a breakout cable from connector 1's selection.
+
+        Convenience for wide breakouts (e.g. a 1x16 landing on front ports 1-16): the user picks the
+        first connector's type / parent / termination once, and this walks the parent's natural
+        ordering (skipping connected ports) to populate the remaining connectors on that side, then
+        re-renders the lane form with those values. This is "I need X more connectors" — it fills one
+        cable's connectors, distinct from the "Number of cables" bulk-add.
+        """
+        from nautobot.dcim.cables import walk_terminations
+
+        side = request.GET.get("fill_side", "b")
+        data = request.GET.copy()
+
+        cable_type = CableType.objects.filter(pk=data.get("cable_type")).first() if data.get("cable_type") else None
+        connectors = (cable_type.a_connectors if side == "a" else cable_type.b_connectors) if cable_type else 1
+
+        prefix1 = f"{side}_conn_1"
+        type_name = data.get(f"{prefix1}_type")
+        parent_pk = data.get(f"{prefix1}_parent")
+        term_pk = data.get(f"{prefix1}_termination")
+        if connectors > 1 and type_name and term_pk:
+            ct = ContentType.objects.filter(model=type_name.replace("-", "")).first()
+            model = ct.model_class() if ct else None
+            seed = model.objects.filter(pk=term_pk).first() if model else None
+            if seed is not None:
+                for i, termination in enumerate(walk_terminations(seed, connectors), start=1):
+                    data[f"{side}_conn_{i}_type"] = type_name
+                    data[f"{side}_conn_{i}_parent"] = parent_pk
+                    data[f"{side}_conn_{i}_termination"] = str(termination.pk)
+
+        form = forms.CableForm(data=data)
+        return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
+
+    def perform_create(self, request, *args, **kwargs):
+        """Handle the "Add cable" form, which carries an optional Count and a "Bulk add" button.
+
+        Three submission intents, distinguished by the submit button name:
+
+        * ``_create`` (default) — create a single cable the normal way. Rejected if a count was
+          entered (the user must use "Bulk add" for more than one).
+        * ``_bulkadd`` — validate, then render a read-only confirmation page extrapolating the N
+          cables. Nothing is created yet. Requires a count.
+        * ``_bulkconfirm`` — the confirmation page was accepted; create the N cables atomically.
+        """
+        self.obj = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
+        restrict_form_fields(form, request.user)
+        if not form.is_valid():
+            return self.form_invalid(form)
+
+        count = form.cleaned_data.get("count")
+        is_bulk = "_bulkadd" in request.POST or "_bulkconfirm" in request.POST
+
+        if not is_bulk:
+            # Single-cable creation. A count here is ambiguous — make the user choose "Bulk add".
+            if count:
+                form.add_error(
+                    "count",
+                    'To create more than one cable, use the "Bulk add" button. Clear this field to '
+                    "create a single cable.",
+                )
+                return self.form_invalid(form)
+            return self.form_valid(form)
+
+        # Bulk path.
+        if not count:
+            form.add_error("count", 'Enter the number of cables (2 or more), then use "Bulk add".')
+            return self.form_invalid(form)
+
+        from nautobot.dcim.cables import BulkCableConnectService
+
+        service = BulkCableConnectService(form.build_spec(), user=request.user)
+        try:
+            resolved = service.resolve()
+            service.validate(resolved)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+            return self.form_invalid(form)
+
+        if "_bulkconfirm" in request.POST:
+            result = service.run()
+            noun = "breakout cables" if result.is_breakout else "cables"
+            links = format_html_join(
+                ", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in result.cables)
+            )
+            messages.success(request, format_html("Created {} {}: {}", len(result.cables), noun, links))
+            return redirect(self.get_return_url(request))
+
+        # "_bulkadd": re-render the SAME cable form template with a read-only "confirming" context
+        # that extrapolates the cables to be created. Same URL, different view of the same data.
+        def _term_info(term):
+            parent = getattr(term, "parent", None)
+            return {
+                "type": term._meta.verbose_name.title(),
+                "parent": str(parent) if parent is not None else "",
+                "name": str(term),
+            }
+
+        cables = [
+            {
+                "index": i + 1,
+                "a": [_term_info(term) for term in resolved["A"].block(i)],
+                "b": [_term_info(term) for term in resolved["B"].block(i)],
+            }
+            for i in range(count)
+        ]
+
+        # Render the form's own fields read-only on the confirmation view (reusing its labels and
+        # choice/widget rendering rather than re-deriving a summary). Disable at the *widget* level,
+        # not via ``field.disabled`` — a disabled field makes a bound form render its initial value
+        # instead of the submitted data, which would blank out the read-only view. The submitted
+        # values still ride along as hidden inputs (disabled widgets don't submit) for the confirm POST.
+        for field in form.fields.values():
+            field.widget.attrs["disabled"] = True
+
+        skip = {"_create", "_addanother", "_bulkadd", "_bulkconfirm", "csrfmiddlewaretoken"}
+        hidden_fields = [
+            (key, value) for key in request.POST if key not in skip for value in request.POST.getlist(key)
+        ]
+        return Response(
+            {
+                "form": form,
+                "confirming": True,
+                "bulk_cables": cables,
+                "bulk_hidden_fields": hidden_fields,
+                "bulk_count": count,
+            }
         )
 
 

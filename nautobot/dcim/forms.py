@@ -4758,6 +4758,55 @@ class CableForm(NautobotModelForm):
                 cable.add_termination(termination, cable_end=side_label, connector=connector)
 
 
+class CableCreateForm(CableForm):
+    """The cable *create* form (``CableUIViewSet.create_form_class``): ``CableForm`` plus a Count.
+
+    It is the form rendered/submitted for ``dcim:cable_add`` only — editing an existing cable uses
+    plain ``CableForm``, since a count (which produces N cables) is meaningless when modifying one
+    existing cable. The user fills
+    one cable as a template (``CableForm``'s per-connector pickers) and optionally sets ``count``.
+    ``CableUIViewSet.perform_create`` inspects the count and the submit button: a single cable saves
+    through the normal ``CableForm`` path, while "Bulk add" builds a spec via ``build_spec()`` and
+    hands it to ``BulkCableConnectService``, which creates the N cables.
+    """
+
+    count = forms.IntegerField(
+        min_value=2,
+        required=False,
+        label="Number of cables",
+        help_text="Leave blank to create a single cable. Enter 2 or more, then use “Bulk add” to "
+        "create that many cables — each side auto-fills count x (terminations you selected on that "
+        "side), walking from the last selected termination.",
+    )
+
+    def build_spec(self):
+        """Build a :class:`BulkConnectSpec` from the cleaned form data (used by the view's bulk path)."""
+        from nautobot.dcim.cables import BulkConnectSpec, ConnectorSelection
+
+        info = self.connection_info
+        selections = []
+        for side_key, side_label in (("a_side", "A"), ("b_side", "B")):
+            for conn in info[side_key]:
+                connector = conn["connector"]
+                termination = self.cleaned_data.get(f"{side_label.lower()}_conn_{connector}_termination")
+                if termination is not None:
+                    selections.append(
+                        ConnectorSelection(side=side_label, connector=connector, termination=termination)
+                    )
+        return BulkConnectSpec(
+            cable_type=self.cleaned_data.get("cable_type"),
+            selections=selections,
+            count=self.cleaned_data.get("count") or 1,
+            status=self.cleaned_data.get("status"),
+            label=self.cleaned_data.get("label") or "",
+            color=self.cleaned_data.get("color") or "",
+            length=self.cleaned_data.get("length"),
+            length_unit=self.cleaned_data.get("length_unit") or "",
+            type=self.cleaned_data.get("type") or "",
+            tags=list(self.cleaned_data.get("tags") or []),
+        )
+
+
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cable.objects.all(), widget=forms.MultipleHiddenInput)
     type = forms.ChoiceField(
