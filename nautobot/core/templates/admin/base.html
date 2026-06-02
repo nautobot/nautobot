@@ -35,12 +35,7 @@
             .related-widget-wrapper > select {
                 width: 100%;
             }
-            /*
-             * Select2-enhanced selects (e.g. ObjectPermission's "Object types", "Groups", "Users") are
-             * initialized with width: 'off', so the generated .select2-container relies on CSS for sizing.
-             * The Bootstrap 5 theme only sizes the inner .select2-selection, leaving the container collapsed
-             * in the admin layout. Force the container to full width to match the other admin form widgets.
-             */
+            /* Select2 inits with width: 'off', so the generated container must be sized via CSS. */
             .nautobot-select2-static + .select2-container {
                 width: 100%;
             }
