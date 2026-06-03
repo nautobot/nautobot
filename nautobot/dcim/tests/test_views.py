@@ -115,6 +115,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
+    DeviceBayUIViewSet,
     DeviceUIViewSet,
     InterfaceConnectionsListView,
     ModuleTypeComponentAddButton,
@@ -4051,6 +4052,11 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    def test_parents_name_empty_selection(self):
+        """`get_selected_objects_parents_name` returns an empty string when no objects are selected."""
+        viewset = DeviceBayUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(DeviceBay.objects.none()), "")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_populate_device_bay(self):
