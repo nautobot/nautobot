@@ -1,0 +1,1 @@
+Changed `ObjectMetadata.assigned_object_type` to `on_delete=CASCADE`; deleting a `ContentType` now cascades to its `ObjectMetadata` records instead of nulling them out.

@@ -1092,6 +1092,13 @@ properties:
     environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
     type: "string"
     version_added: "2.4.0"
+  KUBERNETES_VERIFY_SSL:
+    default: true
+    description: "Internal/development-only. Toggles TLS certificate verification for the Nautobot connection to the Kubernetes API."
+    details: "Intended ONLY for local development against Docker Desktop."
+    environment_variable: "NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL"
+    type: "boolean"
+    version_added: "3.2.0"
   LOCATION_LIST_DEFAULT_MAX_DEPTH:
     default: 0
     description: >-

@@ -1,0 +1,4 @@
+{% load form_helpers %}
+{# Generic HTMX swap target for a single bound form field. The view should pass the bound #}
+{# field via the `field` context key (or omit it to render an empty fragment). #}
+{% if field %}{% render_field field %}{% endif %}

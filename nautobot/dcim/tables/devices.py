@@ -52,7 +52,6 @@ from .template_code import (
     INTERFACE_REDUNDANCY_GROUP_INTERFACES_IPADDRESSES,
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
-    MODULE_BUTTONS,
     MODULEBAY_BUTTONS,
     PARENT_DEVICE,
     PATHENDPOINT,
@@ -313,7 +312,7 @@ class ModuleTable(StatusTableMixin, RoleTableMixin, BaseTable):
     tenant = TenantColumn()
     module_family = tables.Column(linkify=True, verbose_name="Family", accessor="module_type__module_family")
     tags = TagColumn(url_name="dcim:module_list")
-    actions = ButtonsColumn(Module, prepend_template=MODULE_BUTTONS)
+    actions = ButtonsColumn(Module)
 
     class Meta(BaseTable.Meta):
         model = Module
