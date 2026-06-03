@@ -2308,6 +2308,9 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
                     initial=str(obj),
                     disabled=True,
                 )
+                css_classes = display_field.widget.attrs.get("class", "")
+                if "form-control" not in css_classes:
+                    display_field.widget.attrs["class"] = ("form-control " + css_classes).strip()
                 # Insert the display field where assigned_object_id used to sit so visual order matches.
                 reordered = {}
                 for name, field in self.fields.items():
