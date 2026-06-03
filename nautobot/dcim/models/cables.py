@@ -1263,11 +1263,12 @@ class CablePath(BaseModel):
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
-            # Mid-path breakout bail-out: don't even enter the cable. Lane-aware routing
-            # *through* a mid-path breakout cable (e.g. an MPO trunk between pass-through ports
-            # in a cross-connect cabinet) isn't supported, so we mark the path as split and stop
-            # at the previous pass-through rather than picking an arbitrary peer.
-            if not first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
+            # Mid-path breakout handling: a lane returning to its single trunk peer can be followed
+            # deterministically (e.g. a patch-panel front port whose breakout lane leads back to one
+            # trunk endpoint). Arriving on the fan-out side instead means the signal splits across
+            # multiple lanes with no way to choose, so mark the path split and stop at the previous
+            # pass-through rather than picking an arbitrary peer.
+            if not first_hop and node.breakout_fans_out():
                 is_split = True
                 break
 

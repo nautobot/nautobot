@@ -1310,6 +1310,55 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(lane1_reverse.destination, if_trunk)
 
+    def test_207c_mid_path_breakout_lane_traverses_to_trunk(self):
+        """
+        A breakout lane reached mid-path leads deterministically back to its single trunk endpoint,
+        so the trace continues through it to completion (the fan-out side still splits — see
+        test_207a). This mirrors a patch-panel/MPO topology where a far endpoint reaches the trunk
+        endpoint through a breakout whose lane lands on a patch-panel front port.
+
+        [IF_trunk] --C_bk (breakout 1:2, lane B1)-- [FP1][RP1] --C2-- [RP2][FP2] --C3-- [IF_dest]
+        """
+        breakout_type = CableType(
+            name="Test mid-path lane 1:2 breakout",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=2,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        if_trunk = Interface.objects.create(device=self.device, name="Trunk", status=self.interface_status)
+        if_dest = Interface.objects.create(device=self.device, name="Dest", status=self.interface_status)
+
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=2)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=2)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # IF_dest -- C3 -- FP2 (pass-through to RP2)
+        cable3 = Cable(termination_a=frontport2, termination_b=if_dest, status=self.status)
+        cable3.save()
+        # RP2 -- C2 -- RP1 (straight rear-to-rear)
+        cable2 = Cable(termination_a=rearport2, termination_b=rearport1, status=self.status)
+        cable2.save()
+        # FP1 -- C_bk (breakout lane B1) -- IF_trunk
+        cable_bk = Cable(termination_a=if_trunk, termination_b=frontport1, cable_type=breakout_type, status=self.status)
+        cable_bk.save()
+
+        # Tracing from the destination interface reaches the trunk interface: the breakout lane (B1)
+        # maps to a single trunk connector, so it is followed rather than treated as a split.
+        cp = self.assertPathExists(
+            origin=if_dest,
+            destination=if_trunk,
+            path=(cable3, frontport2, rearport2, cable2, rearport1, frontport1, cable_bk),
+            is_active=True,
+        )
+        self.assertFalse(cp.is_split, msg=f"Lane-side mid-path breakout should traverse, not split; got {cp}")
+
     def test_208_single_path_via_circuit(self):
         """
         [IF1] --C1-- [CT1A] [CT1Z] --C2-- [IF2]
