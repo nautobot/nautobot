@@ -2305,7 +2305,7 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_disconnect_objects_with_permission(self):
-            """_confirm + valid form -> cables deleted, components remain, redirect to return_url."""
+            """_confirm + valid form -> components detached, cables preserved, redirect to return_url."""
             try:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
@@ -2316,19 +2316,18 @@ class ViewTestCases:
 
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
             pk_list = [obj.pk for obj in self.cabled_objects]
-            cable_pks = [obj.cable_id for obj in self.cabled_objects]
+            cable_pks = [obj.cable.pk for obj in self.cabled_objects]
 
             data = {"pk": pk_list, "_confirm": True, "confirm": True}
             response = self.client.post(self._get_url("bulk_disconnect"), data)
             self.assertHttpStatus(response, 302)
 
-            # Components still exist
+            # Components still exist but are no longer cabled
             self.assertEqual(self._get_queryset().filter(pk__in=pk_list).count(), len(pk_list))
-            # Their cables are gone
-            self.assertEqual(Cable.objects.filter(pk__in=cable_pks).count(), 0)
-            # And the components' cable FK is now None
             for obj in self._get_queryset().filter(pk__in=pk_list):
                 self.assertIsNone(obj.cable)
+            # The cables themselves are preserved (disconnect_termination removes the termination row only)
+            self.assertEqual(Cable.objects.filter(pk__in=cable_pks).count(), len(cable_pks))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_disconnect_skips_uncabled_selections(self):
@@ -2343,7 +2342,7 @@ class ViewTestCases:
 
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
             cabled = self.cabled_objects[0]
-            cable_pk = cabled.cable_id
+            cable_pk = cabled.cable.pk
 
             data = {
                 "pk": [cabled.pk, self.uncabled_object.pk],
@@ -2353,7 +2352,10 @@ class ViewTestCases:
             response = self.client.post(self._get_url("bulk_disconnect"), data)
             self.assertHttpStatus(response, 302)
 
-            self.assertFalse(Cable.objects.filter(pk=cable_pk).exists())
+            # The cabled component is detached but the cable itself is preserved
+            cabled.refresh_from_db()
+            self.assertIsNone(cabled.cable)
+            self.assertTrue(Cable.objects.filter(pk=cable_pk).exists())
             # Uncabled object is untouched and still uncabled
             self.uncabled_object.refresh_from_db()
             self.assertIsNone(self.uncabled_object.cable)
