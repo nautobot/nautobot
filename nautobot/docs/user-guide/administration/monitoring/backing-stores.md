@@ -28,7 +28,11 @@ Deploy [`redis_exporter`](https://github.com/oliver006/redis_exporter) alongside
 
 ### Redis Slowlog
 
-`redis_exporter` counts slow commands but does not surface their content. To investigate which commands are slow, query Redis directly:
+**Potential Issue:** Individual Redis commands are running slowly, dragging request and Job latency with them. The most common offender in a Nautobot deployment is an App that uses the Django cache for an unbounded queryset.
+
+**Artifact or data:** The `SLOWLOG` ring buffer and the `LATENCY` history are maintained by Redis itself but are not surfaced by `redis_exporter`'s counters — you have to query Redis directly.
+
+**Query:**
 
 ```bash
 redis-cli SLOWLOG GET 20            # last 20 slow commands with timing
@@ -36,11 +40,21 @@ redis-cli LATENCY DOCTOR            # human-readable latency report
 redis-cli CONFIG GET slowlog-log-slower-than    # default 10000 µs (10 ms)
 ```
 
-The most common offender is an App that uses Django cache for an unbounded queryset. To attribute Redis latency back to the *Nautobot request* that caused it, pair this with [Request Profiling](./request-profiling.md) — `django-silk` records cache calls per request alongside SQL queries.
+**Suggested resolution(s):** Identify the offending App from the slow command text and replace the unbounded cache key with a bounded one (paginate, scope to a tenant, or cache per-object instead of per-collection). To attribute the Redis latency back to the *Nautobot request* that caused it, pair this with [Request Profiling](./request-profiling.md) — `django-silk` records cache calls per request alongside SQL queries.
 
 ### HA Considerations
 
-`redis-cli ping` returns `PONG` whether the node is master or replica. In a Sentinel topology, add `redis-cli INFO replication | grep role:master` as a secondary probe so a replica that just got demoted does not pass the liveness check — see [Health Checks](./health-checks.md).
+**Potential Issue:** In a Redis Sentinel topology, a replica that has just been demoted (or one that never became master in the first place) still answers `redis-cli ping` with `PONG`, so a basic liveness check passes against a node Nautobot cannot read or write data from.
+
+**Artifact or data:** Redis's `INFO replication` block carries the node's current role.
+
+**Query:**
+
+```bash
+redis-cli INFO replication | grep role:master
+```
+
+**Suggested resolution(s):** Add the query above as a secondary liveness probe alongside `redis-cli ping`, so a demoted node gets caught at the probe layer rather than after the first failed read or write. See [Health Checks](./health-checks.md) for wiring details.
 
 ## PostgreSQL
 
@@ -65,19 +79,28 @@ Three observations drive Nautobot-specific PostgreSQL load:
 
 ### High-Churn Tables
 
-These tables bloat fastest in a typical Nautobot deployment:
+A handful of tables bloat fastest in a typical Nautobot deployment:
 
 - `extras_objectchange` — every model write emits a row. Retention controlled by [`CHANGELOG_RETENTION`](../configuration/settings.md#changelog_retention) (days; default 90, `0` disables retention enforcement).
 - `extras_jobresult` — one row per Job invocation. No standalone retention setting; trimmed by the bundled `Logs Cleanup` Job.
 - `extras_joblogentry` — every Job emits dozens to thousands of rows. Deleted automatically when the parent `JobResult` is deleted via the cleanup Job above.
 - `django_session` if not cache-backed.
 
-Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Logs Cleanup` Job (under the `System Jobs` group) to run periodically. Its `cleanup_types` argument selects which records to trim (`extras.ObjectChange`, `extras.JobResult`, or both) and `max_age` overrides the default cutoff in days (which falls back to `CHANGELOG_RETENTION`). The defaults err on the side of "keep everything," which is fine until disk fills.
+**Potential Issue:** Without working retention discipline, these tables grow unboundedly. Autovacuum falls behind the churn, the data volume fills up, and query performance against the bloated tables degrades.
 
-The two signals that tell you when bloat or growth on these tables is getting away from you:
+**Artifact or data:** Two complementary signals tell you when growth on these tables is getting away from you — a per-relation bloat ratio (autovacuum lag) and a disk-fill trajectory (cleanup-vs-retention mismatch).
 
-- **`pg_stat_user_tables_n_dead_tup / n_live_tup` per relation** — the bloat ratio (see [Key PostgreSQL Metrics](#key-postgresql-metrics) below). A sustained value above `0.2` on `extras_joblogentry` or `extras_objectchange` is the first sign that autovacuum is falling behind retention churn.
-- **Disk-fill trajectory** — `predict_linear` on the PostgreSQL data volume (see [Disk-Trajectory Monitoring](#disk-trajectory-monitoring) below). The growth is almost always attributable to one of the tables listed above outpacing your cleanup schedule.
+**Query:**
+
+```promql
+# Bloat ratio per relation — alert on a sustained value above 0.2
+# on extras_joblogentry or extras_objectchange.
+pg_stat_user_tables_n_dead_tup / pg_stat_user_tables_n_live_tup
+```
+
+For the disk-fill trajectory, see [Disk-Trajectory Monitoring](#disk-trajectory-monitoring) below; for the broader metric catalogue see [Key PostgreSQL Metrics](#key-postgresql-metrics) below.
+
+**Suggested resolution(s):** Set `CHANGELOG_RETENTION` to a value that matches your audit requirements (anything from 30 days to 365 days is typical), and schedule the bundled `Logs Cleanup` Job (under the `System Jobs` group) to run periodically. Its `cleanup_types` argument selects which records to trim (`extras.ObjectChange`, `extras.JobResult`, or both) and `max_age` overrides the default cutoff in days (which falls back to `CHANGELOG_RETENTION`). The defaults err on the side of "keep everything," which is fine until disk fills.
 
 ### Key PostgreSQL Metrics
 
@@ -95,7 +118,11 @@ Deploy [`postgres_exporter`](https://github.com/prometheus-community/postgres_ex
 
 ### `pg_stat_statements`
 
-The `pg_stat_statements` extension is the standard tool for investigating slow queries on a PostgreSQL instance. As a SQL artifact, it can be directly queried from [Grafana](./visualization.md#3-backing-stores). Enable on the primary:
+**Potential Issue:** A page or Job is reported as slow and the root cause is one or more queries dominating database time. The biggest offenders are usually filter combinations on large tables without a supporting index, or N+1 query loops in Job code.
+
+**Artifact or data:** The `pg_stat_statements` extension retains aggregated stats per normalized query — total time, mean time, call count, rows. As a SQL artifact, it can be queried from `psql` directly or, in environments where operators don't have direct database access, through `nautobot-server dbshell` (which opens a session using Nautobot's own credentials). It can also be queried from [Grafana](./visualization.md#3-backing-stores).
+
+Enable on the primary:
 
 ```sql
 -- in postgresql.conf
@@ -106,7 +133,7 @@ pg_stat_statements.track = top
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 ```
 
-`pg_stat_statements` retains aggregated stats per normalized query — total time, mean time, call count, rows. When an operator says "the device list page is slow," this is the first place to look:
+**Query:**
 
 ```sql
 SELECT
@@ -120,17 +147,15 @@ ORDER BY total_exec_time DESC
 LIMIT 20;
 ```
 
-The query above can be run from `psql` directly, or — for environments where operators don't have direct database access — through `nautobot-server dbshell`, which opens a `psql`/`mysql` session using Nautobot's own database credentials.
-
-The biggest offenders are usually filter combinations on large tables without a supporting index, or N+1 query loops in Job code.
-
-`pg_stat_statements` aggregates across the whole database. When you have not yet identified *which* view is slow, start with the [Visualization — View Latency](./visualization.md#6-view-latency) dashboard — its Top-N panel surfaces the slowest Nautobot views in Grafana, after which the offending queries can be tracked down here. To trace a slow query back to the specific *Nautobot view or Job* that issued it, also enable [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
+**Suggested resolution(s):** Add the missing index for filter combinations on large tables; refactor N+1 loops in Job code into a single bulk query using `prefetch_related` or `select_related`. `pg_stat_statements` aggregates across the whole database — when you have not yet identified *which* view is slow, start with the [Visualization — View Latency](./visualization.md#6-view-latency) dashboard to find the slowest view, then attribute its SQL through [Request Profiling](./request-profiling.md) — `django-silk` records each request's SQL queries with timing.
 
 ### Long-Running Transactions
 
-Nautobot Jobs that wrap a multi-thousand-row update in `with transaction.atomic():` keep a transaction open for the duration of the loop. That's fine in isolation or in smaller updates, but the transaction holds row locks, prevents the database from cleaning up "dead" rows, and consumes a PgBouncer slot in `transaction` mode.
+**Potential Issue:** Nautobot Jobs that wrap a multi-thousand-row update in `with transaction.atomic():` keep a transaction open for the duration of the loop. That's fine in isolation or for smaller updates, but the transaction holds row locks, prevents the database from cleaning up "dead" rows, and consumes a PgBouncer slot in `transaction` mode.
 
-Detect:
+**Artifact or data:** `pg_stat_activity` exposes the live state of every backend, including `xact_start` (when the current transaction began) and the current query text.
+
+**Query:**
 
 ```sql
 SELECT
@@ -144,21 +169,37 @@ WHERE state = 'active'
 ORDER BY xact_start;
 ```
 
-For continuous monitoring rather than one-off `psql` checks, wrap the same query in a Grafana dashboard with a `FOR 5m` alert on any non-zero count. The fix on the application side is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
+**Suggested resolution(s):** Break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop. For continuous monitoring rather than one-off `psql` checks, wrap the query above in a Grafana panel with a `FOR 5m` alert on any non-zero count.
 
 ### HA-Specific Signals
 
-`pg_isready` confirms the server is accepting TCP connections; it does **not** check whether the node is in recovery (read-only). In a Patroni / repmgr / RDS multi-AZ topology, a connection probe will pass against a node that Nautobot cannot write to. Add `psql -c "SELECT NOT pg_is_in_recovery();"` as a secondary probe — it returns `t` only on the primary, so a failed promotion gets caught at the probe layer instead of as a flood of 5xx after the first write. See [Health Checks — PostgreSQL](./health-checks.md#postgresql).
+**Potential Issue:** In a Patroni / repmgr / RDS multi-AZ topology, a failed promotion can leave Nautobot pointed at a node that is still in recovery (read-only). A basic connection probe (`pg_isready`) only confirms TCP reachability — it does not check the recovery state — so the first sign of the problem becomes a flood of 5xx after the first write.
+
+**Artifact or data:** PostgreSQL's `pg_is_in_recovery()` function returns `false` on the primary and `true` on any node still in recovery.
+
+**Query:**
+
+```bash
+psql -c "SELECT NOT pg_is_in_recovery();"   # returns 't' only on the primary
+```
+
+**Suggested resolution(s):** Add the query above as a secondary liveness probe alongside `pg_isready`, so a failed promotion gets caught at the probe layer rather than as a 5xx flood after the first write. See [Health Checks — PostgreSQL](./health-checks.md#postgresql) for wiring details.
 
 ### Disk-Trajectory Monitoring
 
-Disk-fill is the slowest-developing PostgreSQL outage and the most catastrophic. A 30-day forecast catches the trajectory before the 3 AM page:
+**Potential Issue:** Disk-fill is the slowest-developing PostgreSQL outage and the most catastrophic. By the time the data volume crosses 95%, the on-call engineer is making decisions under time pressure.
+
+**Artifact or data:** `node_exporter` exposes `node_filesystem_avail_bytes` on every host. Prometheus's `predict_linear` extrapolates the trend forward.
+
+**Query:**
 
 ```promql
+# 30-day forecast — fires when the linear projection of the last 7 days
+# of available bytes goes below zero within the next 30 days.
 predict_linear(node_filesystem_avail_bytes{mountpoint=~".*postgres.*"}[7d], 30 * 24 * 3600) < 0
 ```
 
-The growth is almost always traceable to `extras_joblogentry` or `extras_objectchange` outpacing your retention settings — see "High-Churn Tables" above.
+**Suggested resolution(s):** The growth is almost always traceable to `extras_joblogentry` or `extras_objectchange` outpacing your retention settings — apply tighter retention via the [High-Churn Tables](#high-churn-tables) guidance above. The fix is rarely "add more disk."
 
 !!! tip
-    Pair the disk-trajectory alert with periodic table-size queries against `pg_total_relation_size()` to attribute the growth to a specific table. The fix is usually tighter retention, not more disk.
+    Pair the disk-trajectory alert with periodic table-size queries against `pg_total_relation_size()` to attribute the growth to a specific table.
