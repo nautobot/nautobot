@@ -3243,9 +3243,11 @@ class ScheduledJobUIViewSet(
         ):
             messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
             return redirect(obj.get_absolute_url())
+
         obj.user = request.user
-        obj.enabled = True
-        obj.state = ScheduledJobStateChoices.ACTIVE
+        if obj.state == ScheduledJobStateChoices.ERRORED:
+            obj.enabled = True
+            obj.state = ScheduledJobStateChoices.ACTIVE
         obj.validated_save()
         messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
         return redirect(obj.get_absolute_url())

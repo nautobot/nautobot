@@ -4313,6 +4313,219 @@ class ScheduledJobTestCase(
         sj.refresh_from_db()
         self.assertEqual(sj.user_id, other_user.id)  # unchanged
 
+    def _make_pending_scheduled_job(self, name, *, prior_owner, stage_specs):
+        sj = self._make_scheduled_job(name, user=prior_owner, enabled=False)
+        sj.state = ScheduledJobStateChoices.PENDING
+        sj.save()
+
+        approver_group = Group.objects.create(name=f"approvers_{name}")
+        workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name=f"workflow_def_{name}",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+        )
+        workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            object_under_review_object_id=sj.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+            user=prior_owner,
+        )
+        stages = []
+        for index, (stage_state, approved_usernames) in enumerate(stage_specs, start=1):
+            stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+                approval_workflow_definition=workflow_definition,
+                sequence=index,
+                name=f"stage_{index}_{name}",
+                min_approvers=len(approved_usernames) + 2,
+                approver_group=approver_group,
+            )
+            stage = ApprovalWorkflowStage.objects.create(
+                approval_workflow=workflow,
+                approval_workflow_stage_definition=stage_definition,
+                state=stage_state,
+            )
+            for username in approved_usernames:
+                approver = User.objects.create(username=username, is_active=True)
+                ApprovalWorkflowStageResponse.objects.create(
+                    approval_workflow_stage=stage,
+                    user=approver,
+                    state=ApprovalWorkflowStateChoices.APPROVED,
+                    comments="LGTM",
+                )
+            stages.append(stage)
+        return sj, workflow, stages
+
+    def test_assume_ownership_pending_transfers_owner_only_and_preserves_approvals(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_handoff", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_handoff",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["approver_pending_handoff"])],
+        )
+        active_stage = stages[0]
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            1,
+        )
+        self.assertFalse(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                user=self.user,
+            ).exists()
+        )
+
+    def test_assume_ownership_pending_when_both_users_are_approvers(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_in_group", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_in_group",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["approver_pending_in_group"])],
+        )
+        active_stage = stages[0]
+        approver_group = active_stage.approval_workflow_stage_definition.approver_group
+        approver_group.user_set.add(prior_owner, self.user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            1,
+        )
+        self.assertFalse(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                user=self.user,
+            ).exists()
+        )
+
+    def test_assume_ownership_pending_preserves_prior_approval_from_new_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_self_approved", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_self_approved",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["other_approver_pending_self_approved"])],
+        )
+        active_stage = stages[0]
+        approver_group = active_stage.approval_workflow_stage_definition.approver_group
+        approver_group.user_set.add(prior_owner, self.user)
+        self_user_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=active_stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.APPROVED,
+            comments="LGTM from future owner",
+        )
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            2,
+        )
+        self_user_response.refresh_from_db()
+        self.assertEqual(self_user_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(self_user_response.comments, "LGTM from future owner")
+
+    def _assert_assume_ownership_transfers_owner_only(self, state, prior_owner_username, schedule_name):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username=prior_owner_username, is_active=True)
+        sj = self._make_scheduled_job(schedule_name, user=prior_owner, enabled=False)
+        sj.state = state
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, state)
+        self.assertFalse(sj.enabled)
+
+    def test_assume_ownership_denied_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.DENIED, "prior_owner_denied_handoff", "assume_denied_handoff"
+        )
+
+    def test_assume_ownership_canceled_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.CANCELED, "prior_owner_canceled_handoff", "assume_canceled_handoff"
+        )
+
+    def test_assume_ownership_completed_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.COMPLETED, "prior_owner_completed_handoff", "assume_completed_handoff"
+        )
+
+    def test_assume_ownership_active_transfers_owner_only(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_active_handoff", is_active=True)
+        sj = self._make_scheduled_job("assume_active_handoff", user=prior_owner, enabled=True)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(sj.enabled)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(sj.enabled)
+
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = JobQueue
