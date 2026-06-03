@@ -59,7 +59,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.jobs_revoke import CeleryStrategy
+from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -4851,8 +4851,8 @@ class JobResultTestCase(
         )
 
     @mock.patch.object(CeleryStrategy, "revoke")
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
-    def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_is_alive, mock_revoke):
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_liveness, mock_revoke):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4865,18 +4865,18 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         self.assertTemplateUsed(response, "extras/job_revoke.html")
         self.assertEqual(response.context["object"], self.job_result_pending)
-        self.assertTrue(response.context["job_is_running"])
+        self.assertTrue(response.context["job_liveness_state"])
         self.assertEqual(
             response.context["return_url"],
             self.job_result_pending.get_absolute_url(),
         )
-        mock_is_alive.assert_called_once_with(self.job_result_pending)
+        mock_liveness.assert_called_once_with(self.job_result_pending)
         mock_revoke.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "revoke")
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=False)
-    def test_revoke_job_get_renders_confirmation_for_dead_worker(self, mock_is_alive, mock_revoke):
-        """`job_is_running=False` is the 'reap' branch — confirmation page still shown."""
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
+    def test_revoke_job_get_renders_confirmation_for_dead_worker(self, mock_liveness, mock_revoke):
+        """`job_liveness_state=JobLiveness.NOT_RUNNING` is the 'reap' branch — confirmation page still shown."""
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4887,12 +4887,12 @@ class JobResultTestCase(
         response = self.client.get(revoke_url)
 
         self.assertHttpStatus(response, 200)
-        self.assertFalse(response.context["job_is_running"])
+        self.assertEqual(response.context["job_liveness_state"], JobLiveness.NOT_RUNNING)
         mock_revoke.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "revoke")
-    @mock.patch.object(CeleryStrategy, "is_alive")
-    def test_revoke_job_get_already_finished_redirects(self, mock_is_alive, mock_revoke):
+    @mock.patch.object(CeleryStrategy, "liveness")
+    def test_revoke_job_get_already_finished_redirects(self, mock_liveness, mock_revoke):
         self.user.is_staff = True
         self.user.save()
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4903,7 +4903,7 @@ class JobResultTestCase(
         response = self.client.get(revoke_url)
 
         self.assertRedirects(response, self.job_result_completed.get_absolute_url())
-        mock_is_alive.assert_not_called()
+        mock_liveness.assert_not_called()
         mock_revoke.assert_not_called()
 
         messages_list = list(get_messages(response.wsgi_request))
@@ -4917,9 +4917,9 @@ class JobResultTestCase(
         response = self.client.post(revoke_url)
         self.assertHttpStatus(response, [403, 404])
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_job_post_success(self, mock_revoke, mock_is_alive):
+    def test_revoke_job_post_success(self, mock_revoke, mock_liveness):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4939,13 +4939,13 @@ class JobResultTestCase(
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("terminated" in m.lower() for m in messages_list),
+            any("Job revoked." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_job_post_success_when_user_owner_with_permission(self, mock_revoke, mock_is_alive):
+    def test_revoke_job_post_success_when_user_owner_with_permission(self, mock_revoke, mock_liveness):
         self.user.is_staff = False
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4966,13 +4966,13 @@ class JobResultTestCase(
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("terminated" in m.lower() for m in messages_list),
+            any("Job revoked." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke")
-    def test_revoke_job_post_strategy_returns_error(self, mock_revoke, mock_is_alive):
+    def test_revoke_job_post_strategy_returns_error(self, mock_revoke, mock_liveness):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -4995,8 +4995,8 @@ class JobResultTestCase(
         self.assertIn(error_message, messages_list)
 
     @mock.patch.object(CeleryStrategy, "revoke")
-    @mock.patch.object(CeleryStrategy, "is_alive")
-    def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_is_alive, mock_revoke):
+    @mock.patch.object(CeleryStrategy, "liveness")
+    def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_liveness, mock_revoke):
         self.user.is_staff = True
         self.user.save()
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -5007,12 +5007,12 @@ class JobResultTestCase(
         response = self.client.post(revoke_url)
 
         self.assertRedirects(response, self.job_result_completed.get_absolute_url())
-        mock_is_alive.assert_not_called()
+        mock_liveness.assert_not_called()
         mock_revoke.assert_not_called()
 
-    @mock.patch.object(CeleryStrategy, "is_alive", return_value=True)
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_no_action_termination_path)
-    def test_revoke_status_not_changed_returns_409(self, mock_revoke, mock_is_alive):
+    def test_revoke_status_not_changed_returns_409(self, mock_revoke, mock_liveness):
         """If the strategy reports success but the job didn't end up REVOKED returns info."""
         self.user.is_staff = True
         self.user.save()
@@ -5032,8 +5032,10 @@ class JobResultTestCase(
         )
 
     @mock.patch.object(JobResult, "log")
-    def test_revoke_unsupported_queue_type_should_reap_job(self, mock_job_log):
-        """Unsuporrted queue type should reap job."""
+    def test_revoke_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
+        self.job_result_pending.celery_kwargs = {}
+        self.job_result_pending.save()
         self.user.is_staff = True
         self.user.save()
         self.add_permissions(
@@ -5045,9 +5047,9 @@ class JobResultTestCase(
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
-        self.assertTrue(any("Job terminated." in m for m in messages_list))
+        self.assertTrue(any("Job revoked." in m for m in messages_list))
         mock_job_log.assert_called_once_with(
-            f"Reaped dead job {self.job_result_pending.pk} by {self.user}",
+            f"Abandoned job {self.job_result_pending.pk} by {self.user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="revoking",
         )
