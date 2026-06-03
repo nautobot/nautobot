@@ -1,9 +1,8 @@
 {% extends 'base.html' %}
-{% load helpers %}
 
 {% block content %}
     <div class="row">
-        <div class="col-lg-6 col-md-12">
+        <div class="col-12">
             {% if trace_svg %}
                 <div class="card">
                     <div class="card-header">
@@ -13,84 +12,11 @@
                         {{ trace_svg }}
                     </div>
                 </div>
-            {% else %}
-            <div class="nb-cable-trace">
-                {% with traced_path=path.origin.trace %}
-                    {% for near_end, cable, far_end in traced_path %}
-
-                        {# Near end #}
-                        {% if near_end.device or near_end.module %}
-                            {% include 'dcim/trace/device.html' with device=near_end.parent %}
-                            {% include 'dcim/trace/termination.html' with termination=near_end %}
-                        {% elif near_end.power_panel %}
-                            {% include 'dcim/trace/powerpanel.html' with powerpanel=near_end.power_panel %}
-                            {% include 'dcim/trace/termination.html' with termination=far_end %}
-                        {% elif near_end.circuit %}
-                            {% include 'dcim/trace/circuit.html' with circuit=near_end.circuit %}
-                            {% include 'dcim/trace/termination.html' with termination=near_end %}
-                        {% endif %}
-
-                        {# Cable #}
-                        {% if cable %}
-                            {% include 'dcim/trace/cable.html' %}
-                        {% endif %}
-
-                        {# Far end #}
-                        {% if far_end.device or far_end.module %}
-                            {% include 'dcim/trace/termination.html' with termination=far_end %}
-                            {% if forloop.last %}
-                                {% include 'dcim/trace/device.html' with device=far_end.parent %}
-                            {% endif %}
-                        {% elif far_end.power_panel %}
-                            {% include 'dcim/trace/termination.html' with termination=far_end %}
-                            {% include 'dcim/trace/powerpanel.html' with powerpanel=far_end.power_panel %}
-                        {% elif far_end.circuit %}
-                            {% include 'dcim/trace/termination.html' with termination=far_end %}
-                            {% if forloop.last %}
-                                {% include 'dcim/trace/circuit.html' with circuit=far_end.circuit %}
-                            {% endif %}
-                        {% endif %}
-
-                        {% if forloop.last %}
-                            {% if path.is_split %}
-                                <div class="nb-trace-end">
-                                    <h3 class="text-danger">Path split!</h3>
-                                    <p>Select a node below to continue:</p>
-                                    <ul class="text-start">
-                                        {% for next_node in path.get_split_nodes %}
-                                            {% if next_node.cable %}
-                                                <li>
-                                                    <a href="{% url 'dcim:frontport_trace' pk=next_node.pk %}">{{ next_node }}</a>
-                                                    (Cable {{ next_node.cable|hyperlinked_object }})
-                                                </li>
-                                            {% else %}
-                                                <li class="text-secondary">{{ next_node }}</li>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            {% else %}
-                                <div class="nb-trace-end">
-                                    <h3{% if far_end %} class="text-success"{% endif %}>Trace completed</h3>
-                                    <h5>Total segments: {{ traced_path|length }}</h5>
-                                    <h5>Total length:
-                                        {% if total_length %}
-                                            {{ total_length|floatformat:"-2" }} Meters /
-                                            {{ total_length|meters_to_feet|floatformat:"-2" }} Feet
-                                        {% else %}
-                                            <span class="text-secondary">N/A</span>
-                                        {% endif %}
-                                    </h5>
-                                </div>
-                            {% endif %}
-                        {% endif %}
-
-                    {% endfor %}
-                {% endwith %}
-            </div>
             {% endif %}
         </div>
-        <div class="col-lg-6 col-md-12">
+    </div>
+    <div class="row">
+        <div class="col-12">
 
             <div class="card">
                 <div class="card-header">

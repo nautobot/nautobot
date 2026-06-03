@@ -59,7 +59,7 @@ class CableTraceSVG:
     # Vertical padding above and below the termination box's stacked text block.
     TERM_TEXT_PAD_Y = 6
     # TERM_H holds two stacked lines: the bold termination name plus a "<verbose name> (<type>)"
-    # detail line (mirroring trace/termination.html), with vertical padding.
+    # detail line, with vertical padding.
     TERM_H = constants.FONT_SIZE + TEXT_LINE_SPACING + 2 * TERM_TEXT_PAD_Y
 
     # Layout: node (device/circuit/panel box)
@@ -209,10 +209,10 @@ class CableTraceSVG:
         """Extract a termination's grouping key and the text block to render for its parent node.
 
         Returns `(key, lines)`. `lines` is a list of `(text, url)` tuples drawn stacked inside the
-        node box, mirroring the multi-line `dcim/trace/*.html` partials: line 0 is the bold parent
-        name and any further lines are detail. `url` is `None` for plain text or an absolute URL to
-        render the line as a link. `key` groups same-device nodes via the parent's globally-unique
-        UUID; `termination.parent` handles device, module, circuit, and power_panel.
+        node box: line 0 is the bold parent name and any further lines are detail. `url` is `None`
+        for plain text or an absolute URL to render the line as a link. `key` groups same-device
+        nodes via the parent's globally-unique UUID; `termination.parent` handles device, module,
+        circuit, and power_panel.
         """
         if termination is None:
             return None, []
@@ -227,7 +227,7 @@ class CableTraceSVG:
 
         if hasattr(parent, "device_type"):
             # Device — manufacturer + device type, then location and rack each on their own line
-            # (see trace/device.html; split onto separate lines so each centers cleanly).
+            # (split onto separate lines so each centers cleanly).
             lines.append((f"{parent.device_type.manufacturer} {parent.device_type}", None))
             location = getattr(parent, "location", None)
             rack = getattr(parent, "rack", None)
@@ -236,11 +236,11 @@ class CableTraceSVG:
             if rack:
                 lines.append((str(rack), self._url(rack)))
         elif hasattr(parent, "provider"):
-            # Circuit — name is the cid, then "Circuit" and the linked provider (see trace/circuit.html).
+            # Circuit — name is the cid, then "Circuit" and the linked provider.
             lines.append(("Circuit", None))
             lines.append((str(parent.provider), self._url(parent.provider)))
         else:
-            # PowerPanel / Module / other — verbose name, then linked location if any (see trace/powerpanel.html).
+            # PowerPanel / Module / other — verbose name, then linked location if any.
             lines.append((parent._meta.verbose_name.title(), None))
             location = getattr(parent, "location", None)
             if location is not None:
@@ -1130,8 +1130,7 @@ class CableTraceSVG:
             )
         )
 
-        # Line 0: the linked name; line 1: the model verbose name plus type display, if any
-        # (mirrors trace/termination.html).
+        # Line 0: the linked name; line 1: the model verbose name plus type display, if any.
         lines = [(str(termination), termination_url)]
         if termination is not None:
             detail = bettertitle(termination._meta.verbose_name)

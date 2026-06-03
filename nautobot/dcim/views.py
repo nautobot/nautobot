@@ -5706,7 +5706,6 @@ class PathTraceView(generic.ObjectView):
             "path": path,
             "related_paths": related_paths,
             "trace_svg": trace_svg,
-            "total_length": path.get_total_length() if path else None,
             "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
