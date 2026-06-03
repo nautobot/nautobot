@@ -171,9 +171,9 @@ For each pattern, the recommended way to detect it is to combine the named logge
 
 ### Migration and Startup Errors
 
-Django applies pending migrations automatically at process start. A failed migration aborts the process and the container restart loop kicks in; the cause is usually in the first startup log block, before subsequent restart noise.
+**Potential Issue:** Django applies pending migrations automatically at process start. A failed migration aborts the process and the container restart loop kicks in. The cause is typically a deploy-time issue — code rolled forward without the matching DB schema, or a downgrade where the new code expects a schema that has been rolled back.
 
-Representative log lines:
+**Artifact or data:** Failures surface in worker/web `stdout` at process startup, in the *first* startup log block before subsequent restart noise. Representative log lines:
 
 ```text
 django.db.utils.ProgrammingError: relation "extras_X" does not exist
@@ -182,25 +182,38 @@ InconsistentMigrationHistory: Migration X is applied before its dependency Y
 ImportError: cannot import name 'X' from 'nautobot.Y'
 ```
 
-Migration failures are typically deploy-time issues — code rolled forward without the matching DB schema, or a downgrade where the new code expects a schema that has been rolled back. Catch them at deploy time with the [`/health/`](./health-checks.md#nautobot-http-server) readiness probe, which fails until all migrations have applied.
+**Query:** Prefer the deploy-time signal over log search — the [`/health/`](./health-checks.md#nautobot-http-server) readiness probe fails until all migrations have applied. For post-hoc investigation of a restart-looping pod, scope the aggregator to the first 30 seconds of each restart window.
+
+**Suggested resolution(s):** Roll back the deploy if the matching DB schema is not in place. Long-term, gate deploys on the readiness probe so a bad migration never reaches rollout completion.
 
 ### Database Connectivity and Capacity
 
-Surfaces through Django's `db.backends` logger and Python's stdlib `OperationalError`/`ProgrammingError` propagation. Note that Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign of a database problem is usually a 500 traceback from a request.
+**Potential Issue:** PostgreSQL is unreachable, has hit its `max_connections` ceiling, or is encountering contention (deadlocks, lock timeouts). Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign is usually a 500 traceback from a request rather than a friendly startup error.
 
-- `OperationalError: could not connect to server` — PostgreSQL unreachable
-- `OperationalError: FATAL: too many connections for role` — pool exhausted
-- `psycopg2.errors.DeadlockDetected`, `LockNotAvailable` — contention
-- `django.db.utils.InterfaceError: connection already closed` — typically after worker fork or stale `CONN_MAX_AGE`
+**Artifact or data:** Lines surface through Django's `db.backends` logger and Python's stdlib `OperationalError` / `ProgrammingError` propagation. Representative log lines:
 
-!!! tip
-    If you see `too many connections`, check the connection pooler before Nautobot — see [Backing Stores — PostgreSQL connection topology](./backing-stores.md#connection-topology).
+```text
+OperationalError: could not connect to server                # PostgreSQL unreachable
+OperationalError: FATAL: too many connections for role       # pool exhausted
+psycopg2.errors.DeadlockDetected, LockNotAvailable           # contention
+django.db.utils.InterfaceError: connection already closed    # worker fork or stale CONN_MAX_AGE
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="django.db.backends" | levelname="ERROR"
+```
+
+Add `name="django.request" AND levelname="ERROR"` as a second query to catch request-time tracebacks that surface the underlying database error.
+
+**Suggested resolution(s):** Connection-pool exhaustion is the most common case — check the connection pooler before Nautobot, see [Backing Stores — PostgreSQL connection topology](./backing-stores.md#connection-topology). For unreachable-server errors, check the PostgreSQL liveness probe in [Health Checks — PostgreSQL](./health-checks.md#postgresql). For deadlock spikes, see [Backing Stores — Key PostgreSQL Metrics](./backing-stores.md#key-postgresql-metrics) (the `pg_stat_database_deadlocks` rate).
 
 ### Authentication Backend Failures
 
-LDAP, SAML, and OAuth integrations are configured via `AUTHENTICATION_BACKENDS` and surface failures at the moment a user attempts to log in. Errors propagate from the underlying backend module (`django_auth_ldap.backend`, `social_core`, etc.) and the auth-event line is emitted through `nautobot.auth.login`.
+**Potential Issue:** An external authentication backend (LDAP, SAML, OAuth) is misconfigured, has lost connectivity to its upstream service, or is rejecting valid credentials due to a state mismatch. Errors surface at the moment a user attempts to log in.
 
-Representative log lines:
+**Artifact or data:** Errors propagate from the underlying backend module (`django_auth_ldap.backend`, `social_core`, etc.) and the auth-event line is emitted through `nautobot.auth.login`. Representative log lines:
 
 ```text
 LDAP authentication error: server is unwilling to perform
@@ -210,13 +223,21 @@ SAML signature validation failed for IdP 'okta'
 django_auth_ldap group sync raised <Exception>: connection refused
 ```
 
-A spike on `nautobot.auth.login` at WARNING or above during normal operating hours usually signals a backend outage. Pair with a `health_check_*` probe on the upstream auth service if available; for OAuth providers, route the spike to the IdP team rather than to the Nautobot operator.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.auth.login" | levelname=~"WARNING|ERROR"
+```
+
+A spike during normal operating hours is the canonical signal of a backend outage.
+
+**Suggested resolution(s):** Pair the aggregator alert with a `health_check_*` probe on the upstream auth service if available. For OAuth providers, route the spike to the IdP team rather than to the Nautobot operator — the failure is almost always upstream.
 
 ### REST API Validation and Throttling Errors
 
-Per-request validation errors surface from the REST API serializers and propagate through `django.request` when they reach the response layer. Soft client errors (400/403/429) are visible from `nautobot.core.api.serializers` and friends.
+**Potential Issue:** External API clients are sending malformed payloads (4xx validation), hitting unique-constraint violations, or hitting rate limits (429). These are usually client-side bugs, not Nautobot problems.
 
-Representative log lines:
+**Artifact or data:** Per-request validation errors surface from the REST API serializers and propagate through `django.request` when they reach the response layer. Soft client errors (400/403/429) are visible from `nautobot.core.api.serializers` and friends. Representative log lines:
 
 ```text
 ValidationError: {'parent': [ErrorDetail(string='Invalid pk ...', code='does_not_exist')]}
@@ -224,13 +245,21 @@ IntegrityError: duplicate key value violates unique constraint "..."
 Request was throttled. Expected available in N seconds.
 ```
 
-The 4xx classes are usually a client issue — a misconfigured external integration retrying a bad payload. A sustained 429 rate on a specific endpoint is a sign someone is hammering it; look at the requesting client IP or API token before treating it as a Nautobot problem.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name=~"nautobot\\.core\\.api\\..*" | levelname="WARNING"
+```
+
+For surfaced 4xx HTTP responses, also include `name="django.request" AND levelname="WARNING"`.
+
+**Suggested resolution(s):** 4xx classes are usually a client issue — a misconfigured external integration retrying a bad payload. For a sustained 429 rate on a specific endpoint, identify the requesting client by IP or API token and address it client-side; treat it as a Nautobot problem only when many distinct clients are throttling simultaneously.
 
 ### GraphQL Execution Errors
 
-GraphQL execution errors are logged from `nautobot.core.graphql.schema`. Long-running queries surface either as schema errors or as elevated database time on the underlying view.
+**Potential Issue:** GraphQL queries are failing schema validation, exceeding depth limits, or running slowly enough to drive elevated database time on the underlying view.
 
-Representative log lines:
+**Artifact or data:** Errors are logged from `nautobot.core.graphql.schema`. Representative log lines:
 
 ```text
 Cannot query field "X" on type "..."
@@ -238,24 +267,38 @@ Variable "$id" of type "String!" used in position expecting type "ID!"
 Maximum query depth N reached
 ```
 
-For deeply-nested queries that are slow rather than malformed, enable [Request Profiling](./request-profiling.md) for the requesting user — `django-silk` captures every SQL query a single GraphQL request issues.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.core.graphql.schema" | levelname="ERROR"
+```
+
+**Suggested resolution(s):** Schema validation errors are client-side — point the client at the schema introspection. For deeply-nested queries that are slow rather than malformed, enable [Request Profiling](./request-profiling.md) for the requesting user — `django-silk` captures every SQL query a single GraphQL request issues.
 
 ### Object-Permission Denials
 
-Object-level permission failures surface at the API and UI layers as 403s. Lines come from `django.request` (HTTP layer) and from the Nautobot module that raised the `PermissionDenied`.
+**Potential Issue:** API or UI requests are being rejected by Nautobot's object-level permission system. Single occurrences are normal; a sustained spike usually indicates a misconfigured automation user.
 
-Representative log lines:
+**Artifact or data:** 403s surface from `django.request` at the HTTP layer and from the Nautobot module that raised the `PermissionDenied`. Representative log lines:
 
 ```text
 PermissionDenied: ...
 django.request: Forbidden: /api/dcim/devices/<id>/
 ```
 
-Single occurrences are normal — read-only users hitting write endpoints. A sustained spike on a specific endpoint from a single token usually means a misconfigured automation user; review group memberships and object-permission constraints rather than chasing it as a Nautobot bug.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="django.request" |~ "Forbidden:"
+```
+
+**Suggested resolution(s):** Read-only users hitting write endpoints produce single occurrences that should be ignored. For a sustained spike on a specific endpoint from a single token, review the corresponding user's group memberships and object-permission constraints — the issue is almost always a misconfigured automation user, not a Nautobot bug.
 
 ### Job Execution Failures
 
-Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model. The Celery statuses an operator is likely to encounter:
+**Potential Issue:** A Nautobot Job has failed, been revoked, or is stuck retrying. Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model.
+
+The Celery statuses an operator is likely to encounter:
 
 | Status | Meaning |
 |---|---|
@@ -269,7 +312,7 @@ Job results carry both a Celery task status and an application log level — see
 | `IGNORED` | Task ran but its result was discarded (`ignore_result=True`). Rare in Nautobot Jobs, since results back the Job Result UI. |
 | `REJECTED` | Task was rejected by the worker (commonly via `task_reject_on_worker_lost`) and either requeued or discarded depending on broker policy. |
 
-Representative log lines from `nautobot.extras.jobs`:
+**Artifact or data:** Representative log lines from `nautobot.extras.jobs`:
 
 ```text
 Job <name> is not enabled to be run!
@@ -286,9 +329,19 @@ Disabling schedule <name> that was removed from database
 Disabling schedule <name> with missing user
 ```
 
-Prefer the metric `nautobot_worker_finished_jobs{status="FAILURE"}` (and `nautobot_worker_exception_jobs{exception_type=...}`) over text matching — see [Prometheus Metrics](./prometheus-metrics.md).
+**Query:** Prefer metrics over log text — `nautobot_worker_finished_jobs{status="FAILURE"}` and `nautobot_worker_exception_jobs{exception_type=...}` are the canonical signal; see [Prometheus Metrics](./prometheus-metrics.md). When metrics aren't available:
+
+```logql
+{app="nautobot"} | json | name="nautobot.extras.jobs" | levelname=~"ERROR|CRITICAL"
+```
+
+**Suggested resolution(s):** Inspect `JobResult.traceback` in the Job Result UI to identify the exception class. For systematic failures of a single Job, see [Celery and Jobs](./celery-jobs.md) for reliability tuning.
 
 ### Celery Worker and Broker
+
+**Potential Issue:** A Celery worker has crashed, lost its broker connection, or stopped responding to control pings. Single occurrences during a Redis restart or a pod recycle are routine; sustained occurrences indicate a real problem.
+
+**Artifact or data:** Worker stdout carries the standard Celery diagnostics. Representative log lines:
 
 ```text
 consumer: Cannot connect to redis://...: Connection refused.
@@ -298,11 +351,19 @@ MissingHeartbeatException
 No celery workers running on queue <name>          # web logs this when inspect-ping fails (1 s timeout)
 ```
 
-For Celery-specific reliability tuning, see [Celery and Jobs](./celery-jobs.md).
+**Query:**
+
+```logql
+{app="nautobot",component="worker"} | json | levelname=~"ERROR|WARNING" |~ "WorkerLostError|MissingHeartbeatException|Cannot connect to redis"
+```
+
+**Suggested resolution(s):** Single retries during a Redis restart are routine — see [Known Noise](#known-noise) below. For sustained reconnect attempts or `WorkerLostError` patterns, see [Celery and Jobs](./celery-jobs.md) for reliability tuning.
 
 ### App Initialization (Plugins)
 
-Apps register at startup. Hard failures crash the process loudly (Django dies on import); soft failures are logged from `nautobot.extras.plugins`:
+**Potential Issue:** A Nautobot App fails to register cleanly at startup — typically a filter-set field conflict, a table-column collision, or a missing attribute. Hard failures crash the process loudly (Django dies on import); soft failures are logged.
+
+**Artifact or data:** Soft failures surface from `nautobot.extras.plugins`. Representative log lines:
 
 ```text
 ERROR  - There was a conflict with filter set field <name>...
@@ -310,21 +371,39 @@ ERROR  - There was a name conflict with existing table column <name>...
 WARN   - <plugin> table extension is missing default_columns attribute
 ```
 
-Scope app-startup alerts to `logger:nautobot.extras.plugins AND level:ERROR` to avoid the cosmetic `default_columns` warning.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.extras.plugins" | levelname="ERROR"
+```
+
+Scope to `ERROR` rather than `WARNING` to avoid the cosmetic `default_columns` notice — see [Known Noise](#known-noise) below.
+
+**Suggested resolution(s):** App-startup conflicts are deploy-time bugs — coordinate with the App author. For hard import failures, check the deploy log of the first restarting pod for the traceback.
 
 ### Git Repository Sync
 
-Triggered by the **Git Repositories** sync action — runs as a Job, so most output flows through `JobLogEntry`. The underlying utility logs to `nautobot.core.utils.git`:
+**Potential Issue:** A Git repository sync (triggered by the **Git Repositories** sync action, which runs as a Job) fails to reach the remote, fails to resolve the configured branch, or fails to clone due to credentials.
+
+**Artifact or data:** Most output flows through `JobLogEntry`. The underlying utility logs to `nautobot.core.utils.git`. Representative log line:
 
 ```text
 Branch <name> does not exist at <url>. <git_error>
 ```
 
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.core.utils.git" | levelname=~"WARNING|ERROR"
+```
+
+**Suggested resolution(s):** Verify the Git repository configuration (URL, branch, credentials) in the Nautobot admin UI. For connectivity issues, check the operator-network egress to the Git host.
+
 ### Static and Media Storage Backend Errors
 
-When `STORAGE_BACKEND` is misconfigured, when the local `MEDIA_ROOT` becomes unwritable, or when S3 credentials rotate without an update, errors surface from Django's file-handling stack rather than from Nautobot directly.
+**Potential Issue:** `STORAGE_BACKEND` is misconfigured, the local `MEDIA_ROOT` has become unwritable, or S3 credentials have rotated without an update. These break image attachments, exported templates, and Job-result download links.
 
-Representative log lines:
+**Artifact or data:** Errors surface from Django's file-handling stack rather than from Nautobot directly. The underlying request surfaces to the user as a 500 with the traceback in `django.request`. Representative log lines:
 
 ```text
 botocore.exceptions.NoCredentialsError: Unable to locate credentials
@@ -332,7 +411,13 @@ PermissionError: [Errno 13] Permission denied: '/opt/nautobot/media/...'
 ClientError: An error occurred (AccessDenied) when calling the PutObject operation
 ```
 
-These break image attachments, exported templates, and Job-result download links — and the underlying request surfaces to the user as a 500 with the traceback in `django.request`.
+**Query:**
+
+```logql
+{app="nautobot"} | json | name=~"botocore.*|django.request" | levelname="ERROR" |~ "NoCredentialsError|PermissionError|AccessDenied"
+```
+
+**Suggested resolution(s):** Verify storage backend credentials and the writability of `MEDIA_ROOT` (for filesystem backends). For S3, audit the IAM policy attached to the credentials in use.
 
 ## Known Noise
 
