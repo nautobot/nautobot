@@ -11,6 +11,8 @@ from django.utils.html import mark_safe
 import svgwrite
 
 from nautobot.core.templatetags.helpers import bettertitle, fgcolor, meters_to_feet
+from nautobot.dcim.svg import constants
+from nautobot.dcim.svg.utils import estimate_text_width, fit_text
 
 
 class CableTraceSVG:
@@ -31,22 +33,12 @@ class CableTraceSVG:
         svg_string = diagram.render()
     """
 
-    # Typography. These match Nautobot's standard 14 / 12 px font sizes and act as the base unit
-    # for the text-coupled layout constants below (line spacing, box heights, text areas), so the
-    # whole diagram scales with the font if these change.
-    FONT_FAMILY = "var(--bs-font-sans-serif)"
-    FONT_SIZE = 14
-    FONT_SIZE_SM = 12
-    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
-    # estimate text widths for truncation and badge sizing; 0.65 covers uppercase-heavy strings.
-    FONT_WIDTH_RATIO = 0.65
-
     # Layout: spacing and offsets
     GAP_Y = 5
     LABEL_OFFSET_X = 10
     # Baseline-to-baseline spacing for stacked detail lines; tied to the (larger) base font size so
     # consecutive lines aren't crowded.
-    TEXT_LINE_SPACING = FONT_SIZE
+    TEXT_LINE_SPACING = constants.FONT_SIZE
     # Downward shift from a vertical center to a text baseline (≈ half the cap height) so a line of
     # text appears vertically centered at its target y.
     TEXT_VERTICAL_OFFSET = 5
@@ -68,7 +60,7 @@ class CableTraceSVG:
     TERM_TEXT_PAD_Y = 6
     # TERM_H holds two stacked lines: the bold termination name plus a "<verbose name> (<type>)"
     # detail line (mirroring trace/termination.html), with vertical padding.
-    TERM_H = FONT_SIZE + TEXT_LINE_SPACING + 2 * TERM_TEXT_PAD_Y
+    TERM_H = constants.FONT_SIZE + TEXT_LINE_SPACING + 2 * TERM_TEXT_PAD_Y
 
     # Layout: node (device/circuit/panel box)
     NODE_W = 260
@@ -81,7 +73,7 @@ class CableTraceSVG:
     # termination sub-boxes. The height is fixed (sized for the tallest node) so rows stay aligned
     # when they mix node types; shorter nodes just center their text with extra padding. NODE_H adds
     # the half-termination overlap a single (top- or bottom-) termination box contributes beyond it.
-    NODE_TEXT_AREA_H = FONT_SIZE + 3 * TEXT_LINE_SPACING + 2 * NODE_TEXT_PAD_Y
+    NODE_TEXT_AREA_H = constants.FONT_SIZE + 3 * TEXT_LINE_SPACING + 2 * NODE_TEXT_PAD_Y
     NODE_H = NODE_TEXT_AREA_H + TERM_H // 2
 
     # Layout: cable segment
@@ -102,22 +94,6 @@ class CableTraceSVG:
 
     # Line widths
     FORK_LINE_WIDTH = 2
-
-    # Colors. Bootstrap theme variables (not hard-coded hex) so the diagram follows light/dark mode
-    # via `data-bs-theme`; the inline SVG resolves these against the surrounding document. The
-    # chosen variables match the previous hard-coded light-mode values.
-    COLOR_NODE_BG = "var(--bs-secondary-bg)"
-    COLOR_NODE_BORDER = "var(--bs-border-color)"
-    COLOR_TERM_BG = "var(--bs-tertiary-bg)"
-    COLOR_TERM_BORDER = "var(--bs-border-color)"
-    COLOR_ACTIVE_BORDER = "var(--bs-success)"
-    COLOR_TEXT = "var(--bs-body-color)"
-    COLOR_TEXT_MUTED = "var(--bs-secondary-color)"
-    COLOR_LINK = "var(--bs-link-color)"
-    COLOR_CABLE_DEFAULT = "var(--bs-secondary-color)"
-    COLOR_SUCCESS = "var(--bs-success)"
-    COLOR_DANGER = "var(--bs-danger)"
-    COLOR_WARNING = "var(--bs-warning)"
 
     def __init__(self, origin, base_url="", cable_path=None):
         self.origin = origin
@@ -289,21 +265,6 @@ class CableTraceSVG:
             return cell["cable"].pk
         return None
 
-    def _fit_text(self, text, max_width, font_size=None):
-        """Truncate `text` with an ellipsis if its estimated rendered width exceeds `max_width` px.
-
-        Width estimate uses the `font_size * FONT_WIDTH_RATIO` heuristic; callers should attach the
-        un-truncated `text` as a `<title>` tooltip for full discoverability when truncation occurs.
-        """
-        if not text:
-            return ""
-        font_size = font_size or self.FONT_SIZE
-        max_chars = max(int(max_width / (font_size * self.FONT_WIDTH_RATIO)), 1)
-        if len(text) <= max_chars:
-            return text
-        # Reserve one slot for the ellipsis glyph.
-        return text[: max(max_chars - 1, 1)] + "…"
-
     def _max_cable_label_width(self, header_cable, column_entries):
         """Estimate the widest element drawn to the right of any column center.
 
@@ -314,9 +275,9 @@ class CableTraceSVG:
 
         def add(cable, near_end, far_end):
             # The bold name renders at FONT_SIZE; the detail lines below it at FONT_SIZE_SM.
-            widths.append(len(str(cable)) * self.FONT_SIZE * self.FONT_WIDTH_RATIO)
+            widths.append(estimate_text_width(str(cable), constants.FONT_SIZE))
             for detail in self._cable_detail_lines(cable, near_end, far_end):
-                widths.append(len(detail) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO)
+                widths.append(estimate_text_width(detail, constants.FONT_SIZE_SM))
             widths.append(self._status_badge_width(cable))
 
         if header_cable is not None:
@@ -332,7 +293,7 @@ class CableTraceSVG:
         status = getattr(cable, "status", None)
         status_name = status.name if status else "Unknown"
         # Mirrors `_draw_status_badge`: text width plus horizontal padding of FONT_SIZE_SM.
-        return len(status_name) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO + self.FONT_SIZE_SM
+        return estimate_text_width(status_name, constants.FONT_SIZE_SM) + constants.FONT_SIZE_SM
 
     def _cable_lane_info(self, cable, termination):
         """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
@@ -406,7 +367,7 @@ class CableTraceSVG:
         column_count = len(self.fanout_paths)
 
         near_end, cable, _ = self.traced_path[0] if self.traced_path else (None, None, None)
-        cable_color = f"#{cable.color}" if cable and cable.color else self.COLOR_CABLE_DEFAULT
+        cable_color = f"#{cable.color}" if cable and cable.color else constants.COLOR_SECONDARY
 
         header = {
             "origin": near_end,
@@ -694,9 +655,9 @@ class CableTraceSVG:
                             label,
                             insert=(cx, fork_y - self.TEXT_VERTICAL_OFFSET),
                             text_anchor="middle",
-                            fill=self.COLOR_TEXT_MUTED,
-                            font_size=f"{self.FONT_SIZE_SM}px",
-                            font_family=self.FONT_FAMILY,
+                            fill=constants.COLOR_SECONDARY,
+                            font_size=f"{constants.FONT_SIZE_SM}px",
+                            font_family=constants.FONT_FAMILY,
                             font_weight="bold",
                         )
                     )
@@ -764,7 +725,7 @@ class CableTraceSVG:
                     dwg.line(
                         start=(cx, y),
                         end=(cx, y + row_h),
-                        stroke=self.COLOR_NODE_BORDER,
+                        stroke=constants.COLOR_BORDER,
                         stroke_width=1,
                         stroke_dasharray="4,3",
                     )
@@ -773,9 +734,9 @@ class CableTraceSVG:
                     dwg.text(
                         "pass-thru",
                         insert=(cx + self.LABEL_OFFSET_X, y + row_h / 2 + self.TEXT_VERTICAL_OFFSET),
-                        fill=self.COLOR_TEXT_MUTED,
-                        font_size=f"{self.FONT_SIZE_SM}px",
-                        font_family=self.FONT_FAMILY,
+                        fill=constants.COLOR_SECONDARY,
+                        font_size=f"{constants.FONT_SIZE_SM}px",
+                        font_family=constants.FONT_FAMILY,
                     )
                 )
 
@@ -784,7 +745,7 @@ class CableTraceSVG:
                     dwg.line(
                         start=(cx, y),
                         end=(cx, y + row_h),
-                        stroke=self.COLOR_NODE_BORDER,
+                        stroke=constants.COLOR_BORDER,
                         stroke_width=1,
                         stroke_dasharray="2,4",
                         opacity=0.3,
@@ -803,9 +764,9 @@ class CableTraceSVG:
                             "Unconnected",
                             insert=(cx, y + self.NODE_H / 2),
                             text_anchor="middle",
-                            fill=self.COLOR_WARNING,
-                            font_size=f"{self.FONT_SIZE_SM}px",
-                            font_family=self.FONT_FAMILY,
+                            fill=constants.COLOR_WARNING,
+                            font_size=f"{constants.FONT_SIZE_SM}px",
+                            font_family=constants.FONT_FAMILY,
                             font_weight="bold",
                         )
                     )
@@ -831,14 +792,14 @@ class CableTraceSVG:
         `fill` overrides the default color (link blue when `url` is set, else muted).
         """
         if fill is None:
-            fill = self.COLOR_LINK if url else self.COLOR_TEXT_MUTED
+            fill = constants.COLOR_LINK if url else constants.COLOR_SECONDARY
         element = dwg.text(
             text,
             insert=(x, baseline_y),
             text_anchor=anchor,
             fill=fill,
             font_size=f"{font_size}px",
-            font_family=self.FONT_FAMILY,
+            font_family=constants.FONT_FAMILY,
             font_weight=font_weight,
         )
         if title:
@@ -858,7 +819,7 @@ class CableTraceSVG:
         """
         if not text:
             return
-        fitted = self._fit_text(text, max_width, font_size=font_size)
+        fitted = fit_text(text, max_width, font_size)
         title = text if fitted != text else None
         self._add_text(dwg, fitted, cx, baseline_y, "middle", font_size, font_weight, url=url, title=title)
 
@@ -876,9 +837,11 @@ class CableTraceSVG:
                 text_center_y + (line_index - (line_count - 1) / 2) * self.TEXT_LINE_SPACING + self.TEXT_VERTICAL_OFFSET
             )
             if line_index == 0:
-                self._draw_text_line(dwg, text_cx, baseline_y, text, url, self.FONT_SIZE, max_width, font_weight="bold")
+                self._draw_text_line(
+                    dwg, text_cx, baseline_y, text, url, constants.FONT_SIZE, max_width, font_weight="bold"
+                )
             else:
-                self._draw_text_line(dwg, text_cx, baseline_y, text, url, self.FONT_SIZE_SM, max_width)
+                self._draw_text_line(dwg, text_cx, baseline_y, text, url, constants.FONT_SIZE_SM, max_width)
 
     def _draw_parent_box(self, dwg, box_x, box_y, box_w, box_h, text_cx, text_area_top, text_area_h, termination):
         """Draw a parent (device/circuit/panel) box with a centered, stacked text block.
@@ -897,8 +860,8 @@ class CableTraceSVG:
                 size=(box_w, box_h),
                 rx=self.NODE_BORDER_RADIUS,
                 ry=self.NODE_BORDER_RADIUS,
-                fill=self.COLOR_NODE_BG,
-                stroke=self.COLOR_NODE_BORDER,
+                fill=constants.COLOR_SECONDARY_BG,
+                stroke=constants.COLOR_BORDER,
                 stroke_width=1,
             )
         )
@@ -1026,7 +989,7 @@ class CableTraceSVG:
 
     def _draw_cable(self, dwg, cx, y, cable, near_end=None, far_end=None):
         """Draw a cable segment with color bar, label, breakout lane info, and status badge."""
-        cable_color = f"#{cable.color}" if cable.color else self.COLOR_CABLE_DEFAULT
+        cable_color = f"#{cable.color}" if cable.color else constants.COLOR_SECONDARY
         cable_url = self._url(cable)
         is_connected = hasattr(cable, "status") and cable.status and cable.status.name == "Connected"
 
@@ -1064,7 +1027,7 @@ class CableTraceSVG:
             label_x,
             first_row_cy + self.TEXT_VERTICAL_OFFSET,
             "start",
-            self.FONT_SIZE,
+            constants.FONT_SIZE,
             "bold",
             url=cable_url,
         )
@@ -1076,14 +1039,14 @@ class CableTraceSVG:
                 label_x,
                 first_row_cy + row_index * line_step + self.TEXT_VERTICAL_OFFSET,
                 "start",
-                self.FONT_SIZE_SM,
+                constants.FONT_SIZE_SM,
                 "normal",
             )
 
         # Status badge on the last row (positioned by its vertical center).
         status = cable.status if hasattr(cable, "status") else None
         status_name = status.name if status else "Unknown"
-        status_color = f"#{status.color}" if status and status.color else self.COLOR_TEXT_MUTED
+        status_color = f"#{status.color}" if status and status.color else constants.COLOR_SECONDARY
         self._draw_status_badge(dwg, label_x, first_row_cy + (row_count - 1) * line_step, status_name, status_color)
 
         return y + bar_h
@@ -1117,10 +1080,10 @@ class CableTraceSVG:
     def _draw_status_badge(self, dwg, x, y, status_name, bg_color):
         """Draw a Bootstrap-style badge pill with colored background and contrasting text."""
 
-        text_width = len(status_name) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO
+        text_width = estimate_text_width(status_name, constants.FONT_SIZE_SM)
         # Pad the pill horizontally/vertically relative to the font size it wraps.
-        badge_w = text_width + self.FONT_SIZE_SM
-        badge_h = self.FONT_SIZE_SM + self.GAP_Y
+        badge_w = text_width + constants.FONT_SIZE_SM
+        badge_h = constants.FONT_SIZE_SM + self.GAP_Y
         badge_r = self.TERM_BORDER_RADIUS
 
         dwg.add(
@@ -1140,8 +1103,8 @@ class CableTraceSVG:
                 insert=(x + badge_w / 2, y + self.TEXT_VERTICAL_OFFSET),
                 text_anchor="middle",
                 fill=f"#{text_color}" if not text_color.startswith("#") else text_color,
-                font_size=f"{self.FONT_SIZE_SM}px",
-                font_family=self.FONT_FAMILY,
+                font_size=f"{constants.FONT_SIZE_SM}px",
+                font_family=constants.FONT_FAMILY,
                 font_weight="bold",
             )
         )
@@ -1152,7 +1115,7 @@ class CableTraceSVG:
         is_active = termination == self.origin
         termination_url = self._url(termination) if termination else "#"
 
-        border_color = self.COLOR_ACTIVE_BORDER if is_active else self.COLOR_TERM_BORDER
+        border_color = constants.COLOR_SUCCESS if is_active else constants.COLOR_BORDER
         border_width = 3 if is_active else 1
 
         dwg.add(
@@ -1161,7 +1124,7 @@ class CableTraceSVG:
                 size=(self.TERM_W, self.TERM_H),
                 rx=self.TERM_BORDER_RADIUS,
                 ry=self.TERM_BORDER_RADIUS,
-                fill=self.COLOR_TERM_BG,
+                fill=constants.COLOR_TERTIARY_BG,
                 stroke=border_color,
                 stroke_width=border_width,
             )
@@ -1202,33 +1165,33 @@ class CableTraceSVG:
         # A branched trace's `cable_path`/`traced_path` only describe the first lane, so a single
         # completion/split/totals summary would misrepresent the other branches.
         if len(self.fanout_paths) > 1:
-            return [(f"Breakout fan-out — {len(self.fanout_paths)} branches", self.FONT_SIZE, "bold", None, None)]
+            return [(f"Breakout fan-out — {len(self.fanout_paths)} branches", constants.FONT_SIZE, "bold", None, None)]
 
         if cable_path is not None and cable_path.is_split:
-            lines.append(("Path split!", self.FONT_SIZE, "bold", self.COLOR_DANGER, None))
-            lines.append(("Select a node below to continue:", self.FONT_SIZE_SM, "normal", None, None))
+            lines.append(("Path split!", constants.FONT_SIZE, "bold", constants.COLOR_DANGER, None))
+            lines.append(("Select a node below to continue:", constants.FONT_SIZE_SM, "normal", None, None))
             for next_node in cable_path.get_split_nodes():
                 next_cable = getattr(next_node, "cable", None)
                 # A node with an onward cable links to its trace view, naming that cable inline; a
                 # node with no cable can't be continued, so it stays plain muted text.
                 if next_cable is not None:
                     text = f"{next_node}  (Cable {next_cable})"
-                    lines.append((text, self.FONT_SIZE_SM, "normal", None, self._trace_url(next_node)))
+                    lines.append((text, constants.FONT_SIZE_SM, "normal", None, self._trace_url(next_node)))
                 else:
-                    lines.append((str(next_node), self.FONT_SIZE_SM, "normal", None, None))
+                    lines.append((str(next_node), constants.FONT_SIZE_SM, "normal", None, None))
             return lines
 
         complete = cable_path is not None and cable_path.destination is not None
         lines.append(
             (
                 "Trace completed" if complete else "Trace incomplete",
-                self.FONT_SIZE,
+                constants.FONT_SIZE,
                 "bold",
-                self.COLOR_SUCCESS if complete else self.COLOR_DANGER,
+                constants.COLOR_SUCCESS if complete else constants.COLOR_DANGER,
                 None,
             )
         )
-        lines.append((f"Total segments: {len(self.traced_path)}", self.FONT_SIZE_SM, "normal", None, None))
+        lines.append((f"Total segments: {len(self.traced_path)}", constants.FONT_SIZE_SM, "normal", None, None))
         total_length = cable_path.get_total_length() if cable_path is not None else None
         if total_length:
             length_text = (
@@ -1237,13 +1200,13 @@ class CableTraceSVG:
             )
         else:
             length_text = "Total length: N/A"
-        lines.append((length_text, self.FONT_SIZE_SM, "normal", None, None))
+        lines.append((length_text, constants.FONT_SIZE_SM, "normal", None, None))
         return lines
 
     def _trace_end_width(self):
         """Estimated width of the widest footer line (centered, so half is reserved on each side)."""
         return max(
-            (len(text) * font_size * self.FONT_WIDTH_RATIO for text, font_size, *_ in self._trace_end_lines()),
+            (estimate_text_width(text, font_size) for text, font_size, *_ in self._trace_end_lines()),
             default=0,
         )
 
@@ -1270,9 +1233,9 @@ class CableTraceSVG:
                 "No cable path found",
                 insert=(self.COL_WIDTH / 2, self.EMPTY_HEIGHT / 2),
                 text_anchor="middle",
-                fill=self.COLOR_TEXT_MUTED,
-                font_size=f"{self.FONT_SIZE}px",
-                font_family=self.FONT_FAMILY,
+                fill=constants.COLOR_SECONDARY,
+                font_size=f"{constants.FONT_SIZE}px",
+                font_family=constants.FONT_FAMILY,
             )
         )
         return mark_safe(dwg.tostring())  # noqa: S308

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from django.utils.html import mark_safe
 import svgwrite
 
+from nautobot.dcim.svg import constants
+from nautobot.dcim.svg.utils import estimate_text_width
 from nautobot.dcim.utils import validate_cable_breakout_mapping
 
 
@@ -34,23 +36,9 @@ class BreakoutDiagramSVG:
     MINIMUM_LINE_AREA_WIDTH = 80
     LANE_X_GAP = 1  # space between the connector and the lane
     LANE_Y_SPACING = 14  # minimum vertical spacing between lane endpoints within a connector
-    CONNECTOR_FONT_SIZE = 14
-    LANE_LABEL_FONT_SIZE = 12
-    LANE_LABEL_HEIGHT = LANE_LABEL_FONT_SIZE + 4
-    TERMINATION_LABEL_FONT_SIZE = 12
+    LANE_LABEL_HEIGHT = constants.FONT_SIZE_SM + 4
     TERMINATION_LABEL_GAP = 8  # gap between connector edge and termination label
     TERMINATION_LABEL_MAX_CHARS = 40  # truncate visible labels longer than this
-    FONT_FAMILY = "var(--bs-font-sans-serif)"
-    # Approximate average glyph width as a fraction of font size for sans-serif text. Used to
-    # reserve horizontal space for labels; 0.65 covers uppercase-heavy strings.
-    FONT_WIDTH_RATIO = 0.65
-
-    COLOR_LANE_CONNECTED = "var(--bs-success)"
-    COLOR_LANE_DISCONNECTED = "var(--bs-tertiary-color)"
-    COLOR_CONNECTOR_FILL_CONNECTED = "var(--bs-success)"
-    COLOR_CONNECTOR_FILL_DEFAULT = "var(--bs-tertiary-color)"
-    COLOR_TEXT = "var(--bs-body-color)"
-    COLOR_BACKGROUND = "var(--bs-body-bg)"
 
     def __init__(
         self,
@@ -94,9 +82,8 @@ class BreakoutDiagramSVG:
         # Line area width scales with the largest group of parallel lanes so that
         # staggered labels within a single (a, b) pair don't overlap horizontally.
         max_parallel_lanes = max((len(g) for g in self.lane_groups.values()), default=1)
-        lane_label_x_spacing = (
-            max(len(e.label) + 1 for e in self.entries) * self.LANE_LABEL_FONT_SIZE * self.FONT_WIDTH_RATIO
-        )
+        longest_label = max((e.label for e in self.entries), key=len, default="")
+        lane_label_x_spacing = estimate_text_width(longest_label + " ", constants.FONT_SIZE_SM)
         self.line_area_width = max(self.MINIMUM_LINE_AREA_WIDTH, (max_parallel_lanes + 1) * lane_label_x_spacing)
 
         # Reserve outer horizontal space for visible termination labels alongside each connector.
@@ -107,8 +94,8 @@ class BreakoutDiagramSVG:
         """Pixel width to reserve for the visible termination labels on one side."""
         if not labels:
             return 0
-        max_len = min(max(len(label) for label in labels.values()), self.TERMINATION_LABEL_MAX_CHARS)
-        return self.TERMINATION_LABEL_GAP + max_len * self.TERMINATION_LABEL_FONT_SIZE * self.FONT_WIDTH_RATIO
+        longest = max(labels.values(), key=len)[: self.TERMINATION_LABEL_MAX_CHARS]
+        return self.TERMINATION_LABEL_GAP + estimate_text_width(longest, constants.FONT_SIZE_SM)
 
     def _y_offset(self, position, total_positions, connector_height):
         """Vertical offset relative to a connector's center for the given 1-indexed lane position."""
@@ -164,7 +151,7 @@ class BreakoutDiagramSVG:
         for connector in range(1, connectors + 1):
             y_center = connector_y_centers[connector]
             connected = self.show_status and connector in labels
-            bg = self.COLOR_CONNECTOR_FILL_CONNECTED if connected else self.COLOR_CONNECTOR_FILL_DEFAULT
+            bg = constants.COLOR_SUCCESS if connected else constants.COLOR_TERTIARY
 
             group = drawing.g()
 
@@ -188,11 +175,11 @@ class BreakoutDiagramSVG:
             group.add(
                 drawing.text(
                     label,
-                    insert=(x + self.CONNECTOR_WIDTH / 2, y_center + self.CONNECTOR_FONT_SIZE / 3),
+                    insert=(x + self.CONNECTOR_WIDTH / 2, y_center + constants.FONT_SIZE / 3),
                     text_anchor="middle",
-                    fill=self.COLOR_TEXT,
-                    font_size=f"{self.CONNECTOR_FONT_SIZE}px",
-                    font_family=self.FONT_FAMILY,
+                    fill=constants.COLOR_BODY,
+                    font_size=f"{constants.FONT_SIZE}px",
+                    font_family=constants.FONT_FAMILY,
                     font_weight="bolder",
                     style="pointer-events: none;",
                 )
@@ -213,11 +200,11 @@ class BreakoutDiagramSVG:
                 drawing.add(
                     drawing.text(
                         termination_label,
-                        insert=(text_x, y_center + self.TERMINATION_LABEL_FONT_SIZE / 3),
+                        insert=(text_x, y_center + constants.FONT_SIZE_SM / 3),
                         text_anchor=text_anchor,
-                        fill=self.COLOR_TEXT,
-                        font_size=f"{self.TERMINATION_LABEL_FONT_SIZE}px",
-                        font_family=self.FONT_FAMILY,
+                        fill=constants.COLOR_BODY,
+                        font_size=f"{constants.FONT_SIZE_SM}px",
+                        font_family=constants.FONT_FAMILY,
                     )
                 )
 
@@ -237,7 +224,7 @@ class BreakoutDiagramSVG:
             connected_b = self.show_status and entry.b_connector in self.b_labels
             connected_both = connected_a and connected_b
 
-            color = self.COLOR_LANE_CONNECTED if connected_both else self.COLOR_LANE_DISCONNECTED
+            color = constants.COLOR_SUCCESS if connected_both else constants.COLOR_TERTIARY
             stroke_width = 2 if connected_both or not self.show_status else 1.5
             dasharray = None if connected_both or not self.show_status else "6,4"
 
@@ -267,14 +254,14 @@ class BreakoutDiagramSVG:
             label_mid_x = line_a_x + offset_fraction * (line_b_x - line_a_x)
             label_mid_y = line_a_y + offset_fraction * (line_b_y - line_a_y)
 
-            label_estimated_width = self.LANE_LABEL_FONT_SIZE / 2 * (1 + len(entry.label))
+            label_estimated_width = constants.FONT_SIZE_SM / 2 * (1 + len(entry.label))
             drawing.add(
                 drawing.rect(
                     insert=(label_mid_x - label_estimated_width / 2, label_mid_y - self.LANE_LABEL_HEIGHT / 2),
                     size=(label_estimated_width, self.LANE_LABEL_HEIGHT),
                     rx=self.LANE_LABEL_HEIGHT / 2,
                     ry=self.LANE_LABEL_HEIGHT / 2,
-                    fill=self.COLOR_BACKGROUND,
+                    fill=constants.COLOR_BODY_BG,
                     stroke=color,
                     stroke_width=1,
                 )
@@ -282,11 +269,11 @@ class BreakoutDiagramSVG:
             drawing.add(
                 drawing.text(
                     entry.label,
-                    insert=(label_mid_x, label_mid_y + self.LANE_LABEL_FONT_SIZE / 3),
+                    insert=(label_mid_x, label_mid_y + constants.FONT_SIZE_SM / 3),
                     text_anchor="middle",
-                    fill=self.COLOR_TEXT,
-                    font_size=f"{self.LANE_LABEL_FONT_SIZE}px",
-                    font_family=self.FONT_FAMILY,
+                    fill=constants.COLOR_BODY,
+                    font_size=f"{constants.FONT_SIZE_SM}px",
+                    font_family=constants.FONT_FAMILY,
                     font_weight="bolder",
                 )
             )

@@ -18,8 +18,10 @@ from nautobot.dcim.models import (
     Manufacturer,
     RearPort,
 )
+from nautobot.dcim.svg import constants as svg_constants
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 from nautobot.dcim.svg.path_trace import CableTraceSVG
+from nautobot.dcim.svg.utils import estimate_text_width
 from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras.models import Role, Status
 
@@ -352,7 +354,7 @@ class CableTraceSVGTestCase(TestCase):
         matrix = diagram.build_matrix()
         center_x = matrix["col_centers"][0]
         label_x = center_x + diagram.CABLE_BAR_W / 2 + diagram.LABEL_OFFSET_X
-        label_width = len(long_label) * diagram.FONT_SIZE * diagram.FONT_WIDTH_RATIO
+        label_width = estimate_text_width(long_label, svg_constants.FONT_SIZE)
         self.assertLessEqual(label_x + label_width, width, msg=f"Cable label clipped: width={width}")
 
     def test_trace_end_footer_centered_and_unclipped(self):
