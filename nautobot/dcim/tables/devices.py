@@ -1342,7 +1342,7 @@ class InterfaceRedundancyGroupAssociationTable(BaseTable):
         orderable=False,
         verbose_name="IP Addresses",
     )
-    actions = ButtonsColumn(model=InterfaceRedundancyGroupAssociation)
+    actions = ButtonsColumn(model=InterfaceRedundancyGroupAssociation, buttons=["edit", "delete"])
 
     class Meta(BaseTable.Meta):
         """Meta attributes."""
