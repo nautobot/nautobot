@@ -36,6 +36,9 @@ The threshold is site-specific — tune to your steady state. Pair with a counte
 
 Job runtime is the leading indicator for several of the failure modes covered elsewhere on this page. A Job class whose p99 runtime is trending up will, in order, push queue depth up (more workers tied up per unit of incoming work), increase the rate of `nautobot_worker_singleton_conflict` (the next scheduled invocation collides with one still running), and eventually hit Celery's hard / soft time limits or the Redis broker's visibility timeout. Watching runtime gives you a chance to act before any of those bite.
 
+!!! info
+    Often times, specific jobs are expected to run for extended periods. In those cases, special task queues can be configured for those jobs, and the alerting thresholds can be set accordingly. See [Task Queues](../guides/celery-queues.md) for more details.
+
 Nautobot's own `/metrics` exposes Job *counts* but not Job *durations*. Two complementary sources cover the duration question:
 
 - **`celery-exporter`** — exposes `celery_task_runtime_seconds` as a Prometheus histogram, labeled by Celery task name. The right source for quantile time series and trend alerts. See [Visualization — Monitoring Job Execution Duration](./visualization.md#monitoring-job-execution-duration) for panel recipes.
@@ -97,7 +100,7 @@ Two complementary detections:
     metrics = [metric_beat_schedule_drift]
     ```
 
-    The gauge appears on the web-tier `/metrics` endpoint and is recomputed on each scrape, so keep the underlying query cheap — the `enabled=True, next_run_at__lt=threshold` filter above is already index-friendly and well-bounded for typical `ScheduledJob` counts.
+    The gauge appears on the web-tier `/metrics` endpoint and is recomputed on each scrape, so keep the underlying query cheap — the `enabled=True, next_run_at__lt=threshold` filter above is already index-friendly and works well for typical `ScheduledJob` counts.
 
 ## Operator UIs
 

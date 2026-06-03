@@ -128,7 +128,7 @@ The biggest offenders are usually filter combinations on large tables without a 
 
 ### Long-Running Transactions
 
-Nautobot Jobs that wrap a multi-thousand-row update in `with transaction.atomic():` keep a transaction open for the duration of the loop. That's fine in isolation, but it (a) holds row locks, (b) prevents `VACUUM` from reclaiming dead tuples, and (c) consumes a PgBouncer slot in `transaction` mode.
+Nautobot Jobs that wrap a multi-thousand-row update in `with transaction.atomic():` keep a transaction open for the duration of the loop. That's fine in isolation or in smaller updates, but the transaction holds row locks, prevents the database from cleaning up "dead" rows, and consumes a PgBouncer slot in `transaction` mode.
 
 Detect:
 
@@ -144,32 +144,11 @@ WHERE state = 'active'
 ORDER BY xact_start;
 ```
 
-For continuous monitoring rather than one-off `psql` checks, wrap the same query in a periodic Nautobot Job using Django's database cursor — that way the alerting flows through the standard `JobLogEntry` and worker-`stdout` channels:
-
-```python
-from django.db import connection
-
-with connection.cursor() as cursor:
-    cursor.execute(
-        """
-        SELECT pid, NOW() - xact_start AS xact_duration, state, LEFT(query, 100)
-        FROM pg_stat_activity
-        WHERE state = 'active' AND xact_start < NOW() - INTERVAL '10 minutes'
-        ORDER BY xact_start
-        """
-    )
-    for pid, duration, state, query in cursor.fetchall():
-        self.logger.warning(
-            "Long-running transaction: pid=%s duration=%s state=%s query=%s",
-            pid, duration, state, query,
-        )
-```
-
-The fix on the application side is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
+For continuous monitoring rather than one-off `psql` checks, wrap the same query in a Grafana dashboard with a `FOR 5m` alert on any non-zero count. The fix on the application side is almost always to break the Job into smaller transactional batches — a per-chunk `transaction.atomic()` rather than one wrapping the entire loop.
 
 ### HA-Specific Signals
 
-`pg_isready` confirms the server is accepting TCP connections; it does **not** check whether the node is in recovery (read-only). In a Patroni / repmgr / RDS multi-AZ topology, a connection probe will pass against a follower that Nautobot cannot write to. Add `psql -c "SELECT NOT pg_is_in_recovery();"` as a secondary probe — it returns `t` only on the primary, so a failed promotion gets caught at the probe layer instead of as a flood of 5xx after the first write. See [Health Checks — PostgreSQL](./health-checks.md#postgresql).
+`pg_isready` confirms the server is accepting TCP connections; it does **not** check whether the node is in recovery (read-only). In a Patroni / repmgr / RDS multi-AZ topology, a connection probe will pass against a node that Nautobot cannot write to. Add `psql -c "SELECT NOT pg_is_in_recovery();"` as a secondary probe — it returns `t` only on the primary, so a failed promotion gets caught at the probe layer instead of as a flood of 5xx after the first write. See [Health Checks — PostgreSQL](./health-checks.md#postgresql).
 
 ### Disk-Trajectory Monitoring
 

@@ -10,7 +10,54 @@ Alert primarily on health-checks and metrics. Use log keywords as a *secondary* 
 
 !!! note "Living section"
     The rules and thresholds below are the starting points we currently recommend based on production deployments we've seen — they're not exhaustive and they're not deployment-tuned.
-    Walk through your steady-state baseline before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
+    Make sure to walk through your steady-state baseline and adapt thresholds for your actual production environment needs before committing them to your alerting rules; what's "normal" depends heavily on Job mix, fleet size, and Beat schedule density. Contributions from your environment are welcome.
+
+## Before You Write a Rule
+
+Every alert rule on this page is the product of five decisions: where the condition is observed, what severity tier should fire, what shape the rule takes, what baseline it was measured against, and whether maintenance windows should suppress it.
+
+The table below is the index for those decisions — each row points to the section that elaborates. Treat it as the reference scaffold; the rest of the page is the practical illustration of how to deal with each decision.
+
+| Decision | Choices | Where it's covered |
+|---|---|---|
+| Where is the condition observed? | Prometheus metric / log line / orchestrator probe / SLO burn-rate | [Tier 1 Alerts](#tier-1-alerts-page-on-call), [Tier 2 Alerts](#tier-2-alerts-ticket-or-dashboard), [Metrics-Based Alerts](#metrics-based-alerts), [Log-Based Alerts](#log-based-alerts), [View Latency Alerts](#view-latency-alerts), [SLO-Based Alerts](#slo-based-alerts) |
+| What severity tier should fire? | Page (Tier 1) / Ticket or Dashboard (Tier 2) | [Tier 1 Alerts](#tier-1-alerts-page-on-call), [Tier 2 Alerts](#tier-2-alerts-ticket-or-dashboard), [Routing and Severity](#routing-and-severity) |
+| What rule shape fits the signal? | Fixed threshold / regression from baseline / burn-rate / new-class detection | [Calibrating Thresholds](#calibrating-thresholds), [View Latency Alerts](#view-latency-alerts), [SLO-Based Alerts](#slo-based-alerts) |
+| What baseline did I measure against? | p95 over 7 days × headroom multiplier | [Calibrating Thresholds — Worked Example](#worked-example-queue-depth-threshold) |
+| Should maintenance windows suppress it? | Yes (silence by label) / No | [Maintenance Windows](#maintenance-windows) |
+
+## Tier 1 Alerts: Page on-Call
+
+Indicative list of the most critical signals that should page the on-call engineer immediately. These are the conditions that indicate a likely outage or severe degradation in service, and require immediate attention.
+
+| Signal | Source | Threshold |
+|---|---|---|
+| Web `/health/` failing | HTTP probe | non-200 for 2 consecutive checks (≥1 minute) |
+| `nautobot-server health_check` failing on web pod | exec probe | ≥3 failures in 5 minutes |
+| Celery worker heartbeat file stale | filesystem | mtime > 60 seconds old |
+| Celery Beat heartbeat file stale | filesystem | mtime > 30 seconds old (Beat ticks every ~5 seconds) |
+| `nautobot_worker_finished_jobs{status="FAILURE"}` | Prometheus | rate > 0 for any production Job class for 5 minutes |
+| `health_check_database_info` | Prometheus | unavailable for 1 minute |
+| `health_check_redis_backend_info` | Prometheus | unavailable for 1 minute |
+| Web 5xx rate | log search | `level=ERROR AND logger:django.request AND status_code:5*` rate ≥ 1/min — see [Logging — Reading the Logger Name in Your Aggregator](./logging.md#reading-the-logger-name-in-your-aggregator) for how to extract `logger` as a queryable field |
+
+## Tier 2 Alerts: Ticket or Dashboard
+
+Indicative list of signals that should open a ticket or appear on a dashboard for next-business-day handling. These are the conditions that indicate a likely issue that should be investigated and resolved, but do not require immediate attention.
+
+| Signal | Threshold |
+|---|---|
+| Celery `RETRY` rate | > N retries / 5 min for the same task |
+| Soft-time-limit hits | any |
+| `nautobot_worker_singleton_conflict` | > 0 (schedule overlap; either tune cron or shorten Job) |
+| `nautobot.extras.plugins` `ERROR` | any (App health post-deploy) |
+| `nautobot.core.celery.schedulers` `Disabling schedule` | any (an admin-defined schedule was auto-disabled) |
+| Git sync Job failures | any (`status="FAILURE"` on the Job) |
+| Login failure spike on `nautobot.auth.login` | rate spike (security signal) |
+| Redis memory utilization (via `redis_exporter`) | `redis_memory_used_bytes / redis_memory_max_bytes > 0.8` |
+| PgBouncer pool saturation (via `pgbouncer_exporter`) | `pgbouncer_pools_server_active_connections / max_server_connections > 0.9` |
+
+For Redis and PostgreSQL alerting in detail, see [Backing Stores](./backing-stores.md). For Celery-specific signals (queue depth, Beat drift), see [Celery and Jobs](./celery-jobs.md).
 
 ## Calibrating Thresholds
 
@@ -57,35 +104,6 @@ The same recipe applies to any threshold-shaped metric — Redis memory utilizat
 Tier 1 alerts page the on-call engineer immediately — PagerDuty, OpsGenie, or a Slack channel with paging integration. Tier 2 alerts open a ticket or appear on a dashboard for next-business-day handling — email, a low-urgency Slack channel, or an issue tracker.
 
 For any Tier 1 condition that affects more than half of available capacity (every web pod failing `/health/`, every worker heartbeat stale at once, the database itself unreachable), escalate to whoever owns incident command in your organization in addition to paging on-call. These are the cases where one engineer working alone is the bottleneck — getting the response team coordinated early is more valuable than starting the technical investigation thirty seconds sooner.
-
-## Tier 1: Page
-
-| Signal | Source | Threshold |
-|---|---|---|
-| Web `/health/` failing | HTTP probe | non-200 for 2 consecutive checks (≥1 minute) |
-| `nautobot-server health_check` failing on web pod | exec probe | ≥3 failures in 5 minutes |
-| Celery worker heartbeat file stale | filesystem | mtime > 60 seconds old |
-| Celery Beat heartbeat file stale | filesystem | mtime > 30 seconds old (Beat ticks every ~5 seconds) |
-| `nautobot_worker_finished_jobs{status="FAILURE"}` | Prometheus | rate > 0 for any production Job class for 5 minutes |
-| `health_check_database_info` | Prometheus | unavailable for 1 minute |
-| `health_check_redis_backend_info` | Prometheus | unavailable for 1 minute |
-| Web 5xx rate | log search | `level=ERROR AND logger:django.request AND status_code:5*` rate ≥ 1/min — see [Logging — Reading the Logger Name in Your Aggregator](./logging.md#reading-the-logger-name-in-your-aggregator) for how to extract `logger` as a queryable field |
-
-## Tier 2: Ticket or Dashboard
-
-| Signal | Threshold |
-|---|---|
-| Celery `RETRY` rate | > N retries / 5 min for the same task |
-| Soft-time-limit hits | any |
-| `nautobot_worker_singleton_conflict` | > 0 (schedule overlap; either tune cron or shorten Job) |
-| `nautobot.extras.plugins` `ERROR` | any (App health post-deploy) |
-| `nautobot.core.celery.schedulers` `Disabling schedule` | any (an admin-defined schedule was auto-disabled) |
-| Git sync Job failures | any (`status="FAILURE"` on the Job) |
-| Login failure spike on `nautobot.auth.login` | rate spike (security signal) |
-| Redis memory utilization (via `redis_exporter`) | `redis_memory_used_bytes / redis_memory_max_bytes > 0.8` |
-| PgBouncer pool saturation (via `pgbouncer_exporter`) | `pgbouncer_pools_server_active_connections / max_server_connections > 0.9` |
-
-For Redis and PostgreSQL alerting in detail, see [Backing Stores](./backing-stores.md). For Celery-specific signals (queue depth, Beat drift), see [Celery and Jobs](./celery-jobs.md).
 
 ## Metrics-Based Alerts
 
@@ -172,7 +190,7 @@ The pattern is the same in any aggregator: anchor on `logger` (or `name`) plus `
 
 ## View Latency Alerts
 
-Operator complaints about Nautobot being slow are typically about a specific view, not the whole service. The histogram exposed by [`django-prometheus`](./prometheus-metrics.md#view-latency-histograms) supports two complementary alert shapes:
+View Latency Alerts track the response time of individual Nautobot views (UI pages and REST API endpoints) and are most useful for catching slowdowns that affect a specific view rather than the service as a whole. View-level latency lends itself to two complementary alert shapes, both built on the per-view histogram exposed by [`django-prometheus`](./prometheus-metrics.md#view-latency-histograms):
 
 **Fixed-threshold (Tier 2)** — p99 of a named critical view exceeds your target for 10 minutes. Use when you have an absolute target for that view.
 
@@ -229,7 +247,7 @@ For a fuller treatment — candidate Service Level Indicators for Nautobot, sugg
 Walking through a typical paging incident clarifies how the signals on this page fit together. The scenario: at 3 a.m., the on-call engineer is paged for `NautobotJobFailures` on a production deployment.
 
 1. **Read the alert annotation.** The `summary` line names the Job: `Nautobot Job NetworkSync is failing` — the label value is the Python class name, which the Job's `Meta.name` would surface in the UI as `Network Sync`.
-2. **Open the metrics dashboard.** Confirm `nautobot_worker_finished_jobs{job_class_name="NetworkSync", status="FAILURE"}` is increasing. Cross-check `nautobot_worker_started_jobs` to see whether new runs are still being kicked off (Beat is working) or whether the failures are stuck retries.
+2. **Open the metrics dashboard.** Confirm `nautobot_worker_finished_jobs{job_class_name="NetworkSync", status="FAILURE"}` is increasing. Cross-check `nautobot_worker_started_jobs` to see whether new runs are still being kicked off (Beat is working) or whether the failures are stuck retry jobs.
 3. **Look at `nautobot_worker_exception_jobs{exception_type=...}`** for the same Job. The label tells you the exception class: `OperationalError` (database) vs `ConnectionError` (downstream device) vs `TimeoutError` (the Job itself running long).
 4. **Jump to the aggregator.** Search `name="nautobot.jobs.network_sync"` with `levelname="ERROR"` over the last hour. Read the tracebacks to confirm the root cause.
 5. **Cross-check the Job Result UI** when you need to coordinate with the Job author — `/extras/job-results/?status=failure&name=Network+Sync` (the UI filters on the human `Meta.name`) shows the user-facing failure summary and the structured `JobLogEntry` rows.
