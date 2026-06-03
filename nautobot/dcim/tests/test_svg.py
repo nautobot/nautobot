@@ -280,6 +280,67 @@ class CableTraceSVGTestCase(TestCase):
     def _svg_width(svg):
         return float(re.search(r'width="([\d.]+)px"', svg).group(1))
 
+    @staticmethod
+    def _matrix_cells(diagram):
+        """All matrix cells for a rendered diagram, applying render()'s single-leg normalization."""
+        if not diagram.fanout_paths and diagram.traced_path:
+            _, _, far_end = diagram.traced_path[0]
+            diagram.fanout_paths = [
+                {
+                    "termination": far_end,
+                    "connector_label": "",
+                    "trace": diagram._expand_trace_segments(diagram.traced_path[1:]),
+                }
+            ]
+        return [cell for row in diagram.build_matrix()["rows"] for cell in row]
+
+    def test_passthrough_hops_always_fold_into_passthrough_nodes(self):
+        """Front↔rear pass-through hops are always merged into `passthrough_node` device boxes; a
+        standalone `passthrough` cell never reaches a row (so it has no rendering of its own)."""
+        rp1 = RearPort.objects.create(device=self.device, name="PT Rear 1", positions=1)
+        fp1 = FrontPort.objects.create(device=self.device, name="PT Front 1", rear_port=rp1, rear_port_position=1)
+        rp2 = RearPort.objects.create(device=self.device, name="PT Rear 2", positions=1)
+        fp2 = FrontPort.objects.create(device=self.device, name="PT Front 2", rear_port=rp2, rear_port_position=1)
+        iface_a = Interface.objects.create(device=self.device, name="pt-a", status=self.interface_status)
+        iface_b = Interface.objects.create(device=self.device, name="pt-b", status=self.interface_status)
+        # iface_a -- RP1 ; FP1 -- RP2 ; FP2 -- iface_b  (two patch-panel pass-throughs)
+        Cable.objects.create(termination_a=iface_a, termination_b=rp1, status=self.connected)
+        Cable.objects.create(termination_a=fp1, termination_b=rp2, status=self.connected)
+        Cable.objects.create(termination_a=fp2, termination_b=iface_b, status=self.connected)
+
+        cells = self._matrix_cells(CableTraceSVG(iface_a))
+        types = {cell["type"] for cell in cells}
+        self.assertIn("passthrough_node", types)
+        self.assertNotIn("passthrough", types)
+
+    def test_uneven_breakout_legs_pad_shorter_column_with_empty_cells(self):
+        """A breakout whose legs differ in length pads the shorter leg's column with `empty` cells.
+
+        Empty cells only ever trail a leg's content (legs are top-aligned), so they render as
+        no-ops — they never carry a `continuation` marker.
+        """
+        breakout = CableType(name="Uneven 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()
+        trunk = Interface.objects.create(device=self.device, name="uneven-trunk", status=self.interface_status)
+        # Lane 1: straight to an interface (short leg).
+        lane1 = Interface.objects.create(device=self.device, name="uneven-lane1", status=self.interface_status)
+        # Lane 2: through a patch panel to an interface (longer leg).
+        rear = RearPort.objects.create(device=self.device, name="Uneven Rear", positions=1)
+        front = FrontPort.objects.create(device=self.device, name="Uneven Front", rear_port=rear, rear_port_position=1)
+        dest = Interface.objects.create(device=self.device, name="uneven-dest", status=self.interface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.connected)
+        cable.save()
+        cable.add_termination(front, "B", connector=2)
+        Cable.objects.create(termination_a=rear, termination_b=dest, status=self.connected)
+
+        diagram = CableTraceSVG(trunk)
+        cells = self._matrix_cells(diagram)
+        empties = [cell for cell in cells if cell["type"] == "empty"]
+        self.assertTrue(empties, "The shorter leg's column should be padded with empty cells")
+        self.assertFalse(any(cell.get("continuation") for cell in empties))
+        # Empty pad cells render as no-ops; the diagram still renders.
+        self.assertIn("<svg", diagram.render())
+
     def test_complete_trace_footer(self):
         """A complete trace renders a completion summary with the segment count and total length."""
         iface_a = Interface.objects.create(device=self.device, name="iface-a", status=self.interface_status)

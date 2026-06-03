@@ -24,8 +24,7 @@ class CableTraceSVG:
 
     The rendering is split into two phases:
       Phase 1 (`build_matrix`): Collect trace data into a row/column matrix with spatial metadata
-          (colspan for grouped devices, continuation markers for empty cells above active content,
-          etc.).
+          (e.g. colspan for grouped devices spanning fan-out columns).
       Phase 2 (`render`): Walk the matrix and draw each cell at its computed pixel position.
 
     Usage:
@@ -42,7 +41,6 @@ class CableTraceSVG:
     # Downward shift from a vertical center to a text baseline (≈ half the cap height) so a line of
     # text appears vertically centered at its target y.
     TEXT_VERTICAL_OFFSET = 5
-    FORK_DROP_LENGTH = 3 * GAP_Y  # vertical drop from fork bar to first row
     TRACE_END_PADDING = 5
     # Minimum reserve for cable labels/badges hanging off the rightmost column. Actual reserve
     # is sized to the longest cable label found in the trace; this is the floor used when no
@@ -78,10 +76,16 @@ class CableTraceSVG:
 
     # Layout: cable segment
     CABLE_H = 140
-    CABLE_BAR_W = 5
-
-    # Layout: pass-through
-    PASSTHROUGH_H = 30
+    CABLE_BAR_W = 10
+    CABLE_BORDER_W = 1
+    # Dash pattern for a disconnected/planned cable (and its fork lines): the cable color rides on
+    # top of a wider, longer border-color dash so each dash keeps a visible border "rung" against
+    # the page background. Same period; the cable dash is offset so its rungs straddle it evenly.
+    CABLE_DASH_SEGMENT_LENGTH = 20
+    CABLE_DASH_GAP_LENGTH = 10
+    CABLE_DASH_BORDER = f"{CABLE_DASH_SEGMENT_LENGTH},{CABLE_DASH_GAP_LENGTH}"
+    CABLE_DASH = f"{CABLE_DASH_SEGMENT_LENGTH - 2 * CABLE_BORDER_W},{CABLE_DASH_GAP_LENGTH + 2 * CABLE_BORDER_W}"
+    CABLE_DASH_OFFSET = -CABLE_BORDER_W
 
     # Layout: overall dimensions
     MAX_WIDTH = 465
@@ -91,9 +95,6 @@ class CableTraceSVG:
     INITIAL_HEIGHT = 900
     INITIAL_FANOUT_HEIGHT = 2350
     EMPTY_HEIGHT = 70
-
-    # Line widths
-    FORK_LINE_WIDTH = 2
 
     def __init__(self, origin, base_url="", cable_path=None):
         self.origin = origin
@@ -355,14 +356,21 @@ class CableTraceSVG:
                 ],
             }
 
-        Cell types:
+        Row cell types:
             {"type": "node", "col": int, "colspan": 1, "termination": obj}
             {"type": "grouped_node", "col": int, "colspan": int,
              "terminations": [obj, ...], "parent_key": str}
-            {"type": "spanned"}  — covered by a grouped_node in a prior column
+            {"type": "passthrough_node", "col": int, "arriving": obj, "departing": obj}
+            {"type": "grouped_passthrough_node", "col": int, "colspan": int,
+             "arriving": [obj, ...], "departing": [obj, ...], "parent_key": str}
             {"type": "cable", "col": int, "cable": obj, "near": obj, "far": obj}
-            {"type": "passthrough", "col": int, "near": obj, "far": obj}
-            {"type": "empty", "col": int, "continuation": bool}
+            {"type": "grouped_cable", "col": int, "colspan": int, "cable": obj, "near": obj, "far": obj}
+            {"type": "spanned", "col": int}  — covered by a grouped cell in a prior column
+            {"type": "empty", "col": int}  — column padding where a shorter leg has ended
+
+        A front↔rear `passthrough` is an intermediate raw entry only; Step 1 always folds the
+        preceding node and the passthrough into a single `passthrough_node`, so a standalone
+        `passthrough` never reaches a row.
         """
         column_count = len(self.fanout_paths)
 
@@ -463,24 +471,7 @@ class CableTraceSVG:
                 row.append(cell)
             raw_rows.append(row)
 
-        # Step 3: Mark continuation on empty cells (if any cell below in the same column has content).
-        for col_idx in range(column_count):
-            last_content_row_idx = -1
-            for row_idx in range(len(raw_rows) - 1, -1, -1):
-                if raw_rows[row_idx][col_idx]["type"] != "empty":
-                    last_content_row_idx = row_idx
-                    break
-            for row_idx in range(last_content_row_idx):
-                cell = raw_rows[row_idx][col_idx]
-                if cell["type"] == "empty":
-                    cell["continuation"] = True
-                else:
-                    cell.setdefault("continuation", False)
-            for row_idx in range(last_content_row_idx, len(raw_rows)):
-                cell = raw_rows[row_idx][col_idx]
-                cell.setdefault("continuation", False)
-
-        # Step 4: Collapse a run of same-type cells that share a grouping key into one cell spanning
+        # Step 3: Collapse a run of same-type cells that share a grouping key into one cell spanning
         # their columns: node/pass-through nodes into one device box, a shared cable into one bar.
         rows = []
         for raw_row in raw_rows:
@@ -513,7 +504,6 @@ class CableTraceSVG:
                             "colspan": colspan,
                             "terminations": [row[c]["termination"] for c in spanned],
                             "parent_key": group_key,
-                            "continuation": False,
                         }
                     elif cell["type"] == "passthrough_node":
                         row[col_idx] = {
@@ -523,7 +513,6 @@ class CableTraceSVG:
                             "arriving": [row[c]["arriving"] for c in spanned],
                             "departing": [row[c]["departing"] for c in spanned],
                             "parent_key": group_key,
-                            "continuation": False,
                         }
                     else:  # cable shared across legs (a fan-in/fan-out trunk)
                         row[col_idx] = {
@@ -533,10 +522,9 @@ class CableTraceSVG:
                             "cable": cell["cable"],
                             "near": cell.get("near"),
                             "far": cell.get("far"),
-                            "continuation": False,
                         }
                     for spanned_col in range(col_idx + 1, span_end):
-                        row[spanned_col] = {"type": "spanned", "col": spanned_col, "continuation": False}
+                        row[spanned_col] = {"type": "spanned", "col": spanned_col}
                     col_idx = span_end
                 else:
                     cell["colspan"] = 1
@@ -622,6 +610,7 @@ class CableTraceSVG:
             return mark_safe(dwg.tostring())  # noqa: S308
 
         cable_color = header["cable_color"]
+        is_connected = hasattr(cable, "status") and cable.status and cable.status.name == "Connected"
         is_breakout_fanout = bool(cable.cable_type_id) and len(col_centers) > 1
 
         if is_breakout_fanout:
@@ -630,30 +619,17 @@ class CableTraceSVG:
             y += self.GAP_Y
 
             fork_y = y
-            dwg.add(
-                dwg.line(
-                    start=(col_centers[0], fork_y),
-                    end=(col_centers[-1], fork_y),
-                    stroke=cable_color,
-                    stroke_width=self.FORK_LINE_WIDTH,
-                )
-            )
-            drop_end = fork_y + self.FORK_DROP_LENGTH
+            self._draw_cable_line(dwg, (col_centers[0], fork_y), (col_centers[-1], fork_y), cable_color, is_connected)
+            fork_y += self.GAP_Y
+            drop_end = fork_y + self.CABLE_DASH_SEGMENT_LENGTH
             for col_idx, cx in enumerate(col_centers):
-                dwg.add(
-                    dwg.line(
-                        start=(cx, fork_y),
-                        end=(cx, drop_end),
-                        stroke=cable_color,
-                        stroke_width=self.FORK_LINE_WIDTH,
-                    )
-                )
+                self._draw_cable_line(dwg, (cx, fork_y), (cx, drop_end), cable_color, is_connected)
                 label = header["connector_labels"][col_idx]
                 if label:
                     dwg.add(
                         dwg.text(
                             label,
-                            insert=(cx, fork_y - self.TEXT_VERTICAL_OFFSET),
+                            insert=(cx, fork_y - self.GAP_Y - self.TEXT_VERTICAL_OFFSET),
                             text_anchor="middle",
                             fill=constants.COLOR_SECONDARY,
                             font_size=f"{constants.FONT_SIZE_SM}px",
@@ -700,56 +676,21 @@ class CableTraceSVG:
                 row_h = max(row_h, 2 * self.TERM_H + self.NODE_TEXT_AREA_H)
             elif cell["type"] in ("cable", "grouped_cable"):
                 row_h = max(row_h, self.CABLE_H)
-            elif cell["type"] == "passthrough":
-                row_h = max(row_h, self.PASSTHROUGH_H)
         return row_h
 
     def _render_row_background(self, dwg, y, row, row_h, col_centers):
-        """Draw background elements for a row: cables, pass-through lines, continuation lines."""
+        """Draw background elements for a row: the cable bars."""
         if row_h == 0:
             return
         for cell in row:
-            cx = col_centers[cell["col"]]
-
             if cell["type"] == "cable":
+                cx = col_centers[cell["col"]]
                 self._draw_cable(dwg, cx, y, cell["cable"], cell.get("near"), cell.get("far"))
 
             elif cell["type"] == "grouped_cable":
                 # A shared trunk spanning several legs — drawn once, centered over the span.
                 self._draw_cable(
                     dwg, self._group_cx(cell, col_centers), y, cell["cable"], cell.get("near"), cell.get("far")
-                )
-
-            elif cell["type"] == "passthrough":
-                dwg.add(
-                    dwg.line(
-                        start=(cx, y),
-                        end=(cx, y + row_h),
-                        stroke=constants.COLOR_BORDER,
-                        stroke_width=1,
-                        stroke_dasharray="4,3",
-                    )
-                )
-                dwg.add(
-                    dwg.text(
-                        "pass-thru",
-                        insert=(cx + self.LABEL_OFFSET_X, y + row_h / 2 + self.TEXT_VERTICAL_OFFSET),
-                        fill=constants.COLOR_SECONDARY,
-                        font_size=f"{constants.FONT_SIZE_SM}px",
-                        font_family=constants.FONT_FAMILY,
-                    )
-                )
-
-            elif cell["type"] == "empty" and cell.get("continuation"):
-                dwg.add(
-                    dwg.line(
-                        start=(cx, y),
-                        end=(cx, y + row_h),
-                        stroke=constants.COLOR_BORDER,
-                        stroke_width=1,
-                        stroke_dasharray="2,4",
-                        opacity=0.3,
-                    )
                 )
 
     def _render_row_foreground(self, dwg, y, row, col_centers):
@@ -993,21 +934,8 @@ class CableTraceSVG:
         cable_url = self._url(cable)
         is_connected = hasattr(cable, "status") and cable.status and cable.status.name == "Connected"
 
-        bar_x = cx - self.CABLE_BAR_W / 2
         bar_h = self.CABLE_H
-
-        if is_connected:
-            dwg.add(dwg.rect(insert=(bar_x, y), size=(self.CABLE_BAR_W, bar_h), fill=cable_color))
-        else:
-            dwg.add(
-                dwg.line(
-                    start=(cx, y),
-                    end=(cx, y + bar_h),
-                    stroke=cable_color,
-                    stroke_width=self.CABLE_BAR_W,
-                    stroke_dasharray="8,4",
-                )
-            )
+        self._draw_cable_line(dwg, (cx, y), (cx, y + bar_h), cable_color, is_connected)
 
         label_x = cx + self.CABLE_BAR_W / 2 + self.LABEL_OFFSET_X
         label_y = y + bar_h / 2
@@ -1050,6 +978,31 @@ class CableTraceSVG:
         self._draw_status_badge(dwg, label_x, first_row_cy + (row_count - 1) * line_step, status_name, status_color)
 
         return y + bar_h
+
+    def _draw_cable_line(self, dwg, start, end, cable_color, is_connected):
+        """Draw a cable line — the main trace bar or a breakout fork bar/drop.
+
+        The cable color is drawn `CABLE_BAR_W - 2 * CABLE_BORDER_W` wide over a `CABLE_BAR_W`-wide border-color line,
+        so the border shows as a CABLE_BORDER_W outline on each side and the cable stays distinct from the
+        page background even when its color is near it. When the cable isn't connected the line is
+        dashed, with the wider border peeking out as a "rung" at each dash.
+        """
+        if is_connected:
+            dwg.add(dwg.line(start=start, end=end, stroke=constants.COLOR_BORDER, stroke_width=self.CABLE_BAR_W))
+            dwg.add(
+                dwg.line(
+                    start=start, end=end, stroke=cable_color, stroke_width=self.CABLE_BAR_W - 2 * self.CABLE_BORDER_W
+                )
+            )
+        else:
+            for stroke, width, dasharray, dashoffset in (
+                (constants.COLOR_BORDER, self.CABLE_BAR_W, self.CABLE_DASH_BORDER, 0),
+                (cable_color, self.CABLE_BAR_W - 2 * self.CABLE_BORDER_W, self.CABLE_DASH, self.CABLE_DASH_OFFSET),
+            ):
+                line = dwg.line(start=start, end=end, stroke=stroke, stroke_width=width, stroke_dasharray=dasharray)
+                if dashoffset:
+                    line["stroke-dashoffset"] = dashoffset
+                dwg.add(line)
 
     def _draw_passthrough_node(self, dwg, cx, y, arriving_termination, departing_termination):
         """Draw a device node with arriving port at top and departing port at bottom."""
