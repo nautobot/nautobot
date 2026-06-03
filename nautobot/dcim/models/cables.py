@@ -1371,6 +1371,16 @@ class CablePath(BaseModel):
 
         return path
 
+    def trace(self):
+        """Return this path as a list of (near-end termination, cable, far-end termination) three-tuples."""
+        # Construct the complete path, padding to complete three-tuples (e.g. for paths that end at
+        # a RearPort) before appending the destination.
+        path = [self.origin, *self.get_path()]
+        while (len(path) + 1) % 3:
+            path.append(None)
+        path.append(self.destination)
+        return list(zip(*[iter(path)] * 3))
+
     def get_total_length(self):
         """
         Return the sum of the length of each cable in the path.

@@ -525,19 +525,9 @@ class PathEndpoint(models.Model):
         abstract = True
 
     def trace(self):
+        # Trace the endpoint's first path (a non-breakout endpoint has at most one).
         path_obj = self.cable_paths.first()  # pylint: disable=no-member
-        if path_obj is None:
-            return []
-
-        # Construct the complete path
-        path = [self, *path_obj.get_path()]
-        while (len(path) + 1) % 3:
-            # Pad to ensure we have complete three-tuples (e.g. for paths that end at a RearPort)
-            path.append(None)
-        path.append(path_obj.destination)
-
-        # Return the path as a list of three-tuples (A termination, cable, B termination)
-        return list(zip(*[iter(path)] * 3))
+        return path_obj.trace() if path_obj is not None else []
 
     @property
     def path(self):

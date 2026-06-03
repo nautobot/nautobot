@@ -119,10 +119,17 @@ class CableTraceSVG:
     COLOR_DANGER = "var(--bs-danger)"
     COLOR_WARNING = "var(--bs-warning)"
 
-    def __init__(self, origin, base_url=""):
+    def __init__(self, origin, base_url="", cable_path=None):
         self.origin = origin
         self.base_url = base_url.rstrip("/") if base_url else ""
-        self.traced_path = origin.trace() if hasattr(origin, "trace") else []
+        # Render the explicitly-selected CablePath when given (e.g. a `?cablepath_id=` choice);
+        # otherwise fall back to the origin endpoint's first path.
+        if cable_path is not None:
+            self.traced_path = cable_path.trace()
+        elif hasattr(origin, "trace"):
+            self.traced_path = origin.trace()
+        else:
+            self.traced_path = []
         self.fanout_paths = self._detect_fanout()
 
     # ──────────────────────────────────────────────
@@ -203,11 +210,7 @@ class CableTraceSVG:
             if cable_path is not None:
                 # Reconstruct the trace from the CablePath, stripping the first hop (the breakout
                 # cable itself) since the renderer's header already shows it.
-                full_path_objects = [self.origin, *cable_path.get_path()]
-                while (len(full_path_objects) + 1) % 3:
-                    full_path_objects.append(None)
-                full_path_objects.append(cable_path.destination)
-                full_trace = list(zip(*[iter(full_path_objects)] * 3))
+                full_trace = cable_path.trace()
                 if len(full_trace) > 1:
                     leg_trace = self._expand_trace_segments(full_trace[1:])
 
