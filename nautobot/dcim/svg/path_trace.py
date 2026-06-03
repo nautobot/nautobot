@@ -6,10 +6,11 @@ and unconnected breakout lanes. See `CableTraceSVG` for the public entry point.
 """
 
 from django.contrib.contenttypes.models import ContentType
+from django.urls import NoReverseMatch, reverse
 from django.utils.html import mark_safe
 import svgwrite
 
-from nautobot.core.templatetags.helpers import bettertitle, fgcolor
+from nautobot.core.templatetags.helpers import bettertitle, fgcolor, meters_to_feet
 
 
 class CableTraceSVG:
@@ -51,7 +52,6 @@ class CableTraceSVG:
     TEXT_VERTICAL_OFFSET = 5
     FORK_DROP_LENGTH = 3 * GAP_Y  # vertical drop from fork bar to first row
     TRACE_END_PADDING = 5
-    TRACE_END_HEIGHT = 25
     # Minimum reserve for cable labels/badges hanging off the rightmost column. Actual reserve
     # is sized to the longest cable label found in the trace; this is the floor used when no
     # cables (or only very short ones) are present.
@@ -124,12 +124,10 @@ class CableTraceSVG:
         self.base_url = base_url.rstrip("/") if base_url else ""
         # Render the explicitly-selected CablePath when given (e.g. a `?cablepath_id=` choice);
         # otherwise fall back to the origin endpoint's first path.
-        if cable_path is not None:
-            self.traced_path = cable_path.trace()
-        elif hasattr(origin, "trace"):
-            self.traced_path = origin.trace()
-        else:
-            self.traced_path = []
+        if cable_path is None and hasattr(origin, "cable_paths"):
+            cable_path = origin.cable_paths.first()
+        self.cable_path = cable_path
+        self.traced_path = cable_path.trace() if cable_path is not None else []
         self.fanout_paths = self._detect_fanout()
 
     # ──────────────────────────────────────────────
@@ -307,7 +305,11 @@ class CableTraceSVG:
         return text[: max(max_chars - 1, 1)] + "…"
 
     def _max_cable_label_width(self, header_cable, column_entries):
-        """Estimate the widest cable label/detail line drawn to the right of any column center."""
+        """Estimate the widest element drawn to the right of any column center.
+
+        Considers everything a cable stacks beside its bar — the bold name, the muted detail lines,
+        and the status badge pill — so the canvas reserves enough width to avoid clipping any of them.
+        """
         widths = []
 
         def add(cable, near_end, far_end):
@@ -315,6 +317,7 @@ class CableTraceSVG:
             widths.append(len(str(cable)) * self.FONT_SIZE * self.FONT_WIDTH_RATIO)
             for detail in self._cable_detail_lines(cable, near_end, far_end):
                 widths.append(len(detail) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO)
+            widths.append(self._status_badge_width(cable))
 
         if header_cable is not None:
             add(header_cable, None, None)
@@ -323,6 +326,13 @@ class CableTraceSVG:
                 if entry.get("type") == "cable" and entry.get("cable") is not None:
                     add(entry["cable"], entry.get("near"), entry.get("far"))
         return max(widths, default=0)
+
+    def _status_badge_width(self, cable):
+        """Estimated rendered width of the status badge pill drawn beside a cable bar."""
+        status = getattr(cable, "status", None)
+        status_name = status.name if status else "Unknown"
+        # Mirrors `_draw_status_badge`: text width plus horizontal padding of FONT_SIZE_SM.
+        return len(status_name) * self.FONT_SIZE_SM * self.FONT_WIDTH_RATIO + self.FONT_SIZE_SM
 
     def _cable_lane_info(self, cable, termination):
         """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
@@ -457,23 +467,25 @@ class CableTraceSVG:
 
             column_entries.append(entries)
 
-        # Layout: now that we know every cable label in the trace, size the canvas to fit them
-        # and center the column band horizontally within `total_width`.
+        # Layout: size the canvas to fit the trace and center the column band so the trunk (band
+        # center) sits at the SVG's horizontal center. The widest overhang from a column center is
+        # reserved symmetrically on both sides: cable labels hang to the right of the rightmost
+        # column, the origin/trunk node and the centered trace-end footer extend to the left of the
+        # trunk, so a symmetric reserve keeps the labels, the node, and the footer all unclipped.
         col_width = self.COL_WIDTH
-        # Leftmost / rightmost overhang relative to a column center.
-        left_overhang = max(self.NODE_W / 2, 0)
-        right_overhang = (
-            self.LABEL_OFFSET_X
+        node_overhang = self.NODE_W / 2
+        label_overhang = (
+            self.CABLE_BAR_W / 2
+            + self.LABEL_OFFSET_X
             + self._max_cable_label_width(header["cable"], column_entries)
             + self.GAP_Y * 2  # safety margin: width estimation is a fraction-of-em approximation
         )
-        right_overhang = max(right_overhang, self.LABEL_RIGHT_RESERVE_MIN, left_overhang)
-        # `content_extent` is the actual horizontal range from leftmost node edge to rightmost label edge,
-        # measured relative to the first column's center.
-        content_extent = (column_count - 1) * col_width + left_overhang + right_overhang
-        total_width = max(content_extent, self.MAX_WIDTH)
-        # Center the content band; first column's center sits at `left_overhang + extra/2`.
-        first_col_x = left_overhang + max((total_width - content_extent) / 2, 0)
+        side_overhang = max(node_overhang, label_overhang, self.LABEL_RIGHT_RESERVE_MIN)
+        band_width = (column_count - 1) * col_width
+        # The footer is centered on the trunk, so the canvas must hold its full width as well.
+        total_width = max(band_width + 2 * side_overhang, self._trace_end_width(), self.MAX_WIDTH)
+        # Center the band: the trunk center then coincides with the SVG center (total_width / 2).
+        first_col_x = (total_width - band_width) / 2
         col_centers = [first_col_x + col_idx * col_width for col_idx in range(column_count)]
 
         # Step 2: Normalize into rows (pad with empty cells).
@@ -643,7 +655,7 @@ class CableTraceSVG:
         # Header: Breakout cable trunk + fork
         cable = header["cable"]
         if not cable:
-            y = self._draw_trace_end(dwg, trunk_cx, y, incomplete=True)
+            y = self._draw_trace_end(dwg, trunk_cx, y)
             dwg["height"] = f"{y + self.GAP_Y}px"
             dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
             return mark_safe(dwg.tostring())  # noqa: S308
@@ -706,6 +718,9 @@ class CableTraceSVG:
 
         for row_y, row, row_h in row_positions:
             self._render_row_foreground(dwg, row_y, row, col_centers)
+
+        # Footer: split next-hops, or completion summary (segment count + total length).
+        y = self._draw_trace_end(dwg, trunk_cx, y)
 
         dwg["height"] = f"{y + self.GAP_Y}px"
         dwg["width"] = f"{total_width}px"
@@ -810,13 +825,18 @@ class CableTraceSVG:
     # Cell drawing primitives
     # ──────────────────────────────────────────────
 
-    def _add_text(self, dwg, text, x, baseline_y, anchor, font_size, font_weight, url=None, title=None):
-        """Add one `<text>` element (wrapped in a link when `url` is set) and an optional tooltip."""
+    def _add_text(self, dwg, text, x, baseline_y, anchor, font_size, font_weight, url=None, title=None, fill=None):
+        """Add one `<text>` element (wrapped in a link when `url` is set) and an optional tooltip.
+
+        `fill` overrides the default color (link blue when `url` is set, else muted).
+        """
+        if fill is None:
+            fill = self.COLOR_LINK if url else self.COLOR_TEXT_MUTED
         element = dwg.text(
             text,
             insert=(x, baseline_y),
             text_anchor=anchor,
-            fill=self.COLOR_LINK if url else self.COLOR_TEXT_MUTED,
+            fill=fill,
             font_size=f"{font_size}px",
             font_family=self.FONT_FAMILY,
             font_weight=font_weight,
@@ -929,25 +949,29 @@ class CableTraceSVG:
         return (first_cx + last_cx) / 2
 
     @staticmethod
-    def _legs_share_termination(terminations):
-        """True if every leg references the same (non-None) termination — i.e. a shared port."""
-        return (
-            bool(terminations)
-            and all(term is not None for term in terminations)
-            and len({term.pk for term in terminations}) == 1
-        )
+    def _same_termination(first, second):
+        """True if both are the same non-None termination (shared port)."""
+        return first is not None and second is not None and first.pk == second.pk
 
-    def _draw_termination_row(self, dwg, terminations, term_y, start_col, group_cx, col_centers):
-        """Draw a grouped cell's termination boxes at `term_y`, one per column.
+    def _draw_termination_row(self, dwg, terminations, term_y, start_col, col_centers):
+        """Draw a grouped cell's termination boxes at `term_y`.
 
-        When every leg shares the same termination (a fan-in/fan-out trunk port), it is drawn once,
-        centered over the span, instead of redundantly per column.
+        A run of consecutive columns sharing the same termination — a fan-in/fan-out trunk port
+        reached by several legs — is drawn once, centered over the columns it spans, rather than
+        redundantly per column. (All-or-nothing won't do: a grouped device can mix a shared trunk
+        port with other, distinct ports.)
         """
-        if self._legs_share_termination(terminations):
-            self._draw_termination_box(dwg, group_cx, term_y, terminations[0])
-        else:
-            for term_index, termination in enumerate(terminations):
-                self._draw_termination_box(dwg, col_centers[start_col + term_index], term_y, termination)
+        index = 0
+        count = len(terminations)
+        while index < count:
+            termination = terminations[index]
+            run_end = index + 1
+            while run_end < count and self._same_termination(terminations[run_end], termination):
+                run_end += 1
+            first_cx = col_centers[start_col + index]
+            last_cx = col_centers[start_col + run_end - 1]
+            self._draw_termination_box(dwg, (first_cx + last_cx) / 2, term_y, termination)
+            index = run_end
 
     def _draw_grouped_node_cell(self, dwg, y, cell, col_centers):
         """Draw a device box spanning multiple columns with side-by-side termination boxes at top."""
@@ -966,7 +990,7 @@ class CableTraceSVG:
         self._draw_parent_box(
             dwg, box_x, box_y, box_w, self.NODE_H, group_cx, text_area_top, self.NODE_TEXT_AREA_H, terminations[0]
         )
-        self._draw_termination_row(dwg, terminations, y, start_col, group_cx, col_centers)
+        self._draw_termination_row(dwg, terminations, y, start_col, col_centers)
 
         return box_y + self.NODE_H
 
@@ -995,8 +1019,8 @@ class CableTraceSVG:
         text_area_top = box_y + half_term_h
 
         self._draw_parent_box(dwg, box_x, box_y, box_w, box_h, group_cx, text_area_top, text_area_h, arriving[0])
-        self._draw_termination_row(dwg, arriving, y, start_col, group_cx, col_centers)
-        self._draw_termination_row(dwg, departing, departing_y, start_col, group_cx, col_centers)
+        self._draw_termination_row(dwg, arriving, y, start_col, col_centers)
+        self._draw_termination_row(dwg, departing, departing_y, start_col, col_centers)
 
         return departing_y + self.TERM_H
 
@@ -1155,26 +1179,87 @@ class CableTraceSVG:
 
         self._draw_text_block(dwg, cx, y, self.TERM_H, self.TERM_W - 2 * self.TERM_TEXT_PAD, lines)
 
-    def _draw_trace_end(self, dwg, cx, y, incomplete=False):
-        """Draw the trace completion indicator at the bottom of a finished trace."""
-        text = "Trace completed" if not incomplete else "Trace incomplete"
-        color = self.COLOR_SUCCESS if not incomplete else self.COLOR_DANGER
+    def _trace_url(self, node):
+        """Absolute URL of the trace view for a split next-hop node (FrontPort/RearPort)."""
+        try:
+            return self.base_url + reverse(f"dcim:{node._meta.model_name}_trace", kwargs={"pk": node.pk})
+        except NoReverseMatch:
+            return self._url(node)
 
-        y += self.TRACE_END_PADDING
-        segment_count = len(self.traced_path)
-        label = f"{text} • {segment_count} segment{'s' if segment_count != 1 else ''}"
-        dwg.add(
-            dwg.text(
-                label,
-                insert=(cx, y + self.FONT_SIZE),
-                text_anchor="middle",
-                fill=color,
-                font_size=f"{self.FONT_SIZE}px",
-                font_family=self.FONT_FAMILY,
-                font_weight="bold",
+    def _trace_end_lines(self):
+        """Descriptors `(text, font_size, font_weight, fill, url)` for the trace-end footer.
+
+        For a branched (breakout) trace, a single neutral aggregate line — there is no one end state
+        to report, and each lane's outcome is already shown in its own column. For a split path
+        (`CablePath.is_split`): a "Path split!" heading and the selectable next-hop nodes to continue
+        through. Otherwise a completion summary with the total segment count and linear length (when
+        available), mirroring the legacy `cable_trace.html` footer. Centralizing the content here
+        lets both the rendered footer and the canvas width derive from one source.
+        """
+        cable_path = self.cable_path
+        lines = []
+
+        # A branched trace's `cable_path`/`traced_path` only describe the first lane, so a single
+        # completion/split/totals summary would misrepresent the other branches.
+        if len(self.fanout_paths) > 1:
+            return [(f"Breakout fan-out — {len(self.fanout_paths)} branches", self.FONT_SIZE, "bold", None, None)]
+
+        if cable_path is not None and cable_path.is_split:
+            lines.append(("Path split!", self.FONT_SIZE, "bold", self.COLOR_DANGER, None))
+            lines.append(("Select a node below to continue:", self.FONT_SIZE_SM, "normal", None, None))
+            for next_node in cable_path.get_split_nodes():
+                next_cable = getattr(next_node, "cable", None)
+                # A node with an onward cable links to its trace view, naming that cable inline; a
+                # node with no cable can't be continued, so it stays plain muted text.
+                if next_cable is not None:
+                    text = f"{next_node}  (Cable {next_cable})"
+                    lines.append((text, self.FONT_SIZE_SM, "normal", None, self._trace_url(next_node)))
+                else:
+                    lines.append((str(next_node), self.FONT_SIZE_SM, "normal", None, None))
+            return lines
+
+        complete = cable_path is not None and cable_path.destination is not None
+        lines.append(
+            (
+                "Trace completed" if complete else "Trace incomplete",
+                self.FONT_SIZE,
+                "bold",
+                self.COLOR_SUCCESS if complete else self.COLOR_DANGER,
+                None,
             )
         )
-        return y + self.TRACE_END_HEIGHT
+        lines.append((f"Total segments: {len(self.traced_path)}", self.FONT_SIZE_SM, "normal", None, None))
+        total_length = cable_path.get_total_length() if cable_path is not None else None
+        if total_length:
+            length_text = (
+                f"Total length: {self._format_length(total_length)} Meters"
+                f" / {self._format_length(meters_to_feet(total_length))} Feet"
+            )
+        else:
+            length_text = "Total length: N/A"
+        lines.append((length_text, self.FONT_SIZE_SM, "normal", None, None))
+        return lines
+
+    def _trace_end_width(self):
+        """Estimated width of the widest footer line (centered, so half is reserved on each side)."""
+        return max(
+            (len(text) * font_size * self.FONT_WIDTH_RATIO for text, font_size, *_ in self._trace_end_lines()),
+            default=0,
+        )
+
+    def _draw_trace_end(self, dwg, cx, y):
+        """Draw the trace-end footer (see `_trace_end_lines`), centered at `cx`."""
+        line_step = self.TEXT_LINE_SPACING + self.GAP_Y
+        y += self.TRACE_END_PADDING
+        for index, (text, font_size, font_weight, fill, url) in enumerate(self._trace_end_lines()):
+            y += font_size if index == 0 else line_step
+            self._add_text(dwg, text, cx, y, "middle", font_size, font_weight, url=url, fill=fill)
+        return y + self.TRACE_END_PADDING
+
+    @staticmethod
+    def _format_length(value):
+        """Format a length with up to two decimal places, trailing zeros stripped (cf. floatformat:-2)."""
+        return f"{float(value):.2f}".rstrip("0").rstrip(".")
 
     def _render_empty(self):
         """Render an empty/no-path SVG."""

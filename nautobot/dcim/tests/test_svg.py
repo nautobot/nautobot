@@ -5,8 +5,23 @@ import re
 
 from django.test import SimpleTestCase
 
+from nautobot.core.testing import TestCase
+from nautobot.dcim.models import (
+    Cable,
+    CableType,
+    Device,
+    DeviceType,
+    FrontPort,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    RearPort,
+)
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
+from nautobot.dcim.svg.path_trace import CableTraceSVG
 from nautobot.dcim.utils import generate_cable_breakout_mapping
+from nautobot.extras.models import Role, Status
 
 
 def _line_endpoints(svg):
@@ -237,3 +252,164 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
             entry["label"] = f"VERY_LONG_LANE_LABEL_{i}"
         long_diagram = BreakoutDiagramSVG(mapping, show_status=False)
         self.assertGreater(long_diagram.line_area_width, BreakoutDiagramSVG.MINIMUM_LINE_AREA_WIDTH)
+
+
+class CableTraceSVGTestCase(TestCase):
+    """Direct tests of the server-side cable-trace SVG renderer (no view layer)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="SVG Trace Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            location=location,
+            device_type=device_type,
+            role=device_role,
+            name="SVG Trace Device",
+            status=device_status,
+        )
+        cls.interface_status = Status.objects.get_for_model(Interface).first()
+        cls.connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+    @staticmethod
+    def _svg_width(svg):
+        return float(re.search(r'width="([\d.]+)px"', svg).group(1))
+
+    def test_complete_trace_footer(self):
+        """A complete trace renders a completion summary with the segment count and total length."""
+        iface_a = Interface.objects.create(device=self.device, name="iface-a", status=self.interface_status)
+        iface_b = Interface.objects.create(device=self.device, name="iface-b", status=self.interface_status)
+        Cable.objects.create(
+            termination_a=iface_a, termination_b=iface_b, status=self.connected, length=5, length_unit="m"
+        )
+
+        svg = CableTraceSVG(iface_a).render()
+        self.assertIn("Trace completed", svg)
+        self.assertIn("Total segments: 1", svg)
+        self.assertIn("5 Meters", svg)
+        self.assertIn("Feet", svg)
+
+    def test_branched_trace_footer_is_neutral_aggregate(self):
+        """A branched (breakout) trace shows a neutral aggregate footer, not first-lane-only totals."""
+        breakout = CableType(name="SVG 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name="branch-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name="branch-lane-1", status=self.interface_status)
+        lane2 = Interface.objects.create(device=self.device, name="branch-lane-2", status=self.interface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.connected)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        svg = CableTraceSVG(trunk).render()
+        self.assertIn("Breakout fan-out", svg)
+        # The single-path summary (which would reflect only the first lane) is suppressed.
+        self.assertNotIn("Trace completed", svg)
+        self.assertNotIn("Total segments", svg)
+        self.assertNotIn("Total length", svg)
+
+    def test_split_trace_footer_lists_next_hops_with_cables(self):
+        """A split trace renders "Path split!" and the selectable next-hop nodes with their cables."""
+        iface = Interface.objects.create(device=self.device, name="split-origin", status=self.interface_status)
+        rear = RearPort.objects.create(device=self.device, name="Rear Port Split", positions=4)
+        front1 = FrontPort.objects.create(
+            device=self.device, name="Front Port Split 1", rear_port=rear, rear_port_position=1
+        )
+        front2 = FrontPort.objects.create(
+            device=self.device, name="Front Port Split 2", rear_port=rear, rear_port_position=2
+        )
+        dest1 = Interface.objects.create(device=self.device, name="split-dest-1", status=self.interface_status)
+        dest2 = Interface.objects.create(device=self.device, name="split-dest-2", status=self.interface_status)
+
+        # IF -- C1 -- RP (positions=4); the rear port fans out, so tracing from IF splits there.
+        Cable.objects.create(termination_a=iface, termination_b=rear, status=self.connected)
+        Cable.objects.create(termination_a=front1, termination_b=dest1, status=self.connected, label="split-cable-1")
+        Cable.objects.create(termination_a=front2, termination_b=dest2, status=self.connected, label="split-cable-2")
+
+        svg = CableTraceSVG(iface).render()
+        self.assertIn("Path split!", svg)
+        self.assertIn("Select a node below to continue", svg)
+        self.assertIn("Front Port Split 1", svg)
+        self.assertIn("Front Port Split 2", svg)
+        # Each next-hop names its onward cable.
+        self.assertIn("split-cable-1", svg)
+        self.assertIn("split-cable-2", svg)
+
+    def test_long_cable_label_fits_within_canvas_width(self):
+        """The canvas must be wide enough that a long cable label is not clipped on the right."""
+        iface_a = Interface.objects.create(device=self.device, name="wide-a", status=self.interface_status)
+        iface_b = Interface.objects.create(device=self.device, name="wide-b", status=self.interface_status)
+        long_label = "DEMO-VERY-LONG-CABLE-LABEL-THAT-SHOULD-NOT-BE-CLIPPED-01"
+        Cable.objects.create(termination_a=iface_a, termination_b=iface_b, status=self.connected, label=long_label)
+
+        diagram = CableTraceSVG(iface_a)
+        svg = diagram.render()
+        width = self._svg_width(svg)
+
+        # The label hangs to the right of the (centered) cable bar; its right edge must be inside the canvas.
+        matrix = diagram.build_matrix()
+        center_x = matrix["col_centers"][0]
+        label_x = center_x + diagram.CABLE_BAR_W / 2 + diagram.LABEL_OFFSET_X
+        label_width = len(long_label) * diagram.FONT_SIZE * diagram.FONT_WIDTH_RATIO
+        self.assertLessEqual(label_x + label_width, width, msg=f"Cable label clipped: width={width}")
+
+    def test_trace_end_footer_centered_and_unclipped(self):
+        """The trunk is centered in the canvas so the centered footer can't overflow the left edge."""
+        iface = Interface.objects.create(device=self.device, name="footer-origin", status=self.interface_status)
+        rear = RearPort.objects.create(device=self.device, name="Footer Rear", positions=4)
+        front = FrontPort.objects.create(device=self.device, name="Footer Front", rear_port=rear, rear_port_position=1)
+        dest = Interface.objects.create(device=self.device, name="footer-dest", status=self.interface_status)
+        Cable.objects.create(termination_a=iface, termination_b=rear, status=self.connected)
+        # A long onward-cable label makes the split footer's next-hop line the widest element.
+        long_label = "DEMO-EXTREMELY-LONG-NEXT-HOP-CABLE-LABEL-FOR-FOOTER-WIDTH-CHECK-01"
+        Cable.objects.create(termination_a=front, termination_b=dest, status=self.connected, label=long_label)
+
+        diagram = CableTraceSVG(iface)
+        width = self._svg_width(diagram.render())
+        col_centers = diagram.build_matrix()["col_centers"]
+        trunk_cx = (col_centers[0] + col_centers[-1]) / 2
+
+        # The trunk runs down the SVG center, so the centered footer has equal room on both sides.
+        self.assertAlmostEqual(trunk_cx, width / 2, places=3)
+        footer_half = diagram._trace_end_width() / 2
+        self.assertGreaterEqual(trunk_cx - footer_half, 0, msg="Footer overflows the left edge")
+        self.assertLessEqual(trunk_cx + footer_half, width, msg="Footer overflows the right edge")
+
+    def test_grouped_passthrough_shared_rear_port_drawn_once_among_distinct(self):
+        """A rear port shared by two adjacent legs renders once even when a third leg in the same
+        grouped pass-through node uses a different rear port (regression: all-or-nothing dedup)."""
+        breakout = CableType(name="SVG 1x3", a_connectors=1, b_connectors=3, total_lanes=3)
+        breakout.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name="grp-trunk", status=self.interface_status)
+
+        shared_rear = RearPort.objects.create(device=self.device, name="Rear-Shared", positions=2)
+        front1 = FrontPort.objects.create(
+            device=self.device, name="Front-1", rear_port=shared_rear, rear_port_position=1
+        )
+        front2 = FrontPort.objects.create(
+            device=self.device, name="Front-2", rear_port=shared_rear, rear_port_position=2
+        )
+        other_rear = RearPort.objects.create(device=self.device, name="Rear-Other", positions=1)
+        front3 = FrontPort.objects.create(
+            device=self.device, name="Front-3", rear_port=other_rear, rear_port_position=1
+        )
+
+        # Lanes B1/B2 → front1/front2 (both pass through to the shared rear); B3 → front3 (other rear).
+        cable = Cable(termination_a=trunk, termination_b=front1, cable_type=breakout, status=self.connected)
+        cable.save()
+        cable.add_termination(front2, "B", connector=2)
+        cable.add_termination(front3, "B", connector=3)
+
+        # The rear ports must continue onward (here, straight to interfaces) so the front→rear
+        # pass-through is mid-leg — only then are the rear ports actually rendered.
+        dest1 = Interface.objects.create(device=self.device, name="grp-dest-1", status=self.interface_status)
+        dest2 = Interface.objects.create(device=self.device, name="grp-dest-2", status=self.interface_status)
+        Cable.objects.create(termination_a=shared_rear, termination_b=dest1, status=self.connected)
+        Cable.objects.create(termination_a=other_rear, termination_b=dest2, status=self.connected)
+
+        svg = CableTraceSVG(trunk).render()
+        # The shared rear port is drawn once (consecutive run), the distinct one once.
+        self.assertEqual(svg.count("Rear-Shared"), 1, "Shared rear port should render once, not per leg")
+        self.assertEqual(svg.count("Rear-Other"), 1)
