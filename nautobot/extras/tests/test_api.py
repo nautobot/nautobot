@@ -940,7 +940,7 @@ class ApprovalWorkflowStageTest(
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    choices_fields = ["content_type"]
+    choices_fields = ["content_type", "output_type"]
     create_data = [
         {
             "content_type": "dcim.location",
