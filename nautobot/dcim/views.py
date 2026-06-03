@@ -5667,7 +5667,6 @@ class PathTraceView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         related_paths = []
-        breakout_fanout = False
 
         # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin.
         if isinstance(instance, PathEndpoint):
@@ -5675,7 +5674,6 @@ class PathTraceView(generic.ObjectView):
             path = cable_paths.first()
             if cable_paths.count() > 1:  # breakout cable!
                 related_paths = cable_paths
-                breakout_fanout = True
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:
@@ -5705,7 +5703,6 @@ class PathTraceView(generic.ObjectView):
         return {
             "path": path,
             "related_paths": related_paths,
-            "breakout_fanout": breakout_fanout,
             "trace_svg": trace_svg,
             "total_length": path.get_total_length() if path else None,
             "view_titles": self.get_view_titles(),
