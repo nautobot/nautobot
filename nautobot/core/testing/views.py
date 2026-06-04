@@ -2295,7 +2295,10 @@ class ViewTestCases:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
             if not self.cabled_objects:
                 self.skipTest("This test requires self.cabled_objects")
-            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
             pk_list = [obj.pk for obj in self.cabled_objects]
             response = self.client.post(self._get_url("bulk_disconnect"), {"pk": pk_list})
             self.assertHttpStatus(response, 200)
@@ -2314,9 +2317,12 @@ class ViewTestCases:
                 self.skipTest("This test requires self.cabled_objects")
             from nautobot.dcim.models import Cable
 
-            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
             pk_list = [obj.pk for obj in self.cabled_objects]
-            cable_pks = [obj.cable.pk for obj in self.cabled_objects]
+            cable_pks = [obj.cable_id for obj in self.cabled_objects]
 
             data = {"pk": pk_list, "_confirm": True, "confirm": True}
             response = self.client.post(self._get_url("bulk_disconnect"), data)
@@ -2340,9 +2346,12 @@ class ViewTestCases:
                 self.skipTest("This test requires self.cabled_objects and self.uncabled_object")
             from nautobot.dcim.models import Cable
 
-            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
             cabled = self.cabled_objects[0]
-            cable_pk = cabled.cable.pk
+            cable_pk = cabled.cable_id
 
             data = {
                 "pk": [cabled.pk, self.uncabled_object.pk],
@@ -2367,7 +2376,10 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
-            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
             data = {"_confirm": True, "confirm": True}  # no pk
             response = self.client.post(self._get_url("bulk_disconnect"), data)
             # form_invalid returns a Response that NautobotHTMLRenderer turns into 200 with form errors

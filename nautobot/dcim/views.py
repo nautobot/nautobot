@@ -3977,11 +3977,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
 class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
     """
     UI mixin for UIViewSets serving cabled components (console/power/interface, etc.) — adds a
-    ``bulk_disconnect`` action that detaches each selected component from its cable via
-    ``disconnect_termination()`` (the cable itself and any other terminations are preserved).
+    `bulk_disconnect` action that detaches each selected component from its cable via
+    `disconnect_termination()` (the cable itself and any other terminations are preserved).
 
-    Subclasses may set ``bulk_disconnect_form_class`` to override the default ConfirmationForm
-    with a hidden ``pk`` ModelMultipleChoiceField.
+    Subclasses may set `bulk_disconnect_form_class` to override the default ConfirmationForm
+    with a hidden `pk` ModelMultipleChoiceField.
     """
 
     bulk_disconnect_form_class = None
@@ -4002,7 +4002,7 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
     def _process_bulk_disconnect_form(self, form):
         """Disconnect each selected component from its cable inside a single transaction.
 
-        Uses ``disconnect_termination(obj)`` to remove the termination only; the cable itself
+        Uses `disconnect_termination(obj)` to remove the termination only; the cable itself
         and any surviving terminations are left intact. After the loop, the user is shown a
         bulleted list of the now-orphaned cables so they can clean up any that are no longer
         needed.
@@ -4056,15 +4056,16 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
         url_path="disconnect",
         url_name="bulk_disconnect",
         custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_cable"],
     )
     def bulk_disconnect(self, request, *args, **kwargs):
-        """Mirrors DRF's ``{action}/perform_{action}`` pattern used by the other bulk mixins."""
+        """Mirrors DRF's `{action}/perform_{action}` pattern used by the other bulk mixins."""
         return self.perform_bulk_disconnect(request, **kwargs)
 
     def perform_bulk_disconnect(self, request, **kwargs):
         """
-        POST without ``_confirm``: render the confirmation page listing the selected components.
-        POST with ``_confirm``: validate the form and detach each component from its cable.
+        POST without `_confirm`: render the confirmation page listing the selected components.
+        POST with `_confirm`: validate the form and detach each component from its cable.
         """
         queryset = self.get_queryset()
         model = queryset.model
