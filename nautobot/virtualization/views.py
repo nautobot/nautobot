@@ -9,10 +9,22 @@ from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectEditViewMixin,
+    ObjectListViewMixin,
+    ObjectNotesViewMixin,
+)
 from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.tables import DeviceTable
 from nautobot.dcim.utils import render_software_version_and_image_files
+from nautobot.dcim.views import ComponentCreateViewMixin
 from nautobot.extras.models import ConfigContext
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
 from nautobot.ipam.utils import render_ip_with_nat
@@ -302,82 +314,27 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
 #
 
 
-class VMInterfaceListView(generic.ObjectListView):
+class VMInterfaceUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectEditViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = VMInterface.objects.all()
-    filterset = filters.VMInterfaceFilterSet
-    filterset_form = forms.VMInterfaceFilterForm
-    table = tables.VMInterfaceTable
+    filterset_class = filters.VMInterfaceFilterSet
+    filterset_form_class = forms.VMInterfaceFilterForm
+    table_class = tables.VMInterfaceTable
+    serializer_class = serializers.VMInterfaceSerializer
+    form_class = forms.VMInterfaceForm
+    create_form_class = forms.VMInterfaceCreateForm
+    bulk_update_form_class = forms.VMInterfaceBulkEditForm
     action_buttons = ("export",)
-
-
-class VMInterfaceView(generic.ObjectView):
-    queryset = VMInterface.objects.all()
-
-    def get_extra_context(self, request, instance):
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
-            orderable=False,
-        )
-
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.VMInterfaceTable(
-            child_interfaces, orderable=False, exclude=("virtual_machine",)
-        )
-
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
-
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
-
-        return {
-            "ipaddress_table": ipaddress_table,
-            "child_interfaces_table": child_interfaces_tables,
-            "vlan_table": vlan_table,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class VMInterfaceCreateView(generic.ComponentCreateView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceCreateForm
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/virtualmachine_component_add.html"
-
-
-class VMInterfaceEditView(generic.ObjectEditView):
-    queryset = VMInterface.objects.all()
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/vminterface_edit.html"
-
-
-class VMInterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = VMInterface.objects.all()
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
-
-
-class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-
-
-class VMInterfaceBulkEditView(generic.BulkEditView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    form = forms.VMInterfaceBulkEditForm
-    filterset = filters.VMInterfaceFilterSet
-
-
-class VMInterfaceBulkRenameView(generic.BulkRenameView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceBulkRenameForm
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
@@ -385,12 +342,86 @@ class VMInterfaceBulkRenameView(generic.BulkRenameView):
             return selected_object.virtual_machine.name
         return ""
 
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve" and instance is not None:
+            context["ipaddress_table"] = InterfaceIPAddressTable(
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
+                orderable=False,
+            )
+            context["child_interfaces_table"] = tables.VMInterfaceTable(
+                instance.child_interfaces.restrict(request.user, "view"),
+                orderable=False,
+            )
+            # Equivalent to exclude=("virtual_machine",):
+            context["child_interfaces_table"].columns.hide("virtual_machine")
 
-class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    template_name = "virtualization/vminterface_bulk_delete.html"
-    filterset = filters.VMInterfaceFilterSet
+            vlans = []
+            if instance.untagged_vlan is not None:
+                vlans.append(instance.untagged_vlan)
+                vlans[0].tagged = False
+            for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
+                vlan.tagged = True
+                vlans.append(vlan)
+            context["vlan_table"] = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+        return context
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Interface",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "virtual_machine",
+                    "name",
+                    "status",
+                    "role",
+                    "enabled",
+                    "parent_interface",
+                    "vrf",
+                    "bridge",
+                    "description",
+                    "mtu",
+                    "mac_address",
+                    "mode",
+                ],
+                key_transforms={
+                    "mode": "802.1Q Mode",
+                    "vrf": "VRF",
+                },
+            ),
+            # IP addresses
+            object_detail.ObjectsTablePanel(
+                label="IP Addresses",
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="ipaddress_table",
+                add_button_route=None,
+                table_title="",
+                header_extra_content_template_path=None,
+            ),
+            # Tagged + untagged VLANs
+            object_detail.ObjectsTablePanel(
+                label="VLANs",
+                section=SectionChoices.FULL_WIDTH,
+                weight=400,
+                context_table_key="vlan_table",
+                add_button_route=None,
+                table_title="",
+                header_extra_content_template_path=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                label="Child Interfaces",
+                section=SectionChoices.FULL_WIDTH,
+                weight=500,
+                context_table_key="child_interfaces_table",
+                add_button_route=None,
+                table_title="",
+                header_extra_content_template_path=None,
+            ),
+        ]
+    )
 
 
 #

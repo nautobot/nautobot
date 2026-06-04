@@ -196,6 +196,10 @@ class VMInterfaceTable(BaseInterfaceTable):
     virtual_machine = tables.LinkColumn()
     name = tables.Column(linkify=True)
     tags = TagColumn(url_name="virtualization:vminterface_list")
+    actions = ButtonsColumn(
+        model=VMInterface,
+        buttons=("edit", "delete"),
+    )
 
     class Meta(BaseTable.Meta):
         model = VMInterface
@@ -214,8 +218,9 @@ class VMInterfaceTable(BaseInterfaceTable):
             "ip_addresses",
             "untagged_vlan",
             "tagged_vlans",
+            "actions",
         )
-        default_columns = ("pk", "virtual_machine", "name", "status", "role", "enabled", "description")
+        default_columns = ("pk", "virtual_machine", "name", "status", "role", "enabled", "description", "actions")
 
 
 class VirtualMachineVMInterfaceTable(VMInterfaceTable):
