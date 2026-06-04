@@ -52,6 +52,7 @@ from nautobot.extras.choices import (
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
     WebhookHttpMethodChoices,
@@ -1296,7 +1297,7 @@ class ApprovalWorkflowStageViewTestCase(
         approval_workflow_stage = ApprovalWorkflowStage.objects.first()
         # create new response with a comment
         second_user = User.objects.last()
-        new_response = ApprovalWorkflowStageResponse.objects.create(
+        ApprovalWorkflowStageResponse.objects.create(
             approval_workflow_stage=approval_workflow_stage,
             user=second_user,
             comments="existing comment",
@@ -3220,7 +3221,11 @@ class GitRepositoryTestCase(
                     job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
                     mock_enqueue.return_value = job_result
                     response = self.client.post(url)
-                    self.assertRedirects(response, job_result.get_absolute_url(), fetch_redirect_response=False)
+                    self.assertRedirects(
+                        response,
+                        reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}),
+                        fetch_redirect_response=False,
+                    )
                     mock_enqueue.assert_called_once_with(instance, self.user)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
@@ -3807,7 +3812,6 @@ class SavedViewTest(ModelViewTestCase):
             response = self.client.get(reverse(view_name) + "?saved_view=" + str(instance.pk), follow=True)
             # Assert that Job List View rendered with the boolean filter parameter without error
             self.assertHttpStatus(response, 200)
-            response_body = extract_page_body(response.content.decode(response.charset))
             self.assertBodyContains(
                 response,
                 f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
@@ -4145,6 +4149,382 @@ class ScheduledJobTestCase(
         response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertIn("test11", extract_page_body(response.content.decode(response.charset)))
+
+    def _make_scheduled_job(self, name, **kwargs):
+        defaults = {
+            "task": "pass_job.TestPassJob",
+            "interval": JobExecutionType.TYPE_DAILY,
+            "user": self.user,
+            "start_time": timezone.now(),
+            "job_model": Job.objects.get(name="TestPassJob"),
+        }
+        defaults.update(kwargs)
+        return ScheduledJob.objects.create(name=name, **defaults)
+
+    def test_detail_view_shows_banner_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_null_user", user=None)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_no_banner_when_user_is_present(self):
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job("banner_with_user")
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_shows_assume_ownership_button_with_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="other_owner_button_visible", is_active=True)
+        sj = self._make_scheduled_job("assume_button_with_perm", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_when_already_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_button_already_owner")  # owned by self.user
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_run_job_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        other_user = User.objects.create(username="other_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_run", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_detail_view_hides_assume_ownership_button_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="other_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_button_no_change", user=other_user)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn("Assume Ownership", body)
+
+    def test_assume_ownership_succeeds_with_required_perms(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="prior_owner", is_active=True)
+        sj = self._make_scheduled_job("assume_other_owner", user=other_user, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_recovers_schedule_when_user_is_null(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_null_owner", user=None, enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertTrue(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+
+    def test_assume_ownership_forbidden_without_run_job_perm(self):
+        self.add_permissions("extras.change_scheduledjob")
+        other_user = User.objects.create(username="prior_owner_no_run", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_run", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
+
+    def test_assume_ownership_forbidden_without_change_perm(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.run_job")
+        other_user = User.objects.create(username="prior_owner_no_change", is_active=True)
+        sj = self._make_scheduled_job("assume_forbidden_no_change", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 403)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)
+
+    def test_assume_ownership_no_op_when_already_owner(self):
+        """A direct POST while already owning the schedule short-circuits without modification."""
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        sj = self._make_scheduled_job("assume_already_owner_post", enabled=False)
+        sj.state = ScheduledJobStateChoices.ERRORED
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        # State must NOT have been mutated since the requester already owns it.
+        sj.refresh_from_db()
+        self.assertFalse(sj.enabled)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ERRORED)
+
+    def test_assume_ownership_rejected_without_run_perm_on_specific_job(self):
+        """A user with extras.run_job at the model level but no per-Job run constraint match is rejected."""
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob")
+        # Grant `run` on a constraint that does NOT match the schedule's job_model.
+        obj_perm = ObjectPermission.objects.create(
+            name="run only fail jobs",
+            actions=["run"],
+            constraints={"name": "TestFailJob"},
+        )
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+
+        other_user = User.objects.create(username="other_owner_no_run_for_job", is_active=True)
+        sj = self._make_scheduled_job("assume_no_run_specific_job", user=other_user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("do not have permission to run the job", body)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, other_user.id)  # unchanged
+
+    def _make_pending_scheduled_job(self, name, *, prior_owner, stage_specs):
+        sj = self._make_scheduled_job(name, user=prior_owner, enabled=False)
+        sj.state = ScheduledJobStateChoices.PENDING
+        sj.save()
+
+        approver_group = Group.objects.create(name=f"approvers_{name}")
+        workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name=f"workflow_def_{name}",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+        )
+        workflow = ApprovalWorkflow.objects.create(
+            approval_workflow_definition=workflow_definition,
+            object_under_review_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            object_under_review_object_id=sj.pk,
+            current_state=ApprovalWorkflowStateChoices.PENDING,
+            user=prior_owner,
+        )
+        stages = []
+        for index, (stage_state, approved_usernames) in enumerate(stage_specs, start=1):
+            stage_definition = ApprovalWorkflowStageDefinition.objects.create(
+                approval_workflow_definition=workflow_definition,
+                sequence=index,
+                name=f"stage_{index}_{name}",
+                min_approvers=len(approved_usernames) + 2,
+                approver_group=approver_group,
+            )
+            stage = ApprovalWorkflowStage.objects.create(
+                approval_workflow=workflow,
+                approval_workflow_stage_definition=stage_definition,
+                state=stage_state,
+            )
+            for username in approved_usernames:
+                approver = User.objects.create(username=username, is_active=True)
+                ApprovalWorkflowStageResponse.objects.create(
+                    approval_workflow_stage=stage,
+                    user=approver,
+                    state=ApprovalWorkflowStateChoices.APPROVED,
+                    comments="LGTM",
+                )
+            stages.append(stage)
+        return sj, workflow, stages
+
+    def test_assume_ownership_pending_transfers_owner_only_and_preserves_approvals(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_handoff", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_handoff",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["approver_pending_handoff"])],
+        )
+        active_stage = stages[0]
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            1,
+        )
+        self.assertFalse(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                user=self.user,
+            ).exists()
+        )
+
+    def test_assume_ownership_pending_when_both_users_are_approvers(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_in_group", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_in_group",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["approver_pending_in_group"])],
+        )
+        active_stage = stages[0]
+        approver_group = active_stage.approval_workflow_stage_definition.approver_group
+        approver_group.user_set.add(prior_owner, self.user)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            1,
+        )
+        self.assertFalse(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                user=self.user,
+            ).exists()
+        )
+
+    def test_assume_ownership_pending_preserves_prior_approval_from_new_owner(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_pending_self_approved", is_active=True)
+        sj, workflow, stages = self._make_pending_scheduled_job(
+            "assume_pending_self_approved",
+            prior_owner=prior_owner,
+            stage_specs=[(ApprovalWorkflowStateChoices.PENDING, ["other_approver_pending_self_approved"])],
+        )
+        active_stage = stages[0]
+        approver_group = active_stage.approval_workflow_stage_definition.approver_group
+        approver_group.user_set.add(prior_owner, self.user)
+        self_user_response = ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=active_stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.APPROVED,
+            comments="LGTM from future owner",
+        )
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.PENDING)
+        self.assertFalse(sj.enabled)
+
+        workflow.refresh_from_db()
+        self.assertEqual(workflow.user_id, prior_owner.id)
+        self.assertEqual(workflow.current_state, ApprovalWorkflowStateChoices.PENDING)
+
+        active_stage.refresh_from_db()
+        self.assertEqual(active_stage.state, ApprovalWorkflowStateChoices.PENDING)
+        self.assertEqual(
+            ApprovalWorkflowStageResponse.objects.filter(
+                approval_workflow_stage=active_stage,
+                state=ApprovalWorkflowStateChoices.APPROVED,
+            ).count(),
+            2,
+        )
+        self_user_response.refresh_from_db()
+        self.assertEqual(self_user_response.state, ApprovalWorkflowStateChoices.APPROVED)
+        self.assertEqual(self_user_response.comments, "LGTM from future owner")
+
+    def _assert_assume_ownership_transfers_owner_only(self, state, prior_owner_username, schedule_name):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username=prior_owner_username, is_active=True)
+        sj = self._make_scheduled_job(schedule_name, user=prior_owner, enabled=False)
+        sj.state = state
+        sj.save()
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, state)
+        self.assertFalse(sj.enabled)
+
+    def test_assume_ownership_denied_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.DENIED, "prior_owner_denied_handoff", "assume_denied_handoff"
+        )
+
+    def test_assume_ownership_canceled_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.CANCELED, "prior_owner_canceled_handoff", "assume_canceled_handoff"
+        )
+
+    def test_assume_ownership_completed_transfers_owner_only(self):
+        self._assert_assume_ownership_transfers_owner_only(
+            ScheduledJobStateChoices.COMPLETED, "prior_owner_completed_handoff", "assume_completed_handoff"
+        )
+
+    def test_assume_ownership_active_transfers_owner_only(self):
+        self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
+        prior_owner = User.objects.create(username="prior_owner_active_handoff", is_active=True)
+        sj = self._make_scheduled_job("assume_active_handoff", user=prior_owner, enabled=True)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(sj.enabled)
+
+        url = reverse("extras:scheduledjob_assume_ownership", kwargs={"pk": sj.pk})
+        response = self.client.post(url, follow=True)
+        self.assertHttpStatus(response, 200)
+
+        sj.refresh_from_db()
+        self.assertEqual(sj.user_id, self.user.id)
+        self.assertEqual(sj.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(sj.enabled)
 
 
 class JobQueueTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -4527,6 +4907,57 @@ class JobResultTestCase(
         self.assertIn("Starting job execution...", response_raw_content)
         self.assertIn("Processing data...", response_raw_content)
 
+    def test_jobresult_modal_refresh_on_close_preserved_in_polling_hx_vals(self):
+        """Pending job: `refresh_on_close_if_done` must be preserved in the polling `hx-vals`."""
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(
+            url,
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('hx-trigger="every 2s"', content)
+        # Marker is only set once the job is done.
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
+
+    def test_jobresult_modal_refresh_on_close_sets_marker_when_done(self):
+        """Completed job: `refresh_on_close_if_done=true` must render the DOM marker used to trigger reload."""
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
+        response = self.client.post(
+            url,
+            data={
+                "refresh_on_close_if_done": "true",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # No polling once the job is done.
+        self.assertNotIn('hx-trigger="every 2s"', content)
+
+    def test_jobresult_modal_refresh_on_close_default_false(self):
+        """Without the query parameter, neither the polling `hx-vals` nor the DOM marker should opt in to reload."""
+        self.add_permissions("extras.view_jobresult")
+        pending_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(
+            pending_url,
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
+
+        completed_url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
+        response = self.client.post(
+            completed_url,
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertNotIn('data-nb-refresh-on-close="true"', content)
+
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
@@ -4787,8 +5218,15 @@ class JobTestCase(
         so EXEMPT_VIEW_PERMISSIONS=["*"] does NOT apply here.
         """
         self.add_permissions("extras.run_job")
+
         for run_url in self.run_urls:
-            response = self.client.get(run_url, {"job_form_modal": True}, HTTP_HX_REQUEST="true")
+            response = self.client.post(
+                run_url,
+                data={
+                    "render_job_form": True,
+                },
+                HTTP_HX_REQUEST="true",
+            )
             self.assertBodyContains(response, "TestPassJob")
             self.assertBodyContains(response, "Show Advanced Settings")
             self.assertBodyContains(response, "Run Job Now")
@@ -4862,11 +5300,10 @@ class JobTestCase(
                 run_url, self.data_run_immediately, headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"}
             )
 
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
             result = JobResult.objects.latest()
-            self.assertRedirects(
-                response,
-                reverse("extras:jobresult_modal", kwargs={"pk": result.pk}) + "?refresh_on_close_if_done=false",
-            )
+            self.assertIn(str(result.pk), content)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
@@ -4954,6 +5391,7 @@ class JobTestCase(
             "nautobot_job_job_model_id": self.test_required_args.id,
             "nautobot_job_profile": True,
             "nautobot_job_ignore_singleton_lock": True,
+            "nautobot_job_console_log": True,
             "nautobot_job_user_id": self.user.id,
             "queue": job_queue.name,
         }
@@ -4983,6 +5421,61 @@ class JobTestCase(
             '<input type="checkbox" name="_ignore_singleton_lock" class="form-check-input" aria-describedby="id__ignore_singleton_lock_helptext" id="id__ignore_singleton_lock" checked>',
             content,
         )
+        self.assertInHTML(
+            (
+                '<input type="checkbox" name="_console_log" '
+                'class="form-check-input" '
+                'aria-describedby="id__console_log_helptext" '
+                'id="id__console_log" checked>'
+            ),
+            content,
+        )
+
+    def test_rerun_job_restores_queue_for_all_queue_types(self):
+        """Verify rerun restores selected queue regardless of queue type."""
+
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        run_url = reverse(
+            "extras:job_run",
+            kwargs={"pk": self.test_required_args.pk},
+        )
+
+        self.test_required_args.is_singleton_override = True
+        self.test_required_args.has_sensitive_variables_override = True
+        self.test_required_args.is_singleton = True
+        self.test_required_args.has_sensitive_variables = False
+        self.test_required_args.validated_save()
+
+        for queue_type in JobQueueTypeChoices.values():
+            with self.subTest(queue_type=queue_type):
+                job_queue = JobQueue.objects.create(
+                    name=f"queue-{queue_type}",
+                    queue_type=queue_type,
+                )
+
+                self.test_required_args.job_queues.set([job_queue])
+
+                previous_result = JobResult.objects.create(
+                    job_model=self.test_required_args,
+                    user=self.user,
+                    task_kwargs={"var": "456"},
+                    celery_kwargs={
+                        "queue": job_queue.name,
+                    },
+                )
+
+                response = self.client.get(f"{run_url}?kwargs_from_job_result={previous_result.pk!s}")
+
+                self.assertEqual(response.status_code, 200)
+
+                content = extract_page_body(response.content.decode(response.charset))
+
+                self.assertInHTML(
+                    f'<option value="{job_queue.pk}" selected>{job_queue}</option>',
+                    content,
+                )
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):

@@ -13,8 +13,8 @@ The following operational statuses are available by default:
 ## Speed and duplex
 
 +++ 2.4.22
-* `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
-* `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
+    * `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
+    * `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
 
 ### Validation rules for speed/duplex
 

@@ -303,9 +303,6 @@ class ExampleDryRunJob(Job):
 class ExampleJob(Job):
     some_json_data = JSONVar(label="JSON", description="Example JSONVar for a job.", default={})
 
-    # specify template_name to override the default job scheduling template
-    template_name = "example_app/example_with_custom_template.html"
-
     class Meta:
         name = "Example job, does nothing"
         description = """
@@ -314,6 +311,9 @@ class ExampleJob(Job):
             *This is italicized*
         """
         has_sensitive_variables = False
+
+        # specify template_name to override the default job scheduling template
+        template_name = "example_app/example_with_custom_template.html"
 
     def run(self, some_json_data):  # pylint:disable=arguments-differ
         # some_json_data is passed to the run method as a Python object (e.g. dictionary)
@@ -341,12 +341,12 @@ class ExampleCustomFormJob(Job):
     # display a text area instead in the template.
     custom_job_data = StringVar(label="Input Data", description="Some input data", default="Lorem Ipsum")
 
-    # specify template_name to override the default job scheduling template
-    template_name = "example_app/custom_job_form.html"
-
     class Meta:
         name = "Custom form."
         has_sensitive_variables = False
+
+        # specify template_name to override the default job scheduling template
+        template_name = "example_app/custom_job_form.html"
 
     def run(self, custom_job_data):  # pylint:disable=arguments-differ
         """Run the job."""

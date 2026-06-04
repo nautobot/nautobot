@@ -1,4 +1,7 @@
+from django.db import connection
+from django.db.models import IntegerField, Value
 from django.test import tag, TestCase
+from django.test.utils import CaptureQueriesContext
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
@@ -7,6 +10,8 @@ from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, 
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
 from nautobot.extras.models import JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
+from nautobot.ipam.models import RIR
+from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
@@ -203,3 +208,46 @@ class TableTestCase(TestCase):
         ]
         self.assertEqual(job_log_entry_table.visible_columns, expected_visible_columns)
         self.assertEqual(job_log_entry_table.configurable_columns, expected_configurable_columns)
+
+
+class BaseTableLinkedCountColumnTestCase(TestCase):
+    """Covers the `count_fields` annotation pathway in `BaseTable.__init__`."""
+
+    def test_basetable_construction_is_lazy(self):
+        """Constructing a BaseTable around a lazy queryset must not query the DB.
+
+        Querysets are lazy; column setup, annotation chaining, and prefetch
+        wiring are pure-Python operations. Any DB query issued here is a sign
+        that something forced evaluation of the queryset.
+        """
+        with CaptureQueriesContext(connection) as ctx:
+            RIRTable(RIR.objects.all())
+        self.assertEqual(
+            len(ctx.captured_queries),
+            0,
+            f"BaseTable.__init__ issued {len(ctx.captured_queries)} DB queries; "
+            "expected 0 because the input queryset is lazy.\n" + "\n".join(q["sql"] for q in ctx.captured_queries),
+        )
+
+    def test_annotation_applied_when_missing(self):
+        """A LinkedCountColumn's annotation is applied when neither the queryset nor the model has it."""
+        table = RIRTable(RIR.objects.all())
+        self.assertIn("assigned_prefix_count", table.data.data.query.annotations)
+
+    def test_annotation_preserved_when_already_on_queryset(self):
+        """A caller-supplied annotation with the same name as a LinkedCountColumn is preserved, not overwritten."""
+        qs = RIR.objects.annotate(assigned_prefix_count=Value(42, output_field=IntegerField()))
+        table = RIRTable(qs)
+        self.assertIn("assigned_prefix_count", table.data.data.query.annotations)
+        row = table.data.data.first()
+        if row is not None:
+            self.assertEqual(row.assigned_prefix_count, 42)
+
+    def test_annotation_skipped_when_model_defines_attribute(self):
+        """The annotation is not applied if the model class already exposes the attribute."""
+        RIR.assigned_prefix_count = property(lambda self: 999)
+        try:
+            table = RIRTable(RIR.objects.all())
+            self.assertNotIn("assigned_prefix_count", table.data.data.query.annotations)
+        finally:
+            del RIR.assigned_prefix_count

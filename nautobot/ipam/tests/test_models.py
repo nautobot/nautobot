@@ -1600,10 +1600,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix="10.0.0.128/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
         )
         self.assertEqual(slash25.get_utilization(), (4, 128))
+        pool.delete()
 
         # When the pool does not overlap with broadcast or network address, the denominator decrements by 2
-        pool.delete()
-        pool = Prefix.objects.create(
+        Prefix.objects.create(
             prefix="10.0.0.132/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
         )
         self.assertEqual(slash25.get_utilization(), (4, 126))
