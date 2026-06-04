@@ -1742,52 +1742,47 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 }
             )
 
+        elif self.action == "members":
+            # Members tab
+            context["base_template"] = get_base_template(self.base_template, instance.model)
+            model = instance.model
+            table_class = get_table_for_model(model)
+            members = instance.members
+            if table_class is not None:
+                if hasattr(members, "without_tree_fields"):
+                    members = members.without_tree_fields()
+
+                members_table = table_class(
+                    members.restrict(request.user, "view"),
+                    orderable=False,
+                    exclude=["dynamic_group_count"],
+                    hide_hierarchy_ui=True,
+                )
+                paginate = {
+                    "paginator_class": EnhancedPaginator,
+                    "per_page": get_paginate_count(request),
+                }
+                RequestConfig(request, paginate).configure(members_table)
+
+                if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
+                    context["members_list_url"] = None
+                else:
+                    try:
+                        context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
+                    except NoReverseMatch:
+                        context["members_list_url"] = None
+                context.update(
+                    {
+                        "members_verbose_name_plural": model._meta.verbose_name_plural,
+                        "members_table": members_table,
+                    }
+                )
+
         return context
 
     @action(detail=True, url_path="members", url_name="members", custom_view_base_action="view")
     def members(self, request, pk=None):
-        instance = self.get_object()
-        model = instance.model
-        table_class = get_table_for_model(model)
-
-        context = super().get_extra_context(request, instance)
-        context["base_template"] = "extras/dynamicgroup_retrieve.html"
-        context["object"] = instance
-        context["active_tab"] = "members"
-
-        if table_class is not None:
-            members = instance.members
-            if hasattr(members, "without_tree_fields"):
-                members = members.without_tree_fields()
-
-            members_table = table_class(
-                members.restrict(request.user, "view"),
-                orderable=False,
-                exclude=["dynamic_group_count"],
-                hide_hierarchy_ui=True,
-            )
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(members_table)
-
-            if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
-                members_list_url = None
-            else:
-                try:
-                    members_list_url = reverse(get_route_for_model(instance.model, "list"))
-                except NoReverseMatch:
-                    members_list_url = None
-
-            context.update(
-                {
-                    "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
-                    "members_table": members_table,
-                    "members_list_url": members_list_url,
-                }
-            )
-
+        context = self.get_extra_context(request, self.get_object())
         return Response(context, template_name="extras/dynamicgroup_members.html")
 
     def form_save(self, form, commit=True, **kwargs):
