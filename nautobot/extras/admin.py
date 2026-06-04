@@ -1,10 +1,8 @@
-from db_file_storage.form_widgets import DBAdminClearableFileInput
-from django import forms
 from django.contrib import admin
 
 from nautobot.core.admin import NautobotModelAdmin
 
-from .models import FileProxy, JobResult
+from .models import JobResult
 
 
 def order_content_types(field):
@@ -13,27 +11,6 @@ def order_content_types(field):
     """
     queryset = field.queryset.order_by("app_label", "model")
     field.choices = [(ct.pk, f"{ct.app_label} > {ct.name}") for ct in queryset]
-
-
-#
-# File attachments
-#
-
-
-class FileProxyForm(forms.ModelForm):
-    class Meta:
-        model = FileProxy
-        fields = ["name", "file"]
-        widgets = {
-            "file": DBAdminClearableFileInput,
-        }
-
-
-@admin.register(FileProxy)
-class FileProxyAdmin(NautobotModelAdmin):
-    form = FileProxyForm
-    list_display = ["name", "file", "created"]
-    list_filter = ["created"]
 
 
 #
