@@ -5218,6 +5218,16 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
 #
 
 
+class InventoryItemFieldsPanel(object_detail.ObjectFieldsPanel):
+    """ObjectFieldsPanel with context-aware rendering of `software_version` and its image files."""
+
+    def render_value(self, key, value, context):
+        if key == "software_version":
+            instance = get_obj_from_context(context, self.context_object_key)
+            return render_software_version_and_image_files(instance, value, context)
+        return super().render_value(key, value, context)
+
+
 class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin, NautobotUIViewSet):
     queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version")
     filterset_class = filters.InventoryItemFilterSet
@@ -5231,20 +5241,31 @@ class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin,
     action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_inventory"
 
-    def get_extra_context(self, request, instance):
-        if instance is None or self.action != "retrieve":
-            return super().get_extra_context(request, instance)
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-        else:
-            software_version_images = []
-
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "software_version_images": software_version_images,
-            **super().get_extra_context(request, instance),
-        }
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            InventoryItemFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Inventory Item",
+                fields=[
+                    "device",
+                    "parent",
+                    "name",
+                    "label",
+                    "manufacturer",
+                    "part_id",
+                    "serial",
+                    "asset_tag",
+                    "software_version",
+                    "description",
+                ],
+                key_transforms={
+                    "parent": "Parent Item",
+                    "serial": "Serial",
+                },
+            ),
+        ),
+    )
 
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
