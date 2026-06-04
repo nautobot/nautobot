@@ -3671,6 +3671,29 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_multiple_components_with_required_custom_field(self):
+        """A required custom field value must be carried through to each component created via the bulk-add form."""
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Mandatory Interface Field",
+            required=True,
+        )
+        custom_field.content_types.set([ContentType.objects.get_for_model(Interface)])
+
+        self.add_permissions("dcim.add_interface")
+        data = self.bulk_create_data.copy()
+        data[custom_field.add_prefix_to_cf_key()] = "expected value"
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(data),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        created = self._get_queryset().filter(name__in=["Interface 4", "Interface 5", "Interface 6"])
+        self.assertEqual(created.count(), 3)
+        for instance in created:
+            self.assertEqual(instance.cf[custom_field.key], "expected value")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_port_type_fails(self):
         """Test that a virtual interface cannot have a port type"""
         self.add_permissions("dcim.add_interface")
