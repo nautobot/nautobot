@@ -1,0 +1,2 @@
+Fixed cable path tracing through a mid-path breakout cable so that a lane returning to a single trunk peer is followed through, rather than always reporting the path as split.
+Fixed the list of selectable next hops shown for a split cable path when the split originates at a front port; previously only splits at a rear port were handled.

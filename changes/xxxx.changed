@@ -1,0 +1,2 @@
+The cable path trace view now renders the trace as a single server-side SVG diagram, replacing the previous per-object-type HTML templates.
+Cable path trace diagrams now depict breakout cable fan-outs, rendering each downstream lane as its own branch, including unconnected lanes.
