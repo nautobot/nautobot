@@ -1135,6 +1135,28 @@ class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModel
             },
         )
 
+    def test_get_relationships_with_related_objects_uninstalled_app(self):
+        """
+        Relationships whose peer model is uninstalled render a descriptive count string when related objects
+        exist, and fall back to `None` (rendered as "—" in the detail view) when there are none.
+        """
+        # locations[1] has the invalid (uninstalled-app) associations created in setUp().
+        data = self.locations[1].get_relationships_with_related_objects()
+        self.assertEqual(
+            data["source"][self.invalid_relationships[0]],
+            f"1 {self.invalid_ct} object(s)",
+        )
+        self.assertEqual(
+            data["destination"][self.invalid_relationships[1]],
+            f"1 {self.invalid_ct} object(s)",
+        )
+
+        # locations[0] has no associations for these relationships, so the value is None rather than
+        # "0 ... object(s)", keeping it consistent with installed relationships that render "—" when empty.
+        data = self.locations[0].get_relationships_with_related_objects()
+        self.assertIsNone(data["source"][self.invalid_relationships[0]])
+        self.assertIsNone(data["destination"][self.invalid_relationships[1]])
+
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
         initial_count = RelationshipAssociation.objects.count()
