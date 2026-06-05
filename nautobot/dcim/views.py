@@ -5004,9 +5004,7 @@ class DeviceBayUIViewSet(
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields=("device", "name", "label", "description"),
+                weight=100, section=SectionChoices.LEFT_HALF, exclude_fields=("installed_device",)
             ),
             object_detail.KeyValueTablePanel(
                 weight=100,
