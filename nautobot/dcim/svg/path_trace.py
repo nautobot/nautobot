@@ -51,7 +51,6 @@ class CableTraceSVG:
     # names without truncation; values that still overflow get clipped to an ellipsis with the
     # full string available on hover via a `<title>` element.
     TERM_W = 230
-    TERM_BORDER_RADIUS = 5
     # Horizontal padding inside the termination box; the usable text area is `TERM_W - 2 * TERM_TEXT_PAD`.
     TERM_TEXT_PAD = 8
     # Vertical padding above and below the termination box's stacked text block.
@@ -61,8 +60,7 @@ class CableTraceSVG:
     TERM_H = constants.FONT_SIZE + TEXT_LINE_SPACING + 2 * TERM_TEXT_PAD_Y
 
     # Layout: node (device/circuit/panel box)
-    NODE_W = 260
-    NODE_BORDER_RADIUS = 8
+    NODE_W = TERM_W + 30
     # Vertical padding above and below the stacked text block within a node box.
     NODE_TEXT_PAD_Y = 8
     # NODE_TEXT_AREA_H is the free vertical span reserved for a node's stacked text block: the bold
@@ -88,12 +86,9 @@ class CableTraceSVG:
     CABLE_DASH_OFFSET = -CABLE_BORDER_W
 
     # Layout: overall dimensions
-    MAX_WIDTH = 465
     # Column pitch must be >= NODE_W so adjacent device boxes in different columns don't overlap;
     # the extra ~20 px gives a visible gap between distinct devices.
-    COL_WIDTH = 280
-    INITIAL_HEIGHT = 900
-    INITIAL_FANOUT_HEIGHT = 2350
+    COL_WIDTH = NODE_W + 20
     EMPTY_HEIGHT = 70
 
     def __init__(self, origin, base_url="", cable_path=None):
@@ -452,7 +447,7 @@ class CableTraceSVG:
         side_overhang = max(node_overhang, label_overhang, self.LABEL_RIGHT_RESERVE_MIN)
         band_width = (column_count - 1) * col_width
         # The footer is centered on the trunk, so the canvas must hold its full width as well.
-        total_width = max(band_width + 2 * side_overhang, self._trace_end_width(), self.MAX_WIDTH)
+        total_width = max(band_width + 2 * side_overhang, self._trace_end_width(), self.COL_WIDTH)
         # Center the band: the trunk center then coincides with the SVG center (total_width / 2).
         first_col_x = (total_width - band_width) / 2
         col_centers = [first_col_x + col_idx * col_width for col_idx in range(column_count)]
@@ -590,8 +585,7 @@ class CableTraceSVG:
         col_centers = matrix["col_centers"]
         total_width = matrix["total_width"]
 
-        dwg = svgwrite.Drawing(size=(f"{total_width}px", f"{self.INITIAL_FANOUT_HEIGHT}px"), debug=False)
-        dwg.viewbox(0, 0, total_width, self.INITIAL_FANOUT_HEIGHT)
+        dwg = svgwrite.Drawing(size=(f"{total_width}px", f"{self.EMPTY_HEIGHT}px"), debug=False)
 
         trunk_cx = (col_centers[0] + col_centers[-1]) / 2 if col_centers else total_width / 2
         y = self.GAP_Y
@@ -799,17 +793,17 @@ class CableTraceSVG:
             dwg.rect(
                 insert=(box_x, box_y),
                 size=(box_w, box_h),
-                rx=self.NODE_BORDER_RADIUS,
-                ry=self.NODE_BORDER_RADIUS,
+                rx=constants.BORDER_RADIUS,
+                ry=constants.BORDER_RADIUS,
                 fill=constants.COLOR_SECONDARY_BG,
                 stroke=constants.COLOR_BORDER,
                 stroke_width=1,
             )
         )
 
-        # Usable text width inside the box, after the NODE_BORDER_RADIUS rounded corners eat a few
-        # pixels at each end. Detail lines render at FONT_SIZE_SM so they fit a few more chars.
-        text_area_w = box_w - 2 * self.NODE_BORDER_RADIUS
+        # Usable text width inside the box, inset at each end so text clears the rounded corners.
+        # Detail lines render at FONT_SIZE_SM so they fit a few more chars.
+        text_area_w = box_w - 2 * constants.BORDER_RADIUS
         self._draw_text_block(dwg, text_cx, text_area_top, text_area_h, text_area_w, lines)
 
     def _draw_node(self, dwg, cx, y, termination, term_position="top", is_last=False):
@@ -1037,7 +1031,7 @@ class CableTraceSVG:
         # Pad the pill horizontally/vertically relative to the font size it wraps.
         badge_w = text_width + constants.FONT_SIZE_SM
         badge_h = constants.FONT_SIZE_SM + self.GAP_Y
-        badge_r = self.TERM_BORDER_RADIUS
+        badge_r = constants.BORDER_RADIUS
 
         dwg.add(
             dwg.rect(
@@ -1075,8 +1069,8 @@ class CableTraceSVG:
             dwg.rect(
                 insert=(termination_x, y),
                 size=(self.TERM_W, self.TERM_H),
-                rx=self.TERM_BORDER_RADIUS,
-                ry=self.TERM_BORDER_RADIUS,
+                rx=constants.BORDER_RADIUS,
+                ry=constants.BORDER_RADIUS,
                 fill=constants.COLOR_TERTIARY_BG,
                 stroke=border_color,
                 stroke_width=border_width,

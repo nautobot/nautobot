@@ -4,6 +4,10 @@ Colors are Bootstrap CSS theme variables rather than hard-coded hex, so an inlin
 page follows light/dark mode via `data-bs-theme` (the variables resolve against the document).
 """
 
+# Shared corner radius (px) for rounded rects: node boxes, termination boxes, breakout connectors,
+# status badges.
+BORDER_RADIUS = 4
+
 # Typography
 FONT_FAMILY = "var(--bs-font-sans-serif)"
 FONT_SIZE = 14

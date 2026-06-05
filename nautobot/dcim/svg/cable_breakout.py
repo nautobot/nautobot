@@ -31,7 +31,6 @@ class BreakoutDiagramSVG:
     """
 
     CONNECTOR_WIDTH = 80
-    CONNECTOR_CORNER_RADIUS = 4
     SPACE_BETWEEN_CONNECTORS = 4
     MINIMUM_LINE_AREA_WIDTH = 80
     LANE_X_GAP = 1  # space between the connector and the lane
@@ -162,8 +161,8 @@ class BreakoutDiagramSVG:
                 drawing.rect(
                     insert=(x, y_center - connector_height / 2),
                     size=(self.CONNECTOR_WIDTH, connector_height),
-                    rx=self.CONNECTOR_CORNER_RADIUS,
-                    ry=self.CONNECTOR_CORNER_RADIUS,
+                    rx=constants.BORDER_RADIUS,
+                    ry=constants.BORDER_RADIUS,
                     fill=bg,
                     style="cursor: pointer;",
                 )
