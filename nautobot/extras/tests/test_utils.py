@@ -339,8 +339,8 @@ class UtilsTestCase(TestCase):
         mock_configuration.assert_called_once()
         self.assertEqual(mock_config_instance.host, "https://kubernetes.default.svc")
         self.assertEqual(mock_config_instance.ssl_ca_cert, "/path/to/ca.crt")
-        self.assertEqual(mock_config_instance.api_key_prefix["authorization"], "Bearer")
-        self.assertEqual(mock_config_instance.api_key["authorization"], "test-token")
+        self.assertEqual(mock_config_instance.api_key_prefix["BearerToken"], "Bearer")
+        self.assertEqual(mock_config_instance.api_key["BearerToken"], "test-token")
 
         # Verify ApiClient was used as context manager
         mock_api_client.assert_called_once_with(mock_config_instance)

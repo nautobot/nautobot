@@ -1227,30 +1227,22 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 
     revocation_type = django_filters.MultipleChoiceFilter(
         choices=JobRevocationTypeChoices.CHOICES,
-        method="filter_revocation_type",
-        label="Revocation Type",
     )
-
-    def filter_revocation_type(self, queryset, name, value):
-        if not value:
-            return queryset
-
-        q = Q()
-        if "terminated" in value:
-            q |= Q(
-                status=JobResultStatusChoices.STATUS_REVOKED,
-                date_terminated__isnull=False,
-            )
-        if "reaped" in value:
-            q |= Q(
-                status=JobResultStatusChoices.STATUS_REVOKED,
-                date_terminated__isnull=True,
-            )
-        return queryset.filter(q)
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = [
+            "id",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_revoked",
+            "name",
+            "status",
+            "user",
+            "revoked_by",
+            "scheduled_job",
+        ]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1351,6 +1343,7 @@ class MetadataTypeFilterSet(NautobotFilterSet):
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("metadata").get_choices,
     )
+    content_type_id = django_filters.NumberFilter(field_name="content_types", lookup_expr="exact")
 
     class Meta:
         model = MetadataType

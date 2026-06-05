@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -120,6 +121,7 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ScheduledJobStateChoices,
 )
 from .datasources import (
@@ -3351,6 +3353,30 @@ def render_jobresult_status(status):
     )
 
 
+def render_jobresult_revocation_type(revocation_type):
+    """
+    Render a Bootstrap-style label for a JobRevocationType.
+
+    Args:
+        revocation_type (str): The job result revocation type (e.g., "terminated", "reaped", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "terminated": ("bg-danger", "Terminated"),
+        "reaped": ("bg-warning", "Reaped"),
+        "abandoned": ("bg-body-secondary border", "Abandoned"),
+    }
+
+    css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
+    return format_html(
+        '<span id="revocation-type-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
 class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Render a placeholder for certain fields if the job hasn't yet completed."""
@@ -3582,9 +3608,13 @@ class JobResultUIViewSet(
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "date_terminated",
+                "date_revoked",
                 "revoked_by_user_name",
+                "revocation_type",
             ],
+            value_transforms={
+                "revocation_type": [render_jobresult_revocation_type],
+            },
         ),
         object_detail.ObjectFieldsPanel(
             label="Worker",
@@ -3838,14 +3868,14 @@ class JobResultUIViewSet(
             messages.info(request, "Job is already finished. Nothing to do.")
             return redirect(job_result.get_absolute_url())
 
-        job_is_running = strategy.is_alive(job_result)
+        job_liveness_state = strategy.liveness(job_result)
         if request.method == "GET":
             return render(
                 request,
                 "extras/job_revoke.html",
                 {
                     "object": job_result,
-                    "job_is_running": job_is_running,
+                    "job_liveness_state": job_liveness_state,
                     "timestamp": now(),
                     "return_url": job_result.get_absolute_url(),
                 },
@@ -3856,7 +3886,7 @@ class JobResultUIViewSet(
             messages.error(request, result["error"])
         else:
             if result["revoked"]:
-                messages.success(request, "Job terminated.")
+                messages.success(request, "Job revoked.")
             else:
                 messages.info(request, "Job finished before it could be revoked. No action was taken.")
 
@@ -4128,15 +4158,131 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
         return obj
 
 
+class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        if key == "_value":
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj:
+                return obj.get_value_display()
+        return super().render_value(key, value, context)
+
+
 class ObjectMetadataUIViewSet(
     ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
+    create_form_class = forms.ObjectMetadataCreateForm
+    update_form_class = forms.ObjectMetadataForm
     action_buttons = ("export",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            _ObjectMetadataFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "metadata_type",
+                    "contact",
+                    "team",
+                    "scoped_fields",
+                    "assigned_object_type",
+                    "assigned_object",
+                    "_value",
+                ],
+                hide_if_unset=["contact", "team", "_value"],
+            ),
+        ),
+    )
+
+    def create(self, request, *args, **kwargs):
+        # ObjectMetadata is always anchored to an existing object. Block direct navigation to
+        # the bare add URL — entry must come from the parent object's Metadata tab, which
+        # supplies assigned_object_type and assigned_object_id as query params.
+        if request.method == "GET":
+            ct_id = request.GET.get("assigned_object_type")
+            obj_id = request.GET.get("assigned_object_id")
+            if not (ct_id and obj_id):
+                messages.warning(
+                    request,
+                    "Object metadata must be created from the parent object's detail view (Metadata tab).",
+                )
+                return redirect(self.get_return_url(request))
+            try:
+                ct = ContentType.objects.get(pk=ct_id)
+                ct.get_object_for_this_type(pk=obj_id)
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValidationError, ValueError, TypeError) as exc:
+                logger.debug(
+                    "Object metadata create: could not resolve assigned object "
+                    "(assigned_object_type=%r, assigned_object_id=%r): %r",
+                    ct_id,
+                    obj_id,
+                    exc,
+                )
+                messages.warning(
+                    request,
+                    "Cannot create metadata: the requested assigned object does not exist.",
+                )
+                return redirect(self.get_return_url(request))
+        return super().create(request, *args, **kwargs)
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "create":
+            # Provide a {metadata_type_id: data_type} map so the create template's JS can
+            # show/hide contact, team, and value based on the selected metadata_type.
+            context["metadata_type_data_types"] = json.dumps(
+                {str(mt.pk): mt.data_type for mt in MetadataType.objects.all()}
+            )
+            context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        return context
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="value-widget",
+        url_name="value_widget",
+        custom_view_base_action="view",
+    )
+    def value_widget(self, request, *args, **kwargs):
+        """
+        Render the appropriate `value` field for a given metadata_type.
+
+        Called by the create template via HTMX when the user changes the metadata_type select,
+        so the input adapts (date picker, choice list, etc.) without a full page reload.
+        Returns an empty fragment for TYPE_CONTACT_TEAM, since those don't use `value`.
+        """
+        mt_id = request.GET.get("metadata_type")
+        mt = None
+        if mt_id:
+            try:
+                mt = MetadataType.objects.get(pk=mt_id)
+            except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
+                mt = None
+        field = None
+        if mt is not None:
+            field = mt.to_form_field(required=False)
+            if field is not None:
+                field.label = "Value"
+                field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+
+        class _ValueOnlyForm(django_forms.Form):
+            pass
+
+        bound_field = None
+        if field is not None:
+            f = _ValueOnlyForm()
+            f.fields["value"] = field
+            bound_field = f["value"]
+        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
 
 
 #
