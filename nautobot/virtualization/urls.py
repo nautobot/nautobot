@@ -10,8 +10,8 @@ router = NautobotUIViewSetRouter()
 router.register("cluster-groups", views.ClusterGroupUIViewSet)
 router.register("clusters", views.ClusterUIViewSet)
 router.register("cluster-types", views.ClusterTypeUIViewSet)
-router.register("virtual-machines", views.VirtualMachineUIViewSet)
 router.register("interfaces", views.VMInterfaceUIViewSet)
+router.register("virtual-machines", views.VirtualMachineUIViewSet)
 
 urlpatterns = [
     path(

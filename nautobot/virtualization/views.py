@@ -336,26 +336,22 @@ class VMInterfaceUIViewSet(
     bulk_update_form_class = forms.VMInterfaceBulkEditForm
     action_buttons = ("export",)
 
-    def get_selected_objects_parents_name(self, selected_objects):
-        selected_object = selected_objects.first()
-        if selected_object:
-            return selected_object.virtual_machine.name
-        return ""
-
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve" and instance is not None:
+            # Get assigned IP addresses
             context["ipaddress_table"] = InterfaceIPAddressTable(
                 data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
                 orderable=False,
             )
+            # Get child interfaces
             context["child_interfaces_table"] = tables.VMInterfaceTable(
                 instance.child_interfaces.restrict(request.user, "view"),
                 orderable=False,
             )
             # Equivalent to exclude=("virtual_machine",):
             context["child_interfaces_table"].columns.hide("virtual_machine")
-
+            # Get assigned VLANs and annotate whether each is tagged or untagged
             vlans = []
             if instance.untagged_vlan is not None:
                 vlans.append(instance.untagged_vlan)
@@ -372,24 +368,11 @@ class VMInterfaceUIViewSet(
                 label="Interface",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                fields=[
-                    "virtual_machine",
-                    "name",
-                    "status",
-                    "role",
-                    "enabled",
-                    "parent_interface",
-                    "vrf",
-                    "bridge",
-                    "description",
-                    "mtu",
-                    "mac_address",
-                    "mode",
-                ],
                 key_transforms={
                     "mode": "802.1Q Mode",
                     "vrf": "VRF",
                 },
+                exclude_fields=["untagged_vlan"],
             ),
             # IP addresses
             object_detail.ObjectsTablePanel(

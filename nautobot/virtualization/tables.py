@@ -196,10 +196,7 @@ class VMInterfaceTable(BaseInterfaceTable):
     virtual_machine = tables.LinkColumn()
     name = tables.Column(linkify=True)
     tags = TagColumn(url_name="virtualization:vminterface_list")
-    actions = ButtonsColumn(
-        model=VMInterface,
-        buttons=("edit", "delete"),
-    )
+    actions = ButtonsColumn(VMInterface)
 
     class Meta(BaseTable.Meta):
         model = VMInterface
