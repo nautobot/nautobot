@@ -128,10 +128,10 @@
                         loadingSpinner.setAttribute('aria-hidden', 'true');
 
                         {% if enable_scheduling %}
-                        const scheduleTypeEl = container.querySelector('#id__schedule_type');
-                        const isImmediate = !scheduleTypeEl || scheduleTypeEl.value === 'immediately';
+                            const scheduleTypeEl = container.querySelector('#id__schedule_type');
+                            const isImmediate = !scheduleTypeEl || scheduleTypeEl.value === 'immediately';
                         {% else %}
-                        const isImmediate = true;
+                            const isImmediate = true;
                         {% endif %}
                         const loadingText = document.createElement('span');
                         loadingText.textContent = isImmediate ? ' Enqueuing...' : ' Scheduling...';
@@ -155,63 +155,63 @@
                     if (!runButton) return;
 
                     {% if enable_scheduling %}
-                    const scheduleTypeEl = container.querySelector('#id__schedule_type');
-                    const scheduleType = scheduleTypeEl ? scheduleTypeEl.value : 'immediately';
-                    const isImmediate = scheduleType === 'immediately';
-                    const isCustom = scheduleType === 'custom';
+                        const scheduleTypeEl = container.querySelector('#id__schedule_type');
+                        const scheduleType = scheduleTypeEl ? scheduleTypeEl.value : 'immediately';
+                        const isImmediate = scheduleType === 'immediately';
+                        const isCustom = scheduleType === 'custom';
 
                     // Update run button text, icon, and color based on schedule type.
-                    const textSpan = runButton.querySelector('.run-button-text');
-                    const baseText = runButton.getAttribute('data-base-text');
-                    if (textSpan && baseText) {
-                        const label = isImmediate ? baseText : 'Schedule Job';
-                        textSpan.textContent = `${label}${isDryRun ? ' (DRYRUN)' : ''}`;
-                    }
-                    const icon = runButton.querySelector('.mdi');
-                    if (icon) {
-                        icon.classList.toggle('mdi-play', isImmediate);
-                        icon.classList.toggle('mdi-clock', !isImmediate);
-                    }
-                    runButton.classList.toggle('btn-primary', isImmediate);
-                    runButton.classList.toggle('btn-warning', !isImmediate);
+                        const textSpan = runButton.querySelector('.run-button-text');
+                        const baseText = runButton.getAttribute('data-base-text');
+                        if (textSpan && baseText) {
+                            const label = isImmediate ? baseText : 'Schedule Job';
+                            textSpan.textContent = `${label}${isDryRun ? ' (DRYRUN)' : ''}`;
+                        }
+                        const icon = runButton.querySelector('.mdi');
+                        if (icon) {
+                            icon.classList.toggle('mdi-play', isImmediate);
+                            icon.classList.toggle('mdi-clock', !isImmediate);
+                        }
+                        runButton.classList.toggle('btn-primary', isImmediate);
+                        runButton.classList.toggle('btn-warning', !isImmediate);
 
                     // Schedule name: show + require for future and custom.
-                    const nameInput = container.querySelector('#id__schedule_name');
-                    if (nameInput) {
-                        const row = nameInput.parentElement.parentElement;
-                        row.classList.toggle('d-none', isImmediate);
-                        const label = row.querySelector('label');
-                        label && label.classList.toggle('nb-required', !isImmediate);
-                        isImmediate ? nameInput.removeAttribute('required') : nameInput.setAttribute('required', '');
-                    }
+                        const nameInput = container.querySelector('#id__schedule_name');
+                        if (nameInput) {
+                            const row = nameInput.parentElement.parentElement;
+                            row.classList.toggle('d-none', isImmediate);
+                            const label = row.querySelector('label');
+                            label && label.classList.toggle('nb-required', !isImmediate);
+                            isImmediate ? nameInput.removeAttribute('required') : nameInput.setAttribute('required', '');
+                        }
 
                     // Start time: show + require only for "future" (not immediate, not custom/cron).
-                    const startTimeInput = container.querySelector('#id__schedule_start_time');
-                    if (startTimeInput) {
-                        const isFuture = !isImmediate && !isCustom;
-                        const row = startTimeInput.parentElement.parentElement;
-                        row.classList.toggle('d-none', !isFuture);
-                        const label = row.querySelector('label');
-                        label && label.classList.toggle('nb-required', isFuture);
-                        isFuture ? startTimeInput.setAttribute('required', '') : startTimeInput.removeAttribute('required');
-                    }
+                        const startTimeInput = container.querySelector('#id__schedule_start_time');
+                        if (startTimeInput) {
+                            const isFuture = !isImmediate && !isCustom;
+                            const row = startTimeInput.parentElement.parentElement;
+                            row.classList.toggle('d-none', !isFuture);
+                            const label = row.querySelector('label');
+                            label && label.classList.toggle('nb-required', isFuture);
+                            isFuture ? startTimeInput.setAttribute('required', '') : startTimeInput.removeAttribute('required');
+                        }
 
                     // Show/hide custom crontab field.
-                    const crontabInput = container.querySelector('#id__recurrence_custom_time');
-                    if (crontabInput) {
-                        const row = crontabInput.parentElement.parentElement;
-                        row.classList.toggle('d-none', !isCustom);
-                        const label = row.querySelector('label');
-                        label && label.classList.toggle('nb-required', isCustom);
-                        isCustom ? crontabInput.setAttribute('required', '') : crontabInput.removeAttribute('required');
-                    }
+                        const crontabInput = container.querySelector('#id__recurrence_custom_time');
+                        if (crontabInput) {
+                            const row = crontabInput.parentElement.parentElement;
+                            row.classList.toggle('d-none', !isCustom);
+                            const label = row.querySelector('label');
+                            label && label.classList.toggle('nb-required', isCustom);
+                            isCustom ? crontabInput.setAttribute('required', '') : crontabInput.removeAttribute('required');
+                        }
                     {% else %}
                     // Scheduling disabled: just handle dryrun suffix.
-                    const textSpan = runButton.querySelector('.run-button-text');
-                    const baseText = runButton.getAttribute('data-base-text');
-                    if (textSpan && baseText) {
-                        textSpan.textContent = `${baseText}${isDryRun ? ' (DRYRUN)' : ''}`;
-                    }
+                        const textSpan = runButton.querySelector('.run-button-text');
+                        const baseText = runButton.getAttribute('data-base-text');
+                        if (textSpan && baseText) {
+                            textSpan.textContent = `${baseText}${isDryRun ? ' (DRYRUN)' : ''}`;
+                        }
                     {% endif %}
                 };
 
