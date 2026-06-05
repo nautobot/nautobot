@@ -135,27 +135,16 @@ class CableTraceSVG:
 
         from nautobot.dcim.models import CablePath, CableToCableTermination
 
-        # Locate the origin's CableToCableTermination row to learn which side we're on.
-        origin_ct = ContentType.objects.get_for_model(self.origin)
-        origin_row = next(
-            (
-                row
-                for row in cable.terminations.all()
-                if row.termination_id == self.origin.pk
-                and row.termination_type
-                and (row.termination_type.app_label, row.termination_type.model)
-                == (origin_ct.app_label, origin_ct.model)
-            ),
-            None,
-        )
-        # The origin's CableToCableTermination row on this cable is the very linkage that placed the
-        # cable in the trace, so under consistent data it always exists. A miss means the data is
-        # inconsistent; fail loudly rather than render a misleading trace.
+        # Locate the origin's CableToCableTermination row to learn which side we're on. This row is
+        # the very linkage that placed the cable in the trace, so under consistent data it always
+        # exists; a miss means inconsistent data, so fail loudly rather than render a misleading trace.
+        origin_row = self._cable_lane_info(cable, self.origin)
         if origin_row is None:
             raise RuntimeError(
                 f"No CableToCableTermination row links trace origin {self.origin!r} to its first "
                 f"cable {cable!r}; cannot determine the breakout side."
             )
+        origin_ct = ContentType.objects.get_for_model(self.origin)
 
         origin_side = origin_row.cable_end  # "A" or "B"
         opposite_side = "B" if origin_side == "A" else "A"
@@ -790,7 +779,7 @@ class CableTraceSVG:
         text_area_w = box_w - 2 * constants.BORDER_RADIUS
         self._draw_text_block(dwg, text_cx, text_area_top, text_area_h, text_area_w, lines)
 
-    def _draw_node(self, dwg, cx, y, termination, term_position="top", is_last=False):
+    def _draw_node(self, dwg, cx, y, termination, term_position="top"):
         """Draw a device node with one termination box (top or bottom)."""
         half_term_h = self.TERM_H / 2
 
@@ -830,6 +819,18 @@ class CableTraceSVG:
         last_cx = col_centers[cell["col"] + cell["colspan"] - 1]
         return (first_cx + last_cx) / 2
 
+    def _grouped_box_bounds(self, cell, col_centers):
+        """Left edge and width of a grouped node's box spanning its columns.
+
+        The box extends half a termination box (plus GAP_Y) past the outermost column centers on each
+        side, so the leftmost and rightmost termination boxes sit fully inside it.
+        """
+        first_cx = col_centers[cell["col"]]
+        last_cx = col_centers[cell["col"] + cell["colspan"] - 1]
+        box_w = (last_cx - first_cx) + self.TERM_W + self.GAP_Y * 2
+        box_x = first_cx - self.TERM_W / 2 - self.GAP_Y
+        return box_x, box_w
+
     @staticmethod
     def _same_termination(first, second):
         """True if both are the same non-None termination (shared port)."""
@@ -861,11 +862,7 @@ class CableTraceSVG:
         start_col = cell["col"]
         half_term_h = self.TERM_H / 2
         group_cx = self._group_cx(cell, col_centers)
-
-        first_cx = col_centers[start_col]
-        last_cx = col_centers[start_col + cell["colspan"] - 1]
-        box_w = (last_cx - first_cx) + self.TERM_W + self.GAP_Y * 2
-        box_x = first_cx - self.TERM_W / 2 - self.GAP_Y
+        box_x, box_w = self._grouped_box_bounds(cell, col_centers)
         box_y = y + half_term_h
         text_area_top = box_y + half_term_h
 
@@ -889,13 +886,9 @@ class CableTraceSVG:
         start_col = cell["col"]
         half_term_h = self.TERM_H / 2
         text_area_h = self.NODE_TEXT_AREA_H
-        box_h = half_term_h + text_area_h + half_term_h
+        box_h = self.TERM_H + text_area_h
         group_cx = self._group_cx(cell, col_centers)
-
-        first_cx = col_centers[start_col]
-        last_cx = col_centers[start_col + cell["colspan"] - 1]
-        box_w = (last_cx - first_cx) + self.TERM_W + self.GAP_Y * 2
-        box_x = first_cx - self.TERM_W / 2 - self.GAP_Y
+        box_x, box_w = self._grouped_box_bounds(cell, col_centers)
         box_y = y + half_term_h
         departing_y = box_y + box_h - half_term_h
         text_area_top = box_y + half_term_h
@@ -984,7 +977,7 @@ class CableTraceSVG:
         """Draw a device node with arriving port at top and departing port at bottom."""
         half_term_h = self.TERM_H / 2
         text_area_h = self.NODE_TEXT_AREA_H
-        box_h = half_term_h + text_area_h + half_term_h
+        box_h = self.TERM_H + text_area_h
 
         box_y = y + half_term_h
         departing_y = box_y + box_h - half_term_h
@@ -1008,19 +1001,17 @@ class CableTraceSVG:
 
     def _draw_status_badge(self, dwg, x, y, status_name, bg_color):
         """Draw a Bootstrap-style badge pill with colored background and contrasting text."""
-
         text_width = estimate_text_width(status_name, constants.FONT_SIZE_SM)
         # Pad the pill horizontally/vertically relative to the font size it wraps.
         badge_w = text_width + constants.FONT_SIZE_SM
         badge_h = constants.FONT_SIZE_SM + self.GAP_Y
-        badge_r = constants.BORDER_RADIUS
 
         dwg.add(
             dwg.rect(
                 insert=(x, y - badge_h / 2),
                 size=(badge_w, badge_h),
-                rx=badge_r,
-                ry=badge_r,
+                rx=constants.BORDER_RADIUS,
+                ry=constants.BORDER_RADIUS,
                 fill=bg_color,
             )
         )
