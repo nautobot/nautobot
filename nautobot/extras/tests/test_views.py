@@ -5305,6 +5305,98 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertIn(str(result.pk), content)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_render_job_form_modal_with_enable_scheduling_shows_schedule_form(self):
+        """Modal render with enable_scheduling=true includes schedule form fields."""
+        self.add_permissions("extras.run_job")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data={"render_job_form": True, "enable_scheduling": "true"},
+                HTTP_HX_REQUEST="true",
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            # Schedule form fields should be rendered in the modal.
+            self.assertIn("id__schedule_type", content, msg=run_url)
+            self.assertIn("Job Schedule Type", content, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_render_job_form_modal_without_enable_scheduling_omits_schedule_form(self):
+        """Modal render without enable_scheduling does not include schedule form fields (default behavior)."""
+        self.add_permissions("extras.run_job")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data={"render_job_form": True},
+                HTTP_HX_REQUEST="true",
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertNotIn("id__schedule_type", content, msg=run_url)
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_schedule_job_via_modal_returns_confirmation_partial(self, _):
+        """Submitting a future-scheduled job via the HTMX modal returns the confirmation partial (not a redirect)."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        start_time = timezone.now() + timedelta(minutes=5)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "modal-scheduled-test",
+            "_schedule_start_time": str(start_time),
+            "enable_scheduling": "true",
+        }
+
+        for i, run_url in enumerate(self.run_urls):
+            data["_schedule_name"] = f"modal-scheduled-test-{i}"
+            response = self.client.post(
+                run_url,
+                data,
+                headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"},
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            # The confirmation partial should show the success message, not a redirect.
+            self.assertIn("successfully scheduled", content, msg=run_url)
+            self.assertIn("View Scheduled Job", content, msg=run_url)
+            # A ScheduledJob record must have been created.
+            self.assertTrue(
+                ScheduledJob.objects.filter(name=data["_schedule_name"]).exists(),
+                msg=run_url,
+            )
+
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_approval_workflow_via_modal_returns_confirmation_partial(self, _):
+        """Submitting a job that requires approval via the HTMX modal returns the approval-workflow confirmation partial."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_scheduledjob")
+
+        ApprovalWorkflowDefinition.objects.create(
+            name="Approval Definition Modal",
+            model_content_type=ContentType.objects.get_for_model(ScheduledJob),
+            weight=0,
+            model_constraints={"job_model__name": self.test_pass.name},
+        )
+        data = {
+            "_schedule_type": "immediately",
+            "enable_scheduling": "true",
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data,
+                headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"},
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertIn("submitted for approval", content, msg=run_url)
+            self.assertIn("View Approval Request", content, msg=run_url)
+
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):
         obj_perm = ObjectPermission(

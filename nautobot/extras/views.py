@@ -2506,11 +2506,36 @@ class JobUIViewSet(NautobotUIViewSet):
 
     def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
         """Handle response for jobs requiring approval workflow."""
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            approval_url = reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk])
+            context = {
+                "title": scheduled_job.name,
+                "scheduled_job": scheduled_job,
+                "message": f"Job '{scheduled_job.name}' successfully submitted for approval.",
+                "redirect_url": approval_url,
+                "redirect_label": "View Approval Request",
+            }
+            response = render(request, "extras/htmx/job_schedule_confirmation_modal.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
         messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
         return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
 
     def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
         """Handle response for successfully scheduled jobs."""
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            context = {
+                "title": scheduled_job.name,
+                "scheduled_job": scheduled_job,
+                "message": f"Job '{scheduled_job.name}' successfully scheduled.",
+                "redirect_url": scheduled_job.get_absolute_url(),
+                "redirect_label": "View Scheduled Job",
+            }
+            response = render(request, "extras/htmx/job_schedule_confirmation_modal.html", context)
+            patch_vary_headers(response, ["HX-Request"])
+            return response
         messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
         return redirect(return_url or "extras:scheduledjob_list")
 
@@ -2603,7 +2628,26 @@ class JobUIViewSet(NautobotUIViewSet):
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+            # Scheduling is enabled only when explicitly opted-in AND the job does not have sensitive variables.
+            enable_scheduling = (
+                request.POST.get("enable_scheduling", "false").lower() in ("true", "1")
+                and not job_model.has_sensitive_variables
+            )
             template_name = self._get_template_name(job_class=job_class, htmx_modal=True)
+            hx_vals_dict = {
+                "job_modal_button": job_modal_button_registry_id,
+                "job_form_modal": True,
+                "job_result_key": job_result_key,
+                "run_button_label": run_button_label,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
+                "advanced_fields": advanced_field_names,
+                "enable_scheduling": enable_scheduling,
+            }
+            # When scheduling is disabled, force immediate execution by injecting _schedule_type into hx-vals.
+            # When scheduling is enabled, omit it so that the form's <select> value is submitted unchanged
+            # (hx-vals would override the form field with the same name if present).
+            if not enable_scheduling:
+                hx_vals_dict["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
             response = render(
                 request,
                 template_name,
@@ -2617,17 +2661,8 @@ class JobUIViewSet(NautobotUIViewSet):
                     "advanced_field_names": advanced_field_names,
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
-                    "hx_vals": json.dumps(
-                        {
-                            "job_modal_button": job_modal_button_registry_id,
-                            "job_form_modal": True,
-                            "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
-                            "advanced_fields": advanced_field_names,
-                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
-                        }
-                    ),
+                    "enable_scheduling": enable_scheduling,
+                    "hx_vals": json.dumps(hx_vals_dict),
                 },
             )
         else:
@@ -2705,7 +2740,11 @@ class JobUIViewSet(NautobotUIViewSet):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
-            schedule_form = None
+            enable_scheduling = request.POST.get("enable_scheduling", "false").lower() in ("true", "1")
+            if enable_scheduling and not job_model.has_sensitive_variables:
+                schedule_form = forms.JobScheduleForm(initial=initial_form_data)
+            else:
+                schedule_form = None
             return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
         if job_execution_form is not None:

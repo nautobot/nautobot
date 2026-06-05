@@ -1004,6 +1004,32 @@ class _JobModalButtonTest(TestCase):
             )
         self.assertIn("button_id is required", str(cm.exception))
 
+    def test_enable_scheduling_defaults_false_in_hx_vals(self):
+        """Verify that enable_scheduling defaults to False and is present in hx_vals."""
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        device = Device.objects.first()
+        context = btn.get_extra_context(Context({"object": device}))
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+        self.assertIn("enable_scheduling", hx_vals)
+        self.assertFalse(hx_vals["enable_scheduling"])
+
+    def test_enable_scheduling_true_in_hx_vals(self):
+        """Verify that enable_scheduling=True is propagated into hx_vals."""
+        btn = _JobModalButton(
+            weight=100,
+            label="Schedule Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            enable_scheduling=True,
+        )
+        device = Device.objects.first()
+        context = btn.get_extra_context(Context({"object": device}))
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+        self.assertTrue(hx_vals["enable_scheduling"])
+
 
 class PostButtonTest(TestCase):
     def test_render_uses_request_for_csrf_token_tag(self):
