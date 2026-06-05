@@ -1782,8 +1782,7 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
 
     @action(detail=True, url_path="members", url_name="members", custom_view_base_action="view")
     def members(self, request, pk=None):
-        context = self.get_extra_context(request, self.get_object())
-        return Response(context, template_name="extras/dynamicgroup_members.html")
+        return Response({})
 
     def form_save(self, form, commit=True, **kwargs):
         obj = form.save(commit=False)
