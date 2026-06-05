@@ -9,16 +9,17 @@
 {% block message %}
     <p>Are you sure you want to revoke <strong>{{ object.name }}</strong>?</p>
     <p>
-        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is: {% if job_is_running %}<strong>RUNNING</strong>{% else %}<strong>NOT RUNNING</strong>{% endif %}
+        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is:
+        <strong>{{ job_liveness_state.display }}</strong>
     </p>
     <p>
-        Would you like revoke the job? Which will <strong>REAP</strong> or <strong>TERMINATE</strong> the job.
+        Would you like revoke the job? Which will <strong>REAP</strong>, <strong>TERMINATE</strong> or <strong>ABANDON</strong> the job.
     </p>
 
     <p>This action cannot be undone.</p>
 
     <details>
-        <summary>What's the difference between REAP and TERMINATE?</summary>
+        <summary>What's the difference between REAP, TERMINATE and ABANDON?</summary>
         <div class="alert alert-info" role="alert">
             <p>
                 <strong>REAP:</strong> No worker is currently running this Job, so no kill signal
@@ -28,6 +29,13 @@
                 <strong>TERMINATE:</strong> A SIGKILL signal will be sent to the worker running
                 this Job. The Job will stop immediately with no opportunity to clean up. Any
                 in-flight operations will be cut off.
+            </p>
+            <p>
+                <strong>ABANDON:</strong> The Celery broker or Kubernetes API could not
+                be reached, so this Job's actual state cannot be confirmed. The
+                JobResult will be marked as revoked, but no kill signal can be sent.
+                If the Job is still running somewhere, it will continue until it
+                finishes on its own.
             </p>
         </div>
     </details>

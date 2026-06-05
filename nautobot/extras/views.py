@@ -3353,6 +3353,30 @@ def render_jobresult_status(status):
     )
 
 
+def render_jobresult_revocation_type(revocation_type):
+    """
+    Render a Bootstrap-style label for a JobRevocationType.
+
+    Args:
+        revocation_type (str): The job result revocation type (e.g., "terminated", "reaped", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "terminated": ("bg-danger", "Terminated"),
+        "reaped": ("bg-warning", "Reaped"),
+        "abandoned": ("bg-body-secondary border", "Abandoned"),
+    }
+
+    css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
+    return format_html(
+        '<span id="revocation-type-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
 class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
         """Render a placeholder for certain fields if the job hasn't yet completed."""
@@ -3584,9 +3608,13 @@ class JobResultUIViewSet(
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "date_terminated",
+                "date_revoked",
                 "revoked_by_user_name",
+                "revocation_type",
             ],
+            value_transforms={
+                "revocation_type": [render_jobresult_revocation_type],
+            },
         ),
         object_detail.ObjectFieldsPanel(
             label="Worker",
@@ -3840,14 +3868,14 @@ class JobResultUIViewSet(
             messages.info(request, "Job is already finished. Nothing to do.")
             return redirect(job_result.get_absolute_url())
 
-        job_is_running = strategy.is_alive(job_result)
+        job_liveness_state = strategy.liveness(job_result)
         if request.method == "GET":
             return render(
                 request,
                 "extras/job_revoke.html",
                 {
                     "object": job_result,
-                    "job_is_running": job_is_running,
+                    "job_liveness_state": job_liveness_state,
                     "timestamp": now(),
                     "return_url": job_result.get_absolute_url(),
                 },
@@ -3858,7 +3886,7 @@ class JobResultUIViewSet(
             messages.error(request, result["error"])
         else:
             if result["revoked"]:
-                messages.success(request, "Job terminated.")
+                messages.success(request, "Job revoked.")
             else:
                 messages.info(request, "Job finished before it could be revoked. No action was taken.")
 

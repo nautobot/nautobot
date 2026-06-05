@@ -1,0 +1,4 @@
+Added abstract `perform_reap` method to `JobRevokeStrategy` class. 
+Added implementation for K8s revoke job.
+Added `revocation_type` to `JobResult` model to track which type of revocation was done.
+Added `TYPE_ABANDONED` to `JobRevocationTypeChoices`.
