@@ -282,16 +282,7 @@ class CableTraceSVGTestCase(TestCase):
 
     @staticmethod
     def _matrix_cells(diagram):
-        """All matrix cells for a rendered diagram, applying render()'s single-leg normalization."""
-        if not diagram.fanout_paths and diagram.traced_path:
-            _, _, far_end = diagram.traced_path[0]
-            diagram.fanout_paths = [
-                {
-                    "termination": far_end,
-                    "connector_label": "",
-                    "trace": diagram._expand_trace_segments(diagram.traced_path[1:]),
-                }
-            ]
+        """All matrix cells for a rendered diagram."""
         return [cell for row in diagram.build_matrix()["rows"] for cell in row]
 
     def test_passthrough_hops_always_fold_into_passthrough_nodes(self):
@@ -372,6 +363,25 @@ class CableTraceSVGTestCase(TestCase):
         self.assertNotIn("Trace completed", svg)
         self.assertNotIn("Total segments", svg)
         self.assertNotIn("Total length", svg)
+
+    def test_one_to_one_cable_type_renders_as_linear_trace(self):
+        """A cable_type that maps the origin's connector to a single far connector is not a fan-out.
+
+        `_detect_fanout` finds `seen_far_connectors <= 1` and returns the single linear leg, so the
+        trace renders like an ordinary point-to-point cable — no "Breakout fan-out" header.
+        """
+        one_to_one = CableType(name="SVG 1x1", a_connectors=1, b_connectors=1, total_lanes=1)
+        one_to_one.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name="1x1-trunk", status=self.interface_status)
+        dest = Interface.objects.create(device=self.device, name="1x1-dest", status=self.interface_status)
+        Cable.objects.create(termination_a=trunk, termination_b=dest, cable_type=one_to_one, status=self.connected)
+
+        diagram = CableTraceSVG(trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1)
+        self.assertEqual(diagram.fanout_paths[0]["connector_label"], "")
+        svg = diagram.render()
+        self.assertIn("<svg", svg)
+        self.assertNotIn("Breakout fan-out", svg)
 
     def test_split_trace_footer_lists_next_hops_with_cables(self):
         """A split trace renders "Path split!" and the selectable next-hop nodes with their cables."""

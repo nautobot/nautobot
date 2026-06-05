@@ -64,7 +64,7 @@ class CableTraceSVG:
     # Vertical padding above and below the stacked text block within a node box.
     NODE_TEXT_PAD_Y = 8
     # NODE_TEXT_AREA_H is the free vertical span reserved for a node's stacked text block: the bold
-    # name (FONT_SIZE) plus up to three detail lines (FONT_SIZE_SM each — e.g. a device's
+    # name (FONT_SIZE) plus up to three detail lines (TEXT_LINE_SPACING each — e.g. a device's
     # manufacturer/type, location, and rack), with padding so the text clears the box edges and any
     # termination sub-boxes. The height is fixed (sized for the tallest node) so rows stay aligned
     # when they mix node types; shorter nodes just center their text with extra padding. NODE_H adds
@@ -118,9 +118,20 @@ class CableTraceSVG:
         if not self.traced_path:
             return []
 
-        _, cable, _ = self.traced_path[0]
+        _, cable, far_end = self.traced_path[0]
+
+        # A trace that isn't a breakout fan-out is modeled as a single linear leg (no fork), so
+        # breakout and non-breakout traces flow through the same build_matrix → render pipeline.
+        linear_fanout = [
+            {
+                "termination": far_end,
+                "connector_label": "",
+                "trace": self._expand_trace_segments(self.traced_path[1:]),
+            }
+        ]
+
         if not cable or not cable.cable_type_id:
-            return []
+            return linear_fanout
 
         from nautobot.dcim.models import CablePath, CableToCableTermination
 
@@ -137,8 +148,14 @@ class CableTraceSVG:
             ),
             None,
         )
+        # The origin's CableToCableTermination row on this cable is the very linkage that placed the
+        # cable in the trace, so under consistent data it always exists. A miss means the data is
+        # inconsistent; fail loudly rather than render a misleading trace.
         if origin_row is None:
-            return []
+            raise RuntimeError(
+                f"No CableToCableTermination row links trace origin {self.origin!r} to its first "
+                f"cable {cable!r}; cannot determine the breakout side."
+            )
 
         origin_side = origin_row.cable_end  # "A" or "B"
         opposite_side = "B" if origin_side == "A" else "A"
@@ -158,7 +175,7 @@ class CableTraceSVG:
         seen_far_connectors.sort()
 
         if len(seen_far_connectors) <= 1:
-            return []
+            return linear_fanout
 
         # Far-side terminations indexed by connector for quick lookup; CablePaths indexed by
         # peer_connector (which corresponds to the far-side connector for the breakout leg).
@@ -213,8 +230,8 @@ class CableTraceSVG:
         if termination is None:
             return None, []
 
-        parent = getattr(termination, "parent", None)
-        if parent is None:
+        parent = termination.parent
+        if parent is None:  # case of a ModularComponent belonging to a module that isn't installed in a device?
             return (None, [(str(termination), "#")])
 
         parent_key = str(parent.pk)
@@ -223,14 +240,12 @@ class CableTraceSVG:
 
         if hasattr(parent, "device_type"):
             # Device — manufacturer + device type, then location and rack each on their own line
-            # (split onto separate lines so each centers cleanly).
+            # (split onto separate lines so each centers cleanly). `location` is a required FK;
+            # `rack` is optional.
             lines.append((f"{parent.device_type.manufacturer} {parent.device_type}", None))
-            location = getattr(parent, "location", None)
-            rack = getattr(parent, "rack", None)
-            if location:
-                lines.append((str(location), self._url(location)))
-            if rack:
-                lines.append((str(rack), self._url(rack)))
+            lines.append((str(parent.location), self._url(parent.location)))
+            if parent.rack:
+                lines.append((str(parent.rack), self._url(parent.rack)))
         elif hasattr(parent, "provider"):
             # Circuit — name is the cid, then "Circuit" and the linked provider.
             lines.append(("Circuit", None))
@@ -238,9 +253,8 @@ class CableTraceSVG:
         else:
             # PowerPanel / Module / other — verbose name, then linked location if any.
             lines.append((parent._meta.verbose_name.title(), None))
-            location = getattr(parent, "location", None)
-            if location is not None:
-                lines.append((str(location), self._url(location)))
+            if parent.location is not None:
+                lines.append((str(parent.location), self._url(parent.location)))
 
         return (parent_key, lines)
 
@@ -274,7 +288,9 @@ class CableTraceSVG:
             widths.append(estimate_text_width(str(cable), constants.FONT_SIZE))
             for detail in self._cable_detail_lines(cable, near_end, far_end):
                 widths.append(estimate_text_width(detail, constants.FONT_SIZE_SM))
-            widths.append(self._status_badge_width(cable))
+            # Status badge pill, mirroring `_draw_status_badge`: text width plus horizontal padding
+            # of FONT_SIZE_SM.
+            widths.append(estimate_text_width(cable.status.name, constants.FONT_SIZE_SM) + constants.FONT_SIZE_SM)
 
         if header_cable is not None:
             add(header_cable, None, None)
@@ -283,13 +299,6 @@ class CableTraceSVG:
                 if entry.get("type") == "cable" and entry.get("cable") is not None:
                     add(entry["cable"], entry.get("near"), entry.get("far"))
         return max(widths, default=0)
-
-    def _status_badge_width(self, cable):
-        """Estimated rendered width of the status badge pill drawn beside a cable bar."""
-        status = getattr(cable, "status", None)
-        status_name = status.name if status else "Unknown"
-        # Mirrors `_draw_status_badge`: text width plus horizontal padding of FONT_SIZE_SM.
-        return estimate_text_width(status_name, constants.FONT_SIZE_SM) + constants.FONT_SIZE_SM
 
     def _cable_lane_info(self, cable, termination):
         """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
@@ -540,23 +549,79 @@ class CableTraceSVG:
     # ──────────────────────────────────────────────
 
     def render(self):
-        """Render the complete trace as an SVG string."""
+        """Render the complete trace (breakout fan-out or single-leg linear) as an SVG string."""
         if not self.traced_path:
             return self._render_empty()
 
-        # Normalize: a linear trace is a single-leg fanout without the fork — ensures all paths
-        # flow through the same build_matrix → render pipeline.
-        if not self.fanout_paths:
-            _, _, far_end = self.traced_path[0]
-            self.fanout_paths = [
-                {
-                    "termination": far_end,
-                    "connector_label": "",
-                    "trace": self._expand_trace_segments(self.traced_path[1:]),
-                }
-            ]
+        matrix = self.build_matrix()
+        header = matrix["header"]
+        col_centers = matrix["col_centers"]
+        total_width = matrix["total_width"]
 
-        return self._render_fanout()
+        dwg = svgwrite.Drawing(size=(f"{total_width}px", f"{self.EMPTY_HEIGHT}px"), debug=False)
+
+        trunk_cx = (col_centers[0] + col_centers[-1]) / 2 if col_centers else total_width / 2
+        y = self.GAP_Y
+
+        # Header: Origin node
+        if header["origin"]:
+            y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
+            y += self.GAP_Y
+
+        # Header: Breakout cable trunk + fork
+        cable = header["cable"]
+        if cable:
+            cable_color = header["cable_color"]
+            is_connected = cable.status.name == "Connected"
+            is_breakout_fanout = bool(cable.cable_type_id) and len(col_centers) > 1
+
+            if is_breakout_fanout:
+                # Breakout cable: half-height bar, then fork lines to each column.
+                y = self._draw_cable(dwg, trunk_cx, y, cable)
+                y += self.GAP_Y
+
+                fork_y = y
+                self._draw_cable_line(
+                    dwg, (col_centers[0], fork_y), (col_centers[-1], fork_y), cable_color, is_connected
+                )
+                fork_y += self.GAP_Y
+                drop_end = fork_y + self.CABLE_DASH_SEGMENT_LENGTH
+                for col_idx, cx in enumerate(col_centers):
+                    self._draw_cable_line(dwg, (cx, fork_y), (cx, drop_end), cable_color, is_connected)
+                    label = header["connector_labels"][col_idx]
+                    if label:
+                        dwg.add(
+                            dwg.text(
+                                label,
+                                insert=(cx, fork_y - self.GAP_Y - self.TEXT_VERTICAL_OFFSET),
+                                text_anchor="middle",
+                                fill=constants.COLOR_SECONDARY,
+                                font_size=f"{constants.FONT_SIZE_SM}px",
+                                font_family=constants.FONT_FAMILY,
+                                font_weight="bold",
+                            )
+                        )
+                y = drop_end + self.GAP_Y
+            else:
+                # Linear or single-leg: full-height cable bar, no fork.
+                y = self._draw_cable(dwg, trunk_cx, y, cable)
+                y += self.GAP_Y
+
+            row_positions = []
+            for row in matrix["rows"]:
+                row_h = self._compute_row_height(row)
+                row_positions.append((y, row, row_h))
+                y += row_h + self.GAP_Y
+
+            self._render_rows(dwg, row_positions, col_centers)
+
+        # Footer: split next-hops, or completion summary (segment count + total length).
+        y = self._draw_trace_end(dwg, trunk_cx, y)
+
+        dwg["height"] = f"{y + self.GAP_Y}px"
+        dwg["width"] = f"{total_width}px"
+        dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
+        return mark_safe(dwg.tostring())  # noqa: S308
 
     def _expand_trace_segments(self, segments):
         """Expand `trace()` three-tuples into entries with explicit pass-through hops.
@@ -578,86 +643,6 @@ class CableTraceSVG:
 
         return entries
 
-    def _render_fanout(self):
-        """Render a breakout fan-out (or single-leg linear) trace from the matrix."""
-        matrix = self.build_matrix()
-        header = matrix["header"]
-        col_centers = matrix["col_centers"]
-        total_width = matrix["total_width"]
-
-        dwg = svgwrite.Drawing(size=(f"{total_width}px", f"{self.EMPTY_HEIGHT}px"), debug=False)
-
-        trunk_cx = (col_centers[0] + col_centers[-1]) / 2 if col_centers else total_width / 2
-        y = self.GAP_Y
-
-        # Header: Origin node
-        if header["origin"]:
-            y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
-            y += self.GAP_Y
-
-        # Header: Breakout cable trunk + fork
-        cable = header["cable"]
-        if not cable:
-            y = self._draw_trace_end(dwg, trunk_cx, y)
-            dwg["height"] = f"{y + self.GAP_Y}px"
-            dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
-            return mark_safe(dwg.tostring())  # noqa: S308
-
-        cable_color = header["cable_color"]
-        is_connected = hasattr(cable, "status") and cable.status and cable.status.name == "Connected"
-        is_breakout_fanout = bool(cable.cable_type_id) and len(col_centers) > 1
-
-        if is_breakout_fanout:
-            # Breakout cable: half-height bar, then fork lines to each column.
-            y = self._draw_cable(dwg, trunk_cx, y, cable)
-            y += self.GAP_Y
-
-            fork_y = y
-            self._draw_cable_line(dwg, (col_centers[0], fork_y), (col_centers[-1], fork_y), cable_color, is_connected)
-            fork_y += self.GAP_Y
-            drop_end = fork_y + self.CABLE_DASH_SEGMENT_LENGTH
-            for col_idx, cx in enumerate(col_centers):
-                self._draw_cable_line(dwg, (cx, fork_y), (cx, drop_end), cable_color, is_connected)
-                label = header["connector_labels"][col_idx]
-                if label:
-                    dwg.add(
-                        dwg.text(
-                            label,
-                            insert=(cx, fork_y - self.GAP_Y - self.TEXT_VERTICAL_OFFSET),
-                            text_anchor="middle",
-                            fill=constants.COLOR_SECONDARY,
-                            font_size=f"{constants.FONT_SIZE_SM}px",
-                            font_family=constants.FONT_FAMILY,
-                            font_weight="bold",
-                        )
-                    )
-            y = drop_end + self.GAP_Y
-        else:
-            # Linear or single-leg: full-height cable bar, no fork.
-            y = self._draw_cable(dwg, trunk_cx, y, cable)
-            y += self.GAP_Y
-
-        # Two-pass row rendering for z-order (background first, foreground on top).
-        row_positions = []
-        for row in matrix["rows"]:
-            row_h = self._compute_row_height(row)
-            row_positions.append((y, row, row_h))
-            y += row_h + self.GAP_Y
-
-        for row_y, row, row_h in row_positions:
-            self._render_row_background(dwg, row_y, row, row_h, col_centers)
-
-        for row_y, row, row_h in row_positions:
-            self._render_row_foreground(dwg, row_y, row, col_centers)
-
-        # Footer: split next-hops, or completion summary (segment count + total length).
-        y = self._draw_trace_end(dwg, trunk_cx, y)
-
-        dwg["height"] = f"{y + self.GAP_Y}px"
-        dwg["width"] = f"{total_width}px"
-        dwg.viewbox(0, 0, total_width, y + self.GAP_Y)
-        return mark_safe(dwg.tostring())  # noqa: S308
-
     def _compute_row_height(self, row):
         row_h = 0
         for cell in row:
@@ -672,50 +657,49 @@ class CableTraceSVG:
                 row_h = max(row_h, self.CABLE_H)
         return row_h
 
-    def _render_row_background(self, dwg, y, row, row_h, col_centers):
-        """Draw background elements for a row: the cable bars."""
-        if row_h == 0:
-            return
-        for cell in row:
-            if cell["type"] == "cable":
+    def _render_rows(self, dwg, row_positions, col_centers):
+        """Draw every cell of every row: cable bars, device boxes, and termination boxes.
+
+        Rows are separated vertically by GAP_Y and the cells within a row occupy distinct columns,
+        so no two cells ever share pixels — paint order doesn't affect the result.
+        """
+        for y, row, _row_h in row_positions:
+            for cell in row:
                 cx = col_centers[cell["col"]]
-                self._draw_cable(dwg, cx, y, cell["cable"], cell.get("near"), cell.get("far"))
 
-            elif cell["type"] == "grouped_cable":
-                # A shared trunk spanning several legs — drawn once, centered over the span.
-                self._draw_cable(
-                    dwg, self._group_cx(cell, col_centers), y, cell["cable"], cell.get("near"), cell.get("far")
-                )
+                if cell["type"] == "cable":
+                    self._draw_cable(dwg, cx, y, cell["cable"], cell.get("near"), cell.get("far"))
 
-    def _render_row_foreground(self, dwg, y, row, col_centers):
-        """Draw foreground elements for a row: device boxes, termination boxes."""
-        for cell in row:
-            cx = col_centers[cell["col"]]
-
-            if cell["type"] == "node":
-                if cell["termination"] is None:
-                    dwg.add(
-                        dwg.text(
-                            "Unconnected",
-                            insert=(cx, y + self.NODE_H / 2),
-                            text_anchor="middle",
-                            fill=constants.COLOR_WARNING,
-                            font_size=f"{constants.FONT_SIZE_SM}px",
-                            font_family=constants.FONT_FAMILY,
-                            font_weight="bold",
-                        )
+                elif cell["type"] == "grouped_cable":
+                    # A shared trunk spanning several legs — drawn once, centered over the span.
+                    self._draw_cable(
+                        dwg, self._group_cx(cell, col_centers), y, cell["cable"], cell.get("near"), cell.get("far")
                     )
-                else:
-                    self._draw_node(dwg, cx, y, cell["termination"], term_position="top")
 
-            elif cell["type"] == "grouped_node":
-                self._draw_grouped_node_cell(dwg, y, cell, col_centers)
+                elif cell["type"] == "node":
+                    if cell["termination"] is None:
+                        dwg.add(
+                            dwg.text(
+                                "Unconnected",
+                                insert=(cx, y + self.NODE_H / 2),
+                                text_anchor="middle",
+                                fill=constants.COLOR_WARNING,
+                                font_size=f"{constants.FONT_SIZE_SM}px",
+                                font_family=constants.FONT_FAMILY,
+                                font_weight="bold",
+                            )
+                        )
+                    else:
+                        self._draw_node(dwg, cx, y, cell["termination"], term_position="top")
 
-            elif cell["type"] == "passthrough_node":
-                self._draw_passthrough_node(dwg, cx, y, cell["arriving"], cell["departing"])
+                elif cell["type"] == "grouped_node":
+                    self._draw_grouped_node_cell(dwg, y, cell, col_centers)
 
-            elif cell["type"] == "grouped_passthrough_node":
-                self._draw_grouped_passthrough_node(dwg, y, cell, col_centers)
+                elif cell["type"] == "passthrough_node":
+                    self._draw_passthrough_node(dwg, cx, y, cell["arriving"], cell["departing"])
+
+                elif cell["type"] == "grouped_passthrough_node":
+                    self._draw_grouped_passthrough_node(dwg, y, cell, col_centers)
 
     # ──────────────────────────────────────────────
     # Cell drawing primitives
@@ -926,7 +910,7 @@ class CableTraceSVG:
         """Draw a cable segment with color bar, label, breakout lane info, and status badge."""
         cable_color = f"#{cable.color}" if cable.color else constants.COLOR_SECONDARY
         cable_url = self._url(cable)
-        is_connected = hasattr(cable, "status") and cable.status and cable.status.name == "Connected"
+        is_connected = cable.status.name == "Connected"
 
         bar_h = self.CABLE_H
         self._draw_cable_line(dwg, (cx, y), (cx, y + bar_h), cable_color, is_connected)
@@ -965,11 +949,9 @@ class CableTraceSVG:
                 "normal",
             )
 
-        # Status badge on the last row (positioned by its vertical center).
-        status = cable.status if hasattr(cable, "status") else None
-        status_name = status.name if status else "Unknown"
-        status_color = f"#{status.color}" if status and status.color else constants.COLOR_SECONDARY
-        self._draw_status_badge(dwg, label_x, first_row_cy + (row_count - 1) * line_step, status_name, status_color)
+        # Status badge on the last row
+        status_y = first_row_cy + (row_count - 1) * line_step
+        self._draw_status_badge(dwg, label_x, status_y, cable.status.name, f"#{cable.status.color}")
 
         return y + bar_h
 
@@ -1043,13 +1025,13 @@ class CableTraceSVG:
             )
         )
 
-        text_color = fgcolor(bg_color.lstrip("#")) if bg_color.startswith("#") else "#ffffff"
+        text_color = fgcolor(bg_color)
         dwg.add(
             dwg.text(
                 status_name,
                 insert=(x + badge_w / 2, y + self.TEXT_VERTICAL_OFFSET),
                 text_anchor="middle",
-                fill=f"#{text_color}" if not text_color.startswith("#") else text_color,
+                fill=text_color,
                 font_size=f"{constants.FONT_SIZE_SM}px",
                 font_family=constants.FONT_FAMILY,
                 font_weight="bold",
