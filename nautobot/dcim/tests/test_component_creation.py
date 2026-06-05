@@ -182,3 +182,15 @@ class SkipAutoComponentCreationOnSaveTestCase(TestCase):
             device.save()
         device.refresh_from_db()
         self.assertEqual(device.interfaces.count(), 2)
+
+    def test_components_not_recreated_on_later_unsuppressed_save(self):
+        """A Device created under suppression stays component-free on a later unsuppressed save."""
+        with SkipAutoComponentCreation():
+            device = self._create_device("suppressed-then-saved")
+        self.assertEqual(device.interfaces.count(), 0)
+        # Saving again *without* suppression must not retroactively instantiate components,
+        # because create_components() only runs on the initial (is_new) save.
+        device.name = "suppressed-then-saved-renamed"
+        device.save()
+        device.refresh_from_db()
+        self.assertEqual(device.interfaces.count(), 0)
