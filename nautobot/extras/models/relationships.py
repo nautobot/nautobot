@@ -290,6 +290,7 @@ class RelationshipModel(models.Model):
                             ][relationship].first()
                 else:
                     # Maybe an uninstalled App?
+                    # We can't provide a relevant queryset, but we can provide a descriptive string
                     if not relationship.symmetric:
                         count = RelationshipAssociation.objects.filter(
                             relationship=relationship, **{f"{side}_id": self.pk}
