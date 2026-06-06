@@ -801,7 +801,10 @@ class ComputedFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        return self.computedfield.render({"obj": record})
+        value = self.computedfield.render({"obj": record})
+        if self.computedfield.output_type == choices.ComputedFieldTypeChoices.TYPE_MARKDOWN:
+            return helpers.render_markdown(value)
+        return value
 
 
 class CustomFieldColumn(django_tables2.Column):
