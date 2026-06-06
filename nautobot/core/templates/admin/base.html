@@ -35,6 +35,10 @@
             .related-widget-wrapper > select {
                 width: 100%;
             }
+            /* Select2 inits with width: 'off', so the generated container must be sized via CSS. */
+            .nautobot-select2-static + .select2-container {
+                width: 100%;
+            }
             .form-horizontal .control-label {
                 text-align: left;
             }
