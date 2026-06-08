@@ -1,0 +1,1 @@
+Added type-aware behavior to the Custom Field create/edit UI so only validation and choice inputs that apply to the selected field type are shown.
