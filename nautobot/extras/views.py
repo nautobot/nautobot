@@ -4157,6 +4157,37 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
         return obj
 
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="value-widget",
+        url_name="value_widget",
+        custom_view_base_action="view",
+    )
+    def value_widget(self, request, *args, **kwargs):
+        """
+        Render the appropriate `value` input field for this metadata type.
+
+        Called by the ObjectMetadata create form via HTMX when the user changes the metadata_type
+        select, so the input adapts (date picker, choice list, etc.) without a full page reload.
+        The metadata type is identified by the pk in the URL path. Returns an empty fragment for
+        TYPE_CONTACT_TEAM, since those don't use `value`.
+        """
+        mt = self.get_object()
+        field = mt.to_form_field(required=False)
+        bound_field = None
+        if field is not None:
+            field.label = "Value"
+            field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+
+            class _ValueOnlyForm(django_forms.Form):
+                pass
+
+            f = _ValueOnlyForm()
+            f.fields["value"] = field
+            bound_field = f["value"]
+        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
+
 
 class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
@@ -4244,45 +4275,6 @@ class ObjectMetadataUIViewSet(
             )
             context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
         return context
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="value-widget",
-        url_name="value_widget",
-        custom_view_base_action="view",
-    )
-    def value_widget(self, request, *args, **kwargs):
-        """
-        Render the appropriate `value` field for a given metadata_type.
-
-        Called by the create template via HTMX when the user changes the metadata_type select,
-        so the input adapts (date picker, choice list, etc.) without a full page reload.
-        Returns an empty fragment for TYPE_CONTACT_TEAM, since those don't use `value`.
-        """
-        mt_id = request.GET.get("metadata_type")
-        mt = None
-        if mt_id:
-            try:
-                mt = MetadataType.objects.get(pk=mt_id)
-            except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
-                mt = None
-        field = None
-        if mt is not None:
-            field = mt.to_form_field(required=False)
-            if field is not None:
-                field.label = "Value"
-                field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
-
-        class _ValueOnlyForm(django_forms.Form):
-            pass
-
-        bound_field = None
-        if field is not None:
-            f = _ValueOnlyForm()
-            f.fields["value"] = field
-            bound_field = f["value"]
-        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
 
 
 #
