@@ -5,6 +5,7 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.template import Context
 from django.urls import reverse
 from django.utils.html import format_html
 import redis.exceptions
@@ -15,8 +16,10 @@ from nautobot.core.forms import (
     DynamicModelMultipleChoiceField,
 )
 from nautobot.core.tables import RelationshipColumn
+from nautobot.core.templatetags.helpers import placeholder
 from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.core.ui.object_detail import _ObjectRelationshipsPanel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.forms import DeviceForm
@@ -1392,6 +1395,45 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
             # Exact match is difficult because the order of rendering is unpredictable.
             for value in col_expected_value:
                 self.assertIn(value, rendered_value)
+
+    def test_object_relationships_panel_renders_has_many_as_count(self):
+        """
+        The detail-view relationships panel renders a "has many" relationship as a count linked to the
+        filtered associations list (e.g. "2 VLANs"), rather than enumerating each related object, and renders
+        an empty relationship as the "—" placeholder.
+        """
+        for vlan in (self.vlans[0], self.vlans[1]):
+            RelationshipAssociation(
+                relationship=self.o2m_1,
+                source_id=self.locations[0].id,
+                source_type=self.location_ct,
+                destination_id=vlan.id,
+                destination_type=self.vlan_ct,
+            ).validated_save()
+
+        data = self.locations[0].get_relationships_with_related_objects()
+        panel = _ObjectRelationshipsPanel(weight=100)
+        context = Context({"object": self.locations[0]})
+
+        # has-many relationship: count linked to the filtered associations list
+        self.assertHTMLEqual(
+            panel.render_value((self.o2m_1, "source"), data["source"][self.o2m_1], context),
+            format_html(
+                '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                reverse("extras:relationshipassociation_list"),
+                self.o2m_1.key,
+                "source",
+                self.locations[0].id,
+                2,
+                "VLANs",
+            ),
+        )
+
+        # empty relationship: "—" placeholder
+        self.assertEqual(
+            panel.render_value((self.o2m_1, "source"), self.vlans[0]._meta.model.objects.none(), context),
+            placeholder(None),
+        )
 
 
 class RequiredRelationshipTestMixin:

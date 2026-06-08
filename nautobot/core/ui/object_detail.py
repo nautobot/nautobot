@@ -2330,6 +2330,32 @@ class _ObjectRelationshipsPanel(KeyValueTablePanel):
         obj = get_obj_from_context(context)
         return f"cr_{relationship.key}__{side}={obj.pk}"
 
+    def render_value(self, key, value, context: Context):
+        """
+        Render a "has many" relationship as a count linking to the filtered Relationship Associations list
+        (e.g. "3 inventory items"), rather than enumerating each related object individually as the base
+        `KeyValueTablePanel` does. Single-object, empty, and uninstalled-app relationships fall back to the
+        base rendering (the related object linked to its detail view, or the "—" placeholder).
+        """
+        if isinstance(value, models.QuerySet):
+            count = value.count()
+            if not count:
+                return placeholder(None)
+            relationship, side = key
+            obj = get_obj_from_context(context)
+            model_meta = value.model._meta
+            label = model_meta.verbose_name if count == 1 else model_meta.verbose_name_plural
+            return format_html(
+                '<a href="{}?relationship={}&{}_id={}">{} {}</a>',
+                reverse("extras:relationshipassociation_list"),
+                relationship.key,
+                side,
+                obj.pk,
+                count,
+                label,
+            )
+        return super().render_value(key, value, context)
+
 
 class _ObjectTagsPanel(Panel):
     """Panel displaying an object's tags as a space-separated list of color-coded tag names."""
