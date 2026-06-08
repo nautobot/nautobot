@@ -1,1 +1,0 @@
-Fixed N+1 query patterns when resolving `tags` and `config_context` in GraphQL queries.
