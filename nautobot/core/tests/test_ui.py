@@ -1004,31 +1004,47 @@ class _JobModalButtonTest(TestCase):
             )
         self.assertIn("button_id is required", str(cm.exception))
 
-    def test_enable_scheduling_defaults_false_in_hx_vals(self):
-        """Verify that enable_scheduling defaults to False and is present in hx_vals."""
+    def test_enable_scheduling_defaults_false_and_not_in_hx_vals(self):
+        """Verify enable_scheduling defaults to False and is never exposed through hx_vals."""
         btn = _JobModalButton(
             weight=100,
             label="Run Job",
             class_path="nautobot.core.jobs.ValidateModelData",
         )
+        self.assertFalse(btn.enable_scheduling)
         device = Device.objects.first()
         context = btn.get_extra_context(Context({"object": device}))
         hx_vals = json.loads(context["attributes"]["hx-vals"])
-        self.assertIn("enable_scheduling", hx_vals)
-        self.assertFalse(hx_vals["enable_scheduling"])
+        # The flag is resolved server-side from the registered component, so it must not travel via hx_vals.
+        self.assertNotIn("enable_scheduling", hx_vals)
 
-    def test_enable_scheduling_true_in_hx_vals(self):
-        """Verify that enable_scheduling=True is propagated into hx_vals."""
+    def test_enable_scheduling_requires_button_id(self):
+        """Verify enable_scheduling=True requires a button_id so the view can resolve it from the registry."""
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(
+                weight=100,
+                label="Schedule Job",
+                class_path="nautobot.core.jobs.ValidateModelData",
+                enable_scheduling=True,
+            )
+        self.assertIn("button_id is required", str(cm.exception))
+
+    def test_enable_scheduling_true_registered_and_not_in_hx_vals(self):
+        """Verify a registered enable_scheduling=True button stores the flag but does not leak it into hx_vals."""
         btn = _JobModalButton(
             weight=100,
             label="Schedule Job",
             class_path="nautobot.core.jobs.ValidateModelData",
             enable_scheduling=True,
+            button_id="test_enable_scheduling_true_button",
         )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+        self.assertTrue(btn.enable_scheduling)
+        self.assertIs(registry["job_modal_buttons"][btn.button_id], btn)
         device = Device.objects.first()
         context = btn.get_extra_context(Context({"object": device}))
         hx_vals = json.loads(context["attributes"]["hx-vals"])
-        self.assertTrue(hx_vals["enable_scheduling"])
+        self.assertNotIn("enable_scheduling", hx_vals)
 
 
 class PostButtonTest(TestCase):

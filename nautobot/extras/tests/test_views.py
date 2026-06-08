@@ -29,6 +29,7 @@ from nautobot.core.testing import (
     ViewTestCases,
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
+from nautobot.core.ui.object_detail import _JobModalButton
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -105,6 +106,7 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from nautobot.extras.registry import registry
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
@@ -5306,11 +5308,32 @@ class JobTestCase(
             self.assertIn(str(result.pk), content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_render_job_form_modal_with_enable_scheduling_shows_schedule_form(self):
-        """Modal render with enable_scheduling=true includes schedule form fields."""
+    def test_render_job_form_modal_scheduling_resolved_from_registered_button(self):
+        """The schedule form is rendered based on the registered _JobModalButton, never the POST payload."""
         self.add_permissions("extras.run_job")
 
+        button = _JobModalButton(
+            weight=100,
+            label="Schedule Job",
+            class_path=self.test_pass.class_path,
+            button_id="test_render_modal_scheduling_button",
+            enable_scheduling=True,
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(button.button_id, None))
+
         for run_url in self.run_urls:
+            # The registered button enables scheduling even though the POST payload doesn't set enable_scheduling.
+            response = self.client.post(
+                run_url,
+                data={"render_job_form": True, "job_modal_button": button.button_id},
+                HTTP_HX_REQUEST="true",
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertIn("id__schedule_type", content, msg=run_url)
+            self.assertIn("Job Schedule Type", content, msg=run_url)
+
+            # A raw enable_scheduling POST value with no registered button must NOT render the schedule form.
             response = self.client.post(
                 run_url,
                 data={"render_job_form": True, "enable_scheduling": "true"},
@@ -5318,9 +5341,7 @@ class JobTestCase(
             )
             self.assertHttpStatus(response, 200, msg=run_url)
             content = response.content.decode(response.charset)
-            # Schedule form fields should be rendered in the modal.
-            self.assertIn("id__schedule_type", content, msg=run_url)
-            self.assertIn("Job Schedule Type", content, msg=run_url)
+            self.assertNotIn("id__schedule_type", content, msg=run_url)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_schedule_job_via_modal_returns_confirmation_partial(self, _):

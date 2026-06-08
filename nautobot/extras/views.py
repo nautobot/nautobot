@@ -2615,6 +2615,22 @@ class JobUIViewSet(NautobotUIViewSet):
                 )
         return template_name
 
+    def _resolve_enable_scheduling(self, request, job_model):
+        """Determine whether the job modal should render the scheduling form.
+
+        The setting is sourced exclusively from the server-side `_JobModalButton` component, looked up from
+        the registry using the `button_id` carried in the request. The request payload's `enable_scheduling`
+        value is never trusted: an unregistered (or missing) `button_id` resolves to `False`. Scheduling is
+        always disabled for jobs flagged with sensitive variables, regardless of the component setting.
+        """
+        if job_model.has_sensitive_variables:
+            return False
+        button_id = request.POST.get("job_modal_button", "")
+        job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
+        if job_modal_button is None:
+            return False
+        return bool(job_modal_button.enable_scheduling)
+
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2628,11 +2644,7 @@ class JobUIViewSet(NautobotUIViewSet):
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
-            # Scheduling is enabled only when explicitly opted-in AND the job does not have sensitive variables.
-            enable_scheduling = (
-                request.POST.get("enable_scheduling", "false").lower() in ("true", "1")
-                and not job_model.has_sensitive_variables
-            )
+            enable_scheduling = self._resolve_enable_scheduling(request, job_model)
             template_name = self._get_template_name(job_class=job_class, htmx_modal=True)
             hx_vals_dict = {
                 "job_modal_button": job_modal_button_registry_id,
@@ -2641,7 +2653,6 @@ class JobUIViewSet(NautobotUIViewSet):
                 "run_button_label": run_button_label,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "advanced_fields": advanced_field_names,
-                "enable_scheduling": enable_scheduling,
             }
             # When scheduling is disabled, force immediate execution by injecting _schedule_type into hx-vals.
             # When scheduling is enabled, omit it so that the form's <select> value is submitted unchanged
@@ -2740,8 +2751,7 @@ class JobUIViewSet(NautobotUIViewSet):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
-            enable_scheduling = request.POST.get("enable_scheduling", "false").lower() in ("true", "1")
-            if enable_scheduling and not job_model.has_sensitive_variables:
+            if self._resolve_enable_scheduling(request, job_model):
                 schedule_form = forms.JobScheduleForm(initial=initial_form_data)
             else:
                 schedule_form = None
