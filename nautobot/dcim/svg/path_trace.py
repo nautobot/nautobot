@@ -215,10 +215,10 @@ class CableTraceSVG:
         for plain text or an absolute URL to render the line as a link. `key` groups same-device
         nodes via the parent's globally-unique UUID; `termination.parent` handles device, module,
         circuit, and power_panel.
-        """
-        if termination is None:
-            return None, []
 
+        `termination` must be non-None: a null-termination cell (an unconnected breakout lane) is
+        rendered as an "Unconnected" placeholder and grouping skips it, so it never reaches here.
+        """
         parent = termination.parent
         if parent is None:  # case of a ModularComponent belonging to a module that isn't installed in a device?
             return (None, [(str(termination), "#")])
@@ -282,7 +282,13 @@ class CableTraceSVG:
             widths.append(estimate_text_width(cable.status.name, constants.FONT_SIZE_SM) + constants.FONT_SIZE_SM)
 
         if header_cable is not None:
-            add(header_cable, None, None)
+            # A fan-out trunk forks to multiple far ends and draws no lane detail; a linear first hop
+            # draws its lane detail from the single far end, mirroring how `render` draws the header.
+            if len(self.fanout_paths) > 1:
+                add(header_cable, None, None)
+            else:
+                near_end, _, far_end = self.traced_path[0]
+                add(header_cable, near_end, far_end)
         for entries in column_entries:
             for entry in entries:
                 if entry.get("type") == "cable" and entry.get("cable") is not None:
@@ -290,9 +296,10 @@ class CableTraceSVG:
         return max(widths, default=0)
 
     def _cable_lane_info(self, cable, termination):
-        """Return the `CableToCableTermination` row matching `termination` on `cable`, or None."""
-        if cable is None or termination is None:
-            return None
+        """Return the `CableToCableTermination` row matching `termination` on `cable`, or None.
+
+        `cable` and `termination` must be non-None; callers resolve them first.
+        """
         termination_ct = ContentType.objects.get_for_model(termination)
         for row in cable.terminations.all():
             if (
@@ -367,13 +374,14 @@ class CableTraceSVG:
         """
         column_count = len(self.fanout_paths)
 
-        near_end, cable, _ = self.traced_path[0] if self.traced_path else (None, None, None)
+        near_end, cable, far_end = self.traced_path[0] if self.traced_path else (None, None, None)
         cable_color = f"#{cable.color}" if cable and cable.color else constants.COLOR_SECONDARY
 
         header = {
             "origin": near_end,
             "cable": cable,
             "cable_color": cable_color,
+            "far_end": far_end,
             "connector_labels": [leg["connector_label"] for leg in self.fanout_paths],
         }
 
@@ -592,8 +600,9 @@ class CableTraceSVG:
                         )
                 y = drop_end + self.GAP_Y
             else:
-                # Linear or single-leg: full-height cable bar, no fork.
-                y = self._draw_cable(dwg, trunk_cx, y, cable)
+                # Linear or single-leg: full-height cable bar, no fork. Pass the first hop's
+                # endpoints so a breakout cable here shows its lane detail, as a mid-path segment would.
+                y = self._draw_cable(dwg, trunk_cx, y, cable, header["origin"], header["far_end"])
                 y += self.GAP_Y
 
             row_positions = []

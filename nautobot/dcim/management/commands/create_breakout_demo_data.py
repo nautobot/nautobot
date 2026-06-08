@@ -5,6 +5,7 @@ Each scenario creates DEMO-prefixed objects so the dataset is easy to flush and 
 methods invoked from `handle()`; the helpers below cover the common factory shapes.
 """
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -55,6 +56,7 @@ class Command(BaseCommand):
         self.device_role = Role.objects.get_for_model(Device).first()
 
         loc_type, _ = LocationType.objects.get_or_create(name="DEMO Data Center")
+        loc_type.content_types.add(ContentType.objects.get_for_model(Device))
         self.location, _ = Location.objects.get_or_create(
             name="DEMO-DC1",
             location_type=loc_type,

@@ -3,7 +3,7 @@
 import functools
 import re
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, tag
 
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import (
@@ -16,12 +16,14 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleType,
     RearPort,
 )
 from nautobot.dcim.svg import constants as svg_constants
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 from nautobot.dcim.svg.path_trace import CableTraceSVG
-from nautobot.dcim.svg.utils import estimate_text_width
+from nautobot.dcim.svg.utils import estimate_text_width, fit_text
 from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras.models import Role, Status
 
@@ -55,6 +57,28 @@ def _label_rects(svg):
     return labels
 
 
+@tag("unit")
+class FitTextTest(SimpleTestCase):
+    """Tests for nautobot.dcim.svg.utils.fit_text."""
+
+    def test_empty_text_returns_empty_string(self):
+        """Falsy text short-circuits to an empty string regardless of the available width."""
+        self.assertEqual(fit_text("", 100, 12), "")
+
+    def test_text_within_width_is_returned_unchanged(self):
+        """Text whose estimated width fits within `max_width` is returned verbatim, no ellipsis."""
+        self.assertEqual(fit_text("Short", 1000, 12), "Short")
+
+    def test_text_exceeding_width_is_truncated_with_ellipsis(self):
+        """Text wider than `max_width` is truncated to fit, reserving one slot for the ellipsis.
+
+        At font_size=12 and ratio=0.65, `max_width=50` allows 6 chars, so a longer string keeps its
+        first 5 characters plus the ellipsis glyph.
+        """
+        self.assertEqual(fit_text("Truncate me please", 50, 12), "Trunc…")
+
+
+@tag("unit")
 class BreakoutDiagramSVGTest(SimpleTestCase):
     """Tests for nautobot.dcim.svg.cable_breakout.BreakoutDiagramSVG."""
 
@@ -304,6 +328,29 @@ class CableTraceSVGTestCase(TestCase):
         self.assertIn("passthrough_node", types)
         self.assertNotIn("passthrough", types)
 
+    def test_get_parent_info_for_component_on_location_module(self):
+        """A component on a Module assigned directly to a Location (no ModuleBay) has no parent
+        Device — `Module.device` returns None — so `ModularComponentModel.parent` is None. In that
+        case `_get_parent_info` falls back to a single self-named, unlinked line rather than
+        dereferencing the absent parent.
+        """
+        module_location = Location.objects.get_for_model(Module).first()
+        module_type = ModuleType.objects.create(
+            manufacturer=Manufacturer.objects.first(), model="SVG Trace Location Module"
+        )
+        module = Module.objects.create(
+            module_type=module_type,
+            location=module_location,
+            status=Status.objects.get_for_model(Module).first(),
+        )
+        iface = Interface.objects.create(module=module, name="mod-iface", status=self.interface_status)
+        # Precondition: a location-based module's component has no parent device.
+        self.assertIsNone(iface.parent)
+
+        key, lines = CableTraceSVG(iface)._get_parent_info(iface)
+        self.assertIsNone(key)
+        self.assertEqual(lines, [(str(iface), "#")])
+
     def test_uneven_breakout_legs_pad_shorter_column_with_empty_cells(self):
         """A breakout whose legs differ in length pads the shorter leg's column with `empty` cells.
 
@@ -332,6 +379,19 @@ class CableTraceSVGTestCase(TestCase):
         # Empty pad cells render as no-ops; the diagram still renders.
         self.assertIn("<svg", diagram.render())
 
+    def test_origin_without_cable_path_renders_empty_placeholder(self):
+        """An origin with no cable (hence no CablePath) yields an empty trace: `_detect_fanout`
+        returns no legs and `render` falls back to the 'No cable path found' placeholder."""
+        iface = Interface.objects.create(device=self.device, name="empty-origin", status=self.interface_status)
+
+        diagram = CableTraceSVG(iface)
+        self.assertEqual(diagram.traced_path, [])
+        self.assertEqual(diagram.fanout_paths, [])
+
+        svg = diagram.render()
+        self.assertIn("<svg", svg)
+        self.assertIn("No cable path found", svg)
+
     def test_complete_trace_footer(self):
         """A complete trace renders a completion summary with the segment count and total length."""
         iface_a = Interface.objects.create(device=self.device, name="iface-a", status=self.interface_status)
@@ -345,6 +405,25 @@ class CableTraceSVGTestCase(TestCase):
         self.assertIn("Total segments: 1", svg)
         self.assertIn("5 Meters", svg)
         self.assertIn("Feet", svg)
+
+    def test_non_connected_cable_renders_dashed_with_status_badge(self):
+        """A path through a non-Connected cable draws the bar dashed and labels it with the cable's
+        status, unlike a Connected cable (drawn solid, with no dash array)."""
+        planned = Status.objects.get_for_model(Cable).get(name="Planned")
+        iface_a = Interface.objects.create(device=self.device, name="planned-a", status=self.interface_status)
+        iface_b = Interface.objects.create(device=self.device, name="planned-b", status=self.interface_status)
+        Cable.objects.create(termination_a=iface_a, termination_b=iface_b, status=planned)
+
+        svg = CableTraceSVG(iface_a).render()
+        # A dashed bar (only emitted for non-Connected cables) plus a status badge naming the status.
+        self.assertIn("stroke-dasharray", svg)
+        self.assertIn("Planned", svg)
+
+        # Contrast: a Connected cable draws a solid bar with no dash array.
+        iface_c = Interface.objects.create(device=self.device, name="planned-c", status=self.interface_status)
+        iface_d = Interface.objects.create(device=self.device, name="planned-d", status=self.interface_status)
+        Cable.objects.create(termination_a=iface_c, termination_b=iface_d, status=self.connected)
+        self.assertNotIn("stroke-dasharray", CableTraceSVG(iface_c).render())
 
     def test_branched_trace_footer_is_neutral_aggregate(self):
         """A branched (breakout) trace shows a neutral aggregate footer, not first-lane-only totals."""
@@ -383,6 +462,31 @@ class CableTraceSVGTestCase(TestCase):
         self.assertIn("<svg", svg)
         self.assertNotIn("Breakout fan-out", svg)
 
+    def test_origin_side_breakout_cable_shows_lane_detail(self):
+        """A breakout cable that is the origin's first hop, traced from the single-lane side, renders
+        as one linear bar (no fork) but must still show its lane mapping detail — matching how the
+        same cable renders as a mid-path segment.
+
+        [IF_lane1] --C (breakout 1:2, lane B1)-- [IF_trunk]
+        """
+        breakout = CableType(name="SVG lane-detail 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name="ld-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name="ld-lane-1", status=self.interface_status)
+        lane2 = Interface.objects.create(device=self.device, name="ld-lane-2", status=self.interface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.connected)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # Tracing from a single lane maps to one trunk connector, so it is a linear (non-fan-out) leg.
+        diagram = CableTraceSVG(lane1)
+        self.assertEqual(len(diagram.fanout_paths), 1)
+        svg = diagram.render()
+        self.assertNotIn("Breakout fan-out", svg)
+        # The breakout cable is the only cable and sits in the header; its lane detail (absent before
+        # the first hop's endpoints were threaded through) names the lane mapping.
+        self.assertIn("Breakout: B1 → A1", svg)
+
     def test_split_trace_footer_lists_next_hops_with_cables(self):
         """A split trace renders "Path split!" and the selectable next-hop nodes with their cables."""
         iface = Interface.objects.create(device=self.device, name="split-origin", status=self.interface_status)
@@ -409,6 +513,33 @@ class CableTraceSVGTestCase(TestCase):
         # Each next-hop names its onward cable.
         self.assertIn("split-cable-1", svg)
         self.assertIn("split-cable-2", svg)
+
+    def test_split_trace_footer_lists_uncabled_next_hop_as_plain_text(self):
+        """A split next-hop node with no onward cable can't be traced further, so the footer lists it
+        as bare text (no link, no "(Cable ...)"), unlike a cabled next-hop which links to its trace."""
+        iface = Interface.objects.create(device=self.device, name="nc-origin", status=self.interface_status)
+        rear = RearPort.objects.create(device=self.device, name="NC Rear", positions=4)
+        cabled_front = FrontPort.objects.create(
+            device=self.device, name="NC Front Cabled", rear_port=rear, rear_port_position=1
+        )
+        uncabled_front = FrontPort.objects.create(
+            device=self.device, name="NC Front Uncabled", rear_port=rear, rear_port_position=2
+        )
+        dest = Interface.objects.create(device=self.device, name="nc-dest", status=self.interface_status)
+        # IF -- C1 -- RP (positions=4): tracing from IF splits at the rear port.
+        Cable.objects.create(termination_a=iface, termination_b=rear, status=self.connected)
+        # Only one front port has an onward cable; the other is a dead end.
+        Cable.objects.create(termination_a=cabled_front, termination_b=dest, status=self.connected)
+
+        # Map each next-hop's footer text to its url (last tuple element); a None url is plain text.
+        next_hops = {text: url for text, _size, _weight, _fill, url in CableTraceSVG(iface)._trace_end_lines()}
+        # The cabled front port links to its trace and names the cable inline.
+        cabled_line = next(text for text in next_hops if str(cabled_front) in text)
+        self.assertIn("(Cable", cabled_line)
+        self.assertIsNotNone(next_hops[cabled_line])
+        # The uncabled front port is listed as bare text with no link (path_trace.py line 1109).
+        self.assertIn(str(uncabled_front), next_hops)
+        self.assertIsNone(next_hops[str(uncabled_front)])
 
     def test_long_cable_label_fits_within_canvas_width(self):
         """The canvas must be wide enough that a long cable label is not clipped on the right."""
