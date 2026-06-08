@@ -44,6 +44,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    ComputedFieldTypeChoices,
     CustomFieldTypeChoices,
     DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
@@ -1547,6 +1548,7 @@ class ComputedFieldTestCase(
 
         cls.form_data = {
             "content_type": obj_type.pk,
+            "output_type": ComputedFieldTypeChoices.TYPE_TEXT,
             "key": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Location!",
