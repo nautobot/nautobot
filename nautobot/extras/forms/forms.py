@@ -48,6 +48,7 @@ from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, De
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     ButtonClassChoices,
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
@@ -470,6 +471,13 @@ class ComputedFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     template = forms.CharField(
         max_length=500, widget=forms.Textarea, required=False, help_text="Jinja2 template code for field value"
     )
+    output_type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ComputedFieldTypeChoices.CHOICES),
+        widget=StaticSelect2(),
+        label="Output Type",
+        help_text="How to display this field, markdown renders the content as Markdown",
+    )
 
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
@@ -487,6 +495,14 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
         label="Content Type",
+    )
+    output_type = forms.ChoiceField(
+        choices=ComputedFieldTypeChoices.CHOICES,
+        required=True,
+        initial=ComputedFieldTypeChoices.TYPE_TEXT,
+        widget=StaticSelect2(),
+        label="Output Type",
+        help_text="How to display this field, markdown renders the content as Markdown",
     )
     key = SlugField(
         label="Key",
@@ -511,6 +527,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "key",
             "description",
             "template",
+            "output_type",
             "fallback_value",
             "weight",
             "advanced_ui",
