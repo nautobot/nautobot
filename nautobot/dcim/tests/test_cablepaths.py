@@ -27,7 +27,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.dcim.signals import create_cablepath, defer_cable_path_rebuilds, rebuild_paths
-from nautobot.dcim.utils import disconnect_termination, object_to_path_node
+from nautobot.dcim.utils import disconnect_termination, object_to_path_node, path_node_to_object
 from nautobot.extras.models import Role, Status
 
 
@@ -1252,6 +1252,54 @@ class CablePathTestCase(TestCase):
             is_active=False,
         )
         self.assertTrue(cp.is_split, msg=f"Expected is_split=True on mid-path breakout; got {cp}")
+
+    def test_207a2_get_split_nodes_with_frontport_terminal(self):
+        """
+        `CablePath.get_split_nodes()` must handle a split path whose terminal node is a FrontPort,
+        not just the RearPort case (test_206). A front-to-rear trace that bails out at a mid-path
+        breakout (see test_207a) stops on the FrontPort, so `path[-1]` is a FrontPort. The next
+        segments are the breakout cable's far-side lane terminations (FP2 here) — onward across the
+        cable — not the rear port behind FP1, which is backward and already in the traced path.
+
+        [IF1] --C1 (straight)-- [RP1] [FP1] --C2 (breakout 1:4)-- [FP2] [RP2]
+        """
+        breakout_type = CableType(
+            name="Test split-nodes 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # Straight cable IF1 ↔ RP1 (pass-through to FP1), then a breakout cable on FP1 that fans out.
+        cable1 = Cable(termination_a=interface1, termination_b=rearport1, status=self.status)
+        cable1.save()
+        Cable(termination_a=frontport1, termination_b=frontport2, cable_type=breakout_type, status=self.status).save()
+
+        cp = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+
+        # Precondition: the path split on a FrontPort, the branch the old code mishandled.
+        self.assertTrue(cp.is_split)
+        self.assertIsInstance(path_node_to_object(cp.path[-1]), FrontPort)
+
+        # Onward node is the breakout cable's far-side peer (FP2), not the already-traversed RP1.
+        split_nodes = list(cp.get_split_nodes())
+        self.assertEqual([node.pk for node in split_nodes], [frontport2.pk])
 
     def test_207b_breakout_with_partial_lanes(self):
         """
