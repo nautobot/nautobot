@@ -3320,6 +3320,42 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         self.assertHttpStatus(response, 404)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_without_permission(self):
+        """A user lacking `extras.view_metadatatype` is denied the value-widget detail action."""
+        mdt = MetadataType.objects.create(name="No-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertHttpStatus(self.client.get(url, HTTP_HX_REQUEST="true"), 403, msg=url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_permission(self):
+        """With `extras.view_metadatatype`, the value widget renders for the metadata type."""
+        self.add_permissions("extras.view_metadatatype")
+        mdt = MetadataType.objects.create(name="View-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertBodyContains(self.client.get(url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_constrained_permission(self):
+        """A constrained view permission renders the permitted type's widget but 404s others."""
+        permitted_mdt = MetadataType.objects.create(name="Permitted", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        other_mdt = MetadataType.objects.create(name="Forbidden", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+
+        obj_perm = ObjectPermission(
+            name="Constrained metadata type view",
+            constraints={"pk": permitted_mdt.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(MetadataType))
+
+        permitted_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": permitted_mdt.pk})
+        self.assertBodyContains(self.client.get(permitted_url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+        other_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": other_mdt.pk})
+        self.assertHttpStatus(self.client.get(other_url, HTTP_HX_REQUEST="true"), 404, msg=other_url)
+
 
 class NoteTestCase(
     ViewTestCases.CreateObjectViewTestCase,
