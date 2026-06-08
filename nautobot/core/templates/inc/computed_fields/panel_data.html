@@ -36,7 +36,13 @@
                     {% for field, value in fields %}
                         <tr class="collapseme-computed-{{ count }} collapse show nb-transition-none">
                             <td><span title="{{ field.description }}">{{ field }}</span></td>
-                            <td>{{ value }}</td>
+                            <td>
+                                {% if field.output_type == 'markdown' %}
+                                    {{ value|render_markdown }}
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 {% endwith %}

@@ -157,6 +157,16 @@ class CustomFieldTypeChoices(ChoiceSet):
     )
 
 
+class ComputedFieldTypeChoices(ChoiceSet):
+    TYPE_TEXT = "text"
+    TYPE_MARKDOWN = "markdown"
+
+    CHOICES = (
+        (TYPE_TEXT, "Text"),
+        (TYPE_MARKDOWN, "Markdown"),
+    )
+
+
 #
 # Button Classes
 #
