@@ -1,6 +1,6 @@
 # Suppressing Automatic Device/Module Component Creation
 
-+++ 3.2.0
++++ 3.1.4
 
 By default, when a new `Device` or `Module` is first saved, Nautobot calls `self.create_components()` from inside `save()` to instantiate one component (interface, console port, power port, rear/front port, device bay, module bay) per template defined on the related `DeviceType` / `ModuleType`. For apps that own the component inventory from an external source-of-truth and intend to write the full component graph themselves immediately after creating the parent object, this default is undesirable.
 
