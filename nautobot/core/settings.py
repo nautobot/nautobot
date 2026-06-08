@@ -1291,3 +1291,7 @@ KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
 KUBERNETES_TOKEN_PATH = os.getenv(
     "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
+
+# Internal/dev-only: disables TLS verification for the Kubernetes API connection. Required for local clusters
+# WARNING: never set to False in production.
+KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL", "True"))

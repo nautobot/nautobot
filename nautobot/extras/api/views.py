@@ -40,7 +40,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
-from nautobot.extras.jobs_revoke import RevokeFactory
+from nautobot.extras.jobs_revoke import JobLiveness, RevokeFactory
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1212,7 +1212,7 @@ class JobResultViewSet(
 
         strategy = RevokeFactory.get_strategy(job_result.queue_type)
 
-        job_is_running = strategy.is_alive(job_result)
+        job_liveness_state = strategy.liveness(job_result)
 
         if request.method == "GET":
             if not job_result.is_unready_state:
@@ -1225,15 +1225,30 @@ class JobResultViewSet(
                 }
                 return Response(detail, status=status.HTTP_200_OK)
 
+            revoke_info = {
+                JobLiveness.RUNNING: {
+                    "action": "TERMINATE",
+                    "action_description": "SIGKILL to worker. Stops immediately, no cleanup.",
+                    "job_status": "RUNNING",
+                },
+                JobLiveness.NOT_RUNNING: {
+                    "action": "REAP",
+                    "action_description": "No worker running. Marks JobResult as revoked without signal.",
+                    "job_status": "NOT RUNNING",
+                },
+                JobLiveness.UNKNOWN: {
+                    "action": "ABANDON",
+                    "action_description": (
+                        "Backend unreachable. Marks JobResult as revoked without confirming "
+                        "its state. If the job is still running somewhere, it will continue "
+                        "until it finishes on its own."
+                    ),
+                    "job_status": "UNKNOWN",
+                },
+            }
             detail = {
                 "message": f"Are you sure you want to revoke '{job_result.name}'?",
-                "action": "TERMINATE" if job_is_running else "REAP",
-                "action_description": (
-                    "SIGKILL to worker. Stops immediately, no cleanup."
-                    if job_is_running
-                    else "No worker running. Marks JobResult as revoked without signal."
-                ),
-                "job_status": "RUNNING" if job_is_running else "NOT RUNNING",
+                **revoke_info[job_liveness_state],
                 "irreversible": "This action cannot be undone.",
                 "timestamp": timezone.now().isoformat(),
             }

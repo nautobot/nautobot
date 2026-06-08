@@ -41,6 +41,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    JobRevocationTypeChoices,
     LogLevelChoices,
     ScheduledJobStateChoices,
 )
@@ -723,14 +724,20 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="terminated_job_results",
-        help_text="The user who initiated the kill action.",
+        help_text="The user who initiated the revoke action.",
     )
     # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
     revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
-    date_terminated = models.DateTimeField(
+    revocation_type = models.CharField(
+        max_length=30,
+        choices=JobRevocationTypeChoices,
+        blank=True,
+        help_text="Revocation type of the Job being revoked",
+    )
+    date_revoked = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Timestamp at which the job was forcibly terminated",
+        help_text="Timestamp at which the job was revoked",
     )
 
     objects = JobResultManager()
