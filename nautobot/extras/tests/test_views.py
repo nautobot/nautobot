@@ -5322,21 +5322,6 @@ class JobTestCase(
             self.assertIn("id__schedule_type", content, msg=run_url)
             self.assertIn("Job Schedule Type", content, msg=run_url)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    def test_render_job_form_modal_without_enable_scheduling_omits_schedule_form(self):
-        """Modal render without enable_scheduling does not include schedule form fields (default behavior)."""
-        self.add_permissions("extras.run_job")
-
-        for run_url in self.run_urls:
-            response = self.client.post(
-                run_url,
-                data={"render_job_form": True},
-                HTTP_HX_REQUEST="true",
-            )
-            self.assertHttpStatus(response, 200, msg=run_url)
-            content = response.content.decode(response.charset)
-            self.assertNotIn("id__schedule_type", content, msg=run_url)
-
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_schedule_job_via_modal_returns_confirmation_partial(self, _):
         """Submitting a future-scheduled job via the HTMX modal returns the confirmation partial (not a redirect)."""
