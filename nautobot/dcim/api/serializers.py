@@ -2,6 +2,7 @@ import contextlib
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
@@ -50,7 +51,12 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import CABLE_TERMINATION_MODELS, RACK_ELEVATION_LEGEND_WIDTH_DEFAULT
+from nautobot.dcim.constants import (
+    CABLE_TERMINATION_MODELS,
+    CONTENT_TYPE_TO_TERMINATION_FK,
+    RACK_ELEVATION_LEGEND_WIDTH_DEFAULT,
+    TERMINATION_FK_FIELDS,
+)
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -852,23 +858,95 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     termination_b_id = serializers.UUIDField(required=False, allow_null=True)
     length_unit = ChoiceField(choices=CableLengthUnitChoices, allow_blank=True, required=False)
     type = ChoiceField(choices=CableTypeChoices, allow_blank=True, required=False)
-    # TODO: disabled for now, to re-enable and fix OpenAPI schema in a future PR.
-    # total_lanes = serializers.SerializerMethodField(read_only=True)
-    # connected_lanes = serializers.SerializerMethodField(read_only=True)
+    total_lanes = serializers.IntegerField(read_only=True)
+    connected_lanes = serializers.IntegerField(read_only=True)
+    # `SerializerMethodField` (rather than a declared nested field) so the per-request `?depth=N`
+    # context drives the brief-vs-nested rendering of each slot. Writes are handled separately by
+    # peeking at `self.initial_data` in `validate()` and applying via `_apply_terminations()`; see
+    # those methods below. The on-wire shape is a `{"a": {<connector>: ...}, "b": {...}}` dict
+    # keyed by cable side then connector index, mirroring the physical structure of the cable.
+    terminations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Cable
-        fields = "__all__"
+        # Suppress the typed M2M reverse accessors (`interfaces`, `front_ports`, etc.) from the
+        # serializer output — they list terminations without `cable_end`/`connector`, so they can't
+        # convey breakout-lane structure. The `terminations` field below replaces them with the
+        # through-row view that carries lane info.
+        exclude = [
+            "circuit_terminations",
+            "console_ports",
+            "console_server_ports",
+            "front_ports",
+            "interfaces",
+            "power_feeds",
+            "power_outlets",
+            "power_ports",
+            "rear_ports",
+        ]
+        # Include `terminations` in the default response (without `?exclude_m2m=False`); without this
+        # opt-in, `OptInFieldsMixin` would mark the nested ListSerializer write-only by default.
+        default_m2m_fields = ["terminations"]
         extra_kwargs = {
             "color": {"help_text": "RGB color in hexadecimal (e.g. 00ff00)"},
         }
 
-    # TODO: disabled for now, to re-enable and test in a future PR
-    # def get_total_lanes(self, obj):
-    #     return obj.total_lanes
-    #
-    # def get_connected_lanes(self, obj):
-    #     return obj.connected_lanes
+    @extend_schema_field(
+        {
+            "type": "object",
+            "description": (
+                "Terminations on this cable, keyed by side ('a'/'b') then 1-indexed connector "
+                "number (as string). Each slot value is a brief representation (default depth) "
+                "or the full nested serializer (`?depth>=1`) of the termination at that connector "
+                "— polymorphic across Interface / CircuitTermination / ConsolePort / FrontPort / "
+                "RearPort / PowerPort / PowerOutlet / PowerFeed. Uncabled connectors on breakout "
+                "cables are represented as `null`."
+            ),
+            "properties": {
+                "a": {
+                    "type": "object",
+                    "description": "A-side connector slots, keyed by 1-indexed connector number as string.",
+                    "additionalProperties": {
+                        "allOf": [{"$ref": "#/components/schemas/CableTermination"}],
+                        "nullable": True,
+                    },
+                },
+                "b": {
+                    "type": "object",
+                    "description": "B-side connector slots, keyed by 1-indexed connector number as string.",
+                    "additionalProperties": {
+                        "allOf": [{"$ref": "#/components/schemas/CableTermination"}],
+                        "nullable": True,
+                    },
+                },
+            },
+            "required": ["a", "b"],
+        }
+    )
+    def get_terminations(self, obj):
+        depth = get_nested_serializer_depth(self)
+        rows_by_slot = {(row.cable_end, row.connector): row for row in obj.terminations.all()}
+        if obj.cable_type_id:
+            a_connectors = obj.cable_type.a_connectors
+            b_connectors = obj.cable_type.b_connectors
+        else:
+            a_connectors = 1
+            b_connectors = 1
+        result = {"a": {}, "b": {}}
+        for side, count in (("A", a_connectors), ("B", b_connectors)):
+            for connector in range(1, count + 1):
+                row = rows_by_slot.get((side, connector))
+                if row is None:
+                    result[side.lower()][str(connector)] = None
+                    continue
+                termination = row.termination
+                if termination is None:
+                    result[side.lower()][str(connector)] = None
+                    continue
+                result[side.lower()][str(connector)] = return_nested_serializer_data_based_on_depth(
+                    self, depth, obj, termination, f"termination_{side.lower()}"
+                )
+        return result
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -879,25 +957,6 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         data["termination_b_type"] = f"{content_type_b.app_label}.{content_type_b.model}" if content_type_b else None
         data["termination_a_id"] = str(instance.termination_a_id) if instance.termination_a_id else None
         data["termination_b_id"] = str(instance.termination_b_id) if instance.termination_b_id else None
-
-        # Add lanes representation for breakout cables
-        if instance.cable_type_id:
-            lanes = []
-            for lane in instance.get_lanes():
-                a_term = lane["a_termination"]
-                b_term = lane["b_termination"]
-                lanes.append(
-                    {
-                        "lane": lane["lane"],
-                        "a_connector": lane["a_connector"],
-                        "a_position": lane["a_position"],
-                        "b_connector": lane["b_connector"],
-                        "b_position": lane["b_position"],
-                        "a_termination": self._serialize_term(a_term) if a_term else None,
-                        "b_termination": self._serialize_term(b_term) if b_term else None,
-                    }
-                )
-            data["lanes"] = lanes
 
         return data
 
@@ -932,99 +991,230 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def get_termination_b(self, obj):
         return self._get_termination(obj, "b")
 
-    # TODO: disabled for now, to re-enable and test in a future PR
-    # def _resolve_termination_object(self, termination_data):
-    #     """Resolve a termination dict to an object."""
-    #     if termination_data is None:
-    #         return None
-    #     object_type = termination_data.get("object_type")
-    #     object_id = termination_data.get("object_id")
-    #     if not object_type or not object_id:
-    #         raise serializers.ValidationError("Each termination must have 'object_type' and 'object_id'.")
-    #     try:
-    #         app_label, model_name = object_type.split(".")
-    #         ct = ContentType.objects.get_by_natural_key(app_label, model_name)
-    #         return ct.model_class().objects.get(pk=object_id)
-    #     except (ValueError, ContentType.DoesNotExist):
-    #         raise serializers.ValidationError(f"Invalid object_type: {object_type}")
-    #     except ct.model_class().DoesNotExist:
-    #         raise serializers.ValidationError(f"Object not found: {object_type} {object_id}")
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        # Both the legacy `termination_<side>_type`/`_id` fields and the new `terminations` payload
+        # describe the same underlying CableToCableTermination rows; normalize both into a single
+        # `_terminations_payload` list here so `create()` / `update()` have only one shape to apply.
+        # `terminations` is declared read-only as a SerializerMethodField (so it appears in
+        # responses and respects `?depth`), but it's also writable through this peek at
+        # `initial_data`. Per-entry validation is deferred to `_apply_terminations` so it can be
+        # delegated to `CableToCableTerminationSerializer` once we have the cable's pk.
+        payload = self._legacy_termination_entries(attrs)
+        if "terminations" in self.initial_data:
+            # If both legacy fields and a `terminations` payload are present, the `terminations`
+            # entries apply after the legacy ones — last writer wins on overlapping (side, connector).
+            payload.extend(self._parse_terminations_payload(self.initial_data["terminations"]))
+        if payload:
+            attrs["_terminations_payload"] = payload
+        return attrs
 
-    def create(self, validated_data):
-        # Extract termination fields (writable on the serializer but not on the Cable model)
+    def _parse_terminations_payload(self, raw):
+        """Translate the dict-shape `terminations` input into internal `_apply_terminations` entries.
+
+        Input shape:
+            {"a": {"<connector>": null | {"object_type": "<app.model>", "id": "<uuid>"}}, "b": {...}}
+
+        Output: list of {"cable_end": "A"/"B", "connector": int, <fk>: id?} dicts. A slot whose
+        value is `null` (or an empty dict) yields an entry with no FK set, signaling delete to
+        `_apply_terminations`. Only sides/connectors present in the input are touched; absent
+        slots are left alone (PATCH merge semantics, with explicit `null` as the delete sentinel).
+        """
+        if not isinstance(raw, dict):
+            raise serializers.ValidationError(
+                {"terminations": "Expected an object keyed by side ('a'/'b'), then connector number."}
+            )
+        invalid_sides = set(raw) - {"a", "b"}
+        if invalid_sides:
+            raise serializers.ValidationError(
+                {"terminations": f"Invalid side keys: {sorted(invalid_sides)}. Allowed: 'a', 'b'."}
+            )
+        entries = []
+        for side_key in ("a", "b"):
+            if side_key not in raw:
+                continue
+            side_payload = raw[side_key]
+            if not isinstance(side_payload, dict):
+                raise serializers.ValidationError(
+                    {"terminations": {side_key: "Expected an object keyed by connector number."}}
+                )
+            for connector_key, value in side_payload.items():
+                try:
+                    connector = int(connector_key)
+                except (TypeError, ValueError) as exc:
+                    raise serializers.ValidationError(
+                        {"terminations": {side_key: {connector_key: "Connector key must be an integer."}}}
+                    ) from exc
+                entry = {"cable_end": side_key.upper(), "connector": connector}
+                if value is None:
+                    entries.append(entry)
+                    continue
+                if not isinstance(value, dict):
+                    raise serializers.ValidationError(
+                        {"terminations": {side_key: {connector_key: "Expected null or an {object_type, id} object."}}}
+                    )
+                object_type = value.get("object_type")
+                term_id = value.get("id")
+                if not object_type or not term_id:
+                    raise serializers.ValidationError(
+                        {"terminations": {side_key: {connector_key: "Required keys: 'object_type' and 'id'."}}}
+                    )
+                try:
+                    app_label, model = object_type.split(".")
+                except (AttributeError, ValueError) as exc:
+                    raise serializers.ValidationError(
+                        {
+                            "terminations": {
+                                side_key: {connector_key: {"object_type": "Must be of the form 'app_label.modelname'."}}
+                            }
+                        }
+                    ) from exc
+                fk = CONTENT_TYPE_TO_TERMINATION_FK.get((app_label, model))
+                if fk is None:
+                    raise serializers.ValidationError(
+                        {
+                            "terminations": {
+                                side_key: {
+                                    connector_key: {
+                                        "object_type": f"{object_type} is not a valid cable termination type."
+                                    }
+                                }
+                            }
+                        }
+                    )
+                entry[fk] = term_id
+                entries.append(entry)
+        return entries
+
+    def _apply_terminations(self, cable, raw_payload):
+        """Apply `terminations` write payload to a saved Cable, delegating per-row validation.
+
+        Each entry is matched on `(cable_end, connector)`. An entry with no per-type FK set is
+        a delete signal: the existing row at that (side, connector) is removed if present. All
+        other entries are handed to `CableToCableTerminationSerializer` for create/update.
+        """
+        for entry in raw_payload:
+            cable_end = entry["cable_end"]
+            connector = entry["connector"]
+            error_key = {"terminations": {cable_end.lower(): {str(connector): None}}}
+            existing = CableToCableTermination.objects.filter(
+                cable=cable, cable_end=cable_end, connector=connector
+            ).first()
+
+            # If no per-type FK is set with a non-null value, treat the entry as a delete signal.
+            if not any(entry.get(fk) is not None for fk in TERMINATION_FK_FIELDS):
+                if existing is not None:
+                    existing.delete()
+                continue
+
+            payload = {"cable": cable.pk, **{k: entry[k] for k in entry if k != "id"}}
+            # When updating, clear any previously-set FK that the new payload doesn't mention,
+            # so the row's "at most one FK" constraint stays satisfied across type changes.
+            if existing is not None:
+                for fk in TERMINATION_FK_FIELDS:
+                    if fk not in entry and getattr(existing, f"{fk}_id", None) is not None:
+                        payload[fk] = None
+
+            row_serializer = CableToCableTerminationSerializer(instance=existing, data=payload, context=self.context)
+            try:
+                row_serializer.is_valid(raise_exception=True)
+                row_serializer.save()
+            except serializers.ValidationError as exc:
+                error_key["terminations"][cable_end.lower()][str(connector)] = exc.detail
+                raise serializers.ValidationError(error_key) from exc
+
+    def _legacy_termination_entries(self, validated_data):
+        """Pop and translate `termination_a/b_type/_id` into `_apply_terminations` entries (connector 1)."""
         term_a_type = validated_data.pop("termination_a_type", None)
         term_a_id = validated_data.pop("termination_a_id", None)
         term_b_type = validated_data.pop("termination_b_type", None)
         term_b_id = validated_data.pop("termination_b_id", None)
+        entries = []
+        for term_type, term_id, side in (
+            (term_a_type, term_a_id, "a"),
+            (term_b_type, term_b_id, "b"),
+        ):
+            if not (term_type and term_id):
+                continue
+            fk_name = CONTENT_TYPE_TO_TERMINATION_FK.get((term_type.app_label, term_type.model))
+            if fk_name is None:
+                raise serializers.ValidationError(
+                    {
+                        f"termination_{side}_type": (
+                            f"{term_type.app_label}.{term_type.model} is not a valid cable termination type."
+                        )
+                    }
+                )
+            entries.append({"cable_end": side.upper(), "connector": 1, fk_name: term_id})
+        return entries
 
-        # Resolve termination objects and store on the instance for the signal handler
-        cable = Cable(**validated_data)
-        if term_a_type and term_a_id:
-            cable._initial_termination_a = term_a_type.model_class().objects.get(pk=term_a_id)
-        if term_b_type and term_b_id:
-            cable._initial_termination_b = term_b_type.model_class().objects.get(pk=term_b_id)
-
-        cable.validated_save()
-
-        # TODO: disabled for now, to re-enable and test in a future PR
-        # Handle breakout lanes if provided
-        # initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
-        # lanes_data = initial.get("lanes")
-        # if lanes_data and cable.cable_type:
-        #     self._assign_lanes(cable, lanes_data)
-
+    def create(self, validated_data):
+        terminations_payload = validated_data.pop("_terminations_payload", None)
+        with transaction.atomic():
+            cable = Cable(**validated_data)
+            cable.validated_save()
+            if terminations_payload:
+                self._apply_terminations(cable, terminations_payload)
         return cable
 
     def update(self, instance, validated_data):
-        cable = super().update(instance, validated_data)
-
-        # TODO: disabled for now, to re-enable and test in a future PR
-        # initial = self.initial_data if hasattr(self, "initial_data") and isinstance(self.initial_data, dict) else {}
-        # lanes_data = initial.get("lanes")
-        # if lanes_data and cable.cable_type:
-        #     self._assign_lanes(cable, lanes_data)
-
+        terminations_payload = validated_data.pop("_terminations_payload", None)
+        with transaction.atomic():
+            cable = super().update(instance, validated_data)
+            if terminations_payload:
+                self._apply_terminations(cable, terminations_payload)
         return cable
 
-    # TODO: disabled for now, to re-enable and test in a future PR
-    # def _assign_lanes(self, cable, lanes_data):
-    #     """Assign lane terminations to a breakout cable via CableToCableTermination rows."""
-    #     cable_type = cable.cable_type
-    #     mapping = cable_type.mapping
-    #     for lane_data in lanes_data:
-    #         lane_num = lane_data["lane"]
-    #         if lane_num < 1 or lane_num > len(mapping):
-    #             raise serializers.ValidationError(
-    #                 f"Lane {lane_num} is outside the cable type's range (1-{len(mapping)})."
-    #             )
-    #         entry = mapping[lane_num - 1]
-    #
-    #         for key, side, conn in (
-    #             ("a_termination", "A", entry["a_connector"]),
-    #             ("b_termination", "B", entry["b_connector"]),
-    #         ):
-    #             term_obj = self._resolve_termination_object(lane_data.get(key))
-    #             if term_obj is None:
-    #                 continue
-    #             try:
-    #                 fk_field = termination_fk_field(term_obj)
-    #             except TypeError as exc:
-    #                 raise serializers.ValidationError(str(exc)) from exc
-    #             CableToCableTermination.objects.update_or_create(
-    #                 **{fk_field: term_obj},
-    #                 defaults={
-    #                     "cable": cable,
-    #                     "cable_end": side,
-    #                     "connector": conn,
-    #                 },
-    #             )
 
-    def _serialize_term(self, obj):
-        return {
-            "object_type": f"{obj._meta.app_label}.{obj._meta.model_name}",
-            "object_id": str(obj.pk),
-            "display": str(obj),
+class WritableCableSerializer(CableSerializer):
+    """Schema-only variant of `CableSerializer` advertising the writable `terminations` payload.
+
+    The runtime `CableSerializer.terminations` field is a `SerializerMethodField` (for depth-aware
+    reads) — so drf-spectacular marks it `readOnly: true` by default. This subclass overrides the
+    field with a writable `JSONField` purely so the OpenAPI request body schema for POST/PATCH on
+    `/api/dcim/cables/` advertises `terminations` as writable, and documents its accepted shape.
+
+    Not used at runtime; referenced only from `@extend_schema_view` on `CableViewSet`.
+    """
+
+    terminations = extend_schema_field(
+        {
+            "type": "object",
+            "description": (
+                "Terminations to apply, keyed by side ('a'/'b') then 1-indexed connector number. "
+                "Each slot value is either `null` (delete the existing row at this connector) or "
+                'an `{"object_type": "<app.model>", "id": "<uuid>"}` reference to the '
+                "termination to plug in. Sides and connectors omitted from the payload are left "
+                "untouched (PATCH-style merge semantics)."
+            ),
+            "properties": {
+                "a": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "nullable": True,
+                        "type": "object",
+                        "properties": {
+                            "object_type": {"type": "string", "example": "dcim.interface"},
+                            "id": {"type": "string", "format": "uuid"},
+                        },
+                        "required": ["object_type", "id"],
+                    },
+                },
+                "b": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "nullable": True,
+                        "type": "object",
+                        "properties": {
+                            "object_type": {"type": "string", "example": "dcim.interface"},
+                            "id": {"type": "string", "format": "uuid"},
+                        },
+                        "required": ["object_type", "id"],
+                    },
+                },
+            },
         }
+    )(serializers.JSONField(required=False))
 
 
 class TracedCableSerializer(serializers.ModelSerializer):

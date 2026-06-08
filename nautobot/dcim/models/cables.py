@@ -18,6 +18,9 @@ from nautobot.dcim.constants import (
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
     COMPATIBLE_TERMINATION_TYPES,
+    CONTENT_TYPE_TO_TERMINATION_FK,
+    TERMINATION_FK_FIELDS,
+    TERMINATION_FK_TO_CONTENT_TYPE,
 )
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
@@ -377,10 +380,13 @@ class Cable(PrimaryModel):
         Returns None for partially-cabled breakouts where connector 1 is uncabled, by design — the
         backward-compat `termination_a`/`termination_b` properties have a singular meaning that only
         maps cleanly to connector 1. Use `terminations_a`/`terminations_b` for the full set.
+
+        Iterates `.all()` (rather than `.filter()`) so a prefetched `terminations` cache is honored;
+        without this, every call to a `termination_*` property would hit the DB.
         """
-        endpoint = self.terminations.filter(cable_end=side, connector=1).first()
-        if endpoint:
-            return getattr(endpoint, endpoint_attr)
+        for endpoint in self.terminations.all():
+            if endpoint.cable_end == side and endpoint.connector == 1:
+                return getattr(endpoint, endpoint_attr)
         return getattr(self, fallback_attr, None)
 
     @property
@@ -441,13 +447,17 @@ class Cable(PrimaryModel):
 
     @property
     def terminations_a(self):
-        """All A-side CableTermination rows."""
-        return self.terminations.filter(cable_end="A").order_by("connector")
+        """All A-side CableTermination rows.
+
+        Iterates `.all()` (honoring any prefetched `terminations` cache) and filters / sorts in
+        Python so a prefetched parent queryset doesn't suffer a per-cable DB round-trip here.
+        """
+        return sorted((e for e in self.terminations.all() if e.cable_end == "A"), key=lambda e: e.connector)
 
     @property
     def terminations_b(self):
-        """All B-side CableTermination rows."""
-        return self.terminations.filter(cable_end="B").order_by("connector")
+        """All B-side CableTermination rows. See `terminations_a` for the prefetch-honoring rationale."""
+        return sorted((e for e in self.terminations.all() if e.cable_end == "B"), key=lambda e: e.connector)
 
     # ─── Breakout lane properties ───
 
@@ -863,31 +873,6 @@ CABLE_END_CHOICES = (
 )
 
 
-# Per-type one-to-one FK field name → (app_label, model) natural key for its target model.
-# The dict is the source of truth; `TERMINATION_FK_FIELDS` is derived for ordered iteration.
-# At most one of these FKs may be non-null on each CableToCableTermination row; enforced by a
-# CheckConstraint below. The stricter "exactly one" requirement is enforced in `clean()` — at the
-# DB level we allow the all-null state because Django's cascade-delete machinery temporarily nulls
-# the nullable FK before deleting the row, and a CHECK constraint would block that intermediate
-# step on MySQL.
-_TERMINATION_FK_TO_NATURAL_KEY = {
-    "circuit_termination": ("circuits", "circuittermination"),
-    "console_port": ("dcim", "consoleport"),
-    "console_server_port": ("dcim", "consoleserverport"),
-    "front_port": ("dcim", "frontport"),
-    "interface": ("dcim", "interface"),
-    "power_feed": ("dcim", "powerfeed"),
-    "power_outlet": ("dcim", "poweroutlet"),
-    "power_port": ("dcim", "powerport"),
-    "rear_port": ("dcim", "rearport"),
-}
-TERMINATION_FK_FIELDS = tuple(_TERMINATION_FK_TO_NATURAL_KEY)
-
-# Reverse map: (app_label, model_name) → FK field name. Used by signal/form/serializer code that
-# needs to write to the right per-type FK on CableToCableTermination given a termination instance.
-_NATURAL_KEY_TO_TERMINATION_FK = {nk: fk for fk, nk in _TERMINATION_FK_TO_NATURAL_KEY.items()}
-
-
 def termination_fk_field(model_or_instance):
     """Return the CableToCableTermination FK field name corresponding to the given model class or instance.
 
@@ -895,11 +880,11 @@ def termination_fk_field(model_or_instance):
     """
     opts = model_or_instance._meta
     try:
-        return _NATURAL_KEY_TO_TERMINATION_FK[(opts.app_label, opts.model_name)]
+        return CONTENT_TYPE_TO_TERMINATION_FK[(opts.app_label, opts.model_name)]
     except KeyError:
         raise TypeError(
             f"{opts.label} is not a known CableTermination subclass; expected one of "
-            f"{sorted(_NATURAL_KEY_TO_TERMINATION_FK)}"
+            f"{sorted(CONTENT_TYPE_TO_TERMINATION_FK)}"
         ) from None
 
 
@@ -1088,7 +1073,7 @@ class CableToCableTermination(BaseModel):
         """
         for field in TERMINATION_FK_FIELDS:
             if getattr(self, f"{field}_id", None) is not None:
-                app_label, model = _TERMINATION_FK_TO_NATURAL_KEY[field]
+                app_label, model = TERMINATION_FK_TO_CONTENT_TYPE[field]
                 return ContentType.objects.get_by_natural_key(app_label, model)
         return None
 

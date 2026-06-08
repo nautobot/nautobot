@@ -6,6 +6,7 @@ from unittest import expectedFailure, mock
 import uuid
 from zoneinfo import ZoneInfo
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -24,6 +25,9 @@ import time_machine
 from nautobot.circuits.models import CircuitType
 from nautobot.core.celery.schedulers import NautobotScheduleEntry
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms import CommentField, JSONField as JSONFormField
+from nautobot.core.forms.fields import LaxURLField, NullableDateField
 from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
@@ -2401,6 +2405,118 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
             instance.data_type = MetadataTypeDataTypeChoices.TYPE_TEXT
             instance.validated_save()
 
+    def test_to_form_field_contact_team_returns_none(self):
+        """CONTACT_TEAM data_type has no `_value` input — `to_form_field` must return None
+        so callers can branch on absence rather than receiving a no-op widget."""
+
+        mt = MetadataType.objects.create(
+            name="MT contact-team", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        self.assertIsNone(mt.to_form_field())
+        self.assertNotIsInstance(mt.to_form_field(), django_forms.Field)
+
+    def test_to_form_field_integer_returns_integer_field(self):
+
+        mt = MetadataType.objects.create(name="MT int", data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER)
+        field = mt.to_form_field(initial=42)
+        self.assertIs(type(field), django_forms.IntegerField)
+        self.assertEqual(field.initial, 42)
+        self.assertFalse(field.required)
+
+    def test_to_form_field_float_returns_float_field(self):
+
+        mt = MetadataType.objects.create(name="MT float", data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT)
+        field = mt.to_form_field(initial=1.5)
+        self.assertIs(type(field), django_forms.FloatField)
+        self.assertEqual(field.initial, 1.5)
+
+    def test_to_form_field_boolean_returns_nullboolean_field(self):
+
+        mt = MetadataType.objects.create(name="MT bool", data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN)
+        field = mt.to_form_field(initial=False)
+        self.assertIs(type(field), django_forms.NullBooleanField)
+        widget_choices = dict(field.widget.choices)
+        self.assertIn(None, widget_choices)
+        self.assertIn(True, widget_choices)
+        self.assertIn(False, widget_choices)
+
+    def test_to_form_field_date_returns_nullable_date_field(self):
+
+        mt = MetadataType.objects.create(name="MT date", data_type=MetadataTypeDataTypeChoices.TYPE_DATE)
+        field = mt.to_form_field()
+        self.assertIs(type(field), NullableDateField)
+
+    def test_to_form_field_datetime_returns_datetime_field(self):
+
+        mt = MetadataType.objects.create(name="MT datetime", data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME)
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.DateTimeField)
+
+    def test_to_form_field_url_returns_lax_url_field(self):
+
+        mt = MetadataType.objects.create(name="MT url", data_type=MetadataTypeDataTypeChoices.TYPE_URL)
+        field = mt.to_form_field()
+        self.assertIs(type(field), LaxURLField)
+
+    def test_to_form_field_text_returns_charfield_with_max_length(self):
+        mt = MetadataType.objects.create(name="MT text", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        field = mt.to_form_field(initial="hello")
+        self.assertIs(type(field), django_forms.CharField)
+        self.assertEqual(field.max_length, CHARFIELD_MAX_LENGTH)
+        self.assertEqual(field.initial, "hello")
+
+    def test_to_form_field_markdown_returns_comment_field(self):
+
+        mt = MetadataType.objects.create(name="MT md", data_type=MetadataTypeDataTypeChoices.TYPE_MARKDOWN)
+        field = mt.to_form_field()
+        self.assertIs(type(field), CommentField)
+
+    def test_to_form_field_select_returns_choice_field_with_choices(self):
+
+        mt = MetadataType.objects.create(name="MT select", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="alpha")
+        MetadataChoice.objects.create(metadata_type=mt, value="beta")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.ChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertIn("alpha", choice_values)
+        self.assertIn("beta", choice_values)
+
+    def test_to_form_field_multiselect_returns_multiple_choice_field(self):
+
+        mt = MetadataType.objects.create(name="MT multiselect", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="x")
+        MetadataChoice.objects.create(metadata_type=mt, value="y")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.MultipleChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertEqual(set(choice_values), {"x", "y"})
+
+    def test_to_form_field_json_falls_back_to_jsonformfield(self):
+
+        mt = MetadataType.objects.create(name="MT json", data_type=MetadataTypeDataTypeChoices.TYPE_JSON)
+        field = mt.to_form_field()
+        self.assertIs(type(field), JSONFormField)
+
+    def test_to_form_field_applies_form_control(self):
+        """The returned field's widget always carries Bootstrap's `form-control` class so callers
+        don't need to re-apply it after late-stage swaps (e.g. in `ObjectMetadataForm._adapt_value_field`
+        or the HTMX `value_widget` endpoint)."""
+        for data_type in (
+            MetadataTypeDataTypeChoices.TYPE_TEXT,
+            MetadataTypeDataTypeChoices.TYPE_INTEGER,
+            MetadataTypeDataTypeChoices.TYPE_BOOLEAN,
+            MetadataTypeDataTypeChoices.TYPE_DATE,
+            MetadataTypeDataTypeChoices.TYPE_URL,
+            MetadataTypeDataTypeChoices.TYPE_JSON,
+        ):
+            with self.subTest(data_type=data_type):
+                mt = MetadataType.objects.create(name=f"MT FC {data_type}", data_type=data_type)
+                field = mt.to_form_field()
+                self.assertIn("form-control", field.widget.attrs.get("class", ""))
+
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
     model = ObjectChange
@@ -2876,6 +2992,81 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance2.scoped_fields = ["role", "status", "type"]
             instance2.validated_save()
+
+    def _make_om(self, data_type, value=None, *, contact=None, team=None):
+        """Helper to build an ObjectMetadata for a fresh MetadataType of the given data_type."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        mt = MetadataType.objects.create(name=f"GVD {data_type}", data_type=data_type)
+        mt.content_types.set([location_ct])
+        # Use a Location not already metadata-targeted to keep the helper independent.
+        loc = Location.objects.filter(associated_object_metadata__isnull=True).first()
+        return ObjectMetadata(
+            metadata_type=mt,
+            _value=value,
+            contact=contact,
+            team=team,
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=loc.pk,
+        )
+
+    def test_get_value_display_text_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value="hello")
+        self.assertEqual(om.get_value_display(), "hello")
+
+    def test_get_value_display_integer_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_INTEGER, value=42)
+        self.assertEqual(om.get_value_display(), 42)
+
+    def test_get_value_display_boolean_renders_html_icon(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_BOOLEAN, value=True)
+        # render_boolean(True) emits the check-bold span; render_boolean(False) emits close-thick.
+        self.assertIn("mdi-check-bold", om.get_value_display())
+        om._value = False
+        self.assertIn("mdi-close-thick", om.get_value_display())
+
+    def test_get_value_display_url_returns_linkified_anchor(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_URL, value="https://example.com")
+        rendered = om.get_value_display()
+        self.assertIn('href="https://example.com"', rendered)
+        self.assertIn(">https://example.com<", rendered)
+
+    def test_get_value_display_markdown_renders_html(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MARKDOWN, value="**bold**")
+        rendered = om.get_value_display()
+        self.assertIn("<strong>bold</strong>", rendered)
+
+    def test_get_value_display_json_pretty_prints(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_JSON, value={"key": "val"})
+        rendered = om.get_value_display()
+        self.assertIn("language-json", rendered)
+        self.assertIn("key", rendered)
+
+    def test_get_value_display_multiselect_joins_with_commas(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MULTISELECT, value=["red", "blue"])
+        self.assertEqual(om.get_value_display(), "red, blue")
+
+    def test_get_value_display_contact_team_returns_linkified_contact(self):
+        contact = Contact.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, contact=contact)
+        rendered = om.get_value_display()
+        self.assertIn(contact.get_absolute_url(), rendered)
+        self.assertIn(str(contact), rendered)
+
+    def test_get_value_display_contact_team_returns_linkified_team(self):
+        team = Team.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, team=team)
+        rendered = om.get_value_display()
+        self.assertIn(team.get_absolute_url(), rendered)
+        self.assertIn(str(team), rendered)
+
+    def test_get_value_display_contact_team_returns_none_when_neither_set(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM)
+        self.assertIsNone(om.get_value_display())
+
+    def test_get_value_display_returns_none_when_value_is_none(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value=None)
+        self.assertIsNone(om.get_value_display())
 
 
 class RoleTest(ModelTestCases.BaseModelTestCase):

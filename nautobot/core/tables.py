@@ -432,7 +432,7 @@ class BooleanColumn(django_tables2.Column):
 
 class ButtonsColumn(django_tables2.TemplateColumn):
     """
-    Render edit, delete, and changelog buttons for an object.
+    Render detail, changelog, edit, and delete buttons for an object.
 
     Args:
         model (type(Model)): Model class to use for calculating URL view names
@@ -440,7 +440,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
-    buttons = ("changelog", "edit", "delete")
+    buttons = ("detail", "changelog", "edit", "delete")
     attrs = {
         "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
         "tf": {"class": "nb-w-0"},
@@ -456,6 +456,14 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
             {prepend_template}
+            {{% if "detail" in buttons %}}
+                <li>
+                    <a href="{{% url '{detail_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
+                        <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                        Details
+                    </a>
+                </li>
+            {{% endif %}}
             {{% if "changelog" in buttons %}}
                 <li>
                     <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
@@ -498,6 +506,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         changelog_route = get_route_for_model(model, "changelog")
         edit_route = get_route_for_model(model, "edit")
         delete_route = get_route_for_model(model, "delete")
+        detail_route = get_route_for_model(model, "")
 
         template_code = self.template_code.format(
             app_label=app_label,
@@ -506,6 +515,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             changelog_route=changelog_route,
             edit_route=edit_route,
             delete_route=delete_route,
+            detail_route=detail_route,
             pk_field=pk_field,
             buttons=buttons,
             prepend_template=prepend_template,
@@ -792,7 +802,10 @@ class ComputedFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        return self.computedfield.render({"obj": record})
+        value = self.computedfield.render({"obj": record})
+        if self.computedfield.output_type == choices.ComputedFieldTypeChoices.TYPE_MARKDOWN:
+            return helpers.render_markdown(value)
+        return value
 
 
 class CustomFieldColumn(django_tables2.Column):

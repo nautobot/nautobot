@@ -38,6 +38,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -195,6 +196,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    output_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField
@@ -740,13 +742,18 @@ class JobResultRevokePreviewSerializer(serializers.Serializer):
 
     message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
     action = serializers.ChoiceField(
-        choices=["TERMINATE", "REAP", "None"],
-        help_text="TERMINATE if worker alive; REAP if no worker; None if job already finished.",
+        choices=["TERMINATE", "REAP", "ABANDON", "None"],
+        help_text=(
+            "TERMINATE if worker alive; "
+            "REAP if no worker; "
+            "ABANDON if backend unreachable; "
+            "None if job already finished."
+        ),
     )
     action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
     job_status = serializers.ChoiceField(
-        choices=["RUNNING", "NOT RUNNING", *JobResultStatusChoices.ALL_STATES],
-        help_text=("RUNNING or NOT RUNNING for unready jobs; for ready jobs, the terminal state."),
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
+        help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
     )
     irreversible = serializers.CharField(
         required=False, help_text="Warning that the action cannot be undone. Omitted when action is None."

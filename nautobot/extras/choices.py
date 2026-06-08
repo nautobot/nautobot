@@ -157,6 +157,16 @@ class CustomFieldTypeChoices(ChoiceSet):
     )
 
 
+class ComputedFieldTypeChoices(ChoiceSet):
+    TYPE_TEXT = "text"
+    TYPE_MARKDOWN = "markdown"
+
+    CHOICES = (
+        (TYPE_TEXT, "Text"),
+        (TYPE_MARKDOWN, "Markdown"),
+    )
+
+
 #
 # Button Classes
 #
@@ -387,10 +397,12 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 class JobRevocationTypeChoices(ChoiceSet):
     TYPE_TERMINATED = "terminated"
     TYPE_REAPED = "reaped"
+    TYPE_ABANDONED = "abandoned"
 
     CHOICES = (
         (TYPE_TERMINATED, "Terminated"),
         (TYPE_REAPED, "Reaped"),
+        (TYPE_ABANDONED, "Abandoned"),
     )
 
 
