@@ -62,6 +62,27 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.browser.select("destination_type", str(power_panel_content_type.pk))
         self.assertEqual(self.browser.find_by_id("id_destination_type").first.value, str(power_panel_content_type.pk))
 
+        # Switching back to symmetric should re-apply mirroring and lock destination fields prior to submit.
+        self.browser.select("type", RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC)
+        self.assertEqual(self.browser.find_by_id("id_destination_type").first.value, str(device_content_type.pk))
+        self.assertFalse(self.browser.find_by_id("id_destination_type").first._element.is_enabled())
+
+        # Submit and verify a relationship is successfully created with symmetric destination values preserved.
+        self.scroll_element_into_view(css='button[name="_create"]', block="center")
+        self.browser.find_by_css('button[name="_create"]').click()
+        self.assertTrue(self.browser.is_text_present("Created relationship"))
+
+        relationship = Relationship.objects.get(label="Symmetric Relationship Form Test")
+        self.assertEqual(relationship.type, RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC)
+        self.assertEqual(relationship.source_type, device_content_type)
+        self.assertEqual(relationship.destination_type, device_content_type)
+        self.assertEqual(relationship.source_label, "Peers")
+        self.assertEqual(relationship.destination_label, "Peers")
+        self.assertEqual(relationship.source_filter, {"name__ic": "peer"})
+        self.assertEqual(relationship.destination_filter, {"name__ic": "peer"})
+        self.assertTrue(relationship.source_hidden)
+        self.assertTrue(relationship.destination_hidden)
+
     def test_relationship_advanced_ui(self):
         """
         This test creates a device and a relationship for that device.
