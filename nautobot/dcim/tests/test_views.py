@@ -3246,6 +3246,9 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+    # ConsolePort is the first cabled component served by ComponentBulkDisconnectViewMixin;
+    # opt in to the new-behavior tests (form-error flash, per-cable perm check, form-invalid 200).
+    bulk_disconnect_uses_new_mixin = True
 
     @classmethod
     def setUpTestData(cls):
@@ -3329,6 +3332,19 @@ class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects = console_server_ports
         cls.selected_objects_parent_name = device.name
 
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cabled_a = ConsoleServerPort.objects.create(device=device, name="Console Server Port Cabled A")
+        cabled_b = ConsoleServerPort.objects.create(device=device, name="Console Server Port Cabled B")
+        peer_a = ConsolePort.objects.create(device=device, name="CP Peer for CSP A")
+        peer_b = ConsolePort.objects.create(device=device, name="CP Peer for CSP B")
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = console_server_ports[0]
+
         cls.form_data = {
             "device": device.pk,
             "name": "Console Server Port X",
@@ -3376,6 +3392,22 @@ class PowerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = power_ports
         cls.selected_objects_parent_name = device.name
+
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        peer_device = create_test_device("PP Peer Device")
+        cabled_a = PowerPort.objects.create(device=device, name="Power Port Cabled A")
+        cabled_b = PowerPort.objects.create(device=device, name="Power Port Cabled B")
+        peer_pp_a = PowerPort.objects.create(device=peer_device, name="Upstream PP A")
+        peer_pp_b = PowerPort.objects.create(device=peer_device, name="Upstream PP B")
+        peer_a = PowerOutlet.objects.create(device=peer_device, name="Upstream Outlet A", power_port=peer_pp_a)
+        peer_b = PowerOutlet.objects.create(device=peer_device, name="Upstream Outlet B", power_port=peer_pp_b)
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = power_ports[0]
 
         cls.form_data = {
             "device": device.pk,
@@ -3439,6 +3471,20 @@ class PowerOutletTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = poweroutlets
         cls.selected_objects_parent_name = device.name
+
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        peer_device = create_test_device("PO Peer Device")
+        cabled_a = PowerOutlet.objects.create(device=device, name="Power Outlet Cabled A", power_port=powerports[0])
+        cabled_b = PowerOutlet.objects.create(device=device, name="Power Outlet Cabled B", power_port=powerports[0])
+        peer_a = PowerPort.objects.create(device=peer_device, name="Downstream PP A")
+        peer_b = PowerPort.objects.create(device=peer_device, name="Downstream PP B")
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = poweroutlets[0]
 
         cls.form_data = {
             "device": device.pk,
@@ -3525,6 +3571,19 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = interfaces
         cls.selected_objects_parent_name = device.name
+
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cabled_a = Interface.objects.create(device=device, name="Interface Cabled A", status=status_active)
+        cabled_b = Interface.objects.create(device=device, name="Interface Cabled B", status=status_active)
+        peer_a = Interface.objects.create(device=device, name="Interface Peer A", status=status_active)
+        peer_b = Interface.objects.create(device=device, name="Interface Peer B", status=status_active)
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = interfaces[1]
 
         vlan_status = Status.objects.get_for_model(VLAN).first()
         vlan_group = VLANGroup.objects.first()
@@ -3917,6 +3976,16 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects = frontports
         cls.selected_objects_parent_name = device.name
 
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        # The first three rearports are already occupied by frontports above; use rearports 4-5 as peers.
+        Cable.objects.create(termination_a=frontports[0], termination_b=rearports[3], status=cable_status)
+        Cable.objects.create(termination_a=frontports[1], termination_b=rearports[4], status=cable_status)
+        frontports[0].refresh_from_db()
+        frontports[1].refresh_from_db()
+        cls.cabled_objects = [frontports[0], frontports[1]]
+        cls.uncabled_object = frontports[2]
+
         cls.form_data = {
             "device": device.pk,
             "name": "Front Port X",
@@ -3989,6 +4058,27 @@ class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         # Required by ViewTestCases.DeviceComponentViewTestCase.test_bulk_rename
         cls.selected_objects = rearports
         cls.selected_objects_parent_name = device.name
+
+        # Fixtures for ViewTestCases.DeviceComponentViewTestCase.test_bulk_disconnect_*
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cabled_a = RearPort.objects.create(
+            device=device, type=PortTypeChoices.TYPE_8P8C, positions=24, name="Rear Port Cabled A"
+        )
+        cabled_b = RearPort.objects.create(
+            device=device, type=PortTypeChoices.TYPE_8P8C, positions=24, name="Rear Port Cabled B"
+        )
+        peer_a = RearPort.objects.create(
+            device=device, type=PortTypeChoices.TYPE_8P8C, positions=24, name="Rear Port Peer A"
+        )
+        peer_b = RearPort.objects.create(
+            device=device, type=PortTypeChoices.TYPE_8P8C, positions=24, name="Rear Port Peer B"
+        )
+        Cable.objects.create(termination_a=cabled_a, termination_b=peer_a, status=cable_status)
+        Cable.objects.create(termination_a=cabled_b, termination_b=peer_b, status=cable_status)
+        cabled_a.refresh_from_db()
+        cabled_b.refresh_from_db()
+        cls.cabled_objects = [cabled_a, cabled_b]
+        cls.uncabled_object = rearports[0]
 
         cls.form_data = {
             "device": device.pk,

@@ -2268,10 +2268,16 @@ class ViewTestCases:
         Required class attributes on the consuming TestCase:
             cabled_objects: list of >=2 instances of self.model whose `.cable` is set.
             uncabled_object: optional instance with `.cable is None` for skip-path coverage.
+            bulk_disconnect_uses_new_mixin: True if the model's bulk_disconnect URL is served by
+                `ComponentBulkDisconnectViewMixin` (which enforces per-cable change perm, surfaces
+                form errors as messages, and uses form-invalid 200s). False (default) preserves the
+                legacy `BulkDisconnectView` CBV semantics; the three behavior-only tests skip in
+                that case until the corresponding model is migrated to the new mixin.
         """
 
         cabled_objects: list = []
         uncabled_object = None
+        bulk_disconnect_uses_new_mixin: bool = False
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_disconnect_objects_without_permission(self):
@@ -2386,6 +2392,11 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.bulk_disconnect_uses_new_mixin:
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not flash form errors via messages."
+                )
             self.add_permissions(
                 f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
                 "dcim.change_cable",
@@ -2405,6 +2416,11 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.bulk_disconnect_uses_new_mixin:
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView; "
+                    "the form-invalid 200 response on constrained PKs is only emitted by ComponentBulkDisconnectViewMixin."
+                )
             self.assertTrue(
                 self.cabled_objects and len(self.cabled_objects) >= 2,
                 f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
@@ -2447,6 +2463,11 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.bulk_disconnect_uses_new_mixin:
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not enforce per-cable change permission."
+                )
             self.assertTrue(
                 self.cabled_objects and len(self.cabled_objects) >= 2,
                 f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
