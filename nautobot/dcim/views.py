@@ -4092,6 +4092,10 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
         """
         POST without `_confirm`: render the confirmation page listing the selected components.
         POST with `_confirm`: validate the form and detach each component from its cable.
+        When `_confirm` is present but the form is invalid (e.g. no `pk` submitted), each error
+        is surfaced as a flash message before the confirmation page is re-rendered, since the
+        underlying `confirmation_form.html` template hides the `pk` field and won't otherwise
+        display its errors.
         """
         queryset = self.get_queryset()
         model = queryset.model
@@ -4104,6 +4108,10 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
             if form.is_valid():
                 self._process_bulk_disconnect_form(form)
                 return redirect(self.get_return_url(request))
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    label = "" if field_name == "__all__" else f"{field_name}: "
+                    messages.error(request, f"{label}{error}")
         else:
             form = form_class(initial={"pk": self.pk_list})
 
