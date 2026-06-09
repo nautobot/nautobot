@@ -114,6 +114,7 @@ class ComponentModel(PrimaryModel):
 
 
 class ModularComponentModel(ComponentModel):
+    root_device = ...
     device = ForeignKeyWithAutoRelatedName(
         to="dcim.Device",
         on_delete=models.CASCADE,
@@ -132,6 +133,7 @@ class ModularComponentModel(ComponentModel):
     class Meta:
         abstract = True
         ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
+        # TODO: custom clean method or devce / module / name constraint
         constraints = [
             models.UniqueConstraint(
                 fields=("device", "name"),
@@ -1590,11 +1592,13 @@ class ModuleBay(PrimaryModel):
 
     class Meta:
         # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
+
         ordering = (
             "parent_device",
             "parent_module__id",
             "_name",
         )
+        # TODO: parent device, parent module, name
         constraints = [
             models.UniqueConstraint(
                 fields=["parent_device", "name"],
