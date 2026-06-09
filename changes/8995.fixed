@@ -1,1 +1,0 @@
-Added default ordering to `VRFPrefixAssignment` and `VRFDeviceAssignment` so paginated REST/GraphQL queries return deterministic results.
