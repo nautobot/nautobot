@@ -1,0 +1,1 @@
+Moved the ObjectMetadata value-widget to a detail action on `MetadataTypeUIViewSet`.

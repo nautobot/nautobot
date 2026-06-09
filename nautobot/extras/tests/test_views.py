@@ -3278,6 +3278,84 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.form_data["data_type"] = self.model.objects.first().data_type
         return super().test_edit_object_with_permission()
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_renders_text_input_for_text_metadata_type(self):
+        """`value_widget` detail action returns a CharField-backed widget for TYPE_TEXT."""
+        text_mdt = MetadataType.objects.create(
+            name="Text MDT for value widget", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": text_mdt.pk}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # TYPE_TEXT renders an <input type="text"> with the field name `value`.
+        self.assertIn('name="value"', content)
+        # Help text mentions the resolved metadata type's display name.
+        self.assertIn(str(text_mdt), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_contact_team_metadata_type(self):
+        """For CONTACT_TEAM types, `MetadataType.to_form_field` returns None, so the value
+        widget endpoint renders an empty fragment (no input). HTMX swaps in nothing, removing
+        any prior value input."""
+        contact_team_mdt = MetadataType.objects.create(
+            name="Contact/Team MDT for value widget", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": contact_team_mdt.pk}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset).strip()
+        self.assertNotIn('name="value"', content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_404_for_nonexistent_metadata_type(self):
+        """As a detail action, an unknown metadata-type pk resolves via get_object() → 404."""
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": "00000000-0000-0000-0000-000000000000"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 404)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_without_permission(self):
+        """A user lacking `extras.view_metadatatype` is denied the value-widget detail action."""
+        mdt = MetadataType.objects.create(name="No-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertHttpStatus(self.client.get(url, HTTP_HX_REQUEST="true"), 403, msg=url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_permission(self):
+        """With `extras.view_metadatatype`, the value widget renders for the metadata type."""
+        self.add_permissions("extras.view_metadatatype")
+        mdt = MetadataType.objects.create(name="View-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertBodyContains(self.client.get(url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_constrained_permission(self):
+        """A constrained view permission renders the permitted type's widget but 404s others."""
+        permitted_mdt = MetadataType.objects.create(name="Permitted", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        other_mdt = MetadataType.objects.create(name="Forbidden", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+
+        obj_perm = ObjectPermission(
+            name="Constrained metadata type view",
+            constraints={"pk": permitted_mdt.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(MetadataType))
+
+        permitted_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": permitted_mdt.pk})
+        self.assertBodyContains(self.client.get(permitted_url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+        other_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": other_mdt.pk})
+        self.assertHttpStatus(self.client.get(other_url, HTTP_HX_REQUEST="true"), 404, msg=other_url)
+
 
 class NoteTestCase(
     ViewTestCases.CreateObjectViewTestCase,
@@ -6498,59 +6576,6 @@ class ObjectMetadataTestCase(
             },
         )
         self.assertRedirects(response, return_url, fetch_redirect_response=False)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_value_widget_renders_text_input_for_text_metadata_type(self):
-        """`value_widget` HTMX endpoint returns a CharField-backed widget for TYPE_TEXT."""
-        response = self.client.get(
-            reverse("extras:objectmetadata_value_widget"),
-            data={"metadata_type": str(self.text_mdt.pk)},
-            headers={"HX-Request": "true"},
-        )
-        self.assertHttpStatus(response, 200)
-        content = response.content.decode(response.charset)
-        # TYPE_TEXT renders an <input type="text"> with the field name `value`.
-        self.assertIn('name="value"', content)
-        # Help text mentions the resolved metadata type's display name.
-        self.assertIn(str(self.text_mdt), content)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_value_widget_returns_empty_for_contact_team_metadata_type(self):
-        """For CONTACT_TEAM types, `MetadataType.to_form_field` returns None, so the value
-        widget endpoint renders an empty fragment (no input). HTMX swaps in nothing, removing
-        any prior value input."""
-        response = self.client.get(
-            reverse("extras:objectmetadata_value_widget"),
-            data={"metadata_type": str(self.contact_team_mdt.pk)},
-            headers={"HX-Request": "true"},
-        )
-        self.assertHttpStatus(response, 200)
-        content = response.content.decode(response.charset).strip()
-        self.assertNotIn('name="value"', content)
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_value_widget_returns_empty_for_missing_metadata_type(self):
-        """No `metadata_type` query param → empty fragment, no crash."""
-        response = self.client.get(
-            reverse("extras:objectmetadata_value_widget"),
-            headers={"HX-Request": "true"},
-        )
-        self.assertHttpStatus(response, 200)
-        self.assertNotIn('name="value"', response.content.decode(response.charset))
-
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-    def test_value_widget_returns_empty_for_invalid_metadata_type(self):
-        """Bogus pk or non-existent metadata_type → swallow via the view's try/except, return
-        an empty fragment instead of raising."""
-        for bogus in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
-            with self.subTest(metadata_type=bogus):
-                response = self.client.get(
-                    reverse("extras:objectmetadata_value_widget"),
-                    data={"metadata_type": bogus},
-                    headers={"HX-Request": "true"},
-                )
-                self.assertHttpStatus(response, 200)
-                self.assertNotIn('name="value"', response.content.decode(response.charset))
 
     def test_object_metadata_fields_panel_delegates_value_rendering_to_model(self):
         """The panel's render_value override delegates `_value` rendering to
