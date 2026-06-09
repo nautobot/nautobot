@@ -153,28 +153,9 @@ def clear_backpopulated_device(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    """
-    Data migration: back-populate the root device FK on modular components.
-
-    Before applying:
-      1. Replace the dependency below with the actual latest dcim migration in
-         your branch, e.g. ("dcim", "0070_my_previous_migration").
-      2. Run ANALYZE on dcim_module and dcim_modulebay beforehand so the query
-         planner has fresh statistics for the recursive CTE joins.
-      3. The UPDATE on dcim_interface (215M+ rows) will hold row-level locks for
-         its duration. Plan for a maintenance window, or batch the interface
-         update separately with keyset pagination if zero-downtime is required.
-      4. Partial indexes will significantly speed up the joins into target tables:
-           CREATE INDEX CONCURRENTLY ON dcim_interface (module_id)
-           WHERE device_id IS NULL;
-           CREATE INDEX CONCURRENTLY ON dcim_modulebay (parent_module_id)
-           WHERE parent_device_id IS NULL;
-         Drop them after the migration completes if not needed ongoing.
-    """
+    """Data migration: back-populate the root device FK on modular components."""
 
     dependencies = [
-        # TODO: replace with the real latest dcim migration in your branch, e.g.:
-        # ("dcim", "0070_some_previous_migration"),
         ("dcim", "0090_cablepath_add_lane_fields"),
     ]
 
