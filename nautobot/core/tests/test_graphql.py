@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.urls import reverse
 import graphene.types
@@ -25,6 +25,7 @@ from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
     _make_filter_cache_key,
+    generate_attrs_for_schema_type,
     generate_list_search_parameters,
     generate_schema_type,
 )
@@ -37,7 +38,7 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
 from nautobot.core.testing import AssertNoRepeatedQueries, create_test_user, NautobotTestClient, TestCase
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
@@ -548,6 +549,43 @@ class GraphQLSearchParameters(GraphQLTestCaseBase):
                 self.assertIn(field, params["args"].keys())
             else:
                 self.assertIn(field, params.keys())
+
+
+@tag("example_app")
+class GraphQLReservedFieldKwargFilters(TestCase):
+    """Regression tests for filters whose names collide with reserved `graphene.Field` kwargs (#9021).
+
+    The `example_app.ExampleModelFilterSet` declares `default_value`, `required`, and `resolver`
+    filters specifically to exercise this path.
+    """
+
+    reserved_filter_names = ("default_value", "required", "resolver")
+
+    def test_reserved_filter_names_relocated_to_args(self):
+        from example_app.filters import ExampleModelFilterSet
+
+        args = get_filtering_args_from_filterset(ExampleModelFilterSet)
+        for reserved in self.reserved_filter_names:
+            # Relocated out of the top-level Field kwargs...
+            self.assertNotIn(reserved, args)
+            # ...but still exposed as a GraphQL argument.
+            self.assertIn(reserved, args["args"])
+
+    def test_schema_type_builds_with_reserved_filter_names(self):
+        from example_app.models import ExampleModel
+
+        schema_type = generate_schema_type(app_name="example_app", model=ExampleModel)
+
+        # The list query field exposes the reserved filter names as arguments.
+        search_params = generate_list_search_parameters(schema_type)
+        for reserved in self.reserved_filter_names:
+            self.assertIn(reserved, search_params["args"])
+
+        # Mounting the generated attrs onto an ObjectType triggers graphene's make_dataclass(),
+        # which raised `ValueError: mutable default ... Argument` before the fix.
+        attrs = generate_attrs_for_schema_type(schema_type)
+        query = type("ExampleModelReservedKwargQuery", (graphene.types.ObjectType,), attrs)
+        self.assertIn("example_models", query._meta.fields)
 
 
 class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
