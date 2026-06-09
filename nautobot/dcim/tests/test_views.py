@@ -115,6 +115,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.dcim.views import (
     ConsoleConnectionsListView,
+    ConsolePortUIViewSet,
     DeviceUIViewSet,
     InterfaceConnectionsListView,
     ModuleTypeComponentAddButton,
@@ -3306,8 +3307,6 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     def test_get_selected_objects_parents_name_empty(self):
         """Covers the empty-queryset branch (`return ""`) in get_selected_objects_parents_name."""
-        from nautobot.dcim.views import ConsolePortUIViewSet
-
         viewset = ConsolePortUIViewSet()
         self.assertEqual(viewset.get_selected_objects_parents_name(ConsolePort.objects.none()), "")
 

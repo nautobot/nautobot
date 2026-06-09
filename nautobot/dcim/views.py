@@ -4006,6 +4006,13 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
         and any surviving terminations are left intact. After the loop, the user is shown a
         bulleted list of the now-orphaned cables so they can clean up any that are no longer
         needed.
+
+        Permission enforcement:
+          - Per-component change perm is implicit in `self.get_queryset()` (restrict()).
+          - Per-cable change perm is verified inside the transaction by running the disconnected
+            cable PKs through `Cable.objects.restrict(user, "change")`; if any disconnected cable
+            falls outside that restricted set, `ObjectDoesNotExist` is raised, rolling back every
+            disconnect in the transaction.
         """
         request = self.request
         queryset = self.get_queryset()
@@ -4014,17 +4021,31 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
         try:
             with transaction.atomic():
                 count = 0
-                disconnected_cables = []
+                # Both collections are sets to dedupe when a single cable is hit by multiple
+                # selected terminations (both ends of a cable, or multiple terminations on a
+                # breakout cable): each unique cable should appear in the user message once,
+                # and the permission check below must compare against unique cable PKs.
+                disconnected_cables = set()
+                disconnected_cable_pks = set()
                 for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
                     if obj.cable is None:
                         continue
                     cable_label = str(obj.cable)
                     cable_url = obj.cable.get_absolute_url()
+                    disconnected_cable_pks.add(obj.cable_id)
 
                     disconnect_termination(obj)
 
-                    disconnected_cables.append((cable_label, cable_url))
+                    disconnected_cables.add((cable_label, cable_url))
                     count += 1
+
+                # Enforce object-level Cable change permission. The legacy `BulkDisconnectView`
+                # only checked the component's change perm even though it deleted the cable;
+                # this closes that gap. Raising `ObjectDoesNotExist` rolls back the transaction.
+                if Cable.objects.restrict(request.user, "change").filter(pk__in=disconnected_cable_pks).count() != len(
+                    disconnected_cable_pks
+                ):
+                    raise ObjectDoesNotExist
 
             msg = f"Disconnected {count} {model._meta.verbose_name_plural}"
             logger.info(msg)
@@ -4045,6 +4066,11 @@ class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
                         cable_items,
                     ),
                 )
+        except ObjectDoesNotExist:
+            msg = "Bulk disconnect failed due to object-level permissions violation on one or more cables"
+            logger.info(msg)
+            messages.error(request, msg)
+            self.success_url = self.get_return_url(request)
         except ProtectedError as e:  # pragma: no cover
             logger.info("Caught ProtectedError while attempting to disconnect cables")
             handle_protectederror(queryset, request, e)
