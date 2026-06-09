@@ -380,9 +380,8 @@ class VMInterfaceUIViewSet(
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="ipaddress_table",
-                add_button_route=None,
-                table_title="",
-                header_extra_content_template_path=None,
+                add_button_route=None,  # hides Add button
+                header_extra_content_template_path=None,  # hides badge
             ),
             # Tagged + untagged VLANs
             object_detail.ObjectsTablePanel(
@@ -390,18 +389,16 @@ class VMInterfaceUIViewSet(
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
                 context_table_key="vlan_table",
-                add_button_route=None,
-                table_title="",
-                header_extra_content_template_path=None,
+                add_button_route=None,  # hides Add button
+                header_extra_content_template_path=None,  # hides badge
             ),
             object_detail.ObjectsTablePanel(
                 label="Child Interfaces",
                 section=SectionChoices.FULL_WIDTH,
                 weight=500,
                 context_table_key="child_interfaces_table",
-                add_button_route=None,
-                table_title="",
-                header_extra_content_template_path=None,
+                add_button_route=None,  # hides Add button
+                header_extra_content_template_path=None,  # hides badge
             ),
         ]
     )

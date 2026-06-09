@@ -8,8 +8,8 @@ app_name = "virtualization"
 
 router = NautobotUIViewSetRouter()
 router.register("cluster-groups", views.ClusterGroupUIViewSet)
-router.register("clusters", views.ClusterUIViewSet)
 router.register("cluster-types", views.ClusterTypeUIViewSet)
+router.register("clusters", views.ClusterUIViewSet)
 router.register("interfaces", views.VMInterfaceUIViewSet)
 router.register("virtual-machines", views.VirtualMachineUIViewSet)
 
