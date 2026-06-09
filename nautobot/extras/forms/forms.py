@@ -2290,14 +2290,22 @@ class ObjectMetadataCreateForm(ObjectMetadataForm):
         # Persistent HTMX swap target around the value field: when the user changes
         # metadata_type, the wrapper's innerHTML is replaced with the appropriate input
         # widget for that data type. `jsify_form` re-runs to re-init Select2/date pickers.
+        #
+        # The value widget lives on MetadataTypeUIViewSet as a *detail* action, so the
+        # metadata-type pk belongs in the URL path. The selected pk isn't known until the user
+        # picks one, so rather than reverse a detail URL with a throwaway pk, we hand the client
+        # the pk-less list URL and let the config-request handler assemble the detail path from it
+        # plus the current `#id_metadata_type` value (see objectmetadata_create.html).
         if "value" in self.fields:
+            metadata_type_base_url = reverse_lazy("extras:metadatatype_list")
             self.fields["value"].htmx_attrs = {
                 "id": "nb-objectmetadata-value-field",
-                "hx-get": reverse_lazy("extras:objectmetadata_value_widget"),
+                "data-value-widget-base": metadata_type_base_url,
+                "hx-get": metadata_type_base_url,
                 "hx-trigger": "change from:#id_metadata_type",
-                "hx-include": "#id_metadata_type",
                 "hx-target": "this",
                 "hx-swap": "innerHTML",
+                "hx-on::config-request": "objectMetadataValueWidgetConfigRequest(this, event)",
                 "hx-on::after-swap": "if (window.jsify_form) jsify_form(this);",
             }
         initial = kwargs.get("initial", {})
