@@ -241,7 +241,7 @@ Additional useful commands for the development environment:
     * You can add `-f` or `--follow` to follow the logs in real time.
     * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
-* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke cli [-s servicename] [-c command]` - Launches a `bash` shell (or runs the specified `command`) inside the specified service container (if no servicename is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
