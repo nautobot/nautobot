@@ -201,22 +201,19 @@ class ModularComponentModel(ComponentModel):
 
         # Annotate the parent
         try:
-            parent = self.device if self.device else self.module
+            parent = self.module if self.module else self.device
         except ObjectDoesNotExist:
             # The parent may have already been deleted
             parent = None
 
         return super().to_objectchange(action, related_object=parent, **kwargs)
 
-    def clean(self):
-        super().clean()
+    def save(self, *args, **kwargs):
+        if not self.present_in_database:
+            if self.device is None and self.module is not None:
+                self.device = self.module.parent_module_bay.parent_device
 
-        # Validate that a Device or Module is set, but not both
-        if self.device and self.module:
-            raise ValidationError("Only one of device or module must be set")
-
-        if not (self.device or self.module):
-            raise ValidationError("Either device or module must be set")
+        super().save(*args, **kwargs)
 
 
 class CableTerminationQuerySet(RestrictedQuerySet):
@@ -1643,24 +1640,13 @@ class ModuleBay(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # Validate that a Device or Module is set, but not both
-        if self.parent_device and self.parent_module:
-            raise ValidationError("Only one of parent_device or parent_module must be set")
-
-        if not (self.parent_device or self.parent_module):
-            raise ValidationError("Either parent_device or parent_module must be set")
-
-        # Populate the position field with the name of the module bay if it is not supplied by the user.
-
         if not self.position:
             self.position = self.name
 
     clean.alters_data = True
 
     def save(self, *args, **kwargs):
+        if not self.present_in_database:
+            if self.parent_device is None and self.parent_module is not None:
+                self.parent_device = self.parent_module.parent_module_bay.parent_device
         super().save(*args, **kwargs)
-
-        if self.parent_device is not None:
-            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
-            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
-            cache.set(cache_key, True, timeout=5)
