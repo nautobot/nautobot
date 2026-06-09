@@ -1611,7 +1611,6 @@ class ObjectChangeTable(BaseTable):
 class FileProxyTable(BaseTable):
     """Table for listing FileProxy objects."""
 
-    pk = ToggleColumn()
     name = tables.Column(linkify=True)
     file = tables.Column(
         linkify=("extras:fileproxy_download", {"pk": tables.A("pk")}),

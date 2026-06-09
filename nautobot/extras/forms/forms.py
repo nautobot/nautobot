@@ -1222,7 +1222,6 @@ class FileProxyFilterForm(BootstrapMixin, forms.Form):
     field_order = (
         "q",
         "name",
-        "created",
         "job",
         "job_result",
     )

@@ -1,3 +1,2 @@
 Implemented File Proxy UI viewset using the existing mixin-based approach and `UI Component Framework`.
-Changed `FileProxy.uploaded_at` to `.created`.
 Enabled saved views for FileProxy.

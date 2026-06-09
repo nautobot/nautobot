@@ -3223,7 +3223,6 @@ class FileProxyUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
     ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
     ObjectChangeLogViewMixin,
 ):
     queryset = FileProxy.objects.all()

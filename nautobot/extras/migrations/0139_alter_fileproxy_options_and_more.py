@@ -23,4 +23,9 @@ class Migration(migrations.Migration):
             name="last_updated",
             field=models.DateTimeField(auto_now=True, null=True),
         ),
+        migrations.AlterField(
+            model_name="fileproxy",
+            name="created",
+            field=models.DateTimeField(auto_now_add=True, null=True),
+        ),
     ]

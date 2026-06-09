@@ -189,12 +189,12 @@ class NavigationWeightChoices(ChoiceSet):
     # since it the default weight for NavMenuTab if none is specified.
     DESIGN = 1100
     APPROVAL_WORKFLOWS = 1200
-    ADMINISTRATION = 3000
     EXTENSIBILITY = 1300
     # look to keep these last few items at the end of the nav for easy access
     GOLDEN_CONFIG = 2000
     JOBS = 2100
     APPS = 2200
+    ADMINISTRATION = 3000
 
     CHOICES = (
         (DEVICES, "Devices"),
@@ -213,9 +213,9 @@ class NavigationWeightChoices(ChoiceSet):
         (CLOUD, "Cloud"),
         (DESIGN, "Design"),
         (APPROVAL_WORKFLOWS, "Approval Workflows"),
-        (ADMINISTRATION, "Administration"),
         (EXTENSIBILITY, "Extensibility"),
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),
         (APPS, "Apps"),
+        (ADMINISTRATION, "Administration"),
     )
