@@ -75,6 +75,7 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -174,6 +175,7 @@ __all__ = (
     "ExternalIntegrationBulkEditForm",
     "ExternalIntegrationFilterForm",
     "ExternalIntegrationForm",
+    "FileProxyFilterForm",
     "GitRepositoryBulkEditForm",
     "GitRepositoryFilterForm",
     "GitRepositoryForm",
@@ -1198,6 +1200,30 @@ class ExportTemplateFilterForm(BootstrapMixin, forms.Form):
         ),
         required=False,
         label="Content Type",
+    )
+
+
+class FileProxyFilterForm(BootstrapMixin, forms.Form):
+    """FileProxy basic filter form."""
+
+    model = FileProxy
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(required=False, label="Name")
+    job = DynamicModelMultipleChoiceField(
+        queryset=Job.objects.all(),
+        required=False,
+        label="Job",
+    )
+    job_result_id = DynamicModelMultipleChoiceField(
+        queryset=JobResult.objects.all(),
+        required=False,
+        label="Job Result",
+    )
+    field_order = (
+        "q",
+        "name",
+        "job",
+        "job_result",
     )
 
 

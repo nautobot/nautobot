@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -25,7 +26,7 @@ from nautobot.core.testing import (
     TestCase,
     ViewTestCases,
 )
-from nautobot.core.testing.utils import get_deletable_objects, post_data
+from nautobot.core.testing.utils import disable_warnings, get_deletable_objects, post_data
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -70,6 +71,7 @@ from nautobot.extras.models import (
     DynamicGroup,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     Job,
@@ -2561,6 +2563,90 @@ class ExportTemplateTestCase(
             "mime_type": "application/json",
             "file_extension": "json",
         }
+
+
+class FileProxyUIViewSetTestCase(
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
+):
+    model = FileProxy
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        file1 = FileProxy.objects.create(
+            name="test-file-1.txt",
+            file=SimpleUploadedFile("test-file-1.txt", b"file one", content_type="text/plain"),
+        )
+        file2 = FileProxy.objects.create(
+            name="test-file-2.txt",
+            file=SimpleUploadedFile("test-file-2.txt", b"file two", content_type="text/plain"),
+        )
+        file3 = FileProxy.objects.create(
+            name="test-file-3.txt",
+            file=SimpleUploadedFile("test-file-3.txt", b"file three", content_type="text/plain"),
+        )
+
+        cls.instance = file1  # for get/detail tests
+        cls.instances = [file1, file2, file3]  # for list tests
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_anonymous(self):
+        """An unauthenticated user is redirected to login rather than being served the file."""
+        self.client.logout()
+        instance = self._get_queryset().first()
+        response = self.client.get(self._get_url("download", instance))
+        self.assertHttpStatus(response, 302)
+        self.assertIn("/login/", response.url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_without_permission(self):
+        """A user lacking the `view` permission cannot download a file."""
+        instance = self._get_queryset().first()
+        with disable_warnings("django.request"):
+            response = self.client.get(self._get_url("download", instance))
+        self.assertHttpStatus(response, [403, 404])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_with_permission(self):
+        """The `download` action is gated on the model-level `view` permission and serves the file as an attachment."""
+        instance = self._get_queryset().get(name="test-file-1.txt")
+
+        # Add model-level `view` permission (the action declares `custom_view_base_action="view"`)
+        self.add_permissions("extras.view_fileproxy")
+
+        response = self.client.get(self._get_url("download", instance))
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.get("Content-Disposition", "").split(";", 1)[0], "attachment")
+        self.assertEqual(b"".join(response.streaming_content), b"file one")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_download_with_constrained_permission(self):
+        """Object-level `view` constraints are enforced on the `download` action."""
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Add object-level permission scoped to instance1 only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        # The permitted object can be downloaded
+        response = self.client.get(self._get_url("download", instance1))
+        self.assertHttpStatus(response, 200)
+        self.assertTrue(b"".join(response.streaming_content))
+
+        # The non-permitted object is hidden (404), not served
+        with disable_warnings("django.request"):
+            response = self.client.get(self._get_url("download", instance2))
+        self.assertHttpStatus(response, 404)
 
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):

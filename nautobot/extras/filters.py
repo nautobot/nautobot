@@ -959,7 +959,7 @@ class FileProxyFilterSet(BaseFilterSet):
 
     class Meta:
         model = FileProxy
-        fields = ["id", "name", "uploaded_at", "job", "job_result_id"]
+        fields = ["id", "name", "created", "job", "job_result_id"]
 
 
 #

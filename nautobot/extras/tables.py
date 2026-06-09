@@ -41,6 +41,7 @@ from .models import (
     DynamicGroupMembership,
     ExportTemplate,
     ExternalIntegration,
+    FileProxy,
     GitRepository,
     GraphQLQuery,
     ImageAttachment,
@@ -1602,6 +1603,25 @@ class ObjectChangeTable(BaseTable):
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
             logger.warning(error_message)
+
+
+# File proxy
+
+
+class FileProxyTable(BaseTable):
+    """Table for listing FileProxy objects."""
+
+    name = tables.Column(linkify=True)
+    file = tables.Column(
+        linkify=("extras:fileproxy_download", {"pk": tables.A("pk")}),
+    )
+    created = tables.DateTimeColumn()
+    actions = ButtonsColumn(FileProxy, buttons=("delete",))
+
+    class Meta(BaseTable.Meta):
+        model = FileProxy
+        fields = ("name", "file", "created", "actions")
+        default_columns = ("name", "file", "created", "actions")
 
 
 #

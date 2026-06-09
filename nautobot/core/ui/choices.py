@@ -133,6 +133,7 @@ class NavigationIconChoices(ChoiceSet):
     CLOUD = "cloud"
     DESIGN = "hammer"
     APPROVAL_WORKFLOWS = "checkbox-circle"
+    ADMINISTRATION = "transform"
     EXTENSIBILITY = "extensibility"
     GOLDEN_CONFIG = "sliders-vert-2"
     JOBS = "share"
@@ -193,6 +194,7 @@ class NavigationWeightChoices(ChoiceSet):
     GOLDEN_CONFIG = 2000
     JOBS = 2100
     APPS = 2200
+    ADMINISTRATION = 3000
 
     CHOICES = (
         (DEVICES, "Devices"),
@@ -215,4 +217,5 @@ class NavigationWeightChoices(ChoiceSet):
         (GOLDEN_CONFIG, "Golden Config"),
         (JOBS, "Jobs"),
         (APPS, "Apps"),
+        (ADMINISTRATION, "Administration"),
     )
