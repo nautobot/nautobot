@@ -1,1 +1,0 @@
-Fixed bulk delete operations not creating ObjectChange records for CASCADE-deleted child objects.
