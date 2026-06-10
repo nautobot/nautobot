@@ -114,6 +114,7 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=[
+                    "circuit",
                     "location",
                     "provider_network",
                     "cloud_network",
