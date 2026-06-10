@@ -437,7 +437,7 @@ class VMInterfaceUIViewSet(
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
-                context_table_key="vlan_table",               
+                context_table_key="vlan_table",
                 # Custom footer template right-aligns the footer button (the default footer floats it left).
                 footer_content_template_path="virtualization/inc/vminterface_vlan_panel_footer.html",
                 footer_buttons=(
