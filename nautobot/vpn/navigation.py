@@ -28,7 +28,7 @@ menu_items = (
                     NavMenuItem(
                         link="vpn:vpntunnel_list",
                         name="VPN Tunnels",
-                        weight=100,
+                        weight=200,
                         permissions=["vpn.view_vpntunnel"],
                         buttons=(
                             NavMenuAddButton(
@@ -40,12 +40,24 @@ menu_items = (
                     NavMenuItem(
                         link="vpn:vpntunnelendpoint_list",
                         name="VPN Tunnel Endpoints",
-                        weight=100,
+                        weight=300,
                         permissions=["vpn.view_vpntunnelendpoint"],
                         buttons=(
                             NavMenuAddButton(
                                 link="vpn:vpntunnelendpoint_add",
                                 permissions=["vpn.add_vpntunnelendpoint"],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="vpn:vpntermination_list",
+                        name="VPN Terminations",
+                        weight=400,
+                        permissions=["vpn.view_vpntermination"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="vpn:vpntermination_add",
+                                permissions=["vpn.add_vpntermination"],
                             ),
                         ),
                     ),
@@ -70,7 +82,7 @@ menu_items = (
                     NavMenuItem(
                         link="vpn:vpnphase1policy_list",
                         name="VPN Phase 1 Policies",
-                        weight=100,
+                        weight=200,
                         permissions=["vpn.view_vpnphase1policy"],
                         buttons=(
                             NavMenuAddButton(
@@ -82,7 +94,7 @@ menu_items = (
                     NavMenuItem(
                         link="vpn:vpnphase2policy_list",
                         name="VPN Phase 2 Policies",
-                        weight=100,
+                        weight=300,
                         permissions=["vpn.view_vpnphase2policy"],
                         buttons=(
                             NavMenuAddButton(
@@ -90,18 +102,6 @@ menu_items = (
                                 permissions=["vpn.add_vpnphase2policy"],
                             ),
                         ),
-                    ),
-                ),
-            ),
-            NavMenuGroup(
-                name="Terminations",
-                weight=200,
-                items=(
-                    NavMenuItem(
-                        link="vpn:vpntermination_list",
-                        name="VPN Terminations",
-                        weight=100,
-                        permissions=["vpn.view_vpntermination"],
                     ),
                 ),
             ),

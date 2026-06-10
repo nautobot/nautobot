@@ -40,6 +40,7 @@ STATUS_CHOICESET_MAP = {
     "virtualization.VirtualMachine": vm_choices.VirtualMachineStatusChoices,
     "virtualization.VMInterface": vm_choices.VMInterfaceStatusChoices,
     "vpn.VPNTunnel": vpn_choices.VPNTunnelStatusChoices,
+    "vpn.VPNTermination": vpn_choices.VPNTerminationStatusChoices,
 }
 
 

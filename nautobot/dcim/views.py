@@ -100,7 +100,7 @@ from nautobot.ipam.tables import (
 from nautobot.ipam.utils import render_ip_with_nat
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.virtualization.tables import ClusterTable, VirtualMachineTable
-from nautobot.vpn.tables import VPNTunnelEndpointTable
+from nautobot.vpn.tables import VPNTerminationTable, VPNTunnelEndpointTable
 from nautobot.wireless.forms import ControllerManagedDeviceGroupWirelessNetworkFormSet
 from nautobot.wireless.tables import (
     BaseControllerManagedDeviceGroupWirelessNetworkAssignmentTable,
@@ -4899,6 +4899,15 @@ class InterfaceView(
             exclude=("device",),
         )
 
+        # Get VPN Terminations
+        vpn_termination_table = VPNTerminationTable(
+            data=instance.vpn_terminations.restrict(request.user, "view").select_related(
+                "vpn", "role", "status", "tenant"
+            ),
+            orderable=False,
+            exclude=("interface", "assigned_object", "assigned_object_type", "assigned_object_parent"),
+        )
+
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
@@ -4907,6 +4916,7 @@ class InterfaceView(
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
+            "vpn_termination_table": vpn_termination_table,
             **super().get_extra_context(request, instance),
         }
 

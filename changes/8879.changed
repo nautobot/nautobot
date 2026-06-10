@@ -1,0 +1,1 @@
+Enhanced the VPN Termination model with name, role, status, and tenant fields, along with tunnel-vs-termination mutual exclusivity validation.

@@ -1,5 +1,7 @@
+"""Homepage items for the vpn models."""
+
 from nautobot.core.apps import HomePageItem, HomePagePanel
-from nautobot.vpn.models import VPN, VPNTunnel, VPNTunnelEndpoint
+from nautobot.vpn.models import VPN, VPNTermination, VPNTunnel, VPNTunnelEndpoint
 
 layout = (
     HomePagePanel(
@@ -29,6 +31,14 @@ layout = (
                 description="VPN Tunnel Endpoints",
                 permissions=["vpn.view_vpntunnelendpoint"],
                 weight=300,
+            ),
+            HomePageItem(
+                name="VPN Terminations",
+                link="vpn:vpntermination_list",
+                model=VPNTermination,
+                description="VPN Terminations",
+                permissions=["vpn.view_vpntermination"],
+                weight=400,
             ),
         ),
     ),

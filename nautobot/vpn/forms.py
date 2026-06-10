@@ -749,7 +749,7 @@ class VPNTunnelEndpointFilterForm(NautobotFilterForm, RoleModelFilterFormMixin, 
 #
 
 
-class VPNTerminationForm(NautobotModelForm):
+class VPNTerminationForm(NautobotModelForm, TenancyForm):  # pylint: disable=too-many-ancestors
     """Form for creating and updating VPNTermination."""
 
     vpn = DynamicModelChoiceField(
@@ -774,8 +774,10 @@ class VPNTerminationForm(NautobotModelForm):
     )
 
     class Meta:
+        """Meta attributes."""
+
         model = models.VPNTermination
-        fields = ["vpn", "vlan", "interface", "vm_interface", "tags"]
+        fields = ["vpn", "vlan", "interface", "vm_interface", "role", "status", "tenant_group", "tenant", "tags"]
 
     def clean(self):
         super().clean()
@@ -786,7 +788,9 @@ class VPNTerminationForm(NautobotModelForm):
         return cleaned_data
 
 
-class VPNTerminationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+class VPNTerminationBulkEditForm(
+    RoleModelBulkEditFormMixin, StatusModelBulkEditFormMixin, TagsBulkEditFormMixin, NautobotBulkEditForm
+):  # pylint: disable=too-many-ancestors
     """VPNTermination bulk edit form."""
 
     pk = forms.ModelMultipleChoiceField(queryset=models.VPNTermination.objects.all(), widget=forms.MultipleHiddenInput)
@@ -795,15 +799,22 @@ class VPNTerminationBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):  
         required=False,
         label="VPN",
     )
+    tenant = DynamicModelChoiceField(
+        queryset=Tenant.objects.all(),
+        required=False,
+        label="Tenant",
+    )
 
     class Meta:
         """Meta attributes."""
 
         model = models.VPNTermination
-        nullable_fields = []
+        nullable_fields = ["status", "tenant"]
 
 
-class VPNTerminationFilterForm(NautobotFilterForm):
+class VPNTerminationFilterForm(
+    NautobotFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin, TenancyFilterForm
+):  # pylint: disable=too-many-ancestors
     """Filter form for VPNTermination list view."""
 
     model = models.VPNTermination
@@ -829,3 +840,15 @@ class VPNTerminationFilterForm(NautobotFilterForm):
         label="VM Interface",
     )
     tags = TagFilterField(model)
+
+    field_order = [
+        "vpn",
+        "vlan",
+        "interface",
+        "vm_interface",
+        "role",
+        "status",
+        "tenant",
+        "tenant_group",
+        "tags",
+    ]

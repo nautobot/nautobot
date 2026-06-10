@@ -13,6 +13,8 @@ This model is primarily intended for overlay and service-style VPN use cases whe
 
 For example, a VXLAN-based service can store its service-wide attributes on the `VPN` record, while individual `VPNTermination` records map that service to the relevant VLANs, switch interfaces, or VM interfaces that participate in it.
 
+The `role`, `status`, and `tenant` fields on a VPN Termination are optional and describe the local attachment, not the VPN service. They let a single VPN contain terminations with different roles (e.g. `VTEP` vs `BGW` in a VXLAN-EVPN fabric), independent operational states (e.g. one termination offline for maintenance while siblings remain active), or different tenants (e.g. a provider service terminating on circuits owned by different customers).
+
 ![VPN Termination List View](../../../media/models/vpn_models_vpntermination_list_light.png#only-light){ .on-glb }
 ![VPN Termination List View](../../../media/models/vpn_models_vpntermination_list_dark.png#only-dark){ .on-glb }
 [//]: # ("`/vpn/vpn-terminations/`")

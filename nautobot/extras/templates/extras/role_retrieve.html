@@ -287,4 +287,20 @@
         </div>
         {% include 'inc/paginator.html' with paginator=vpn_tunnel_endpoint_table.paginator page=vpn_tunnel_endpoint_table.page %}
     {% endif %}
+    {% if vpn_termination_table %}
+        <div class="card">
+            <div class="card-header">
+                <strong>VPN Terminations</strong>
+            </div>
+            {% include 'inc/table.html' with table=vpn_termination_table %}
+            {% if perms.vpn.add_vpntermination %}
+                <div class="card-footer text-end d-print-none">
+                    <a href="{% url 'vpn:vpntermination_add' %}?role={{ object.pk }}" class="btn btn-sm btn-primary">
+                        <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add VPN Termination
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% include 'inc/paginator.html' with paginator=vpn_termination_table.paginator page=vpn_termination_table.page %}
+    {% endif %}
 {% endblock content_full_width_page %}

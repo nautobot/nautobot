@@ -73,11 +73,6 @@ class VPNTunnelEndpointViewSet(NautobotModelViewSet):  # pylint: disable=too-man
 class VPNTerminationViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
     """VPNTermination viewset."""
 
-    queryset = models.VPNTermination.objects.select_related(
-        "vpn",
-        "vlan",
-        "interface",
-        "vm_interface",
-    )
+    queryset = models.VPNTermination.objects.all()
     serializer_class = serializers.VPNTerminationSerializer
     filterset_class = filters.VPNTerminationFilterSet

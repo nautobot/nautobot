@@ -5,10 +5,11 @@ from django.contrib.contenttypes.models import ContentType
 from nautobot.apps.testing import FormTestCases
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
-from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.models import Prefix
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 from nautobot.vpn import choices, forms, models
+from nautobot.vpn.factory import get_status_for_model
+from nautobot.vpn.tests import VPNTerminationFixtureMixin
 
 
 class VPNProfileFormTest(FormTestCases.BaseFormTestCase):
@@ -170,16 +171,6 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
 
     form_class = forms.VPNForm
 
-    @classmethod
-    def _get_vpn_status(cls):
-        """Get or create an Active status for VPN."""
-        ct = ContentType.objects.get_for_model(models.VPN)
-        status = Status.objects.filter(content_types=ct).first()
-        if not status:
-            status = Status.objects.get(name="Active")
-            status.content_types.add(ct)
-        return status
-
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
         vpn_role, _ = Role.objects.get_or_create(name="Default")
@@ -192,7 +183,7 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
             "role": vpn_role,
             "vpn_profile": models.VPNProfile.objects.first().pk,
             "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
-            "status": self._get_vpn_status().pk,
+            "status": get_status_for_model(models.VPN).pk,
             "tenant": Tenant.objects.first().pk,
             "extra_attributes": '{"flooding_mode": "ingress-replication"}',
         }
@@ -228,7 +219,7 @@ class VPNFormTest(FormTestCases.BaseFormTestCase):
         data = {
             "name": "VXLAN Without Identifier",
             "service_type": choices.VPNServiceTypeChoices.TYPE_VXLAN,
-            "status": self._get_vpn_status().pk,
+            "status": get_status_for_model(models.VPN).pk,
         }
         form = self.form_class(data=data)
         self.assertFalse(form.is_valid())
@@ -249,7 +240,7 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
             "name": "test 1",
             "description": "test value",
             "vpn_profile": models.VPNProfile.objects.first(),
-            "vpn": models.VPN.objects.first(),
+            "vpn": models.VPN.objects.filter(vpn_terminations__isnull=True).first(),
             "tunnel_id": "test value",
             "status": Status.objects.get(name="Active"),
             "role": tunnel_role,
@@ -318,74 +309,14 @@ class VPNTunnelEndpointFormTest(FormTestCases.BaseFormTestCase):
         self.assertTrue(form.save())
 
 
-class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
+class VPNTerminationFormTest(VPNTerminationFixtureMixin, FormTestCases.BaseFormTestCase):
     """Test the VPNTermination form."""
 
     form_class = forms.VPNTerminationForm
 
-    @classmethod
-    def _get_available_interfaces(cls):
-        used_interface_ids = models.VPNTermination.objects.exclude(interface__isnull=True).values_list(
-            "interface_id", flat=True
-        )
-        return Interface.objects.exclude(pk__in=used_interface_ids).filter(device__isnull=False)
-
-    @classmethod
-    def _get_available_vlans(cls):
-        used_vlan_ids = models.VPNTermination.objects.exclude(vlan__isnull=True).values_list("vlan_id", flat=True)
-        return VLAN.objects.exclude(pk__in=used_vlan_ids)
-
-    @classmethod
-    def _get_available_vm_interfaces(cls):
-        used_vm_interface_ids = models.VPNTermination.objects.exclude(vm_interface__isnull=True).values_list(
-            "vm_interface_id", flat=True
-        )
-        available_vm_interfaces = VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
-        if available_vm_interfaces.exists():
-            return available_vm_interfaces
-
-        vm = VirtualMachine.objects.first()
-        if vm is None:
-            cluster_type, _ = ClusterType.objects.get_or_create(name=f"{cls.__name__} Cluster Type")
-            cluster, _ = Cluster.objects.get_or_create(
-                name=f"{cls.__name__} Cluster",
-                defaults={"cluster_type": cluster_type},
-            )
-            if cluster.cluster_type_id != cluster_type.id:
-                cluster.cluster_type = cluster_type
-                cluster.save()
-
-            vm_status = Status.objects.get_for_model(VirtualMachine).first()
-            if vm_status is None:
-                vm_ct = ContentType.objects.get_for_model(VirtualMachine)
-                vm_status = Status.objects.get(name="Active")
-                vm_status.content_types.add(vm_ct)
-
-            vm, _ = VirtualMachine.objects.get_or_create(
-                name=f"{cls.__name__} VM",
-                defaults={"cluster": cluster, "status": vm_status},
-            )
-            if vm.cluster_id != cluster.id or vm.status_id != vm_status.id:
-                vm.cluster = cluster
-                vm.status = vm_status
-                vm.save()
-
-        vm_interface_status = Status.objects.get_for_model(VMInterface).first()
-        if vm_interface_status is None:
-            vm_interface_ct = ContentType.objects.get_for_model(VMInterface)
-            vm_interface_status = Status.objects.get(name="Active")
-            vm_interface_status.content_types.add(vm_interface_ct)
-
-        VMInterface.objects.create(
-            virtual_machine=vm,
-            name=f"vpn-termination-form-{cls.__name__.lower()}",
-            status=vm_interface_status,
-        )
-        return VMInterface.objects.exclude(pk__in=used_vm_interface_ids)
-
     def test_termination_with_interface(self):
         vpn = models.VPN.objects.first()
-        interface = self._get_available_interfaces().first()
+        interface = self._ensure_available_interfaces(1)[0]
 
         self.assertIsNotNone(vpn)
         self.assertIsNotNone(interface)
@@ -395,7 +326,7 @@ class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
 
     def test_termination_with_vlan(self):
         vpn = models.VPN.objects.first()
-        vlan = self._get_available_vlans().first()
+        vlan = self._ensure_available_vlans(1)[0]
 
         self.assertIsNotNone(vpn)
         self.assertIsNotNone(vlan)
@@ -405,7 +336,7 @@ class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
 
     def test_termination_with_vm_interface(self):
         vpn = models.VPN.objects.first()
-        vm_interface = self._get_available_vm_interfaces().first()
+        vm_interface = self._ensure_available_vm_interfaces(1)[0]
 
         self.assertIsNotNone(vpn)
         self.assertIsNotNone(vm_interface)
@@ -423,8 +354,8 @@ class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
 
     def test_validation_multiple_objects_selected(self):
         vpn = models.VPN.objects.first()
-        interface = self._get_available_interfaces().first()
-        vlan = self._get_available_vlans().first()
+        interface = self._ensure_available_interfaces(1)[0]
+        vlan = self._ensure_available_vlans(1)[0]
 
         self.assertIsNotNone(vpn)
         self.assertIsNotNone(interface)
@@ -441,7 +372,7 @@ class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
 
     def test_invalid_vlan_does_not_trigger_multiple_selection_error(self):
         vpn = models.VPN.objects.first()
-        interface = self._get_available_interfaces().first()
+        interface = self._ensure_available_interfaces(1)[0]
 
         self.assertIsNotNone(vpn)
         self.assertIsNotNone(interface)
@@ -457,7 +388,7 @@ class VPNTerminationFormTest(FormTestCases.BaseFormTestCase):
         self.assertFalse(form.non_field_errors())
 
     def test_vpn_required(self):
-        interface = self._get_available_interfaces().first()
+        interface = self._ensure_available_interfaces(1)[0]
 
         self.assertIsNotNone(interface)
         form = self.form_class(data={"interface": str(interface.pk)})

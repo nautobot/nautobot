@@ -55,3 +55,15 @@ class VPNFactoryTestCase(testing.TestCase):
                     ),
                     1,
                 )
+
+    def test_vpn_termination_factory_populates_optional_fields(self):
+        """VPNTerminationFactory populates role, status, and tenant when enabled."""
+        termination = factory.VPNTerminationFactory.create(
+            target_type="interface",
+            has_role=True,
+            has_status=True,
+            has_tenant=True,
+        )
+        self.assertIsNotNone(termination.role)
+        self.assertIsNotNone(termination.status)
+        self.assertIsNotNone(termination.tenant)

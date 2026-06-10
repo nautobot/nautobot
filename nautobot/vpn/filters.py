@@ -110,6 +110,8 @@ class VPNProfilePhase1PolicyAssignmentFilterSet(BaseFilterSet):
     )
 
     class Meta:
+        """Meta attributes for filter."""
+
         model = models.VPNProfilePhase1PolicyAssignment
         fields = "__all__"
 
@@ -136,6 +138,8 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
     )
 
     class Meta:
+        """Meta attributes for filter."""
+
         model = models.VPNProfilePhase2PolicyAssignment
         fields = "__all__"
 
@@ -248,7 +252,9 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         fields = "__all__"
 
 
-class VPNTerminationFilterSet(NautobotFilterSet):
+class VPNTerminationFilterSet(
+    RoleModelFilterSetMixin, StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet
+):  # pylint: disable=too-many-ancestors
     """Filter for VPNTermination."""
 
     q = SearchFilter(
@@ -284,5 +290,7 @@ class VPNTerminationFilterSet(NautobotFilterSet):
     )
 
     class Meta:
+        """Meta attributes for filter."""
+
         model = models.VPNTermination
         fields = "__all__"
