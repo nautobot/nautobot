@@ -960,8 +960,6 @@ interface GigabitEthernet1/0/2
 
 > Note: From the downstream device's perspective, vPC is invisible — it is a standard LACP port channel whose member links happen to land on two different switches. In Nautobot the downstream side is modeled as an ordinary LAG on a single device; no special handling is required.
 
-
-
 ### Firewall HA pair
 
 #### Key Questions
