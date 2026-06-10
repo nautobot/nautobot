@@ -50,7 +50,7 @@ def remove_iprange_roles(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("ipam", "0056_iprange"),
+        ("ipam", "0057_iprange"),
     ]
 
     operations = [
