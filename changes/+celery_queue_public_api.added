@@ -1,1 +1,1 @@
-Added existing utility get_celery_queues() to the public API.
+Added existing utility get_celery_queues() to the nautobot.apps.jobs public API.
