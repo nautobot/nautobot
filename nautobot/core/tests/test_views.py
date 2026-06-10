@@ -116,7 +116,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in header
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
+            '<header.*<form action="/search/" class="col-4 text-center" data-nb-live-search-path="/live-search/" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -181,6 +181,52 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+    def test_homepage_layout_panels_empty(self):
+        """
+        Validate that homepage layout panels render empty when user has no required permissions.
+        """
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertBodyContains(
+            response,
+            """
+                <div
+                    id="draggable-homepage-panels"
+                    class="row nb-draggable-container"
+                    data-nb-draggable-flow="column"
+                    hx-ext="json-enc"
+                    hx-swap="none"
+                    hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
+                >
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_homepage_layout_panels_filtered_by_user_permissions(self):
+        """
+        Validate that homepage layout panels render only those panels which user is permitted to view.
+        """
+        self.add_permissions("dcim.view_device", "dcim.view_location", "ipam.view_prefix", "ipam.view_ipaddress")
+
+        url = reverse("home")
+        response = self.client.get(url)
+
+        def assertBodyContains(html):
+            return self.assertBodyContains(response, html, html=True)
+
+        assertBodyContains("""<strong class="nb-text-none text-body">Organization</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/locations/">Locations</a></h4>""")
+        assertBodyContains("""<strong class="nb-text-none text-body">DCIM</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/devices/">Devices</a></h4>""")
+        assertBodyContains("""<strong class="nb-text-none text-body">IPAM</strong>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/prefixes/">Prefixes</a></h4>""")
+        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h4>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -410,6 +456,84 @@ class SearchContentTypeView(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class LiveSearchViewTestCase(TestCase):
+    """Unit tests for the LiveSearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.first()
+        status = Status.objects.first()
+        cls.locations = [
+            Location.objects.create(name=f"Location #{i}", location_type=location_type, status=status)
+            for i in range(0, 20)
+        ]
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        url = reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        response = self.client.get(url)
+        expected_params = urllib.parse.urlencode({"next": url})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_live_search_results(self):
+        """GET with ?q renders table with no more than 10 matching search results."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the first 10 matching results to be displayed.
+        for location in self.locations[:10]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Even when there are more matches, there should no more than 10 results displayed at once.
+        for location in self.locations[10:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+
+    def test_live_search_single_result(self):
+        """GET with a very specific ?q renders table with a single matching result."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #0"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the single matching result to be displayed.
+        for location in self.locations[:1]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Make sure all other non-matching results are not displayed.
+        for location in self.locations[1:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+
+    def test_live_search_empty(self):
+        """GET with ?q with no matches response is empty."""
+        response = self.client.get(
+            reverse(
+                "live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "non existent location"}
+            ),
+            headers={"HX-Request": "true"},
+        )
+        # Response is effectively empty, it just contains line breaks from the template file.
+        self.assertEqual(response.text, "\n\n\n")
+
+    def test_live_search_bad_request_when_no_htmx(self):
+        """Non-HTMX requests are not supported."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        )
+        self.assertEqual(response.text, "Endpoint in question supports only HTMX-made requests.")
+        self.assertEqual(response.status_code, 400)
+
+    def test_live_search_bad_request_when_no_path(self):
+        """List view `path` is required."""
+        response = self.client.get(reverse("live_search"))
+        self.assertEqual(response.text, "List view `path` is missing in the requested URL.")
+        self.assertEqual(response.status_code, 400)
+
+
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
         """Unauthenticated access redirects to the login page."""
@@ -471,7 +595,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -490,7 +614,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(

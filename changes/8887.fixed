@@ -1,1 +1,0 @@
-Fixed `NoReverseMatch` crash when adding Data Validation Rules.

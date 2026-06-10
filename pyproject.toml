@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "3.1.1a0"
+version = "3.2.0a0"
 description = "Source of truth and network automation platform."
 authors = [
     {name = "Network to Code", email = "<opensource@networktocode.com>"}
@@ -27,9 +27,9 @@ dependencies = [
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=46.0.7,<46.1)",
+    "cryptography (>=48.0.0,<49)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.13,<5.3)",
+    "django (>=5.2.14,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -77,7 +77,7 @@ dependencies = [
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "GitPython (>=3.1.47,<3.2)",
+    "gitpython (>=3.1.50,<3.2)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -87,7 +87,7 @@ dependencies = [
     # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
     "jsonschema (>=4.7.0,<5)",
     # Library to access Kubernetes API used to develop K8s integration
-    "kubernetes (>=35.0.0,<36)",
+    "kubernetes (>=36.0.1,<37)",
     # Rendering of markdown files to HTML
     "Markdown (>=3.10.2,<3.11)",
     # IP prefix and address handling
@@ -97,7 +97,7 @@ dependencies = [
     #       we permit a looser (^) version constraint here.
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.4,<0.4)",
+    "nh3 (>=0.3.5,<0.4)",
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library
@@ -113,10 +113,14 @@ dependencies = [
     "pyuwsgi (>=2.0.30,<2.1)",
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
+    # Enhanced version of Python's built-in `re` module
+    "regex (>=2026.4.4)",
     # Social authentication/registration with support for many auth providers
     "social-auth-app-django (>=5.7.0,<5.8)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
+    # Enhanced HTTP client library
+    "urllib3 (>=2.7.0,<3.0.0)",
 ]
 
 [project.optional-dependencies]
@@ -173,7 +177,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^40.11.0"
+faker = "^40.15.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -217,7 +221,7 @@ pylint = "~4.0.5"
 # Pylint extensions for Django
 pylint-django = "~2.7.0"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.36"
+pymarkdownlnt = "~0.9.37"
 # Combination linter and code formatter
 ruff = "~0.15.12"
 # YAML linting
@@ -419,7 +423,7 @@ order-by-type = false
 [tool.towncrier]
 package = "nautobot"
 directory = "changes"
-filename = "nautobot/docs/release-notes/version-3.1.md"
+filename = "nautobot/docs/release-notes/version-3.2.md"
 template = "development/towncrier_template.j2"
 start_string = "<!-- towncrier release notes start -->"
 issue_format = "[#{issue}](https://github.com/nautobot/nautobot/issues/{issue})"

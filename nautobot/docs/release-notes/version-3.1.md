@@ -148,6 +148,170 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.4 (2026-06-08)
+
+### Security in v3.1.4
+
+- [#9013](https://github.com/nautobot/nautobot/issues/9013) - Fixed the Scheduled Job 'Assume Ownership' action to not bypass approval workflows.
+
+### Added in v3.1.4
+
+- [#9005](https://github.com/nautobot/nautobot/issues/9005) - Added type-aware behavior to the Custom Field create/edit UI so only validation and choice inputs that apply to the selected field type are shown.
+- [#9026](https://github.com/nautobot/nautobot/issues/9026) - Added `nautobot.apps.dcim.SkipAutoComponentCreation` context manager that lets apps opt out of Nautobot's automatic Device/Module component instantiation on a new save.
+
+### Fixed in v3.1.4
+
+- [#8658](https://github.com/nautobot/nautobot/issues/8658) - Fixed bulk delete operations not creating ObjectChange records for CASCADE-deleted child objects.
+- [#8871](https://github.com/nautobot/nautobot/issues/8871) - Fixed pagination issue on the Dynamic Groups membership tab.
+- [#8995](https://github.com/nautobot/nautobot/issues/8995) - Added default ordering to `VRFPrefixAssignment` and `VRFDeviceAssignment` so paginated REST/GraphQL queries return deterministic results.
+- [#9015](https://github.com/nautobot/nautobot/issues/9015) - Fixed N+1 query patterns when resolving `tags` and `config_context` in GraphQL queries.
+- [#9021](https://github.com/nautobot/nautobot/issues/9021) - Fixed a GraphQL schema build failure when a model's filterset exposes a filter whose name collides with a reserved `graphene.Field` keyword argument.
+- [#9038](https://github.com/nautobot/nautobot/issues/9038) - Fixed Select2 multi-select widgets (Object types, Groups, Users) rendering as a collapsed, narrow column on the admin object permission form.
+
+## v3.1.3 (2026-05-26)
+
+### Security in v3.1.3
+
+- [#8957](https://github.com/nautobot/nautobot/issues/8957) - Updated development npm dependency `fast-uri` to `3.1.2` to mitigate CVE-2026-6321 and CVE-2026-6322.
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated dependency `idna` to `3.15` to mitigate CVE-2026-45409. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated indirect development dependency `pymdown-extensions` to `10.21.3` to mitigate CVE-2026-46338.
+
+### Added in v3.1.3
+
+- [#8917](https://github.com/nautobot/nautobot/issues/8917) - Added support for custom redirect buttons on the job result modal.
+
+### Changed in v3.1.3
+
+- [#8969](https://github.com/nautobot/nautobot/issues/8969) - Added "View change log" item to "actions" dropdown in Device component (Interface, etc.) tables.
+- [#8969](https://github.com/nautobot/nautobot/issues/8969) - Added model verbose name to "Edit" and "Delete" items in table action dropdowns.
+- [#8969](https://github.com/nautobot/nautobot/issues/8969) - Changed `nautobot-migrate-bootstrap-v3-to-v5` script to apply to `*.js` files as well.
+
+### Fixed in v3.1.3
+
+- [#8954](https://github.com/nautobot/nautobot/issues/8954) - Job Result Summary timestamps now display in user timezone instead of UTC.
+- [#8962](https://github.com/nautobot/nautobot/issues/8962) - Fixed a case where the Run/Re-Run button on the Job Result detail view wouldn't correctly refresh once task kwargs became available.
+- [#8965](https://github.com/nautobot/nautobot/issues/8965) - Fixed slow page loads on detail views at large scale.
+- [#8969](https://github.com/nautobot/nautobot/issues/8969) - Fixed "Mark planned"/"Mark installed" actions not working in Device Interfaces table and others.
+- [#8972](https://github.com/nautobot/nautobot/issues/8972) - Fixed an issue where form auto-population logic in `forms.js` would crash when a form contained an `id_slug` or `id_key` field without a `slug-source` attribute, silently breaking downstream form initialization (including Flatpickr date/time pickers) on affected pages such as the API Token create form.
+- [#8976](https://github.com/nautobot/nautobot/issues/8976) - Fixed an exception when rendering an object list view whose viewset has no `filterset_class` configured.
+- [#8988](https://github.com/nautobot/nautobot/issues/8988) - Fixed Git Repository Job loading producing multiple class objects for the same source file, which caused `isinstance` checks against shared classes to return false negatives.
+- [#8999](https://github.com/nautobot/nautobot/issues/8999) - Fixed "Job Queue" in Re-Run form when queue type is kubernetes.
+
+### Dependencies in v3.1.3
+
+- [#8959](https://github.com/nautobot/nautobot/issues/8959) - Added `urllib3 (>=2.7.0,<3.0.0)` as a direct dependency as Nautobot now directly uses it. (Previously it was an indirect dependency.)
+- [#8968](https://github.com/nautobot/nautobot/issues/8968) - Updated `cryptography` dependency to `(>=48.0.0,<49)`.
+
+### Housekeeping in v3.1.3
+
+- [#8917](https://github.com/nautobot/nautobot/issues/8917) - The `_JobModalButton` now uses POST requests instead of GET requests for the job modal flow.
+- [#8964](https://github.com/nautobot/nautobot/issues/8964) - Changed "View job results" to "View Job Results" in modal button text.
+- [#8969](https://github.com/nautobot/nautobot/issues/8969) - Removed `initializeSortableList` logic in forms.js, unused since 3.1.0.
+
+## v3.1.2 (2026-05-08)
+
+### Security in v3.1.2
+
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_SCHEMES` settings variable. By default new or updated `Webhook` records will be restricted to HTTP or HTTPS only, disallowing other schemes that may have been previously allowed. Administrators should audit existing `Webhook` records to identify any that are invalid, and either update/delete said records or customize `WEBHOOK_ALLOWED_SCHEMES` as appropriate.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` settings variable. This can be used to specify additional IP networks that should be denied to `Webhook` sending, for example some deployments may wish to disallow RFC1918 addresses.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_HOSTS` settings variable. This can be used to provide an allow-list of specific hosts that would otherwise be blocked by any `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` configuration.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added logic to deny loopback, link-local, multicast, unspecified, or reserved IP addresses when defining or executing a `Webhook`. Administrators should audit existing `Webhook` records to identify any that are invalid and delete said records (CVE-2026-44797).
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added various logic to protect `Webhook` definitions against being used as a vector for server-side request forgery (SSRF) (CVE-2026-44797).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added a timeout to `bulk-rename` views (both legacy `BulkRenameView` and viewset `ObjectBulkRenameViewMixin`) when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated dependency `django` to `>=5.2.14,<5.3` to mitigate CVE-2026-5766, CVE-2026-35192, and CVE-2026-6907.
+- [#8940](https://github.com/nautobot/nautobot/issues/8940) - Updated dependency `gitpython` to `>=3.1.50,<3.2` to mitigate CVE-2026-44243, CVE-2026-44244, and GHSA-mv93-w799-cj2w.
+
+### Added in v3.1.2
+
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Added an "Assume Ownership" action button on the Scheduled Job detail view that allows users with the required permissions to take over ownership of a scheduled job.
+
+### Removed in v3.1.2
+
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Removed support for `nautobot-server webhook_receiver` command.
+
+### Fixed in v3.1.2
+
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Fixed silent failure of scheduled jobs whose originating user has been removed. The scheduler now records a failed JobResult as well as disables the schedule with state ERRORED.
+- [#8861](https://github.com/nautobot/nautobot/issues/8861) - Add an iterator to the queryset in migration `0130_jobresult_generate_log_entry_counts` to prevent resource exhaustion.
+- [#8884](https://github.com/nautobot/nautobot/issues/8884) - Fixed `_JobModalButton` `refresh_on_close_if_done` flag being dropped during modal polling, causing the page to not reload when the Close button (footer, header, or Escape key) is used after a Job completes.
+- [#8890](https://github.com/nautobot/nautobot/issues/8890) - Fixed N+1 query patterns on the VRF detail view for templated fields (devices, vms, virtual device contexts).
+- [#8937](https://github.com/nautobot/nautobot/issues/8937) - Fixed Job History home page panel sorting.
+
+### Dependencies in v3.1.2
+
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated dependency `nh3` to `>=0.3.5,<0.4`.
+
+### Documentation in v3.1.2
+
+- [#8943](https://github.com/nautobot/nautobot/issues/8943) - Updated the security notices documentation.
+
+### Housekeeping in v3.1.2
+
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Replaced bespoke `bulk_rename` actions on `ModuleBayUIViewSet` and `ModuleBayTemplateUIViewSet` with the generic `ObjectBulkRenameViewMixin`.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--no-input` option to `invoke tests` task.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--command` option to `invoke nbshell` task.
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated development dependency `faker` to `^40.15.0`.
+- [#8931](https://github.com/nautobot/nautobot/issues/8931) - Updated development dependency `pymarkdownlnt` to `~0.9.37`.
+- [#8932](https://github.com/nautobot/nautobot/issues/8932) - Addressed a number of CodeQL-reported issues in the code base.
+- [#8940](https://github.com/nautobot/nautobot/issues/8940) - Loosened timeout requirement in `test_bulk_rename_regex_redos_protection` to reduce spurious failures in CI.
+
+## v3.1.1 (2026-04-27)
+
+### Security in v3.1.1
+
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `GitPython` to `>=3.1.47,<3.2` to mitigate CVE-2026-42215 and CVE-2026-42284.
+- [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v3.1.1
+
+- [#8876](https://github.com/nautobot/nautobot/issues/8876) - Added `render_default_panels_for_object` template tag.
+- [#8883](https://github.com/nautobot/nautobot/issues/8883) - Added copyright notice to the About page.
+
+### Changed in v3.1.1
+
+- [#8894](https://github.com/nautobot/nautobot/issues/8894) - Changed the CSV export algorithm to speed up the export of a large number of objects.
+
+### Fixed in v3.1.1
+
+- [#6199](https://github.com/nautobot/nautobot/issues/6199) - Fixed job class template override not working when `template_name` is set as a Meta attribute.
+- [#8876](https://github.com/nautobot/nautobot/issues/8876) - Re-added placeholders for files `nautobot/extras/templates/extras/inc/jobresult_js.html`, `nautobot/project-static/js/job_result.js`, and `nautobot/project-static/js/log_level_filtering.js` that were removed in 3.1.0, in order to avoid breaking Apps still referencing these files.
+- [#8877](https://github.com/nautobot/nautobot/issues/8877) - Fixed incorrect refreshing of GitRepository "Synchronization Status" tab.
+- [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
+- [#8887](https://github.com/nautobot/nautobot/issues/8887) - Fixed `NoReverseMatch` crash when adding Data Validation Rules.
+
+### Dependencies in v3.1.1
+
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `djangorestframework` to `>=3.17.1,<3.18`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `psycopg2-binary` to `>=2.9.12,<2.10`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated dependency `social-auth-core` to `>=4.8.6,<4.9`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm dependency `htmx.org` to `^2.0.10`.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated dependency `social-auth-core` to `>=4.8.7,<4.9`.
+
+### Documentation in v3.1.1
+
+- [#8820](https://github.com/nautobot/nautobot/issues/8820) - Added documentation on how to set logging levels for Nautobot Jobs.
+- [#8873](https://github.com/nautobot/nautobot/issues/8873) - Improved documentation for VPN Terminations, VPN service types, and related VPN models added in v3.1.0.
+
+### Housekeeping in v3.1.1
+
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated development dependency `rich` to `~14.3.4`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated documentation dependency `mkdocs-section-index` to `~0.3.12`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated documentation dependency `mkdocstrings` to `~1.0.4`.
+- [#8840](https://github.com/nautobot/nautobot/issues/8840) - Updated development dependency `ruff` to `~0.15.11`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm development dependency `postcss` to `^8.5.10`.
+- [#8880](https://github.com/nautobot/nautobot/issues/8880) - Updated npm development dependency `prettier` to `^3.8.3`.
+- [#8906](https://github.com/nautobot/nautobot/issues/8906) - Fixed a unit test issue that was causing a number of view test cases to be incorrectly skipped.
+- [#8906](https://github.com/nautobot/nautobot/issues/8906) - Adjusted the RouteTargetFactory implementation to ensure data is suitable for use with the `bulk_rename` test cases.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated development dependency `ruff` to `~0.15.12`.
+- [#8909](https://github.com/nautobot/nautobot/issues/8909) - Updated development dependency `openapi-spec-validator` to `~0.8.5`.
+
 ## v3.1.0 (2026-04-14)
 
 ### Breaking Changes in v3.1.0

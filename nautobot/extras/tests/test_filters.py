@@ -31,6 +31,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ScheduledJobStateChoices,
@@ -1500,6 +1501,63 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
+    def test_revocation_type(self):
+        user = UserFactory.create()
+        job = self.jobs[0]
+
+        # "terminated"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            revocation_type=JobRevocationTypeChoices.TYPE_TERMINATED,
+            date_revoked=now(),
+        )
+        # "reaped"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            revocation_type=JobRevocationTypeChoices.TYPE_REAPED,
+            date_revoked=now(),
+        )
+        # "abandoned"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            revocation_type=JobRevocationTypeChoices.TYPE_ABANDONED,
+            date_revoked=now(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["terminated"]}, self.queryset).qs,
+            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_TERMINATED).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["reaped"]}, self.queryset).qs,
+            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_REAPED).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["abandoned"]}, self.queryset).qs,
+            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_ABANDONED).distinct(),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"revocation_type": ["terminated", "reaped", "abandoned"]}, self.queryset).qs,
+            self.queryset.filter(status=JobResultStatusChoices.STATUS_REVOKED).distinct(),
+        )
+
+        self.assertQuerySetEqual(
+            self.filterset({"revocation_type": []}, self.queryset).qs,
+            self.queryset.all(),
+            ordered=False,
+        )
+
 
 class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobHook.objects.all()
@@ -1749,6 +1807,12 @@ class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
         mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
         params = {"content_types": ["dcim.device", "dcim.rack"]}
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
+
+    def test_content_type_id(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        expected = self.queryset.filter(content_types=device_ct).distinct()
+        params = {"content_type_id": device_ct.pk}
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):

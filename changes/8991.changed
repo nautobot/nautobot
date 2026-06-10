@@ -1,0 +1,2 @@
+Updated extras migration 0143 so that all changes related to the “revoke” action would be included in a single file.
+Changed `is_alive` to `liveness` with 3 state: `JobLiveness.RUNNING`, `JobLiveness.NOT_RUNNING` and `JobLiveness.UNKNOWN`.

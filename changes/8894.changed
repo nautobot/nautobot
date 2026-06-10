@@ -1,2 +1,0 @@
-Changed the CSV export algorithm to speed up the export of a large number of objects.
-

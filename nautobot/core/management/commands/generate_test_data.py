@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
@@ -76,6 +77,7 @@ class Command(BaseCommand):
                 CloudServiceFactory,
             )
             from nautobot.dcim.factory import (
+                CableTypeFactory,
                 ConsolePortTemplateFactory,
                 ConsoleServerPortTemplateFactory,
                 ControllerFactory,
@@ -100,6 +102,7 @@ class Command(BaseCommand):
                 SoftwareVersionFactory,
                 VirtualDeviceContextFactory,
             )
+            from nautobot.dcim.utils import populate_default_cable_types
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
@@ -223,8 +226,10 @@ class Command(BaseCommand):
             description="without a Tenant and without any Prefixes or IPAddresses",
             has_tenant=False,
         )
+        populate_default_cable_types(apps, schema_editor=None)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
+        _create_batch(CableTypeFactory, 10)
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")

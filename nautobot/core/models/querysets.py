@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from django.db.models import Count, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, OuterRef, QuerySet, Subquery
 from django.db.models.functions import Coalesce
 
 from nautobot.core.models.utils import deconstruct_composite_key
@@ -134,7 +134,6 @@ class RestrictedQuerySet(CompositeKeyQuerySetMixin, QuerySet):
 
         # Filter the queryset to include only objects with allowed attributes
         else:
-            attrs = Q()
             tokens = {
                 "$user": user,
             }

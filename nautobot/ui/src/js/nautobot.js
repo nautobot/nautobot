@@ -23,6 +23,8 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import htmx from 'htmx.org';
 window.htmx = htmx;
 
+import 'htmx-ext-json-enc';
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);
@@ -49,6 +51,7 @@ import { getEchartsOptionsThemeOverrides } from './echarts.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { refreshMessages } from './messages.js';
+import { initializeModal } from './modal.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
@@ -94,6 +97,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Messages
   window.nb.messages = { refreshMessages };
+
+  // Modal
+  initializeModal();
 
   // Search
   initializeSearch();

@@ -2,6 +2,7 @@
 
 import contextlib
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
 import hashlib
 import json
@@ -18,10 +19,11 @@ from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
-from django.template.defaultfilters import truncatechars
+from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
@@ -55,6 +57,7 @@ from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import Job
+from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -1747,6 +1750,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
 
+        if isinstance(value, datetime):
+            if timezone.is_naive(value):
+                value = timezone.make_aware(value, timezone.get_default_timezone())
+            return format_date(timezone.localtime(value), "DATETIME_FORMAT")
+
+        if isinstance(value, date):
+            return format_date(value, "DATE_FORMAT")
+
         return super().render_value(key, value, context)
 
     def get_data(self, context: Context):
@@ -2281,6 +2292,14 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
+    def render_value(self, key, value, context: Context):
+        """Render a given computed field value appropriately depending on what output type the computed field has."""
+        # TODO: this logic could be unified with ComputedFieldColumn.render()?
+        cf = key
+        if cf.output_type == CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            return render_markdown(value)
+        return super().render_value(key, value, context)
+
 
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
@@ -2590,6 +2609,18 @@ class _ObjectDetailGroupsTab(Tab):
         )
 
 
+class _ObjectMetadataTablePanel(ObjectsTablePanel):
+    """Custom table panel for ObjectMetadata that includes assigned_object_type in the add URL."""
+
+    def _get_table_add_url(self, context: Context):
+        url = super()._get_table_add_url(context)
+        if url:
+            obj = get_obj_from_context(context)
+            content_type = ContentType.objects.get_for_model(obj)
+            url += f"&assigned_object_type={content_type.pk}"
+        return url
+
+
 @dataclass
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
@@ -2603,13 +2634,12 @@ class _ObjectDetailMetadataTab(Tab):
         super().__init__(**kwargs)
         if not self.panels:
             self.panels = (
-                ObjectsTablePanel(
+                _ObjectMetadataTablePanel(
                     weight=100,
                     table_class=ObjectMetadataTable,
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
                     exclude_columns=["assigned_object"],
-                    add_button_route=None,
                     related_field_name="assigned_object_id",
                     table_title="Object Metadata",
                 ),
@@ -2619,7 +2649,7 @@ class _ObjectDetailMetadataTab(Tab):
         if not super().should_render(context):
             return False
         obj = get_obj_from_context(context)
-        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
+        return getattr(obj, "is_metadata_associable_model", False)
 
     def render_label(self, context: Context):
         return format_html(
@@ -2651,7 +2681,15 @@ def resolve_attr(obj, dotted_path: str):
 
 
 class _JobModalButton(Button):
-    """A Button that, when clicked, opens a modal dialog for running a Job. This is experimental and subject to change or removal without deprecation."""
+    """A Button that opens a modal dialog for running a Job. Experimental — subject to change without deprecation.
+
+    If a `button_id` is provided, the instance is registered in `registry["job_modal_buttons"]` at init time.
+    The `button_id` travels through HTMX POST data so the view can look up the instance and call
+    `get_redirect_button()` to optionally render a redirect button in the third modal page's footer.
+
+    To add a redirect button, a `button_id` must be defined, and either pass a `redirect_button_callback`
+    or subclass and override `get_redirect_button()`.
+    """
 
     class_path = None
     advanced_fields = ()
@@ -2659,6 +2697,8 @@ class _JobModalButton(Button):
     run_button_label = "Run Job Now"
     job_result_key = None
     refresh_on_close_if_done = False
+    redirect_button_callback = None
+    button_id = ""
 
     def __init__(self, **kwargs):
         """
@@ -2680,6 +2720,14 @@ class _JobModalButton(Button):
                 is displayed directly.
             refresh_on_close_if_done (bool, optional): If True, if the modal is dismissed after the Job is run to
                 completion (whether successful or not), a refresh of the page will be automatically triggered.
+            button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
+                Required when using redirect_button_callback.
+                Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
+                modal footer after the job completes. Requires button_id to be set.
+                Signature: `callback(job_result, request) -> dict`.
+                The dict should have keys `url`, `label`, `color`, and optionally `extra_classes`.
+                Return an empty dict to render no button.
             icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
             template_path (str, optional): Template to render for this button (not the modal). Defaults to "components/button/default.html".
             javascript_template_path (str, optional): JavaScript template to render and include with this button.
@@ -2702,11 +2750,43 @@ class _JobModalButton(Button):
                     advanced_fields=("verbose", "skip_related_objects"),
                     required_permissions=["dcim.view_location"],
                     run_button_label="Run Validation",
+                    button_id="my_app.take_snapshot",
+                    redirect_button_callback=lambda job_result, request: {
+                        "url": f"/plugins/my-app/results/?job={job_result.pk}",
+                        "label": "View Results",
+                        "color": "success",
+                    },
                 )
         """
         super().__init__(**kwargs)
         if self.class_path is None:
             raise TypeError("class_path is required")
+        if self.redirect_button_callback and not self.button_id:
+            raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
+
+        if self.button_id:
+            if self.button_id in registry["job_modal_buttons"]:
+                raise ValueError(f"{self.button_id} must be globally unique")
+            registry["job_modal_buttons"][self.button_id] = self
+
+    def get_redirect_button(self, job_result, request, **kwargs):
+        """Optionally provide a redirect button on the final page of the modal after the job has completed.
+
+        If a `redirect_button_callback` was provided at init time, it is called. Otherwise,
+        subclasses can override this method directly.
+
+        Args:
+            job_result (JobResult): The completed JobResult instance.
+            request (HttpRequest): The HTMX request for the final page of the job modal.
+            **kwargs: Reserved for future use.
+
+        Returns:
+            dict: A dictionary with keys `url`, `label`, `color`, and optionally `attributes`,
+                or a empty dict to render no button.
+        """
+        if self.redirect_button_callback is not None:
+            return self.redirect_button_callback(job_result, request, **kwargs)
+        return {}
 
     def get_link(self, context):
         """Override the default `get_link()` behavior since this button opens a modal."""
@@ -2719,7 +2799,10 @@ class _JobModalButton(Button):
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
-        hx_vals["job_form_modal"] = True
+
+        # TODO: Potentially refactor to use values from the instance using component_id instead of passing as hx_vals.
+        hx_vals["render_job_form"] = True
+        hx_vals["job_modal_button"] = self.button_id
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
@@ -2733,7 +2816,7 @@ class _JobModalButton(Button):
                 "data-bs-toggle": "modal",
                 "data-bs-target": "#nautobot-generic-modal",
                 "hx-target": "#modal-content-container",
-                "hx-get": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+                "hx-post": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
                 "hx-vals": json.dumps(hx_vals),
                 "hx-swap": "innerHTML",
             }

@@ -204,6 +204,35 @@ Output (when pass):
 No approval_required jobs or scheduled jobs found.
 ```
 
+### `create_breakout_demo_data`
+
+`nautobot-server create_breakout_demo_data`
+
+Creates some example data for demonstrating the breakout-cable modelling capabilities introduced in Nautobot v3.2.
+
+```no-highlight
+nautobot-server create_breakout_demo_data
+```
+
+Output:
+
+```no-highlight
+Creating breakout cable demo data...
+12:55:05.131 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.135 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.228 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+12:55:05.231 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+Demo data created successfully.
+  Location: DEMO-DC1
+  Devices: 5
+  Cable types: 2
+  Cables: 2
+```
+
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`
@@ -691,7 +720,10 @@ nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 Run the job on the local system and not on a worker.
 
 `--data <data>`
-JSON string that populates the `data` variable of the job.
+JSON string that populates the `data` variable of the job. Defaults to `{}` (an empty dict). Passing `null` will result in a validation error.
+
++++ 3.2.0
+    The default value of `--data` is now `{}` instead of `None`. Job input validation is also stricter: passing `data=null` raises a `ValueError` rather than being silently treated as an empty input.
 
 ```no-highlight
 nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars
@@ -876,27 +908,3 @@ Nautobot version: 2.2.0a1
 Django version: 3.2.24
 Configuration file: /opt/nautobot/nautobot_config.py
 ```
-
-### `webhook_receiver`
-
-`nautobot-server webhook_receiver`
-
-Start a simple listener to display received HTTP requests.
-
-`--port PORT`  
-Optional port number (default: `9000`)
-
-`--no-headers`  
-Hide HTTP request headers.
-
-```no-highlight
-nautobot-server webhook_receiver --port 9001 --no-headers
-```
-
-Example output:
-
-```no-highlight
-Listening on port http://localhost:9000. Stop with CONTROL-C.
-```
-
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.

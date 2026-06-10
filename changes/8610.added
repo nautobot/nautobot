@@ -1,0 +1,3 @@
+Added UI views for creating, editing, and deleting `ObjectMetadata` records directly in the web UI.
+Added "Add metadata" entry point from a model's Metadata tab that opens a pre-filled create form, with the value input adapting to the selected `MetadataType` data type.
+Added type-aware value rendering in the `ObjectMetadata` list and detail views (linkified URLs, parsed Markdown, pretty-printed JSON, etc.).

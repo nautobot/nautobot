@@ -1,11 +1,16 @@
+from unittest import mock
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.dcim import signals as dcim_signals
 from nautobot.dcim.models import (
     Cable,
     CablePath,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsoleServerPort,
     Device,
@@ -21,7 +26,8 @@ from nautobot.dcim.models import (
     PowerPort,
     RearPort,
 )
-from nautobot.dcim.utils import object_to_path_node
+from nautobot.dcim.signals import create_cablepath, defer_cable_path_rebuilds, rebuild_paths
+from nautobot.dcim.utils import disconnect_termination, object_to_path_node, path_node_to_object
 from nautobot.extras.models import Role, Status
 
 
@@ -117,7 +123,9 @@ class CablePathTestCase(TestCase):
         """
         if msg is None:
             msg = f"Path #{cablepath.pk} not set on originating endpoint {origin}"
-        self.assertEqual(origin._path_id, cablepath.pk, msg=msg)
+        primary_path = origin.cable_paths.first()
+        self.assertIsNotNone(primary_path, msg=msg)
+        self.assertEqual(primary_path.pk, cablepath.pk, msg=msg)
 
     def assertPathIsNotSet(self, origin, msg=None):
         """
@@ -126,9 +134,10 @@ class CablePathTestCase(TestCase):
         :param origin: The originating path endpoint
         :param msg: Custom failure message (optional)
         """
+        primary_path = origin.cable_paths.first()
         if msg is None:
-            msg = f"Path #{origin._path_id} set as origin on {origin}; should be None!"
-        self.assertIsNone(origin._path_id, msg=msg)
+            msg = f"Path #{primary_path.pk if primary_path else None} set as origin on {origin}; should be None!"
+        self.assertIsNone(primary_path, msg=msg)
 
     def assertContainedByPath(self, path_parts):
         """
@@ -444,7 +453,7 @@ class CablePathTestCase(TestCase):
         cable4.save()
         cable5 = Cable(termination_a=frontport2_2, termination_b=interface4, status=self.status)
         cable5.save()
-        path1 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface1,
             destination=interface3,
             path=(
@@ -458,7 +467,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path2 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface2,
             destination=interface4,
             path=(
@@ -472,7 +481,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path3 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface3,
             destination=interface1,
             path=(
@@ -486,7 +495,7 @@ class CablePathTestCase(TestCase):
             ),
             is_active=True,
         )
-        path4 = self.assertPathExists(
+        self.assertPathExists(
             origin=interface4,
             destination=interface2,
             path=(
@@ -524,14 +533,11 @@ class CablePathTestCase(TestCase):
         # Check for four partial paths; one from each interface
         self.assertEqual(CablePath.objects.filter(destination_id__isnull=True).count(), 4)
         self.assertEqual(CablePath.objects.filter(destination_id__isnull=False).count(), 0)
-        interface1.refresh_from_db()
-        interface2.refresh_from_db()
-        interface3.refresh_from_db()
-        interface4.refresh_from_db()
-        self.assertPathIsSet(interface1, path1)
-        self.assertPathIsSet(interface2, path2)
-        self.assertPathIsSet(interface3, path3)
-        self.assertPathIsSet(interface4, path4)
+        # Path PKs change across a cable deletion (signal-driven rebuild replaces the rows
+        # rather than updating in place); refetch the post-delete path for each origin.
+        for origin in (interface1, interface2, interface3, interface4):
+            origin.refresh_from_db()
+            self.assertIsNotNone(origin.cable_paths.first())
 
     def test_203_multiple_paths_via_nested_pass_throughs(self):
         """
@@ -1184,6 +1190,223 @@ class CablePathTestCase(TestCase):
             }
         )
 
+    def test_207a_mid_path_breakout_bails_out(self):
+        """
+        Mid-path breakout cables are not yet supported lane-aware. A trace that encounters a
+        breakout cable past the origin's directly-connected hop should stop with `is_split=True`
+        rather than picking an arbitrary peer via `get_cable_peer()`.
+
+        [IF1] --C1 (straight)-- [RP1] [FP1] --C2 (breakout 1:4)-- [FP2] [RP2]
+        """
+        breakout_type = CableType(
+            name="Test mid-path 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=self.device,
+            name="Front Port 1",
+            rear_port=rearport1,
+            rear_port_position=1,
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
+        frontport2 = FrontPort.objects.create(
+            device=self.device,
+            name="Front Port 2",
+            rear_port=rearport2,
+            rear_port_position=1,
+        )
+
+        # Regular cable: IF1 ↔ RP1 (pass-through to FP1).
+        cable1 = Cable(termination_a=interface1, termination_b=rearport1, status=self.status)
+        cable1.save()
+
+        # Sanity check: with only the straight cable, the trace stops at FP1 with no destination.
+        self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+
+        # Breakout cable mid-path: FP1 ↔ FP2 with breakout cable_type.
+        cable2 = Cable(
+            termination_a=frontport1,
+            termination_b=frontport2,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable2.save()
+
+        # The retraced path should still stop at FP1 — but now marked `is_split=True` because the
+        # trace hit a breakout cable it can't navigate.
+        cp = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+        self.assertTrue(cp.is_split, msg=f"Expected is_split=True on mid-path breakout; got {cp}")
+
+    def test_207a2_get_split_nodes_with_frontport_terminal(self):
+        """
+        `CablePath.get_split_nodes()` must handle a split path whose terminal node is a FrontPort,
+        not just the RearPort case (test_206). A front-to-rear trace that bails out at a mid-path
+        breakout (see test_207a) stops on the FrontPort, so `path[-1]` is a FrontPort. The next
+        segments are the breakout cable's far-side lane terminations (FP2 here) — onward across the
+        cable — not the rear port behind FP1, which is backward and already in the traced path.
+
+        [IF1] --C1 (straight)-- [RP1] [FP1] --C2 (breakout 1:4)-- [FP2] [RP2]
+        """
+        breakout_type = CableType(
+            name="Test split-nodes 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # Straight cable IF1 ↔ RP1 (pass-through to FP1), then a breakout cable on FP1 that fans out.
+        cable1 = Cable(termination_a=interface1, termination_b=rearport1, status=self.status)
+        cable1.save()
+        Cable(termination_a=frontport1, termination_b=frontport2, cable_type=breakout_type, status=self.status).save()
+
+        cp = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+
+        # Precondition: the path split on a FrontPort, the branch the old code mishandled.
+        self.assertTrue(cp.is_split)
+        self.assertIsInstance(path_node_to_object(cp.path[-1]), FrontPort)
+
+        # Onward node is the breakout cable's far-side peer (FP2), not the already-traversed RP1.
+        split_nodes = list(cp.get_split_nodes())
+        self.assertEqual([node.pk for node in split_nodes], [frontport2.pk])
+
+    def test_207b_breakout_with_partial_lanes(self):
+        """
+        Breakout cable with only some fan-out lanes connected. The trunk side should produce one
+        CablePath per lane defined by the cable type: the connected lane gets a complete path,
+        and the unconnected lanes get partial paths (is_split=True, destination=None, path=[cable])
+        labeled with each lane's connector/position.
+
+        [IF_trunk] --C1 (breakout 1:4)-- [IF_lane1]   (lane 1: connected)
+                                         <unconnected> (lanes 2-4: no fan-out termination)
+        """
+        breakout_type = CableType(
+            name="Test partial-lanes 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()
+
+        if_trunk = Interface.objects.create(device=self.device, name="Trunk", status=self.interface_status)
+        if_lane1 = Interface.objects.create(device=self.device, name="Lane 1", status=self.interface_status)
+
+        cable = Cable(
+            termination_a=if_trunk,
+            termination_b=if_lane1,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable.save()
+
+        trunk_paths = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_trunk.pk
+        ).order_by("peer_connector")
+        # One CablePath per fan-out lane.
+        self.assertEqual(trunk_paths.count(), 4)
+
+        lane1_path = trunk_paths.get(peer_connector=1)
+        self.assertEqual(lane1_path.destination, if_lane1)
+        self.assertFalse(lane1_path.is_split, msg=f"Lane 1 should be complete, got {lane1_path}")
+        self.assertTrue(lane1_path.is_active)
+
+        for connector in (2, 3, 4):
+            partial = trunk_paths.get(peer_connector=connector)
+            self.assertIsNone(
+                partial.destination,
+                msg=f"Lane {connector} should have no destination, got {partial.destination}",
+            )
+            self.assertTrue(partial.is_split, msg=f"Lane {connector} should be split, got {partial}")
+            self.assertFalse(partial.is_active)
+            # Path should be just the cable (entered but couldn't be traversed lane-aware).
+            self.assertEqual(partial.path, [object_to_path_node(cable)])
+
+        # The single connected fan-out side has one complete reverse-direction path.
+        lane1_reverse = CablePath.objects.get(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_lane1.pk
+        )
+        self.assertEqual(lane1_reverse.destination, if_trunk)
+
+    def test_207c_mid_path_breakout_lane_traverses_to_trunk(self):
+        """
+        A breakout lane reached mid-path leads deterministically back to its single trunk endpoint,
+        so the trace continues through it to completion (the fan-out side still splits — see
+        test_207a). This mirrors a patch-panel/MPO topology where a far endpoint reaches the trunk
+        endpoint through a breakout whose lane lands on a patch-panel front port.
+
+        [IF_trunk] --C_bk (breakout 1:2, lane B1)-- [FP1][RP1] --C2-- [RP2][FP2] --C3-- [IF_dest]
+        """
+        breakout_type = CableType(
+            name="Test mid-path lane 1:2 breakout",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=2,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        if_trunk = Interface.objects.create(device=self.device, name="Trunk", status=self.interface_status)
+        if_dest = Interface.objects.create(device=self.device, name="Dest", status=self.interface_status)
+
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=2)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=2)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # IF_dest -- C3 -- FP2 (pass-through to RP2)
+        cable3 = Cable(termination_a=frontport2, termination_b=if_dest, status=self.status)
+        cable3.save()
+        # RP2 -- C2 -- RP1 (straight rear-to-rear)
+        cable2 = Cable(termination_a=rearport2, termination_b=rearport1, status=self.status)
+        cable2.save()
+        # FP1 -- C_bk (breakout lane B1) -- IF_trunk
+        cable_bk = Cable(termination_a=if_trunk, termination_b=frontport1, cable_type=breakout_type, status=self.status)
+        cable_bk.save()
+
+        # Tracing from the destination interface reaches the trunk interface: the breakout lane (B1)
+        # maps to a single trunk connector, so it is followed rather than treated as a split.
+        cp = self.assertPathExists(
+            origin=if_dest,
+            destination=if_trunk,
+            path=(cable3, frontport2, rearport2, cable2, rearport1, frontport1, cable_bk),
+            is_active=True,
+        )
+        self.assertFalse(cp.is_split, msg=f"Lane-side mid-path breakout should traverse, not split; got {cp}")
+
     def test_208_single_path_via_circuit(self):
         """
         [IF1] --C1-- [CT1A] [CT1Z] --C2-- [IF2]
@@ -1494,3 +1717,360 @@ class CablePathTestCase(TestCase):
                 rearport1: 2,
             }
         )
+
+    def test_303_disconnect_termination_straight_cable(self):
+        """
+        Disconnecting one termination of a straight cable: the cable survives, the disconnected
+        side has no CablePath, and the still-connected side has a partial path.
+
+        [IF1] --C1-- [IF2]   →  [IF1]    C1   [IF2]
+                                          (IF2 still on the cable, IF1 disconnected)
+        """
+        if1 = Interface.objects.create(device=self.device, name="IF1", status=self.interface_status)
+        if2 = Interface.objects.create(device=self.device, name="IF2", status=self.interface_status)
+        cable = Cable(termination_a=if1, termination_b=if2, status=self.status)
+        cable.save()
+
+        self.assertEqual(CablePath.objects.count(), 2)
+
+        result = disconnect_termination(if1)
+        self.assertEqual(result, cable)
+
+        # Cable itself survives; IF2's cable_termination row survives; IF1's is gone.
+        self.assertTrue(Cable.objects.filter(pk=cable.pk).exists())
+        if1.refresh_from_db()
+        if2.refresh_from_db()
+        self.assertIsNone(getattr(if1, "cable_termination", None))
+        self.assertIsNotNone(if2.cable_termination)
+
+        # No CablePath from IF1 (its cable is gone); IF2 has a partial path ending at the cable.
+        if1_paths = CablePath.objects.filter(origin_type=ContentType.objects.get_for_model(Interface), origin_id=if1.pk)
+        self.assertEqual(if1_paths.count(), 0)
+
+        if2_path = CablePath.objects.get(origin_type=ContentType.objects.get_for_model(Interface), origin_id=if2.pk)
+        self.assertIsNone(if2_path.destination)
+        self.assertFalse(if2_path.is_active)
+        self.assertEqual(if2_path.path, [object_to_path_node(cable)])
+
+    def test_304_disconnect_termination_breakout_fanout_side(self):
+        """
+        Disconnecting one fanout-side port of a breakout cable should preserve the cable_paths on
+        the surviving lanes (regression test for the old `peer.cable_paths.all().delete()` bug
+        which nuked all trunk-side paths).
+
+        Setup: 1:4 breakout where only lanes 1 and 2 are connected on the fan-out side. Disconnect
+        the lane-1 fan-out port. Lane 2 should still resolve end-to-end on both sides; lane 1
+        should now be partial on the trunk side and gone on the (disconnected) fan-out side.
+        Lanes 3 and 4 are unconnected throughout and remain partial trunk-side paths.
+        """
+        breakout_type = CableType(
+            name="Test disconnect 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()
+
+        if_trunk = Interface.objects.create(device=self.device, name="Trunk", status=self.interface_status)
+        if_lane1 = Interface.objects.create(device=self.device, name="Lane 1", status=self.interface_status)
+        if_lane2 = Interface.objects.create(device=self.device, name="Lane 2", status=self.interface_status)
+
+        # Create the trunk↔lane1 cable (this populates connector=1 join rows on both sides).
+        cable = Cable(
+            termination_a=if_trunk,
+            termination_b=if_lane1,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable.save()
+
+        # Add a join row for connector 2 (Cable.save only materializes connector 1 by default).
+        cable.add_termination(if_lane2, "B", connector=2)
+
+        # Sanity check pre-disconnect: lane 1 + lane 2 complete, lanes 3-4 partial.
+        trunk_paths_pre = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_trunk.pk
+        )
+        self.assertEqual(trunk_paths_pre.count(), 4)
+        self.assertEqual(trunk_paths_pre.get(peer_connector=1).destination, if_lane1)
+        self.assertEqual(trunk_paths_pre.get(peer_connector=2).destination, if_lane2)
+        self.assertTrue(trunk_paths_pre.get(peer_connector=3).is_split)
+        self.assertTrue(trunk_paths_pre.get(peer_connector=4).is_split)
+
+        # Disconnect lane 1's fan-out port.
+        result = disconnect_termination(if_lane1)
+        self.assertEqual(result, cable)
+
+        # Cable itself survives.
+        self.assertTrue(Cable.objects.filter(pk=cable.pk).exists())
+
+        trunk_paths_post = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_trunk.pk
+        )
+        # Still 4 trunk-side paths (one per lane in the cable type's mapping).
+        self.assertEqual(trunk_paths_post.count(), 4)
+
+        # Lane 1 is now partial.
+        lane1_trunk = trunk_paths_post.get(peer_connector=1)
+        self.assertIsNone(lane1_trunk.destination)
+        self.assertTrue(lane1_trunk.is_split)
+
+        # Lane 2 SURVIVES — this is the regression-protected assertion.
+        lane2_trunk = trunk_paths_post.get(peer_connector=2)
+        self.assertEqual(lane2_trunk.destination, if_lane2, msg="Lane 2 trunk-side path was clobbered by disconnect")
+
+        # Lanes 3 and 4 remain partial (unchanged).
+        self.assertTrue(trunk_paths_post.get(peer_connector=3).is_split)
+        self.assertTrue(trunk_paths_post.get(peer_connector=4).is_split)
+
+        # The disconnected fan-out side has no CablePath at all.
+        self.assertEqual(
+            CablePath.objects.filter(
+                origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_lane1.pk
+            ).count(),
+            0,
+        )
+        # The other fan-out side still has its reverse-direction path.
+        lane2_reverse = CablePath.objects.get(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_lane2.pk
+        )
+        self.assertEqual(lane2_reverse.destination, if_trunk)
+
+    def test_get_connected_endpoints_unconnected_endpoint(self):
+        """An endpoint with no cable returns an empty list."""
+        lonely = Interface.objects.create(device=self.device, name="lonely", status=self.interface_status)
+        self.assertEqual(lonely.get_connected_endpoints(), [])
+
+    def test_get_connected_endpoints_simple_cable(self):
+        """A simple cable: each endpoint resolves to a one-element list containing the peer."""
+        if1 = Interface.objects.create(device=self.device, name="gce-simple-1", status=self.interface_status)
+        if2 = Interface.objects.create(device=self.device, name="gce-simple-2", status=self.interface_status)
+        Cable(termination_a=if1, termination_b=if2, status=self.status).save()
+        self.assertEqual(if1.get_connected_endpoints(), [if2])
+        self.assertEqual(if2.get_connected_endpoints(), [if1])
+
+    def test_get_connected_endpoints_breakout_cable(self):
+        """A breakout cable: the trunk side resolves to one destination per fanned-out lane."""
+        breakout_type = CableType(
+            name="get_connected_endpoints 1x4",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()
+
+        trunk = Interface.objects.create(device=self.device, name="gce-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name="gce-lane1", status=self.interface_status)
+        lane2 = Interface.objects.create(device=self.device, name="gce-lane2", status=self.interface_status)
+
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout_type, status=self.status)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # Trunk side: one destination per resolved lane (lanes 3-4 unconnected → not included).
+        self.assertEqual(set(trunk.get_connected_endpoints()), {lane1, lane2})
+        # Each fan-out side resolves back to the trunk.
+        self.assertEqual(lane1.get_connected_endpoints(), [trunk])
+        self.assertEqual(lane2.get_connected_endpoints(), [trunk])
+
+
+class CableToCableTerminationSignalTestCase(TestCase):
+    """Unit tests for the `CableToCableTermination` post_save/post_delete signal handler and the
+    `defer_cable_path_rebuilds()` batching context manager."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Signal Test Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            location=cls.location,
+            device_type=device_type,
+            role=device_role,
+            name="Signal Test Device",
+            status=device_status,
+        )
+        cls.iface_status = Status.objects.get_for_model(Interface).first()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.if_a = Interface.objects.create(device=cls.device, name="if-a", status=cls.iface_status)
+        cls.if_b = Interface.objects.create(device=cls.device, name="if-b", status=cls.iface_status)
+
+    def test_post_save_signal_triggers_path_rebuild(self):
+        """Creating a `CableToCableTermination` row outside the context manager triggers an
+        immediate `rebuild_paths(cable)` via the post_save signal handler."""
+        cable = Cable.objects.create(status=self.cable_status)
+        # Cable.objects.create() doesn't go through Cable.save()'s _materialize flow because there
+        # are no initial terminations — so no paths exist for it yet.
+        self.assertEqual(CablePath.objects.filter(path__contains=cable).count(), 0)
+        # Adding a row should trigger the signal → rebuild_paths → create a path for if_a.
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+        self.assertEqual(
+            CablePath.objects.filter(
+                origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+            ).count(),
+            1,
+        )
+
+    def test_post_delete_signal_triggers_path_rebuild(self):
+        """Deleting a `CableToCableTermination` row triggers `rebuild_paths(cable)` and
+        re-traces (or removes) any paths that used it."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+        # Cable creation builds the path; baseline.
+        path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(path)
+        self.assertEqual(path.destination_id, self.if_b.pk)
+        # Drop the B-side join row directly; signal fires → path should be re-traced to partial.
+        CableToCableTermination.objects.filter(cable=cable, cable_end="B").delete()
+        path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(path)
+        self.assertIsNone(path.destination_id)
+
+    def test_defer_coalesces_per_row_signals_into_one_rebuild(self):
+        """Inside `defer_cable_path_rebuilds()`, per-row signals queue dirty cables without
+        triggering rebuilds; exactly one `rebuild_paths(cable)` fires per affected cable on exit."""
+        cable = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+                # No rebuilds while batching.
+                self.assertEqual(spy.call_count, 0)
+            # Exactly one rebuild on exit, for the single affected cable.
+            self.assertEqual(spy.call_count, 1)
+            self.assertEqual(spy.call_args.args[0].pk, cable.pk)
+
+    def test_defer_dedupes_multiple_changes_to_same_cable(self):
+        """Multiple row changes on the same cable inside a single defer block flush to one
+        rebuild — the dirty set is a set, not a list."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.filter(cable=cable).delete()
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+            self.assertEqual(spy.call_count, 1)
+
+    def test_defer_handles_multiple_cables(self):
+        """Multiple cables touched in one defer block produce one rebuild per cable."""
+        if_c = Interface.objects.create(device=self.device, name="if-c", status=self.iface_status)
+        if_d = Interface.objects.create(device=self.device, name="if-d", status=self.iface_status)
+        cable1 = Cable.objects.create(status=self.cable_status)
+        cable2 = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable1, cable_end="A", interface=self.if_a)
+                CableToCableTermination.objects.create(cable=cable1, cable_end="B", interface=self.if_b)
+                CableToCableTermination.objects.create(cable=cable2, cable_end="A", interface=if_c)
+                CableToCableTermination.objects.create(cable=cable2, cable_end="B", interface=if_d)
+            self.assertEqual(spy.call_count, 2)
+            rebuilt_cable_pks = {call.args[0].pk for call in spy.call_args_list}
+            self.assertEqual(rebuilt_cable_pks, {cable1.pk, cable2.pk})
+
+    def test_defer_is_nestable_outermost_exit_flushes(self):
+        """Nested entries share the dirty set; only the outermost `__exit__` triggers the
+        flush, so inner exits leave the queue intact."""
+        cable = Cable.objects.create(status=self.cable_status)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with defer_cable_path_rebuilds():
+                CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                with defer_cable_path_rebuilds():
+                    CableToCableTermination.objects.create(cable=cable, cable_end="B", interface=self.if_b)
+                    self.assertEqual(spy.call_count, 0)  # Inner block: no flush yet.
+                self.assertEqual(spy.call_count, 0)  # Inner exit: still no flush (outer still active).
+            self.assertEqual(spy.call_count, 1)  # Outer exit: single flush for the cable.
+
+    def test_defer_rolls_back_on_exception(self):
+        """An exception inside the context manager rolls back the transactional block: the
+        queued row changes are undone and the flushed rebuild is skipped. Avoids the
+        "rows committed, paths stale" inconsistency."""
+        cable = Cable.objects.create(status=self.cable_status)
+        # No join rows before; we'll add one inside the failing block and assert it's rolled back.
+        self.assertEqual(CableToCableTermination.objects.filter(cable=cable).count(), 0)
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            with self.assertRaises(RuntimeError):
+                with defer_cable_path_rebuilds():
+                    CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.if_a)
+                    raise RuntimeError("simulated failure inside defer block")
+            self.assertEqual(spy.call_count, 0)  # flush skipped — transaction rolled back
+
+        # The join row created inside the block doesn't survive the rollback.
+        self.assertEqual(CableToCableTermination.objects.filter(cable=cable).count(), 0)
+
+    def test_rebuild_paths_accepts_cabletocabletermination(self):
+        """`rebuild_paths` resolves a `CableToCableTermination` input to its parent cable and
+        applies Cable semantics."""
+        cable = Cable(termination_a=self.if_a, termination_b=self.if_b, status=self.cable_status)
+        cable.save()
+        join_row = CableToCableTermination.objects.filter(cable=cable, cable_end="A").first()
+        self.assertIsNotNone(join_row)
+        # Sanity: a path already exists; rebuilding via the join row should leave one in place.
+        original_path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        rebuild_paths(join_row)
+        rebuilt_path = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=self.if_a.pk
+        ).first()
+        self.assertIsNotNone(rebuilt_path)
+        # Same end-state (origin → destination); PK may differ because rebuild deletes+recreates.
+        self.assertEqual(rebuilt_path.destination_id, original_path.destination_id)
+
+    def test_rebuild_paths_rejects_unsupported_input(self):
+        """`rebuild_paths` raises `TypeError` for inputs that aren't a Cable, join row, or
+        CableTermination subclass — used to silently no-op."""
+        with self.assertRaisesRegex(TypeError, "expects a Cable, CableToCableTermination, or CableTermination"):
+            rebuild_paths(self.device)  # Device isn't a valid path node.
+
+    # `create_cablepath` direct-invocation branches not exercised by the standard cable-save flow.
+
+    def test_create_cablepath_on_uncabled_node_with_rebuild_is_noop(self):
+        """When the node has no `cable_termination` and `rebuild=True`, `create_cablepath` calls
+        `rebuild_paths(node)` (a no-op for a node with no paths) and returns. The `rebuild=False`
+        variant of this code path is exercised by signals; `rebuild=True` only happens when
+        callers like the `trace_paths` management command pass an uncabled node directly."""
+        uncabled = Interface.objects.create(device=self.device, name="uncabled-cp", status=self.iface_status)
+        self.assertIsNone(uncabled.cable)
+        create_cablepath(uncabled, rebuild=True)
+        self.assertEqual(uncabled.cable_paths.count(), 0)
+
+    def test_create_cablepath_breakout_dedupes_repeated_peer_connectors(self):
+        """One CablePath per distinct peer_connector, not per mapping lane (1x2 with 4 lanes → 2 paths)."""
+        breakout = CableType.objects.create(name="Test 1x2x4", a_connectors=1, b_connectors=2, total_lanes=4)
+        # Sanity: at least one (a_connector, b_connector) pair repeats in the mapping.
+        peer_connectors_seen = [entry["b_connector"] for entry in breakout.mapping]
+        self.assertGreater(len(peer_connectors_seen), len(set(peer_connectors_seen)))
+
+        trunk = Interface.objects.create(device=self.device, name="trunk-1x2x4", status=self.iface_status)
+        lane1 = Interface.objects.create(device=self.device, name="lane1-1x2x4", status=self.iface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.cable_status)
+        cable.save()
+        # Trunk-side has one path per distinct peer_connector (2), not per mapping lane (4).
+        trunk_paths = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        self.assertEqual(trunk_paths.count(), 2)
+        self.assertEqual(set(trunk_paths.values_list("peer_connector", flat=True)), {1, 2})
+
+    def test_create_cablepath_breakout_with_rebuild_true_invokes_rebuild_paths(self):
+        """After fanning out a cable's paths, `create_cablepath(rebuild=True)` calls `rebuild_paths` on the origin."""
+        breakout = CableType.objects.create(name="Test 1x2 rebuild", a_connectors=1, b_connectors=2, total_lanes=2)
+        trunk = Interface.objects.create(device=self.device, name="trunk-rb", status=self.iface_status)
+        lane1 = Interface.objects.create(device=self.device, name="lane1-rb", status=self.iface_status)
+        Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.cable_status).save()
+
+        with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
+            create_cablepath(trunk, rebuild=True)
+        spy.assert_any_call(trunk)

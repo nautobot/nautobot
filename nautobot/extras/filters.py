@@ -29,6 +29,7 @@ from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -1224,9 +1225,24 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Has Job Console Entries",
     )
 
+    revocation_type = django_filters.MultipleChoiceFilter(
+        choices=JobRevocationTypeChoices.CHOICES,
+    )
+
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = [
+            "id",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_revoked",
+            "name",
+            "status",
+            "user",
+            "revoked_by",
+            "scheduled_job",
+        ]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1327,6 +1343,7 @@ class MetadataTypeFilterSet(NautobotFilterSet):
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("metadata").get_choices,
     )
+    content_type_id = django_filters.NumberFilter(field_name="content_types", lookup_expr="exact")
 
     class Meta:
         model = MetadataType
