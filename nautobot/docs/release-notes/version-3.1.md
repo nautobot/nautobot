@@ -148,6 +148,26 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.4 (2026-06-08)
+
+### Security in v3.1.4
+
+- [#9013](https://github.com/nautobot/nautobot/issues/9013) - Fixed the Scheduled Job 'Assume Ownership' action to not bypass approval workflows.
+
+### Added in v3.1.4
+
+- [#9005](https://github.com/nautobot/nautobot/issues/9005) - Added type-aware behavior to the Custom Field create/edit UI so only validation and choice inputs that apply to the selected field type are shown.
+- [#9026](https://github.com/nautobot/nautobot/issues/9026) - Added `nautobot.apps.dcim.SkipAutoComponentCreation` context manager that lets apps opt out of Nautobot's automatic Device/Module component instantiation on a new save.
+
+### Fixed in v3.1.4
+
+- [#8658](https://github.com/nautobot/nautobot/issues/8658) - Fixed bulk delete operations not creating ObjectChange records for CASCADE-deleted child objects.
+- [#8871](https://github.com/nautobot/nautobot/issues/8871) - Fixed pagination issue on the Dynamic Groups membership tab.
+- [#8995](https://github.com/nautobot/nautobot/issues/8995) - Added default ordering to `VRFPrefixAssignment` and `VRFDeviceAssignment` so paginated REST/GraphQL queries return deterministic results.
+- [#9015](https://github.com/nautobot/nautobot/issues/9015) - Fixed N+1 query patterns when resolving `tags` and `config_context` in GraphQL queries.
+- [#9021](https://github.com/nautobot/nautobot/issues/9021) - Fixed a GraphQL schema build failure when a model's filterset exposes a filter whose name collides with a reserved `graphene.Field` keyword argument.
+- [#9038](https://github.com/nautobot/nautobot/issues/9038) - Fixed Select2 multi-select widgets (Object types, Groups, Users) rendering as a collapsed, narrow column on the admin object permission form.
+
 ## v3.1.3 (2026-05-26)
 
 ### Security in v3.1.3
