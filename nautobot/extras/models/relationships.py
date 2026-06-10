@@ -304,7 +304,9 @@ class RelationshipModel(models.Model):
                             .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
                             .count()
                         )
-                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)" if count else None
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = (
+                            f"{count} {remote_ct} object(s)" if count else None
+                        )
 
         return resp
 
