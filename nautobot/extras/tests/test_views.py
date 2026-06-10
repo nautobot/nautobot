@@ -5344,8 +5344,8 @@ class JobTestCase(
             self.assertNotIn("id__schedule_type", content, msg=run_url)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_schedule_job_via_modal_returns_confirmation_partial(self, _):
-        """Submitting a future-scheduled job via the HTMX modal returns the confirmation partial (not a redirect)."""
+    def test_schedule_job_via_modal_closes_modal_and_queues_message(self, _):
+        """Submitting a future-scheduled job via the HTMX modal closes the modal and queues a success message."""
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -5366,18 +5366,22 @@ class JobTestCase(
             )
             self.assertHttpStatus(response, 200, msg=run_url)
             content = response.content.decode(response.charset)
-            # The confirmation partial should show the success message, not a redirect.
-            self.assertIn("successfully scheduled", content, msg=run_url)
-            self.assertIn("View Scheduled Job", content, msg=run_url)
+            # The response should close the modal and refresh the header messages (not a redirect).
+            self.assertIn("refreshMessages", content, msg=run_url)
             # A ScheduledJob record must have been created.
             self.assertTrue(
                 ScheduledJob.objects.filter(name=data["_schedule_name"]).exists(),
                 msg=run_url,
             )
+            # The queued success message is rendered into the header messages on refresh.
+            messages_response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+            messages_content = messages_response.content.decode(messages_response.charset)
+            self.assertIn("successfully scheduled", messages_content, msg=run_url)
+            self.assertIn("View Scheduled Job", messages_content, msg=run_url)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
-    def test_approval_workflow_via_modal_returns_confirmation_partial(self, _):
-        """Submitting a job that requires approval via the HTMX modal returns the approval-workflow confirmation partial."""
+    def test_approval_workflow_via_modal_closes_modal_and_queues_message(self, _):
+        """Submitting a job that requires approval via the HTMX modal closes the modal and queues a success message."""
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
 
@@ -5400,8 +5404,13 @@ class JobTestCase(
             )
             self.assertHttpStatus(response, 200, msg=run_url)
             content = response.content.decode(response.charset)
-            self.assertIn("submitted for approval", content, msg=run_url)
-            self.assertIn("View Approval Request", content, msg=run_url)
+            # The response should close the modal and refresh the header messages (not a redirect).
+            self.assertIn("refreshMessages", content, msg=run_url)
+            # The queued success message is rendered into the header messages on refresh.
+            messages_response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+            messages_content = messages_response.content.decode(messages_response.charset)
+            self.assertIn("submitted for approval", messages_content, msg=run_url)
+            self.assertIn("View Approval Request", messages_content, msg=run_url)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_now_constrained_permissions(self, _):

@@ -2506,37 +2506,39 @@ class JobUIViewSet(NautobotUIViewSet):
 
     def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
         """Handle response for jobs requiring approval workflow."""
+        approval_url = reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk])
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            approval_url = reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk])
-            context = {
-                "title": scheduled_job.name,
-                "scheduled_job": scheduled_job,
-                "message": f"Job '{scheduled_job.name}' successfully submitted for approval.",
-                "redirect_url": approval_url,
-                "redirect_label": "View Approval Request",
-            }
-            response = render(request, "extras/htmx/job_schedule_confirmation_modal.html", context)
+            messages.success(
+                request,
+                format_html(
+                    "Job '{}' successfully submitted for approval. <a href=\"{}\">View Approval Request</a>",
+                    scheduled_job.name,
+                    approval_url,
+                ),
+            )
+            response = render(request, "extras/htmx/job_modal_close.html")
             patch_vary_headers(response, ["HX-Request"])
             return response
         messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
-        return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
+        return redirect(return_url or approval_url)
 
     def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
         """Handle response for successfully scheduled jobs."""
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            context = {
-                "title": scheduled_job.name,
-                "scheduled_job": scheduled_job,
-                "message": f"Job '{scheduled_job.name}' successfully scheduled.",
-                "redirect_url": scheduled_job.get_absolute_url(),
-                "redirect_label": "View Scheduled Job",
-            }
-            response = render(request, "extras/htmx/job_schedule_confirmation_modal.html", context)
+            messages.success(
+                request,
+                format_html(
+                    "Job '{}' successfully scheduled. <a href=\"{}\">View Scheduled Job</a>",
+                    scheduled_job.name,
+                    scheduled_job.get_absolute_url(),
+                ),
+            )
+            response = render(request, "extras/htmx/job_modal_close.html")
             patch_vary_headers(response, ["HX-Request"])
             return response
-        messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+        messages.success(request, f"Job '{scheduled_job.name}' successfully scheduled")
         return redirect(return_url or "extras:scheduledjob_list")
 
     def _handle_immediate_execution(
