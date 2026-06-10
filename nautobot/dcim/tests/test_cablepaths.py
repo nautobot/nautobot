@@ -27,7 +27,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.dcim.signals import create_cablepath, defer_cable_path_rebuilds, rebuild_paths
-from nautobot.dcim.utils import disconnect_termination, object_to_path_node
+from nautobot.dcim.utils import disconnect_termination, object_to_path_node, path_node_to_object
 from nautobot.extras.models import Role, Status
 
 
@@ -1253,6 +1253,54 @@ class CablePathTestCase(TestCase):
         )
         self.assertTrue(cp.is_split, msg=f"Expected is_split=True on mid-path breakout; got {cp}")
 
+    def test_207a2_get_split_nodes_with_frontport_terminal(self):
+        """
+        `CablePath.get_split_nodes()` must handle a split path whose terminal node is a FrontPort,
+        not just the RearPort case (test_206). A front-to-rear trace that bails out at a mid-path
+        breakout (see test_207a) stops on the FrontPort, so `path[-1]` is a FrontPort. The next
+        segments are the breakout cable's far-side lane terminations (FP2 here) — onward across the
+        cable — not the rear port behind FP1, which is backward and already in the traced path.
+
+        [IF1] --C1 (straight)-- [RP1] [FP1] --C2 (breakout 1:4)-- [FP2] [RP2]
+        """
+        breakout_type = CableType(
+            name="Test split-nodes 1:4 breakout",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=4,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        interface1 = Interface.objects.create(device=self.device, name="Interface 1", status=self.interface_status)
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=1)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=1)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # Straight cable IF1 ↔ RP1 (pass-through to FP1), then a breakout cable on FP1 that fans out.
+        cable1 = Cable(termination_a=interface1, termination_b=rearport1, status=self.status)
+        cable1.save()
+        Cable(termination_a=frontport1, termination_b=frontport2, cable_type=breakout_type, status=self.status).save()
+
+        cp = self.assertPathExists(
+            origin=interface1,
+            destination=None,
+            path=(cable1, rearport1, frontport1),
+            is_active=False,
+        )
+
+        # Precondition: the path split on a FrontPort, the branch the old code mishandled.
+        self.assertTrue(cp.is_split)
+        self.assertIsInstance(path_node_to_object(cp.path[-1]), FrontPort)
+
+        # Onward node is the breakout cable's far-side peer (FP2), not the already-traversed RP1.
+        split_nodes = list(cp.get_split_nodes())
+        self.assertEqual([node.pk for node in split_nodes], [frontport2.pk])
+
     def test_207b_breakout_with_partial_lanes(self):
         """
         Breakout cable with only some fan-out lanes connected. The trunk side should produce one
@@ -1309,6 +1357,55 @@ class CablePathTestCase(TestCase):
             origin_type=ContentType.objects.get_for_model(Interface), origin_id=if_lane1.pk
         )
         self.assertEqual(lane1_reverse.destination, if_trunk)
+
+    def test_207c_mid_path_breakout_lane_traverses_to_trunk(self):
+        """
+        A breakout lane reached mid-path leads deterministically back to its single trunk endpoint,
+        so the trace continues through it to completion (the fan-out side still splits — see
+        test_207a). This mirrors a patch-panel/MPO topology where a far endpoint reaches the trunk
+        endpoint through a breakout whose lane lands on a patch-panel front port.
+
+        [IF_trunk] --C_bk (breakout 1:2, lane B1)-- [FP1][RP1] --C2-- [RP2][FP2] --C3-- [IF_dest]
+        """
+        breakout_type = CableType(
+            name="Test mid-path lane 1:2 breakout",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=2,
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+
+        if_trunk = Interface.objects.create(device=self.device, name="Trunk", status=self.interface_status)
+        if_dest = Interface.objects.create(device=self.device, name="Dest", status=self.interface_status)
+
+        rearport1 = RearPort.objects.create(device=self.device, name="Rear Port 1", positions=2)
+        frontport1 = FrontPort.objects.create(
+            device=self.device, name="Front Port 1", rear_port=rearport1, rear_port_position=1
+        )
+        rearport2 = RearPort.objects.create(device=self.device, name="Rear Port 2", positions=2)
+        frontport2 = FrontPort.objects.create(
+            device=self.device, name="Front Port 2", rear_port=rearport2, rear_port_position=1
+        )
+
+        # IF_dest -- C3 -- FP2 (pass-through to RP2)
+        cable3 = Cable(termination_a=frontport2, termination_b=if_dest, status=self.status)
+        cable3.save()
+        # RP2 -- C2 -- RP1 (straight rear-to-rear)
+        cable2 = Cable(termination_a=rearport2, termination_b=rearport1, status=self.status)
+        cable2.save()
+        # FP1 -- C_bk (breakout lane B1) -- IF_trunk
+        cable_bk = Cable(termination_a=if_trunk, termination_b=frontport1, cable_type=breakout_type, status=self.status)
+        cable_bk.save()
+
+        # Tracing from the destination interface reaches the trunk interface: the breakout lane (B1)
+        # maps to a single trunk connector, so it is followed rather than treated as a split.
+        cp = self.assertPathExists(
+            origin=if_dest,
+            destination=if_trunk,
+            path=(cable3, frontport2, rearport2, cable2, rearport1, frontport1, cable_bk),
+            is_active=True,
+        )
+        self.assertFalse(cp.is_split, msg=f"Lane-side mid-path breakout should traverse, not split; got {cp}")
 
     def test_208_single_path_via_circuit(self):
         """

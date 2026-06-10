@@ -642,6 +642,7 @@ nav:
               - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Skip Auto Component Creation: "development/apps/api/platform-features/skip-auto-component-creation.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
               - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
           - UI Extensions:
@@ -661,6 +662,7 @@ nav:
               - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
               - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
               - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.dcim: "code-reference/nautobot/apps/dcim.md"
               - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
               - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
               - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
