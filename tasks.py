@@ -687,14 +687,15 @@ def nbshell(context, quiet=False, print_sql=False, command=None):
     help={
         "service": "Name of the service to shell into",
         "root": "Launch shell as root",
+        "command": "Run this one-off command in the container instead of launching an interactive shell.",
     }
 )
-def cli(context, service="nautobot", root=False):
-    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+def cli(context, service="nautobot", root=False, command=""):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container, or run a one-off command with `-c`."""
     context.nautobot.local = False
-    command = "bash"
+    cmd = command or "bash"
 
-    run_command(context, command, service=service, root=root)
+    run_command(context, cmd, service=service, root=root)
 
 
 @task(

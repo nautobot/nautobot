@@ -433,13 +433,7 @@ class CableTermination(models.Model):
         all_rows = cable.terminations.all()
 
         if cable.cable_type_id and cable.cable_type.is_breakout:
-            origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
-            far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
-            mapped_far_connectors = {
-                entry[far_side_key]
-                for entry in cable.cable_type.mapping
-                if entry[origin_side_key] == my_endpoint.connector
-            }
+            mapped_far_connectors = self._mapped_far_connectors()
             opposite_endpoints = [
                 ep for ep in all_rows if ep.cable_end == opposite_side and ep.connector in mapped_far_connectors
             ]
@@ -448,6 +442,32 @@ class CableTermination(models.Model):
 
         opposite_endpoints.sort(key=lambda ep: ep.connector or 0)
         return opposite_endpoints
+
+    def _mapped_far_connectors(self):
+        """Opposite-side connector numbers this termination's connector maps to via the cable type's
+        lane mapping. Only meaningful for breakout cables; returns an empty set otherwise.
+        """
+        my_endpoint = getattr(self, "cable_termination", None)
+        if my_endpoint is None or my_endpoint.cable is None:
+            return set()
+        cable = my_endpoint.cable
+        if not (cable.cable_type_id and cable.cable_type.is_breakout):
+            return set()
+        origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
+        far_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+        return {
+            entry[far_side_key] for entry in cable.cable_type.mapping if entry[origin_side_key] == my_endpoint.connector
+        }
+
+    def breakout_fans_out(self):
+        """True if this termination sits on the fan-out side of a breakout cable.
+
+        That is, its connector maps to more than one opposite-side connector — the signal fans out
+        to multiple lanes, which is a genuine path split, regardless of how many of those lanes are
+        currently connected. A connector mapping to a single far connector (the aggregating side of
+        a breakout, or any non-breakout cable) is deterministic and not a split.
+        """
+        return len(self._mapped_far_connectors()) > 1
 
     @classmethod
     def cable_columns_select_related_fields(cls):
@@ -525,19 +545,9 @@ class PathEndpoint(models.Model):
         abstract = True
 
     def trace(self):
+        # Trace the endpoint's first path (a non-breakout endpoint has at most one).
         path_obj = self.cable_paths.first()  # pylint: disable=no-member
-        if path_obj is None:
-            return []
-
-        # Construct the complete path
-        path = [self, *path_obj.get_path()]
-        while (len(path) + 1) % 3:
-            # Pad to ensure we have complete three-tuples (e.g. for paths that end at a RearPort)
-            path.append(None)
-        path.append(path_obj.destination)
-
-        # Return the path as a list of three-tuples (A termination, cable, B termination)
-        return list(zip(*[iter(path)] * 3))
+        return path_obj.trace() if path_obj is not None else []
 
     @property
     def path(self):

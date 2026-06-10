@@ -117,6 +117,7 @@ from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     ApprovalWorkflowStateChoices,
+    CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -1416,6 +1417,9 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if self.action in ("create", "update"):
+            context["custom_field_min_max_types"] = list(CustomFieldTypeChoices.MIN_MAX_TYPES)
+            context["custom_field_regex_types"] = list(CustomFieldTypeChoices.REGEX_TYPES)
+
             if request.POST:
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
 
@@ -1690,7 +1694,16 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 related_list_url_name="extras:dynamicgroup_list",
             ),
-        ]
+        ],
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_DATACOMPLIANCE_TAB + 50,
+                tab_id="members",
+                label="Members",
+                url_name="extras:dynamicgroup_members",
+                related_object_attribute="members",
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
@@ -1711,6 +1724,34 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
 
         elif self.action == "retrieve":
+            # Descendants table
+            descendants_memberships = instance.membership_tree()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                descendants_memberships,
+                orderable=False,
+            )
+            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                ancestors,
+                orderable=False,
+            )
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+
+            context.update(
+                {
+                    "ancestors_table": ancestors_table,
+                    "ancestors_tree": ancestors_tree,
+                    "descendants_table": descendants_table,
+                    "descendants_tree": descendants_tree,
+                }
+            )
+
+        elif self.action == "members":
+            # Members tab
+            context["base_template"] = get_base_template(self.base_template, instance.model)
             model = instance.model
             table_class = get_table_for_model(model)
             members = instance.members
@@ -1730,21 +1771,6 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 }
                 RequestConfig(request, paginate).configure(members_table)
 
-                # Descendants table
-                descendants_memberships = instance.membership_tree()
-                descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                    descendants_memberships,
-                    orderable=False,
-                )
-                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
-
-                # Ancestors table
-                ancestors = instance.get_ancestors()
-                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
-                    ancestors,
-                    orderable=False,
-                )
-                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                     context["members_list_url"] = None
                 else:
@@ -1752,19 +1778,18 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                         context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
                     except NoReverseMatch:
                         context["members_list_url"] = None
-
                 context.update(
                     {
-                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                        "members_verbose_name_plural": model._meta.verbose_name_plural,
                         "members_table": members_table,
-                        "ancestors_table": ancestors_table,
-                        "ancestors_tree": ancestors_tree,
-                        "descendants_table": descendants_table,
-                        "descendants_tree": descendants_tree,
                     }
                 )
 
         return context
+
+    @action(detail=True, url_path="members", url_name="members", custom_view_base_action="view")
+    def members(self, request, pk=None):
+        return Response({})
 
     def form_save(self, form, commit=True, **kwargs):
         obj = form.save(commit=False)
@@ -2542,14 +2567,19 @@ class JobUIViewSet(NautobotUIViewSet):
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
-            url = reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk})
+            job_modal_button_registry_id = request.POST.get("job_modal_button", "")
             job_result_key = request.POST.get("job_result_key", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-            if job_result_key:
-                url = f"{url}?job_result_key={job_result_key}&refresh_on_close_if_done={refresh_on_close_if_done}"
-            else:
-                url = f"{url}?refresh_on_close_if_done={refresh_on_close_if_done}"
-            response = redirect(url)
+            context = {
+                "result": job_result,
+                "title": job_model.name,
+                "detail_value": "",
+                "job_is_pending": True,
+                "job_modal_button": job_modal_button_registry_id,
+                "job_result_key": job_result_key,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
+            }
+            response = render(request, "extras/jobresult_modal.html", context)
             patch_vary_headers(response, ["HX-Request"])
             return response
 
@@ -2591,47 +2621,37 @@ class JobUIViewSet(NautobotUIViewSet):
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
-        htmx_modal = False
-        title = job_model.name
-        job_result_key = None
         advanced_fields = ()
-        if htmx_request:
-            if request.method == "POST":
-                htmx_modal = request.POST.get("job_form_modal", False)
-                run_button_label = request.POST.get("run_button_label", "Run Job Now")
-                job_result_key = request.POST.get("job_result_key", None)
-                refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
-                advanced_field_names = request.POST.getlist("advanced_fields")
-            else:
-                htmx_modal = request.GET.get("job_form_modal", False)
-                run_button_label = request.GET.get("run_button_label", "Run Job Now")
-                job_result_key = request.GET.get("job_result_key", None)
-                refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
-                advanced_field_names = request.GET.getlist("advanced_fields")
-            advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
 
-        template_name = self._get_template_name(job_class, htmx_modal)
-        if htmx_request and htmx_modal:
+        if htmx_request:
+            job_modal_button_registry_id = request.POST.get("job_modal_button", "")
+            title = job_model.name
+            run_button_label = request.POST.get("run_button_label", "Run Job Now")
+            job_result_key = request.POST.get("job_result_key")
+            refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+            advanced_field_names = request.POST.getlist("advanced_fields")
+            advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+            template_name = self._get_template_name(job_class=job_class, htmx_modal=True)
             response = render(
                 request,
                 template_name,
                 {
                     "class_path": job_model.class_path,
                     "title": title,
-                    "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
+                    "run_button_label": run_button_label,
                     "job_model": job_model,
                     "job_form": job_form,
                     "advanced_fields": advanced_fields,
                     "advanced_field_names": advanced_field_names,
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
-                    "job_result_key": job_result_key,
                     "hx_vals": json.dumps(
                         {
+                            "job_modal_button": job_modal_button_registry_id,
                             "job_form_modal": True,
                             "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,  # pylint: disable=possibly-used-before-assignment
-                            "refresh_on_close_if_done": refresh_on_close_if_done,  # pylint: disable=possibly-used-before-assignment
+                            "run_button_label": run_button_label,
+                            "refresh_on_close_if_done": refresh_on_close_if_done,
                             "advanced_fields": advanced_field_names,
                             "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                         }
@@ -2639,6 +2659,7 @@ class JobUIViewSet(NautobotUIViewSet):
                 },
             )
         else:
+            template_name = self._get_template_name(job_class=job_class, htmx_modal=False)
             response = render(
                 request,
                 template_name,
@@ -2653,8 +2674,6 @@ class JobUIViewSet(NautobotUIViewSet):
         return response
 
     def _job_run_get(self, request, class_path=None, pk=None):
-        htmx_request = self.request.headers.get("HX-Request", False)
-        htmx_modal = request.GET.get("job_form_modal", False)
         job_model = self._get_job_model_or_404(class_path=class_path, pk=pk)
 
         try:
@@ -2674,9 +2693,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     job_queue = None
                     if task_queue is not None:
                         try:
-                            job_queue = JobQueue.objects.get(
-                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
-                            )
+                            job_queue = JobQueue.objects.get(name=task_queue)
                         except JobQueue.DoesNotExist:
                             pass
                     initial["_job_queue"] = job_queue
@@ -2696,8 +2713,6 @@ class JobUIViewSet(NautobotUIViewSet):
             job_execution_form = job_class.as_execution_form(initial=initial)
 
         except RuntimeError as err:
-            if htmx_request and htmx_modal:
-                return render(request, "extras/htmx/job_missing_modal.html", {"class_path": class_path})
             messages.error(request, f"Unable to run or schedule '{job_model}': {err}")
             return redirect("extras:job_list")
 
@@ -2712,6 +2727,15 @@ class JobUIViewSet(NautobotUIViewSet):
         job_form = job_class.as_form(request.POST, request.FILES) if job_class is not None else None
         job_form_is_valid = job_form is not None and job_form.is_valid()
         job_execution_form = job_class.as_execution_form(request.POST) if job_class is not None else None
+
+        # HTMX modal: render the job form with pre-filled data instead of executing the job.
+        if self.request.headers.get("HX-Request", False) and request.POST.get("render_job_form"):
+            initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
+            job_form = job_class.as_form(initial=initial_form_data)
+            job_execution_form = job_class.as_execution_form(initial=initial_form_data)
+            schedule_form = None
+            return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
+
         if job_execution_form is not None:
             job_execution_form_is_valid = job_execution_form.is_valid()
             job_queue = job_execution_form.cleaned_data.pop("_job_queue", None)
@@ -2829,7 +2853,6 @@ class JobUIViewSet(NautobotUIViewSet):
 
         if return_url:
             return redirect(return_url)
-
         return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
     @action(
@@ -3248,9 +3271,11 @@ class ScheduledJobUIViewSet(
         ):
             messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
             return redirect(obj.get_absolute_url())
+
         obj.user = request.user
-        obj.enabled = True
-        obj.state = ScheduledJobStateChoices.ACTIVE
+        if obj.state == ScheduledJobStateChoices.ERRORED:
+            obj.enabled = True
+            obj.state = ScheduledJobStateChoices.ACTIVE
         obj.validated_save()
         messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
         return redirect(obj.get_absolute_url())
@@ -3407,6 +3432,30 @@ class JobResultButton(object_detail.Button):
         return super().render(context)
 
 
+class JobRunButton(JobResultButton):
+    label = "Run"  # placeholder; real label comes from get_extra_context
+    required_permissions = ["extras.run_job"]
+    template_path = "extras/inc/jobresult_jobrunbutton.html"
+
+    def get_link(self, context):
+        obj = get_obj_from_context(context)
+        if not obj.job_model:
+            return None
+        url = reverse("extras:job_run", kwargs={"pk": obj.job_model.pk})
+        if obj.task_kwargs:
+            url += f"?kwargs_from_job_result={obj.pk}"
+        return url
+
+    def get_extra_context(self, context):
+        rerun = bool(get_obj_from_context(context).task_kwargs)
+        return {
+            **super().get_extra_context(context),
+            "label": "Re-Run" if rerun else "Run",
+            "color": ButtonActionColorChoices.RERUN if rerun else ButtonActionColorChoices.RUN,
+            "icon": "mdi-repeat" if rerun else "mdi-play",
+        }
+
+
 class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
     def should_render(self, context):
         if not super().should_render(context):
@@ -3500,33 +3549,7 @@ class JobResultUIViewSet(
             ),
         ],
         extra_buttons=(
-            JobResultButton(
-                weight=100,
-                label="Re-Run",
-                color=ButtonActionColorChoices.RERUN,
-                icon="mdi-repeat",
-                required_permissions=["extras.run_job"],
-                link_name=lambda ctx: (
-                    (
-                        reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                        + f"?kwargs_from_job_result={ctx['object'].pk}"
-                    )
-                    if ctx["object"].job_model and ctx["object"].task_kwargs
-                    else None
-                ),
-            ),
-            JobResultButton(
-                weight=110,
-                label="Run",
-                color=ButtonActionColorChoices.RUN,
-                icon="mdi-play",
-                required_permissions=["extras.run_job"],
-                link_name=lambda ctx: (
-                    reverse("extras:job_run", kwargs={"pk": ctx["object"].job_model.pk})
-                    if ctx["object"].job_model and not ctx["object"].task_kwargs
-                    else None
-                ),
-            ),
+            JobRunButton(weight=100),
             JobResultButton(
                 weight=120,
                 label="Export Logs",
@@ -3808,33 +3831,49 @@ class JobResultUIViewSet(
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         return response
 
-    @action(
-        detail=True,
-        custom_view_base_action="view",
-    )
+    @action(detail=True, custom_view_base_action="view", methods=["POST"])
     def modal(self, request, *args, **kwargs):
-        instance = self.get_object()
+        """Render the job result modal content, polling while pending and showing results on completion."""
+        job_result = self.get_object()
+        job_modal_button_registry_id = request.POST.get("job_modal_button", "")
         title = "Run Job"
-        if instance.job_model is not None:
-            title = instance.job_model.name
-        job_result_key = request.GET.get("job_result_key", None)
-        refresh_on_close_if_done = request.GET.get("refresh_on_close_if_done", "false")
-        detail_value = f"Job finished with status: {instance.get_status_display()}"
-        if instance.result and isinstance(instance.result, dict) and job_result_key:
-            detail_value = instance.result.get(job_result_key, instance.result)
-        elif instance.result:
-            detail_value = instance.result
-        job_is_pending = self._is_job_pending(instance)
-        context = self.get_extra_context(request, instance)
+        if job_result.job_model is not None:
+            title = job_result.job_model.name
+        job_result_key = request.POST.get("job_result_key")
+        refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
+        detail_value = f"Job finished with status: {job_result.get_status_display()}"
+        if job_result.result and isinstance(job_result.result, dict) and job_result_key:
+            detail_value = job_result.result.get(job_result_key, job_result.result)
+        elif job_result.result:
+            detail_value = job_result.result
+        job_is_pending = self._is_job_pending(job_result)
+        context = self.get_extra_context(request, job_result)
         context.update(
             {
                 "title": title,
                 "detail_value": detail_value,
+                "job_modal_button": job_modal_button_registry_id,
                 "job_result_key": job_result_key,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
                 "job_is_pending": job_is_pending,
             }
         )
+        if not job_is_pending and job_modal_button_registry_id:
+            job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
+            if job_modal_button is None:
+                return HttpResponseBadRequest(f"Invalid job_modal_button registry ID: '{job_modal_button_registry_id}'")
+            redirect_button = job_modal_button.get_redirect_button(job_result, request)
+            if redirect_button:
+                missing_keys = [key for key in ("url", "label") if key not in redirect_button]
+                if missing_keys:
+                    logger.warning(
+                        "The redirect_button with the button_id: %s is missing the required key(s) %s.",
+                        job_modal_button.button_id,
+                        missing_keys,
+                    )
+                else:
+                    redirect_button.setdefault("color", "primary")
+                    context["redirect_button"] = redirect_button
 
         return Response(
             {
@@ -4157,6 +4196,37 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
         return obj
 
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="value-widget",
+        url_name="value_widget",
+        custom_view_base_action="view",
+    )
+    def value_widget(self, request, *args, **kwargs):
+        """
+        Render the appropriate `value` input field for this metadata type.
+
+        Called by the ObjectMetadata create form via HTMX when the user changes the metadata_type
+        select, so the input adapts (date picker, choice list, etc.) without a full page reload.
+        The metadata type is identified by the pk in the URL path. Returns an empty fragment for
+        TYPE_CONTACT_TEAM, since those don't use `value`.
+        """
+        mt = self.get_object()
+        field = mt.to_form_field(required=False)
+        bound_field = None
+        if field is not None:
+            field.label = "Value"
+            field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+
+            class _ValueOnlyForm(django_forms.Form):
+                pass
+
+            f = _ValueOnlyForm()
+            f.fields["value"] = field
+            bound_field = f["value"]
+        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
+
 
 class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
     def render_value(self, key, value, context):
@@ -4244,45 +4314,6 @@ class ObjectMetadataUIViewSet(
             )
             context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
         return context
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="value-widget",
-        url_name="value_widget",
-        custom_view_base_action="view",
-    )
-    def value_widget(self, request, *args, **kwargs):
-        """
-        Render the appropriate `value` field for a given metadata_type.
-
-        Called by the create template via HTMX when the user changes the metadata_type select,
-        so the input adapts (date picker, choice list, etc.) without a full page reload.
-        Returns an empty fragment for TYPE_CONTACT_TEAM, since those don't use `value`.
-        """
-        mt_id = request.GET.get("metadata_type")
-        mt = None
-        if mt_id:
-            try:
-                mt = MetadataType.objects.get(pk=mt_id)
-            except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
-                mt = None
-        field = None
-        if mt is not None:
-            field = mt.to_form_field(required=False)
-            if field is not None:
-                field.label = "Value"
-                field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
-
-        class _ValueOnlyForm(django_forms.Form):
-            pass
-
-        bound_field = None
-        if field is not None:
-            f = _ValueOnlyForm()
-            f.fields["value"] = field
-            bound_field = f["value"]
-        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
 
 
 #
