@@ -27,7 +27,10 @@ Once a job has been scheduled, the schedule can be deleted by navigating to `Job
 
 Each scheduled job is owned by, and runs as, the user that created it. If that user is removed, the schedule can no longer run and is automatically disabled with a state of `Errored` the next time it would have fired; a failed `JobResult` is also recorded.
 
-Ownership of a scheduled job can be transferred at any time from the `Assume Ownership` action in the Actions dropdown on the Scheduled Job detail view. Clicking it reassigns the schedule to the current user. If the scheduled job was previously disabled due to a failure, the button also re-enables it, and resets its state to `Active`.
+Ownership of a scheduled job can be transferred at any time from the `Assume Ownership` action in the Actions dropdown on the Scheduled Job detail view. The exact effect on the schedule depends on its current state:
+
+- **Errored**: ownership transfers, the schedule is re-enabled, and its state resets to `Active`. This is the recovery path for schedules orphaned by a removed owner.
+- **Active, Pending Approval, Approval Denied, Approval Canceled, Completed**: only the owner changes; the state and `enabled` flag are left unchanged. For a `Pending Approval` schedule, any existing approval responses on the associated workflow are preserved, and the workflow must still complete before the schedule can transition to `Active` and be picked up by the scheduler.
 
 The button is hidden when the requester is already the current owner, and is only visible to users that meet **all** of the following criteria:
 

@@ -204,6 +204,35 @@ Output (when pass):
 No approval_required jobs or scheduled jobs found.
 ```
 
+### `create_breakout_demo_data`
+
+`nautobot-server create_breakout_demo_data`
+
+Creates some example data for demonstrating the breakout-cable modelling capabilities introduced in Nautobot v3.2.
+
+```no-highlight
+nautobot-server create_breakout_demo_data
+```
+
+Output:
+
+```no-highlight
+Creating breakout cable demo data...
+12:55:05.131 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.135 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.228 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+12:55:05.231 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+Demo data created successfully.
+  Location: DEMO-DC1
+  Devices: 5
+  Cable types: 2
+  Cables: 2
+```
+
 ### `createsuperuser`
 
 `nautobot-server createsuperuser`

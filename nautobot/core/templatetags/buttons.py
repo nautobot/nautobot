@@ -151,7 +151,7 @@ def render_tag_attrs(attrs_dict):
 @register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html", takes_context=True)
 def consolidate_bulk_action_buttons(context):
     """
-    Generates a list of action buttons for bulk operations (edit, rename, update group assignment, delete) based on the
+    Generates a list of action buttons for bulk operations (edit, rename, disconnect, update group assignment, delete) based on the
     model capabilities and user permissions.
 
     Context must include the following keys:
@@ -161,6 +161,7 @@ def consolidate_bulk_action_buttons(context):
         bulk_edit_url (str): The URL for the bulk edit action.
         bulk_delete_url (str): The URL for the bulk delete action.
         bulk_rename_url (str, optional): The URL for the bulk rename action.
+        bulk_disconnect_url (str, optional): The URL for the bulk disconnect action (cabled-component models only).
         permissions (dict): A dictionary of specific permissions for the view.
     """
 
@@ -197,6 +198,21 @@ def consolidate_bulk_action_buttons(context):
                     "formaction": reverse(context["bulk_delete_url"]) + query_string,
                 },
                 "divider_after": True,
+            }
+        )
+
+    if context.get("bulk_disconnect_url") and context["permissions"]["change"]:
+        button_defs.append(
+            {
+                "label": "Disconnect Selected",
+                "icon": "mdi mdi-ethernet-cable-off",
+                "btn_class": "btn btn-sm btn-danger",
+                "dropdown_class": "dropdown-item",
+                "attrs": {
+                    "type": "submit",
+                    "name": "_disconnect",
+                    "formaction": reverse(context["bulk_disconnect_url"]) + query_string,
+                },
             }
         )
 
