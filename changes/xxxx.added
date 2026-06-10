@@ -1,0 +1,3 @@
+Reworked the "Connection" panel on `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `FrontPort`, `RearPort`, `CircuitTermination`, and `PowerFeed` detail views to show *all* cable peers and *all* connected endpoints of a multi-termination ("breakout") cable rather than only the first. Each line shows a type icon and the resolved-path reachability where applicable.
+Added per-type "Connected Endpoints" panels to the `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, and `PowerOutlet` detail views, listing the details of every connected endpoint grouped by type.
+Added a reusable `nautobot.apps.ui.ConnectionPanel` UI component that renders a `CableTermination`'s cable, cable peers, and connected endpoints as a detail panel.

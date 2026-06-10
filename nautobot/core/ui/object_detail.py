@@ -969,6 +969,54 @@ class DataTablePanel(Panel):
         }
 
 
+class ConnectionPanel(Panel):
+    """
+    Panel rendering the cable/connection detail of a `CableTermination` (its cable, all cable peers,
+    and all connected endpoints), correctly handling multi-termination ("breakout") cables.
+
+    Renders the shared `dcim/inc/connection_body.html` fragment with `object` set to the termination,
+    so the same markup is used here and in the legacy object-retrieve detail templates.
+    """
+
+    body_content_template_path = "dcim/inc/connection_body.html"
+
+    def __init__(self, *, trace_url_name, context_object_key="object", require_location=False, **kwargs):
+        """
+        Instantiate a ConnectionPanel.
+
+        Keyword Args:
+            trace_url_name (str): The trace view name for this termination type
+                (e.g. 'dcim:interface_trace', 'circuits:circuittermination_trace').
+            context_object_key (str): The render-context key holding the termination to render.
+                Defaults to "object" (the detail-view object); set to e.g. "circuit_termination_a"
+                when the page object is not itself the termination.
+            require_location (bool): If True, the panel is hidden when the termination has no
+                `location` (matches the legacy circuit-termination behavior).
+        """
+        self.trace_url_name = trace_url_name
+        self.context_object_key = context_object_key
+        self.require_location = require_location
+        kwargs.setdefault("label", "Connections")
+        super().__init__(**kwargs)
+
+    def should_render(self, context: Context):
+        termination = context.get(self.context_object_key)
+        if termination is None:
+            return False
+        if self.require_location and getattr(termination, "location", None) is None:
+            return False
+        return getattr(termination, "is_connectable", True)
+
+    def render_body_content(self, context: Context):
+        termination = context.get(self.context_object_key)
+        return render_component_template(
+            self.body_content_template_path,
+            context,
+            object=termination,
+            trace_url_name=self.trace_url_name,
+        )
+
+
 class ObjectsTablePanel(Panel):
     """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view).
     Has built-in pagination support and "Add" button at bottom of the Table.
