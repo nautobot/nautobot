@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, ProtectedError
 from django.forms import (
     Form,
     modelformset_factory,
@@ -63,6 +63,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
+    NautobotViewSetMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
@@ -75,7 +76,7 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context
+from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.constants import TERMINATION_FK_FIELDS
@@ -3957,6 +3958,160 @@ class DeviceUIViewSet(NautobotUIViewSet):
 #
 
 
+class ComponentBulkDisconnectViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin for UIViewSets serving cabled components (console/power/interface, etc.) — adds a
+    `bulk_disconnect` action that detaches each selected component from its cable via
+    `disconnect_termination()` (the cable itself and any other terminations are preserved).
+
+    Subclasses may set `bulk_disconnect_form_class` to override the default ConfirmationForm
+    with a hidden `pk` ModelMultipleChoiceField.
+    """
+
+    bulk_disconnect_form_class = None
+    bulk_disconnect_template_name = "dcim/bulk_disconnect.html"
+
+    def get_form_class(self, **kwargs):
+        """Provide a default ConfirmationForm if the consuming view didn't set one."""
+        form_class = super().get_form_class(**kwargs)
+        if not form_class and self.action == "bulk_disconnect":
+            queryset = self.get_queryset()
+
+            class BulkDisconnectForm(ConfirmationForm):
+                pk = ModelMultipleChoiceField(queryset=queryset, widget=MultipleHiddenInput)
+
+            return BulkDisconnectForm
+        return form_class
+
+    def _process_bulk_disconnect_form(self, form):
+        """Disconnect each selected component from its cable inside a single transaction.
+
+        Uses `disconnect_termination(obj)` to remove the termination only; the cable itself
+        and any surviving terminations are left intact. After the loop, the user is shown a
+        bulleted list of the now-orphaned cables so they can clean up any that are no longer
+        needed.
+
+        Permission enforcement:
+          - Per-component change perm is implicit in `self.get_queryset()` (restrict()).
+          - Per-cable change perm is verified inside the transaction by running the disconnected
+            cable PKs through `Cable.objects.restrict(user, "change")`; if any disconnected cable
+            falls outside that restricted set, `ObjectDoesNotExist` is raised, rolling back every
+            disconnect in the transaction.
+        """
+        request = self.request
+        queryset = self.get_queryset()
+        model = queryset.model
+
+        try:
+            with transaction.atomic():
+                count = 0
+                # Both collections are sets to dedupe when a single cable is hit by multiple
+                # selected terminations (both ends of a cable, or multiple terminations on a
+                # breakout cable): each unique cable should appear in the user message once,
+                # and the permission check below must compare against unique cable PKs.
+                disconnected_cables = set()
+                disconnected_cable_pks = set()
+                for obj in queryset.filter(pk__in=form.cleaned_data["pk"]):
+                    if obj.cable is None:
+                        continue
+                    cable_label = str(obj.cable)
+                    cable_url = obj.cable.get_absolute_url()
+                    disconnected_cable_pks.add(obj.cable_id)
+
+                    disconnect_termination(obj)
+
+                    disconnected_cables.add((cable_label, cable_url))
+                    count += 1
+
+                # Enforce object-level Cable change permission. The legacy `BulkDisconnectView`
+                # only checked the component's change perm even though it deleted the cable;
+                # this closes that gap. Raising `ObjectDoesNotExist` rolls back the transaction.
+                if Cable.objects.restrict(request.user, "change").filter(pk__in=disconnected_cable_pks).count() != len(
+                    disconnected_cable_pks
+                ):
+                    raise ObjectDoesNotExist
+
+            msg = f"Disconnected {count} {model._meta.verbose_name_plural}"
+            logger.info(msg)
+            self.success_url = self.get_return_url(request)
+            messages.success(request, msg)
+            # Inform the user that the surviving cables can still be cleaned up. One
+            # aggregated message with a bullet list, not one toast per cable.
+            if disconnected_cables:
+                cable_items = format_html_join(
+                    "",
+                    '<li><a href="{}">{}</a> (<a href="{}delete/">delete</a>)</li>',
+                    ((cable_url, cable_label, cable_url) for cable_label, cable_url in disconnected_cables),
+                )
+                messages.info(
+                    request,
+                    format_html(
+                        "The following cables still exist — delete any that are no longer needed:<ul>{}</ul>",
+                        cable_items,
+                    ),
+                )
+        except ObjectDoesNotExist:
+            msg = "Bulk disconnect failed due to object-level permissions violation on one or more cables"
+            logger.info(msg)
+            messages.error(request, msg)
+            self.success_url = self.get_return_url(request)
+        except ProtectedError as e:  # pragma: no cover
+            logger.info("Caught ProtectedError while attempting to disconnect cables")
+            handle_protectederror(queryset, request, e)
+            self.success_url = self.get_return_url(request)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="disconnect",
+        url_name="bulk_disconnect",
+        custom_view_base_action="change",
+        custom_view_additional_permissions=["dcim.change_cable"],
+    )
+    def bulk_disconnect(self, request, *args, **kwargs):
+        """Mirrors DRF's `{action}/perform_{action}` pattern used by the other bulk mixins."""
+        return self.perform_bulk_disconnect(request, **kwargs)
+
+    def perform_bulk_disconnect(self, request, **kwargs):
+        """
+        POST without `_confirm`: render the confirmation page listing the selected components.
+        POST with `_confirm`: validate the form and detach each component from its cable.
+        When `_confirm` is present but the form is invalid (e.g. no `pk` submitted), each error
+        is surfaced as a flash message before the confirmation page is re-rendered, since the
+        underlying `confirmation_form.html` template hides the `pk` field and won't otherwise
+        display its errors.
+        """
+        queryset = self.get_queryset()
+        model = queryset.model
+        self.pk_list = list(request.POST.getlist("pk"))
+
+        form_class = self.get_form_class(**kwargs)
+
+        if "_confirm" in request.POST:
+            form = form_class(request.POST, initial=normalize_querydict(request.GET, form_class=form_class))
+            if form.is_valid():
+                self._process_bulk_disconnect_form(form)
+                return redirect(self.get_return_url(request))
+            for field_name, errors in form.errors.items():
+                for error in errors:
+                    label = "" if field_name == "__all__" else f"{field_name}: "
+                    messages.error(request, f"{label}{error}")
+        else:
+            form = form_class(initial={"pk": self.pk_list})
+
+        selected_objects = queryset.filter(pk__in=self.pk_list)
+
+        return Response(
+            {
+                "form": form,
+                "obj_type_plural": model._meta.verbose_name_plural,
+                "selected_objects": selected_objects,
+                "return_url": self.get_return_url(request),
+                "template": self.bulk_disconnect_template_name,
+            }
+        )
+
+
 class BulkComponentCreateUIViewSetMixin:
     def _bulk_component_create(self, request, component_queryset, bulk_component_form, parent_field=None):
         parent_model_name = self.queryset.model._meta.verbose_name_plural
@@ -4438,67 +4593,30 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 #
 
 
-class ConsolePortListView(generic.ObjectListView):
-    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
-    filterset = filters.ConsolePortFilterSet
-    filterset_form = forms.ConsolePortFilterForm
-    table = tables.ConsolePortTable
-    action_buttons = ("import", "export")
-
-
-class ConsolePortView(DeviceComponentPageMixin, generic.ObjectView):
+class ConsolePortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = ConsolePort.objects.all()
+    bulk_update_form_class = forms.ConsolePortBulkEditForm
+    create_form_class = forms.ConsolePortCreateForm
+    filterset_class = filters.ConsolePortFilterSet
+    filterset_form_class = forms.ConsolePortFilterForm
+    form_class = forms.ConsolePortForm
+    serializer_class = serializers.ConsolePortSerializer
+    table_class = tables.ConsolePortTable
+    action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_consoleports"
     module_breadcrumb_url = "dcim:module_consoleports"
 
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ConsolePortCreateView(generic.ComponentCreateView):
-    queryset = ConsolePort.objects.all()
-    form = forms.ConsolePortCreateForm
-    model_form = forms.ConsolePortForm
-
-
-class ConsolePortEditView(generic.ObjectEditView):
-    queryset = ConsolePort.objects.all()
-    model_form = forms.ConsolePortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsolePortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsolePort.objects.all()
-    table = tables.ConsolePortTable
-
-
-class ConsolePortBulkEditView(generic.BulkEditView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
-    form = forms.ConsolePortBulkEditForm
-
-
-class ConsolePortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDisconnectView(BulkDisconnectView):
-    queryset = ConsolePort.objects.all()
-
-
-class ConsolePortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePort.objects.all()
-    filterset = filters.ConsolePortFilterSet
-    table = tables.ConsolePortTable
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.device or selected_object.module
+            return parent.display
+        return ""
 
 
 #
