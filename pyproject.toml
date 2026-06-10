@@ -29,7 +29,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=48.0.0,<49)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.14,<5.3)",
+    "django (>=5.2.15,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -64,7 +64,7 @@ dependencies = [
     # Tags
     "django-taggit (>=6.1.0,<6.2)",
     # Represent time zones in Django
-    "django-timezone-field (>=7.2.1,<7.3)",
+    "django-timezone-field (>=7.2.2,<7.3)",
     # Tree database structures based on Common Table Expressions
     "django-tree-queries (>=0.23.1,<0.24)",
     # Run production webservers such as uWSGI/gunicorn as a Django management command.
@@ -110,11 +110,11 @@ dependencies = [
     # A Python slugify application that handles unicode.
     "python-slugify (>=8.0.4,<8.1)",
     # The uWSGI WSGI HTTP server as a Python module
-    "pyuwsgi (>=2.0.30,<2.1)",
+    "pyuwsgi (>=2.0.30.post1,<2.1)",
     # YAML parsing and rendering
     "PyYAML (>=6.0.3,<6.1)",
     # Enhanced version of Python's built-in `re` module
-    "regex (>=2026.4.4)",
+    "regex (>=2026.5.9)",
     # Social authentication/registration with support for many auth providers
     "social-auth-app-django (>=5.7.0,<5.8)",
     # Rendering of SVG images (for rack elevations, etc.)
@@ -177,7 +177,7 @@ example-app-with-view-override = {path = "examples/example_app_with_view_overrid
 # Random data generation
 factory-boy = "~3.3.3"
 # Factory Boy dependency.
-faker = "^40.15.0"
+faker = "^40.21.0"
 # Alternative to Make, CLI based on `tasks.py`
 invoke = "~2.2.1"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
@@ -209,7 +209,7 @@ mkdocs-section-index = "~0.3.12"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~1.0.4"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~2.0.3"
+mkdocstrings-python = "~2.0.4"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -223,7 +223,7 @@ pylint-django = "~2.7.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.37"
 # Combination linter and code formatter
-ruff = "~0.15.12"
+ruff = "~0.15.16"
 # YAML linting
 yamllint = "~1.38.0"
 
