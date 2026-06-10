@@ -1,4 +1,4 @@
-# Redundant Devices
+# HA Devices
 
 Infrastructure is typically designed with redundancy in mind, prompting vendors to develop various technologies to support different high availability (HA) strategies. These include a range of protocols, connection types, synchronization systems, and terminology.
 
