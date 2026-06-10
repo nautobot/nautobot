@@ -19,53 +19,56 @@ framework panel body wrapper.
     <table class="table table-hover attr-table">
         <tr>
             <td>Cable</td>
-            <td>
+            <td colspan="3">
                 {{ object.cable|hyperlinked_object }}
                 {% include 'dcim/inc/cable_actions.html' with trace_url_name=trace_url_name %}
             </td>
         </tr>
         <tr>
             <td>Cable Status</td>
-            <td>{{ object.cable.status|hyperlinked_object_with_color }}</td>
+            <td colspan="3">{{ object.cable.status|hyperlinked_object_with_color }}</td>
         </tr>
-        <tr>
-            <td>Cable Peer{{ object.get_cable_peers|length|pluralize }}</td>
-            <td>
-                {% for peer in object.get_cable_peers %}
-                    {{ peer.parent|hyperlinked_object }}
-                    <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
-                    <span class="mdi {% termination_type_icon peer %}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
-                    {{ peer|hyperlinked_object }}
-                    {% if not forloop.last %}<br>{% endif %}
-                {% empty %}
-                    {{ ""|placeholder }}
-                {% endfor %}
-            </td>
-        </tr>
-        {% with paths=object.cable_paths.all %}
-            {% if paths %}
+        {% with peers=object.get_cable_peers paths=object.cable_paths.all %}
+            {% for peer in peers %}
                 <tr>
-                    <td>Endpoint{{ paths|length|pluralize }}</td>
-                    <td>
-                        {% for path in paths %}
-                            {% if path.destination %}
-                                {{ path.destination.parent|hyperlinked_object }}
-                                <span class="mdi mdi-chevron-right" aria-hidden="true"></span>
-                                <span class="mdi {% termination_type_icon path.destination %}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
-                                {{ path.destination|hyperlinked_object }}
-                                {% if path.is_active %}
-                                    <span class="badge bg-success">Reachable</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Not Reachable</span>
-                                {% endif %}
-                            {% else %}
-                                {{ ""|placeholder }}
-                            {% endif %}
-                            {% if not forloop.last %}<br>{% endif %}
-                        {% endfor %}
+                    {% if forloop.first %}
+                        <td rowspan="{{ peers|length }}" class="align-top"{% if not paths %} style="border-bottom: none;"{% endif %}>Cable Peer{{ peers|length|pluralize }}</td>
+                    {% endif %}
+                    <td>{{ peer.parent|hyperlinked_object }}</td>
+                    <td colspan="2">
+                        <span class="mdi {% termination_type_icon peer %}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                        {{ peer|hyperlinked_object }}
                     </td>
                 </tr>
-            {% endif %}
+            {% empty %}
+                <tr>
+                    <td>Cable Peer</td>
+                    <td colspan="3">{{ ""|placeholder }}</td>
+                </tr>
+            {% endfor %}
+            {% for path in paths %}
+                <tr>
+                    {% if forloop.first %}
+                        <td rowspan="{{ paths|length }}" class="align-top" style="border-bottom: none;">Endpoint{{ paths|length|pluralize }}</td>
+                    {% endif %}
+                    {% if path.destination %}
+                        <td>{{ path.destination.parent|hyperlinked_object }}</td>
+                        <td>
+                            <span class="mdi {% termination_type_icon path.destination %}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                            {{ path.destination|hyperlinked_object }}
+                        </td>
+                        <td>
+                            {% if path.is_active %}
+                                <span class="badge bg-success">Reachable</span>
+                            {% else %}
+                                <span class="badge bg-danger">Not Reachable</span>
+                            {% endif %}
+                        </td>
+                    {% else %}
+                        <td colspan="3">{{ ""|placeholder }}</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
         {% endwith %}
     </table>
 {% else %}

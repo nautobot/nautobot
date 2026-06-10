@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Optional
 import uuid
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -9,10 +10,14 @@ from django.utils.html import format_html, format_html_join
 from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.templatetags.helpers import hyperlinked_object
+from nautobot.core.templatetags.helpers import bettertitle, hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import DEFAULT_CABLE_TYPES, NONCONNECTABLE_IFACE_TYPES
+from nautobot.dcim.constants import (
+    COMPATIBLE_TERMINATION_TYPES,
+    DEFAULT_CABLE_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
+)
 
 
 def compile_path_node(ct_id, object_id):
@@ -410,3 +415,55 @@ def power_ports_connected_to(target_queryset):
     )
 
     return PowerPort.objects.filter(pk__in=powerport_ids)
+
+
+def connected_endpoint_panels(source_model_name, *, weight=200, section=None):
+    """Build one `ConnectedEndpointsPanel` per endpoint type a termination can connect to.
+
+    The candidate types come from `COMPATIBLE_TERMINATION_TYPES[source_model_name]`, intersected with
+    the registered `PathEndpoint` subclasses -- only `PathEndpoint`s can be the destination of a
+    `CablePath`, so non-PathEndpoint compatible types (e.g. front/rear ports) are skipped. Each panel
+    hides itself when the termination has no connected endpoints of its type.
+
+    Args:
+        source_model_name (str): The `model_name` of the termination type whose detail view this is,
+            e.g. "interface" or "circuittermination".
+        weight (int): The weight of the first panel; subsequent panels increment from here so they
+            render in `COMPATIBLE_TERMINATION_TYPES` order.
+        section (str, optional): A `SectionChoices` value for the panels. Defaults to `FULL_WIDTH`.
+
+    Returns:
+        (list): A list of `ConnectedEndpointsPanel` instances, suitable for spreading into an
+        `ObjectDetailContent`'s `panels`.
+    """
+    # Imported lazily: this module is imported during model loading (dcim.fields -> dcim.lookups ->
+    # dcim.utils), so importing the UI/lookup/model layers at the top of the file would cycle.
+    from nautobot.core.ui.choices import SectionChoices
+    from nautobot.core.ui.object_detail import ConnectedEndpointsPanel
+    from nautobot.core.utils.lookup import get_table_for_model
+    from nautobot.dcim.models import PathEndpoint
+
+    if section is None:
+        section = SectionChoices.FULL_WIDTH
+
+    path_endpoint_models = {
+        model._meta.model_name: model for model in apps.get_models() if issubclass(model, PathEndpoint)
+    }
+
+    panels = []
+    for index, endpoint_type in enumerate(COMPATIBLE_TERMINATION_TYPES.get(source_model_name, [])):
+        model = path_endpoint_models.get(endpoint_type)
+        if model is None:
+            continue
+        table_class = get_table_for_model(model)
+        if table_class is None:
+            continue
+        panels.append(
+            ConnectedEndpointsPanel(
+                table_class=table_class,
+                table_title=f"{bettertitle(model._meta.verbose_name)} Endpoints",
+                section=section,
+                weight=weight + index,
+            )
+        )
+    return panels

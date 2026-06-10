@@ -1161,8 +1161,15 @@ class ObjectsTablePanel(Panel):
             )
         if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
-        if self.table_class and not (self.table_filter or self.table_attribute):
-            raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        # A subclass that overrides `get_table_data_queryset()` supplies its own data source and so
+        # does not require `table_filter`/`table_attribute`.
+        overrides_table_data_queryset = (
+            type(self).get_table_data_queryset is not ObjectsTablePanel.get_table_data_queryset
+        )
+        if self.table_class and not (self.table_filter or self.table_attribute or overrides_table_data_queryset):
+            raise ValueError(
+                "You must specify either `table_filter` or `table_attribute`, or override `get_table_data_queryset()`"
+            )
         if self.table_attribute and not self.related_field_name:
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
 
@@ -1245,6 +1252,35 @@ class ObjectsTablePanel(Panel):
             "utilities/templatetags/table_config_form.html", table_config_form(context["body_content_table"])
         )
 
+    def get_table_data_queryset(self, instance, request):
+        """Return the base queryset used to populate this panel's table.
+
+        This is the queryset *before* `.restrict()`, `select_related`, `prefetch_related`, `order_by`,
+        and `distinct` are applied by `get_extra_context()`. The default implementation derives it from
+        `table_attribute` or `table_filter`. Override this to source the table's data differently (for
+        example, from a relationship that isn't expressible as a simple `table_filter`).
+
+        Args:
+            instance (Model): The detail-view object that this panel belongs to.
+            request (Request): The current request.
+
+        Returns:
+            (QuerySet): The base queryset of `self.table_class.Meta.model` objects to display.
+        """
+        body_content_table_model = self.table_class.Meta.model
+        if self.table_attribute:
+            return getattr(instance, self.table_attribute)
+        if isinstance(self.table_filter, str):
+            table_filters = [self.table_filter]
+        elif isinstance(self.table_filter, list):
+            table_filters = self.table_filter
+        else:
+            table_filters = []
+        query = Q()
+        for table_filter in table_filters:
+            query = query | Q(**{table_filter: instance})
+        return body_content_table_model.objects.filter(query)
+
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
 
@@ -1261,20 +1297,7 @@ class ObjectsTablePanel(Panel):
             body_content_table_model = body_content_table_class.Meta.model
             instance = get_obj_from_context(context)
 
-            if self.table_attribute:
-                body_content_table_queryset = getattr(instance, self.table_attribute)
-            else:
-                if isinstance(self.table_filter, str):
-                    table_filters = [self.table_filter]
-                elif isinstance(self.table_filter, list):
-                    table_filters = self.table_filter
-                else:
-                    table_filters = []
-                query = Q()
-                for table_filter in table_filters:
-                    query = query | Q(**{table_filter: instance})
-                body_content_table_queryset = body_content_table_model.objects.filter(query)
-
+            body_content_table_queryset = self.get_table_data_queryset(instance, request)
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
                 body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
@@ -1382,6 +1405,49 @@ class ObjectsTablePanel(Panel):
             "include_paginator": self.include_paginator,
             "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
         }
+
+
+class ConnectedEndpointsPanel(ObjectsTablePanel):
+    """Panel listing the connected endpoints *of a single type* reachable from a `PathEndpoint`.
+
+    Sources its table data from the termination's `CablePaths` (one per breakout lane for a breakout
+    cable), keeping only the resolved destinations whose model matches this panel's `table_class`, so
+    that multi-termination ("breakout") cables show *every* connected endpoint of that type. Declare
+    one panel per compatible endpoint type; each renders nothing when there are no connected endpoints
+    of its type.
+    """
+
+    def __init__(self, **kwargs):
+        """Instantiate a ConnectedEndpointsPanel.
+
+        Keyword Args:
+            table_class (obj): The list table for the endpoint type to display, e.g. `InterfaceTable`.
+
+        See `ObjectsTablePanel` for additional supported keyword arguments.
+        """
+        # Connected endpoints have no natural "list all" route or "add" action from this context.
+        kwargs.setdefault("enable_related_link", False)
+        kwargs.setdefault("add_button_route", None)
+        super().__init__(**kwargs)
+
+    def _connected_endpoints_queryset(self, termination):
+        """Queryset of this panel's endpoint type that are connected to `termination` via its CablePaths."""
+        model = self.table_class.Meta.model
+        cable_paths = getattr(termination, "cable_paths", None)
+        if cable_paths is None:
+            return model.objects.none()
+        destination_type = ContentType.objects.get_for_model(model)
+        destination_ids = cable_paths.filter(destination_type=destination_type).values_list("destination_id", flat=True)
+        return model.objects.filter(pk__in=destination_ids)
+
+    def get_table_data_queryset(self, instance, request):
+        return self._connected_endpoints_queryset(instance)
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        termination = get_obj_from_context(context)
+        return termination is not None and self._connected_endpoints_queryset(termination).exists()
 
 
 class KeyValueTablePanel(Panel):

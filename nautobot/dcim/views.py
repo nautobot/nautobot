@@ -4460,6 +4460,11 @@ def get_connected_endpoint_tables(instance):
 
     Returns an empty list for terminations that are not PathEndpoints (e.g. front/rear ports) or
     that have no resolved destinations.
+
+    TODO: This is the legacy template-based equivalent of `nautobot.dcim.utils.connected_endpoint_panels()`.
+    When these component detail views are migrated to the UI component framework, drop this helper and the
+    `connected_endpoint_tables` context + `content_full_width_page` template blocks in favor of spreading
+    `*connected_endpoint_panels("<model_name>")` into the view's `object_detail_content` panels.
     """
     cable_paths = getattr(instance, "cable_paths", None)
     if cable_paths is None:
@@ -4479,7 +4484,7 @@ def get_connected_endpoint_tables(instance):
             continue
         endpoint_tables.append(
             {
-                "heading": f"Connected {helpers.bettertitle(endpoints[0]._meta.verbose_name_plural)}",
+                "heading": f"{helpers.bettertitle(endpoints[0]._meta.verbose_name)} Endpoints",
                 "table": table_class(data=endpoints, orderable=False, exclude=("pk", "actions")),
             }
         )

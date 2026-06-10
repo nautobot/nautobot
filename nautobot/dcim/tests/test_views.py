@@ -3701,7 +3701,7 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         response = self.client.get(trunk.get_absolute_url())
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Both far-end lanes appear (Connection panel peer/endpoint lists + Connected Endpoints table),
+        # Both far-end lanes appear (Connection panel peer/endpoint lists + "Interface Endpoints" table),
         # not just the first one.
         self.assertIn(lane1.get_absolute_url(), content)
         self.assertIn(lane2.get_absolute_url(), content)
