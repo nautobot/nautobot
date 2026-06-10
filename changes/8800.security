@@ -1,0 +1,1 @@
+Refreshed UI `package-lock.json`, including updating development dependency `shell-quote` to `1.8.4` to mitigate CVE-2026-9277.
