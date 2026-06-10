@@ -728,8 +728,8 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
         url_params={"interfaces": "pk"},
         verbose_name="Virtual Device Contexts",
     )
-    speed = tables.Column(verbose_name="Speed", accessor="speed", orderable=True)
-    duplex = tables.Column(verbose_name="Duplex", accessor="duplex", orderable=True)
+    speed = tables.Column(verbose_name="Speed", accessor="speed")
+    duplex = tables.Column(verbose_name="Duplex", accessor="duplex")
     actions = ButtonsColumn(model=Interface, prepend_template=INTERFACE_BUTTONS)
 
     class Meta(ModularDeviceComponentTable.Meta):
