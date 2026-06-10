@@ -1606,6 +1606,7 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 
 
 class DynamicGroupUIViewSet(NautobotUIViewSet):
+    base_template = None
     bulk_update_form_class = forms.DynamicGroupBulkEditForm
     filterset_class = filters.DynamicGroupFilterSet
     filterset_form_class = forms.DynamicGroupFilterForm
