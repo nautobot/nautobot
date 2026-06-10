@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from django.utils.html import mark_safe
 from django.utils.http import urlencode
 from rest_framework.decorators import action
@@ -362,6 +363,51 @@ class VMInterfaceUIViewSet(
             context["vlan_table"] = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
         return context
 
+    class ChildInterfacesTablePanel(object_detail.ObjectsTablePanel):
+        """Table panel whose right-aligned "Add" button targets the VM interface create form with the
+        parent VM and parent interface pre-filled.
+
+        The default add button can only pass a single `{field}={obj.pk}` param, but a child interface
+        needs both `virtual_machine` (from the parent VM) and `parent_interface` (the interface being
+        viewed). Overriding `_get_table_add_url` lets the native (right-side) add button carry both.
+        """
+
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("virtualization.add_vminterface"):
+                return None
+            instance = object_detail.get_obj_from_context(context)
+            return_url = context.get("return_url", instance.get_absolute_url())
+            return (
+                reverse("virtualization:vminterface_add")
+                + "?"
+                + urlencode(
+                    {
+                        "virtual_machine": instance.virtual_machine.pk,
+                        "parent_interface": instance.pk,
+                        "return_url": return_url,
+                    }
+                )
+            )
+
+    class IPAddressesTablePanel(object_detail.ObjectsTablePanel):
+        """Table panel whose right-aligned "Add" button opens the IP address create form pre-assigned to
+        this VM interface.
+
+        Uses the `?vminterface=<pk>` param the IP address edit view expects (singular, and distinct from
+        the `vm_interfaces` list filter used for the "view all" link).
+        """
+
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("ipam.add_ipaddress"):
+                return None
+            instance = object_detail.get_obj_from_context(context)
+            return_url = context.get("return_url", instance.get_absolute_url())
+            return (
+                reverse("ipam:ipaddress_add") + "?" + urlencode({"vminterface": instance.pk, "return_url": return_url})
+            )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -375,30 +421,50 @@ class VMInterfaceUIViewSet(
                 exclude_fields=["untagged_vlan"],
             ),
             # IP addresses
-            object_detail.ObjectsTablePanel(
-                label="IP Addresses",
+            IPAddressesTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="ipaddress_table",
-                add_button_route=None,  # hides Add button
-                header_extra_content_template_path=None,  # hides badge
+                # The right-aligned Add button is built by the overridden `_get_table_add_url` (uses the
+                # singular `vminterface` param); `related_field_name` below is only for the "view all" link.
+                related_list_url_name="ipam:ipaddress_list",
+                related_field_name="vm_interfaces",
             ),
             # Tagged + untagged VLANs
+            # No "Add": a VLAN isn't created from an interface. You assign VLANs by editing the
+            # interface's `untagged_vlan` / `tagged_vlans` fields -- the same fields used when the
+            # interface is first created. So this panel links to the interface edit form instead.
             object_detail.ObjectsTablePanel(
-                label="VLANs",
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
-                context_table_key="vlan_table",
-                add_button_route=None,  # hides Add button
-                header_extra_content_template_path=None,  # hides badge
+                context_table_key="vlan_table",               
+                # Custom footer template right-aligns the footer button (the default footer floats it left).
+                footer_content_template_path="virtualization/inc/vminterface_vlan_panel_footer.html",
+                footer_buttons=(
+                    object_detail.Button(
+                        weight=100,
+                        color=ButtonActionColorChoices.EDIT,
+                        link_name="virtualization:vminterface_edit",
+                        label="Edit VLAN Assignments",
+                        icon="mdi-pencil",
+                        required_permissions=["virtualization.change_vminterface"],
+                        link_includes_pk=True,
+                    ),
+                ),
+                # "View all" links to the VLAN list filtered by this VM interface (tagged or untagged),
+                # using the `vm_interfaces` filter added to VLANFilterSet.
+                related_list_url_name="ipam:vlan_list",
+                related_field_name="vm_interfaces",
             ),
-            object_detail.ObjectsTablePanel(
-                label="Child Interfaces",
+            ChildInterfacesTablePanel(
+                table_title="Child Interfaces",
                 section=SectionChoices.FULL_WIDTH,
                 weight=500,
                 context_table_key="child_interfaces_table",
-                add_button_route=None,  # hides Add button
-                header_extra_content_template_path=None,  # hides badge
+                # The right-aligned Add button is built by the overridden `_get_table_add_url`, so it
+                # carries both `virtual_machine` and `parent_interface`.
+                related_list_url_name="virtualization:vminterface_list",
+                related_field_name="parent_interface",
             ),
         ]
     )
