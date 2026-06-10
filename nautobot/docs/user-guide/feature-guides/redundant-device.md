@@ -94,9 +94,16 @@ TODO: Insert UML here
 
 ### Sample Design Builder
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a two-member Cisco StackWise virtual chassis (`jcy-stackwise-01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`, and the stack ports between members are wired together using `"!connect_cable"` against the refs on switch 1.
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a two-member Cisco StackWise virtual chassis (`jcy-stackwise-01`). The `VirtualChassis` is declared as its own top-level entry — parallel to how a `DeviceRedundancyGroup` is defined further down — and the member devices then attach via the chassis ref. Because the chassis carries a `master` FK back to a `Device`, the chassis entry uses `deferred: true` so the master assignment resolves only after the master device has been created. The primary IPv4 address is similarly deferred until interface and IP assignments are in place, and the stack ports between members are wired together using `"!connect_cable"` against the refs on switch 1.
 
 ```
+virtual_chassis:
+  - "!create_or_update:name": "jcy-stackwise-01"
+    domain: "jcy-stackwise-01"
+    master: "!ref:jcy-stackwise-01"
+    deferred: true
+    "!ref": "jcy-stackwise-01-vc"
+
 devices:
     # Switch 1 of the stack
   - "!create_or_update:name": "jcy-stackwise-01"
@@ -104,17 +111,10 @@ devices:
     status__name: "Active"
     device_type__model: "C9300-48P"
     role__name: "Access Switch"
-    "!ref": "sw1"
-    # Virtual chassis attributes
+    virtual_chassis: "!ref:jcy-stackwise-01-vc"
     vc_position: 1
     vc_priority: 15
-    # Virtual chassis creation with deferred assignment (Device created first then VC created with switch 1 as master)
-    virtual_chassis:
-      "!create_or_update:name": "jcy-stackwise-01"
-      domain: "jcy-stackwise-01"
-      master: "!ref:sw1"
-      deferred: true
-      "!ref": "virtual_chassis"
+    "!ref": "jcy-stackwise-01"
     # Interfaces (subset for brevity)
     interfaces:
       - "!create_or_update:name": "GigabitEthernet0/0"
@@ -528,8 +528,145 @@ TODO: Insert UML here
 | `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group |
 
 ### Sample API
+
 ### Sample Design Builder
+
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a Cisco ASA 5500 active/standby failover pair (`jcy-fw-01` and `jcy-fw-02`) tied together by a `DeviceRedundancyGroup` named `jcy-fw-failover`, sharing the same `JCY` location and `192.168.1.0/24` management prefix introduced in the Virtual Chassis example above. Unlike a `VirtualChassis` — where the group depends on its master device and forces deferred assignment — a `DeviceRedundancyGroup` is created first as a standalone object, and each `Device` simply references it through `device_redundancy_group`. The active/standby relationship is expressed via `device_redundancy_group_priority` (higher wins primary, so `jcy-fw-01` is primary in this example), and the dedicated heartbeat/sync link is modeled as a `failover-link` virtual interface on each device in its own `/31`.
+
+```
+device_redundancy_groups:
+  - "!create_or_update:name": "jcy-fw-failover"
+    status__name: "Active"
+    failover_strategy: "active-passive"
+    description: "ASA 5500 active/standby failover pair for JCY perimeter"
+    "!ref": "jcy_fw_drg"
+
+devices:
+    # Primary failover unit
+  - "!create_or_update:name": "jcy-fw-01"
+    location__name: "JCY"
+    status__name: "Active"
+    device_type__model: "ASA5555-X"
+    role__name: "Firewall"
+    device_redundancy_group: "!ref:jcy_fw_drg"
+    device_redundancy_group_priority: 100
+    interfaces:
+      - "!create_or_update:name": "Management0/0"
+        type: "1000base-t"
+        status__name: "Active"
+        mgmt_only: true
+        description: "Management Interface"
+        ip_address_assignments:
+          - "!create_or_update:ip_address__address": "192.168.1.20/24"
+            ip_address:
+              "!create_or_update:address": "192.168.1.20/24"
+              "!create_or_update:parent": "192.168.1.0/24"
+              status__name: "Active"
+              "!ref": "fw01_mgmt_ip"
+      - "!create_or_update:name": "GigabitEthernet0/3"
+        type: "1000base-t"
+        status__name: "Active"
+        description: "Failover physical parent"
+        "!ref": "fw01_failover_parent"
+      - "!create_or_update:name": "failover-link"
+        type: "virtual"
+        status__name: "Active"
+        parent_interface: "!ref:fw01_failover_parent"
+        description: "ASA failover link"
+        ip_address_assignments:
+          - "!create_or_update:ip_address__address": "172.27.48.0/31"
+            ip_address:
+              "!create_or_update:address": "172.27.48.0/31"
+              "!create_or_update:parent": "172.27.48.0/31"
+              status__name: "Active"
+    primary_ip4:
+      "address": "!ref:fw01_mgmt_ip"
+      deferred: true
+
+    # Secondary failover unit
+  - "!create_or_update:name": "jcy-fw-02"
+    location__name: "JCY"
+    status__name: "Active"
+    device_type__model: "ASA5555-X"
+    role__name: "Firewall"
+    device_redundancy_group: "!ref:jcy_fw_drg"
+    device_redundancy_group_priority: 50
+    interfaces:
+      - "!create_or_update:name": "Management0/0"
+        type: "1000base-t"
+        status__name: "Active"
+        mgmt_only: true
+        description: "Management Interface"
+        ip_address_assignments:
+          - "!create_or_update:ip_address__address": "192.168.1.21/24"
+            ip_address:
+              "!create_or_update:address": "192.168.1.21/24"
+              "!create_or_update:parent": "192.168.1.0/24"
+              status__name: "Active"
+              "!ref": "fw02_mgmt_ip"
+      - "!create_or_update:name": "GigabitEthernet0/3"
+        type: "1000base-t"
+        status__name: "Active"
+        description: "Failover physical parent"
+        "!ref": "fw02_failover_parent"
+      - "!create_or_update:name": "failover-link"
+        type: "virtual"
+        status__name: "Active"
+        parent_interface: "!ref:fw02_failover_parent"
+        description: "ASA failover link"
+        ip_address_assignments:
+          - "!create_or_update:ip_address__address": "172.27.48.1/31"
+            ip_address:
+              "!create_or_update:address": "172.27.48.1/31"
+              "!create_or_update:parent": "172.27.48.0/31"
+              status__name: "Active"
+    primary_ip4:
+      "address": "!ref:fw02_mgmt_ip"
+      deferred: true
+```
+
 ### GraphQL
+
+The following query retrieves a `DeviceRedundancyGroup` by name along with each member device and its interfaces. A `DeviceRedundancyGroup` has no equivalent of `vc_interfaces` because every member retains an independent control plane and its own interface set; the canonical pattern is to walk `devices -> interfaces` (filtered as needed, e.g. to just the failover link).
+
+```graphql
+query ($drg_name: [String]) {
+  device_redundancy_groups(name: $drg_name) {
+    name
+    failover_strategy
+    status {
+      name
+    }
+    devices {
+      name
+      device_redundancy_group_priority
+      interfaces {
+        name
+        type
+        enabled
+        description
+        parent_interface {
+          name
+        }
+        ip_addresses {
+          address
+        }
+      }
+    }
+  }
+}
+```
+
+Query variables:
+
+```json
+{
+  "drg_name": "jcy-fw-failover"
+}
+```
+
+!!! note
+    If you already have a device name in hand, the same data is reachable from the device side via `devices(name: ["jcy-fw-01"]) { device_redundancy_group { devices { ... } } }`. Querying `device_redundancy_groups` directly is preferred when you want group-level attributes (`failover_strategy`, `status`, `secrets_group`) without first knowing which device belongs to which group.
 
 ================
 
