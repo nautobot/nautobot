@@ -43,6 +43,7 @@ from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
 from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ModularComponentModel
+from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -2268,16 +2269,21 @@ class ViewTestCases:
         Required class attributes on the consuming TestCase:
             cabled_objects: list of >=2 instances of self.model whose `.cable` is set.
             uncabled_object: optional instance with `.cable is None` for skip-path coverage.
-            bulk_disconnect_uses_new_mixin: True if the model's bulk_disconnect URL is served by
-                `ComponentBulkDisconnectViewMixin` (which enforces per-cable change perm, surfaces
-                form errors as messages, and uses form-invalid 200s). False (default) preserves the
-                legacy `BulkDisconnectView` CBV semantics; the three behavior-only tests skip in
-                that case until the corresponding model is migrated to the new mixin.
+
+        The three behavior-only tests (form-error flash, constrained component/cable perm) skip
+        automatically for models still served by the legacy `BulkDisconnectView` CBV — detection
+        is done at runtime via `_bulk_disconnect_uses_new_mixin()` (see below). A model picks up
+        the strict-behavior coverage as soon as its `UIViewSet` inherits from
+        `ComponentBulkDisconnectViewMixin`; no per-test-class opt-in required.
         """
 
         cabled_objects: list = []
         uncabled_object = None
-        bulk_disconnect_uses_new_mixin: bool = False
+
+        def _bulk_disconnect_uses_new_mixin(self):
+            """True iff the model's UIViewSet inherits from `ComponentBulkDisconnectViewMixin`."""
+            view = lookup.get_view_for_model(self.model)
+            return view is not None and issubclass(view, ComponentBulkDisconnectViewMixin)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_bulk_disconnect_objects_without_permission(self):
@@ -2392,7 +2398,7 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
-            if not self.bulk_disconnect_uses_new_mixin:
+            if not self._bulk_disconnect_uses_new_mixin():
                 self.skipTest(
                     f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
                     "which does not flash form errors via messages."
@@ -2416,7 +2422,7 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
-            if not self.bulk_disconnect_uses_new_mixin:
+            if not self._bulk_disconnect_uses_new_mixin():
                 self.skipTest(
                     f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView; "
                     "the form-invalid 200 response on constrained PKs is only emitted by ComponentBulkDisconnectViewMixin."
@@ -2463,7 +2469,7 @@ class ViewTestCases:
                 self._get_url("bulk_disconnect")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
-            if not self.bulk_disconnect_uses_new_mixin:
+            if not self._bulk_disconnect_uses_new_mixin():
                 self.skipTest(
                     f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
                     "which does not enforce per-cable change permission."

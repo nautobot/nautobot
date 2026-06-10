@@ -3246,9 +3246,6 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsolePort
     allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
-    # ConsolePort is the first cabled component served by ComponentBulkDisconnectViewMixin;
-    # opt in to the new-behavior tests (form-error flash, per-cable perm check, form-invalid 200).
-    bulk_disconnect_uses_new_mixin = True
 
     @classmethod
     def setUpTestData(cls):
