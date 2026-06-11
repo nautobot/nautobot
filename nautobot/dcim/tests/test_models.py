@@ -1,4 +1,6 @@
 from decimal import Decimal
+from unittest.mock import MagicMock, patch, PropertyMock
+import warnings
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
@@ -32,8 +34,12 @@ from nautobot.dcim.choices import (
     PowerPortTypeChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -76,6 +82,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import CustomField, Role, SecretsGroup, Status
@@ -222,6 +229,141 @@ class ConsoleServerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCa
 class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
     model = PowerPort
     modular_component_create_data = {"type": PowerPortTypeChoices.TYPE_NEMA_1030P}
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.feed_status = Status.objects.get_for_model(PowerFeed).first()
+        cls.power_panel = PowerPanel.objects.create(location=cls.device.location, name="PowerDraw Panel")
+
+    # `PowerPort.get_power_draw()` — four branches: manual draw cabled-to-feed / manual draw
+    # uncabled / aggregated draw with single-phase peer / aggregated draw with three-phase peer.
+
+    def _make_powerfeed(self, name, phase=PowerFeedPhaseChoices.PHASE_SINGLE, voltage=120, amperage=20):
+        """Build a PowerFeed with explicit voltage/amperage so `available_power` is deterministic."""
+        return PowerFeed.objects.create(
+            name=name,
+            power_panel=self.power_panel,
+            status=self.feed_status,
+            voltage=voltage,
+            amperage=amperage,
+            max_utilization=100,
+            phase=phase,
+        )
+
+    def _build_outlets_with_remote_ports(self, power_port, draws, feed_leg=""):
+        """Create a set of PowerOutlet/PowerPort pairs with the provided `draws` depending on the given `power_port`."""
+        for index, (allocated_w, maximum_w) in enumerate(draws):
+            outlet = PowerOutlet.objects.create(
+                device=power_port.device,
+                name=f"{power_port.name}-out{feed_leg or '_'}-{index}",
+                power_port=power_port,
+                feed_leg=feed_leg,
+            )
+            # Each remote PowerPort lives on its own device so names stay unique.
+            remote_device = Device.objects.create(
+                name=f"remote-{power_port.name}-{feed_leg or '_'}-{index}",
+                device_type=power_port.device.device_type,
+                role=power_port.device.role,
+                location=power_port.device.location,
+                status=power_port.device.status,
+            )
+            remote_port = PowerPort.objects.create(
+                device=remote_device,
+                name="psu",
+                allocated_draw=allocated_w,
+                maximum_draw=maximum_w,
+            )
+            Cable.objects.create(termination_a=outlet, termination_b=remote_port, status=self.cable_status)
+        return len(draws)
+
+    def test_get_power_draw_manual_connected_to_powerfeed(self):
+        """With `allocated_draw`/`maximum_draw` set and a peer, the denominator is the feed's `available_power`."""
+        port = PowerPort.objects.create(
+            device=self.device, name="gpd-manual-cabled", allocated_draw=190, maximum_draw=380
+        )
+        feed = self._make_powerfeed("gpd-feed-manual")
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        port.refresh_from_db()
+
+        result = port.get_power_draw()
+        # recall that power_factor defaults to 0.95
+        # allocated_va = int(190 / 0.95) = 200; maximum_va = int(380 / 0.95) = 400.
+        self.assertEqual(result["allocated"], 200)
+        self.assertEqual(result["maximum"], 400)
+        self.assertEqual(result["outlet_count"], 0)
+        self.assertEqual(result["legs"], [])
+        self.assertEqual(result["utilization_data"].numerator, 200)
+        self.assertEqual(result["utilization_data"].denominator, feed.available_power)
+        self.assertGreater(result["utilization_data"].denominator, 0)
+
+    def test_get_power_draw_manual_uncabled(self):
+        """No peer (uncabled or peer without `available_power`) → denominator = 0."""
+        port = PowerPort.objects.create(
+            device=self.device, name="gpd-manual-uncabled", allocated_draw=100, maximum_draw=200
+        )
+        result = port.get_power_draw()
+        self.assertEqual(result["utilization_data"].denominator, 0)
+        self.assertEqual(result["legs"], [])
+        self.assertEqual(result["outlet_count"], 0)
+
+    def test_get_power_draw_aggregated_no_outlets(self):
+        """Aggregated mode with no child PowerOutlets → all-zero result, no legs."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-empty")
+        result = port.get_power_draw()
+        self.assertEqual(result["allocated"], 0)
+        self.assertEqual(result["maximum"], 0)
+        self.assertEqual(result["outlet_count"], 0)
+        self.assertEqual(result["legs"], [])
+
+    def test_get_power_draw_aggregated_single_phase_peer(self):
+        """Aggregated mode with outlets cabled to remote PowerPorts; peer is single-phase."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-single")
+        feed = self._make_powerfeed("gpd-feed-single", phase=PowerFeedPhaseChoices.PHASE_SINGLE)
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        outlet_count = self._build_outlets_with_remote_ports(port, [(95, 190), (190, 285)])
+
+        result = port.get_power_draw()
+        # Allocated total 95+190=285 W → 300 VA; max total 190+285=475 → 500 VA.
+        self.assertEqual(result["allocated"], 300)
+        self.assertEqual(result["maximum"], 500)
+        self.assertEqual(result["outlet_count"], outlet_count)
+        self.assertEqual(result["legs"], [])
+
+    def test_get_power_draw_aggregated_three_phase_peer(self):
+        """Aggregated mode with outlets cabled to remote PowerPorts; peer is THREE-PHASE, so `legs` are calculated."""
+        port = PowerPort.objects.create(device=self.device, name="gpd-agg-3ph")
+        feed = self._make_powerfeed("gpd-feed-3ph", phase=PowerFeedPhaseChoices.PHASE_3PHASE)
+        Cable.objects.create(termination_a=port, termination_b=feed, status=self.cable_status)
+        # Leg A: one outlet 95W/190W; Leg B: two outlets (95W/95W and 190W/285W); Leg C: empty.
+        self._build_outlets_with_remote_ports(port, [(95, 190)], feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A)
+        self._build_outlets_with_remote_ports(
+            port,
+            [(95, 95), (190, 285)],
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+        )
+
+        result = port.get_power_draw()
+        self.assertEqual(result["outlet_count"], 3)
+        self.assertEqual(len(result["legs"]), 3)  # all 3 legs always rendered, even when empty.
+
+        legs_by_name = {leg["name"]: leg for leg in result["legs"]}
+        # Leg A: 95W → 100 VA allocated, 190W → 200 VA max, 1 outlet.
+        self.assertEqual(legs_by_name["A"]["allocated"], 100)
+        self.assertEqual(legs_by_name["A"]["maximum"], 200)
+        self.assertEqual(legs_by_name["A"]["outlet_count"], 1)
+        # Leg B: 95+190=285 W → 300 VA allocated, 95+285=380 W → 400 VA max, 2 outlets.
+        self.assertEqual(legs_by_name["B"]["allocated"], 300)
+        self.assertEqual(legs_by_name["B"]["maximum"], 400)
+        self.assertEqual(legs_by_name["B"]["outlet_count"], 2)
+        # Leg C: empty.
+        self.assertEqual(legs_by_name["C"]["allocated"], 0)
+        self.assertEqual(legs_by_name["C"]["maximum"], 0)
+        self.assertEqual(legs_by_name["C"]["outlet_count"], 0)
+        # Overall totals across legs: 95+95+190=380 W → 400 VA, 190+95+285=570 W → 600 VA.
+        self.assertEqual(result["allocated"], 400)
+        self.assertEqual(result["maximum"], 600)
 
 
 class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
@@ -1555,6 +1697,12 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
             u_height=0,
         )
+        self.parent_child_devicetype = DeviceType.objects.create(
+            model="Parent-Child Device Type 1",
+            manufacturer=manufacturer,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            u_height=0,
+        )
         self.device_role = Role.objects.get_for_model(Device).first()
         self.device_status = Status.objects.get_for_model(Device).first()
         self.intf_role = Role.objects.get_for_model(Interface).first()
@@ -1681,6 +1829,39 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
                 self.device, Device.objects.get_by_natural_key([self.device.name, None, self.device.location.name])
             )
             # self.assertEqual(self.device, Device.objects.get(composite_key=self.device.composite_key))  # TODO: Revist this if we reintroduce composite keys
+
+    def test_create_parent_child_and_child_devices(self):
+        """Ensure parent, parent-child, and child device roles are set correctly."""
+        parent_device = Device.objects.create(
+            name="Test Parent Device",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        parent_child_device = Device.objects.create(
+            name="Test Parent-Child Device",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+        child_device = Device.objects.create(
+            name="Test Child Device",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+        )
+
+        self.assertTrue(parent_device.device_type.is_parent_device)
+        self.assertFalse(parent_device.device_type.is_child_device)
+
+        self.assertTrue(parent_child_device.device_type.is_parent_device)
+        self.assertTrue(parent_child_device.device_type.is_child_device)
+
+        self.assertFalse(child_device.device_type.is_parent_device)
+        self.assertTrue(child_device.device_type.is_child_device)
 
     def test_device_creation(self):
         """
@@ -2058,11 +2239,11 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             status=self.device_status,
         )
         child_device.validated_save()
-        child_mtime_before_parent_saved = str(child_device.last_updated)
+        child_mtime_before_parent_saved = child_device.last_updated
 
-        devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
-        devicebay.installed_device = child_device
-        devicebay.validated_save()
+        parent_devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        parent_devicebay.installed_device = child_device
+        parent_devicebay.validated_save()
 
         #
         # Tests
@@ -2072,7 +2253,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         # On a NOOP save, the child device shouldn't be updated
         parent_device.save()
 
-        child_mtime_after_parent_noop_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
 
@@ -2081,7 +2262,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.serial = "12345"
         parent_device.save()
 
-        child_mtime_after_parent_serial_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
 
@@ -2118,7 +2299,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
             str(cm.exception),
         )
 
-        child_mtime_after_parent_rack_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 1").last_updated
 
         self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
 
@@ -2130,8 +2311,102 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         parent_device.location = location
         parent_device.save()
 
-        child_mtime_after_parent_site_update_save = str(Device.objects.get(name="Child Device 1").last_updated)
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 1").last_updated
 
+        self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
+
+    def test_multi_level_child_devices_are_only_saved_when_necessary(self):
+        parent_device = Device.objects.create(
+            name="Parent Device 2",
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+        )
+        parent_device.validated_save()
+
+        DeviceBayTemplate(device_type=self.parent_child_devicetype, name="Device Bay 1").save()
+        parent_child_device = Device.objects.create(
+            name="Parent-Child Device 1",
+            location=parent_device.location,
+            device_type=self.parent_child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        parent_child_device.validated_save()
+
+        parent_devicebay = DeviceBay.objects.get(device=parent_device, name="Device Bay 1")
+        parent_devicebay.installed_device = parent_child_device
+        parent_devicebay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.get(device=parent_child_device, name="Device Bay 1")
+
+        child_device = Device.objects.create(
+            name="Child Device 2",
+            location=parent_device.location,
+            device_type=self.child_devicetype,
+            role=parent_device.role,
+            status=self.device_status,
+        )
+        child_device.validated_save()
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        parent_child_mtime_before_parent_saved = parent_child_device.last_updated
+        child_mtime_before_parent_saved = child_device.last_updated
+
+        #
+        # Tests
+        #
+
+        #
+        # On a NOOP save, the child devices shouldn't be updated
+        parent_device.save()
+
+        parent_child_mtime_after_parent_noop_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_noop_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_noop_save)
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_noop_save)
+
+        #
+        # On a serial number update, the child devices shouldn't be updated
+        parent_device.serial = "12345"
+        parent_device.save()
+
+        parent_child_mtime_after_parent_serial_update_save = Device.objects.get(
+            name="Parent-Child Device 1"
+        ).last_updated
+        child_mtime_after_parent_serial_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertEqual(parent_child_mtime_before_parent_saved, parent_child_mtime_after_parent_serial_update_save)
+        self.assertEqual(child_mtime_before_parent_saved, child_mtime_after_parent_serial_update_save)
+
+        #
+        # If the parent rack updates, the child mtimes should update.
+        rack = Rack.objects.create(name="Rack 1", location=parent_device.location, status=self.device_status)
+        parent_device.rack = rack
+        parent_device.save()
+
+        parent_child_mtime_after_parent_rack_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_rack_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertNotEqual(parent_child_mtime_after_parent_noop_save, parent_child_mtime_after_parent_rack_update_save)
+        self.assertNotEqual(child_mtime_after_parent_noop_save, child_mtime_after_parent_rack_update_save)
+
+        #
+        # If the parent site updates, the child mtimes should update
+        location = Location.objects.create(
+            name="New Site 2", status=self.device_status, location_type=self.location_type_3
+        )
+        parent_device.location = location
+        parent_device.save()
+
+        parent_child_mtime_after_parent_site_update_save = Device.objects.get(name="Parent-Child Device 1").last_updated
+        child_mtime_after_parent_site_update_save = Device.objects.get(name="Child Device 2").last_updated
+
+        self.assertNotEqual(
+            parent_child_mtime_after_parent_rack_update_save, parent_child_mtime_after_parent_site_update_save
+        )
         self.assertNotEqual(child_mtime_after_parent_rack_update_save, child_mtime_after_parent_site_update_save)
 
     def test_cluster_queries(self):
@@ -2170,36 +2445,488 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
                     Device.objects.exclude(**{f"clusters__{field_name}": value}),
                 )
 
+    def test_create_two_level_hierarchy(self):
+        """Test creating a two-level hierarchy: Parent → Child."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 1", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Hierarchy Parent 1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        child_device = Device.objects.create(
+            name="Hierarchy Child 1",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = child_device
+        parent_device_bay.validated_save()
+
+        parent_device.save()
+        child_device.refresh_from_db()
+
+        self.assertEqual(parent_device_bay, child_device.parent_bay)
+        self.assertIsNone(child_device.position)
+        self.assertEqual(parent_device.location, child_device.location)
+        self.assertEqual(parent_device.rack, child_device.rack)
+
+    def test_create_three_level_hierarchy(self):
+        """Test creating a three-level hierarchy: Parent → Parent-Child → Child."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 2", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Hierarchy Parent 2",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child_device = Device.objects.create(
+            name="Hierarchy Parent-Child 1",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child_device
+        parent_device_bay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.create(device=parent_child_device, name="BayA")
+
+        child_device = Device.objects.create(
+            name="Hierarchy Child 2",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        parent_device.save()
+        parent_child_device.refresh_from_db()
+        child_device.refresh_from_db()
+
+        self.assertEqual(parent_device_bay, parent_child_device.parent_bay)
+        self.assertEqual(parent_child_device_bay, child_device.parent_bay)
+        self.assertIsNone(parent_child_device.position)
+        self.assertIsNone(child_device.position)
+        self.assertEqual(parent_device.location, parent_child_device.location)
+        self.assertEqual(parent_device.location, child_device.location)
+        self.assertEqual(parent_device.rack, parent_child_device.rack)
+        self.assertEqual(parent_device.rack, child_device.rack)
+
+    def test_create_four_level_hierarchy(self):
+        """Test creating maximum nesting depth (4 levels)."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Hierarchy Rack 3", location=self.location_3, status=rack_status, u_height=42)
+        level1_device = Device.objects.create(
+            name="Hierarchy Level1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        level1_device_bay = DeviceBay.objects.create(device=level1_device, name="Bay1")
+
+        level2_device = Device.objects.create(
+            name="Hierarchy Level2",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level1_device_bay.installed_device = level2_device
+        level1_device_bay.validated_save()
+        level2_device_bay = DeviceBay.objects.create(device=level2_device, name="Bay2")
+
+        level3_device = Device.objects.create(
+            name="Hierarchy Level3",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level2_device_bay.installed_device = level3_device
+        level2_device_bay.validated_save()
+        level3_device_bay = DeviceBay.objects.create(device=level3_device, name="Bay3")
+
+        level4_device = Device.objects.create(
+            name="Hierarchy Level4",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=level1_device.location,
+            rack=level1_device.rack,
+        )
+        level3_device_bay.installed_device = level4_device
+        level3_device_bay.validated_save()
+
+        level1_device.save()
+        level2_device.refresh_from_db()
+        level3_device.refresh_from_db()
+        level4_device.refresh_from_db()
+
+        self.assertEqual(level3_device_bay, level4_device.parent_bay)
+        self.assertEqual(level2_device_bay, level3_device.parent_bay)
+        self.assertEqual(level1_device_bay, level2_device.parent_bay)
+
+    def test_multi_level_cascade_updates_descendants(self):
+        """Test multi-level cascade updates descendants by field."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Cascade Rack 5", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Cascade Parent 4",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child = Device.objects.create(
+            name="Cascade Parent-Child 3",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child
+        parent_device_bay.validated_save()
+        parent_child_bay = DeviceBay.objects.create(device=parent_child, name="Bay2")
+
+        child = Device.objects.create(
+            name="Cascade Child 4",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_bay.installed_device = child
+        parent_child_bay.validated_save()
+
+        new_location = Location.objects.create(
+            name="Cascade Location 4",
+            location_type=self.location_type_3,
+            status=self.device_status,
+        )
+        new_rack = Rack.objects.create(name="Cascade Rack 6", location=self.location_3, u_height=42, status=rack_status)
+
+        for field_name, new_value in (("location", new_location), ("rack", new_rack)):
+            with self.subTest(field_name=field_name):
+                setattr(parent_device, field_name, new_value)
+                if field_name == "rack":
+                    parent_device.position = 2
+                parent_device.save()
+
+                parent_child.refresh_from_db()
+                child.refresh_from_db()
+
+                self.assertEqual(getattr(parent_child, field_name), new_value)
+                self.assertEqual(getattr(child, field_name), new_value)
+
+    def test_all_nested_devices_single_level(self):
+        """Test all_nested_devices query with single-level children."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Nested Rack 1", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Nested Parent 1",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay1 = DeviceBay.objects.create(device=parent_device, name="Bay1")
+        parent_device_bay2 = DeviceBay.objects.create(device=parent_device, name="Bay2")
+
+        child_device1 = Device.objects.create(
+            name="Nested Child 1",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay1.installed_device = child_device1
+        parent_device_bay1.validated_save()
+
+        child_device2 = Device.objects.create(
+            name="Nested Child 2",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay2.installed_device = child_device2
+        parent_device_bay2.validated_save()
+
+        nested = parent_device.all_nested_devices
+        self.assertEqual(nested.count(), 2)
+        self.assertIn(child_device1, nested)
+        self.assertIn(child_device2, nested)
+
+    def test_all_nested_devices_multi_level(self):
+        """Test all_nested_devices query with multi-level nesting."""
+        rack_status = Status.objects.get_for_model(Rack).first()
+        rack = Rack.objects.create(name="Nested Rack 2", location=self.location_3, status=rack_status, u_height=42)
+        parent_device = Device.objects.create(
+            name="Nested Parent 2",
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            location=self.location_3,
+            rack=rack,
+            position=1,
+            face=DeviceFaceChoices.FACE_FRONT,
+        )
+        parent_device_bay = DeviceBay.objects.create(device=parent_device, name="Bay1")
+
+        parent_child_device = Device.objects.create(
+            name="Nested Parent-Child 1",
+            device_type=self.parent_child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_device_bay.installed_device = parent_child_device
+        parent_device_bay.validated_save()
+        parent_child_device_bay = DeviceBay.objects.create(device=parent_child_device, name="Bay2")
+
+        child_device = Device.objects.create(
+            name="Nested Child 3",
+            device_type=self.child_devicetype,
+            role=self.device_role,
+            status=self.device_status,
+            location=parent_device.location,
+            rack=parent_device.rack,
+        )
+        parent_child_device_bay.installed_device = child_device
+        parent_child_device_bay.validated_save()
+
+        nested_devices = parent_device.all_nested_devices
+        self.assertEqual(nested_devices.count(), 2)
+        self.assertIn(parent_child_device, nested_devices)
+        self.assertIn(child_device, nested_devices)
+
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
 
     def setUp(self):
-        self.devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
+        self.parent_devices = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT)
         devicetype = DeviceType.objects.create(
-            manufacturer=self.devices[0].device_type.manufacturer,
+            manufacturer=self.parent_devices[0].device_type.manufacturer,
             model="TestDeviceType1",
             u_height=0,
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
         )
+        self.parent_child_devicetype = DeviceType.objects.create(
+            manufacturer=self.parent_devices[0].device_type.manufacturer,
+            model="TestDeviceTypeParentChild",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+        )
         child_device = Device.objects.create(
             device_type=devicetype,
-            role=self.devices[0].role,
+            role=self.parent_devices[0].role,
             name="TestDevice1",
-            status=self.devices[0].status,
-            location=self.devices[0].location,
+            status=self.parent_devices[0].status,
+            location=self.parent_devices[0].location,
         )
-        DeviceBay.objects.create(device=self.devices[0], name="Device Bay 1", installed_device=child_device)
+        DeviceBay.objects.create(device=self.parent_devices[0], name="Device Bay 1", installed_device=child_device)
 
-    def test_assigning_installed_device(self):
-        server = Device.objects.exclude(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).last()
-        bay = DeviceBay(device=self.devices[1], name="Device Bay Err", installed_device=server)
+    def test_assigning_installed_device_rejects_parent_role(self):
+        parent_server = Device.objects.filter(device_type__subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).last()
+        bay = DeviceBay(device=self.parent_devices[1], name="Device Bay Err", installed_device=parent_server)
         with self.assertRaises(ValidationError) as err:
             bay.validated_save()
         self.assertIn(
-            f'Cannot install device "{server}"; device-type "{server.device_type}" subdevice_role is not "child".',
+            f'Cannot install device "{parent_server}"; device-type "{parent_server.device_type}" subdevice_role is not "child" or "parent-child".',
             str(err.exception),
         )
+
+    def test_assigning_installed_device_allows_child_roles(self):
+        for role in (SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceType-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                child_device = Device.objects.create(
+                    device_type=device_type,
+                    role=self.parent_devices[0].role,
+                    name=f"TestDevice-{role}",
+                    status=self.parent_devices[0].status,
+                    location=self.parent_devices[0].location,
+                )
+                bay = DeviceBay(
+                    device=self.parent_devices[1], name=f"Device Bay OK {role}", installed_device=child_device
+                )
+                bay.validated_save()
+
+    def test_devicetype_requires_removing_device_bay_templates(self):
+        """Ensure device bay templates must be removed before declassifying a parent device type."""
+        for role in (SubdeviceRoleChoices.ROLE_PARENT, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                parent_device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceTypeTemplateCheck-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                DeviceBayTemplate.objects.create(device_type=parent_device_type, name="Device Bay Template 1")
+
+                parent_device_type.subdevice_role = SubdeviceRoleChoices.ROLE_CHILD
+                with self.assertRaises(ValidationError) as err:
+                    parent_device_type.full_clean()
+                self.assertIn(
+                    "Must delete all device bay templates associated with this device type before declassifying it as a parent device.",
+                    str(err.exception),
+                )
+
+    def test_devicetype_child_role_requires_zero_u_height(self):
+        """Ensure child device types must be 0U."""
+        for role in (SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                child_device_type = DeviceType.objects.create(
+                    manufacturer=self.parent_devices[0].device_type.manufacturer,
+                    model=f"TestDeviceTypeUHeightCheck-{role}",
+                    u_height=1,
+                    subdevice_role=role,
+                )
+                with self.assertRaises(ValidationError) as err:
+                    child_device_type.full_clean()
+                self.assertIn("Child device types must be 0U.", str(err.exception))
+
+    def test_cannot_create_self_referential_parent_bay(self):
+        """Test that a device bay cannot install its own device."""
+        device = Device.objects.create(
+            name="DeviceBay Loop 1",
+            device_type=self.parent_child_devicetype,
+            role=self.parent_devices[0].role,
+            status=self.parent_devices[0].status,
+            location=self.parent_devices[0].location,
+        )
+        device_bay = DeviceBay.objects.create(device=device, name="Bay1")
+        device_bay.installed_device = device
+        with self.assertRaises(ValidationError) as err:
+            device_bay.validated_save()
+        self.assertIn("Cannot install a device into itself.", str(err.exception))
+
+    def test_cannot_create_circular_reference(self):
+        """Test that circular references via device bays are prevented."""
+        role = self.parent_devices[0].role
+        status = self.parent_devices[0].status
+        location = self.parent_devices[0].location
+
+        devices = [
+            Device.objects.create(
+                name=f"DeviceBay Loop {index}",
+                device_type=self.parent_child_devicetype,
+                role=role,
+                status=status,
+                location=location,
+            )
+            for index in range(2, 5)
+        ]
+
+        bays = [DeviceBay.objects.create(device=device, name=f"Bay{index}") for index, device in enumerate(devices, 1)]
+        bays[0].installed_device = devices[1]
+        bays[0].validated_save()
+
+        # 2-node loop: device1 -> device2 -> device1
+        with self.subTest(node_count=2):
+            bays[1].installed_device = devices[0]
+            with self.assertRaises(ValidationError) as err:
+                bays[1].validated_save()
+            self.assertIn(
+                "Installing this device would create a loop; it is already an ancestor of this bay's device.",
+                str(err.exception),
+            )
+
+        bays[1].installed_device = devices[2]
+        bays[1].validated_save()
+
+        # 3-node loop: device1 -> device2 -> device3 -> device1
+        with self.subTest(node_count=3):
+            bays[2].installed_device = devices[0]
+            with self.assertRaises(ValidationError) as err:
+                bays[2].validated_save()
+            self.assertIn(
+                "Installing this device would create a loop; it is already an ancestor of this bay's device.",
+                str(err.exception),
+            )
+
+
+class DeviceBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceBayTemplate
+
+    @classmethod
+    def setUpTestData(cls):
+        parent_device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        DeviceBayTemplate.objects.create(device_type=parent_device_type, name="Device Bay Template Base")
+
+    def test_clean_rejects_non_parent_role(self):
+        """Ensure non-parent device types cannot have device bay templates."""
+        devicetype = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model="TestDeviceBayTemplateChild",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template Err")
+        with self.assertRaises(ValidationError) as err:
+            template.full_clean()
+        self.assertIn(
+            f'Subdevice role of device type ({devicetype}) must be set to "parent" or "parent-child" to allow device bays.',
+            str(err.exception),
+        )
+
+    def test_clean_allows_parent_roles(self):
+        """Ensure parent and parent-child device types can have device bay templates."""
+        for role in (SubdeviceRoleChoices.ROLE_PARENT, SubdeviceRoleChoices.ROLE_PARENT_CHILD):
+            with self.subTest(role=role):
+                devicetype = DeviceType.objects.create(
+                    manufacturer=Manufacturer.objects.first(),
+                    model=f"TestDeviceBayTemplateParent-{role}",
+                    u_height=0,
+                    subdevice_role=role,
+                )
+                template = DeviceBayTemplate(device_type=devicetype, name="Device Bay Template OK")
+                template.full_clean()
 
 
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
@@ -2207,6 +2934,335 @@ class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_get_docs_url(self):
         """No docs for this through table model."""
+
+
+class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = CableType
+
+    def test_get_docs_url(self):
+        """Docs page for this model doesn't exist yet."""
+        # TODO: remove this override once a docs page is added for CableType.
+
+    def test_derived_properties(self):
+        breakout = CableType(
+            name="Test 1-to-4",
+            a_connectors=1,
+            b_connectors=4,
+            total_lanes=8,
+            strands_per_lane=2,
+        )
+        self.assertEqual(breakout.a_positions, 8)
+        self.assertEqual(breakout.b_positions, 2)
+        self.assertEqual(breakout.total_strands, 16)
+        self.assertTrue(breakout.is_breakout)
+
+        straight = CableType(
+            name="Test straight",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=4,
+            strands_per_lane=1,
+        )
+        self.assertEqual(straight.a_positions, 2)
+        self.assertEqual(straight.b_positions, 2)
+        self.assertEqual(straight.total_strands, 4)
+        self.assertFalse(straight.is_breakout)
+
+    def test_positions_with_zero_connectors(self):
+        """Guard against ZeroDivisionError when connector counts are zero (e.g. unsaved instance)."""
+        breakout = CableType(a_connectors=0, b_connectors=0, total_lanes=4)
+        self.assertEqual(breakout.a_positions, 0)
+        self.assertEqual(breakout.b_positions, 0)
+
+    def test_clean_wrong_direction(self):
+        """a_connectors must not exceed b_connectors."""
+        breakout = CableType(
+            name="Wrong direction",
+            a_connectors=4,
+            b_connectors=1,
+            total_lanes=4,
+        )
+        with self.assertRaisesRegex(ValidationError, "Wrong breakout direction"):
+            breakout.clean()
+
+    def test_clean_total_lanes_not_divisible_by_a(self):
+        breakout = CableType(
+            name="Bad a divisor",
+            a_connectors=3,
+            b_connectors=4,
+            total_lanes=8,
+        )
+        with self.assertRaisesRegex(ValidationError, "evenly divisible by a_connectors"):
+            breakout.clean()
+
+    def test_clean_total_lanes_not_divisible_by_b(self):
+        breakout = CableType(
+            name="Bad b divisor",
+            a_connectors=2,
+            b_connectors=6,
+            total_lanes=8,
+        )
+        with self.assertRaisesRegex(ValidationError, "evenly divisible by b_connectors"):
+            breakout.clean()
+
+    def test_clean_autogenerates_mapping_when_missing(self):
+        breakout = CableType(
+            name="Auto map",
+            a_connectors=1,
+            b_connectors=2,
+            total_lanes=4,
+            mapping=None,
+        )
+        breakout.clean()
+        self.assertEqual(len(breakout.mapping), 4)
+        self.assertEqual(
+            breakout.mapping, generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=4)
+        )
+
+    def test_validate_mapping_not_a_list(self):
+        breakout = CableType(
+            name="Bad mapping type",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping={"not": "a list"},
+        )
+        with self.assertRaisesRegex(ValidationError, "Mapping must be a JSON array"):
+            breakout.clean()
+
+    def test_validate_mapping_wrong_length(self):
+        breakout = CableType(
+            name="Bad mapping length",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[{"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "Expected 2 lane definitions, but got 1"):
+            breakout.clean()
+
+    def test_validate_mapping_entry_not_dict(self):
+        breakout = CableType(
+            name="Bad entry type",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=["not a dict"],
+        )
+        with self.assertRaisesRegex(ValidationError, "Entry 0 must be a JSON object"):
+            breakout.clean()
+
+    def test_validate_mapping_missing_keys(self):
+        breakout = CableType(
+            name="Missing keys",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"a_connector": 1, "a_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "missing required keys.*b_connector, b_position"):
+            breakout.clean()
+
+    def test_validate_mapping_unknown_keys(self):
+        breakout = CableType(
+            name="Unknown keys",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[
+                {
+                    "a_connector": 1,
+                    "a_position": 1,
+                    "b_connector": 1,
+                    "b_position": 1,
+                    "bogus": "value",
+                }
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, "unknown keys: bogus"):
+            breakout.clean()
+
+    def test_validate_mapping_non_integer_value(self):
+        breakout = CableType(
+            name="Non-int",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"a_connector": "1", "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "key 'a_connector' must be a positive integer"):
+            breakout.clean()
+
+    def test_validate_mapping_out_of_range(self):
+        cases = [
+            ({"a_connector": 2, "a_position": 1, "b_connector": 1, "b_position": 1}, "a_connector 2 out of range"),
+            ({"a_connector": 1, "a_position": 3, "b_connector": 1, "b_position": 1}, "a_position 3 out of range"),
+            ({"a_connector": 1, "a_position": 1, "b_connector": 2, "b_position": 1}, "b_connector 2 out of range"),
+            ({"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 3}, "b_position 3 out of range"),
+        ]
+        for entry, expected_message in cases:
+            with self.subTest(expected_message=expected_message):
+                # Pad mapping to the expected size so validate_mapping reaches the range checks.
+                mapping = [
+                    entry,
+                    {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+                ]
+                breakout = CableType(
+                    name=f"OOR {expected_message}",
+                    a_connectors=1,
+                    b_connectors=1,
+                    total_lanes=2,
+                    mapping=mapping,
+                )
+                with self.assertRaisesRegex(ValidationError, expected_message):
+                    breakout.clean()
+
+    def test_validate_mapping_duplicate_a_pair(self):
+        breakout = CableType(
+            name="Dup A",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 2},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, r"Duplicate A-side .*: \(1, 1\)"):
+            breakout.clean()
+
+    def test_validate_mapping_duplicate_b_pair(self):
+        breakout = CableType(
+            name="Dup B",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 1},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, r"Duplicate B-side .*: \(1, 1\)"):
+            breakout.clean()
+
+    def test_validate_mapping_non_string_label(self):
+        breakout = CableType(
+            name="Non-string label",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=1,
+            mapping=[{"label": 1, "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1}],
+        )
+        with self.assertRaisesRegex(ValidationError, "Label 1 must be a string"):
+            breakout.clean()
+
+    def test_validate_mapping_duplicate_label(self):
+        breakout = CableType(
+            name="Dup label",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=[
+                {"label": "same", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+                {"label": "same", "a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+            ],
+        )
+        with self.assertRaisesRegex(ValidationError, "Duplicate label: same"):
+            breakout.clean()
+
+    def test_validate_mapping_assigns_default_label(self):
+        mapping = [
+            {"a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
+            {"a_connector": 1, "a_position": 2, "b_connector": 1, "b_position": 2},
+        ]
+        breakout = CableType(
+            name="Default labels",
+            a_connectors=1,
+            b_connectors=1,
+            total_lanes=2,
+            mapping=mapping,
+        )
+        breakout.clean()
+        # validate_mapping fills in missing labels (using the entry index as string).
+        self.assertEqual(breakout.mapping[0]["label"], "0")
+        self.assertEqual(breakout.mapping[1]["label"], "1")
+
+    def test_autogenerate_mapping_does_nothing_on_invalid_data_bypassing_clean(self):
+        breakout = CableType(
+            name="Wrong total_lanes",
+            a_connectors=3,
+            b_connectors=4,
+            total_lanes=7,
+        )
+        breakout.save()
+        self.assertFalse(breakout.mapping)
+        with self.assertRaises(ValidationError):
+            breakout.clean()
+
+    def test_immutable_fields_when_referenced_by_cables(self):
+        """Fields defining physical structure may not change once Cables reference this CableType."""
+        ct = CableType.objects.create(name="Lock me", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable_status = Status.objects.get_for_model(Cable).first()
+        Cable.objects.create(status=cable_status, cable_type=ct)
+
+        # Direct ORM save must reject changes to immutable fields.
+        ct.a_connectors = 1
+        ct.b_connectors = 4
+        ct.total_lanes = 4
+        ct.mapping = []  # would otherwise regenerate to the 1x4 mapping
+        with self.assertRaises(ValidationError) as cm:
+            ct.save()
+        self.assertIn("b_connectors", cm.exception.message_dict)
+        self.assertIn("total_lanes", cm.exception.message_dict)
+        self.assertIn("mapping", cm.exception.message_dict)
+
+        # `clean()` (used by validated_save, forms, serializers) must reject the same.
+        ct.refresh_from_db()
+        ct.strands_per_lane = 4
+        with self.assertRaises(ValidationError) as cm:
+            ct.clean()
+        self.assertIn("strands_per_lane", cm.exception.message_dict)
+
+    def test_mutable_fields_still_editable_when_referenced(self):
+        """Metadata/informational fields remain editable even when Cables reference the CableType."""
+        ct = CableType.objects.create(name="Edit metadata")
+        cable_status = Status.objects.get_for_model(Cable).first()
+        Cable.objects.create(status=cable_status, cable_type=ct)
+
+        ct.description = "Updated description"
+        ct.part_number = "P/N-123"
+        ct.is_shuffle = True
+        ct.polarity_method = "straight-through"
+        ct.save()  # Should not raise
+        ct.refresh_from_db()
+        self.assertEqual(ct.description, "Updated description")
+        self.assertEqual(ct.part_number, "P/N-123")
+        self.assertTrue(ct.is_shuffle)
+        self.assertEqual(ct.polarity_method, "straight-through")
+
+    def test_immutable_fields_editable_when_no_cables_reference(self):
+        """Without any referencing Cables, the immutable-when-referenced fields are freely editable."""
+        ct = CableType.objects.create(name="Free to edit", a_connectors=1, b_connectors=2, total_lanes=2)
+        ct.a_connectors = 1
+        ct.b_connectors = 4
+        ct.total_lanes = 4
+        ct.strands_per_lane = 2
+        ct.mapping = []
+        ct.save()  # Should not raise
+        ct.refresh_from_db()
+        self.assertEqual(ct.b_connectors, 4)
+        self.assertEqual(ct.total_lanes, 4)
+        self.assertEqual(ct.strands_per_lane, 2)
+        self.assertEqual(len(ct.mapping), 4)  # auto-regenerated
+
+    def test_save_tolerates_stale_instance(self):
+        """If the underlying row has been deleted out from under a stale in-memory instance, `save()` still succeeds."""
+        ct = CableType.objects.create(name="Stale", a_connectors=1, b_connectors=2, total_lanes=2)
+        # Delete the row directly via the queryset, leaving `ct` in-memory with `_state.adding=False`
+        # (so `present_in_database` still returns True) but no matching DB row.
+        CableType.objects.filter(pk=ct.pk).delete()
+        ct.save()  # Should not raise (immutability check hits the `DoesNotExist` branch and skips)
+        self.assertTrue(CableType.objects.filter(pk=ct.pk).exists())
 
 
 class CableTestCase(ModelTestCases.BaseModelTestCase):
@@ -2313,14 +3369,113 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
     def test_cable_creation(self):
         """
-        When a new Cable is created, it must be cached on either termination point.
+        When a new Cable is created, each termination should resolve its peer via the CableToCableTermination table.
         """
         interface1 = Interface.objects.get(pk=self.interface1.pk)
         interface2 = Interface.objects.get(pk=self.interface2.pk)
         self.assertEqual(self.cable.termination_a, interface1)
-        self.assertEqual(interface1._cable_peer, interface2)
+        self.assertEqual(interface1.get_cable_peer(), interface2)
+        self.assertEqual(interface1.get_cable_peers(), [interface2])
         self.assertEqual(self.cable.termination_b, interface2)
-        self.assertEqual(interface2._cable_peer, interface1)
+        self.assertEqual(interface2.get_cable_peer(), interface1)
+        self.assertEqual(interface2.get_cable_peers(), [interface1])
+        # Behaviors of a non-breakout cable:
+        self.assertEqual(1, self.cable.total_lanes)
+        self.assertEqual(1, self.cable.connected_lanes)
+        self.assertEqual("", self.cable.get_mapping_diagram_svg())
+        self.assertEqual(
+            [
+                {
+                    "lane": 1,
+                    "a_connector": 1,
+                    "a_position": 1,
+                    "b_connector": 1,
+                    "b_position": 1,
+                    "a_termination": interface1,
+                    "b_termination": interface2,
+                },
+            ],
+            self.cable.get_lanes(),
+        )
+
+    def test_termination_backward_compat_properties(self):
+        """
+        Test property getters/setters for `termination_[ab]`, `termination_[ab]_type`, and `termination_[ab]_id`.
+
+        These resolve through the CableToCableTermination join table once endpoints exist, and fall back to the
+        `_initial_*` cache before save.
+        """
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        rear_port_ct = ContentType.objects.get_for_model(RearPort)
+
+        # Getters on a saved cable resolve through the first endpoint on each side.
+        self.assertEqual(self.cable.termination_a_type, interface_ct)
+        self.assertEqual(self.cable.termination_a_id, self.interface1.pk)
+        self.assertEqual(self.cable.termination_b_type, interface_ct)
+        self.assertEqual(self.cable.termination_b_id, self.interface2.pk)
+
+        def assert_round_trip(cable):
+            """Save `cable` and confirm join rows + post-save getter resolution; then tear down."""
+            cable.save()
+            try:
+                rows = list(CableToCableTermination.objects.filter(cable=cable).order_by("cable_end"))
+                self.assertEqual(len(rows), 2)
+                self.assertEqual(rows[0].cable_end, "A")
+                self.assertEqual(rows[0].termination, self.interface3)
+                self.assertEqual(rows[1].cable_end, "B")
+                self.assertEqual(rows[1].termination, self.rear_port1)
+                # Re-fetch so we're reading through the join table, not any cached `_initial_*`.
+                refetched = Cable.objects.get(pk=cable.pk)
+                self.assertEqual(refetched.termination_a, self.interface3)
+                self.assertEqual(refetched.termination_a_type, interface_ct)
+                self.assertEqual(refetched.termination_a_id, self.interface3.pk)
+                self.assertEqual(refetched.termination_b, self.rear_port1)
+                self.assertEqual(refetched.termination_b_type, rear_port_ct)
+                self.assertEqual(refetched.termination_b_id, self.rear_port1.pk)
+            finally:
+                # `interface3` + `rear_port1` are reused across variants; clear the cable so the
+                # next save can claim them again.
+                cable.delete()
+
+        # Variant 1: legacy object-form kwargs flowing into `_initial_termination_[ab]`.
+        via_objects = Cable(termination_a=self.interface3, termination_b=self.rear_port1, status=self.status)
+        self.assertEqual(via_objects.termination_a, self.interface3)
+        self.assertEqual(via_objects.termination_b, self.rear_port1)
+        assert_round_trip(via_objects)
+
+        # Variant 2: serializer-style type/id kwargs flowing into `_initial_termination_[ab]_[type|id]`.
+        via_type_id = Cable(
+            termination_a_type=interface_ct,
+            termination_a_id=self.interface3.pk,
+            termination_b_type=rear_port_ct,
+            termination_b_id=self.rear_port1.pk,
+            status=self.status,
+        )
+        self.assertEqual(via_type_id.termination_a_type, interface_ct)
+        self.assertEqual(via_type_id.termination_a_id, self.interface3.pk)
+        self.assertEqual(via_type_id.termination_b_type, rear_port_ct)
+        self.assertEqual(via_type_id.termination_b_id, self.rear_port1.pk)
+        assert_round_trip(via_type_id)
+
+        # Variant 3a: direct attribute assignment via the object-form `@*.setter` decorators.
+        via_object_setters = Cable(status=self.status)
+        via_object_setters.termination_a = self.interface3
+        via_object_setters.termination_b = self.rear_port1
+        self.assertEqual(via_object_setters.termination_a, self.interface3)
+        self.assertEqual(via_object_setters.termination_b, self.rear_port1)
+        assert_round_trip(via_object_setters)
+
+        # Variant 3b: direct attribute assignment via the type/id `@*.setter` decorators.
+        via_type_id_setters = Cable(status=self.status)
+        via_type_id_setters.termination_a_type = interface_ct
+        via_type_id_setters.termination_a_id = self.interface3.pk
+        via_type_id_setters.termination_b_type = rear_port_ct
+        via_type_id_setters.termination_b_id = self.rear_port1.pk
+        self.assertEqual(via_type_id_setters.termination_a_type, interface_ct)
+        self.assertEqual(via_type_id_setters.termination_a_id, self.interface3.pk)
+        self.assertEqual(via_type_id_setters.termination_b_type, rear_port_ct)
+        self.assertEqual(via_type_id_setters.termination_b_id, self.rear_port1.pk)
+        assert_round_trip(via_type_id_setters)
 
     def test_cable_deletion(self):
         """
@@ -2332,18 +3487,27 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertNotEqual(str(self.cable), "#None")
         interface1 = Interface.objects.get(pk=self.interface1.pk)
         self.assertIsNone(interface1.cable)
-        self.assertIsNone(interface1._cable_peer)
+        self.assertIsNone(interface1.get_cable_peer())
+        self.assertEqual(interface1.get_cable_peers(), [])
         interface2 = Interface.objects.get(pk=self.interface2.pk)
         self.assertIsNone(interface2.cable)
-        self.assertIsNone(interface2._cable_peer)
+        self.assertIsNone(interface2.get_cable_peer())
+        self.assertEqual(interface2.get_cable_peers(), [])
 
     def test_cabletermination_deletion(self):
         """
-        When a CableTermination object is deleted, its attached Cable (if any) must also be deleted.
+        When a CableTermination object is deleted, its CableToCableTermination row is removed but the
+        Cable itself survives.
         """
+
+        interface1_pk = self.interface1.pk
         self.interface1.delete()
         cable = Cable.objects.filter(pk=self.cable.pk).first()
-        self.assertIsNone(cable)
+        self.assertIsNotNone(cable)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=cable, interface_id=interface1_pk).exists())
+        # The other end is still attached to the cable
+        interface2 = Interface.objects.get(pk=self.interface2.pk)
+        self.assertEqual(interface2.cable, cable)
 
     def test_cable_validates_compatible_types(self):
         """
@@ -2590,6 +3754,433 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # Enable change logging
         with context_managers.web_request_context(self.user):
             self.device1.delete()
+
+    def test_multilane_cable_pair_validation_via_cabletocabletermination_clean(self):
+        """Per-lane `CableToCableTermination.clean()` catches pair-wise violations on non-primary lanes.
+
+        Constructs a 2x2 cable where lane 1 (interface↔interface) is valid but lane 2 wires a
+        FrontPort to its corresponding RearPort, then to itself. `Cable.clean()` only validates the
+        first A/B pair, so both violations are surfaced via the per-row `full_clean()` on the
+        lane-2 join row.
+        """
+        Cable.objects.all().delete()
+
+        cable_type = CableType(
+            name="Test 2-to-2 multi-lane",
+            a_connectors=2,
+            b_connectors=2,
+            total_lanes=2,
+        )
+        cable_type.validated_save()  # populates mapping
+        cable = Cable.objects.create(
+            termination_a=self.interface1,
+            termination_b=self.interface2,
+            cable_type=cable_type,
+            status=self.status,
+        )
+
+        # Connector 2 A-side: FrontPort. Its peer (B-side connector 2) will be validated below.
+        CableToCableTermination.objects.create(
+            cable=cable,
+            cable_end="A",
+            front_port=self.front_port1,
+            connector=2,
+        )
+
+        # B-side connector 2 = the FrontPort's corresponding RearPort → pair-rule violation.
+        term2 = CableToCableTermination(cable=cable, cable_end="B", rear_port=self.rear_port1, connector=2)
+        with self.assertRaisesRegex(ValidationError, "front port cannot be connected to its corresponding rear port"):
+            term2.full_clean()
+
+        # B-side connector 2 = the same FrontPort → self-connection violation.
+        term2 = CableToCableTermination(cable=cable, cable_end="B", front_port=self.front_port1, connector=2)
+        with self.assertRaisesRegex(ValidationError, "Cannot connect front port to itself"):
+            term2.full_clean()
+
+    def test_cabletocabletermination_connector_defaults_to_one(self):
+        """For a standard (non-breakout) cable, the join row's `connector` field defaults to 1."""
+        row = CableToCableTermination.objects.filter(cable=self.cable, cable_end="A").first()
+        self.assertEqual(row.connector, 1)
+        row = CableToCableTermination.objects.filter(cable=self.cable, cable_end="B").first()
+        self.assertEqual(row.connector, 1)
+
+    def test_cabletocabletermination_connector_rejected_for_standard_cable_above_one(self):
+        """For a cable without a CableType, `connector` must be 1 — values above 1 fail validation."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=2)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
+            row.full_clean()
+
+    def test_cabletocabletermination_connector_within_cable_type_range_accepted(self):
+        """For a breakout cable, `connector` may range from 1..a_connectors / 1..b_connectors."""
+        ct = CableType.objects.create(name="Test 1x4 OK", a_connectors=1, b_connectors=4, total_lanes=4)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        for b_connector in (1, 2, 3, 4):
+            row = CableToCableTermination(
+                cable=cable,
+                cable_end="B",
+                interface=Interface.objects.create(
+                    device=self.device2, name=f"breakout-ok-{b_connector}", status=self.interface2.status
+                ),
+                connector=b_connector,
+            )
+            row.full_clean()  # Should not raise
+
+    def test_cabletocabletermination_connector_above_cable_type_range_rejected(self):
+        """For a 1x4 breakout cable, connector=5 on the B side is out of range."""
+        ct = CableType.objects.create(name="Test 1x4 bad", a_connectors=1, b_connectors=4, total_lanes=4)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        row = CableToCableTermination(cable=cable, cable_end="B", interface=self.interface3, connector=5)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..4\\)"):
+            row.full_clean()
+
+    def test_cabletocabletermination_connector_zero_rejected(self):
+        """A connector value of 0 is not a valid 1-indexed connector number."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=0)
+        with self.assertRaisesRegex(ValidationError, "outside the valid range \\(1..1\\)"):
+            row.full_clean()
+
+    def test_cabletocabletermination_rejects_incompatible_peer_on_standard_cable(self):
+        """For a standard cable, the second-added row must be compatible with the first row's termination."""
+        cable = Cable.objects.create(status=self.status)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # PowerPort is not in COMPATIBLE_TERMINATION_TYPES["interface"], so this peer-pair check must fail.
+        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", power_port=self.power_port1, connector=1)
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            incompatible_row.full_clean()
+
+    def test_cabletocabletermination_rejects_incompatible_peer_on_breakout_lane(self):
+        """On a 1x2 breakout, each B-side row peers with A-connector 1 — incompatible types fail clean."""
+        ct = CableType.objects.create(name="Test 1x2 mixed", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # B-side connector 2 shares lane 2 with A-connector 1, so this pair gets checked.
+        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", power_port=self.power_port1, connector=2)
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            incompatible_row.full_clean()
+
+    def test_cabletocabletermination_compatible_peer_on_breakout_lane_accepted(self):
+        """Two compatible terminations across a breakout lane pair pass clean."""
+        ct = CableType.objects.create(name="Test 1x2 compat", a_connectors=1, b_connectors=2, total_lanes=2)
+        cable = Cable.objects.create(status=self.status, cable_type=ct)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        peer_interface = Interface.objects.create(
+            device=self.device2, name="peer-lane-2", status=self.interface3.status
+        )
+        compatible_row = CableToCableTermination(cable=cable, cable_end="B", interface=peer_interface, connector=2)
+        compatible_row.full_clean()  # Should not raise
+
+    def test_orm_cable_create_rejects_incompatible_initial_terminations(self):
+        """`Cable.objects.create(termination_a=..., termination_b=...)` must reject incompatible pairs."""
+        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+            Cable.objects.create(termination_a=self.interface3, termination_b=self.power_port1, status=self.status)
+        # The atomic block in Cable.save rolls the cable back too; no orphan row.
+        self.assertFalse(Cable.objects.filter(terminations__interface=self.interface3).exists())
+
+    def test_cabletocabletermination_skips_self_when_updating(self):
+        """An existing row being re-cleaned must not peer-pair-check against itself."""
+        cable = Cable.objects.create(status=self.status)
+        row = CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # Re-clean the saved row; without the `present_in_database` exclusion this would self-compare.
+        row.full_clean()  # Should not raise
+
+    def test_cabletocabletermination_peer_pair_skips_termination_less_peer(self):
+        """Peer rows with no termination FK set are skipped during pair validation."""
+        cable = Cable.objects.create(status=self.status)
+        # Bypass clean() to persist a B-side ghost row with no termination FK — only the DB
+        # "at most one" constraint is enforced here, so a zero-termination row is accepted.
+        CableToCableTermination.objects.create(cable=cable, cable_end="B", connector=1)
+        new_row = CableToCableTermination(cable=cable, cable_end="A", interface=self.interface3, connector=1)
+        # Peer iteration finds the ghost row; `peer_term is None` triggers `continue`, so pair
+        # validation neither crashes nor reports an incompatibility.
+        new_row.full_clean()
+
+    # Backward-compatibility query translation for `cable=`/`select_related("cable")` patterns.
+    # The `cable` FK was replaced by the `CableToCableTermination` join; old queries are
+    # translated with a `DeprecationWarning` to the new `cable_termination__cable[...]` form.
+
+    def _expected_interfaces_on_cable(self):
+        return set(
+            Interface.objects.filter(cable_termination__cable=self.cable).values_list("pk", flat=True),
+        )
+
+    def test_filter_cable_deprecation_warns_and_translates(self):
+        """`Interface.objects.filter(cable=cable)` warns and returns same results as the new path."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable=self.cable).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_id_deprecation_warns_and_translates(self):
+        """`filter(cable_id=<pk>)` warns and translates to `cable_termination__cable_id=<pk>`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id=self.cable.pk).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_isnull_deprecation_warns_and_translates(self):
+        """`filter(cable__isnull=False)` warns and matches `cable_termination__isnull=False`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable__isnull=False).values_list("pk", flat=True))
+        expected = set(
+            Interface.objects.filter(cable_termination__isnull=False).values_list("pk", flat=True),
+        )
+        self.assertEqual(actual, expected)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_double_underscore_lookup_deprecation_warns_and_translates(self):
+        """`filter(cable__status=...)` warns and translates to `cable_termination__cable__status=...`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable__status=self.status).values_list("pk", flat=True))
+        expected = set(
+            Interface.objects.filter(cable_termination__cable__status=self.status).values_list("pk", flat=True),
+        )
+        self.assertEqual(actual, expected)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_exclude_cable_deprecation_warns_and_translates(self):
+        """`exclude(cable=cable)` warns and produces the inverse of `filter(cable=cable)`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.exclude(cable=self.cable).values_list("pk", flat=True))
+        on_cable = self._expected_interfaces_on_cable()
+        all_interfaces = set(Interface.objects.values_list("pk", flat=True))
+        self.assertEqual(actual, all_interfaces - on_cable)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_select_related_cable_deprecation_warns_and_translates(self):
+        """`select_related("cable")` warns; iterating the queryset succeeds (no FieldError)."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("cable")
+            list(qs[:1])  # force evaluation
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_select_related_cable_double_underscore_deprecation_warns_and_translates(self):
+        """`select_related("cable__status")` warns; the query compiles."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("cable__status")
+            list(qs[:1])
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_cable_none_translates_to_isnull_true(self):
+        """`filter(cable=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable=None).values_list("pk", flat=True))
+        expected = set(Interface.objects.filter(cable_termination__isnull=True).values_list("pk", flat=True))
+        self.assertEqual(actual, expected)
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) and "cable=None" in str(w.message) for w in caught)
+        )
+
+    def test_filter_cable_id_none_translates_to_isnull_true(self):
+        """`filter(cable_id=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id=None).values_list("pk", flat=True))
+        expected = set(Interface.objects.filter(cable_termination__isnull=True).values_list("pk", flat=True))
+        self.assertEqual(actual, expected)
+        self.assertTrue(
+            any(issubclass(w.category, DeprecationWarning) and "cable_id=None" in str(w.message) for w in caught)
+        )
+
+    def test_filter_cable_id_lookup_suffix_translates(self):
+        """`filter(cable_id__<suffix>=[...])` translates to `cable_termination__cable_id__<suffix>`."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            actual = set(Interface.objects.filter(cable_id__in=[self.cable.pk]).values_list("pk", flat=True))
+        self.assertEqual(actual, self._expected_interfaces_on_cable())
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_get_cable_deprecation_warns_and_translates(self):
+        """`.get(cable=...)` goes through the same translation as `.filter()`."""
+        # Use one of the actual interfaces on `self.cable` so the `.get()` returns exactly one row.
+        on_cable_pks = self._expected_interfaces_on_cable()
+        self.assertGreaterEqual(len(on_cable_pks), 1)
+        target_pk = next(iter(on_cable_pks))
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            obj = Interface.objects.get(cable=self.cable, pk=target_pk)
+        self.assertEqual(obj.pk, target_pk)
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_filter_passthrough_kwargs_unchanged(self):
+        """Lookup keys unrelated to `cable*` flow through unchanged with no deprecation warning."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            list(Interface.objects.filter(name=self.interface1.name).values_list("pk", flat=True))
+        self.assertFalse(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    # `CableTermination.cable` setter + `_pending_cable_disconnect` flag — assigning
+    # `termination.cable = None` defers the actual disconnect until the next save() so the
+    # caller can also update other fields on the termination in the same transaction.
+
+    def test_setting_cable_to_none_marks_pending_disconnect_and_shadows_property(self):
+        """`termination.cable = None` sets pending flag and the property returns None immediately, join row persists."""
+        interface = Interface.objects.get(pk=self.interface1.pk)
+        self.assertEqual(interface.cable, self.cable)  # baseline: cabled
+
+        interface.cable = None
+        self.assertTrue(interface._pending_cable_disconnect)
+        self.assertIsNone(interface.cable)  # property short-circuits on the flag
+        # Join row is still in the DB until save() runs.
+        self.assertTrue(CableToCableTermination.objects.filter(cable=self.cable, interface=interface).exists())
+
+    def test_save_after_setting_cable_none_performs_disconnect(self):
+        """Saving a termination with `_pending_cable_disconnect=True` removes the `CableToCableTermination` row."""
+        interface = Interface.objects.get(pk=self.interface1.pk)
+        interface.cable = None
+        interface.save()
+
+        self.assertFalse(interface._pending_cable_disconnect)  # flag cleared on save
+        refetched = Interface.objects.get(pk=interface.pk)
+        self.assertIsNone(refetched.cable)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=self.cable, interface=refetched).exists())
+        # The cable itself survives the disconnect (only one side detached).
+        self.assertTrue(Cable.objects.filter(pk=self.cable.pk).exists())
+
+    def test_save_with_pending_disconnect_on_uncabled_termination_is_noop(self):
+        """Setting `cable=None` then saving on a termination that has no `CableToCableTermination` row is a no-op."""
+        # interface3 is part of setUpTestData and is not cabled.
+        self.assertIsNone(self.interface3.cable)
+        self.interface3.cable = None
+        self.interface3.save()  # must not raise
+        self.assertFalse(self.interface3._pending_cable_disconnect)
+        # Still uncabled.
+        self.assertIsNone(Interface.objects.get(pk=self.interface3.pk).cable)
+
+    def test_setting_cable_to_value_raises(self):
+        """Connecting a termination via `termination.cable = <cable>` is intentionally unsupported."""
+        interface = Interface.objects.get(pk=self.interface3.pk)  # uncabled
+        with self.assertRaisesRegex(NotImplementedError, "is not supported"):
+            interface.cable = self.cable
+
+    # `Cable.add_termination()` — public helper for attaching a CableTermination to a saved cable.
+
+    def test_add_termination_creates_join_row_and_returns_it(self):
+        """`add_termination` creates a `CableToCableTermination` row and returns it."""
+        breakout_type = CableType.objects.create(
+            name="add_termination 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        cable = Cable.objects.create(status=self.status, cable_type=breakout_type)
+        row = cable.add_termination(self.interface3, "B", connector=2)
+        self.assertIsInstance(row, CableToCableTermination)
+        self.assertEqual(row.cable, cable)
+        self.assertEqual(row.cable_end, "B")
+        self.assertEqual(row.connector, 2)
+        self.assertEqual(row.termination, self.interface3)
+        self.assertTrue(
+            CableToCableTermination.objects.filter(
+                cable=cable, cable_end="B", connector=2, interface=self.interface3
+            ).exists()
+        )
+
+    def test_add_termination_defaults_connector_to_one(self):
+        """`connector` defaults to 1 — the only valid value on a standard (non-breakout) cable."""
+        new_interface = Interface.objects.create(
+            device=self.device1, name="addterm-default", status=self.interface1.status
+        )
+        cable = Cable.objects.create(status=self.status)
+        row = cable.add_termination(new_interface, "A")
+        self.assertEqual(row.connector, 1)
+
+    def test_add_termination_triggers_rebuild_paths(self):
+        """Adding a new lane termination to a breakout cable should make a CablePath traceable for that lane."""
+        breakout_type = CableType.objects.create(
+            name="add_termination rebuild 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        trunk = Interface.objects.create(device=self.device1, name="addterm-trunk", status=self.interface1.status)
+        lane2 = Interface.objects.create(device=self.device2, name="addterm-lane2", status=self.interface2.status)
+        # Build the cable with only connector 1 wired (trunk → some interface), then add lane 2.
+        cable = Cable(
+            termination_a=trunk,
+            termination_b=self.interface3,
+            cable_type=breakout_type,
+            status=self.status,
+        )
+        cable.save()
+
+        trunk_paths_pre = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        # Lane 2 has no termination on the fanout side yet, so its path is partial.
+        self.assertTrue(trunk_paths_pre.get(peer_connector=2).is_split)
+
+        cable.add_termination(lane2, "B", connector=2)
+
+        trunk_paths_post = CablePath.objects.filter(
+            origin_type=ContentType.objects.get_for_model(Interface), origin_id=trunk.pk
+        )
+        self.assertEqual(trunk_paths_post.get(peer_connector=2).destination, lane2)
+
+    def test_add_termination_rejects_invalid_termination_type(self):
+        """Passing something that isn't a recognized cable-termination type raises `TypeError`."""
+        cable = Cable.objects.create(status=self.status)
+        with self.assertRaisesRegex(TypeError, "is not a known CableTermination subclass"):
+            cable.add_termination(self.device1, "A")  # Device is not a CableTermination
+
+    def test_add_termination_rejects_out_of_range_connector(self):
+        """`add_termination` validates `connector` against the parent cable's CableType, rejecting
+        values outside the per-side range and the field's MinValueValidator/MaxValueValidator."""
+        # Standard (non-breakout) cable: only connector=1 is valid.
+        standard_cable = Cable.objects.create(status=self.status)
+        with self.assertRaises(ValidationError):
+            standard_cable.add_termination(self.interface3, "A", connector=2)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=standard_cable).exists())
+
+        # Breakout cable: connector must be in 1..a_connectors on the A side and 1..b_connectors
+        # on the B side. A 1x2 cable accepts B-side connector 1 or 2, but not 3.
+        breakout_type = CableType.objects.create(
+            name="add_termination range 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(status=self.status, cable_type=breakout_type)
+        with self.assertRaises(ValidationError):
+            breakout_cable.add_termination(self.interface3, "B", connector=3)
+        # And the A side only has one connector on this CableType.
+        with self.assertRaises(ValidationError):
+            breakout_cable.add_termination(self.interface3, "A", connector=2)
+
+        # Connector below the field minimum is rejected by the field-level validator.
+        with self.assertRaises(ValidationError):
+            standard_cable.add_termination(self.interface3, "A", connector=0)
+
+
+class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
+    model = CableToCableTermination
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.status = Status.objects.get(name="Connected")
+        Cable.objects.create(
+            termination_a=Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first(),
+            termination_b=Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).last(),
+            status=cls.status,
+        )
+
+    def test_get_docs_url(self):
+        """Docs page for this model doesn't exist yet."""
+        # TODO: remove this override once a docs page is added for CableToCableTermination.
+
+    def test_properties_handle_invalid_data(self):
+        """The database permits a null `termination` (no FK set), make sure it doesn't error out various cases."""
+        c_to_ct = CableToCableTermination.objects.create(cable=Cable.objects.create(status=self.status), cable_end="A")
+        self.assertIsNone(c_to_ct.termination)
+        self.assertIsNone(c_to_ct.termination_type)
+        self.assertIsNone(c_to_ct.termination_id)
+        with self.assertRaisesRegex(ValidationError, "Exactly one termination foreign key must be set"):
+            c_to_ct.clean()
+
+        c_to_ct.rear_port = RearPort.objects.first()
+        c_to_ct.front_port = FrontPort.objects.first()
+        with self.assertRaisesRegex(ValidationError, "Exactly one termination foreign key must be set"):
+            c_to_ct.clean()
 
 
 class PowerFeedTestCase(ModelTestCases.BaseModelTestCase):
@@ -4217,6 +5808,50 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = ModuleType
+
+    def test_image_replaced_on_save_deletes_old_file(self):
+        """Replacing a front/rear image on a DB-loaded ModuleType should delete the old file."""
+        manufacturer = Manufacturer.objects.first()
+        ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Replacement Test",
+        )
+        # Load from DB so from_db() populates _original_front_image/_original_rear_image.
+        module_type = ModuleType.objects.get(model="Image Replacement Test")
+
+        # Simulate previously-stored images by patching the tracked originals directly,
+        # avoiding real filesystem I/O while still exercising the save() cleanup path.
+        old_front = MagicMock()
+        old_rear = MagicMock()
+        module_type._original_front_image = old_front
+        module_type._original_rear_image = old_rear
+
+        # Save without changing images; the empty FieldFiles differ from the mocked originals,
+        # so the cleanup logic should call delete() on both.
+        module_type.save()
+
+        old_front.delete.assert_called_once_with(save=False)
+        old_rear.delete.assert_called_once_with(save=False)
+
+        module_type.delete()
+
+    def test_images_deleted_on_model_delete(self):
+        """Deleting a ModuleType should delete any associated image files."""
+        manufacturer = Manufacturer.objects.first()
+        module_type = ModuleType.objects.create(
+            manufacturer=manufacturer,
+            model="Image Deletion Test",
+        )
+        mock_front = MagicMock()
+        mock_rear = MagicMock()
+
+        with (
+            patch.object(type(module_type), "front_image", new_callable=PropertyMock, return_value=mock_front),
+            patch.object(type(module_type), "rear_image", new_callable=PropertyMock, return_value=mock_rear),
+        ):
+            module_type.delete()
+            mock_front.delete.assert_called_once_with(save=False)
+            mock_rear.delete.assert_called_once_with(save=False)
 
 
 class VirtualDeviceContextTestCase(ModelTestCases.BaseModelTestCase):

@@ -113,7 +113,7 @@ class CSVFileField(django_forms.FileField):
         if data is None:
             return None
 
-        data = super().to_python(data)
+        data = super().to_python(data)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         return data.read().decode("utf-8-sig").strip()
 
 
@@ -429,7 +429,7 @@ class NullableDateField(django_forms.DateField):
         # TODO: Once NullableDateField becomes MultiNullableDateField or MultiDateField is fixed, this can be removed.
         elif isinstance(value, list):
             return value[0]
-        return super().to_python(value)
+        return super().to_python(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class SlugField(django_forms.SlugField):
@@ -683,7 +683,7 @@ class JSONField(_JSONField):
     def bound_data(self, data, initial):
         if data is None:
             return None
-        return super().bound_data(data, initial)
+        return super().bound_data(data, initial)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class JSONArrayFormField(django_forms.JSONField):
@@ -721,7 +721,7 @@ class JSONArrayFormField(django_forms.JSONField):
         Validate `value` and return its "cleaned" value as an appropriate
         Python object. Raise ValidationError for any errors.
         """
-        value = super().clean(value)
+        value = super().clean(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         return [self.base_field.clean(val) for val in value]
 
     def prepare_value(self, value):
@@ -741,7 +741,7 @@ class JSONArrayFormField(django_forms.JSONField):
             return None
         if isinstance(data, list):
             data = json.dumps(data)
-        return super().bound_data(data, initial)
+        return super().bound_data(data, initial)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
     def to_python(self, value):
         """
@@ -773,7 +773,7 @@ class JSONArrayFormField(django_forms.JSONField):
         """
         Validate `value` and raise ValidationError if necessary.
         """
-        super().validate(value)
+        super().validate(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         errors = []
         for item in value:
             try:
@@ -804,7 +804,7 @@ class JSONArrayFormField(django_forms.JSONField):
         Runs all validators against `value` and raise ValidationError if necessary.
         Some validators can't be created at field initialization time.
         """
-        super().run_validators(value)
+        super().run_validators(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         errors = []
         for item in value:
             try:
@@ -821,7 +821,7 @@ class JSONArrayFormField(django_forms.JSONField):
         value = self.to_python(data)
         if initial in self.empty_values and value in self.empty_values:
             return False
-        return super().has_changed(initial, data)
+        return super().has_changed(initial, data)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class NumericArrayField(SimpleArrayField):

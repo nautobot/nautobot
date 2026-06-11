@@ -3,6 +3,7 @@
 import contextlib
 from datetime import datetime, timedelta
 import logging
+import os
 import signal
 from typing import Optional, TYPE_CHECKING, Union
 
@@ -13,7 +14,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.db import models, transaction
+from django.db import connections, InterfaceError, models, OperationalError, transaction
 from django.db.models import Count, ProtectedError, Q, signals
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -40,7 +41,9 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    JobRevocationTypeChoices,
     LogLevelChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.constants import (
     JOB_LOG_MAX_ABSOLUTE_URL_LENGTH,
@@ -611,6 +614,18 @@ class JobQueue(PrimaryModel):
         workers = "worker" if worker_count == 1 else "workers"
         return f"{self.queue_type}: {self.name} ({worker_count} {workers})"
 
+    def clean(self):
+        super().clean()
+        if self.name:
+            if ".." in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError({"name": "Job queue name cannot contain '..', please use a different name."})
+            if os.sep in self.name or "/" in self.name:
+                # This is a security measure to prevent path traversal attacks.
+                raise ValidationError(
+                    {"name": "Job queue name cannot contain path separators (e.g. '/'), please use a different name."}
+                )
+
 
 @extras_features(
     "custom_links",
@@ -702,6 +717,29 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
+    # Revoke switch fields
+    revoked_by = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="terminated_job_results",
+        help_text="The user who initiated the revoke action.",
+    )
+    # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
+    revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
+    revocation_type = models.CharField(
+        max_length=30,
+        choices=JobRevocationTypeChoices,
+        blank=True,
+        help_text="Revocation type of the Job being revoked",
+    )
+    date_revoked = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp at which the job was revoked",
+    )
+
     objects = JobResultManager()
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
@@ -757,11 +795,10 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
 
     @property
     def duration(self):
-        if not self.date_done:
+        if not self.date_done or not self.date_started:
             return None
 
-        # Older records may not have a date_started value, so we use date_created as a fallback.
-        duration = self.date_done - (self.date_started or self.date_created)
+        duration = self.date_done - self.date_started
         minutes, seconds = divmod(duration.total_seconds(), 60)
 
         return f"{int(minutes)} minutes, {seconds:.2f} seconds"
@@ -773,8 +810,26 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         return None
 
     @property
+    def queue_type(self):
+        if queue_type := self.celery_kwargs.get("nautobot_job_queue_type"):
+            return queue_type
+        try:
+            return JobQueue.objects.get(name=self.queue).queue_type
+        except JobQueue.DoesNotExist:
+            return None
+
+    @property
+    def console_log(self):
+        return self.celery_kwargs.get("nautobot_job_console_log", False)
+
+    @property
     def job_description(self):
         return self.job_model.description if self.job_model else None
+
+    @property
+    def is_unready_state(self) -> bool:
+        """Return True if job_result is in a not finished state."""
+        return self.status in JobResultStatusChoices.UNREADY_STATES
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
@@ -822,7 +877,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         self.error_log_count = db_log_counts["error_log_count"]
 
     @classmethod
-    def execute_job(cls, *args, **kwargs):
+    def execute_job(cls, *args, job_kwargs=None, **extra_kwargs):
         """
         Create a JobResult instance and run a job in the current process, blocking until the job finishes.
 
@@ -834,7 +889,20 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         Returns:
             JobResult instance
         """
-        return cls.enqueue_job(*args, **kwargs, synchronous=True)
+        celery_kwargs = extra_kwargs.pop("celery_kwargs", None)
+
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
+
+        return cls.enqueue_job(
+            *args, **extra_kwargs, job_kwargs=job_kwargs, celery_kwargs=celery_kwargs, synchronous=True
+        )
 
     execute_job.__func__.alters_data = True
 
@@ -851,12 +919,19 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         celery_kwargs: Optional[dict] = None,
     ) -> dict:
         """Build the celery kwargs dict common to all job execution paths."""
+
+        try:
+            queue_type = JobQueue.objects.get(name=task_queue).queue_type
+        except JobQueue.DoesNotExist:
+            queue_type = "unknown"
+
         job_celery_kwargs = {
             "nautobot_job_job_model_id": str(job_model.id),
             "nautobot_job_profile": profile,
             "nautobot_job_user_id": str(user.id),
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": queue_type,
             "queue": task_queue,
         }
 
@@ -921,7 +996,8 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         job_result: Optional["JobResult"] = None,
         synchronous: bool = False,
         ignore_singleton_lock: bool = False,
-        **job_kwargs,
+        job_kwargs=None,
+        **extra_kwargs,
     ):
         """Create/Modify a JobResult instance and enqueue a job to be executed asynchronously by a Celery worker.
 
@@ -942,7 +1018,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         IMPORTANT:
             If changes are made to job execution behavior (status transitions,
             result handling, logging, profiling, or error propagation), the
-            corresponding logic in ``execute_job_result`` must be reviewed and
+            corresponding logic in `execute_job_result` must be reviewed and
             updated as needed to keep behavior consistent across execution modes.
 
         This duplication is intentional but requires ongoing coordination.
@@ -962,13 +1038,24 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
             ignore_singleton_lock (bool): If True, invalidate the singleton lock before running the job.
               This allows singleton jobs to run twice, or makes it possible to remove the lock when the first instance
               of the job failed to remove it for any reason.
+            job_kwargs: keyword args passed to the job task
             *job_args: positional args passed to the job task (UNUSED)
-            **job_kwargs: keyword args passed to the job task
+            **extra_kwargs: Deprecated way of passing keyword arguments directly. If `job_kwargs`
+                is not provided, these values will be used instead and a warning
+                will be logged. Will be removed in a future version.
 
         Returns:
             JobResult instance
         """
         from nautobot.extras.jobs import run_console_log_job_and_return_job_result, run_job  # TODO circular import
+
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
 
         if schedule is not None and synchronous:
             raise ValueError("Scheduled jobs cannot be run synchronously")
@@ -1016,6 +1103,7 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         )
         job_result.celery_kwargs = job_celery_kwargs
         job_result.save()
+        job_result.refresh_from_db()
 
         # Kubernetes Job Queue logic
         # As we execute Kubernetes jobs, we want to execute `run_kubernetes_job_and_return_job_result`
@@ -1134,7 +1222,20 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         if not self.use_job_logs_db or not JOB_LOGS:
             log.save()
         else:
-            log.save(using=JOB_LOGS)
+            try:
+                conn = connections[JOB_LOGS]
+                # Close the existing connection if it has encountered errors or if the CONN_MAX_AGE is exceeded.
+                # Without this, job logs connections persist indefinitely, regardless of the CONN_MAX_AGE setting.
+                # A subsequent ORM call will automatically open a new connection.
+                conn.close_if_unusable_or_obsolete()
+                log.save(using=JOB_LOGS)
+            # Some failure scenarios, such as a DB connection closed by the server, cannot be easily detected.
+            # In these cases, we manually clear the connection and retry.
+            except (InterfaceError, OperationalError):
+                # Explicitly clear the connection socket due to MySQL not playing nicely with conn.close()
+                conn.connection = None
+                conn.ensure_connection()
+                log.save(using=JOB_LOGS)
 
         if self.celery_kwargs.get("nautobot_job_console_log", False):
             job_console_entry = JobConsoleEntry(job_result=self, timestamp=timezone.now(), text=message)
@@ -1413,6 +1514,14 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         help_text="Datetime when the schedule should begin triggering the task to run",
     )
 
+    state = models.CharField(
+        max_length=30,
+        choices=ScheduledJobStateChoices,
+        default=ScheduledJobStateChoices.ACTIVE,
+        help_text="Current state of the Scheduled Job",
+        db_index=True,
+    )
+
     # todoindex:
     # equivalent to PeriodicTask.enabled
     enabled = models.BooleanField(
@@ -1523,8 +1632,6 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     )
 
     # todoindex:
-    approval_required = models.BooleanField(default=False)
-
     decision_date = models.DateTimeField(
         editable=False,
         blank=True,
@@ -1554,20 +1661,12 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
                 raise ValidationError({"crontab": e})
         if not self.enabled:
             self.last_run_at = None
-        elif not self.last_run_at:
-            # I'm not sure if this is a bug, or "works as designed", but if self.last_run_at is not set,
-            # the celery beat scheduler will never pick up a recurring job. One-off jobs work just fine though.
-            if self.interval in [
-                JobExecutionType.TYPE_HOURLY,
-                JobExecutionType.TYPE_DAILY,
-                JobExecutionType.TYPE_WEEKLY,
-            ]:
-                # A week is 7 days, otherwise the iteration is set to 1
-                multiplier = 7 if self.interval == JobExecutionType.TYPE_WEEKLY else 1
-                # Set the "last run at" time to one interval before the scheduled start time
-                self.last_run_at = self.start_time - timedelta(
-                    **{JobExecutionType.CELERY_INTERVAL_MAP[self.interval]: multiplier},
-                )
+        # When celery beat finishes executing a one-off job, it sets enabled=False and calls save().
+        # At that point state is still ACTIVE (no workflow transition occurred), so we flip it to COMPLETED.
+        # Workflow transitions (on_workflow_initiated/approved/denied/canceled) set status explicitly before save(),
+        # so they won't be affected by this check.
+        if not self.enabled and self.state == ScheduledJobStateChoices.ACTIVE:
+            self.state = ScheduledJobStateChoices.COMPLETED
         is_new = not self.present_in_database
         super().save(*args, **kwargs)
         if is_new:
@@ -1575,12 +1674,15 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
 
     def on_workflow_initiated(self, approval_workflow):
         """When initiated, set approval required to True."""
-        self.approval_required = True
+        self.state = ScheduledJobStateChoices.PENDING
+        self.enabled = False
         self.save()
 
     def on_workflow_approved(self, approval_workflow):
         """When approved, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.ACTIVE
+        self.enabled = True
         self.save()
 
         publish_event_payload = {"data": serialize_object_v2(self)}
@@ -1589,6 +1691,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_denied(self, approval_workflow):
         """When denied, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.DENIED
         self.enabled = False
         self.save()
 
@@ -1598,6 +1701,7 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
     def on_workflow_canceled(self, approval_workflow):
         """When canceled, set decision_date to decision_date from approval workflow."""
         self.decision_date = approval_workflow.decision_date
+        self.state = ScheduledJobStateChoices.CANCELED
         self.enabled = False
         self.save()
 
@@ -1615,6 +1719,10 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         if self.one_off and self.start_time < timezone.now():
             return "extras/job_approval_confirmation.html"
         return None
+
+    @property
+    def approval_required(self):
+        return self.state == ScheduledJobStateChoices.PENDING
 
     @property
     def runnable(self):
@@ -1673,7 +1781,8 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
         job_queue: Optional[JobQueue] = None,
         task_queue: Optional[str] = None,  # deprecated!
         ignore_singleton_lock: bool = False,
-        **job_kwargs,
+        job_kwargs=None,
+        **extra_kwargs,
     ):
         """
         Schedule a job with the specified parameters.
@@ -1695,11 +1804,21 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             job_queue (JobQueue): The Job queue to use. If unset, use the configured default celery queue.
             task_queue (str): The queue name to use. **Deprecated, prefer `job_queue`.**
             ignore_singleton_lock (bool): Whether to ignore singleton locks. Defaults to False.
-            **job_kwargs: Additional keyword arguments to pass to the job.
+            job_kwargs: Additional keyword arguments to pass to the job.
+            **extra_kwargs: Deprecated way of passing additional keyword arguments directly. If `job_kwargs`
+                is not provided, these values will be used instead and a warning
+                will be logged. Will be removed in a future version.
 
         Returns:
             ScheduledJob instance
         """
+        if job_kwargs is None:
+            if not extra_kwargs:
+                raise ValueError("`job_kwargs` has to be defined.")
+            logger.warning(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+            )
+            job_kwargs = extra_kwargs
 
         if job_queue is not None and task_queue is not None and job_queue.name != task_queue:
             raise ValueError("task_queue and job_queue are mutually exclusive")
@@ -1716,15 +1835,25 @@ class ScheduledJob(ApprovableModelMixin, BaseModel):
             name = name or f"{job_model.name} - {start_time}"
         elif interval == JobExecutionType.TYPE_CUSTOM:
             if start_time is None:
-                # "start_time" is checked against models.ScheduledJob.earliest_possible_time()
-                # which returns timezone.now() + timedelta(seconds=15)
-                start_time = timezone.localtime() + timedelta(seconds=20)
+                # Calculate the next crontab match as the start_time so that the scheduled job
+                # accurately reflects when it will first run, rather than using creation time.
+                # Note: start_time is validated against ScheduledJob.earliest_possible_time()
+                # (now + 15s) in the API serializer; the next crontab match always exceeds this.
+                tz = timezone.get_current_timezone()
+                crontab_schedule = cls.get_crontab(crontab, tz=tz)
+                now = timezone.localtime()
+                next_run_delta = crontab_schedule.remaining_estimate(now)
+                # Round up to the nearest minute to compensate for floating-point
+                # precision loss in celery's remaining_estimate (e.g., 4:59:59.999991 -> 5:00:00)
+                total_minutes = -(-int(next_run_delta.total_seconds()) // 60)  # ceiling division
+                start_time = now + timedelta(minutes=total_minutes)
 
         celery_kwargs = {
             "nautobot_job_profile": profile,
             "queue": task_queue,
             "nautobot_job_ignore_singleton_lock": ignore_singleton_lock,
             "nautobot_job_console_log": console_log,
+            "nautobot_job_queue_type": job_queue.queue_type,  # need a migration to set this field
         }
         if "nautobot_version_control" in settings.PLUGINS:
             from nautobot_version_control.utils import active_branch  # pylint: disable=import-error

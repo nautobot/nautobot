@@ -94,15 +94,21 @@
             </div>
         {% endif %}
     </div>
-    <div class="card">
+    <div class="card" id="nb-validation-rules-card">
         <div class="card-header"><strong>Validation Rules</strong></div>
         <div class="card-body">
-            {% render_field form.validation_minimum %}
-            {% render_field form.validation_maximum %}
-            {% render_field form.validation_regex %}
+            <div id="nb-validation-minimum-field">
+                {% render_field form.validation_minimum %}
+            </div>
+            <div id="nb-validation-maximum-field">
+                {% render_field form.validation_maximum %}
+            </div>
+            <div id="nb-validation-regex-field">
+                {% render_field form.validation_regex %}
+            </div>
         </div>
     </div>
-    <div class="card">
+    <div class="card" id="nb-custom-field-choices-card">
         <div class="card-header"><strong>Custom Field Choices</strong></div>
         <div class="card-body overflow-auto">
             {% if choices.errors %}
@@ -160,10 +166,16 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'jquery/jquery.formset.js' %}" onerror="nb.media.handleFailure(this)"></script>
+    {{ custom_field_min_max_types|json_script:"nb-custom-field-min-max-types" }}
+    {{ custom_field_regex_types|json_script:"nb-custom-field-regex-types" }}
     <script src="{% versioned_static 'js/filter_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
+    <script src="{% versioned_static 'js/customfield_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script type="text/javascript">
-        const slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
+        /*
+         * Deliberately use `var` instead of `const` or `let` here to prevent JavaScript engine from throwing an
+         * exception when the constant is defined multiple times, which can be the case for embedded action modal.
+         */
+        var slugify_prefer_underscores = true; // Custom fields work better in GraphQL (etc.) with underscore-based slugs
         $('.formset_row-{{ choices.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Custom Field Choice',
             addCssClass: 'btn btn-primary add-row',

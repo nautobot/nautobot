@@ -321,6 +321,7 @@ plugins:
         "models/vpn/vpnprofile.md": "user-guide/core-data-model/vpn/vpnprofile.md"
         "models/vpn/vpntunnel.md": "user-guide/core-data-model/vpn/vpntunnel.md"
         "models/vpn/vpntunnelendpoint.md": "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
+        "models/vpn/vpntermination.md": "user-guide/core-data-model/vpn/vpntermination.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -405,7 +406,9 @@ nav:
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Device Redundancy: "user-guide/feature-guides/device-redundancy.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
-          - Custom Fields: "user-guide/feature-guides/custom-fields.md"
+          - Custom Fields:
+              - Custom Fields Overview: "user-guide/feature-guides/custom-fields.md"
+              - Custom Fields Cleanup: "user-guide/feature-guides/custom-fields-behavior.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
@@ -483,14 +486,16 @@ nav:
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
               - Cable: "user-guide/core-data-model/dcim/cable.md"
-              - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+              - HA Devices:
+                  - "user-guide/core-data-model/dcim/hadevice.md"
+                  - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+                  - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
               - Power Panel: "user-guide/core-data-model/dcim/powerpanel.md"
               - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
               - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
               - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
               - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
-              - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
               - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
@@ -533,6 +538,7 @@ nav:
           - VPN:
               - "user-guide/core-data-model/vpn/index.md"
               - VPN: "user-guide/core-data-model/vpn/vpn.md"
+              - VPN Termination: "user-guide/core-data-model/vpn/vpntermination.md"
               - VPN Tunnel: "user-guide/core-data-model/vpn/vpntunnel.md"
               - VPN Tunnel Endpoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
               - VPN Profile: "user-guide/core-data-model/vpn/vpnprofile.md"
@@ -566,6 +572,7 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
+              - Job Revocation: "user-guide/platform-functionality/jobs/job-revocation.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
@@ -601,6 +608,7 @@ nav:
           - Common Job Patterns: "development/jobs/job-patterns.md"
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
+          - Job Execution: "development/jobs/job-execution.md"
           - Migration Guides:
               -  Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
@@ -637,6 +645,7 @@ nav:
               - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Skip Auto Component Creation: "development/apps/api/platform-features/skip-auto-component-creation.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
               - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
           - UI Extensions:
@@ -656,6 +665,7 @@ nav:
               - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
               - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
               - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.dcim: "code-reference/nautobot/apps/dcim.md"
               - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
               - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
               - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
@@ -693,6 +703,7 @@ nav:
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
                   - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
+              - Embedded Actions: "development/apps/migration/embedded_actions.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:
@@ -709,7 +720,7 @@ nav:
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
           - HTMX: "development/core/htmx.md"
-          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
+          - Running Jobs Locally on Kubernetes: "development/core/running-jobs-locally-kubernetes.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
@@ -723,6 +734,7 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.2: "release-notes/version-3.2.md"
       - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"
       - Version 2.4: "release-notes/version-2.4.md"

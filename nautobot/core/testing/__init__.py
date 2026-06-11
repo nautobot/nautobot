@@ -1,12 +1,17 @@
 import collections
+from contextlib import contextmanager
+import os
+from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import tag, TransactionTestCase as _TransactionTestCase
 
 from nautobot.core.testing.api import APITestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.core.testing.utils import (
+    AssertNoRepeatedQueries,
     create_test_user,
     disable_warnings,
     extract_form_failures,
@@ -21,6 +26,7 @@ from nautobot.extras.models import Job, JobResult
 __all__ = (
     "APITestCase",
     "APIViewTestCases",
+    "AssertNoRepeatedQueries",
     "FilterTestCases",
     "JobClassInfo",
     "ModelTestCase",
@@ -44,7 +50,9 @@ __all__ = (
 User = get_user_model()
 
 
-def run_job_for_testing(job, username="test-user", profile=False, console_log=False, **kwargs):
+def run_job_for_testing(
+    job, username="test-user", profile=False, console_log=False, celery_kwargs=None, job_kwargs=None, **extra_kwargs
+):
     """
     Provide a common interface to run Nautobot jobs as part of unit tests.
 
@@ -52,13 +60,27 @@ def run_job_for_testing(job, username="test-user", profile=False, console_log=Fa
         job (Job): Job model instance (not Job class) to run
         username (str): Username of existing or to-be-created User account to own the JobResult.
         profile (bool): Whether to profile the job execution.
+        console_log (bool): Whether to enable console logging.
+        celery_kwargs (dict): Dictionary of kwargs to pass as **kwargs to `apply()` when job is run.
+        job_kwargs (dict): keyword args passed to the job task
 
     Keyword Args:
-        **kwargs (any): Input keyword arguments for Job run method.
+        **extra_kwargs (any): Deprecated way of passing keyword arguments directly. If `job_kwargs`
+            is not provided, these values will be used instead and a warning
+            will be logged. Will be removed in a future version.
 
     Returns:
         (JobResult): representing the executed job
     """
+    if job_kwargs is None:
+        if not extra_kwargs:
+            raise ValueError("`job_kwargs` has to be defined.")
+
+        print(
+            "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+        )
+        job_kwargs = extra_kwargs
+
     # Enable the job if it wasn't enabled before
     if not job.enabled:
         job.enabled = True
@@ -75,15 +97,41 @@ def run_job_for_testing(job, username="test-user", profile=False, console_log=Fa
         user=user_instance,
         profile=profile,
         console_log=console_log,
-        **kwargs,
+        job_kwargs=job_kwargs,
+        celery_kwargs=celery_kwargs,
     )
     return job_result
+
+
+def _split_runner_and_job_kwargs(kwargs):
+    """
+    Split a flat kwargs dict into runner-level kwargs and job-level kwargs.
+
+    Keys matching `run_job_for_testing`'s own parameters (username, profile,
+    console_log, celery_kwargs, job_kwargs) are treated as runner kwargs.
+    Everything else is bundled into job_kwargs and merged with any explicit
+    job_kwargs the caller already provided. Explicit job_kwargs win on conflict.
+
+    `job_kwargs` is always set in the result, defaulting to `{}` if no
+    job-level parameters were provided.
+
+    Returns a single dict suitable for `run_job_for_testing(**result)`.
+    """
+    runner_param_names = {"username", "profile", "console_log", "celery_kwargs", "job_kwargs"}
+    runner_kwargs = {k: kwargs.pop(k) for k in list(kwargs) if k in runner_param_names}
+
+    job_kwargs = dict(kwargs)
+    job_kwargs.update(runner_kwargs.pop("job_kwargs", None) or {})
+    runner_kwargs["job_kwargs"] = job_kwargs
+
+    return runner_kwargs
 
 
 def create_job_result_and_run_job(module, name, source="local", *args, **kwargs):
     """Test helper function to call get_job_class_and_model() then call run_job_for_testing()."""
     _job_class, job_model = get_job_class_and_model(module, name, source)
-    job_result = run_job_for_testing(job=job_model, **kwargs)
+    runner_kwargs = _split_runner_and_job_kwargs(kwargs)
+    job_result = run_job_for_testing(job=job_model, **runner_kwargs)
     job_result.refresh_from_db()
     return job_result
 
@@ -132,3 +180,29 @@ class TransactionTestCase(NautobotTestCaseMixin, _TransactionTestCase):
         statuses present in the database in order to run tests."""
         super().setUp()
         self.setUpNautobot(client=True, populate_status=True)
+
+
+class CelerySubprocessTestCase(TransactionTestCase):
+    """
+    A base class for testing Celery tasks (E2E) that spawn subprocesses.
+    Ensures that subprocesses receive environment variables pointing to
+    a test database.
+    """
+
+    @contextmanager
+    def celery_subprocess_env(self, **extra_env):
+        """
+        A context manager that injects a test environment into subprocesses.
+        It allows to optionally add additional variables via **extra_env.
+        """
+        test_db_name = connection.settings_dict["NAME"]
+
+        env_overrides = {
+            "NAUTOBOT_DB_NAME": test_db_name,
+        }
+
+        # Optionall set additional extra_env
+        env_overrides.update(extra_env)
+
+        with mock.patch.dict(os.environ, env_overrides):
+            yield

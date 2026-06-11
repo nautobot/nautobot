@@ -1,7 +1,7 @@
 {% load querystring from django_tables2 %}
 {% load get_item table_config_button from helpers %}
 
-{% with last_column_name=table.columns.names|last %}
+{% with last_column_name=table.visible_columns|last visible_column_count=table.visible_columns|length %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
         {% if table.show_header %}
             <thead>
@@ -61,7 +61,7 @@
                 {% if table.empty_text %}
                     <tr>
                         <td
-                            colspan="{% if last_column_name == 'actions' %}{{ table.columns|length }}{% else %}{{ table.columns|length|add:1 }}{% endif %}"
+                            colspan="{% if last_column_name == 'actions' %}{{ visible_column_count }}{% else %}{{ visible_column_count|add:1 }}{% endif %}"
                             class="text-center text-secondary"
                         >
                             &mdash; {{ table.empty_text }} &mdash;

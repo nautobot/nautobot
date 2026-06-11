@@ -46,7 +46,6 @@ def run(
                 for li_match in re.finditer(r"<li[^>]*>", ul_content, flags=re.IGNORECASE):
                     closing_li_match = re.search(r"</li>", ul_content, flags=re.IGNORECASE)
                     li_start_relative = li_match.start()
-                    li_end_relative = li_match.end()
                     li_start_absolute = ul_start + li_start_relative
                     if closing_li_match:
                         li_end_content = li_start_relative + closing_li_match.start()

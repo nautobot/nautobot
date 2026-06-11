@@ -39,7 +39,6 @@ def run(
             li_end_relative = li_match.end()
             li_start_absolute = start_index + li_start_relative
             li_attributes = li_match.group(1)
-            li_tag_full = content[li_start_relative:li_end_relative]
 
             if re.search(r"\bactive\b", li_attributes, flags=re.IGNORECASE) and not re.search(
                 r'aria-current=["\']page["\']', li_attributes, flags=re.IGNORECASE

@@ -45,6 +45,16 @@ In short:
     - Use `hx-history="false"` on at least one element in any HTML template fragment that might be loaded through HTMX
     - When adding/changing any HTMX functionality, be sure to manually test with your browser's "back", "forward", and "refresh" buttons.
 
+## HTMX and Attribute Inheritance
+
+By default, HTMX normally allows for implicit inheritance of `hx-*` attributes from a container HTML element to a contained HTML element. Similar to history caching, the author of HTMX has [decided](https://htmx.org/essays/the-fetchening/#explicit-inheritance-by-default) that this will no longer be the default in HTMX 4.0:
+
+> I feel that the biggest mistake in htmx 1.0 & 2.0 was making attribute inheritance implicit. I was inspired by CSS in doing this, and the results have been roughly the same as CSS: powerful & maddening.
+>
+> In htmx 4.0, attribute inheritance will be explicit by default rather than implicit.
+
+Because Nautobot development has already encountered several cases where implicit inheritance resulted in unexpected behavior, we've decided to proactively adopt the 4.0-like behavior and have configured `htmx.config.disableInheritance = true` in our base templates, using the `hx-inherit` attribute to reenable inheritance sparingly and only in cases where it's necessary.
+
 ## Detecting an HTMX request in a view
 
 For piecemeal page rendering (like the object-list view example above), rather than write a separate Nautobot/Django view for each part of the page, it may be more convenient to implement a single view that behaves differently when requested via HTMX versus otherwise. Conveniently, HTMX requests always set the otherwise unset `HX-Request` header, so your code might do something like this:

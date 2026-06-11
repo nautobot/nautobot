@@ -22,6 +22,12 @@ from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
+from nautobot.core.jobs.customfields import (
+    CleanupCustomFieldsData,
+    DeleteCustomFieldData,
+    ProvisionCustomField,
+    UpdateCustomFieldChoiceData,
+)
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
@@ -293,7 +299,7 @@ class ImportObjects(Job):
                 if validation_failed:
                     raise AbortTransaction
                 return new_objs, validation_failed
-        # If validation failed return an empty list, since all objs created where rolled back
+        # If validation failed return an empty list, since all objs created were rolled back
         self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 
@@ -587,14 +593,18 @@ class ValidateModelData(Job):
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
+    CleanupCustomFieldsData,
+    DeleteCustomFieldData,
     ExportObjectList,
     GitRepositorySync,
     GitRepositoryDryRun,
     ImportObjects,
     LogsCleanup,
+    ProvisionCustomField,
     RefreshDynamicGroupCaches,
     RefreshDynamicGroupCacheJobButtonReceiver,
     RunRegisteredDataComplianceRules,
+    UpdateCustomFieldChoiceData,
     ValidateModelData,
 ]
 register_jobs(*jobs)

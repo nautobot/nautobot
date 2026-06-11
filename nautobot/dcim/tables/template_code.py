@@ -1,30 +1,24 @@
 CABLETERMINATION = """
 {% if value %}
-    <a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
-    <i class="mdi mdi-chevron-right"></i>
-    <a href="{{ value.get_absolute_url }}">{{ value }}</a>
+    {% for peer in value %}
+        <a href="{{ peer.parent.get_absolute_url }}">{{ peer.parent }}</a>
+        <span class="mdi mdi-chevron-right"></span>
+        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>
+        {% if not forloop.last %}<br>{% endif %}
+    {% endfor %}
 {% else %}
     <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
 
 PATHENDPOINT = """
-{% if value.destination %}
-    <a href="{{ value.destination.parent.get_absolute_url }}">{{ value.destination.parent }}</a>
-    <i class="mdi mdi-chevron-right"></i>
-    <a href="{{ value.destination.get_absolute_url }}">{{ value.destination }}</a>
-    {% with traced_path=value.origin.trace %}
-        {% for near_end, cable, far_end in traced_path %}
-            {% if near_end.circuit %}
-                <small>via
-                    <a href="{{ near_end.circuit.get_absolute_url }}">
-                        {{ near_end.circuit }}
-                        {{ near_end.circuit.provider }}
-                    </a>
-                </small>
-            {% endif %}
-        {% endfor %}
-    {% endwith %}
+{% if value %}
+    {% for endpoint in value %}
+        <a href="{{ endpoint.parent.get_absolute_url }}">{{ endpoint.parent }}</a>
+        <span class="mdi mdi-chevron-right"></span>
+        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>
+        {% if not forloop.last %}<br>{% endif %}
+    {% endfor %}
 {% else %}
     <span class="text-secondary">&mdash;</span>
 {% endif %}
@@ -39,15 +33,32 @@ CABLE_LENGTH = """
 """
 
 CABLE_TERMINATION_PARENT = """
-{% if value.device %}
-    <a href="{{ value.device.get_absolute_url }}">{{ value.device }}</a>
-{% elif value.circuit %}
-    <a href="{{ value.circuit.get_absolute_url }}">{{ value.circuit }}</a>
-{% elif value.power_panel %}
-    <a href="{{ value.power_panel.get_absolute_url }}">{{ value.power_panel }}</a>
-{% elif value.module and value.module.device %}
-    <a href="{{ value.module.device.get_absolute_url }}">{{ value.module.device }}</a>
+{% if value.parent %}
+    <a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
 {% endif %}
+"""
+
+CABLE_TERMINATIONS_MULTI = """
+{% load cables %}
+{% load helpers %}
+{% for endpoint in value %}
+    {% with term=endpoint.termination %}
+        {% if term %}
+            {% termination_type_icon term as t_icon %}
+            <span class="mdi {{ t_icon }}" title="{{ term|meta:'verbose_name'|capfirst }}"></span>
+            {% if term.parent %}
+                <a href="{{ term.parent.get_absolute_url }}">{{ term.parent }}</a> /
+            {% endif %}
+            <a href="{{ term.get_absolute_url }}">{{ term }}</a>
+            {% if endpoint.connector is not None %}
+                <small class="text-muted">({{ endpoint.cable_end }}{{ endpoint.connector }})</small>
+            {% endif %}
+            {% if not forloop.last %}<br>{% endif %}
+        {% endif %}
+    {% endwith %}
+{% empty %}
+    <span class="text-secondary">&mdash;</span>
+{% endfor %}
 """
 
 DEVICE_LINK = """
@@ -151,21 +162,20 @@ LOCATION_TREE_LINK = """
 POWERFEED_CABLE = """
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 <a href="{% url 'dcim:powerfeed_trace' pk=record.pk %}" class="btn btn-primary btn-sm" title="Trace">
-    <i class="mdi mdi-transit-connection-variant" aria-hidden="true"></i>
+    <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
 </a>
 """
 
 POWERFEED_CABLETERMINATION = """
 <a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
-<i class="mdi mdi-chevron-right"></i>
+<span class="mdi mdi-chevron-right"></span>
 <a href="{{ value.get_absolute_url }}">{{ value }}</a>
 """
 
 RACKGROUP_ELEVATIONS = """
 <li>
     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.pk }}&rack_group={{ record.pk }}" class="dropdown-item text-primary">
-        <span class="mdi mdi-server" aria-hidden="true"></span>
-        View elevations
+        <span class="mdi mdi-server me-4" aria-hidden="true"></span>View elevations
     </a>
 </li>
 """
@@ -180,244 +190,54 @@ UTILIZATION_GRAPH = """
 # Device component buttons
 #
 
-CONSOLEPORT_BUTTONS = """
+# Shared row-action template for any CableTermination subclass (ConsolePort, ConsoleServerPort, PowerPort,
+# PowerOutlet, Interface, FrontPort, RearPort, etc.). Each table column passing this in as `prepend_template`
+# may also concatenate additional model-specific buttons (e.g. Interface adds an "Add IP address" entry).
+CABLE_TERMINATION_BUTTONS = """
+{% load helpers %}
 {% if record.cable %}
-    <li><a href="{% url 'dcim:consoleport_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
+    {% with trace_url=record|viewname:"trace" %}
+        <li><a href="{% url trace_url pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant me-4" aria-hidden="true"></span>Trace</a></li>
+    {% endwith %}
+    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable termination=record %}
+{% elif record.is_connectable and perms.dcim.add_cable %}
     <li>
-        <a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Console Server Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Front Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:consoleport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Rear Port
+        <a href="{% url 'dcim:cable_add' %}?termination_a_type={{ record|meta:'app_label' }}.{{ record|meta:'model_name' }}&termination_a_id={{ record.pk }}&return_url={{ request.path }}" class="dropdown-item text-success">
+            <span class="mdi mdi-ethernet-cable me-4" aria-hidden="true"></span>Add cable
         </a>
     </li>
 {% endif %}
 """
 
-CONSOLESERVERPORT_BUTTONS = """
-{% if record.cable %}
-    <li><a href="{% url 'dcim:consoleserverport_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Console Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Front Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:consoleserverport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Rear Port
-        </a>
-    </li>
-{% endif %}
-"""
-
-POWERPORT_BUTTONS = """
-{% if record.cable %}
-    <li><a href="{% url 'dcim:powerport_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-outlet' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Power Outlet
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:powerport_connect' termination_a_id=record.pk termination_b_type='power-feed' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Power Feed
-        </a>
-    </li>
-{% endif %}
-"""
-
-POWEROUTLET_BUTTONS = """
-{% if record.cable %}
-    <li><a href="{% url 'dcim:poweroutlet_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:poweroutlet_connect' termination_a_id=record.pk termination_b_type='power-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect
-        </a>
-    </li>
-{% endif %}
-"""
-
-INTERFACE_BUTTONS = """
+INTERFACE_BUTTONS = (
+    """
 {% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
     <li>
         <a href="{% url 'ipam:ipaddress_add' %}?interface={{ record.pk }}&return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-            Add IP address
-        </a>
-    </li>
-{% endif %}
-{% if record.cable %}
-    <li><a href="{% url 'dcim:interface_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif record.is_connectable and perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Interface
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Front Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Rear Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:interface_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Circuit Termination
+            <span class="mdi mdi-plus-thick me-4" aria-hidden="true"></span>Add IP address
         </a>
     </li>
 {% endif %}
 """
-
-FRONTPORT_BUTTONS = """
-{% if record.cable %}
-    <li><a href="{% url 'dcim:frontport_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Interface
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-server-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Console Server Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='console-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Console Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Front Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Rear Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:frontport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Circuit Termination
-        </a>
-    </li>
-{% endif %}
-"""
-
-REARPORT_BUTTONS = """
-{% if record.cable %}
-    <li><a href="{% url 'dcim:rearport_trace' pk=record.pk %}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    {% include 'dcim/inc/cable_toggle_buttons.html' with cable=record.cable %}
-{% elif perms.dcim.add_cable %}
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>Trace</a></li>
-    <li><a class="dropdown-item disabled" aria-disabled="true"><span class="mdi mdi-lan-connect" aria-hidden="true"></span>Mark installed</a></li>
-    <li>
-        <a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='interface' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Interface
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='front-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Front Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='rear-port' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Rear Port
-        </a>
-    </li>
-    <li>
-        <a href="{% url 'dcim:rearport_connect' termination_a_id=record.pk termination_b_type='circuit-termination' %}?return_url={{ request.path }}" class="dropdown-item text-success">
-            <span class="mdi mdi-ethernet-cable" aria-hidden="true"></span>
-            Connect to Circuit Termination
-        </a>
-    </li>
-{% endif %}
-"""
+    + CABLE_TERMINATION_BUTTONS
+)
 
 DEVICEBAY_BUTTONS = """
 {% if perms.dcim.change_devicebay %}
     {% if record.installed_device %}
         <li>
             <a href="{% url 'dcim:devicebay_depopulate' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-                <span class="mdi mdi-minus-thick" aria-hidden="true"></span>
-                Remove device
+                <span class="mdi mdi-minus-thick me-4" aria-hidden="true"></span>Remove device
             </a>
         </li>
     {% else %}
         <li>
             <a href="{% url 'dcim:devicebay_populate' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-success">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-                Install device
+                <span class="mdi mdi-plus-thick me-4" aria-hidden="true"></span>Install device
             </a>
         </li>
     {% endif %}
 {% endif %}
-"""
-
-MODULE_BUTTONS = """
-<li><a href="{% url 'dcim:module' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
 """
 
 MODULEBAY_BUTTONS = """
@@ -425,17 +245,24 @@ MODULEBAY_BUTTONS = """
     {% if not record.installed_module %}
         <li>
             <a href="{% url 'dcim:module_add' %}?parent_module_bay={{ record.pk }}&return_url={{ request.path }}" class="dropdown-item text-success">
-                <span class="mdi mdi-plus-thick" aria-hidden="true"></span>
-                Install module
+                <span class="mdi mdi-plus-thick me-4" aria-hidden="true"></span>Install module
             </a>
         </li>
     {% else %}
         <li>
             <a href="{% url 'dcim:module_delete' pk=record.installed_module.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-                <span class="mdi mdi-minus-thick" aria-hidden="true"></span>
-                Delete installed module
+                <span class="mdi mdi-minus-thick me-4" aria-hidden="true"></span>Delete installed module
             </a>
         </li>
     {% endif %}
+{% endif %}
+"""
+
+PARENT_DEVICE = """
+{% load helpers %}
+{% if record.parent_bay %}
+    {{ record.parent_bay.device|hyperlinked_object }}
+{% else %}
+    {{ None|placeholder }}
 {% endif %}
 """

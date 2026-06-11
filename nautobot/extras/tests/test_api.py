@@ -14,6 +14,8 @@ from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils.timezone import make_aware, now
 from rest_framework import status
+from rest_framework.request import Request as DRFRequest
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
@@ -33,7 +35,11 @@ from nautobot.dcim.models import (
     RackGroup,
 )
 from nautobot.dcim.tests import test_views
-from nautobot.extras.api.serializers import ConfigContextSerializer, JobResultSerializer
+from nautobot.extras.api.serializers import (
+    ConfigContextSerializer,
+    JobResultSerializer,
+    RelationshipAssociationSerializer,
+)
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     DynamicGroupOperatorChoices,
@@ -41,6 +47,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
@@ -50,6 +57,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -863,8 +871,6 @@ class ApprovalWorkflowStageTest(
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_approval_workflow_stage_pending_my_approvals(self):
         base_url = reverse("extras-api:approvalworkflowstage-list")
-        query_params = urlencode({"pending_my_approvals": "true"})
-        url = f"{base_url}?{query_params}"
         self.add_permissions(
             "extras.view_approvalworkflowstage",
         )
@@ -934,7 +940,7 @@ class ApprovalWorkflowStageTest(
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    choices_fields = ["content_type"]
+    choices_fields = ["content_type", "output_type"]
     create_data = [
         {
             "content_type": "dcim.location",
@@ -1338,6 +1344,124 @@ class ContactAssociationTestCase(APIViewTestCases.APIViewTestCase):
             "role": roles[4].pk,
             "status": statuses[1].pk,
         }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_contact_name(self):
+        """Test that a ContactAssociation can be created by referencing a Contact by name (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        contact = Contact.objects.create(name="Issue 6111 Test Contact", phone="555-6111", email="test6111@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "contact": contact.name,
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["contact"]["id"], contact.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_team_name(self):
+        """Test that a ContactAssociation can be created by referencing a Team by name (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        team = Team.objects.create(name="Issue 6111 Test Team", phone="555-6111", email="team6111@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "team": team.name,
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["team"]["id"], team.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_contact_name_only(self):
+        """Test that creating a ContactAssociation with only a duplicated Contact name fails gracefully (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0001", email="dup1@example.com")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "contact": "Duplicate Contact",
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("contact", response.data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_contact_with_attrs(self):
+        """Test that a ContactAssociation can be created with a duplicated Contact name when disambiguating attributes are provided (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        contact = Contact.objects.create(name="Duplicate Contact", phone="555-0001", email="dup1@example.com")
+        Contact.objects.create(name="Duplicate Contact", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "contact": {"name": "Duplicate Contact", "phone": "555-0001", "email": "dup1@example.com"},
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["contact"]["id"], contact.pk)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_team_name_only(self):
+        """Test that creating a ContactAssociation with only a duplicated Team name fails gracefully (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        Team.objects.create(name="Duplicate Team", phone="555-0001", email="dup1@example.com")
+        Team.objects.create(name="Duplicate Team", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "team": "Duplicate Team",
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("team", response.data)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_contact_association_by_duplicate_team_with_attrs(self):
+        """Test that a ContactAssociation can be created with a duplicated Team name when disambiguating attributes are provided (issue #6111)."""
+        self.add_permissions("extras.add_contactassociation")
+        team = Team.objects.create(name="Duplicate Team", phone="555-0001", email="dup1@example.com")
+        Team.objects.create(name="Duplicate Team", phone="555-0002", email="dup2@example.com")
+        roles = Role.objects.get_for_model(ContactAssociation)
+        statuses = Status.objects.get_for_model(ContactAssociation)
+        device = Device.objects.first()
+        data = {
+            "team": {"name": "Duplicate Team", "phone": "555-0001", "email": "dup1@example.com"},
+            "associated_object_type": "dcim.device",
+            "associated_object_id": str(device.pk),
+            "role": roles[0].pk,
+            "status": statuses[0].pk,
+        }
+        response = self.client.post(reverse("extras-api:contactassociation-list"), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["team"]["id"], team.pk)
 
 
 class CreatedUpdatedFilterTest(APITestCase):
@@ -2072,6 +2196,36 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertEqual(list(response.data["provided_contents"]), data["provided_contents"])
 
+    def test_current_head_is_read_only(self):
+        """`current_head` is set by the sync job and must not be writable via the REST API."""
+        self.add_permissions("extras.add_gitrepository")
+        self.add_permissions("extras.change_gitrepository")
+        bogus_sha = "0000000000000000000000000000000000000000"
+
+        # Create: any client-supplied `current_head` should be ignored.
+        create_url = self._get_list_url()
+        create_data = {
+            "name": "read_only_head_create",
+            "slug": "read_only_head_create",
+            "remote_url": "https://example.com/read_only_head_create.git",
+            "current_head": bogus_sha,
+        }
+        response = self.client.post(create_url, create_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = GitRepository.objects.get(slug="read_only_head_create")
+        self.assertEqual(created.current_head, "")
+        self.assertNotEqual(response.data["current_head"], bogus_sha)
+
+        # Update: PATCHing `current_head` should not modify the stored value.
+        repo = self.repos[0]
+        original_head = repo.current_head
+        detail_url = self._get_detail_url(repo)
+        response = self.client.patch(detail_url, {"current_head": bogus_sha}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        repo.refresh_from_db()
+        self.assertEqual(repo.current_head, original_head)
+        self.assertNotEqual(response.data["current_head"], bogus_sha)
+
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
     model = GraphQLQuery
@@ -2140,11 +2294,26 @@ class ImageAttachmentTest(
     choices_fields = ["content_type"]
 
     @classmethod
+    def _png_bytes(cls):
+        """Return the bytes of a minimal valid 1x1 PNG, generated via Pillow so it always validates."""
+        from io import BytesIO
+
+        from PIL import Image
+
+        buf = BytesIO()
+        Image.new("RGBA", (1, 1)).save(buf, format="PNG")
+        return buf.getvalue()
+
+    @classmethod
     def setUpTestData(cls):
         ct = ContentType.objects.get_for_model(Location)
 
         location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
 
+        # These fixtures exist for GET/LIST/DELETE coverage and use placeholder image paths so they
+        # don't write to media storage. Tests that PATCH or otherwise round-trip through the API
+        # should create their own ImageAttachment via SimpleUploadedFile so the underlying file
+        # actually exists on disk.
         ImageAttachment.objects.create(
             content_type=ct,
             object_id=location.pk,
@@ -2170,6 +2339,15 @@ class ImageAttachmentTest(
             image_width=100,
         )
 
+    def _create_real_image_attachment(self, *, name, location):
+        """Create an ImageAttachment whose underlying file is actually written to media storage."""
+        return ImageAttachment.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            object_id=location.pk,
+            name=name,
+            image=SimpleUploadedFile(name=f"{name}.png", content=self._png_bytes(), content_type="image/png"),
+        )
+
     # TODO: Unskip after resolving #2908, #2909
     @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
     def test_list_objects_ascending_ordered(self):
@@ -2178,6 +2356,120 @@ class ImageAttachmentTest(
     @skip("DRF's built-in OrderingFilter triggering natural key attribute error in our base")
     def test_list_objects_descending_ordered(self):
         pass
+
+    def test_create_enforces_view_permission_on_parent(self):
+        """The GFK validation block must enforce view permission on the parent object on create."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        campus_lt = LocationType.objects.get(name="Campus")
+        permitted, forbidden = Location.objects.filter(location_type=campus_lt)[:2]
+        self.add_permissions("extras.add_imageattachment")
+        obj_perm = ObjectPermission(
+            name="View permitted location only",
+            constraints={"pk": str(permitted.pk)},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(location_ct)
+
+        with self.subTest("Viewable parent succeeds"):
+            response = self.client.post(
+                self._get_list_url(),
+                data={
+                    "content_type": "dcim.location",
+                    "object_id": str(permitted.pk),
+                    "name": "Permitted attachment",
+                    "image": SimpleUploadedFile(name="img.png", content=self._png_bytes(), content_type="image/png"),
+                },
+                format="multipart",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        with self.subTest("Non-viewable parent is rejected"):
+            response = self.client.post(
+                self._get_list_url(),
+                data={
+                    "content_type": "dcim.location",
+                    "object_id": str(forbidden.pk),
+                    "name": "Forbidden attachment",
+                    "image": SimpleUploadedFile(name="img.png", content=self._png_bytes(), content_type="image/png"),
+                },
+                format="multipart",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("object_id", response.data)
+            self.assertFalse(ImageAttachment.objects.filter(name="Forbidden attachment").exists())
+
+    def test_partial_update_skips_gfk_validation_when_unchanged(self):
+        """A PATCH that doesn't touch content_type or object_id must not require parent view permission."""
+        campus_lt = LocationType.objects.get(name="Campus")
+        location = Location.objects.filter(location_type=campus_lt).first()
+        instance = self._create_real_image_attachment(name="To be renamed", location=location)
+        # Note: deliberately NOT granting any view permission on the parent Location.
+        self.add_permissions("extras.view_imageattachment", "extras.change_imageattachment")
+
+        response = self.client.patch(
+            self._get_detail_url(instance),
+            {"name": "Renamed via PATCH"},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Renamed via PATCH")
+
+    def test_partial_update_changing_object_id_enforces_view_permission(self):
+        """A PATCH that changes only object_id must validate the new target against parent view permission."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        campus_lt = LocationType.objects.get(name="Campus")
+        original_location = Location.objects.filter(location_type=campus_lt).first()
+        instance = self._create_real_image_attachment(name="Re-targetable", location=original_location)
+        # Pick another campus location not already used by the attachment.
+        other = Location.objects.filter(location_type=campus_lt).exclude(pk=instance.object_id).first()
+        self.add_permissions("extras.view_imageattachment", "extras.change_imageattachment")
+
+        with self.subTest("Re-target to a viewable Location succeeds"):
+            obj_perm = ObjectPermission(
+                name="View both locations",
+                constraints={"pk__in": [str(instance.object_id), str(other.pk)]},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(location_ct)
+
+            response = self.client.patch(
+                self._get_detail_url(instance),
+                {"object_id": str(other.pk)},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            instance.refresh_from_db()
+            self.assertEqual(instance.object_id, other.pk)
+
+        with self.subTest("Re-target to a non-viewable Location is rejected"):
+            # Tighten the permission so `other` is no longer viewable; instance is still viewable.
+            obj_perm.constraints = {"pk": str(instance.object_id)}
+            obj_perm.save()
+            # Find a third Location the user can't see.
+            third = (
+                Location.objects.filter(location_type=campus_lt).exclude(pk__in=[instance.object_id, other.pk]).first()
+            )
+            self.assertIsNotNone(third, "Test fixture needs a third Campus Location")
+
+            response = self.client.patch(
+                self._get_detail_url(instance),
+                {"object_id": str(third.pk)},
+                format="json",
+                **self.header,
+            )
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("object_id", response.data)
+            instance.refresh_from_db()
+            self.assertNotEqual(instance.object_id, third.pk)
 
 
 class JobTest(
@@ -2569,7 +2861,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
         # No new scheduled job should be created
@@ -2609,7 +2901,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 
@@ -3411,6 +3703,241 @@ class JobResultTest(
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             scheduled_job=None,
         )
+        cls.pending_job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+
+    @staticmethod
+    def _fake_revoke_success_termination_path(job_result, user):
+        """Simulate a successful revoke by flipping the job to REVOKED.
+
+        Stand-in for `CeleryStrategy.revoke` in tests of the TERMINATE path,
+        where the real code relies on Celery's async catchup to set the
+        REVOKED status. Writes the status synchronously so the view's
+        post-revoke check sees the expected terminal state.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_REVOKED
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "revoked": True}
+
+    @staticmethod
+    def _fake_revoke_no_action_termination_path(job_result, user):
+        """Simulate a revoke that lost the race to natural completion.
+
+        Stand-in for `CeleryStrategy.revoke` in tests where the job finishes
+        between the view's pre-check and the strategy call. Leaves the job
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-revoke
+        check trips and returns 409.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "revoked": False}
+
+    def test_post_revoke_already_finished_returns_409(self):
+        """A finished job cannot be revoked."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("already finished", response.data["detail"].lower())
+
+    def test_get_revoke_already_finished(self):
+        """A finished job cannot be revoked: POST returns 409, GET returns a NOOP preview."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["action"], "None")
+        self.assertEqual(response.data["job_status"], JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertIn("already", response.data["action_description"].lower())
+        self.assertNotIn("irreversible", response.data)
+        self.assertIn("message", response.data)
+        self.assertIn("timestamp", response.data)
+
+    def test_revoke_non_owner_non_staff_denied_with_run_job_permission(self):
+        """A user who is neither owner nor staff cannot revoke."""
+        other = User.objects.create_user(username="other-owner")
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        job_result.user = other
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("Job can be revoked only by the submitter or by staff users.", response.data["detail"])
+
+    def test_revoke_owner_no_staff_without_run_job_permission(self):
+        """A user who is owner but not have `run_job` permission cannot revoke."""
+        self.user.is_staff = False
+        self.user.save()
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        job_result.user = self.user
+        job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("Job can not be revoked by user without permission to run jobs.", response.data["detail"])
+
+    def test_revoke_staff_without_run_job_permission_denied(self):
+        """Staff users still need run_job; staff does not bypass that gate."""
+        self.user.is_staff = True
+        self.user.save()
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        self.remove_permissions("extras.run_job")
+
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("Job can not be revoked by user without permission to run jobs.", response.data["detail"])
+
+    @mock.patch.object(JobResult, "log")
+    def test_revoke_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
+        self.user.is_staff = True
+        self.user.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_job_result.refresh_from_db()
+        self.assertEqual(self.pending_job_result.status, "REVOKED")
+
+        mock_job_log.assert_called_once_with(
+            f"Abandoned job {self.pending_job_result.pk} by {self.user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="revoking",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
+    def test_revoke_get_returns_terminate_preview(self, mock_revoke, mock_liveness):
+        """GET returns the revoke TERMINATE preview payload and does not invoke revoke."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "RUNNING")
+        self.assertIn("TERMINATE", response.data["action"])
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
+    def test_revoke_get_returns_reap_preview(self, mock_revoke, mock_liveness):
+        """GET returns the revoke REAP preview payload and does not invoke revoke."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "NOT RUNNING")
+        self.assertIn("REAP", response.data["action"])
+        mock_revoke.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
+    def test_revoke_staff_user_non_owner_with_run_job_permission_can_revoke(self, mock_revoke, mock_liveness):
+        """A staff user non owner with permission can revoke."""
+        self.user.is_staff = True
+        self.user.save()
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.assertNotEqual(self.pending_job_result.user, self.user)
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_revoke.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
+    def test_revoke_owner_run_job_permission_no_staff_user_can_revoke(self, mock_revoke, mock_liveness):
+        """A owner with run_job permission can revoke."""
+        self.user.is_staff = False
+        self.user.save()
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_revoke.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": "Revoke failed: worker not responding."})
+    def test_revoke_strategy_error_returns_500(self, mock_revoke, mock_liveness):
+        """When the revoke strategy returns an error, the endpoint returns 500 with the error detail."""
+        self.user.is_staff = False
+        self.user.save()
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.run_job",
+        )
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["detail"], "Revoke failed: worker not responding.")
+        mock_revoke.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_no_action_termination_path)
+    def test_revoke_status_not_flipped_returns_409(self, mock_revoke, mock_liveness):
+        """If the strategy reports success but the job didn't end up REVOKED, return 409."""
+        self.user.is_staff = True
+        self.user.save()
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.run_job")
+        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn(response.data["detail"], "Job finished before it could be revoked. No action was taken.")
+        mock_revoke.assert_called_once()
 
 
 class JobLogEntryTest(
@@ -3617,7 +4144,6 @@ class ScheduledJobTest(
             job_model=job_model,
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             user=user,
-            approval_required=True,
             start_time=now(),
         )
         ScheduledJob.objects.create(
@@ -3626,7 +4152,6 @@ class ScheduledJobTest(
             job_model=job_model,
             interval=JobExecutionType.TYPE_DAILY,
             user=user,
-            approval_required=True,
             start_time=datetime(2020, 1, 23, 12, 34, 56, tzinfo=ZoneInfo("America/New_York")),
             time_zone=ZoneInfo("America/New_York"),
         )
@@ -3638,7 +4163,6 @@ class ScheduledJobTest(
             crontab="34 12 * * *",
             enabled=False,
             user=user,
-            approval_required=True,
             start_time=now(),
         )
 
@@ -4233,8 +4757,10 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
             {
                 "relationships": {
                     "vlans_devices_m2m": [
-                        "VLANs require at least one device, but no devices exist yet. "
-                        "Create a device by posting to /api/dcim/devices/",
+                        (
+                            "VLANs require at least one device, but no devices exist yet. "
+                            "Create a device by posting to /api/dcim/devices/"
+                        ),
                         'You need to specify ["relationships"]["vlans_devices_m2m"]["source"]["objects"].',
                     ]
                 }
@@ -4452,10 +4978,13 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
     def test_model_clean_method_is_called(self):
         """Validate RelationshipAssociation clean method is called"""
 
+        # source_type is Device, but the relationship requires source_type=Location, which is what
+        # we expect the model's clean() to flag. source_id must reference a real Device so the
+        # serializer-level GFK existence check passes and model.clean() actually runs.
         data = {
             "relationship": self.relationship.pk,
             "source_type": "dcim.device",
-            "source_id": self.locations[2].pk,
+            "source_id": self.devices[1].pk,
             "destination_type": "dcim.device",
             "destination_id": self.devices[2].pk,
         }
@@ -4637,6 +5166,133 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
             self.assertTrue(RelationshipAssociation.objects.filter(destination_id=self.devices[3].pk).exists())
 
 
+class GenericForeignKeyValidationTest(APITestCase):
+    """
+    Unit-level coverage of the GenericForeignKey enforcement in
+    `ValidatedModelSerializer.validate()`.
+
+    Uses `RelationshipAssociationSerializer` as the test target because it has multiple GFKs
+    (source and destination) and no custom `validate()` override that would interfere with the
+    code path under test.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = ContentType.objects.get_for_model(Location)
+        cls.device_type_ct = ContentType.objects.get_for_model(Device)
+        cls.location_status = Status.objects.get_for_model(Location).first()
+
+        cls.relationship = Relationship.objects.create(
+            label="GFK Validation Many-to-Many",
+            key="gfk_validation_m2m",
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            source_type=cls.location_type,
+            destination_type=cls.device_type_ct,
+        )
+
+        lt = LocationType.objects.get(name="Campus")
+        cls.locations = [
+            Location.objects.create(name=f"GFK Loc {n}", status=cls.location_status, location_type=lt) for n in range(3)
+        ]
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="GFK DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.devices = [
+            Device.objects.create(
+                name=f"GFK Dev {n}",
+                device_type=device_type,
+                role=device_role,
+                location=cls.locations[0],
+                status=device_status,
+            )
+            for n in range(3)
+        ]
+
+        # An existing association used as the `instance` for partial-update tests
+        cls.existing = RelationshipAssociation.objects.create(
+            relationship=cls.relationship,
+            source_type=cls.location_type,
+            source_id=cls.locations[0].pk,
+            destination_type=cls.device_type_ct,
+            destination_id=cls.devices[0].pk,
+        )
+
+    def _request_context(self):
+        factory = APIRequestFactory()
+        raw = factory.post("/")
+        force_authenticate(raw, user=self.user)
+        drf_request = DRFRequest(raw)
+        drf_request.user = self.user
+        return {"request": drf_request}
+
+    def test_create_with_viewable_targets_passes_validation(self):
+        """A creation whose source and destination GFK targets are both viewable is accepted."""
+        self.add_permissions("extras.view_relationship", "dcim.view_location", "dcim.view_device")
+        serializer = RelationshipAssociationSerializer(
+            data={
+                "relationship": str(self.relationship.pk),
+                "source_type": "dcim.location",
+                "source_id": str(self.locations[1].pk),
+                "destination_type": "dcim.device",
+                "destination_id": str(self.devices[1].pk),
+            },
+            context=self._request_context(),
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_create_rejects_non_viewable_source(self):
+        """A creation referencing a non-viewable source GFK target is rejected with an error on the fk_field."""
+        self.add_permissions("extras.view_relationship", "dcim.view_device")
+        # User can view all Devices but only one specific Location (which we won't reference)
+        self.add_permissions("dcim.view_location", constraints={"pk__in": [str(self.locations[0].pk)]})
+        serializer = RelationshipAssociationSerializer(
+            data={
+                "relationship": str(self.relationship.pk),
+                "source_type": "dcim.location",
+                "source_id": str(self.locations[2].pk),
+                "destination_type": "dcim.device",
+                "destination_id": str(self.devices[1].pk),
+            },
+            context=self._request_context(),
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("source_id", serializer.errors)
+
+    def test_partial_update_falls_back_to_instance_for_unchanged_ct_field(self):
+        """
+        On a partial update that changes only the `fk_field` of a GFK pair, the validator falls back
+        to `self.instance` for the unchanged `ct_field` and validates the new target accordingly.
+        """
+        # Existing association points at devices[0]; partial update redirects to devices[1].
+        self.add_permissions("dcim.view_location", constraints={"pk__in": [str(self.locations[0].pk)]})
+        self.add_permissions(
+            "dcim.view_device",
+            constraints={"pk__in": [str(self.devices[0].pk), str(self.devices[1].pk)]},
+        )
+        serializer = RelationshipAssociationSerializer(
+            instance=self.existing,
+            data={"destination_id": str(self.devices[1].pk)},
+            partial=True,
+            context=self._request_context(),
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_partial_update_rejects_unviewable_new_fk_target(self):
+        """A partial update changing only `fk_field` to a non-viewable target is rejected."""
+        # User can view the existing target only; the new candidate (devices[2]) is hidden.
+        self.add_permissions("dcim.view_location", constraints={"pk__in": [str(self.locations[0].pk)]})
+        self.add_permissions("dcim.view_device", constraints={"pk__in": [str(self.devices[0].pk)]})
+        serializer = RelationshipAssociationSerializer(
+            instance=self.existing,
+            data={"destination_id": str(self.devices[2].pk)},
+            partial=True,
+            context=self._request_context(),
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("destination_id", serializer.errors)
+
+
 class SecretTest(APIViewTestCases.APIViewTestCase):
     model = Secret
     bulk_update_data = {}
@@ -4737,7 +5393,7 @@ class SecretsGroupTest(APIViewTestCases.APIViewTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        secrets = secrets = (
+        secrets = (
             Secret.objects.create(
                 name="secret-1", provider="environment-variable", parameters={"variable": "SOME_VAR"}
             ),
@@ -4912,12 +5568,11 @@ class StaticGroupAssociationTest(APIViewTestCases.APIViewTestCase):
                 "associated_object_id": device_pks[3],
             },
         ]
-        # TODO: this isn't really valid since we're changing the associated_object_type but not the associated_object_id
-        # Should we disallow bulk-updates of StaticGroupAssociation? Or maybe skip the bulk-update tests at least?
-        cls.bulk_update_data = {
-            "dynamic_group": cls.dg3.pk,
-            "associated_object_type": "ipam.vlan",
-        }
+        # Although StaticGroupAssociation REST API supports bulk-updates, the `test_bulk_update_objects` generic test
+        # wants to update 3 distinct records with a *shared* set of `bulk_update_data` and doesn't provide a pattern for
+        # providing different data for each updated record. This doesn't really work for StaticGroupAssociation
+        # since a "realistic" bulk-update would have a different `associated_object` for each row.
+        cls.bulk_update_data = {}
 
     def test_content_type_mismatch(self):
         self.add_permissions("extras.add_staticgroupassociation")

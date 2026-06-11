@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -39,11 +38,13 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -195,6 +196,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    output_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField
@@ -308,7 +310,7 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.filter(FeatureQuery("contacts").get_query()))
 
     class Meta:
         model = ContactAssociation
@@ -555,6 +557,7 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
     class Meta:
         model = GitRepository
         fields = "__all__"
+        read_only_fields = ["current_head"]
 
 
 #
@@ -606,23 +609,16 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 
 
 class ImageAttachmentSerializer(ValidatedModelSerializer):
-    content_type = ContentTypeField(queryset=ContentType.objects.all())
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(app_label="dcim", model__in=["device", "location", "rack"])
+    )
 
     class Meta:
         model = ImageAttachment
         fields = "__all__"
-
-    def validate(self, attrs):
-        # Validate that the parent object exists
-        try:
-            attrs["content_type"].get_object_for_this_type(id=attrs["object_id"])
-        except ObjectDoesNotExist:
-            raise serializers.ValidationError(f"Invalid parent object: {attrs['content_type']} ID {attrs['object_id']}")
-
-        # Enforce model validation
-        super().validate(attrs)
-
-        return attrs
+        # image_height and image_width are auto-populated from the uploaded image via the ImageField's
+        # height_field/width_field declaration on the model, so clients must not supply them.
+        read_only_fields = ["image_height", "image_width"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -695,6 +691,7 @@ class ScheduledJobSerializer(BaseModelSerializer):
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
     associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
+    state = ChoiceField(choices=ScheduledJobStateChoices, read_only=True)
 
     class Meta:
         model = ScheduledJob
@@ -738,6 +735,30 @@ class JobRunResponseSerializer(serializers.Serializer):
 
     schedule = ScheduledJobSerializer(read_only=True, required=False)
     job_result = JobResultSerializer(read_only=True, required=False)
+
+
+class JobResultRevokePreviewSerializer(serializers.Serializer):
+    """Describes what a revoke action would do, returned by GET on the revoke endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    action = serializers.ChoiceField(
+        choices=["TERMINATE", "REAP", "ABANDON", "None"],
+        help_text=(
+            "TERMINATE if worker alive; "
+            "REAP if no worker; "
+            "ABANDON if backend unreachable; "
+            "None if job already finished."
+        ),
+    )
+    action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
+        help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
+    )
+    irreversible = serializers.CharField(
+        required=False, help_text="Warning that the action cannot be undone. Omitted when action is None."
+    )
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
 
 #

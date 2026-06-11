@@ -5,6 +5,7 @@ from django.db.models.functions import JSONObject
 
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.choices import ScheduledJobStateChoices
 from nautobot.extras.models.tags import TaggedItem
 
 
@@ -54,7 +55,9 @@ class ConfigContextQuerySet(RestrictedQuerySet):
             query.append(Q(dynamic_groups__in=obj.dynamic_groups) | Q(dynamic_groups=None))
 
         # `clusters` for Device, `cluster` for VirtualMachine
-        if obj._meta.model_name == "device":
+        from nautobot.dcim.models import Device
+
+        if isinstance(obj, Device):
             query.append(Q(clusters__in=obj.clusters.all()) | Q(clusters=None))
             query.append(
                 Q(cluster_groups__in=obj.clusters.values_list("cluster_group", flat=True)) | Q(cluster_groups=None)
@@ -134,10 +137,10 @@ class ConfigContextModelQuerySet(RestrictedQuerySet):
         )
         base_query.add((Q(roles=OuterRef("role")) | Q(roles=None)), Q.AND)
 
-        from nautobot.dcim.models import Location
+        from nautobot.dcim.models import Device, Location
         from nautobot.tenancy.models import TenantGroup
 
-        if self.model._meta.model_name == "device":
+        if issubclass(self.model, Device):
             location_query_string = "location"
             base_query.add((Q(device_types=OuterRef("device_type")) | Q(device_types=None)), Q.AND)
             base_query.add((Q(device_families=OuterRef("device_type__device_family")) | Q(device_families=None)), Q.AND)
@@ -269,6 +272,4 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
         """
         Return only ScheduledJob instances that are enabled and approved (if approval required)
         """
-        return self.filter(
-            Q(enabled=True) & Q(Q(approval_required=True, decision_date__isnull=False) | Q(approval_required=False))
-        )
+        return self.filter(state=ScheduledJobStateChoices.ACTIVE)

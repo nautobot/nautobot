@@ -3,6 +3,10 @@
 {% block javascript %}
     {{ block.super }}
     <script type="text/javascript">
-        const slugify_prefer_underscores = true; // Computed fields work better in GraphQL (etc.) with underscore-based slugs
+        /*
+         * Deliberately use `var` instead of `const` or `let` here to prevent JavaScript engine from throwing an
+         * exception when the constant is defined multiple times, which can be the case for embedded action modal.
+         */
+        var slugify_prefer_underscores = true; // Computed fields work better in GraphQL (etc.) with underscore-based slugs
     </script>
 {% endblock javascript %}

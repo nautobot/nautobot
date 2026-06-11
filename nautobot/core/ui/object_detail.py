@@ -2,11 +2,14 @@
 
 import contextlib
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
 import hashlib
 import json
 import logging
+from operator import attrgetter
 from typing import Callable
+from urllib.parse import urlencode
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -16,10 +19,11 @@ from django.db.models import CharField, JSONField, Q, URLField
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyField
 from django.template import Context
-from django.template.defaultfilters import truncatechars
+from django.template.defaultfilters import date as format_date, truncatechars
 from django.template.loader import render_to_string
 from django.templatetags.l10n import localize
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django_tables2 import RequestConfig
 
@@ -52,6 +56,8 @@ from nautobot.core.views.utils import get_obj_from_context
 from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models import Job
+from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -297,7 +303,7 @@ class Button(Component):
     link_includes_pk = True
     link_name = None
     placeholder_template_path = "components/button/button_placeholder.html"
-    render_on_tab_id = "main"
+    render_on_tab_id = ("main",)
     size = None
     template_path = "components/button/default.html"
 
@@ -319,8 +325,8 @@ class Button(Component):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -358,14 +364,6 @@ class Button(Component):
             "attributes": self.attributes,
             "size": self.size,
         }
-
-    def should_render(self, context: Context):
-        # Only show if the user has the permission, which is enforce in super.
-        if not super().should_render(context):
-            return False
-        if self.render_on_tab_id == "__all__":
-            return True
-        return context.get("active_tab", "main") == self.render_on_tab_id
 
     def render(self, context: Context):
         """Render this button to HTML, possibly including any associated JavaScript."""
@@ -408,8 +406,8 @@ class DropdownButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -452,7 +450,7 @@ class FormButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
                 render on all tabs. Defaults to "__all__".
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
@@ -472,6 +470,12 @@ class FormButton(Button):
             **super().get_extra_context(context),
             "form_id": self.form_id,
         }
+
+
+class PostButton(Button):
+    """A Button that submits a POST request to the link URL."""
+
+    template_path = "components/button/postbutton.html"
 
 
 class ExtraDetailViewActionButton(Button):
@@ -499,8 +503,8 @@ class ExtraDetailViewActionButton(Button):
                 Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
             attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
             size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
-            render_on_tab_id (str, optional): The (only) tab that this button should appear on. May be set to "__all__" to
-                render on all tabs. Defaults to "main".
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
             weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
                 rendered "first", usually towards the top left of the page.
             required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
@@ -998,6 +1002,7 @@ class ObjectsTablePanel(Panel):
     hide_hierarchy_ui = False
     include_columns = ()
     include_paginator = False
+    list_url_extra_params = None
     max_display_count = None
     order_by_fields = ()
     paginate = True
@@ -1008,6 +1013,7 @@ class ObjectsTablePanel(Panel):
     show_table_config_button = True
     tab_id = None
     table_attribute = None
+    extra_columns = None
     table_class = None
     table_filter = None
     # TODO: Is `table_title` redundant with the base Panel's `label`
@@ -1032,6 +1038,7 @@ class ObjectsTablePanel(Panel):
             table_attribute (str, optional): The attribute of the detail view instance that contains the queryset to
                 initialize the table class. e.g. `dynamic_groups`.
                 Mutually exclusive with `table_filter`.
+            extra_columns (list, optional): Extra columns to pass through to the table constructor.
             distinct (bool, optional): If True, apply `.distinct()` to the table queryset.
             select_related_fields (list, optional): list of fields to pass to table queryset's `select_related` method.
             prefetch_related_fields (list, optional): list of fields to pass to table queryset's `prefetch_related`
@@ -1067,6 +1074,8 @@ class ObjectsTablePanel(Panel):
                 These buttons typically perform actions like bulk delete, edit, or custom form submission.
             form_id (str, optional): A unique ID for this table's form; used to set the `data-form-id` attribute on each `FormButton`.
             include_paginator (bool, optional): If True, renders a paginator in the panel footer.
+            list_url_extra_params (dict, optional): Additional query parameters to include in the `list_route`,
+                allowing customization beyond the default filter by `related_field_name`.
             label (str, optional): Label to display for this panel. If an empty string, the panel will have no label.
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
@@ -1089,6 +1098,7 @@ class ObjectsTablePanel(Panel):
                 self.table_class,
                 self.table_filter,
                 self.table_attribute,
+                self.extra_columns,
                 self.distinct,
                 self.select_related_fields,
                 self.prefetch_related_fields,
@@ -1122,7 +1132,14 @@ class ObjectsTablePanel(Panel):
         obj = get_obj_from_context(context)
         body_content_table_add_url = None
         request = context["request"]
-        related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
+
+        if self.related_field_name:
+            related_field_name = self.related_field_name
+        elif isinstance(self.table_filter, str):
+            related_field_name = self.table_filter
+        else:
+            related_field_name = obj._meta.model_name
+
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
             try:
@@ -1221,12 +1238,14 @@ class ObjectsTablePanel(Panel):
                 body_content_table_queryset = body_content_table_queryset.order_by(*self.order_by_fields)
             if self.distinct:
                 body_content_table_queryset = body_content_table_queryset.distinct()
-            body_content_table = body_content_table_class(  # pylint: disable=not-callable
-                body_content_table_queryset,
-                hide_hierarchy_ui=self.hide_hierarchy_ui,
-                user=request.user,
-                configurable=self.show_table_config_button,
-            )
+            table_kwargs = {
+                "hide_hierarchy_ui": self.hide_hierarchy_ui,
+                "user": request.user,
+                "configurable": self.show_table_config_button,
+            }
+            if self.extra_columns is not None:
+                table_kwargs["extra_columns"] = self.extra_columns
+            body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)  # pylint: disable=not-callable
             if self.tab_id and "actions" in body_content_table.columns:
                 # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
                 # to redirect the user back to the correct tab after editing/deleteing an object
@@ -1239,7 +1258,7 @@ class ObjectsTablePanel(Panel):
 
         if self.include_columns:
             for column in self.include_columns:
-                if column not in body_content_table.base_columns:
+                if column not in body_content_table.columns.columns:
                     raise ValueError(f"You are specifying a non-existent column `{column}`")
                 body_content_table.columns.show(column)
 
@@ -1273,6 +1292,7 @@ class ObjectsTablePanel(Panel):
 
         obj = get_obj_from_context(context)
         body_content_table_model = body_content_table.Meta.model
+
         related_field_name = self.related_field_name or self.table_filter or obj._meta.model_name
 
         body_content_table_list_url = None
@@ -1296,7 +1316,10 @@ class ObjectsTablePanel(Panel):
                 list_route = None
 
             if list_route:
-                body_content_table_list_url = f"{list_route}?{related_field_name}={obj.pk}"
+                query_params = {related_field_name: obj.pk}
+                if isinstance(self.list_url_extra_params, dict):
+                    query_params.update(self.list_url_extra_params)
+                body_content_table_list_url = f"{list_route}?{urlencode(query_params)}"
 
         return {
             **super().get_extra_context(context),
@@ -1726,6 +1749,14 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             # For example, Secret.provider -> Secret.get_provider_display()
             # Note that we *don't* want to do this for models with a StatusField and its `get_status_display()`
             return super().render_value(key, getattr(obj, f"get_{key}_display")(), context)
+
+        if isinstance(value, datetime):
+            if timezone.is_naive(value):
+                value = timezone.make_aware(value, timezone.get_default_timezone())
+            return format_date(timezone.localtime(value), "DATETIME_FORMAT")
+
+        if isinstance(value, date):
+            return format_date(value, "DATE_FORMAT")
 
         return super().render_value(key, value, context)
 
@@ -2261,6 +2292,14 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
+    def render_value(self, key, value, context: Context):
+        """Render a given computed field value appropriately depending on what output type the computed field has."""
+        # TODO: this logic could be unified with ComputedFieldColumn.render()?
+        cf = key
+        if cf.output_type == CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            return render_markdown(value)
+        return super().render_value(key, value, context)
+
 
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
@@ -2570,6 +2609,18 @@ class _ObjectDetailGroupsTab(Tab):
         )
 
 
+class _ObjectMetadataTablePanel(ObjectsTablePanel):
+    """Custom table panel for ObjectMetadata that includes assigned_object_type in the add URL."""
+
+    def _get_table_add_url(self, context: Context):
+        url = super()._get_table_add_url(context)
+        if url:
+            obj = get_obj_from_context(context)
+            content_type = ContentType.objects.get_for_model(obj)
+            url += f"&assigned_object_type={content_type.pk}"
+        return url
+
+
 @dataclass
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
@@ -2583,13 +2634,12 @@ class _ObjectDetailMetadataTab(Tab):
         super().__init__(**kwargs)
         if not self.panels:
             self.panels = (
-                ObjectsTablePanel(
+                _ObjectMetadataTablePanel(
                     weight=100,
                     table_class=ObjectMetadataTable,
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
                     exclude_columns=["assigned_object"],
-                    add_button_route=None,
                     related_field_name="assigned_object_id",
                     table_title="Object Metadata",
                 ),
@@ -2599,7 +2649,7 @@ class _ObjectDetailMetadataTab(Tab):
         if not super().should_render(context):
             return False
         obj = get_obj_from_context(context)
-        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
+        return getattr(obj, "is_metadata_associable_model", False)
 
     def render_label(self, context: Context):
         return format_html(
@@ -2610,3 +2660,185 @@ class _ObjectDetailMetadataTab(Tab):
                 badge(get_obj_from_context(context).associated_object_metadata.count(), True),
             ),
         )
+
+
+def resolve_attr(obj, dotted_path: str):
+    """Resolve nested attributes on a Django model instance using a Django-style double underscore path (e.g. 'location__location_type__name').
+
+    Args:
+        obj: The Django model instance.
+        dotted_path (str): The dotted path to the attribute using '__' for
+            nested relationships or foreign keys.
+
+    Returns:
+        str | None: The value of the nested attribute, or None if any attribute in the path does not exist.
+    """
+    try:
+        value = attrgetter(dotted_path.replace("__", "."))(obj)
+        return str(value) if value is not None else None
+    except (AttributeError, ObjectDoesNotExist):
+        return None
+
+
+class _JobModalButton(Button):
+    """A Button that opens a modal dialog for running a Job. Experimental — subject to change without deprecation.
+
+    If a `button_id` is provided, the instance is registered in `registry["job_modal_buttons"]` at init time.
+    The `button_id` travels through HTMX POST data so the view can look up the instance and call
+    `get_redirect_button()` to optionally render a redirect button in the third modal page's footer.
+
+    To add a redirect button, a `button_id` must be defined, and either pass a `redirect_button_callback`
+    or subclass and override `get_redirect_button()`.
+    """
+
+    class_path = None
+    advanced_fields = ()
+    initial_field_mapping = {}
+    run_button_label = "Run Job Now"
+    job_result_key = None
+    refresh_on_close_if_done = False
+    redirect_button_callback = None
+    button_id = ""
+
+    def __init__(self, **kwargs):
+        """
+        Initialize a _JobModalButton component.
+
+        Keyword Args:
+            class_path (str): The Python class path of the Job to run, e.g. "nautobot.core.jobs.ValidateModelData".
+            label (str): The text of this button, not including any icon.
+            color (ButtonColorChoices, optional): The color (class) of this button.
+            advanced_fields (tuple, optional): A tuple of job fields to only render on the Advanced Settings section of the Modal.
+            initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
+                For example, `{"location": "location__name"}` would pre-populate the `location` field on the
+                Job form with the value of `obj.location.name` from the object in context.
+            context_object_key (str, optional): The key in the render context that will contain the linked object.
+            run_button_label (str, optional): The text to display on the button that submits the Job form within the modal. Defaults to "Run Job Now".
+            job_result_key (str, optional): The dictionary key used to extract specific display data from the JobResult.result field.
+                If JobResult.result is a dictionary, this key determines which value is shown in the Job Result modal.
+                If the result is a primitive type (string, integer, or float), this key is ignored and the full value
+                is displayed directly.
+            refresh_on_close_if_done (bool, optional): If True, if the modal is dismissed after the Job is run to
+                completion (whether successful or not), a refresh of the page will be automatically triggered.
+            button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
+                Required when using redirect_button_callback.
+                Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
+                modal footer after the job completes. Requires button_id to be set.
+                Signature: `callback(job_result, request) -> dict`.
+                The dict should have keys `url`, `label`, `color`, and optionally `extra_classes`.
+                Return an empty dict to render no button.
+            icon (str, optional): Material Design Icons icon, to include on the button, for example `"mdi-plus-bold"`.
+            template_path (str, optional): Template to render for this button (not the modal). Defaults to "components/button/default.html".
+            javascript_template_path (str, optional): JavaScript template to render and include with this button.
+                Does not need to include the wrapping `<script>...</script>` tags as those will be added automatically.
+            attributes (dict, optional): Additional HTML attributes and their values to attach to the button.
+            size (str, optional): The size of the button (e.g. `xs` or `sm`), used to apply a Bootstrap-style sizing.
+            render_on_tab_id (str | list[str], optional): The tab(s) that this button should appear on. May be set to "__all__" to
+                render on all tabs. Defaults to ["main"].
+            weight (int): A relative weighting of this Component relative to its peers. Typically lower weights will be
+                rendered "first", usually towards the top left of the page.
+            required_permissions (list, optional): Permissions such as `["dcim.add_consoleport"]`.
+                The component will only be rendered if the user has these permissions.
+
+            Example:
+                _JobModalButton(
+                    label="Validate Device Location Data",
+                    weight=200,
+                    class_path="myapp.jobs.ValidateLocationData",
+                    initial_field_mapping={"location": "location__name"},
+                    advanced_fields=("verbose", "skip_related_objects"),
+                    required_permissions=["dcim.view_location"],
+                    run_button_label="Run Validation",
+                    button_id="my_app.take_snapshot",
+                    redirect_button_callback=lambda job_result, request: {
+                        "url": f"/plugins/my-app/results/?job={job_result.pk}",
+                        "label": "View Results",
+                        "color": "success",
+                    },
+                )
+        """
+        super().__init__(**kwargs)
+        if self.class_path is None:
+            raise TypeError("class_path is required")
+        if self.redirect_button_callback and not self.button_id:
+            raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
+
+        if self.button_id:
+            if self.button_id in registry["job_modal_buttons"]:
+                raise ValueError(f"{self.button_id} must be globally unique")
+            registry["job_modal_buttons"][self.button_id] = self
+
+    def get_redirect_button(self, job_result, request, **kwargs):
+        """Optionally provide a redirect button on the final page of the modal after the job has completed.
+
+        If a `redirect_button_callback` was provided at init time, it is called. Otherwise,
+        subclasses can override this method directly.
+
+        Args:
+            job_result (JobResult): The completed JobResult instance.
+            request (HttpRequest): The HTMX request for the final page of the job modal.
+            **kwargs: Reserved for future use.
+
+        Returns:
+            dict: A dictionary with keys `url`, `label`, `color`, and optionally `attributes`,
+                or a empty dict to render no button.
+        """
+        if self.redirect_button_callback is not None:
+            return self.redirect_button_callback(job_result, request, **kwargs)
+        return {}
+
+    def get_link(self, context):
+        """Override the default `get_link()` behavior since this button opens a modal."""
+        return None
+
+    def get_extra_context(self, context: Context):
+        """Add necessary htmx attributes to the button."""
+        obj = get_obj_from_context(context, self.context_object_key)
+        base_context = super().get_extra_context(context)
+        hx_vals = {
+            field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
+        }
+
+        # TODO: Potentially refactor to use values from the instance using component_id instead of passing as hx_vals.
+        hx_vals["render_job_form"] = True
+        hx_vals["job_modal_button"] = self.button_id
+        hx_vals["advanced_fields"] = self.advanced_fields
+        hx_vals["run_button_label"] = self.run_button_label
+        hx_vals["job_result_key"] = self.job_result_key
+        hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
+
+        raw_attrs = base_context.get("attributes")
+        attributes = {} if raw_attrs is None else raw_attrs.copy()
+
+        attributes.update(
+            {
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#nautobot-generic-modal",
+                "hx-target": "#modal-content-container",
+                "hx-post": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+                "hx-vals": json.dumps(hx_vals),
+                "hx-swap": "innerHTML",
+            }
+        )
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
+        disabled = False
+        disabled_reason = ""
+        try:
+            jobs = Job.objects
+            if "request" in context and context["request"].user is not None:
+                jobs = jobs.restrict(context["request"].user, "view")
+            job = jobs.get_for_class_path(self.class_path)
+            if not job.enabled:
+                disabled = True
+                disabled_reason = "Job is not enabled."
+        except Job.DoesNotExist:
+            disabled = True
+            disabled_reason = "You do not have permission to run this Job."
+        if disabled:
+            attributes["disabled"] = "disabled"
+            attributes["title"] = disabled_reason
+            attributes["aria-disabled"] = "true"
+            attributes["tabindex"] = "-1"
+        base_context["attributes"] = attributes
+        return base_context

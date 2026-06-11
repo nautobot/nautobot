@@ -117,10 +117,12 @@ class RackElevationDetailRenderChoices(ChoiceSet):
 class SubdeviceRoleChoices(ChoiceSet):
     ROLE_PARENT = "parent"
     ROLE_CHILD = "child"
+    ROLE_PARENT_CHILD = "parent-child"
 
     CHOICES = (
         (ROLE_PARENT, "Parent"),
         (ROLE_CHILD, "Child"),
+        (ROLE_PARENT_CHILD, "Parent and Child"),
     )
 
 
@@ -1439,6 +1441,25 @@ class CableLengthUnitChoices(ChoiceSet):
         (UNIT_MILE, "Miles"),
         (UNIT_FOOT, "Feet"),
         (UNIT_INCH, "Inches"),
+    )
+
+
+#
+# Polarity Methods (Cable Types)
+#
+
+
+class CableTypePolarityMethodChoices(ChoiceSet):
+    METHOD_STRAIGHT = "straight-through"
+    METHOD_REVERSED = "reversed"
+    METHOD_PAIR_REVERSED = "pair-reversed"
+    METHOD_OTHER = "other"
+
+    CHOICES = (
+        (METHOD_STRAIGHT, "Straight-through"),
+        (METHOD_REVERSED, "Reversed"),
+        (METHOD_PAIR_REVERSED, "Pair-reversed"),
+        (METHOD_OTHER, "Other"),
     )
 
 

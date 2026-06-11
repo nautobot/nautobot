@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html, format_html_join
 import django_tables2 as tables
 from django_tables2.utils import Accessor
+from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
 from nautobot.core.tables import (
@@ -23,7 +24,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import HTML_NONE, render_boolean, render_json, render_markdown
 from nautobot.tenancy.tables import TenantColumn
 
-from .choices import JobResultStatusChoices, MetadataTypeDataTypeChoices
+from .choices import JobResultStatusChoices
 from .models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -127,14 +128,13 @@ class="badge bg-{% if entry.content_identifier in record.provided_contents %}suc
 
 GITREPOSITORY_BUTTONS = """
 <li>
-    <button
-        data-url="{% url 'extras:gitrepository_sync' pk=record.pk %}"
-        type="submit"
-        class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %}
-    >
-        <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
-        Sync
-    </button>
+    <form action="{% url 'extras:gitrepository_sync' pk=record.pk %}" method="post">
+        {% csrf_token %}
+        <button class="dropdown-item sync-repository{% if perms.extras.change_gitrepository %} text-primary"{% else %}" disabled{% endif %} type="submit">
+            <span class="mdi mdi-source-branch-sync" aria-hidden="true"></span>
+            Sync
+        </button>
+    </form>
 </li>
 """
 
@@ -146,7 +146,6 @@ IMAGEATTACHMENT_NAME = """
 IMAGEATTACHMENT_SIZE = """{{ value|filesizeformat }}"""
 
 JOB_BUTTONS = """
-<li><a href="{% url 'extras:job' pk=record.pk %}" class="dropdown-item"><span class="mdi mdi-information-outline" aria-hidden="true"></span>Details</a></li>
 <li><a href="{% url 'extras:jobresult_list' %}?job_model={{ record.name | urlencode }}" class="dropdown-item"><span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span>Job Results</a></li>
 """
 
@@ -175,6 +174,32 @@ JOB_RESULT_BUTTONS = """
             </a>
         </li>
     {% endif %}
+    {% if record.is_unready_state %}
+        {% if record.user == request.user or request.user.is_staff %}
+            <li>
+                <a href="{% url 'extras:jobresult_revoke_job' pk=record.pk %}" class="dropdown-item text-danger">
+                    <span class="mdi mdi-close-circle" aria-hidden="true"></span>
+                    Revoke Job
+                </a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endif %}
+{% if perms.extras.view_joblogentry %}
+    <li>
+        <a href="{% url 'extras-api:joblogentry-list' %}?job_result={{ record.pk }}&format=csv" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Logs
+        </a>
+    </li>
+{% endif %}
+{% if perms.extras.view_jobconsoleentry and record.console_log %}
+    <li>
+        <a href="{% url 'extras:jobresult_export_job_console_entries' pk=record.pk %}" class="dropdown-item text-success">
+            <span class="mdi mdi-database-export" aria-hidden="true"></span>
+            Export Console Logs
+        </a>
+    </li>
 {% endif %}
 """
 
@@ -584,6 +609,7 @@ class ConfigContextTable(BaseTable):
     name = tables.LinkColumn()
     owner = tables.LinkColumn(order_by=["owner_content_type", "owner_object_id"])
     is_active = BooleanColumn(verbose_name="Active")
+    actions = ButtonsColumn(ConfigContext)
 
     class Meta(BaseTable.Meta):
         model = ConfigContext
@@ -602,6 +628,7 @@ class ConfigContextTable(BaseTable):
             "tenant_groups",
             "tenants",
             "dynamic_groups",
+            "actions",
         )
         default_columns = ("pk", "name", "weight", "is_active", "description")
 
@@ -630,19 +657,29 @@ class ConfigContextSchemaValidationStateColumn(tables.Column):
     """
 
     def __init__(self, validator, data_field, *args, **kwargs):
+        kwargs.setdefault("orderable", False)
+        kwargs.setdefault("accessor", None)
+        kwargs.setdefault("exclude_from_export", True)
+        kwargs.setdefault("empty_values", ())
+
         super().__init__(*args, **kwargs)
+
         self.validator = validator
         self.data_field = data_field
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        data = getattr(record, self.data_field)
-        try:
-            self.validator.validate(data)
-        except JSONSchemaValidationError as e:
-            # Return a red x (like a boolean column) and the validation error message
-            return render_boolean(False) + format_html('<span class="text-danger">{}</span>', e.message)
+        data = getattr(record, self.data_field, None)
 
-        # Return a green check (like a boolean column)
+        validator = self.validator
+        # only call validate if this is a real validator
+        if not isinstance(validator, Draft7Validator):
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', "No schema available")
+
+        try:
+            validator.validate(data)
+
+        except JSONSchemaValidationError as e:
+            return render_boolean(False) + format_html('<span class="text-danger"> {}</span>', e.message)
         return render_boolean(True)
 
 
@@ -1274,6 +1311,7 @@ class JobResultTable(BaseTable):
     date_created = tables.DateTimeColumn(linkify=True, short=True)
     date_started = tables.DateTimeColumn(linkify=True, short=True)
     date_done = tables.DateTimeColumn(linkify=True, short=True)
+    date_revoked = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -1289,6 +1327,11 @@ class JobResultTable(BaseTable):
     )
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+    console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
+    revocation_type = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
+        verbose_name="Revocation Type",
+    )
 
     def render_summary(self, record):
         """
@@ -1325,6 +1368,8 @@ class JobResultTable(BaseTable):
             "date_created",
             "date_started",
             "date_done",
+            "date_revoked",
+            "revoked_by",
             "name",
             "job_model",
             "scheduled_job",
@@ -1333,6 +1378,7 @@ class JobResultTable(BaseTable):
             "status",
             "summary",
             "actions",
+            "console_log",
         )
         default_columns = (
             "pk",
@@ -1429,6 +1475,7 @@ class ObjectMetadataTable(BaseTable):
     # This is needed so that render_value method below does not skip itself
     # when metadata_type.data_type is TYPE_CONTACT_TEAM and we need it to display either contact or team
     value = tables.Column(empty_values=[], order_by=("_value",))
+    actions = ButtonsColumn(ObjectMetadata)
 
     class Meta(BaseTable.Meta):
         model = ObjectMetadata
@@ -1438,6 +1485,7 @@ class ObjectMetadataTable(BaseTable):
             "metadata_type",
             "scoped_fields",
             "value",
+            "actions",
         )
         default_columns = (
             "pk",
@@ -1445,6 +1493,7 @@ class ObjectMetadataTable(BaseTable):
             "scoped_fields",
             "value",
             "metadata_type",
+            "actions",
         )
 
     def render_scoped_fields(self, value):
@@ -1453,18 +1502,10 @@ class ObjectMetadataTable(BaseTable):
         return format_html_join(", ", "<code>{}</code>", ([v] for v in sorted(value)))
 
     def render_value(self, record):
-        if record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_JSON:
-            return render_json(record.value, pretty_print=True)
-        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_MARKDOWN:
-            return render_markdown(record.value)
-        elif record.value is not None and record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_BOOLEAN:
-            return render_boolean(record.value)
-        elif record.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
-            if record.contact:
-                return format_html('<a href="{}">{}</a>', record.contact.get_absolute_url(), record.contact)
-            else:
-                return format_html('<a href="{}">{}</a>', record.team.get_absolute_url(), record.team)
-        return record.value
+        # Delegate to the model so URL/Markdown/JSON/Boolean/MultiSelect/Contact-Team rendering
+        # stays consistent between the list table and the detail panel.
+        display = record.get_value_display()
+        return display if display is not None else record.value
 
 
 #
@@ -1496,6 +1537,9 @@ class ScheduledJobTable(BaseTable):
     name = tables.Column(linkify=True)
     job_model = tables.Column(verbose_name="Job", linkify=True)
     enabled = BooleanColumn()
+    state = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/scheduled_job_label.html' with scheduled_job=record %}",
+    )
     interval = tables.Column(verbose_name="Execution Type")
     start_time = tables.DateTimeColumn(verbose_name="First Run", short=True)
     last_run_at = tables.DateTimeColumn(verbose_name="Most Recent Run", short=True)
@@ -1524,6 +1568,7 @@ class ScheduledJobTable(BaseTable):
             "crontab",
             "time_zone",
             "actions",
+            "state",
         )
         default_columns = (
             "pk",
@@ -1534,6 +1579,7 @@ class ScheduledJobTable(BaseTable):
             "interval",
             "last_run_at",
             "actions",
+            "state",
         )
 
 
@@ -1880,7 +1926,7 @@ class AssociatedContactsTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.TemplateColumn(CONTACT_OR_TEAM, verbose_name="Name")
     contact_or_team_phone = tables.TemplateColumn(PHONE, accessor="contact_or_team__phone", verbose_name="Phone")
     contact_or_team_email = tables.TemplateColumn(EMAIL, accessor="contact_or_team__email", verbose_name="E-Mail")
-    actions = actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
+    actions = ButtonsColumn(model=ContactAssociation, buttons=("edit", "delete"))
 
     class Meta(BaseTable.Meta):
         model = ContactAssociation

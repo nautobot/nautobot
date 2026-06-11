@@ -12,19 +12,19 @@
                     {% for model in searchable_models %}
                         <div id="{{ model|slugify }}-results-table"
                              hx-get=""
-                             hx-indicator="#{{ model|slugify }}-htmx-indicator"
+                             hx-indicator="#search-results-htmx-indicator"
                              hx-select="#{{ model|slugify }}-results-table"
                              hx-select-oob="#{{ model|slugify }}-results-summary"
                              hx-trigger="load"
                              hx-vals='{"model": "{{ model }}"}'
                         >
-                            <div id="{{ model|slugify }}-htmx-indicator" class="htmx-indicator">
-                                <div class="spinner-border">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </div>
                         </div>
                     {% endfor %}
+                    <div id="search-results-htmx-indicator" class="htmx-indicator text-center">
+                        <div class="spinner-border">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-2" style="padding-top: 20px;">

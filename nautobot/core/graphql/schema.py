@@ -11,6 +11,7 @@ from django.db.models import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
+import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.generators import (
@@ -21,7 +22,6 @@ from nautobot.core.graphql.generators import (
     generate_list_search_parameters,
     generate_null_choices_resolver,
     generate_relationship_resolver,
-    generate_restricted_queryset,
     generate_schema_type,
 )
 from nautobot.core.graphql.types import ContentTypeType, DateType, JSON
@@ -92,6 +92,7 @@ CUSTOM_FIELD_MAPPING = {
     CustomFieldTypeChoices.TYPE_TEXT: graphene.String(),
     CustomFieldTypeChoices.TYPE_BOOLEAN: graphene.Boolean(),
     CustomFieldTypeChoices.TYPE_DATE: DateType(),
+    CustomFieldTypeChoices.TYPE_DATETIME: graphene.DateTime(),
     CustomFieldTypeChoices.TYPE_URL: graphene.String(),
     CustomFieldTypeChoices.TYPE_SELECT: graphene.String(),
     CustomFieldTypeChoices.TYPE_JSON: JSON(),
@@ -103,7 +104,6 @@ def extend_schema_type(schema_type):
     """Extend an existing schema type to add fields dynamically.
 
     The following type of dynamic fields/functions are currently supported:
-     - Queryset, ensure a restricted queryset is always returned.
      - Custom Field, all custom field will be defined as a first level attribute.
      - Tags, Tags will automatically be resolvable.
      - Config Context, add a config_context attribute and resolver.
@@ -115,11 +115,6 @@ def extend_schema_type(schema_type):
     """
 
     model = schema_type._meta.model
-
-    #
-    # Queryset
-    #
-    setattr(schema_type, "get_queryset", classmethod(generate_restricted_queryset()))
 
     #
     # Custom Fields
@@ -348,6 +343,7 @@ def extend_schema_type_tags(schema_type, model):
     if "tags" not in fields_name:
         return schema_type
 
+    @gql_optimizer.resolver_hints(prefetch_related="tags")
     def resolve_tags(self, args):
         return self.tags.all()
 

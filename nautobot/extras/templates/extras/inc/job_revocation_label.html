@@ -1,0 +1,15 @@
+{% load helpers %}
+
+{% if result.status == 'REVOKED' %}
+    {% if result.revocation_type == 'terminated' %}
+        <span class="badge bg-danger">Terminated</span>
+    {% elif result.revocation_type == 'reaped' %}
+        <span class="badge bg-warning">Reaped</span>
+    {% elif result.revocation_type == 'abandoned' %}
+        <span class="badge bg-body-secondary border">Abandoned</span>
+    {% else %}
+        <span class="badge bg-body-secondary border">{{ result.revocation_type }} (unrecognized)</span>
+    {% endif %}
+{% else %}
+    <span> {{ None | placeholder }} </span>
+{% endif %}

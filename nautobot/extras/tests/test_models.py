@@ -6,6 +6,7 @@ from unittest import expectedFailure, mock
 import uuid
 from zoneinfo import ZoneInfo
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -22,7 +23,11 @@ from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
+from nautobot.core.celery.schedulers import NautobotScheduleEntry
 from nautobot.core.choices import ColorChoices
+from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.forms import CommentField, JSONField as JSONFormField
+from nautobot.core.forms.fields import LaxURLField, NullableDateField
 from nautobot.core.testing import get_job_class_and_model, TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.models import (
@@ -37,11 +42,13 @@ from nautobot.dcim.models import (
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     JobExecutionType,
+    JobQueueTypeChoices,
     JobResultStatusChoices,
     LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -1361,6 +1368,27 @@ class ConfigContextTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(ctx1.get("device_family"), "Device Family 1")
         self.assertEqual(ctx2.get("device_family"), None)
 
+    def test_get_for_object_inheritance(self):
+        """
+        Verify that get_for_object handles models inheriting from Device.
+        """
+
+        # We use an existing device but mock its model_name to something else, to emulate inheritance.
+        with mock.patch.object(self.device._meta, "model_name", "proxy_device"):
+            self.assertEqual(self.device._meta.model_name, "proxy_device")
+            contexts = ConfigContext.objects.get_for_object(self.device)
+            self.assertEqual(contexts.count(), 1)
+
+    def test_annotate_config_context_data_inheritance(self):
+        """
+        Verify that annotate_config_context_data() works for models inheriting from Device.
+        """
+
+        # Mock the model_name at the class level to prove issubclass() is used.
+        with mock.patch.object(Device._meta, "model_name", "proxy_device"):
+            annotated_device = Device.objects.filter(pk=self.device.pk).annotate_config_context_data().first()
+            self.assertEqual(self.device.get_config_context(), annotated_device.get_config_context())
+
 
 class ConfigContextSchemaTestCase(ModelTestCases.BaseModelTestCase):
     """
@@ -1820,6 +1848,51 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
         self.repo.remote_url = "http://some-private-host/example.git"
         self.repo.validated_save()
 
+    def test_clean_rejects_invalid_branch(self):
+        """`clean()` rejects branch values that are empty, contain whitespace, or start with '-'."""
+        for bad_value in ("", " main", "main\n", "--orphan"):
+            with self.subTest(branch=bad_value):
+                self.repo.branch = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("branch", handler.exception.message_dict)
+
+    def test_clean_rejects_invalid_current_head(self):
+        """`clean()` rejects non-empty `current_head` values that aren't valid hex commit identifiers."""
+        for bad_value in ("--detach", "deadbeef-not-hex", "abc", "z" * 40):
+            with self.subTest(current_head=bad_value):
+                self.repo.current_head = bad_value
+                with self.assertRaises(ValidationError) as handler:
+                    self.repo.validated_save()
+                self.assertIn("current_head", handler.exception.message_dict)
+
+    def test_clean_accepts_empty_current_head(self):
+        """Empty `current_head` is the default for un-synced repos and must remain accepted."""
+        self.repo.current_head = ""
+        self.repo.validated_save()
+
+    def test_clone_to_directory_rejects_invalid_inputs_without_tempdir_leak(self):
+        """`clone_to_directory()` must validate `branch`/`head` before creating its temp dir.
+
+        Otherwise an option-shaped or whitespace-containing value would only fail inside
+        `GitRepo`, by which point the empty temp dir has already been created and orphaned.
+        """
+        target_dir = tempfile.mkdtemp()
+        try:
+            cases = [
+                {"branch": "--upload-pack=evil"},
+                {"branch": " main"},
+                {"head": "--detach"},
+                {"head": "ref\nname"},
+            ]
+            for kwargs in cases:
+                with self.subTest(**kwargs):
+                    with self.assertRaises(ValueError):
+                        self.repo.clone_to_directory(path=target_dir, **kwargs)
+                    self.assertEqual(os.listdir(target_dir), [])
+        finally:
+            shutil.rmtree(target_dir, ignore_errors=True)
+
     def test_clone_to_directory_context_manager(self):
         """Confirm that the clone_to_directory_context() context manager method works as expected."""
         try:
@@ -2090,11 +2163,11 @@ class GitRepositoryTest(ModelTestCases.BaseModelTestCase):
 
             with self.subTest("Assert a GitCommandError is raised when an invalid commit hash is provided"):
                 with self.assertRaisesRegex(GitCommandError, "malformed object name non-existent"):
-                    path = self.repo.clone_to_directory(path=specified_path, head="non-existent")
+                    self.repo.clone_to_directory(path=specified_path, head="non-existent")
 
             with self.subTest("Assert a ValuError is raised when branch and head are both provided"):
                 with self.assertRaisesRegex(ValueError, "Cannot specify both branch and head"):
-                    path = self.repo.clone_to_directory(branch="main", head="valid-files")
+                    self.repo.clone_to_directory(branch="main", head="valid-files")
         finally:
             shutil.rmtree(specified_path, ignore_errors=True)
             shutil.rmtree(self.tempdir.name, ignore_errors=True)
@@ -2272,6 +2345,34 @@ class JobQueueTest(ModelTestCases.BaseModelTestCase):
 
     model = JobQueue
 
+    def test_job_queue_name_rejects_path_traversal(self):
+        """Job queue name cannot contain '..' or path separators for any queue type."""
+        for queue_type in (JobQueueTypeChoices.TYPE_CELERY, JobQueueTypeChoices.TYPE_KUBERNETES):
+            with self.subTest(queue_type=queue_type, name="contains .."):
+                job_queue = JobQueue(
+                    name="../../etc",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="contains slash"):
+                job_queue = JobQueue(
+                    name="My/Job/Queue",
+                    queue_type=queue_type,
+                )
+                with self.assertRaises(ValidationError) as cm:
+                    job_queue.full_clean()
+                self.assertIn("name", cm.exception.message_dict)
+
+            with self.subTest(queue_type=queue_type, name="valid name passes"):
+                job_queue = JobQueue(
+                    name="valid-queue-name",
+                    queue_type=queue_type,
+                )
+                job_queue.full_clean()
+
 
 class MetadataChoiceTest(ModelTestCases.BaseModelTestCase):
     model = MetadataChoice
@@ -2303,6 +2404,118 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             instance.data_type = MetadataTypeDataTypeChoices.TYPE_TEXT
             instance.validated_save()
+
+    def test_to_form_field_contact_team_returns_none(self):
+        """CONTACT_TEAM data_type has no `_value` input — `to_form_field` must return None
+        so callers can branch on absence rather than receiving a no-op widget."""
+
+        mt = MetadataType.objects.create(
+            name="MT contact-team", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        self.assertIsNone(mt.to_form_field())
+        self.assertNotIsInstance(mt.to_form_field(), django_forms.Field)
+
+    def test_to_form_field_integer_returns_integer_field(self):
+
+        mt = MetadataType.objects.create(name="MT int", data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER)
+        field = mt.to_form_field(initial=42)
+        self.assertIs(type(field), django_forms.IntegerField)
+        self.assertEqual(field.initial, 42)
+        self.assertFalse(field.required)
+
+    def test_to_form_field_float_returns_float_field(self):
+
+        mt = MetadataType.objects.create(name="MT float", data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT)
+        field = mt.to_form_field(initial=1.5)
+        self.assertIs(type(field), django_forms.FloatField)
+        self.assertEqual(field.initial, 1.5)
+
+    def test_to_form_field_boolean_returns_nullboolean_field(self):
+
+        mt = MetadataType.objects.create(name="MT bool", data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN)
+        field = mt.to_form_field(initial=False)
+        self.assertIs(type(field), django_forms.NullBooleanField)
+        widget_choices = dict(field.widget.choices)
+        self.assertIn(None, widget_choices)
+        self.assertIn(True, widget_choices)
+        self.assertIn(False, widget_choices)
+
+    def test_to_form_field_date_returns_nullable_date_field(self):
+
+        mt = MetadataType.objects.create(name="MT date", data_type=MetadataTypeDataTypeChoices.TYPE_DATE)
+        field = mt.to_form_field()
+        self.assertIs(type(field), NullableDateField)
+
+    def test_to_form_field_datetime_returns_datetime_field(self):
+
+        mt = MetadataType.objects.create(name="MT datetime", data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME)
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.DateTimeField)
+
+    def test_to_form_field_url_returns_lax_url_field(self):
+
+        mt = MetadataType.objects.create(name="MT url", data_type=MetadataTypeDataTypeChoices.TYPE_URL)
+        field = mt.to_form_field()
+        self.assertIs(type(field), LaxURLField)
+
+    def test_to_form_field_text_returns_charfield_with_max_length(self):
+        mt = MetadataType.objects.create(name="MT text", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        field = mt.to_form_field(initial="hello")
+        self.assertIs(type(field), django_forms.CharField)
+        self.assertEqual(field.max_length, CHARFIELD_MAX_LENGTH)
+        self.assertEqual(field.initial, "hello")
+
+    def test_to_form_field_markdown_returns_comment_field(self):
+
+        mt = MetadataType.objects.create(name="MT md", data_type=MetadataTypeDataTypeChoices.TYPE_MARKDOWN)
+        field = mt.to_form_field()
+        self.assertIs(type(field), CommentField)
+
+    def test_to_form_field_select_returns_choice_field_with_choices(self):
+
+        mt = MetadataType.objects.create(name="MT select", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="alpha")
+        MetadataChoice.objects.create(metadata_type=mt, value="beta")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.ChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertIn("alpha", choice_values)
+        self.assertIn("beta", choice_values)
+
+    def test_to_form_field_multiselect_returns_multiple_choice_field(self):
+
+        mt = MetadataType.objects.create(name="MT multiselect", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT)
+        MetadataChoice.objects.create(metadata_type=mt, value="x")
+        MetadataChoice.objects.create(metadata_type=mt, value="y")
+
+        field = mt.to_form_field()
+        self.assertIs(type(field), django_forms.MultipleChoiceField)
+        choice_values = [value for value, _ in field.choices]
+        self.assertEqual(set(choice_values), {"x", "y"})
+
+    def test_to_form_field_json_falls_back_to_jsonformfield(self):
+
+        mt = MetadataType.objects.create(name="MT json", data_type=MetadataTypeDataTypeChoices.TYPE_JSON)
+        field = mt.to_form_field()
+        self.assertIs(type(field), JSONFormField)
+
+    def test_to_form_field_applies_form_control(self):
+        """The returned field's widget always carries Bootstrap's `form-control` class so callers
+        don't need to re-apply it after late-stage swaps (e.g. in `ObjectMetadataForm._adapt_value_field`
+        or the HTMX `value_widget` endpoint)."""
+        for data_type in (
+            MetadataTypeDataTypeChoices.TYPE_TEXT,
+            MetadataTypeDataTypeChoices.TYPE_INTEGER,
+            MetadataTypeDataTypeChoices.TYPE_BOOLEAN,
+            MetadataTypeDataTypeChoices.TYPE_DATE,
+            MetadataTypeDataTypeChoices.TYPE_URL,
+            MetadataTypeDataTypeChoices.TYPE_JSON,
+        ):
+            with self.subTest(data_type=data_type):
+                mt = MetadataType.objects.create(name=f"MT FC {data_type}", data_type=data_type)
+                field = mt.to_form_field()
+                self.assertIn("form-control", field.widget.attrs.get("class", ""))
 
 
 class ObjectChangeTest(ModelTestCases.BaseModelTestCase):
@@ -2780,6 +2993,81 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
             instance2.scoped_fields = ["role", "status", "type"]
             instance2.validated_save()
 
+    def _make_om(self, data_type, value=None, *, contact=None, team=None):
+        """Helper to build an ObjectMetadata for a fresh MetadataType of the given data_type."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        mt = MetadataType.objects.create(name=f"GVD {data_type}", data_type=data_type)
+        mt.content_types.set([location_ct])
+        # Use a Location not already metadata-targeted to keep the helper independent.
+        loc = Location.objects.filter(associated_object_metadata__isnull=True).first()
+        return ObjectMetadata(
+            metadata_type=mt,
+            _value=value,
+            contact=contact,
+            team=team,
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=loc.pk,
+        )
+
+    def test_get_value_display_text_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value="hello")
+        self.assertEqual(om.get_value_display(), "hello")
+
+    def test_get_value_display_integer_returns_plain_value(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_INTEGER, value=42)
+        self.assertEqual(om.get_value_display(), 42)
+
+    def test_get_value_display_boolean_renders_html_icon(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_BOOLEAN, value=True)
+        # render_boolean(True) emits the check-bold span; render_boolean(False) emits close-thick.
+        self.assertIn("mdi-check-bold", om.get_value_display())
+        om._value = False
+        self.assertIn("mdi-close-thick", om.get_value_display())
+
+    def test_get_value_display_url_returns_linkified_anchor(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_URL, value="https://example.com")
+        rendered = om.get_value_display()
+        self.assertIn('href="https://example.com"', rendered)
+        self.assertIn(">https://example.com<", rendered)
+
+    def test_get_value_display_markdown_renders_html(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MARKDOWN, value="**bold**")
+        rendered = om.get_value_display()
+        self.assertIn("<strong>bold</strong>", rendered)
+
+    def test_get_value_display_json_pretty_prints(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_JSON, value={"key": "val"})
+        rendered = om.get_value_display()
+        self.assertIn("language-json", rendered)
+        self.assertIn("key", rendered)
+
+    def test_get_value_display_multiselect_joins_with_commas(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_MULTISELECT, value=["red", "blue"])
+        self.assertEqual(om.get_value_display(), "red, blue")
+
+    def test_get_value_display_contact_team_returns_linkified_contact(self):
+        contact = Contact.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, contact=contact)
+        rendered = om.get_value_display()
+        self.assertIn(contact.get_absolute_url(), rendered)
+        self.assertIn(str(contact), rendered)
+
+    def test_get_value_display_contact_team_returns_linkified_team(self):
+        team = Team.objects.first()
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM, team=team)
+        rendered = om.get_value_display()
+        self.assertIn(team.get_absolute_url(), rendered)
+        self.assertIn(str(team), rendered)
+
+    def test_get_value_display_contact_team_returns_none_when_neither_set(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM)
+        self.assertIsNone(om.get_value_display())
+
+    def test_get_value_display_returns_none_when_value_is_none(self):
+        om = self._make_om(MetadataTypeDataTypeChoices.TYPE_TEXT, value=None)
+        self.assertIsNone(om.get_value_display())
+
 
 class RoleTest(ModelTestCases.BaseModelTestCase):
     """Tests for `Role` model class."""
@@ -2872,6 +3160,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="Crontab UTC Job",
             interval=JobExecutionType.TYPE_CUSTOM,
             crontab="0 17 * * *",
+            job_kwargs={},
         )
         self.crontab_est_job = ScheduledJob.objects.create(
             name="Crontab EST Job",
@@ -2896,6 +3185,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off EST Job",
             interval=JobExecutionType.TYPE_FUTURE,
             start_time=datetime(year=2050, month=1, day=22, hour=0, minute=0, tzinfo=ZoneInfo("America/New_York")),
+            job_kwargs={},
         )
         self.one_off_immediately_job = ScheduledJob.create_schedule(
             job_model=self.job_model,
@@ -2903,6 +3193,7 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
             name="One-off IMMEDIATELY job",
             interval=JobExecutionType.TYPE_IMMEDIATELY,
             start_time=now(),
+            job_kwargs={},
         )
 
     def test_scheduled_job_queue_setter(self):
@@ -3147,15 +3438,386 @@ class ScheduledJobTest(ModelTestCases.BaseModelTestCase):
                 is_due, _ = crontab.is_due(last_run_at=datetime(2024, 3, 9, 17, 0, tzinfo=ZoneInfo("America/New_York")))
                 self.assertTrue(is_due)
 
+    def test_on_workflow_initiated(self):
+        """Should set status to PENDING and disable the job."""
+        approval_workflow = mock.Mock()
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.daily_utc_job.on_workflow_initiated(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.PENDING)
+        self.assertTrue(self.daily_utc_job.approval_required)
+        self.assertFalse(self.daily_utc_job.enabled)
+
+    def test_on_workflow_approved(self):
+        """Should set status to ACTIVE, enable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_approved(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.assertTrue(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_on_workflow_denied(self):
+        """Should set status to DENIED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
+        approval_workflow = mock.Mock()
+        approval_workflow.decision_date = decision_date
+        self.daily_utc_job.on_workflow_denied(approval_workflow)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.DENIED)
+        self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_last_run_at_not_set_on_save(self):
+        """Test that save() does not set a fake last_run_at for any interval type."""
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_utc_job, JobExecutionType.TYPE_CUSTOM),
+            (self.one_off_utc_job, JobExecutionType.TYPE_FUTURE),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+        for interval_type in [JobExecutionType.TYPE_WEEKLY, JobExecutionType.TYPE_HOURLY]:
+            with self.subTest(interval_type=interval_type):
+                job = ScheduledJob.objects.create(
+                    name=f"{interval_type} Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    interval=interval_type,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+                    time_zone=get_default_timezone(),
+                )
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+
+    def test_disabled_job_last_run_at_cleared(self):
+        """Test that disabling a job clears last_run_at."""
+        self.daily_utc_job.last_run_at = now()
+        self.daily_utc_job.save()
+        self.assertIsNotNone(self.daily_utc_job.last_run_at)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.assertIsNone(self.daily_utc_job.last_run_at)
+
+    def test_schedule_entry_sets_last_run_at(self):
+        """Test that NautobotScheduleEntry sets last_run_at to start_time - 1 minute when model has no last_run_at."""
+
+        for job, interval_type in [
+            (self.daily_utc_job, JobExecutionType.TYPE_DAILY),
+            (self.crontab_est_job, JobExecutionType.TYPE_CUSTOM),
+        ]:
+            with self.subTest(interval_type=interval_type):
+                job.refresh_from_db()
+                self.assertIsNone(job.last_run_at)
+                entry = NautobotScheduleEntry(model=job)
+                expected = job.start_time - timedelta(minutes=1)
+                self.assertEqual(entry.last_run_at, expected)
+
+    def test_schedule_entry_is_due_not_immediate(self):
+        """Test that new scheduled jobs with last_run_at=None do not run immediately.
+
+        Integration test verifying that NautobotScheduleEntry.is_due() (called by celery-beat
+        on each tick) correctly waits for the next crontab match instead of running ASAP.
+        Regression test for https://github.com/nautobot/nautobot/issues/8316
+        """
+
+        with self.subTest("TYPE_CUSTOM crontab job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                crontab_job = ScheduledJob.objects.create(
+                    name="Crontab Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_CUSTOM,
+                    start_time=datetime(year=2050, month=1, day=22, hour=11, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                    crontab="0 17 * * *",  # 5 PM UTC — 5 hours away from "now"
+                )
+                self.assertIsNone(crontab_job.last_run_at)
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_CUSTOM job should not be immediately due")
+                self.assertGreater(next_run_delay, 3600, "Next run delay should be hours away, not seconds")
+
+        with self.subTest("TYPE_CUSTOM crontab job should be due at crontab match time"):
+            with time_machine.travel("2050-01-22 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=crontab_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_CUSTOM job should be due when crontab matches")
+
+        with self.subTest("TYPE_DAILY job should not be immediately due"):
+            with time_machine.travel("2050-01-22 12:00 +0000"):
+                daily_job = ScheduledJob.objects.create(
+                    name="Daily Not Due Job",
+                    task="pass_job.TestPassJob",
+                    job_model=self.job_model,
+                    user=self.user,
+                    interval=JobExecutionType.TYPE_DAILY,
+                    start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=ZoneInfo("UTC")),
+                    time_zone=ZoneInfo("UTC"),
+                )
+                self.assertIsNone(daily_job.last_run_at)
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, next_run_delay = entry.is_due()
+                self.assertFalse(is_due, "TYPE_DAILY job should not be immediately due")
+
+        with self.subTest("TYPE_DAILY job should be due at scheduled time"):
+            with time_machine.travel("2050-01-23 17:00 +0000"):
+                entry = NautobotScheduleEntry(model=daily_job)
+                is_due, _ = entry.is_due()
+                self.assertTrue(is_due, "TYPE_DAILY job should be due at its scheduled time")
+
+    def test_custom_schedule_start_time_is_next_crontab_match(self):
+        """Test that create_schedule sets start_time to the next crontab match when no start_time is provided."""
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom No Start Time",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="0 17 * * *",  # 5 PM daily
+                job_kwargs={},
+            )
+            # start_time should be the next crontab match (2050-01-22 17:00 UTC), not ~now
+            self.assertEqual(job.start_time.hour, 17)
+            self.assertEqual(job.start_time.minute, 0)
+            self.assertEqual(job.start_time.date(), datetime(2050, 1, 22).date())
+
+    def test_custom_schedule_start_time_all_crontab_fields(self):
+        """Test that create_schedule correctly computes the next match for a fully specified crontab."""
+        # "5 4 3 2 1" = minute=5, hour=4, day_of_month=3, month=February, day_of_week=Monday
+        # Next Feb 3 from 2050-01-22 is 2050-02-03 at 04:05 UTC
+        with time_machine.travel("2050-01-22 12:00 +0000"):
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Custom All Fields",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                job_kwargs={},
+            )
+            self.assertEqual(job.start_time.minute, 5)
+            self.assertEqual(job.start_time.hour, 4)
+            self.assertEqual(job.start_time.month, 2)
+            self.assertEqual(job.start_time.day, 3)
+
+    def test_create_schedule_uses_extra_kwargs_when_job_kwargs_none(self):
+        """Ensure deprecated extra_kwargs are used when job_kwargs is None."""
+        extra_kwargs = {"foo": "bar"}
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            job = ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Deprecated kwargs fallback",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+                **extra_kwargs,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        self.assertEqual(job.kwargs.get("foo"), "bar")
+
+    def test_create_schedule_raises_when_no_kwargs_provided(self):
+        """Ensure ValueError is raised if both job_kwargs and extra_kwargs are missing."""
+        with self.assertRaises(ValueError) as err:
+            ScheduledJob.create_schedule(
+                job_model=self.job_model,
+                user=self.user,
+                name="Missing kwargs",
+                interval=JobExecutionType.TYPE_CUSTOM,
+                crontab="5 4 3 2 1",
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
     def test_on_workflow_canceled(self):
-        """Should change decision_date and schedule_job should be disabled."""
-        decision_date = datetime(2025, 1, 1)
+        """Should set status to CANCELED, disable the job and set decision_date."""
+        decision_date = datetime(2025, 1, 1, tzinfo=ZoneInfo("UTC"))
         approval_workflow = mock.Mock()
         approval_workflow.decision_date = decision_date
         self.assertIsNone(self.daily_utc_job.decision_date)
         self.daily_utc_job.on_workflow_canceled(approval_workflow)
-        self.assertEqual(self.daily_utc_job.decision_date, approval_workflow.decision_date)
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.CANCELED)
         self.assertFalse(self.daily_utc_job.enabled)
+        self.assertEqual(self.daily_utc_job.decision_date, decision_date)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_sets_completed_when_enabled_turned_off(self):
+        """When celery beat finishes a one-off job it sets enabled=False — status should flip to COMPLETED."""
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.ACTIVE)
+        self.daily_utc_job.enabled = False
+        self.daily_utc_job.save()
+        self.daily_utc_job.refresh_from_db()
+        self.assertEqual(self.daily_utc_job.state, ScheduledJobStateChoices.COMPLETED)
+        self.assertFalse(self.daily_utc_job.approval_required)
+
+    def test_save_does_not_override_non_active_status_when_disabled(self):
+        """Disabling a job that is already PENDING/DENIED/CANCELED should not overwrite the status."""
+        for state in [
+            ScheduledJobStateChoices.PENDING,
+            ScheduledJobStateChoices.DENIED,
+            ScheduledJobStateChoices.CANCELED,
+        ]:
+            with self.subTest(state=state):
+                self.daily_utc_job.enabled = False
+                self.daily_utc_job.state = state
+                self.daily_utc_job.save()
+                self.daily_utc_job.refresh_from_db()
+                self.assertEqual(self.daily_utc_job.state, state)
+
+    def test_schedule_entry_records_failure_when_user_is_null(self):
+        """ScheduledJob with user=None should: create failed JobResult, disable, set state=ERRORED."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Null User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
+        job_results = JobResult.objects.filter(scheduled_job=scheduled_job)
+        self.assertEqual(job_results.count(), 1)
+        job_result = job_results.first()
+        self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIsNone(job_result.user)
+        self.assertIn("originating user has been removed", job_result.traceback)
+        log_entries = JobLogEntry.objects.filter(job_result=job_result)
+        self.assertEqual(log_entries.count(), 1)
+        self.assertEqual(log_entries.first().log_level, "error")
+
+    def test_schedule_entry_records_failure_when_user_is_orphan_fk(self):
+        """When user_id refers to a deleted user (FK orphan), behave like user=None."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Orphan FK Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        # Simulate a FK orphan: a user_id that doesn't correspond to any auth_user row.
+        # We can't write the orphan to the DB on MySQL (FK enforced on UPDATE), so we
+        # mutate the in-memory model instead; the schedulers code reads from the in-memory
+        # model and that's the code path we want to verify.
+        scheduled_job.user_id = uuid.uuid4()
+
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertIsNone(scheduled_job.user_id)
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 1)
+
+    def test_schedule_entry_with_valid_user_does_not_record_failure(self):
+        """Sanity check: a valid user should not trigger the failure path."""
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Valid User Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=self.user,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        scheduled_job.refresh_from_db()
+        self.assertTrue(scheduled_job.enabled)
+        self.assertEqual(entry.options["nautobot_job_user_id"], self.user.id)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_schedule_entry_missing_user_skips_jobresult_when_job_model_is_none(self):
+        """If both user and job_model are missing, no JobResult is created (can't construct one without job_model)."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="No Job Model Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        # job_model is required at the DB layer, but the in-memory mutation exercises the
+        # `_record_missing_user_failure` early-return path.
+        scheduled_job.job_model = None
+
+        NautobotScheduleEntry(model=scheduled_job)
+
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_schedule_entry_missing_user_swallows_jobresult_creation_failure(self):
+        """A failure during JobResult/JobLogEntry creation must not crash celery beat — the schedule is still disabled."""
+        scheduled_job = ScheduledJob.objects.create(
+            name="JobResult Create Fails Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        with mock.patch(
+            "nautobot.core.celery.schedulers.JobResult.objects.create",
+            side_effect=RuntimeError("simulated bookkeeping failure"),
+        ):
+            # Must not propagate the exception.
+            NautobotScheduleEntry(model=scheduled_job)
+
+        scheduled_job.refresh_from_db()
+        self.assertFalse(scheduled_job.enabled)
+        self.assertEqual(scheduled_job.state, ScheduledJobStateChoices.ERRORED)
+        self.assertEqual(JobResult.objects.filter(scheduled_job=scheduled_job).count(), 0)
+
+    def test_apply_async_skips_dispatch_when_user_is_missing(self):
+        """When the entry lacks `nautobot_job_user_id`, apply_async returns None without dispatching."""
+        from nautobot.core.celery.schedulers import NautobotDatabaseScheduler
+
+        scheduled_job = ScheduledJob.objects.create(
+            name="Apply Async Skip Job",
+            task="pass_job.TestPassJob",
+            job_model=self.job_model,
+            user=None,
+            interval=JobExecutionType.TYPE_DAILY,
+            start_time=datetime(year=2050, month=1, day=22, hour=17, minute=0, tzinfo=get_default_timezone()),
+            time_zone=get_default_timezone(),
+        )
+        entry = NautobotScheduleEntry(model=scheduled_job)
+        self.assertNotIn("nautobot_job_user_id", entry.options)
+
+        scheduler = mock.MagicMock(spec=NautobotDatabaseScheduler)
+        scheduler.app = entry.app
+        result = NautobotDatabaseScheduler.apply_async(scheduler, entry, advance=False)
+        self.assertIsNone(result)
+        # Verify the task was never dispatched.
+        scheduler.send_task.assert_not_called()
 
     # TODO uncomment when we have a way to setup the NautobotDatabaseScheduler correctly
     # @mock.patch("nautobot.extras.utils.run_kubernetes_job_and_return_job_result")
@@ -3859,6 +4521,7 @@ class JobResultTestCase(TestCase):
             "nautobot_job_console_log",
             "nautobot_job_user_id",
             "nautobot_job_ignore_singleton_lock",
+            "nautobot_job_queue_type",
             "queue",
         }
         self.assertEqual(set(result.keys()), expected_keys)
@@ -3953,6 +4616,21 @@ class JobResultTestCase(TestCase):
 
         save_mock.assert_called_once()
 
+    def test_console_log_property(self):
+        """console_log property should reflect nautobot_job_console_log from celery_kwargs."""
+
+        with self.subTest("Returns True when nautobot_job_console_log is True"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
+            self.assertTrue(self.job_result.console_log)
+
+        with self.subTest("Returns False when nautobot_job_console_log is False"):
+            self.job_result.celery_kwargs = {"nautobot_job_console_log": False}
+            self.assertFalse(self.job_result.console_log)
+
+        with self.subTest("Returns False when key is absent"):
+            self.job_result.celery_kwargs = {}
+            self.assertFalse(self.job_result.console_log)
+
     def test_log_creates_job_console_entry_when_console_log_enabled(self):
         """log() should create a JobConsoleEntry when nautobot_job_console_log is True."""
         self.job_result.celery_kwargs = {"nautobot_job_console_log": True}
@@ -3979,6 +4657,136 @@ class JobResultTestCase(TestCase):
                 self.job_result.log("test message")
 
                 self.assertEqual(JobConsoleEntry.objects.filter(job_result=self.job_result).count(), 0)
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_enqueue):
+        """execute_job should fallback to extra_kwargs and log a warning when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+                foo="bar",
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs=None,
+            synchronous=True,
+        )
+
+    @mock.patch("nautobot.extras.models.JobResult.enqueue_job")
+    def test_execute_job_extract_celery_kwargs_is_are_in_extra_kwargs(self, mock_enqueue):
+        """execute_job should extract celery_kwargs when exist in extra_kwargs when job_kwargs=None."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.execute_job(job_model, self.user, foo="bar", celery_kwargs={"test": "test"})
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        mock_enqueue.assert_called_once_with(
+            job_model,
+            self.user,
+            foo="bar",
+            job_kwargs={"foo": "bar"},
+            celery_kwargs={"test": "test"},
+            synchronous=True,
+        )
+
+    def test_execute_job_raises_when_no_kwargs(self):
+        """execute_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.execute_job(
+                job_model,
+                self.user,
+            )
+
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    @mock.patch("nautobot.extras.jobs.run_job.apply")
+    @mock.patch("nautobot.extras.models.JobResult._sync_eager_result_to_job_result")
+    def test_enqueue_job_uses_extra_kwargs_when_job_kwargs_none(self, mock_sync, mock_run_job_apply):
+        """enqueue_job should fallback to extra_kwargs and log a warning."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertLogs("nautobot.extras.models", level="WARNING") as log_cm:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+                foo="bar",
+                synchronous=True,
+            )
+
+        self.assertTrue(
+            any(
+                "Using deprecated **job_kwargs pattern, please instead switch to passing job_kwargs as a single parameter"
+                in msg
+                for msg in log_cm.output
+            ),
+            f"Expected a warning log about the deprecated `**job_kwargs` failure, got: {log_cm.output}",
+        )
+
+        job_result = JobResult.objects.first()
+        mock_run_job_apply.assert_called_once_with(
+            args=[job_model.class_path],
+            kwargs={"foo": "bar"},
+            task_id=str(job_result.id),
+            **job_result.celery_kwargs,
+        )
+        mock_sync.assert_called_once()
+
+    def test_enqueue_job_raises_when_no_kwargs(self):
+        """enqueue_job should raise if job_kwargs=None and no extra_kwargs provided."""
+        _, job_model = get_job_class_and_model("pass_job", "TestPassJob")
+
+        with self.assertRaises(ValueError) as err:
+            JobResult.enqueue_job(
+                job_model,
+                self.user,
+            )
+        self.assertEqual(str(err.exception), "`job_kwargs` has to be defined.")
+
+    def test_queue_type_property(self):
+        """queue_type property should prefer celery_kwargs and fallback to JobQueue lookup."""
+
+        with self.subTest("Returns queue type from celery_kwargs when present"):
+            self.job_result.celery_kwargs = {"nautobot_job_queue_type": "celery", "queue": "test-default"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns queue type from JobQueue lookup"):
+            JobQueue.objects.create(
+                name="test-celery",
+                queue_type="celery",
+            )
+            self.job_result.celery_kwargs = {"queue": "test-celery"}
+            self.assertEqual(self.job_result.queue_type, "celery")
+
+        with self.subTest("Returns None when JobQueue does not exist"):
+            self.job_result.celery_kwargs = {"queue": "does-not-exist"}
+            self.assertIsNone(self.job_result.queue_type)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
@@ -4023,3 +4831,21 @@ class WebhookTest(ModelTestCases.BaseModelTestCase):
             conflicts["type_create"],
             [f"A webhook already exists for create on DCIM | device to URL {self.url}"],
         )
+
+    def test_clean_payload_url_validation(self):
+        """`Webhook.clean()` surfaces SSRF policy violations against the `payload_url` field."""
+        cases = [
+            ("bad scheme is rejected", "ftp://example.com/", False),
+            ("loopback ip literal is rejected", "http://127.0.0.1/", False),
+            ("link-local ip literal is rejected", "http://169.254.169.254/", False),
+            ("public url is accepted", "https://example.com/hooks/abc", True),
+        ]
+        for desc, payload_url, should_pass in cases:
+            with self.subTest(desc):
+                webhook = Webhook(name="test-webhook", type_create=True, payload_url=payload_url)
+                if should_pass:
+                    webhook.clean()
+                else:
+                    with self.assertRaises(ValidationError) as ctx:
+                        webhook.clean()
+                    self.assertIn("payload_url", ctx.exception.message_dict)

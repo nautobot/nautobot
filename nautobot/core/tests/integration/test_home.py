@@ -86,6 +86,7 @@ class HomeTestCase(SeleniumTestCase):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f"//div[@id='draggable-homepage-panels']"
+                        f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group']"
                         f"/div[@class='card nb-draggable']"
                         f"/div[@class='card-header nb-draggable-handle']"
                         f"/strong[contains(text(), '{panel_name}')]"
@@ -102,3 +103,38 @@ class HomeTestCase(SeleniumTestCase):
                     f"//div[@class='card-header nb-draggable-handle']/strong[text()='{panel_name}']"
                 )
                 self.assertEqual(len(panel), 0)
+
+    def test_homepage_layout_panels_collapse(self):
+        """
+        Confirm that homepage layout panels are collapsible and that their collapsed state is saved in user preferences.
+        """
+        self.add_permissions("dcim.view_location")
+        self.add_permissions("circuits.view_circuit")
+
+        self.browser.visit(self.live_server_url)
+
+        organization_panel_xpath = "//div[contains(@class, 'nb-panel-group')][1]/div[@id='organization']"
+        circuits_panel_xpath = "//div[contains(@class, 'nb-panel-group')][2]/div[@id='circuits']"
+        collapsed_xpath = "/ul[not(contains(@class, 'show'))]"
+        expanded_xpath = "/ul[contains(@class, 'show')]"
+
+        # Assert that all panels are expanded by default.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + expanded_xpath, wait_time=10))
+
+        # Collapse the Circuits panel.
+        circuits_panel_button = self.browser.find_by_xpath(f"{circuits_panel_xpath}//span[@data-bs-toggle='collapse']")
+        circuits_panel_button.click()
+        # Assert that the Circuits panel is now collapsed.
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))
+
+        # Reload the page to make sure that user preferences with panels collapsed state were correctly saved.
+        self.browser.reload()
+
+        # Assert that the Circuits panel stays collapsed.
+        self.assertTrue(
+            self.browser.is_element_present_by_xpath(organization_panel_xpath + expanded_xpath, wait_time=10)
+        )
+        self.assertTrue(self.browser.is_element_present_by_xpath(circuits_panel_xpath + collapsed_xpath, wait_time=10))

@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
+from nautobot.dcim.models import Device, VirtualDeviceContext
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -14,6 +15,7 @@ from nautobot.ipam.models import (
     VRFDeviceAssignment,
     VRFPrefixAssignment,
 )
+from nautobot.virtualization.models import VirtualMachine
 
 
 @receiver(pre_save, sender=VRFDeviceAssignment)
@@ -40,21 +42,74 @@ def vrf_prefix_associated(sender, instance, action, reverse, model, pk_set, **kw
             raise ValidationError({"prefixes": "Prefix must match namespace of VRF"})
 
 
+def _validate_vrf_device_assignments(sender, instance, pk_set, device_field):
+    """
+    Helper function to validate VRFDeviceAssignment instances when devices/VMs/VDCs are added to a VRF.
+
+    For example:
+        * vrf.devices.add(device)
+        * vrf.virtual_machines.add(virtual_machine)
+        * vrf.virtual_device_contexts.add(virtual_device_context)
+
+    Args:
+        sender: The through model class (VRFDeviceAssignment)
+        instance: The VRF instance
+        pk_set: Set of device/VM/VDC PKs being added
+        device_field: Field name to filter on ('device', 'virtual_machine', or 'virtual_device_context')
+    """
+    filter_kwargs = {"vrf": instance, device_field + "_id__in": pk_set}
+    for assignment in sender.objects.filter(**filter_kwargs):
+        assignment.validated_save()
+
+
+def _validate_device_vrf_assignments(sender, instance, pk_set, device_field):
+    """
+    Helper function to validate VRFDeviceAssignment instances when VRFs are added to a device/VM/VDC.
+
+    For example:
+        * device.vrfs.add(vrf)
+        * virtual_machine.vrfs.add(vrf)
+        * virtual_device_context.vrfs.add(vrf)
+
+    Args:
+        sender: The through model class (VRFDeviceAssignment)
+        instance: The Device/VirtualMachine/VirtualDeviceContext instance
+        pk_set: Set of VRF PKs being added
+        device_field: Field name to filter on ('device', 'virtual_machine', or 'virtual_device_context')
+    """
+    filter_kwargs = {device_field: instance, "vrf_id__in": pk_set}
+    for assignment in sender.objects.filter(**filter_kwargs):
+        assignment.validated_save()
+
+
 @receiver(m2m_changed, sender=VRFDeviceAssignment)
 def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kwargs):
     """
-    Assert validation on m2m when devices are associated with a VRF.
+    Assert validation on m2m when Devices, VMs, or VDCs are associated with a VRF.
     """
-
     # TODO(jathan): Temporary workaround until a formset to add/remove/update VRFs <-> Devices and
-    # optionally setting RD/name on assignment. k
-    if action == "post_add":
+    # optionally setting RD/name on assignment.
+    if action == "post_add" and pk_set:
         if isinstance(instance, VRF):
-            for assignment in instance.device_assignments.iterator():
-                assignment.validated_save()
+            if issubclass(model, Device):
+                device_field = "device"
+            elif issubclass(model, VirtualMachine):
+                device_field = "virtual_machine"
+            elif issubclass(model, VirtualDeviceContext):
+                device_field = "virtual_device_context"
+            else:
+                return
+            _validate_vrf_device_assignments(sender, instance, pk_set, device_field)
         else:
-            for assignment in instance.vrf_assignments.iterator():
-                assignment.validated_save()
+            if isinstance(instance, Device):
+                device_field = "device"
+            elif isinstance(instance, VirtualMachine):
+                device_field = "virtual_machine"
+            elif isinstance(instance, VirtualDeviceContext):
+                device_field = "virtual_device_context"
+            else:
+                return
+            _validate_device_vrf_assignments(sender, instance, pk_set, device_field)
 
 
 @receiver(pre_delete, sender=IPAddressToInterface)

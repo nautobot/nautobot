@@ -90,6 +90,19 @@ const fixupSubtreeDisplay = (td) => {
   }
 };
 
+const hidePaginationInfoOnToggle = (td) => {
+  const button = td.querySelector('button.nb-subtree-expandable');
+  button?.addEventListener('click', () => {
+    /*
+     * Though `#paginator` is a configurable ID, this scenario here is only concerned about `object_list.html` which
+     * guarantees it to be constant.
+     */
+    const paginator = document.querySelector('#paginator');
+    paginator?.querySelector('.nb-paginator-info')?.classList.toggle('d-none', true);
+    paginator?.querySelector('.nb-paginator-info + .nb-paginator-divider')?.classList.toggle('d-none', true);
+  });
+};
+
 export const initializeSubtrees = () => {
   htmx.onLoad((content) => {
     const tree_tds = Array.from(content.getElementsByClassName('nb-tree-element'));
@@ -97,6 +110,7 @@ export const initializeSubtrees = () => {
       tree_tds.forEach((td) => {
         maybeAddSubtreeExpansionCaret(td);
         fixupSubtreeDisplay(td);
+        hidePaginationInfoOnToggle(td);
       });
       htmx.process(content);
 

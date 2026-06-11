@@ -1,11 +1,15 @@
 import datetime
 import json
+import tempfile
 from unittest import skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 
@@ -26,8 +30,11 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
+from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -77,7 +84,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import Cluster, ClusterType
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
 User = get_user_model()
@@ -101,7 +108,10 @@ class Mixins:
             """
             Test tracing a device component's attached cable.
             """
-            obj = self.model.objects.first()
+            if self.model is Interface:
+                obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
+            else:
+                obj = self.model.objects.first()
             peer_device = Device.objects.create(
                 location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
                 device_type=DeviceType.objects.first(),
@@ -663,6 +673,15 @@ class RackGroupTest(APIViewTestCases.APIViewTestCase, APIViewTestCases.TreeModel
         )
 
 
+# Minimal 1x1 pixel PNG used for testing rack images.
+_MINIMAL_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+    b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00"
+    b"\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00"
+    b"\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+
+
 class RackTest(APIViewTestCases.APIViewTestCase):
     model = Rack
     choices_fields = ["outer_unit", "type", "width"]
@@ -907,6 +926,218 @@ class RackTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.get("Content-Type"), "image/svg+xml")
         self.assertIn(b'<text class="unit" x="15.0" y="915.0">01</text>', response.content)
 
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_front_face_device_rendering(self):
+        """Test that a front-facing device is rendered with role color rect and status square on front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.get("Content-Type"), "image/svg+xml")
+        content = response.content.decode()
+        # Device link should be present
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Role color fill should be present
+        self.assertIn(f"fill: #{device.role.color}", content)
+        # Status color fill should be present (status square only on front face)
+        self.assertIn(f"fill: #{device.status.color}", content)
+        # Device name text should be present
+        self.assertIn(str(device), content)
+        # Full name text element should be present
+        self.assertIn("rack-device-fullname", content)
+        self.assertIn("rack-device-shortname", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_full_depth_device(self):
+        """Test that a full-depth front-facing device renders as blocked on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device full depth so it appears on the rear face
+        device.device_type.is_full_depth = True
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device link should still be present on rear face
+        self.assertIn(reverse("dcim:device", kwargs={"pk": device.pk}), content)
+        # Rear face should show "slot blocked" class (not role color)
+        self.assertIn("slot blocked", content)
+        # Status color should NOT be present (no status square on rear face)
+        self.assertNotIn(f"fill: #{device.status.color}", content)
+        # Device name text should still be present
+        self.assertIn(str(device), content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_rear_face_half_depth_device(self):
+        """Test that a half-depth front-facing device renders as blocked_partial on the rear face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device half depth so it shows as blocked_partial on the rear
+        device.device_type.is_full_depth = False
+        device.device_type.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Half-depth devices on opposite face should show blocked_partial
+        self.assertIn("slot blocked_partial", content)
+        # Should show "add device" text (it's treated as a partially-available slot)
+        self.assertIn("add device", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_display_fullname_false(self):
+        """Test that display_fullname=false toggles the hidden class on name elements."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&display_fullname=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # When display_fullname is false, fullname should have "hidden" class
+        self.assertIn("rack-device-fullname hidden", content)
+        # And shortname should NOT have "hidden" class
+        self.assertRegex(content, r'class="rack-device-shortname"')
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_false(self):
+        """Test that include_images=false prevents image embedding in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front&include_images=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # No device-image elements should be present
+        self.assertNotIn("device-image", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_front(self):
+        """Test that a front device type image is embedded in the front face SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.front_image = SimpleUploadedFile(
+                    name="front.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_include_images_rear(self):
+        """Test that a rear device type image is embedded in the rear face SVG for a full-depth device."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        device.device_type.is_full_depth = True
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                device.device_type.rear_image = SimpleUploadedFile(
+                    name="rear.png",
+                    content=_MINIMAL_PNG,
+                    content_type="image/png",
+                )
+                device.device_type.save()
+
+                response = self.client.get(f"{url}?render=svg&face=rear", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                content = response.content.decode()
+                self.assertIn("device-image", content)
+                self.assertIn("devicetype-images/", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_with_reservation(self):
+        """Test that reserved units are rendered with the reserved class in SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        user = self.user
+        RackReservation.objects.create(rack=rack, units=[1, 2, 3], user=user, description="Test Reservation")
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Reserved units should have the "reserved" class
+        self.assertIn("reserved", content)
+        # Reservation description should be in the SVG
+        self.assertIn("Test Reservation", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_device_with_bays(self):
+        """Test that devices with device bays show bay count details in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Create a device bay on the device
+        DeviceBay.objects.create(device=device, name="Bay 1")
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device bay count should appear in the device name text (0/1 since no child installed)
+        self.assertIn("(0/1)", content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_unpermitted_device(self):
+        """Test that devices a user cannot view are rendered as blocked (no link or details)."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Grant only rack view, NOT device view — device should render as blocked
+        self.add_permissions("dcim.view_rack")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # Device should be rendered as blocked (no device link, just a blocked rect)
+        device_url = reverse("dcim:device", kwargs={"pk": device.pk})
+        self.assertNotIn(device_url, content)
+        # Should have a blocked rect for the device's position
+        self.assertIn('class="blocked"', content)
+
+    @override_settings(RACK_ELEVATION_DEFAULT_UNIT_HEIGHT=22, RACK_ELEVATION_DEFAULT_UNIT_WIDTH=230)
+    def test_get_rack_elevation_svg_multi_u_device(self):
+        """Test that multi-U devices span the correct height in the SVG."""
+        rack = Rack.objects.get(name="Populated Rack")
+        device = rack.devices.first()
+        # Make the device 2U
+        device.device_type.u_height = 2
+        device.device_type.save()
+        device.save()
+        self.add_permissions("dcim.view_rack", "dcim.view_device")
+        url = reverse("dcim-api:rack-elevation", kwargs={"pk": rack.pk})
+
+        response = self.client.get(f"{url}?render=svg&face=front", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        content = response.content.decode()
+        # The device rect should have height of 2 * unit_height = 44
+        self.assertIn('height="44"', content)
+        # Device name should still be present
+        self.assertIn(str(device), content)
+
 
 class RackReservationTest(APIViewTestCases.APIViewTestCase):
     model = RackReservation
@@ -1045,6 +1276,40 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
                 "model": "Device Type 7",
             },
         ]
+
+    def test_filter_subdevice_role(self):
+        self.add_permissions("dcim.view_devicetype")
+        manufacturer = Manufacturer.objects.first()
+        device_family = DeviceFamily.objects.first()
+
+        roles = [
+            (SubdeviceRoleChoices.ROLE_PARENT_CHILD, "Device Type ParentChild API", 0),
+            (SubdeviceRoleChoices.ROLE_PARENT, "Device Type Parent API", None),
+            (SubdeviceRoleChoices.ROLE_CHILD, "Device Type Child API", 0),
+        ]
+        device_types = {}
+        for role, model, u_height in roles:
+            kwargs = {
+                "manufacturer": manufacturer,
+                "device_family": device_family,
+                "model": model,
+                "subdevice_role": role,
+            }
+            if u_height is not None:
+                kwargs["u_height"] = u_height
+            device_types[role] = DeviceType.objects.create(**kwargs)
+
+        url = self._get_list_url()
+        for role, _, _ in roles:
+            with self.subTest(role=role):
+                response = self.client.get(url, {"subdevice_role": role}, **self.header)
+
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                result_ids = {item["id"] for item in response.data["results"]}
+                self.assertIn(str(device_types[role].pk), result_ids)
+                for other_role, other_device_type in device_types.items():
+                    if other_role != role:
+                        self.assertNotIn(str(other_device_type.pk), result_ids)
 
 
 class ModuleTypeTest(APIViewTestCases.APIViewTestCase):
@@ -1425,6 +1690,9 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
         device_type = DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first()
+        parent_child_device_type = DeviceType.objects.filter(
+            subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD
+        ).first()
 
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 1")
         DeviceBayTemplate.objects.create(device_type=device_type, name="Device Bay Template 2")
@@ -1442,6 +1710,10 @@ class DeviceBayTemplateTest(Mixins.BasePortTemplateTestMixin):
             {
                 "device_type": device_type.pk,
                 "name": "Device Bay Template 6",
+            },
+            {
+                "device_type": parent_child_device_type.pk,
+                "name": "Device Bay Template 7",
             },
         ]
 
@@ -1501,6 +1773,8 @@ class PlatformTest(APIViewTestCases.APIViewTestCase):
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
     @override_settings(
         NETWORK_DRIVERS={
@@ -2889,6 +3163,7 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
         device_types = (
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT).first(),
             DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_CHILD).first(),
+            DeviceType.objects.filter(subdevice_role=SubdeviceRoleChoices.ROLE_PARENT_CHILD).first(),
         )
 
         devices = (
@@ -2921,6 +3196,13 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 name="Device 5",
                 location=cls.location,
             ),
+            Device.objects.create(
+                device_type=device_types[2],
+                role=cls.device_role,
+                status=cls.device_status,
+                name="Device 6",
+                location=cls.location,
+            ),
         )
 
         DeviceBay.objects.create(device=devices[0], name="Device Bay 1")
@@ -2942,6 +3224,11 @@ class DeviceBayTest(Mixins.BaseComponentTestMixin):
                 "device": devices[0].pk,
                 "name": "Device Bay 6",
                 "installed_device": devices[3].pk,
+            },
+            {
+                "device": devices[0].pk,
+                "name": "Device Bay 7",
+                "installed_device": devices[4].pk,
             },
         ]
 
@@ -3020,6 +3307,32 @@ class ModuleBayTest(Mixins.ModularDeviceComponentMixin, Mixins.BaseComponentTest
         return ModuleBay.objects.filter(installed_module__isnull=True).values_list("pk", flat=True)[:3]
 
 
+class CableTypeTest(APIViewTestCases.APIViewTestCase):
+    model = CableType
+    bulk_update_data = {
+        "description": "Updated description",
+    }
+    choices_fields = ["polarity_method"]
+
+    @classmethod
+    def setUpTestData(cls):
+        CableType.objects.create(name="Test Cable Type 1")
+        CableType.objects.create(name="Test Cable Type 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        CableType.objects.create(name="Test Cable Type 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+
+        cls.create_data = [
+            {"name": "Test Cable Type 4"},
+            {"name": "Test Cable Type 5", "a_connectors": 1, "b_connectors": 4, "total_lanes": 4},
+            {
+                "name": "Test Cable Type 6",
+                "a_connectors": 1,
+                "b_connectors": 8,
+                "total_lanes": 8,
+                "description": "8-lane breakout",
+            },
+        ]
+
+
 class CableTest(Mixins.BaseComponentTestMixin):
     model = Cable
     bulk_update_data = {
@@ -3086,6 +3399,22 @@ class CableTest(Mixins.BaseComponentTestMixin):
             label="Cable 3",
             status=statuses[0],
         )
+        # An un-terminated cable so the inherited serializer/CSV/list tests exercise the
+        # `CableSerializer._get_termination` "termination is None" short-circuit.
+        Cable.objects.create(label="Cable 4 (uncabled)", status=statuses[0])
+        # A breakout cable with two B-side terminations so the inherited serializer/CSV/list
+        # tests exercise the multi-lane representation path in `CableSerializer.to_representation`.
+        breakout_type = CableType.objects.create(
+            name="Cable API breakout 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(
+            termination_a=interfaces[3],
+            termination_b=interfaces[13],
+            cable_type=breakout_type,
+            label="Cable 5 (breakout)",
+            status=statuses[0],
+        )
+        breakout_cable.add_termination(interfaces[19], "B", connector=2)
 
         cls.create_data = [
             {
@@ -3111,6 +3440,474 @@ class CableTest(Mixins.BaseComponentTestMixin):
                 "termination_b_id": interfaces[16].pk,
                 "status": statuses[1].pk,
                 "label": "Cable 6",
+            },
+        ]
+
+    def test_terminations_field_on_standard_cable(self):
+        """A standard (non-breakout) cable's `terminations` field exposes side-keyed brief reps at default depth."""
+        self.add_permissions("dcim.view_cable")
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        # Side/connector keying — non-breakout cables have exactly one A- and one B-side connector.
+        self.assertEqual(set(terminations), {"a", "b"})
+        self.assertEqual(set(terminations["a"]), {"1"})
+        self.assertEqual(set(terminations["b"]), {"1"})
+        # Each slot at default depth is the brief rep of the termination (mirrors termination_a/b).
+        a_slot = terminations["a"]["1"]
+        b_slot = terminations["b"]["1"]
+        self.assertEqual(a_slot["object_type"], "dcim.interface")
+        self.assertEqual(b_slot["object_type"], "dcim.interface")
+        for key in ("id", "url"):
+            self.assertIn(key, a_slot)
+            self.assertIn(key, b_slot)
+
+    def test_terminations_field_on_breakout_cable(self):
+        """A breakout cable's `terminations` field surfaces every connector slot, with `null` for uncabled ones."""
+        self.add_permissions("dcim.view_cable")
+        cable = Cable.objects.get(label="Cable 5 (breakout)")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        # 1 A-side connector + 2 B-side connectors (from setUpTestData) — all slots present, fully cabled.
+        self.assertEqual(set(terminations["a"]), {"1"})
+        self.assertEqual(set(terminations["b"]), {"1", "2"})
+        self.assertIsNotNone(terminations["b"]["1"])
+        self.assertIsNotNone(terminations["b"]["2"])
+
+    def test_terminations_field_uncabled_breakout_slot_is_null(self):
+        """An uncabled connector on a breakout cable surfaces as an explicit `null` slot."""
+        self.add_permissions("dcim.view_cable")
+        breakout_type = CableType.objects.create(
+            name="Cable API partial breakout 1x4", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        free_ifaces = list(
+            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:2]
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cable = Cable.objects.create(
+            termination_a=free_ifaces[0],
+            termination_b=free_ifaces[1],
+            cable_type=breakout_type,
+            status=cable_status,
+        )
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations["b"]), {"1", "2", "3", "4"})
+        self.assertIsNotNone(terminations["b"]["1"])
+        # Slots 2-4 weren't cabled — expect explicit nulls, not absent keys.
+        for connector in ("2", "3", "4"):
+            self.assertIsNone(terminations["b"][connector])
+
+    def test_terminations_field_respects_depth(self):
+        """`?depth>=1` expands each slot from a brief rep into the full nested termination serializer."""
+        self.add_permissions("dcim.view_cable")
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk}) + "?depth=1"
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
+        # serializer payload (which carries fields like `name`).
+        a_slot = terminations["a"]["1"]
+        self.assertIsInstance(a_slot, dict)
+        self.assertIn("name", a_slot)
+
+    def test_list_query_count_does_not_grow_with_cable_count(self):
+        """Listing cables must not run an extra query per cable (or per termination row) for the `terminations` field."""
+        self.add_permissions("dcim.view_cable")
+        list_url = reverse("dcim-api:cable-list")
+
+        def count_queries():
+            with CaptureQueriesContext(connection) as ctx:
+                response = self.client.get(list_url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            return len(ctx.captured_queries)
+
+        baseline_queries = count_queries()
+
+        # Add three more cables (one breakout with two B-side terminations) — six new join rows
+        # in total. If the prefetch on `terminations` (and `select_related` on its per-type FKs)
+        # is working, query count is constant; without it, count grows ~linearly with rows.
+        interfaces = list(
+            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:8]
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        Cable.objects.create(termination_a=interfaces[0], termination_b=interfaces[1], status=cable_status)
+        Cable.objects.create(termination_a=interfaces[2], termination_b=interfaces[3], status=cable_status)
+        breakout_type = CableType.objects.create(
+            name="Cable API query-count breakout 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        breakout_cable = Cable.objects.create(
+            termination_a=interfaces[4],
+            termination_b=interfaces[5],
+            cable_type=breakout_type,
+            status=cable_status,
+        )
+        breakout_cable.add_termination(interfaces[6], "B", connector=2)
+
+        self.assertLessEqual(count_queries(), baseline_queries)
+
+    def test_create_with_nonexistent_termination_id_returns_400(self):
+        """Posting with a `termination_a_id` that doesn't reference any row returns 400, not 500."""
+        # Same permission scope as the new `terminations` write path: legacy termination_a/b
+        # fields now also flow through `_apply_terminations` → `CableToCableTerminationSerializer`,
+        # which applies `.restrict()` on the per-type FKs.
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.view_cable",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        url = reverse("dcim-api:cable-list")
+        response = self.client.post(
+            url,
+            {
+                "status": cable_status.pk,
+                "termination_a_type": "dcim.interface",
+                "termination_a_id": "00000000-0000-0000-0000-000000000000",
+                "termination_b_type": "dcim.interface",
+                "termination_b_id": "00000000-0000-0000-0000-000000000001",
+                "label": "Cable with bogus terminations",
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # Legacy fields route through `_apply_terminations`, so the error surfaces under
+        # `terminations.<idx>.interface` rather than the legacy `termination_a_id` key.
+        self.assertIn("terminations", response.json())
+
+    def test_patch_with_legacy_termination_fields(self):
+        """PATCH on an existing cable updates connector-1 terminations via the legacy `termination_a_type/_id` fields."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        free_iface = (
+            Interface.objects.filter(cable_termination__isnull=True)
+            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+            .first()
+        )
+        existing_a_row = cable.terminations.get(cable_end="A", connector=1)
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {"termination_a_type": "dcim.interface", "termination_a_id": str(free_iface.pk)},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        existing_a_row.refresh_from_db()
+        self.assertEqual(existing_a_row.interface_id, free_iface.pk)
+
+    def test_create_cable_with_terminations_payload(self):
+        """POST a cable with a `terminations` dict creates the cable and all listed connector slots in one request."""
+        # `terminations` is applied via nested `CableToCableTerminationSerializer`, which
+        # applies `.restrict()` on the per-type FK fields — so the test user needs view
+        # permission on the related models in addition to add_cable.
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        free_ifaces = list(
+            Interface.objects.filter(cable_termination__isnull=True).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)[:2]
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        url = reverse("dcim-api:cable-list")
+        payload = {
+            "status": cable_status.pk,
+            "label": "Cable via terminations",
+            "terminations": {
+                "a": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)}},
+                "b": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)}},
+            },
+        }
+        response = self.client.post(url, payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        cable = Cable.objects.get(pk=response.json()["id"])
+        rows = list(cable.terminations.all().order_by("cable_end"))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual({r.cable_end for r in rows}, {"A", "B"})
+        self.assertEqual({r.interface_id for r in rows}, {free_ifaces[0].pk, free_ifaces[1].pk})
+
+    def test_patch_cable_terminations_add_replace_delete(self):
+        """PATCH with `terminations` replaces specified slots, deletes those set to null, and leaves others alone."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 5 (breakout)")
+        free_iface = (
+            Interface.objects.filter(cable_termination__isnull=True)
+            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
+            .first()
+        )
+        existing_b1_row = cable.terminations.get(cable_end="B", connector=1)
+        existing_a1_row = cable.terminations.get(cable_end="A", connector=1)
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {
+                "terminations": {
+                    "b": {
+                        # Replace B-connector-1 with a different interface.
+                        "1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
+                        # Delete B-connector-2 (already has a termination from setUpTestData).
+                        "2": None,
+                    },
+                },
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # B-connector-1 row updated, points at the new interface.
+        existing_b1_row.refresh_from_db()
+        self.assertEqual(existing_b1_row.interface_id, free_iface.pk)
+        # B-connector-2 row deleted.
+        self.assertFalse(cable.terminations.filter(cable_end="B", connector=2).exists())
+        # A-connector-1 (not in the patch) untouched.
+        existing_a1_row.refresh_from_db()
+        self.assertIsNotNone(existing_a1_row.interface_id)
+
+    def test_patch_cable_terminations_rejects_malformed_payload(self):
+        """Each shape-validation branch in `_parse_terminations_payload` returns 400, not 500."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        bogus_uuid = "00000000-0000-0000-0000-000000000000"
+        cases = [
+            (
+                "top-level-not-a-dict",
+                # Old (pre-rewrite) list shape — should be rejected with a clear shape message.
+                [{"cable_end": "A", "connector": 1}],
+            ),
+            (
+                "invalid-side-key",
+                {"z": {"1": None}},
+            ),
+            (
+                "side-value-not-a-dict",
+                {"a": "not a dict"},
+            ),
+            (
+                "non-integer-connector-key",
+                {"a": {"first": None}},
+            ),
+            (
+                "slot-value-not-null-or-dict",
+                {"a": {"1": "not a dict either"}},
+            ),
+            (
+                "missing-object-type",
+                {"a": {"1": {"id": bogus_uuid}}},
+            ),
+            (
+                "missing-id",
+                {"a": {"1": {"object_type": "dcim.interface"}}},
+            ),
+            (
+                "malformed-object-type-no-dot",
+                {"a": {"1": {"object_type": "interface", "id": bogus_uuid}}},
+            ),
+            (
+                "non-termination-model",
+                {"a": {"1": {"object_type": "dcim.device", "id": bogus_uuid}}},
+            ),
+        ]
+        for case_name, terminations_payload in cases:
+            with self.subTest(case=case_name):
+                response = self.client.patch(
+                    url,
+                    {"terminations": terminations_payload},
+                    format="json",
+                    **self.header,
+                )
+                self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("terminations", response.json())
+
+    def test_patch_cable_terminations_swap_termination_type(self):
+        """Changing an existing connector's termination *type* (e.g. Interface -> RearPort) clears the old per-type FK and sets the new one on the same row."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+            "dcim.view_rearport",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        existing_a_row = cable.terminations.get(cable_end="A", connector=1)
+        original_interface_id = existing_a_row.interface_id
+        self.assertIsNotNone(original_interface_id)
+        # Create a free RearPort on the same device — different termination type, free to use.
+        device = Interface.objects.get(pk=original_interface_id).device
+        rear_port = RearPort.objects.create(
+            device=device,
+            name="Type-swap RP",
+            type=PortTypeChoices.TYPE_8P8C,
+            positions=1,
+        )
+
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {
+                "terminations": {
+                    "a": {"1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)}},
+                },
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # The same row was updated, not replaced — verify by primary key.
+        existing_a_row.refresh_from_db()
+        self.assertIsNone(existing_a_row.interface_id, "Stale interface FK should have been cleared on type swap")
+        self.assertEqual(existing_a_row.rear_port_id, rear_port.pk)
+        # Cable still has exactly one A-side row at connector 1 (no orphan / duplicate created).
+        self.assertEqual(cable.terminations.filter(cable_end="A", connector=1).count(), 1)
+
+    def test_patch_cable_terminations_delegated_validation_returns_400(self):
+        """Per-slot errors from `CableToCableTerminationSerializer` (e.g. nonexistent FK target) bubble as 400 with side/connector keying."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.change_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk})
+        response = self.client.patch(
+            url,
+            {
+                "terminations": {
+                    "a": {"1": {"object_type": "dcim.interface", "id": "00000000-0000-0000-0000-000000000000"}},
+                },
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        body = response.json()
+        # Error path is keyed by side then connector — clients can map the error directly back to
+        # the slot they sent.
+        self.assertIn("terminations", body)
+        self.assertIn("a", body["terminations"])
+        self.assertIn("1", body["terminations"]["a"])
+
+    def test_typed_m2m_fields_absent_from_response(self):
+        """The auto-generated typed M2M fields (`interfaces`, `front_ports`, etc.) must not appear in the GET response."""
+        self.add_permissions("dcim.view_cable")
+        cable = Cable.objects.get(label="Cable 1")
+        url = reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk}) + "?exclude_m2m=False"
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        data = response.json()
+        for suppressed in (
+            "circuit_terminations",
+            "console_ports",
+            "console_server_ports",
+            "front_ports",
+            "interfaces",
+            "power_feeds",
+            "power_outlets",
+            "power_ports",
+            "rear_ports",
+        ):
+            self.assertNotIn(suppressed, data, f"Suppressed M2M field `{suppressed}` leaked into response")
+
+
+class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
+    """Tests for the `dcim.CableToCableTermination` REST endpoint."""
+
+    model = CableToCableTermination
+    # Join rows have no meaningful bulk-updatable fields: `cable`/`cable_end`/`connector` edits
+    # collide with the unique constraint, and the per-type FKs each have an `update_or_create`
+    # semantic better expressed via the Cable endpoint.
+    bulk_update_data = None
+    choices_fields = ["cable_end"]
+
+    def test_update_object(self):
+        self.skipTest(  # TODO: not sure I agree with this comment!
+            "Join rows aren't meaningfully updatable via REST: changing `cable`/`cable_end`/"
+            "`connector` collides with the unique constraint, and the per-type termination FKs "
+            "are better managed through the Cable endpoint."
+        )
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Cable Join API DT")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        device = Device.objects.create(
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+            name="Cable Join API Device",
+            location=location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=device, name=f"eth{i}", type=InterfaceTypeChoices.TYPE_1GE_FIXED, status=interface_status
+            )
+            for i in range(10)
+        ]
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        # Three cables fully populated — yields 6 join rows for list/get/delete tests.
+        for i in range(3):
+            Cable.objects.create(termination_a=interfaces[i], termination_b=interfaces[i + 5], status=cable_status)
+
+        # Three empty cables + three free interfaces — one new join row per cable for `create_data`.
+        # (A non-breakout cable only allows one row per side at connector 1, so we use a separate
+        # cable per create payload rather than trying to stack rows on one cable.)
+        empty_cables = [Cable.objects.create(status=cable_status) for _ in range(3)]
+        cls.create_data = [
+            {
+                "cable": empty_cables[0].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[3].pk,
+            },
+            {
+                "cable": empty_cables[1].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[4].pk,
+            },
+            {
+                "cable": empty_cables[2].pk,
+                "cable_end": "A",
+                "connector": 1,
+                "interface": interfaces[8].pk,
             },
         ]
 

@@ -1,4 +1,4 @@
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 import json
 
 from django.contrib.auth import get_user_model
@@ -181,7 +181,8 @@ class JobResultFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
-        # TODO has_scheduled_job? has_meta? has_celery_kwargs?
+        has_celery_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        # TODO has_scheduled_job? has_meta?
 
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
     name = factory.Faker("word")
@@ -197,7 +198,6 @@ class JobResultFactory(BaseModelFactory):
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
-    # TODO celery_kwargs?
     # TODO meta?
 
     @factory.lazy_attribute
@@ -218,15 +218,34 @@ class JobResultFactory(BaseModelFactory):
             return
         if extracted:
             return
-        # Create a date_created in the past, but not too far in the past
-        self.date_created = faker.Faker().date_time_between(start_date="-1y", end_date="-1w", tzinfo=timezone.utc)
-        self.date_started = faker.Faker().date_time_between(
-            start_date=self.date_created, end_date="-1d", tzinfo=timezone.utc
+        # Fixed absolute dates with factory_boy's seeded random for full determinism.
+        # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+        start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+        seconds_range = int((end - start).total_seconds())
+        timestamps = sorted(
+            start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
         )
-        # TODO, should we create "in progress" job results without a date_done value as well?
-        self.date_done = faker.Faker().date_time_between(
-            start_date=self.date_started, end_date="now", tzinfo=timezone.utc
-        )
+        self.date_created, self.date_started, self.date_done = timestamps
+
+    @factory.lazy_attribute
+    def celery_kwargs(self):
+        if not self.has_celery_kwargs:
+            return {}
+
+        fake = faker.Faker()
+        kwargs = {
+            "nautobot_job_profile": fake.boolean(),
+            "nautobot_job_ignore_singleton_lock": fake.boolean(),
+            "nautobot_job_console_log": fake.boolean(),
+            "nautobot_job_queue_type": "celery",
+            "queue": fake.word(),
+        }
+        if self.job_model is not None:
+            kwargs["nautobot_job_job_model_id"] = str(self.job_model.id)
+        if self.user is not None:
+            kwargs["nautobot_job_user_id"] = str(self.user.id)
+        return kwargs
 
 
 class MetadataChoiceFactory(BaseModelFactory):
@@ -474,7 +493,12 @@ class ObjectChangeFactory(BaseModelFactory):
             if extracted:
                 self.time = extracted
             else:
-                self.time = faker.Faker().date_time_between(start_date="-1y", end_date="now", tzinfo=timezone.utc)
+                # Fixed absolute dates with factory_boy's seeded random for full determinism.
+                # Avoids standalone faker (bypasses seed) and relative dates (faker#2149).
+                start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+                end = datetime(2025, 1, 1, tzinfo=timezone.utc)
+                seconds_range = int((end - start).total_seconds())
+                self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
 
 
 class RoleFactory(OrganizationalModelFactory):

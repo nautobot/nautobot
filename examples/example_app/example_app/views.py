@@ -1,3 +1,5 @@
+import random
+
 from django.shortcuts import HttpResponse, render
 from django.utils.html import format_html
 from rest_framework.decorators import action
@@ -361,6 +363,14 @@ class AnotherExampleModelUIViewSet(
             ]
         }
     )
+
+    def list(self, request, *args, **kwargs):
+        """View that sometimes returns an error through HTMX, to demonstrate HTMX error handling in the template."""
+        if (
+            request.headers.get("HX-Request", False) and random.choice([True, False])  # noqa: S311 # suspicious-non-cryptographic-random-usage
+        ):
+            raise RuntimeError("This is a test of error responses from HTMX. Do not adjust your Nautobot.")
+        return super().list(request, *args, **kwargs)
 
     @action(
         detail=True,

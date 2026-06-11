@@ -1,22 +1,25 @@
 from collections import OrderedDict
 from copy import deepcopy
 from functools import partial
+import json
 import logging
-import re
 import uuid
 
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import F, Prefetch
 from django.forms import (
+    Form,
     modelformset_factory,
     ModelMultipleChoiceField,
     MultipleHiddenInput,
 )
-from django.shortcuts import get_object_or_404, HttpResponse, redirect, render
+from django.http.response import HttpResponseBadRequest, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -26,13 +29,12 @@ from django.utils.http import url_has_allowed_host_and_scheme, urlencode
 from django.views.generic import View
 from django_tables2 import RequestConfig
 from rest_framework.decorators import action
-from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.response import Response
 
 from nautobot.cloud.tables import CloudAccountTable
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
-from nautobot.core.forms import BulkRenameForm, ConfirmationForm, ImportForm, restrict_form_fields
+from nautobot.core.forms import ConfirmationForm, ImportForm, restrict_form_fields
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui import object_detail
@@ -55,7 +57,6 @@ from nautobot.core.ui.bulk_buttons import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
@@ -63,6 +64,7 @@ from nautobot.core.views import generic
 from nautobot.core.views.mixins import (
     GetReturnURLMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
@@ -76,8 +78,14 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
+from nautobot.dcim.constants import TERMINATION_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
-from nautobot.dcim.utils import get_all_network_driver_mappings, render_software_version_and_image_files
+from nautobot.dcim.utils import (
+    generate_cable_breakout_mapping,
+    get_all_network_driver_mappings,
+    render_software_version_and_image_files,
+    validate_cable_breakout_mapping,
+)
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
 from nautobot.ipam.models import IPAddress
@@ -103,10 +111,12 @@ from nautobot.wireless.tables import (
 from . import filters, forms, tables
 from .api import serializers
 from .choices import DeviceFaceChoices
-from .constants import NONCONNECTABLE_IFACE_TYPES
+from .constants import DEVICE_RECURSION_DEPTH_LIMIT, NONCONNECTABLE_IFACE_TYPES
 from .models import (
     Cable,
     CablePath,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -152,6 +162,7 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
 
@@ -186,16 +197,37 @@ class BulkDisconnectView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View)
             if form.is_valid():
                 with transaction.atomic():
                     count = 0
+                    disconnected_cables = []
                     for obj in self.queryset.filter(pk__in=form.cleaned_data["pk"]):
                         if obj.cable is None:
                             continue
-                        obj.cable.delete()
+                        cable_label = str(obj.cable)
+                        cable_url = obj.cable.get_absolute_url()
+
+                        disconnect_termination(obj)
+
+                        disconnected_cables.append((cable_label, cable_url))
                         count += 1
 
                 messages.success(
                     request,
                     f"Disconnected {count} {self.queryset.model._meta.verbose_name_plural}",
                 )
+                # Inform the user that the surviving cables can still be cleaned up. One
+                # aggregated message with a bullet list, not one toast per cable.
+                if disconnected_cables:
+                    cable_items = format_html_join(
+                        "",
+                        '<li><a href="{}">{}</a> (<a href="{}delete/">delete</a>)</li>',
+                        ((cable_url, cable_label, cable_url) for cable_label, cable_url in disconnected_cables),
+                    )
+                    messages.info(
+                        request,
+                        format_html(
+                            "The following cables still exist — delete any that are no longer needed:<ul>{}</ul>",
+                            cable_items,
+                        ),
+                    )
 
                 return redirect(return_url)
 
@@ -513,8 +545,7 @@ class LocationUIViewSet(NautobotUIViewSet):
         )
     )
 
-    def filter_queryset(self, queryset):
-        queryset = super().filter_queryset(queryset)
+    def _filter_params_imply_hide_hierarchy_ui(self, filter_params):
         # Override baseline behavior, the below filters do NOT need to suppress hierarchy indentation if and only if
         # no other filters are applied, as they do not generally alter the hierarchy of the filtered locations:
         if all(
@@ -523,37 +554,33 @@ class LocationUIViewSet(NautobotUIViewSet):
                 "max_depth",
                 "subtree",
             ]
-            for key in self.filter_params
+            for key in filter_params
         ):
+            return False
+        return True
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        if not self._filter_params_imply_hide_hierarchy_ui(self.filter_params):
             self.hide_hierarchy_ui = False
-
-        if not self.hide_hierarchy_ui and "max_depth" not in self.filter_params:
-            default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
-            if default_max_depth > 0:
-                if "subtree" in self.filter_params:
-                    min_subtree_depth = 100
-                    for pk_or_name in self.filter_params["subtree"]:
-                        # This isn't *technically* 100% correct since there may be multiple subtrees under the same name
-                        # but it's close enough for now
-                        if loc := (
-                            Location.objects.filter(pk=pk_or_name).first()
-                            if is_uuid(pk_or_name)
-                            else Location.objects.filter(name=pk_or_name).first()
-                        ):
-                            if (depth := loc.ancestors(include_self=False).count()) < min_subtree_depth:
-                                min_subtree_depth = depth
-                    default_max_depth += min_subtree_depth
-                param = f"{'parent__' * default_max_depth}isnull"
-                queryset = queryset.exclude(**{param: False})
-                messages.info(
-                    self.request,
-                    format_html(
-                        "This table has been filtered by default due to the configured "
-                        "<code>LOCATION_LIST_DEFAULT_MAX_DEPTH</code> setting."
-                    ),
-                )
-
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """If `LOCATION_LIST_DEFAULT_MAX_DEPTH` is set, redirect any query-param-free request to `?max_depth=...`."""
+        response = super().list(request, *args, **kwargs)
+        if isinstance(response, HttpResponseRedirect):
+            # already a redirect
+            return response
+        if request.GET:
+            # query params explicitly provided by user, defaults don't apply
+            return response
+        default_max_depth = get_settings_or_config("LOCATION_LIST_DEFAULT_MAX_DEPTH", fallback=0)
+        if not default_max_depth:
+            # no relevant default to apply
+            return response
+        query_dict = request.GET.copy()
+        query_dict["max_depth"] = default_max_depth
+        return redirect(request.path + "?" + query_dict.urlencode())
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
@@ -861,15 +888,251 @@ class RackUIViewSet(NautobotUIViewSet):
         }
     )
 
+    class ImageAttachmentObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if request.user.has_perms(self.add_permissions or []):
+                obj = get_obj_from_context(context)
+                return reverse("dcim:rack_add_image", kwargs={"object_id": obj.pk})
+            return None
+
+    class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "space_utilization" or key == "power_utilization":
+                return self.get_utilization_graph(value)
+
+            if key == "devices":
+                request = context["request"]
+                obj = get_obj_from_context(context)
+                device_count = obj.devices.restrict(request.user, "view").count()
+                if not device_count:
+                    return helpers.HTML_NONE
+                full_url = f"{reverse('dcim:device_list')}?rack={obj.id}"
+                link = format_html('<a href="{}">{}</a>', full_url, device_count)
+                return link
+
+            return super().render_value(key, value, context)
+
+        def get_utilization_graph(self, value):
+            data = helpers.utilization_graph(value)
+            return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+    class DimensionsObjectFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            obj = get_obj_from_context(context, self.context_object_key)
+
+            if key == "u_height":
+                orientation = "descending" if obj.desc_units else "ascending"
+                return format_html("{}U ({})", value, orientation)
+
+            if key == "outer_width" or key == "outer_depth":
+                if not value:
+                    return helpers.HTML_NONE
+                return format_html("{} {}", value, obj.get_outer_unit_display())
+
+            return super().render_value(key, value, context)
+
+    class NonRackedDevicesObjectsTablePanel(object_detail.ObjectsTablePanel):
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("dcim.add_device"):
+                return None
+
+            obj = get_obj_from_context(context)
+            params = []
+            params.append(("rack", obj.pk))
+            if obj.location is not None:
+                params.append(("location", obj.location.pk))
+
+            params.append(("return_url", context.get("return_url", obj.get_absolute_url())))
+            return f"{reverse('dcim:device_add')}?{urlencode(params)}"
+
+    class RackNavigationButton(object_detail.Button):
+        def __init__(self, *, direction, **kwargs):
+            self.direction = direction
+            label = "Previous Rack" if direction == "prev" else "Next Rack"
+            icon = "mdi mdi-chevron-left" if direction == "prev" else "mdi mdi-chevron-right"
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.BLUE,
+                template_path="dcim/inc/rack_nav.html",
+                **kwargs,
+            )
+
+        def get_link(self, context: Context):
+            target = context.get(f"{self.direction}_rack")
+            if target:
+                return reverse("dcim:rack", kwargs={"pk": target.pk})
+            return None
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes") or {}
+            if not extra_context["link"]:
+                attributes.update({"aria-disabled": "true", "disabled": "disabled"})
+            extra_context["attributes"] = attributes
+            return extra_context
+
+    class RackToggleButton(object_detail.Button):
+        def __init__(self, *, label, icon, extra_classes, **kwargs):
+            self.extra_classes = extra_classes
+            super().__init__(
+                label=label,
+                icon=icon,
+                color=ButtonColorChoices.GREY,
+                template_path="dcim/inc/rack_toggle.html",
+                attributes={"selected": "selected"},
+                **kwargs,
+            )
+
+        def get_extra_context(self, context: Context):
+            extra_context = super().get_extra_context(context)
+            attributes = extra_context.get("attributes", {}) or {}
+            attributes.setdefault("selected", "selected")
+            extra_context["attributes"] = attributes
+            extra_context["extra_classes"] = self.extra_classes
+            return extra_context
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            RackObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Rack",
+                fields=[
+                    "location",
+                    "rack_group",
+                    "facility_id",
+                    "tenant",
+                    "status",
+                    "role",
+                    "serial",
+                    "asset_tag",
+                    "devices",
+                    "space_utilization",
+                    "power_utilization",
+                ],
+            ),
+            DimensionsObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=200,
+                label="Dimensions",
+                fields=[
+                    "type",
+                    "width",
+                    "u_height",
+                    "outer_width",
+                    "outer_depth",
+                ],
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=300,
+                table_class=tables.PowerFeedTable,
+                table_filter="rack",
+                add_button_route=None,
+                exclude_columns=[
+                    "rack",
+                    "power_path",
+                    "supply",
+                    "voltage",
+                    "amperage",
+                    "phase",
+                    "cable",
+                    "cable_peer",
+                    "max_utilization",
+                ],
+                include_columns=[
+                    "utilization",
+                ],
+            ),
+            ImageAttachmentObjectsTablePanel(
+                table_title="Images",
+                section=SectionChoices.LEFT_HALF,
+                table_class=ImageAttachmentTable,
+                table_attribute="images",
+                related_field_name="rack",
+                weight=400,
+                include_columns=["actions"],
+                add_permissions=[
+                    "extras.add_imageattachment",
+                ],
+                enable_related_link=False,
+                show_table_config_button=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=500,
+                table_class=tables.RackReservationTable,
+                table_filter="rack",
+                exclude_columns=["pk", "reservation", "location", "rack"],
+                include_columns=[
+                    "tenant",
+                    "created",
+                    "actions",
+                ],
+            ),
+            object_detail.Panel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=600,
+                template_path="dcim/rack_layout.html",
+            ),
+            NonRackedDevicesObjectsTablePanel(
+                weight=700,
+                section=SectionChoices.RIGHT_HALF,
+                context_table_key="nonracked_devices_table",
+                related_field_name="rack",
+                table_title="Non-Racked Devices",
+                exclude_columns=[
+                    "status",
+                    "tenant",
+                    "location",
+                    "rack",
+                    "manufacturer",
+                    "primary_ip",
+                    "actions",
+                ],
+                include_columns=[
+                    "parent_device",
+                    "parent_bay",
+                ],
+                list_url_extra_params={"position__isnull": True},
+            ),
+        ),
+        extra_buttons=(
+            RackNavigationButton(direction="prev", weight=20),
+            RackNavigationButton(direction="next", weight=30),
+            RackToggleButton(
+                label="Show Device Full Name",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-fullname",
+                weight=40,
+            ),
+            RackToggleButton(
+                label="Show Images",
+                icon="mdi mdi-checkbox-marked-circle-outline",
+                extra_classes="toggle-images",
+                weight=50,
+            ),
+        ),
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
         if self.action == "retrieve":
             # Get 0U and child devices located within the rack
-            context["nonracked_devices"] = Device.objects.filter(rack=instance, position__isnull=True).select_related(
+            nonracked_devices = Device.objects.filter(rack=instance, position__isnull=True).select_related(
                 "device_type__manufacturer"
             )
-
+            nonracked_devices_table = tables.DeviceTable(nonracked_devices)
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(nonracked_devices_table)
+            context["nonracked_devices_table"] = nonracked_devices_table
             peer_racks = Rack.objects.restrict(request.user, "view").filter(location=instance.location)
 
             if instance.rack_group:
@@ -879,13 +1142,6 @@ class RackUIViewSet(NautobotUIViewSet):
 
             context["next_rack"] = peer_racks.filter(name__gt=instance.name).order_by("name").first()
             context["prev_rack"] = peer_racks.filter(name__lt=instance.name).order_by("-name").first()
-
-            context["reservations"] = RackReservation.objects.restrict(request.user, "view").filter(rack=instance)
-            context["power_feeds"] = (
-                PowerFeed.objects.restrict(request.user, "view").filter(rack=instance).select_related("power_panel")
-            )
-            context["device_count"] = Device.objects.restrict(request.user, "view").filter(rack=instance).count()
-
         return context
 
 
@@ -1578,6 +1834,45 @@ class DeviceTypeImportView(generic.ObjectImportView):
 #
 
 
+class ModuleTypeFieldsPanel(object_detail.ObjectFieldsPanel):
+    """Custom panel for ModuleType that renders front_image and rear_image as image previews."""
+
+    def render_value(self, key, value, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if key in ["front_image", "rear_image"]:
+            image = getattr(obj, key, None)
+            if image:
+                return format_html(
+                    '<a href="{}" target="_blank" rel="noopener noreferrer">'
+                    '<img src="{}" alt="{}" class="img-responsive mw-100"></a>',
+                    image.url,
+                    image.url,
+                    image.name,
+                )
+            return helpers.HTML_NONE
+        return super().render_value(key, value, context)
+
+
+class ModuleTypeComponentAddButton(object_detail.Button):
+    """
+    Button for adding components to a ModuleType via query-param-based add URLs.
+
+    This subclass exists because ModuleType lacks dedicated per-object add routes
+    (e.g. dcim:moduletype_consoleporttemplate_add) that DeviceType has.
+    """
+
+    def __init__(self, *, tab, **kwargs):
+        self.tab = tab
+        super().__init__(link_includes_pk=False, **kwargs)
+
+    def get_link(self, context):
+        obj = get_obj_from_context(context, self.context_object_key)
+        if not obj:
+            return None
+        return_url = iri_to_uri(f"{obj.get_absolute_url()}?tab={self.tab}")
+        return reverse(self.link_name) + "?" + urlencode({"module_type": obj.pk, "return_url": return_url})
+
+
 class ModuleTypeUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -1616,6 +1911,108 @@ class ModuleTypeUIViewSet(
         }
     )
 
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ModuleTypeFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields="__all__",
+                exclude_fields=["front_image", "rear_image"],
+            ),
+            ModuleTypeFieldsPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                fields=["front_image", "rear_image"],
+                label="Images",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.ModuleTable,
+                table_filter="module_type",
+                related_field_name="module_type",
+                table_title="Module Instances",
+                exclude_columns=["actions", "tags"],
+            ),
+        ),
+        extra_buttons=(
+            object_detail.DropdownButton(
+                weight=100,
+                color=ButtonActionColorChoices.ADD,
+                label="Add Components",
+                attributes={"id": "module-type-add-components-button"},
+                icon="mdi-plus-thick",
+                required_permissions=["dcim.change_moduletype"],
+                children=(
+                    ModuleTypeComponentAddButton(
+                        weight=100,
+                        link_name="dcim:consoleporttemplate_add",
+                        tab="consoleports",
+                        label="Console Ports",
+                        icon="mdi-console",
+                        required_permissions=["dcim.add_consoleporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=200,
+                        link_name="dcim:consoleserverporttemplate_add",
+                        tab="consoleserverports",
+                        label="Console Server Ports",
+                        icon="mdi-console-network-outline",
+                        required_permissions=["dcim.add_consoleserverporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=300,
+                        link_name="dcim:powerporttemplate_add",
+                        tab="powerports",
+                        label="Power Ports",
+                        icon="mdi-power-plug-outline",
+                        required_permissions=["dcim.add_powerporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=400,
+                        link_name="dcim:poweroutlettemplate_add",
+                        tab="poweroutlets",
+                        label="Power Outlets",
+                        icon="mdi-power-socket",
+                        required_permissions=["dcim.add_poweroutlettemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=500,
+                        link_name="dcim:interfacetemplate_add",
+                        tab="interfaces",
+                        label="Interfaces",
+                        icon="mdi-ethernet",
+                        required_permissions=["dcim.add_interfacetemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=600,
+                        link_name="dcim:frontporttemplate_add",
+                        tab="frontports",
+                        label="Front Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_frontporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=700,
+                        link_name="dcim:rearporttemplate_add",
+                        tab="rearports",
+                        label="Rear Ports",
+                        icon="mdi-square-rounded-outline",
+                        required_permissions=["dcim.add_rearporttemplate"],
+                    ),
+                    ModuleTypeComponentAddButton(
+                        weight=800,
+                        link_name="dcim:modulebaytemplate_add",
+                        tab="modulebays",
+                        label="Module Bays",
+                        icon="mdi-tray",
+                        required_permissions=["dcim.add_modulebaytemplate"],
+                    ),
+                ),
+            ),
+        ),
+    )
+
     def get_required_permission(self):
         view_action = self.get_action()
         if view_action == "import_view":
@@ -1636,8 +2033,6 @@ class ModuleTypeUIViewSet(
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            instance_count = Module.objects.restrict(request.user).filter(module_type=instance).count()
-
             # Component tables
             consoleport_table = tables.ConsolePortTemplateTable(
                 ConsolePortTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
@@ -1683,7 +2078,6 @@ class ModuleTypeUIViewSet(
 
             context.update(
                 {
-                    "instance_count": instance_count,
                     "consoleport_table": consoleport_table,
                     "consoleserverport_table": consoleserverport_table,
                     "powerport_table": powerport_table,
@@ -1816,42 +2210,160 @@ class ModuleTypeUIViewSet(
         )
 
 
+class ComponentCreateViewMixin(ObjectEditViewMixin):
+    """
+    UI mixin to bulk-create device/module component template instances from a single
+    parent form using `name_pattern`/`label_pattern` expansion.
+
+    Specializes `ObjectEditViewMixin` by overriding `create()` with the bulk-component
+    flow; update/edit behavior (`update()`, `perform_update()`, `_process_create_or_update_form`,
+    etc.) is inherited unchanged.
+    """
+
+    create_form_class: type[Form]
+    form_class: type[Form]
+    create_template_name = "dcim/device_component_add.html"
+
+    def get_component_create_form(self, request, data=None):
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
+        return self.create_form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.create_form_class),
+        )
+
+    def get_selected_objects_parents_name(self, selected_objects):
+        """Return the display name of the device_type/module_type that owns the selected component templates."""
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
+            if parent:
+                return parent.display
+        return ""
+
+    def get_component_model_form(self, request, data=None):
+        """Return the per-instance component model form used to validate/save each expanded child."""
+        return self.form_class(  # pylint: disable=not-callable
+            data or None,
+            initial=normalize_querydict(request.GET, form_class=self.form_class),
+        )
+
+    def create(self, request, *args, **kwargs):
+        """
+        Component bulk-create entry point. Overrides the inherited single-object create
+        flow so that GET renders the bulk-create form and POST expands `name_pattern`/
+        `label_pattern` into individual component instances via
+        `process_component_create_form()`.
+        """
+        if request.method == "POST":
+            return self.process_component_create_form(request, *args, **kwargs)
+
+        return self.render_component_create_response(request)
+
+    def process_component_create_form(self, request, *args, **kwargs):
+        """
+        Validate the parent bulk-create form, expand the patterns into individual child
+        component forms, and save them atomically. Errors on any expanded child form are
+        re-raised on the parent form's `name_pattern`/`label_pattern` fields.
+        """
+        create_form = self.get_component_create_form(request, data=request.POST)
+
+        if not create_form.is_valid():
+            return self.render_component_create_response(request, create_form)
+
+        new_components = []
+        data = deepcopy(request.POST)
+
+        # Support for bulk creation using name_pattern and label_pattern
+        names = create_form.cleaned_data["name_pattern"]
+        labels = create_form.cleaned_data.get("label_pattern")
+
+        # Create multiple objects based on the name_pattern
+        for i, name in enumerate(names):
+            label = labels[i] if labels else None
+            # Initialize the individual component form
+            data["name"] = name
+            data["label"] = label
+            if hasattr(create_form, "get_iterative_data"):
+                data.update(create_form.get_iterative_data(i))
+
+            # Recreate the form for each iteration with updated data
+            component_form = self.get_component_model_form(request, data=data)
+            if component_form.is_valid():
+                new_components.append(component_form)
+            else:
+                for field, errors in component_form.errors.as_data().items():
+                    # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                    parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
+                    for e in errors:
+                        err_str = ", ".join(e)
+                        create_form.add_error(parent_field, f"{name}: {err_str}")
+
+        if create_form.errors:
+            return self.render_component_create_response(request, create_form)
+
+        try:
+            with transaction.atomic():
+                # Create the new components
+                new_objs = [component_form.save() for component_form in new_components]
+
+                # Enforce object-level permissions
+                if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                    raise ObjectDoesNotExist
+
+            messages.success(
+                request,
+                f"Added {len(new_components)} {self.queryset.model._meta.verbose_name_plural}",
+            )
+
+            if "_addanother" in request.POST:
+                next_url = request.get_full_path()
+                if url_has_allowed_host_and_scheme(url=next_url, allowed_hosts={request.get_host()}):
+                    return redirect(iri_to_uri(next_url))
+            return redirect(self.get_return_url(request))
+
+        except ObjectDoesNotExist:
+            create_form.add_error(None, "Component creation failed due to object-level permissions violation")
+        return self.render_component_create_response(request, create_form)
+
+    def render_component_create_response(self, request, create_form=None):
+        """Render the component bulk-create template with the parent and per-instance forms."""
+        if create_form is None:
+            create_form = self.get_component_create_form(
+                request, data=request.POST if request.method == "POST" else None
+            )
+
+        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
+
+        return Response(
+            {
+                "template": self.create_template_name,
+                "component_type": self.queryset.model._meta.verbose_name,
+                "form": create_form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
+
+
 #
 # Console port templates
 #
 
 
-class ConsolePortTemplateCreateView(generic.ComponentCreateView):
+class ConsolePortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.ConsolePortTemplateBulkEditForm
+    filterset_class = filters.ConsolePortTemplateFilterSet
+    form_class = forms.ConsolePortTemplateForm
+    serializer_class = serializers.ConsolePortTemplateSerializer
+    table_class = tables.ConsolePortTemplateTable
     queryset = ConsolePortTemplate.objects.all()
-    form = forms.ConsolePortTemplateCreateForm
-    model_form = forms.ConsolePortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class ConsolePortTemplateEditView(generic.ObjectEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    model_form = forms.ConsolePortTemplateForm
-
-
-class ConsolePortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkEditView(generic.BulkEditView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    form = forms.ConsolePortTemplateBulkEditForm
-    filterset = filters.ConsolePortTemplateFilterSet
-
-
-class ConsolePortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsolePortTemplate.objects.all()
-
-
-class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsolePortTemplate.objects.all()
-    table = tables.ConsolePortTemplateTable
-    filterset = filters.ConsolePortTemplateFilterSet
+    create_form_class = forms.ConsolePortTemplateCreateForm
 
 
 #
@@ -1859,37 +2371,20 @@ class ConsolePortTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ConsoleServerPortTemplateCreateView(generic.ComponentCreateView):
+class ConsoleServerPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.ConsoleServerPortTemplateBulkEditForm
+    filterset_class = filters.ConsoleServerPortTemplateFilterSet
+    form_class = forms.ConsoleServerPortTemplateForm
+    serializer_class = serializers.ConsoleServerPortTemplateSerializer
+    table_class = tables.ConsoleServerPortTemplateTable
     queryset = ConsoleServerPortTemplate.objects.all()
-    form = forms.ConsoleServerPortTemplateCreateForm
-    model_form = forms.ConsoleServerPortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class ConsoleServerPortTemplateEditView(generic.ObjectEditView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    model_form = forms.ConsoleServerPortTemplateForm
-
-
-class ConsoleServerPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-
-
-class ConsoleServerPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    table = tables.ConsoleServerPortTemplateTable
-    form = forms.ConsoleServerPortTemplateBulkEditForm
-    filterset = filters.ConsoleServerPortTemplateFilterSet
-
-
-class ConsoleServerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-
-
-class ConsoleServerPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsoleServerPortTemplate.objects.all()
-    table = tables.ConsoleServerPortTemplateTable
-    filterset = filters.ConsoleServerPortTemplateFilterSet
+    create_form_class = forms.ConsoleServerPortTemplateCreateForm
 
 
 #
@@ -2122,7 +2617,7 @@ class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
 
 
 class ModuleBayCommonViewSetMixin:
-    """NautobotUIViewSet for ModuleBay views to handle templated create and bulk rename views."""
+    """NautobotUIViewSet for ModuleBay views to handle templated create views."""
 
     def create(self, request, *args, **kwargs):
         if request.method == "POST":
@@ -2173,12 +2668,14 @@ class ModuleBayCommonViewSetMixin:
                     new_components.append(component_form)
                 else:
                     for field, errors in component_form.errors.as_data().items():
-                        # Assign errors on the child form's name/position/label field to *_pattern fields on the parent form
-                        if field.endswith("_pattern"):
-                            field = field[:-8]
+                        parent_field = {
+                            "name": "name_pattern",
+                            "label": "label_pattern",
+                            "position": "position_pattern",
+                        }.get(field, field)
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            form.add_error(parent_field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
@@ -2216,81 +2713,13 @@ class ModuleBayCommonViewSetMixin:
             },
         )
 
-    def _bulk_rename(self, request, *args, **kwargs):
-        # TODO: This shouldn't be needed but default behavior of custom actions that don't support "GET" is broken
-        if request.method != "POST":
-            raise MethodNotAllowed(request.method)
-
-        query_pks = request.POST.getlist("pk")
-        selected_objects = self.get_queryset().filter(pk__in=query_pks) if query_pks else None
-
-        # Create a new Form class from BulkRenameForm
-        class _Form(BulkRenameForm):
-            pk = ModelMultipleChoiceField(queryset=self.get_queryset(), widget=MultipleHiddenInput())
-
-        # selected_objects would return False; if no query_pks or invalid query_pks
-        if not selected_objects:
-            messages.warning(request, f"No valid {self.queryset.model._meta.verbose_name_plural} were selected.")
-            return redirect(self.get_return_url(request))
-
-        if "_preview" in request.POST or "_apply" in request.POST:
-            form = _Form(request.POST, initial={"pk": query_pks})
-            if form.is_valid():
-                try:
-                    with transaction.atomic():
-                        renamed_pks = []
-                        for obj in selected_objects:
-                            find = form.cleaned_data["find"]
-                            replace = form.cleaned_data["replace"]
-                            if form.cleaned_data["use_regex"]:
-                                try:
-                                    obj.new_name = re.sub(find, replace, obj.name)
-                                # Catch regex group reference errors
-                                except re.error:
-                                    obj.new_name = obj.name
-                            else:
-                                obj.new_name = obj.name.replace(find, replace)
-                            renamed_pks.append(obj.pk)
-
-                        if "_apply" in request.POST:
-                            for obj in selected_objects:
-                                obj.name = obj.new_name
-                                obj.save()
-
-                            # Enforce constrained permissions
-                            if self.get_queryset().filter(pk__in=renamed_pks).count() != len(selected_objects):
-                                raise ObjectDoesNotExist
-
-                            messages.success(
-                                request,
-                                f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
-                            )
-                            return redirect(self.get_return_url(request))
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    form.add_error(None, msg)
-
-        else:
-            form = _Form(initial={"pk": query_pks})
-
-        return Response(
-            {
-                "template": "generic/object_bulk_rename.html",
-                "form": form,
-                "obj_type_plural": self.queryset.model._meta.verbose_name_plural,
-                "selected_objects": selected_objects,
-                "return_url": self.get_return_url(request),
-                "parent_name": self.get_selected_objects_parents_name(selected_objects),
-            }
-        )
-
 
 class ModuleBayTemplateUIViewSet(
     ModuleBayCommonViewSetMixin,
     ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
     ObjectBulkUpdateViewMixin,
 ):
     queryset = ModuleBayTemplate.objects.all()
@@ -2310,17 +2739,6 @@ class ModuleBayTemplateUIViewSet(
             parent = selected_object.device_type or selected_object.module_type
             return parent.display
         return ""
-
-    @action(
-        detail=False,
-        methods=["GET", "POST"],
-        url_path="rename",
-        url_name="bulk_rename",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_modulebaytemplate"],
-    )
-    def bulk_rename(self, request, *args, **kwargs):
-        return self._bulk_rename(request, *args, **kwargs)
 
 
 #
@@ -2535,22 +2953,67 @@ class DeviceUIViewSet(NautobotUIViewSet):
         ObjectFieldsPanel with context-aware rendering of `position`, `device_redundancy_group`, and `software_version`.
         """
 
+        @staticmethod
+        def _get_parent_bay_or_none(device):
+            """Return the parent bay for a device, or None if it has no parent bay."""
+            try:
+                return device.parent_bay
+            except DeviceBay.DoesNotExist:
+                return None
+
+        @classmethod
+        def _get_breadcrumb_objects(cls, instance):
+            """
+            Build an ordered list of breadcrumb objects from top-level parent down to immediate parent bay.
+
+            Output shape (for nested devices):
+                [parent_device, parent_device_bay, intermediate_device, intermediate_device_bay, ...]
+            """
+            current_bay = cls._get_parent_bay_or_none(instance)
+            if current_bay is None:
+                return []
+
+            visited_device_ids = set()
+            breadcrumb_segments = []
+            hop_count = 0
+
+            #
+            # Walk up the chain starting at the bay at which the passed instance is installed. The side-effect of
+            # this is that, in the event the chain is longer than the depth limit, the top-most device(s) will
+            # not be included.
+            while current_bay is not None and hop_count < DEVICE_RECURSION_DEPTH_LIMIT:
+                current_device = current_bay.device
+                if current_device.pk in visited_device_ids:
+                    break
+
+                visited_device_ids.add(current_device.pk)
+                breadcrumb_segments.extend([current_bay, current_device])
+
+                current_bay = cls._get_parent_bay_or_none(current_device)
+                hop_count += 1
+
+            # Convert from child-upward order to top-down order to display the breadcrumb from
+            # top-level parent down to immediate parent bay from left to right.
+            return list(reversed(breadcrumb_segments))
+
         def render_value(self, key, value, context):
             if key == "position":
                 instance = get_obj_from_context(context, self.context_object_key)
-                try:
-                    if instance.parent_bay is not None:
-                        parent = instance.parent_bay.device
-                        display = format_html(
-                            "{} / {}",
-                            helpers.hyperlinked_object(parent),
-                            helpers.hyperlinked_object(instance.parent_bay),
-                        )
-                        if parent.position is not None:
-                            display += format_html(" (U{} / {})", parent.position, parent.get_face_display())
-                        return display
-                except DeviceBay.DoesNotExist:
-                    pass
+                breadcrumb_objects = self._get_breadcrumb_objects(instance)
+
+                if breadcrumb_objects:
+                    breadcrumb_links = [helpers.hyperlinked_object(obj) for obj in breadcrumb_objects]
+                    display = format_html(" / ".join(["{}"] * len(breadcrumb_links)), *breadcrumb_links)
+
+                    # Add top-level device position if it has one
+                    if hasattr(breadcrumb_objects[0], "position"):
+                        top_device_position = breadcrumb_objects[0].position
+                        if top_device_position is not None:
+                            display += format_html(
+                                " (U{} / {})", top_device_position, breadcrumb_objects[0].get_face_display()
+                            )
+                    return display
+
                 if instance.rack is not None and value is not None:
                     return format_html("U{} / {}", value, instance.get_face_display())
                 if instance.rack is not None and instance.device_type.u_height:
@@ -2632,6 +3095,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         available_power = connected_endpoint.available_power / 3
                         utilization_data = Context(
                             helpers.utilization_graph_raw_data(leg["allocated"], connected_endpoint.available_power / 3)
+                        )
+                        utilization_graph = object_detail.render_component_template(
+                            "utilities/templatetags/utilization_graph.html", utilization_data
                         )
                     else:
                         available_power = helpers.HTML_NONE
@@ -2953,8 +3419,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleInterfaceTable,
                         table_attribute="vc_interfaces",
                         order_by_fields=["_name"],
-                        prefetch_related_fields=["_path__destination"],
-                        select_related_fields=["cable", "lag"],
+                        prefetch_related_fields=Interface.cable_columns_prefetch_related_fields(),
+                        select_related_fields=[*Interface.cable_columns_select_related_fields(), "lag"],
                         related_field_name="device",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
@@ -2981,7 +3447,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Front Ports",
                         table_class=tables.DeviceModuleFrontPortTable,
                         table_attribute="all_front_ports",
-                        select_related_fields=["cable", "rear_port"],
+                        select_related_fields=[*FrontPort.cable_columns_select_related_fields(), "rear_port"],
+                        prefetch_related_fields=FrontPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="front_ports",
                         enable_bulk_actions=True,
@@ -3007,7 +3474,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Rear Ports",
                         table_class=tables.DeviceModuleRearPortTable,
                         table_attribute="all_rear_ports",
-                        select_related_fields=["cable"],
+                        select_related_fields=RearPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=RearPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="rear_ports",
                         enable_bulk_actions=True,
@@ -3031,8 +3499,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Ports",
                         table_class=tables.DeviceModuleConsolePortTable,
                         table_attribute="all_console_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=ConsolePort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=ConsolePort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_ports",
                         enable_bulk_actions=True,
@@ -3058,8 +3526,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Console Server Ports",
                         table_class=tables.DeviceModuleConsoleServerPortTable,
                         table_attribute="all_console_server_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=ConsoleServerPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=ConsoleServerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_server_ports",
                         enable_bulk_actions=True,
@@ -3085,8 +3553,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Ports",
                         table_class=tables.DeviceModulePowerPortTable,
                         table_attribute="all_power_ports",
-                        select_related_fields=["cable"],
-                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=PowerPort.cable_columns_select_related_fields(),
+                        prefetch_related_fields=PowerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_ports",
                         enable_bulk_actions=True,
@@ -3112,8 +3580,8 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_title="Power Outlets",
                         table_class=tables.DeviceModulePowerOutletTable,
                         table_attribute="all_power_outlets",
-                        select_related_fields=["cable", "power_port"],
-                        prefetch_related_fields=["_path__destination"],
+                        select_related_fields=[*PowerOutlet.cable_columns_select_related_fields(), "power_port"],
+                        prefetch_related_fields=PowerOutlet.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_outlets",
                         enable_bulk_actions=True,
@@ -3439,11 +3907,9 @@ class DeviceUIViewSet(NautobotUIViewSet):
     )
     def lldp_neighbors(self, request, *args, **kwargs):
         instance = self.get_object()
-        interfaces = (
+        interfaces = Interface.optimize_queryset_for_cable_columns(
             instance.all_interfaces.restrict(request.user, "view")
-            .prefetch_related("_path__destination")
-            .exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
-        )
+        ).exclude(type__in=NONCONNECTABLE_IFACE_TYPES)
         return Response(
             {
                 "template": "dcim/device/lldp_neighbors.html",
@@ -3617,13 +4083,17 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
                 ModelBreadcrumbItem(),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_device"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_device is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_device is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(
                     instance=context_object_attr("parent_module_bay.parent_module"),
-                    should_render=lambda c: c["object"].parent_module_bay is not None
-                    and c["object"].parent_module_bay.parent_module is not None,
+                    should_render=lambda c: (
+                        c["object"].parent_module_bay is not None
+                        and c["object"].parent_module_bay.parent_module is not None
+                    ),
                 ),
                 InstanceBreadcrumbItem(instance=context_object_attr("parent_module_bay")),
                 AncestorsInstanceBreadcrumbItem(
@@ -3671,10 +4141,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def consoleports(self, request, *args, **kwargs):
         instance = self.get_object()
-        consoleports = (
+        consoleports = ConsolePort.optimize_queryset_for_cable_columns(
             instance.console_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
         )
         consoleport_table = tables.DeviceModuleConsolePortTable(
             data=consoleports, user=request.user, configurable=True, orderable=False
@@ -3698,10 +4166,8 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def consoleserverports(self, request, *args, **kwargs):
         instance = self.get_object()
-        consoleserverports = (
+        consoleserverports = ConsoleServerPort.optimize_queryset_for_cable_columns(
             instance.console_server_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
         )
         consoleserverport_table = tables.DeviceModuleConsoleServerPortTable(
             data=consoleserverports, user=request.user, orderable=False, configurable=True, parent_module=instance
@@ -3727,11 +4193,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def powerports(self, request, *args, **kwargs):
         instance = self.get_object()
-        powerports = (
-            instance.power_ports.restrict(request.user, "view")
-            .select_related("cable")
-            .prefetch_related("_path__destination")
-        )
+        powerports = PowerPort.optimize_queryset_for_cable_columns(instance.power_ports.restrict(request.user, "view"))
         powerport_table = tables.DeviceModulePowerPortTable(
             data=powerports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -3754,11 +4216,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def poweroutlets(self, request, *args, **kwargs):
         instance = self.get_object()
-        poweroutlets = (
+        poweroutlets = PowerOutlet.optimize_queryset_for_cable_columns(
             instance.power_outlets.restrict(request.user, "view")
-            .select_related("cable", "power_port")
-            .prefetch_related("_path__destination")
-        )
+        ).select_related("power_port")
         poweroutlet_table = tables.DeviceModulePowerOutletTable(
             data=poweroutlets, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -3781,14 +4241,13 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     def interfaces(self, request, *args, **kwargs):
         instance = self.get_object()
         interfaces = (
-            instance.interfaces.restrict(request.user, "view")
+            Interface.optimize_queryset_for_cable_columns(instance.interfaces.restrict(request.user, "view"))
             .prefetch_related(
                 Prefetch("ip_addresses", queryset=IPAddress.objects.restrict(request.user)),
                 Prefetch("member_interfaces", queryset=Interface.objects.restrict(request.user)),
-                "_path__destination",
                 "tags",
             )
-            .select_related("lag", "cable")
+            .select_related("lag")
         )
         interface_table = tables.DeviceModuleInterfaceTable(
             data=interfaces, user=request.user, orderable=False, configurable=True, parent_module=instance
@@ -3812,7 +4271,9 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def frontports(self, request, *args, **kwargs):
         instance = self.get_object()
-        frontports = instance.front_ports.restrict(request.user, "view").select_related("cable", "rear_port")
+        frontports = FrontPort.optimize_queryset_for_cable_columns(
+            instance.front_ports.restrict(request.user, "view")
+        ).select_related("rear_port")
         frontport_table = tables.DeviceModuleFrontPortTable(
             data=frontports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -3835,7 +4296,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
     )
     def rearports(self, request, *args, **kwargs):
         instance = self.get_object()
-        rearports = instance.rear_ports.restrict(request.user, "view").select_related("cable")
+        rearports = RearPort.optimize_queryset_for_cable_columns(instance.rear_ports.restrict(request.user, "view"))
         rearport_table = tables.DeviceModuleRearPortTable(
             data=rearports, user=request.user, orderable=False, configurable=True, parent_module=instance
         )
@@ -3994,7 +4455,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
 
 
 class ConsolePortListView(generic.ObjectListView):
-    queryset = ConsolePort.objects.all()
+    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
     filterset = filters.ConsolePortFilterSet
     filterset_form = forms.ConsolePortFilterForm
     table = tables.ConsolePortTable
@@ -4062,7 +4523,7 @@ class ConsolePortBulkDeleteView(generic.BulkDeleteView):
 
 
 class ConsoleServerPortListView(generic.ObjectListView):
-    queryset = ConsoleServerPort.objects.all()
+    queryset = ConsoleServerPort.optimize_queryset_for_cable_columns(ConsoleServerPort.objects.all())
     filterset = filters.ConsoleServerPortFilterSet
     filterset_form = forms.ConsoleServerPortFilterForm
     table = tables.ConsoleServerPortTable
@@ -4130,7 +4591,7 @@ class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerPortListView(generic.ObjectListView):
-    queryset = PowerPort.objects.all()
+    queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
     filterset = filters.PowerPortFilterSet
     filterset_form = forms.PowerPortFilterForm
     table = tables.PowerPortTable
@@ -4198,7 +4659,7 @@ class PowerPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class PowerOutletListView(generic.ObjectListView):
-    queryset = PowerOutlet.objects.all()
+    queryset = PowerOutlet.optimize_queryset_for_cable_columns(PowerOutlet.objects.all())
     filterset = filters.PowerOutletFilterSet
     filterset_form = forms.PowerOutletFilterForm
     table = tables.PowerOutletTable
@@ -4266,7 +4727,10 @@ class PowerOutletBulkDeleteView(generic.BulkDeleteView):
 
 
 class InterfaceListView(generic.ObjectListView):
-    queryset = Interface.objects.all()
+    # `optimize_queryset_for_cable_columns` adds the `select_related` / `prefetch_related` needed
+    # so `cable`, `cable_peer`, and `connection` columns don't trigger per-row N+1 queries against
+    # CableToCableTermination / CablePath.
+    queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
     filterset = filters.InterfaceFilterSet
     filterset_form = forms.InterfaceFilterForm
     table = tables.InterfaceTable
@@ -4401,7 +4865,7 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
 
 
 class FrontPortListView(generic.ObjectListView):
-    queryset = FrontPort.objects.all()
+    queryset = FrontPort.optimize_queryset_for_cable_columns(FrontPort.objects.all())
     filterset = filters.FrontPortFilterSet
     filterset_form = forms.FrontPortFilterForm
     table = tables.FrontPortTable
@@ -4469,7 +4933,7 @@ class FrontPortBulkDeleteView(generic.BulkDeleteView):
 
 
 class RearPortListView(generic.ObjectListView):
-    queryset = RearPort.objects.all()
+    queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
     filterset = filters.RearPortFilterSet
     filterset_form = forms.RearPortFilterForm
     table = tables.RearPortTable
@@ -4683,7 +5147,7 @@ class DeviceBayBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
+class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectBulkRenameViewMixin):
     queryset = ModuleBay.objects.all()
     filterset_class = filters.ModuleBayFilterSet
     filterset_form_class = forms.ModuleBayFilterForm
@@ -4747,17 +5211,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet):
             parent = selected_object.parent_device or selected_object.parent_module
             return parent.display
         return ""
-
-    @action(
-        detail=False,
-        methods=["GET", "POST"],
-        url_path="rename",
-        url_name="bulk_rename",
-        custom_view_base_action="change",
-        custom_view_additional_permissions=["dcim.change_modulebay"],
-    )
-    def bulk_rename(self, request, *args, **kwargs):
-        return self._bulk_rename(request, *args, **kwargs)
 
 
 #
@@ -4947,6 +5400,150 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 
 
 #
+# Cable Types
+#
+def _mapping_matches_dimensions(mapping, a_connectors, b_connectors, total_lanes):
+    """True if `mapping` is shape-consistent with the given lane dimensions per validate_cable_breakout_mapping."""
+    if not (a_connectors and b_connectors and total_lanes):
+        return False
+    try:
+        validate_cable_breakout_mapping(mapping, a_connectors, b_connectors, total_lanes)
+    except ValidationError:
+        return False
+    return True
+
+
+def _user_labels_from_mapping(mapping):
+    """Build a `(a_connector, a_position, b_connector, b_position) -> label` dict from an untrusted mapping list."""
+    if not isinstance(mapping, list):
+        return {}
+    labels = {}
+    for entry in mapping:
+        if not isinstance(entry, dict):
+            continue
+        label = entry.get("label")
+        if not (isinstance(label, str) and label):
+            continue
+        try:
+            key = (entry["a_connector"], entry["a_position"], entry["b_connector"], entry["b_position"])
+        except KeyError:
+            continue
+        labels[key] = label
+    return labels
+
+
+class CableTypeUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.CableTypeFilterSet
+    filterset_form_class = forms.CableTypeFilterForm
+    form_class = forms.CableTypeForm
+    bulk_update_form_class = forms.CableTypeBulkEditForm
+    queryset = CableType.objects.all()
+    serializer_class = serializers.CableTypeSerializer
+    table_class = tables.CableTypeTable
+    lookup_field = "pk"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=["mapping"],
+            ),
+            object_detail.Panel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Lane Mapping Diagram",
+                body_content_template_path="dcim/inc/cabletype_diagram_panel.html",
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Mapping",
+                object_field="mapping",
+                render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
+            ),
+        ),
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=100,
+                tab_id="cables",
+                label="Cables",
+                url_name="dcim:cabletype_cables",
+                related_object_attribute="cables",
+                panels=(
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        table_class=tables.CableTable,
+                        table_filter="cable_type",
+                        tab_id="cables",
+                        include_paginator=True,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    @action(
+        detail=True,
+        url_path="cables",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["dcim.view_cable"],
+    )
+    def cables(self, request, *args, **kwargs):
+        return Response({})
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_name="mapping_editor",
+        url_path="mapping-editor",
+        custom_view_base_action="view",
+    )
+    def mapping_editor(self, request):
+        """HTMX endpoint: return a server-rendered mapping table for given connector/lane counts."""
+
+        a_connectors = int(request.POST.get("a_connectors", 0) or 0)
+        b_connectors = int(request.POST.get("b_connectors", 0) or 0)
+        total_lanes = int(request.POST.get("total_lanes", 0) or 0)
+
+        # Derive per-side positions if the inputs are consistent; otherwise, we can't render a valid table.
+        a_positions = total_lanes // a_connectors if a_connectors and total_lanes % a_connectors == 0 else 0
+        b_positions = total_lanes // b_connectors if b_connectors and total_lanes % b_connectors == 0 else 0
+
+        # Parse the existing mapping from the request. If it's shape-consistent with the posted dimensions,
+        # use it as-is; otherwise (e.g. user just changed connector counts or total_lanes on an existing
+        # CableType), regenerate but carry over any user-supplied labels keyed by lane assignment.
+        posted_mapping = None
+        mapping_json = request.POST.get("mapping", "")
+        if mapping_json:
+            try:
+                posted_mapping = json.loads(mapping_json)
+            except (json.JSONDecodeError, TypeError):
+                posted_mapping = None
+
+        if _mapping_matches_dimensions(posted_mapping, a_connectors, b_connectors, total_lanes):
+            mapping = posted_mapping
+        elif all([a_connectors, b_connectors, total_lanes, a_positions, b_positions]):
+            mapping = generate_cable_breakout_mapping(
+                a_connectors, b_connectors, total_lanes, labels=_user_labels_from_mapping(posted_mapping)
+            )
+        else:
+            mapping = None
+
+        return render(
+            request,
+            "dcim/inc/breakout_mapping_table.html",
+            {
+                "mapping": mapping,
+                "a_connector_range": range(1, a_connectors + 1),
+                "a_position_range": range(1, a_positions + 1),
+                "b_connector_range": range(1, b_connectors + 1),
+                "b_position_range": range(1, b_positions + 1),
+            },
+        )
+
+
+#
 # Cables
 #
 class CableUIViewSet(NautobotUIViewSet):
@@ -4956,16 +5553,101 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
-    action_buttons = ("import", "export")
+    queryset = Cable.objects.prefetch_related(
+        Prefetch(
+            "terminations",
+            # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
+            # `terminations_b` columns render every FK without an extra query per row.
+            queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+        ),
+    )
+    action_buttons = ("add", "import", "export")
 
     def get_queryset(self):
         # 6933 fix: with prefetch related in queryset
-        # DeviceInterface is not properly cleared of _path_id
+        # DeviceInterface is not properly cleared of its cable_paths
         queryset = super().get_queryset()
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="lane-form",
+        url_name="lane_form",
+        custom_view_base_action="view",
+    )
+    def lane_form(self, request, pk=None):
+        """HTMX endpoint: return the lane termination form partial for an existing cable."""
+        cable = self.get_object()
+        return self._render_lane_form(request, cable)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-form-new",
+        url_name="lane_form_new",
+        custom_view_base_action="view",
+    )
+    def lane_form_new(self, request):
+        """HTMX endpoint: return the lane termination form partial for a new (unsaved) cable."""
+        return self._render_lane_form(request, cable=None)
+
+    def _render_lane_form(self, request, cable):
+        """Shared: render the lane form partial with an optional cable-type override.
+
+        Only forwards keys actually present in `request.GET` into the form's initial — so the form
+        can distinguish "no override sent" (initial display) from "user cleared this field"
+        (explicit override) for the live-preview lane re-render.
+        """
+        initial = {}
+        for key in ("cable_type", "termination_a_type", "termination_a_id", "termination_b_type"):
+            if key in request.GET:
+                initial[key] = request.GET[key]
+
+        form = forms.CableForm(instance=cable, initial=initial)
+        return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-side-fields",
+        url_name="lane_side_fields",
+        custom_view_base_action="view",
+    )
+    def lane_side_fields(self, request):
+        """HTMX endpoint: return parent+termination fields for a specific lane side when the type changes.
+
+        The current cable's pk is not needed since the response only depends on the selected
+        termination type, side, and connector — not on any existing cable state.
+        """
+        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
+
+        connector = request.GET.get("connector", "1")
+        side = request.GET.get("side", "a")
+        prefix = f"{side}_conn_{connector}"
+        # HTMX-only endpoint: the requesting type select sends its value as `<prefix>_type` via hx-include.
+        term_type = request.GET.get(f"{prefix}_type", "interface")
+
+        fieldset = CableTerminationFieldSet()
+        result = fieldset.get_fields(prefix, term_type=term_type)
+
+        # Build a minimal form-like object for template rendering.
+        temp_form = Form()
+        temp_form.fields.update(result["fields"])
+        for k, v in result["initial"].items():
+            temp_form.initial[k] = v
+
+        return render(
+            request,
+            "dcim/inc/cable_lane_side_fields.html",
+            {
+                "form": temp_form,
+                "parent_field": result["meta"]["parent_field"],
+                "term_field": result["meta"]["term_field"],
+            },
+        )
 
 
 class PathTraceView(generic.ObjectView):
@@ -4986,9 +5668,12 @@ class PathTraceView(generic.ObjectView):
     def get_extra_context(self, request, instance):
         related_paths = []
 
-        # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin
+        # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin.
         if isinstance(instance, PathEndpoint):
-            path = instance._path
+            cable_paths = instance.cable_paths.all().prefetch_related("origin")
+            path = cable_paths.first()
+            if cable_paths.count() > 1:  # breakout cable!
+                related_paths = cable_paths
 
         # Otherwise, find all CablePaths which traverse the specified object
         else:
@@ -5008,93 +5693,60 @@ class PathTraceView(generic.ObjectView):
             else:
                 path = related_paths.first()
 
+        # Render the SVG trace diagram for the active path (if there is one).
+        trace_svg = ""
+        if path is not None and getattr(path, "origin", None) is not None:
+            from nautobot.dcim.svg.path_trace import CableTraceSVG
+
+            trace_svg = CableTraceSVG(
+                path.origin, base_url=request.build_absolute_uri("/").rstrip("/"), cable_path=path
+            ).render()
+
         return {
             "path": path,
             "related_paths": related_paths,
-            "total_length": path.get_total_length() if path else None,
+            "trace_svg": trace_svg,
             "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
 
 
-class CableCreateView(generic.ObjectEditView):
-    queryset = Cable.objects.all()
-    template_name = "dcim/cable_connect.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        # Set the model_form class based on the type of component being connected
-        self.model_form = {
-            "console-port": forms.ConnectCableToConsolePortForm,
-            "console-server-port": forms.ConnectCableToConsoleServerPortForm,
-            "power-port": forms.ConnectCableToPowerPortForm,
-            "power-outlet": forms.ConnectCableToPowerOutletForm,
-            "interface": forms.ConnectCableToInterfaceForm,
-            "front-port": forms.ConnectCableToFrontPortForm,
-            "rear-port": forms.ConnectCableToRearPortForm,
-            "power-feed": forms.ConnectCableToPowerFeedForm,
-            "circuit-termination": forms.ConnectCableToCircuitTerminationForm,
-        }.get(kwargs.get("termination_b_type"), None)
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        termination_a_type = url_kwargs.get("termination_a_type")
-        termination_a_id = url_kwargs.get("termination_a_id")
-        termination_b_type_name = url_kwargs.get("termination_b_type")
-        self.termination_b_type = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
-
-        # Initialize Cable termination attributes
-        obj.termination_a = termination_a_type.objects.get(pk=termination_a_id)
-        obj.termination_b_type = self.termination_b_type
-
-        return obj
+class CableCreateView(LoginRequiredMixin, View):
+    """
+    Redirect shim for the per-termination-type `<port>_connect` URLs (referenced from row-action
+    menus across DCIM and Circuits). Forwards the A-side identity (plus an optional B-side type
+    pre-selection) into the unified `cable_add` form's query string, so the user lands on a
+    single form rather than a per-port specialization.
+    """
 
     def get(self, request, *args, **kwargs):
-        if self.model_form is None:
-            return HttpResponse(status_code=400)
+        termination_a_type = kwargs.get("termination_a_type")
+        termination_a_id = kwargs.get("termination_a_id")
+        termination_b_type_name = kwargs.get("termination_b_type")
 
-        obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
+        if not termination_a_type or not termination_a_id:
+            return HttpResponseBadRequest("termination_a_type and termination_a_id must be provided")
 
-        # Parse initial data manually to avoid setting field values as lists
-        initial_data = {k: request.GET[k] for k in request.GET}
+        ct_a = ContentType.objects.get_for_model(termination_a_type)
+        return_url = request.GET.get("return_url", "")
 
-        # Set initial location and rack based on side A termination (if not already set)
-        termination_a_location = getattr(obj.termination_a.parent, "location", None)
-        if "termination_b_location" not in initial_data:
-            initial_data["termination_b_location"] = termination_a_location
-        if "termination_b_rack" not in initial_data:
-            initial_data["termination_b_rack"] = getattr(obj.termination_a.parent, "rack", None)
+        add_url = reverse("dcim:cable_add")
+        params = {
+            "termination_a_type": f"{ct_a.app_label}.{ct_a.model}",
+            "termination_a_id": termination_a_id,
+        }
+        if termination_b_type_name:
+            # The URL path captures the type in hyphenated form (e.g. "console-server-port");
+            # `ContentType.objects.get(model=...)` expects the model name (no hyphens).
+            try:
+                ct_b = ContentType.objects.get(model=termination_b_type_name.replace("-", ""))
+            except ContentType.DoesNotExist:
+                return HttpResponseBadRequest("Unknown termination_b_type")
+            params["termination_b_type"] = f"{ct_b.app_label}.{ct_b.model}"
+        if return_url and url_has_allowed_host_and_scheme(return_url, allowed_hosts=request.get_host()):
+            params["return_url"] = iri_to_uri(return_url)
 
-        form = self.model_form(exclude_id=kwargs.get("termination_a_id"), instance=obj, initial=initial_data)
-
-        # the following builds up a CSS query selector to match all drop-downs
-        # in the termination_b form except the termination_b_id. this is necessary to reset the termination_b_id
-        # drop-down whenever any of these drop-downs' values changes. this cannot be hardcoded because the form is
-        # selected dynamically and therefore the fields change depending on the value of termination_b_type (L2358)
-        js_select_onchange_query = ", ".join(
-            [
-                f"select#id_{field_name}"
-                for field_name, field in form.fields.items()
-                # include all termination_b_* fields:
-                if field_name.startswith("termination_b")
-                # exclude termination_b_id:
-                and field_name != "termination_b_id"
-                # include only HTML select fields:
-                and field.widget.input_type == "select"
-            ]
-        )
-        return render(
-            request,
-            self.template_name,
-            {
-                "obj": obj,
-                "obj_type": Cable._meta.verbose_name,
-                "termination_b_type": self.termination_b_type.name,
-                "form": form,
-                "return_url": self.get_return_url(request, obj),
-                "js_select_onchange_query": js_select_onchange_query,
-            },
-        )
+        return redirect(f"{add_url}?{urlencode(params)}")
 
 
 #
@@ -5107,7 +5759,7 @@ class ConnectionsListView(generic.ObjectListView):
 
 
 class ConsoleConnectionsListView(ConnectionsListView):
-    queryset = ConsolePort.objects.filter(_path__isnull=False)
+    queryset = ConsolePort.objects.filter(cable_paths__isnull=False).distinct()
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
@@ -5117,7 +5769,7 @@ class ConsoleConnectionsListView(ConnectionsListView):
 
 
 class PowerConnectionsListView(ConnectionsListView):
-    queryset = PowerPort.objects.filter(_path__isnull=False)
+    queryset = PowerPort.objects.filter(cable_paths__isnull=False).distinct()
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable
@@ -5139,25 +5791,46 @@ class InterfaceConnectionsListView(ConnectionsListView):
         super().__init__(*args, **kwargs)
         self.get_queryset()  # Populate self.queryset after init.
 
+    def get_required_permission(self):
+        # The view exposes interface connections; gate it on Interface view permission rather than
+        # CablePath view permission (which is the model of the underlying queryset).
+        return "dcim.view_interface"
+
     def get_queryset(self):
         """
-        This is a required so that the call to `ContentType.objects.get_for_model` does not result in a circular import.
+        Build a CablePath queryset of interface-to-interface connections.
+
+        Driven from CablePath rather than Interface so each connection is naturally one row (independent
+        of breakout-cable lanes). Lazy-built here so `ContentType.objects.get_for_model` doesn't run at
+        import time.
         """
-        qs = Interface.objects.filter(_path__isnull=False).exclude(
-            # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
-            # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
-            # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
-            # used for reverse querying.
-            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A)
-            # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
-            #       the connection will appear in the table, but if it only matches (B) then the connection will not!
-            _path__destination_type=ContentType.objects.get_for_model(Interface),
-            pk__lt=F("_path__destination_id"),
-        )
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        qs = CablePath.objects.filter(
+            origin_type=iface_ct,
+            destination_type=iface_ct,
+            # Canonicalize each iface↔iface pair: each connection produces two CablePaths (one per
+            # direction); keep only the one whose origin_id is the lower of the two. Breakout-lane
+            # CablePaths between distinct pairs are independent rows and all survive.
+            origin_id__lt=F("destination_id"),
+        ).prefetch_related("origin", "destination")
         if self.queryset is None:
             self.queryset = qs
 
         return self.queryset
+
+    def has_permission(self):
+        """
+        Override base permission filtering to apply Interface-level permission to BOTH endpoints of
+        each connection, rather than calling `CablePath.objects.restrict()` (which would key off the
+        non-existent `dcim.view_cablepath` permission).
+        """
+        user = self.request.user
+        permission_required = self.get_required_permission()
+        if not user.has_perms((permission_required, *self.additional_permissions)):
+            return False
+        visible_ifaces = Interface.objects.restrict(user, "view").values("pk")
+        self.queryset = self.queryset.filter(origin_id__in=visible_ifaces, destination_id__in=visible_ifaces)
+        return True
 
 
 #
@@ -5587,7 +6260,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
             trace_url = reverse("dcim:powerfeed_trace", kwargs={"pk": instance.pk})
             cable_html = format_html(
                 '{} <a href="{}" class="btn btn-primary btn-xs" title="Trace">'
-                '<i class="mdi mdi-transit-connection-variant"></i></a>',
+                '<span class="mdi mdi-transit-connection-variant"></span></a>',
                 helpers.hyperlinked_object(instance.cable),
                 trace_url,
             )
@@ -5613,15 +6286,13 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
 
         if request.user.has_perm("dcim.add_cable"):
             connect_url = (
-                reverse(
-                    "dcim:powerfeed_connect",
-                    kwargs={"termination_a_id": instance.pk, "termination_b_type": "power-port"},
-                )
-                + f"?return_url={instance.get_absolute_url()}"
+                reverse("dcim:cable_add")
+                + f"?termination_a_type=dcim.powerfeed&termination_a_id={instance.pk}"
+                + f"&return_url={instance.get_absolute_url()}"
             )
             connect_link = format_html(
                 '<a href="{}" class="btn btn-primary btn-sm float-end">'
-                '<span class="mdi mdi-ethernet-cable" aria-hidden="true"></span> Connect</a>',
+                '<span class="mdi mdi-ethernet-cable me-4" aria-hidden="true"></span>Add Cable</a>',
                 connect_url,
             )
             return {"Connection": format_html("Not connected {}", connect_link)}

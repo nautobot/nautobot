@@ -11,7 +11,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.db.models import Count, Q
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.test.client import RequestFactory
 from django.urls import reverse
 import graphene.types
@@ -24,6 +24,8 @@ from rest_framework import status
 from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core.graphql import execute_query, execute_saved_query
 from nautobot.core.graphql.generators import (
+    _make_filter_cache_key,
+    generate_attrs_for_schema_type,
     generate_list_search_parameters,
     generate_schema_type,
 )
@@ -36,8 +38,8 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_tags,
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import str_to_var_name
-from nautobot.core.testing import create_test_user, NautobotTestClient, TestCase
+from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
+from nautobot.core.testing import AssertNoRepeatedQueries, create_test_user, NautobotTestClient, TestCase
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.filters import DeviceFilterSet, LocationFilterSet
@@ -65,6 +67,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.graphql.types import StatusType
 from nautobot.extras.models import (
     ChangeLoggedModel,
     ConfigContext,
@@ -124,6 +127,23 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         resp = execute_query(query, user=self.user)
         self.assertIsNone(resp.errors)
         self.assertEqual(len(resp.data["query"]), Location.objects.all().count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_types_list(self):
+        """Test that querying for a list of content_types works even though ContentType has no restrict() method."""
+        query = "{ content_types { model } }"
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(len(resp.data["content_types"]), ContentType.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_execute_query_content_type_single(self):
+        """Test that querying for a single content_type works even though ContentType has no restrict() method."""
+        ct = ContentType.objects.first()
+        query = f'{{ content_type(id: "{ct.pk}") {{ model }} }}'
+        resp = execute_query(query, user=self.user)
+        self.assertIsNone(resp.errors)
+        self.assertEqual(resp.data["content_type"]["model"], ct.model)
 
     @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -239,6 +259,48 @@ class GraphQLGenerateSchemaTypeTestCase(GraphQLTestCaseBase):
         self.assertIn(OptimizedNautobotObjectType, schema.__bases__)
         self.assertEqual(schema._meta.model, ChangeLoggedModel)
         self.assertIsNone(schema._meta.filterset_class)
+
+
+class GraphQLGetNodePermissionTest(GraphQLTestCaseBase):
+    """Direct tests for `OptimizedNautobotObjectType.get_node()`.
+
+    These ensure that our object-level permission enforcement for ID/node
+    lookups is covered even when nested FK optimization behavior changes.
+    """
+
+    def test_get_node_enforces_object_permissions(self):
+        user = create_test_user("graphql_get_node_user")
+
+        # Status objects are associated with "content_types"; we include one here so the
+        # Status model is fully valid for GraphQL usage.
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        status_ct = ContentType.objects.get_for_model(Status)
+
+        allowed_status = Status.objects.create(name="AllowedStatusForGetNodeTest")
+        allowed_status.content_types.add(interface_ct)
+
+        denied_status = Status.objects.create(name="DeniedStatusForGetNodeTest")
+        denied_status.content_types.add(interface_ct)
+
+        allowed_status_perm = ObjectPermission.objects.create(
+            name="View Status allowed (get_node test)",
+            actions=["view"],
+            constraints={"name": allowed_status.name},
+        )
+        allowed_status_perm.object_types.add(status_ct)
+        allowed_status_perm.users.add(user)
+
+        info = types.SimpleNamespace(context=types.SimpleNamespace(user=user))
+
+        allowed_node = StatusType.get_node(info, str(allowed_status.pk))
+        self.assertIsNotNone(allowed_node)
+        self.assertEqual(allowed_node.name, allowed_status.name)
+
+        denied_node = StatusType.get_node(info, str(denied_status.pk))
+        self.assertIsNone(denied_node)
+
+        nonexistent_node = StatusType.get_node(info, str(uuid.uuid4()))
+        self.assertIsNone(nonexistent_node)
 
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
@@ -487,6 +549,43 @@ class GraphQLSearchParameters(GraphQLTestCaseBase):
                 self.assertIn(field, params["args"].keys())
             else:
                 self.assertIn(field, params.keys())
+
+
+@tag("example_app")
+class GraphQLReservedFieldKwargFilters(TestCase):
+    """Regression tests for filters whose names collide with reserved `graphene.Field` kwargs (#9021).
+
+    The `example_app.ExampleModelFilterSet` declares `default_value`, `required`, and `resolver`
+    filters specifically to exercise this path.
+    """
+
+    reserved_filter_names = ("default_value", "required", "resolver")
+
+    def test_reserved_filter_names_relocated_to_args(self):
+        from example_app.filters import ExampleModelFilterSet
+
+        args = get_filtering_args_from_filterset(ExampleModelFilterSet)
+        for reserved in self.reserved_filter_names:
+            # Relocated out of the top-level Field kwargs...
+            self.assertNotIn(reserved, args)
+            # ...but still exposed as a GraphQL argument.
+            self.assertIn(reserved, args["args"])
+
+    def test_schema_type_builds_with_reserved_filter_names(self):
+        from example_app.models import ExampleModel
+
+        schema_type = generate_schema_type(app_name="example_app", model=ExampleModel)
+
+        # The list query field exposes the reserved filter names as arguments.
+        search_params = generate_list_search_parameters(schema_type)
+        for reserved in self.reserved_filter_names:
+            self.assertIn(reserved, search_params["args"])
+
+        # Mounting the generated attrs onto an ObjectType triggers graphene's make_dataclass(),
+        # which raised `ValueError: mutable default ... Argument` before the fix.
+        attrs = generate_attrs_for_schema_type(schema_type)
+        query = type("ExampleModelReservedKwargQuery", (graphene.types.ObjectType,), attrs)
+        self.assertIn("example_models", query._meta.fields)
 
 
 class GraphQLAPIPermissionTest(GraphQLTestCaseBase):
@@ -884,7 +983,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -894,7 +993,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             status=interface_status,
             role=interface_role,
@@ -974,7 +1073,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -983,7 +1082,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device2,
             mac_address="00:12:12:12:12:12",
             status=interface_status,
@@ -1007,12 +1106,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface31 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device3,
             status=interface_status,
             role=interface_role,
         )
-        cls.interface31 = Interface.objects.create(
+        cls.interface32 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device3,
@@ -2480,6 +2579,36 @@ query {
             result = self.execute_query(query)
         self.assertIsNone(result.errors)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_query_filtered_nested_relation_no_n_plus_one(self):
+        """
+        Test that filtering a nested relation (e.g. interfaces with role filter on devices)
+        does not produce N+1 queries. The filterset should be evaluated once and cached,
+        and prefetched related objects should be filtered in memory.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/7146.
+        """
+        interface_role = Role.objects.get_for_model(Interface).first()
+        query = 'query { devices { name interfaces(role: "%s") { name } } }' % interface_role.name
+        # Prewarm caches
+        result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        device_count = Device.objects.count()
+        self.assertGreater(device_count, 1, "Need multiple devices to verify N+1 is avoided")
+        # The query count should be constant regardless of the number of devices.
+        # Without the fix this would be ~3*N queries (interface fetch + 2 role lookups per device).
+        # With the fix: 1 devices query + 1 prefetch interfaces; the filterset is evaluated once
+        # and its matching PKs are cached on the request context for in-memory filtering.
+        with AssertNoRepeatedQueries(self, threshold=3):
+            result = self.execute_query(query)
+        self.assertIsNone(result.errors)
+        # Verify correctness: devices with the role should have matching interfaces
+        for device_data in result.data["devices"]:
+            device_obj = Device.objects.get(name=device_data["name"])
+            expected = set(device_obj.interfaces.filter(role=interface_role).values_list("name", flat=True))
+            actual = {iface["name"] for iface in device_data["interfaces"]}
+            self.assertEqual(actual, expected, f"Mismatch for device {device_data['name']}")
+
 
 class GraphQLTypeTestCase(UnitTestTestCase):
     def test_date_type(self):
@@ -2493,3 +2622,38 @@ class GraphQLTypeTestCase(UnitTestTestCase):
         with self.assertRaises(GraphQLError) as cm:
             DateType.serialize(obj_not_accepted)
         self.assertIn("Received not compatible date", str(cm.exception))
+
+
+class MakeFilterCacheKeyTestCase(UnitTestTestCase):
+    def test_empty_kwargs(self):
+        self.assertEqual(_make_filter_cache_key({}), ())
+
+    def test_single_kwarg(self):
+        self.assertEqual(_make_filter_cache_key({"name": "test"}), (("name", "test"),))
+
+    def test_kwargs_sorted_by_key(self):
+        result = _make_filter_cache_key({"z_field": "last", "a_field": "first"})
+        self.assertEqual(result, (("a_field", "first"), ("z_field", "last")))
+
+    def test_list_values_converted_to_tuples(self):
+        result = _make_filter_cache_key({"tags": ["red", "blue"]})
+        self.assertEqual(result, (("tags", ("red", "blue")),))
+
+    def test_non_list_values_unchanged(self):
+        result = _make_filter_cache_key({"name": "test", "count": 5, "active": True})
+        self.assertEqual(result, (("active", True), ("count", 5), ("name", "test")))
+
+    def test_result_is_hashable(self):
+        result = _make_filter_cache_key({"tags": ["a", "b"], "name": "test"})
+        # Should be usable as a dict key
+        {result: True}
+
+    def test_same_kwargs_different_order_produce_same_key(self):
+        key1 = _make_filter_cache_key({"a": 1, "b": 2})
+        key2 = _make_filter_cache_key({"b": 2, "a": 1})
+        self.assertEqual(key1, key2)
+
+    def test_different_kwargs_produce_different_keys(self):
+        key1 = _make_filter_cache_key({"name": "foo"})
+        key2 = _make_filter_cache_key({"name": "bar"})
+        self.assertNotEqual(key1, key2)

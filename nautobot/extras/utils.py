@@ -3,7 +3,9 @@ import contextlib
 import copy
 import hashlib
 import hmac
+import json
 import logging
+import os
 import re
 import sys
 from typing import Optional, TYPE_CHECKING, Union
@@ -12,17 +14,21 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import ValidationError
 from django.db import transaction
 from django.db.models import Model, Q
+from django.db.models.deletion import Collector
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
 import kubernetes.client
 import redis.exceptions
 
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.choices import ColorChoices
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.models import BaseModel
 from nautobot.core.models.managers import TagsManager
 from nautobot.core.models.utils import find_models_with_matching_fields
 from nautobot.core.utils.cache import construct_cache_key
@@ -41,6 +47,7 @@ from nautobot.extras.constants import (
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
 )
+from nautobot.extras.exceptions import KubernetesJobManifestError
 from nautobot.extras.registry import registry
 
 if TYPE_CHECKING:
@@ -668,37 +675,121 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
+def build_kubernetes_api_client():
+    """Build an authenticated ApiClient using the in-cluster service account.
+
+    When settings.KUBERNETES_VERIFY_SSL is False, TLS verification is disabled and
+    the CA cert path is ignored. This is intended for local development only. See
+    the comment in settings.py for the security implications.
+
+    Returns:
+        A configured kubernetes.client.ApiClient. The returned object is itself a
+        context manager (its __exit__ calls self.close()), so callers should use:
+
+            with build_kubernetes_api_client() as api_client:
+                ...
+    """
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    if settings.KUBERNETES_VERIFY_SSL:
+        configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    else:  # pragma: no cover
+        if not settings.DEBUG:
+            raise ImproperlyConfigured("KUBERNETES_VERIFY_SSL=False is only permitted when DEBUG=True. ")
+        logger.warning(
+            "TLS verification is DISABLED for the Kubernetes API connection to %s. "
+            "This exposes the service account token attacks and must not be "
+            "used in production. Set _NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL=True to re-enable.",
+            configuration.host,
+        )
+        configuration.verify_ssl = False
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+    with open(pod_token, "r", encoding="utf-8") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["BearerToken"] = "Bearer"
+    configuration.api_key["BearerToken"] = token
+    return kubernetes.client.ApiClient(configuration)
+
+
+def get_kubernetes_job_manifest(queue_name):
+    """Retrieve the job manifest for the given job queue name.
+
+    Given a queue name, look for a manifest.json file in the job queue path.
+    `[path]/[queue_name]/manifest.json`
+    If found, return the manifest as a dictionary.
+    If not, or if queue_name is missing/empty, return the default manifest from
+    settings.KUBERNETES_JOB_MANIFEST.
+    If neither is found, return None.
+
+    Args:
+        queue_name: The job queue name to get the manifest for. If None or empty,
+            skip path lookup and use the default manifest from settings.
+
+    Returns:
+        The manifest as a dictionary or None if no manifest is found.
+    """
+    if not queue_name:
+        manifest_path = None
+    else:
+        manifest_path = os.path.join(settings.JOB_QUEUE_PATH, queue_name, "manifest.json")
+        try:
+            base_real = os.path.realpath(settings.JOB_QUEUE_PATH)
+            resolved = os.path.realpath(manifest_path)
+            if resolved != base_real and not resolved.startswith(base_real + os.sep):
+                logger.warning(
+                    "Job queue name %r would resolve outside JOB_QUEUE_PATH, ignoring manifest path.",
+                    queue_name,
+                )
+                manifest_path = None
+        except OSError:
+            logger.debug("Could not resolve path for job queue %r.", queue_name)
+            manifest_path = None
+
+    if manifest_path and os.path.exists(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            return json.load(manifest_file)
+    if manifest_path:
+        logger.debug("No manifest.json found at path %s.", manifest_path)
+    default_manifest = settings.KUBERNETES_JOB_MANIFEST
+    if default_manifest:
+        return copy.deepcopy(default_manifest)
+    logger.debug("No default manifest found in settings.KUBERNETES_JOB_MANIFEST.")
+    return None
+
+
 def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     """
     Pass the job to a kubernetes pod and execute it there.
-    """
-    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
-    pod_manifest = copy.deepcopy(settings.KUBERNETES_JOB_MANIFEST)
-    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
-    pod_token = settings.KUBERNETES_TOKEN_PATH
 
-    job_result.task_kwargs = job_kwargs
-    job_result.save()
+    The queue name is derived from job_result.celery_kwargs["queue"] when present;
+    if missing, the default manifest from settings (e.g. KUBERNETES_JOB_MANIFEST) is used.
+    """
+    queue_name = job_result.celery_kwargs.get("queue") if job_result.celery_kwargs else None
+    pod_namespace = settings.KUBERNETES_JOB_POD_NAMESPACE
+    pod_manifest = get_kubernetes_job_manifest(queue_name)
+    if not pod_manifest:
+        raise KubernetesJobManifestError("Unable to retrieve a kubernetes job manifest.")
+
+    if not getattr(job_result.job_model, "has_sensitive_variables", False):
+        job_result.task_kwargs = job_kwargs
+        job_result.save()
 
     pod_name = settings.KUBERNETES_JOB_POD_NAME + "-" + str(job_result.pk)
+    pod_manifest.setdefault("metadata", {})
     pod_manifest["metadata"]["name"] = pod_name
     pod_manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "nautobot-server",
         "runjob_with_job_result",
         f"{job_result.pk}",
+        f"--config={settings.SETTINGS_PATH}",
+        "--data",
+        NautobotKombuJSONEncoder(ensure_ascii=False).encode(job_kwargs),
     ]
 
     def create_kubernetes_job():
         """Create and read the Kubernetes job after the transaction commits."""
-        configuration = kubernetes.client.Configuration()
-        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-        configuration.ssl_ca_cert = pod_ssl_ca_cert
-        with open(pod_token, "r", encoding="utf-8") as token_file:
-            token = token_file.read().strip()
-        # configure API Key authorization: BearerToken
-        configuration.api_key_prefix["authorization"] = "Bearer"
-        configuration.api_key["authorization"] = token
-        with kubernetes.client.ApiClient(configuration) as api_client:
+        with build_kubernetes_api_client() as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
@@ -872,36 +963,97 @@ def migrate_role_data(
 
 def bulk_delete_with_bulk_change_logging(qs, batch_size=1000):
     """
-    Deletes objects in the provided queryset and creates ObjectChange instances in bulk to improve performance.
-    For use with bulk delete views. This operation is wrapped in an atomic transaction.
+    Delete objects in the provided queryset and create ObjectChange instances in bulk for performance.
+
+    In addition to logging the queryset members, this also logs every CASCADE-deleted child Django's
+    Collector would remove, plus any Note rows that the pre_delete signal handler cleans up.
+    Parents are processed in chunks of ``batch_size`` to keep peak memory bounded.
+    The whole operation is wrapped in an atomic transaction.
     """
-    from nautobot.extras.models import ObjectChange
+    # Lazy imports to avoid circular imports.
+    # extras.models and extras.signals transitively re-enter extras.utils during app load.
+    from nautobot.extras.models import Note, ObjectChange
     from nautobot.extras.signals import change_context_state
 
     change_context = change_context_state.get()
     if change_context is None:
         raise ValueError("Change logging must be enabled before using bulk_delete_with_bulk_change_logging")
 
+    user = change_context.get_user()
+    user_name = user.username if user is not None else ""
+    request_id = change_context.change_id
+    context = change_context.context
+    context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+    model = qs.model
+
+    def _build_objectchange(obj):
+        if not hasattr(obj, "to_objectchange"):
+            return None
+        oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
+        if oc is None:
+            return None
+        oc.user = user
+        oc.user_name = user_name
+        oc.request_id = request_id
+        oc.change_context = context
+        oc.change_context_detail = context_detail
+        return oc
+
     with transaction.atomic():
         try:
-            queued_object_changes = []
             change_context.defer_object_changes = True
-            for obj in qs.iterator(chunk_size=1000):
-                if not hasattr(obj, "to_objectchange"):
-                    break
-                if len(queued_object_changes) >= batch_size:
-                    ObjectChange.objects.bulk_create(queued_object_changes)
-                    queued_object_changes = []
-                oc = obj.to_objectchange(ObjectChangeActionChoices.ACTION_DELETE)
-                if oc is not None:
-                    oc.user = change_context.get_user()
-                    oc.user_name = oc.user.username
-                    oc.request_id = change_context.change_id
-                    oc.change_context = change_context.context
-                    oc.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
-                    queued_object_changes.append(oc)
-            ObjectChange.objects.bulk_create(queued_object_changes)
-            return qs.delete()
+
+            # Snapshot parent PKs first so deletes in earlier batches do not shift later ones.
+            parent_pks = list(qs.values_list("pk", flat=True))
+
+            total_deleted = 0
+            deleted_by_label = {}
+
+            for offset in range(0, len(parent_pks), batch_size):
+                batch_pks = parent_pks[offset : offset + batch_size]
+                batch_qs = model.objects.filter(pk__in=batch_pks)
+
+                # Collector identifies the parent rows and every row Django will CASCADE-delete for this batch.
+                collector = Collector(using=batch_qs.db)
+                collector.collect(list(batch_qs))
+
+                queued = []
+                ct_to_pks = {}
+
+                for cascade_model, instances in collector.data.items():
+                    # Gate on BaseModel (not ChangeLoggedModel) because BaseModel is what guarantees a UUID pk,
+                    # which the Note discovery below relies on. Whether a given object actually gets an ObjectChange
+                    # is decided by the guard in _build_objectchange.
+                    if not issubclass(cascade_model, BaseModel):
+                        continue
+                    ct = ContentType.objects.get_for_model(cascade_model)
+                    pks = ct_to_pks.setdefault(ct, [])
+                    for obj in instances:
+                        pks.append(obj.pk)
+                        oc = _build_objectchange(obj)
+                        if oc is not None:
+                            queued.append(oc)
+
+                # Notes are not in Collector.data because NotesMixin does not declare a GenericRelation;
+                # the pre_delete signal handler removes them explicitly, so log them ourselves.
+                for ct, pks in ct_to_pks.items():
+                    for note in Note.objects.filter(assigned_object_type=ct, assigned_object_id__in=pks):
+                        oc = _build_objectchange(note)
+                        if oc is not None:
+                            queued.append(oc)
+
+                if queued:
+                    ObjectChange.objects.bulk_create(queued, batch_size=batch_size)
+
+                batch_deleted, batch_info = batch_qs.delete()
+                total_deleted += batch_deleted
+                for label, count in batch_info.items():
+                    deleted_by_label[label] = deleted_by_label.get(label, 0) + count
+
+                # Drop per-batch deferred entries so the dict does not grow across batches.
+                change_context.reset_deferred_object_changes()
+
+            return total_deleted, deleted_by_label
         finally:
             change_context.defer_object_changes = False
             change_context.reset_deferred_object_changes()

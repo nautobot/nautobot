@@ -122,20 +122,21 @@ class CableType(OptimizedNautobotObjectType):
     class Meta:
         model = Cable
         filterset_class = CableFilterSet
-        exclude = ["_termination_a_device", "_termination_b_device"]
 
     termination_a_type = graphene.String()
     termination_b_type = graphene.String()
 
     def resolve_termination_a_type(self, args):
-        if self.termination_a_type:
-            model = self.termination_a_type.model_class()  # pylint: disable=no-member
+        ct = self.termination_a_type
+        if ct:
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 
     def resolve_termination_b_type(self, args):
-        if self.termination_b_type:
-            model = self.termination_b_type.model_class()  # pylint: disable=no-member
+        ct = self.termination_b_type
+        if ct:
+            model = ct.model_class()  # pylint: disable=no-member
             return f"{model._meta.app_label}.{model._meta.model_name}"
         return None
 

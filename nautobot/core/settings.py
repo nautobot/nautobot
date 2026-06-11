@@ -317,6 +317,31 @@ TEST_USE_FACTORIES = is_truthy(os.getenv("NAUTOBOT_TEST_USE_FACTORIES", "False")
 # Pseudo-random number generator seed, for reproducibility of test results.
 TEST_FACTORY_SEED = os.getenv("NAUTOBOT_TEST_FACTORY_SEED", None)
 
+# URL schemes that Webhooks are permitted to target. Defaults to HTTP and HTTPS only.
+WEBHOOK_ALLOWED_SCHEMES = ["http", "https"]
+if "NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES" in os.environ and os.environ["NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"] != "":
+    WEBHOOK_ALLOWED_SCHEMES = os.environ["NAUTOBOT_WEBHOOK_ALLOWED_SCHEMES"].split(_CONFIG_SETTING_SEPARATOR)
+
+# Hostnames that Webhooks may target even if they resolve into WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS.
+# Django ALLOWED_HOSTS-style: literal hostnames or `.example.com` to match a domain and all of its subdomains.
+# Use `*` to disable network filtering entirely (not recommended).
+WEBHOOK_ALLOWED_HOSTS = []
+if "NAUTOBOT_WEBHOOK_ALLOWED_HOSTS" in os.environ and os.environ["NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"] != "":
+    WEBHOOK_ALLOWED_HOSTS = os.environ["NAUTOBOT_WEBHOOK_ALLOWED_HOSTS"].split(_CONFIG_SETTING_SEPARATOR)
+
+# Network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list (loopback, link-local
+# including cloud metadata endpoints such as 169.254.169.254, unspecified, multicast, reserved) is enforced
+# unconditionally and cannot be disabled. Use this setting to extend it -- e.g. ["10.0.0.0/8", "192.168.0.0/16"] to
+# block RFC1918 ranges as well, for deployments that don't legitimately need to webhook into private networks.
+WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = []
+if (
+    "NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS" in os.environ
+    and os.environ["NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"] != ""
+):
+    WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = os.environ["NAUTOBOT_WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS"].split(
+        _CONFIG_SETTING_SEPARATOR
+    )
+
 #
 # Django Prometheus
 #
@@ -1240,6 +1265,9 @@ DJANGO_TABLES2_TEMPLATE = "utilities/obj_table.html"
 # Kubernetes settings variables
 #
 
+# The file path for Job Queue configuration files (currently only used for Kubernetes Job manifests)
+JOB_QUEUE_PATH = os.getenv("NAUTOBOT_JOB_QUEUE_PATH", "/etc/nautobot/job-queues")
+
 # Host of the kubernetes pod created in the kubernetes cluster
 KUBERNETES_DEFAULT_SERVICE_ADDRESS = os.getenv(
     "NAUTOBOT_KUBERNETES_DEFAULT_SERVICE_ADDRESS", "https://kubernetes.default.svc"
@@ -1263,3 +1291,7 @@ KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
 KUBERNETES_TOKEN_PATH = os.getenv(
     "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
+
+# Internal/dev-only: disables TLS verification for the Kubernetes API connection. Required for local clusters
+# WARNING: never set to False in production.
+KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL", "True"))

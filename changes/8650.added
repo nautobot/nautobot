@@ -1,3 +1,0 @@
-Added `Re-Run` button to `Console Log` tab.
-Added saving the same data in `JonConsoleEntry` which are stored in `JobLogEntry` when console log is enabled.
-Added `sanitize` data before saving it to `JobConsoleEntry`.

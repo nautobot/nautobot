@@ -1,86 +1,82 @@
 UI_COLORS = {
     "blue": {
-        "light": "#007dff",
-        "dark": "#339dff",
-    },
-    "blue-darker": {
-        "light": "#0e4781",
-        "dark": "#255581",
-    },
-    "blue-lighter": {
-        "light": "#8cc5ff",
-        "dark": "#a3d3ff",
-    },
-    "gray": {
-        "light": "#b0b0b0",
-        "dark": "#828282",
-    },
-    "gray-darker": {
-        "light": "#5e5e5e",
-        "dark": "#494949",
-    },
-    "gray-lighter": {
-        "light": "#dbdbdb",
-        "dark": "#c7c7c7",
-    },
-    "green": {
-        "light": "#1ca92a",
-        "dark": "#2ecc40",
-    },
-    "green-darker": {
-        "light": "#1b5a21",
-        "dark": "#236a2b",
-    },
-    "green-lighter": {
-        "light": "#99d89f",
-        "dark": "#a1e8a9",
+        "light": "#0979c3",
+        "dark": "#1a90dc",
     },
     "orange": {
-        "light": "#e07807",
-        "dark": "#ff9933",
-    },
-    "orange-darker": {
-        "light": "#734411",
-        "dark": "#815325",
-    },
-    "orange-lighter": {
-        "light": "#f1c28f",
-        "dark": "#ffd1a3",
+        "light": "#f86d17",
+        "dark": "#f86d17",
     },
     "purple": {
-        "light": "#7b61ff",
-        "dark": "#a394ff",
+        "light": "#7550b4",
+        "dark": "#9b7ad4",
     },
-    "purple-darker": {
-        "light": "#463a81",
-        "dark": "#585181",
+    "amber": {
+        "light": "#f8b817",
+        "dark": "#f8b817",
     },
-    "purple-lighter": {
-        "light": "#c4b8ff",
-        "dark": "#d6cfff",
+    "berry": {
+        "light": "#9f2b57",
+        "dark": "#d44a78",
+    },
+    "teal": {
+        "light": "#119597",
+        "dark": "#20babb",
+    },
+    "moss-green": {
+        "light": "#83c766",
+        "dark": "#83c766",
     },
     "red": {
-        "light": "#e01f1f",
-        "dark": "#ff4c4c",
+        "light": "#eb4752",
+        "dark": "#f06570",
     },
-    "red-darker": {
-        "light": "#731c1c",
-        "dark": "#813131",
+    "sky-blue": {
+        "light": "#4db6ff",
+        "dark": "#4db6ff",
     },
-    "red-lighter": {
-        "light": "#f19a9a",
-        "dark": "#ffaeae",
+    "navy": {
+        "light": "#325b95",
+        "dark": "#5588c8",
     },
-    "turquoise": {
-        "light": "#00bfa5",
-        "dark": "#26d7c5",
+    "pink": {
+        "light": "#f39197",
+        "dark": "#f39197",
     },
-    "turquoise-darker": {
-        "light": "#0e6459",
-        "dark": "#1f6f67",
+    "green": {
+        "light": "#45af27",
+        "dark": "#45af27",
     },
-    "turquoise-lighter": {
-        "light": "#8ce2d7",
-        "dark": "#9dede5",
+    "wisteria": {
+        "light": "#88a9d7",
+        "dark": "#88a9d7",
+    },
+    "warm-brown": {
+        "light": "#7a5230",
+        "dark": "#ab7a50",
+    },
+    "aqua": {
+        "light": "#81d4d5",
+        "dark": "#81d4d5",
+    },
+    "dusty-rose": {
+        "light": "#cc79a7",
+        "dark": "#cc79a7",
+    },
+    "slate": {
+        "light": "#ced4da",
+        "dark": "#ced4da",
+    },
+    "dark-gold": {
+        "light": "#a68b00",
+        "dark": "#a68b00",
+    },
+    "periwinkle": {
+        "light": "#d1caf2",
+        "dark": "#d1caf2",
+    },
+    "forest": {
+        "light": "#3d7a4a",
+        "dark": "#5aa86c",
     },
 }

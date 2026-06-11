@@ -51,6 +51,7 @@ CHANGELOG_MAX_OBJECT_REPR = 200
 # JobResult custom Celery kwargs
 JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_profile",
+    "nautobot_job_queue_type",
     "nautobot_job_console_log",
     "nautobot_job_branch_name",
     "nautobot_job_job_model_id",
@@ -58,3 +59,5 @@ JOB_RESULT_CUSTOM_CELERY_KWARGS = (
     "nautobot_job_user_id",
     "nautobot_job_ignore_singleton_lock",
 )
+
+PENDING_WORKFLOWS_ERROR_CODE = "definition_has_pending_workflows"

@@ -171,7 +171,9 @@ class CircuitTerminationTable(BaseTable):
     location = tables.Column(linkify=True)
     provider_network = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
-    cable = tables.Column(linkify=True)
+    # `cable` is a property on CableTermination subclasses (resolved via the cable_termination
+    # join row), not a real model field, so the column is not DB-orderable.
+    cable = tables.Column(linkify=True, orderable=False)
 
     class Meta(BaseTable.Meta):
         model = CircuitTermination

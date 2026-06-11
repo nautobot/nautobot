@@ -2,7 +2,7 @@ import contextlib
 import logging
 import uuid
 
-from django.contrib.contenttypes.fields import GenericRel
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
@@ -12,7 +12,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
 )
 from django.db import models
-from django.db.models.fields.related_descriptors import ManyToManyDescriptor
+from django.db.models.fields.related_descriptors import ManyToManyDescriptor, ReverseManyToOneDescriptor
 from django.db.models.functions import Cast
 from django.urls import NoReverseMatch
 from drf_spectacular.types import OpenApiTypes
@@ -44,12 +44,22 @@ from nautobot.ipam.fields import VarbinaryIPField
 
 logger = logging.getLogger(__name__)
 
+# Maximum natural-key lookup paths to include in a single CSV-export annotate+values query.
+# This is a workaround for the fact that MySQL caps a single statement to no more than 61 joined tables,
+# which is a limit we can easily hit when annotating related objects involving a model like Device
+# (whose natural key can be arbitrarily long depending on the Location tree depth).
+# See also: https://github.com/nautobot/nautobot/issues/8454
+CSV_NATURAL_KEY_QUERY_CHUNK = 20
+
 
 class OptInFieldsMixin:
     """
     Serializer mixin that adjusts its fields based on the `include` and `exclude_m2m` query parameters in a request.
 
     The serializer's `Meta.opt_in_fields` controls which fields are influenced by `include`.
+    The serializer's `Meta.default_m2m_fields` extends the global `DEFAULT_M2M_FIELDS` set
+    (which always includes `tags`, `content_types`, `object_types`) with additional ListSerializer /
+    ManyRelatedField sources that should be visible when the request does not set `exclude_m2m`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -106,9 +116,11 @@ class OptInFieldsMixin:
             # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
             exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
             if exclude_m2m is None or is_truthy(exclude_m2m):
+                default_m2m_fields = set(constants.DEFAULT_M2M_FIELDS)
+                default_m2m_fields.update(getattr(self.Meta, "default_m2m_fields", ()))
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
-                        if exclude_m2m is None and field_instance.source in constants.DEFAULT_M2M_FIELDS:
+                        if exclude_m2m is None and field_instance.source in default_m2m_fields:
                             continue
                         field_instance.write_only = True
 
@@ -166,15 +178,14 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         if self._is_csv_request() and self.instance:
             # Retrieve the natural key values of related fields in an optimized way.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
-            case_query = self._build_query_case_for_natural_key_field_lookup(all_related_fields_natural_key_lookups)
             if isinstance(self.instance, models.QuerySet):
                 queryset = self.instance
             else:
                 # We would only need to run one additional query, making this a more efficient method of
                 # obtaining all the natural key values for this instance;
                 queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
-            self.natural_keys_values = queryset.annotate(**case_query).values(
-                *all_related_fields_natural_key_lookups, "pk"
+            self.natural_keys_values = self._collect_natural_key_values(
+                queryset, all_related_fields_natural_key_lookups
             )
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
@@ -250,6 +261,28 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 output_field=output_field(),
             )
         return case_query
+
+    def _collect_natural_key_values(self, queryset, lookups):
+        """
+        Perform as many `.annotate().values()` queries as needed to prefetch related fields' natural-key values.
+
+        Each query is limited in scope by `CSV_NATURAL_KEY_QUERY_CHUNK` to avoid exceeding MySQL's 61-table join limit.
+
+        Returns a dict (empty if no `lookups`) of `{pk: {"pk": <uuid>, lookup1: value1, lookup2: value2, ...}}`.
+        """
+        natural_keys_values = {}
+        if not lookups:
+            return natural_keys_values
+
+        for offset in range(0, len(lookups), CSV_NATURAL_KEY_QUERY_CHUNK):
+            chunk = lookups[offset : offset + CSV_NATURAL_KEY_QUERY_CHUNK]
+            case_query = self._build_query_case_for_natural_key_field_lookup(chunk)
+            for item in queryset.annotate(**case_query).values(*chunk, "pk"):
+                pk = item["pk"]
+                if pk not in natural_keys_values:
+                    natural_keys_values[pk] = {}
+                natural_keys_values[pk].update(item)
+        return natural_keys_values
 
     def _get_related_fields_natural_key_field_lookups(self):
         """Retrieve a list of field lookups for natural key fields of related models.
@@ -383,16 +416,23 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             # Eliminate all field names that start with "_" as those fields are not user-facing
             if field.startswith("_"):
                 return False
-            # These are expensive to look up, so we have decided not to include them on nested serializers
-            if self.is_nested and isinstance(getattr(self.Meta.model, field, None), ManyToManyDescriptor):
+            # These are expensive to look up, so we have decided not to include them on nested serializers.
+            # Applies to forward M2M (`ManyToManyDescriptor`) and to reverse one-to-many accessors
+            # (`ReverseManyToOneDescriptor`, e.g. `Cable.terminations`) — the latter only surfaces when
+            # explicitly declared on the serializer, but it warrants the same suppression when nested.
+            if self.is_nested and isinstance(
+                getattr(self.Meta.model, field, None), (ManyToManyDescriptor, ReverseManyToOneDescriptor)
+            ):
                 return False
 
-            # Ignore M2M fields
+            # Skip M2M and reverse-FK (one-to-many) fields on CSV requests — they can't be flattened
+            # into a single CSV cell. ContentType M2M is specially handled and remains exportable.
             with contextlib.suppress(FieldDoesNotExist):
                 if self._is_csv_request():
                     field = self.Meta.model._meta.get_field(field)
-                    # ContentType is ManyToMany Field that is specially handled, Hence it can be exported/imported
                     if field.many_to_many and field.related_model is not ContentType:
+                        return False
+                    if field.one_to_many:
                         return False
             return True
 
@@ -464,10 +504,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request() and self.natural_keys_values is not None:
-            if natural_key_field_instance := [item for item in self.natural_keys_values if item["pk"] == instance.pk]:
-                cleaned_natural_key_field_instance = natural_key_field_instance[0]
-                for key, value in data.items():
+        if self._is_csv_request():
+            for key, value in data.items():
+                if cleaned_natural_key_field_instance := self.natural_keys_values.get(instance.pk):
                     # FK field with natural_field_lookups
                     if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
                         key, cleaned_natural_key_field_instance
@@ -476,6 +515,8 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                     else:
                         # Not FK field
                         altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                else:
+                    altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
         else:
             altered_data = data
 
@@ -545,10 +586,48 @@ class ValidatedModelSerializer(BaseModelSerializer):
         local_attrs.pop("relationships", None)
         local_attrs.pop("tags", None)
 
-        # Skip ManyToManyFields
         for field in self.Meta.model._meta.get_fields():
             if isinstance(field, models.ManyToManyField):
+                # Skip ManyToManyFields
                 local_attrs.pop(field.name, None)
+            elif isinstance(field, GenericForeignKey):
+                # Only validate the GFK target if this request is actually assigning it. A partial
+                # update that touches neither ct_field nor fk_field leaves the existing reference
+                # untouched, and re-checking parent view permission would block legitimate edits to
+                # unrelated fields.
+                ct_provided = field.ct_field in local_attrs
+                fk_provided = field.fk_field in local_attrs
+                if not ct_provided and not fk_provided:
+                    continue
+                # For a partial update that changes only one side, fall back to the saved instance
+                # for the unchanged side so we validate the resulting target.
+                ct = local_attrs.get(field.ct_field)
+                fk = local_attrs.get(field.fk_field)
+                if self.instance is not None:
+                    if ct is None:
+                        ct = getattr(self.instance, field.ct_field, None)
+                    if fk is None:
+                        fk = getattr(self.instance, field.fk_field, None)
+                if ct is None or fk is None:
+                    # Creation with one side missing: required-field validation will flag it downstream.
+                    continue
+                ct_model = ct.model_class()
+                if ct_model is None:
+                    raise ValidationError({field.ct_field: "Invalid content-type"})
+                qs = ct_model.objects
+                # Layer view permission on top of the existence check when we have an authenticated
+                # request; programmatic use without a request still gets the existence check.
+                if (
+                    "request" in self.context
+                    and self.context["request"]
+                    and self.context["request"].user
+                    and hasattr(qs, "restrict")
+                ):
+                    qs = qs.restrict(self.context["request"].user, "view")
+                try:
+                    qs.get(pk=fk)
+                except ObjectDoesNotExist as e:
+                    raise ValidationError({field.fk_field: "Object not found"}) from e
 
         # Run clean() on an instance of the model
         if self.instance is None:
