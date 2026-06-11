@@ -2165,15 +2165,10 @@ class Module(PrimaryModel):
             RearPort,
         ]
         for component_class in component_classes:
-            for component in component_class.objects.filter(module=self):
-                component.device = new_device
-                component.save(update_fields=["device"])
+            component_class.objects.filter(module=self).update(device=new_device)
 
-        # Cascade into child ModuleBays owned by this module, which will in turn
-        # trigger their own save() and cascade further down the tree
-        for child_bay in ModuleBay.objects.filter(parent_module=self):
-            child_bay.parent_device = new_device
-            child_bay.save(update_fields=["parent_device"])
+        # Updated the device for all other module bays installed in this module
+        ModuleBay.objects.filter(parent_module=self).update(parent_device=new_device)
 
         # Recurse into child Modules via get_children() so their descendants
         # are also updated
