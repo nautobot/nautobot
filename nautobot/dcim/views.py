@@ -4716,7 +4716,7 @@ class PowerPortUIViewSet(
     ComponentBulkDisconnectViewMixin,
     NautobotUIViewSet,
 ):
-    queryset = PowerPort.objects.all()
+    queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
     bulk_update_form_class = forms.PowerPortBulkEditForm
     create_form_class = forms.PowerPortCreateForm
     filterset_class = filters.PowerPortFilterSet
