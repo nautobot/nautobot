@@ -6027,7 +6027,7 @@ class InterfaceRedundancyGroupUIViewSet(NautobotUIViewSet):
                 prefetch_related_fields=["interface"],
                 order_by_fields=["priority"],
                 table_title="Interfaces",
-                related_field_name="interface_redundancy_groups",
+                related_field_name="interface_redundancy_group",
                 related_list_url_name="dcim:interface_list",
                 include_columns=[
                     "interface__device",
