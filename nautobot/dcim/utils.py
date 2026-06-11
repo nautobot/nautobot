@@ -181,14 +181,14 @@ def render_software_version_and_image_files(instance, software_version, context)
     return display
 
 
-def populate_default_cable_types(apps, schema_editor=None):
+def populate_default_cable_types(apps, schema_editor=None):  # pylint: disable=redefined-outer-name
     """Create default cable type records."""
     CableType = apps.get_model("dcim", "CableType")
     for name, defaults in DEFAULT_CABLE_TYPES.items():
         CableType.objects.get_or_create(name=name, defaults=defaults)
 
 
-def clear_default_cable_types(apps, schema_editor=None):
+def clear_default_cable_types(apps, schema_editor=None):  # pylint: disable=redefined-outer-name
     """Delete default cable type records."""
     CableType = apps.get_model("dcim", "CableType")
     for name in DEFAULT_CABLE_TYPES.keys():
@@ -417,7 +417,52 @@ def power_ports_connected_to(target_queryset):
     return PowerPort.objects.filter(pk__in=powerport_ids)
 
 
-def connected_endpoint_panels(source_model_name, *, weight=200, section=None):
+def get_connected_endpoint_tables(instance):
+    """Build per-type tables of the connected endpoints reachable from a `PathEndpoint`.
+
+    Walks the instance's CablePaths (one per breakout lane for a breakout cable), groups the
+    resolved destination endpoints by model, and renders each group with that model's existing
+    list table (resolved via `get_table_for_model`) so that multi-termination cables show *every*
+    connected endpoint rather than only the first. Returns a list of
+    ``{"heading": ..., "table": ...}`` dicts, ordered by endpoint type.
+
+    Returns an empty list for terminations that are not PathEndpoints (e.g. front/rear ports) or
+    that have no resolved destinations.
+
+    TODO: This is the legacy template-based equivalent of `get_connected_endpoint_panels()`. When the
+    component detail views that use it are migrated to the UI component framework, drop this helper and
+    the `connected_endpoint_tables` context + `content_full_width_page` template blocks in favor of
+    spreading `*get_connected_endpoint_panels("<model_name>")` into the view's `object_detail_content`.
+    """
+    # Imported lazily to avoid the import cycle described in `get_connected_endpoint_panels`.
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    cable_paths = getattr(instance, "cable_paths", None)
+    if cable_paths is None:
+        return []
+
+    grouped = {}
+    for path in cable_paths.all():
+        destination = path.destination
+        if destination is None:
+            continue
+        grouped.setdefault(destination._meta.model_name, []).append(destination)
+
+    endpoint_tables = []
+    for endpoints in grouped.values():
+        table_class = get_table_for_model(endpoints[0])
+        if table_class is None:
+            continue
+        endpoint_tables.append(
+            {
+                "heading": f"{bettertitle(endpoints[0]._meta.verbose_name)} Endpoints",
+                "table": table_class(data=endpoints, orderable=False, exclude=("pk", "actions")),
+            }
+        )
+    return endpoint_tables
+
+
+def get_connected_endpoint_panels(source_model_name, *, weight=200, section=None):
     """Build one `ConnectedEndpointsPanel` per endpoint type a termination can connect to.
 
     The candidate types come from `COMPATIBLE_TERMINATION_TYPES[source_model_name]`, intersected with

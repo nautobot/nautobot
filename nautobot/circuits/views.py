@@ -22,7 +22,7 @@ from nautobot.core.ui.object_detail import (
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.dcim.utils import connected_endpoint_panels
+from nautobot.dcim.utils import get_connected_endpoint_panels
 
 from . import filters, forms, tables
 from .api import serializers
@@ -137,7 +137,7 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                 trace_url_name="circuits:circuittermination_trace",
                 require_location=True,
             ),
-            *connected_endpoint_panels("circuittermination"),
+            *get_connected_endpoint_panels("circuittermination"),
         )
     )
 

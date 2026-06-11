@@ -57,7 +57,7 @@ from nautobot.core.ui.bulk_buttons import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.core.utils.lookup import get_form_for_model, get_table_for_model
+from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views import generic
@@ -83,6 +83,7 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
     get_all_network_driver_mappings,
+    get_connected_endpoint_tables,
     render_software_version_and_image_files,
     validate_cable_breakout_mapping,
 )
@@ -4447,48 +4448,6 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             bulk_component_form=forms.ModuleModuleBayBulkCreateForm,
             parent_field="parent_module",
         )
-
-
-def get_connected_endpoint_tables(instance):
-    """Build per-type tables of the connected endpoints reachable from a PathEndpoint.
-
-    Walks the instance's CablePaths (one per breakout lane for a breakout cable), groups the
-    resolved destination endpoints by model, and renders each group with that model's existing
-    list table (resolved via `get_table_for_model`) so that multi-termination cables show *every*
-    connected endpoint rather than only the first. Returns a list of
-    ``{"heading": ..., "table": ...}`` dicts, ordered by endpoint type.
-
-    Returns an empty list for terminations that are not PathEndpoints (e.g. front/rear ports) or
-    that have no resolved destinations.
-
-    TODO: This is the legacy template-based equivalent of `nautobot.dcim.utils.connected_endpoint_panels()`.
-    When these component detail views are migrated to the UI component framework, drop this helper and the
-    `connected_endpoint_tables` context + `content_full_width_page` template blocks in favor of spreading
-    `*connected_endpoint_panels("<model_name>")` into the view's `object_detail_content` panels.
-    """
-    cable_paths = getattr(instance, "cable_paths", None)
-    if cable_paths is None:
-        return []
-
-    grouped = {}
-    for path in cable_paths.all():
-        destination = path.destination
-        if destination is None:
-            continue
-        grouped.setdefault(destination._meta.model_name, []).append(destination)
-
-    endpoint_tables = []
-    for endpoints in grouped.values():
-        table_class = get_table_for_model(endpoints[0])
-        if table_class is None:
-            continue
-        endpoint_tables.append(
-            {
-                "heading": f"{helpers.bettertitle(endpoints[0]._meta.verbose_name)} Endpoints",
-                "table": table_class(data=endpoints, orderable=False, exclude=("pk", "actions")),
-            }
-        )
-    return endpoint_tables
 
 
 #
