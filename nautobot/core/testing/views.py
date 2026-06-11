@@ -43,6 +43,7 @@ from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
 from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ModularComponentModel
+from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
@@ -2261,6 +2262,253 @@ class ViewTestCases:
             objects[0].refresh_from_db()
             self.assertEqual(objects[0].name, original_name)
 
+    class BulkDisconnectObjectsViewTestCase(ModelViewTestCase):
+        """
+        Bulk disconnect cables from selected cabled components.
+
+        Required class attributes on the consuming TestCase:
+            cabled_objects: list of >=2 instances of self.model whose `.cable` is set.
+            uncabled_object: optional instance with `.cable is None` for skip-path coverage.
+
+        The three behavior-only tests (form-error flash, constrained component/cable perm) skip
+        automatically for models still served by the legacy `BulkDisconnectView` CBV — detection
+        is done at runtime via `_bulk_disconnect_uses_new_mixin()` (see below). A model picks up
+        the strict-behavior coverage as soon as its `UIViewSet` inherits from
+        `ComponentBulkDisconnectViewMixin`; no per-test-class opt-in required.
+        """
+
+        cabled_objects: list = []
+        uncabled_object = None
+
+        def _bulk_disconnect_uses_new_mixin(self):
+            """True iff the model's UIViewSet inherits from `ComponentBulkDisconnectViewMixin`."""
+            view = lookup.get_view_for_model(self.model)
+            return view is not None and issubclass(view, ComponentBulkDisconnectViewMixin)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_disconnect_objects_without_permission(self):
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects:
+                self.skipTest("This test requires self.cabled_objects")
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            with utils.disable_warnings("django.request"):
+                self.assertHttpStatus(self.client.post(self._get_url("bulk_disconnect"), data), 403)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_confirmation_page_renders(self):
+            """First POST (no _confirm) renders the confirmation page listing the selected components."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            response = self.client.post(self._get_url("bulk_disconnect"), {"pk": pk_list})
+            self.assertHttpStatus(response, 200)
+            body = utils.extract_page_body(response.content.decode(response.charset))
+            for obj in self.cabled_objects:
+                self.assertIn(str(obj.pk), body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_objects_with_permission(self):
+            """_confirm + valid form -> components detached, cables preserved, redirect to return_url."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            cable_pks = [obj.cable_id for obj in self.cabled_objects]
+
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            # Components still exist but are no longer cabled
+            self.assertEqual(self._get_queryset().filter(pk__in=pk_list).count(), len(pk_list))
+            for obj in self._get_queryset().filter(pk__in=pk_list):
+                self.assertIsNone(obj.cable)
+            # The cables themselves are preserved (disconnect_termination removes the termination row only)
+            self.assertEqual(Cable.objects.filter(pk__in=cable_pks).count(), len(cable_pks))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_skips_uncabled_selections(self):
+            """Selecting one cabled + one uncabled disconnects only the cabled one (silent skip)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            self.assertIsNotNone(
+                self.uncabled_object,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.uncabled_object",
+            )
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            cabled = self.cabled_objects[0]
+            cable_pk = cabled.cable_id
+
+            data = {
+                "pk": [cabled.pk, self.uncabled_object.pk],
+                "_confirm": True,
+                "confirm": True,
+            }
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            # The cabled component is detached but the cable itself is preserved
+            cabled.refresh_from_db()
+            self.assertIsNone(cabled.cable)
+            self.assertTrue(Cable.objects.filter(pk=cable_pk).exists())
+            # Uncabled object is untouched and still uncabled
+            self.uncabled_object.refresh_from_db()
+            self.assertIsNone(self.uncabled_object.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_invalid_form_rerenders(self):
+            """_confirm with no pks -> form_invalid path."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not flash form errors via messages."
+                )
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            data = {"_confirm": True, "confirm": True}  # no pk
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # form_invalid returns a Response that NautobotHTMLRenderer turns into 200 with form errors
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            # The empty `pk` field should surface a "required" error from the ConfirmationForm
+            self.assertIn("This field is required.", response_body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_with_constrained_component_permission(self):
+            """Selecting a component outside the user's component change-perm constraint -> no objects disconnected (atomic)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView; "
+                    "the form-invalid 200 response on constrained PKs is only emitted by ComponentBulkDisconnectViewMixin."
+                )
+            self.assertTrue(
+                self.cabled_objects and len(self.cabled_objects) >= 2,
+                f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            allowed, forbidden = self.cabled_objects[0], self.cabled_objects[1]
+            allowed_cable_pk, forbidden_cable_pk = allowed.cable_id, forbidden.cable_id
+
+            # Constrained change perm on the component model: only `allowed` is accessible.
+            obj_perm = users_models.ObjectPermission(
+                name="constrained_component_change",
+                constraints={"pk": str(allowed.pk)},
+                actions=["change"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            # Unconstrained Cable change perm so the only barrier is the component constraint.
+            self.add_permissions("dcim.change_cable")
+
+            data = {"pk": [allowed.pk, forbidden.pk], "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # ModelMultipleChoiceField rejects `forbidden.pk` because it's outside the restricted queryset.
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Select a valid choice.", response_body)
+
+            # Atomic: neither component has been disconnected.
+            self.assertTrue(Cable.objects.filter(pk__in=[allowed_cable_pk, forbidden_cable_pk]).count() == 2)
+            allowed.refresh_from_db()
+            forbidden.refresh_from_db()
+            self.assertIsNotNone(allowed.cable)
+            self.assertIsNotNone(forbidden.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_with_constrained_cable_permission(self):
+            """Selecting a component whose cable is outside the user's Cable change-perm constraint -> no objects disconnected (atomic)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not enforce per-cable change permission."
+                )
+            self.assertTrue(
+                self.cabled_objects and len(self.cabled_objects) >= 2,
+                f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            allowed, forbidden = self.cabled_objects[0], self.cabled_objects[1]
+            allowed_cable_pk, forbidden_cable_pk = allowed.cable_id, forbidden.cable_id
+            self.assertNotEqual(allowed_cable_pk, forbidden_cable_pk, "Test fixture must use two distinct cables")
+
+            # Unconstrained component change perm; constrained Cable change perm.
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            obj_perm = users_models.ObjectPermission(
+                name="constrained_cable_change",
+                constraints={"pk": str(allowed_cable_pk)},
+                actions=["change"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(Cable))
+
+            data = {"pk": [allowed.pk, forbidden.pk], "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # The mixin's post-loop `Cable.objects.restrict(user, "change")` check raises
+            # `ObjectDoesNotExist` inside the transaction, rolling back both disconnects;
+            # the redirect happens regardless and an error message is flashed to the user.
+            self.assertHttpStatus(response, 302)
+
+            # Atomic: both cables still exist and both components are still cabled.
+            self.assertEqual(Cable.objects.filter(pk__in=[allowed_cable_pk, forbidden_cable_pk]).count(), 2)
+            allowed.refresh_from_db()
+            forbidden.refresh_from_db()
+            self.assertIsNotNone(allowed.cable)
+            self.assertIsNotNone(forbidden.cable)
+
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
@@ -2321,6 +2569,7 @@ class ViewTestCases:
         BulkEditObjectsViewTestCase,
         BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
+        BulkDisconnectObjectsViewTestCase,
     ):
         """
         TestCase suitable for testing device component models (ConsolePorts, Interfaces, etc.)
