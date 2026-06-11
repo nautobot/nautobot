@@ -108,31 +108,204 @@ erDiagram
     InterfaceRedundancyGroup }o--o| SecretsGroup : "protocol secrets"
 ```
 
-## Sample API - TODO:
+## Sample API
 
-## Sample Design Builder TODO: validate
+The below Python snippet is intended to work as you drop in to your iPython shell or file. It levergages the public demo. In addition, you can update the first set of variables to more easily integrate with other systems.
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a Cisco ASA 5500 active/standby failover pair (`jcy-fw-01` and `jcy-fw-02`) tied together by a `DeviceRedundancyGroup` named `jcy-fw-failover`, sharing the same `JCY` location and `192.168.1.0/24` management prefix introduced in the Virtual Chassis example above. Unlike a `VirtualChassis` — where the group depends on its master device and forces deferred assignment — a `DeviceRedundancyGroup` is created first as a standalone object, and each `Device` simply references it through `device_redundancy_group`. The active/standby relationship is expressed via `device_redundancy_group_priority` (higher wins primary, so `jcy-fw-01` is primary in this example), and the dedicated heartbeat/sync link is modeled as a `failover-link` virtual interface on each device in its own `/31`.
+```python
+import sys
+import pynautobot
+
+NAUTOBOT_URL = "http://demo.nautobot.com"
+NAUTOBOT_TOKEN = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+ROLE_NAME = "router"
+ROOT_NAME = "jcy"
+MGMT_PREFIX = "192.168.1.0/24"
+FAILOVER_PREFIX = "172.27.48.0/31"
+DEVICE_TYPE_MODEL = "N9K-C9372TX"
+
+LOCATION_NAME = f"{ROOT_NAME.upper()}"
+DRG_NAME = f"{ROOT_NAME}-drg01:02"
+IRG_NAME = f"{ROOT_NAME}-drg-rt01:02-po10"
+SECRETS_GROUP_NAME = f"{ROOT_NAME}-drg-credentials"
+DEVICE_1_NAME = f"{ROOT_NAME}-drg-rt01"
+DEVICE_2_NAME = f"{ROOT_NAME}-drg-rt02"
+
+DEVICES = [
+    {"name": DEVICE_1_NAME, "priority": 100, "mgmt_ip": "192.168.1.20/24", "failover_ip": "172.27.48.0/31"},
+    {"name": DEVICE_2_NAME, "priority": 50, "mgmt_ip": "192.168.1.21/24", "failover_ip": "172.27.48.1/31"},
+]
+
+nb = pynautobot.api(url=NAUTOBOT_URL, token=NAUTOBOT_TOKEN)
+
+
+def get_or_create(endpoint, lookup, defaults=None):
+    """Return (record, created) for the given endpoint, matching pynautobot filter kwargs."""
+    record = endpoint.get(**lookup)
+    if record:
+        return record, False
+    return endpoint.create(**{**lookup, **(defaults or {})}), True
+
+
+def log(created, kind, name):
+    print(f"  {'created' if created else 'exists '}  {kind}: {name}")
+
+
+active = nb.extras.statuses.get(name="Active")
+location = nb.dcim.locations.get(name=LOCATION_NAME)
+device_type = nb.dcim.device_types.get(model=DEVICE_TYPE_MODEL)
+namespace = nb.ipam.namespaces.get(name="Global")
+for obj, label in [
+    (active, "Status Active"),
+    (location, f"Location {LOCATION_NAME}"),
+    (device_type, f"DeviceType {DEVICE_TYPE_MODEL}"),
+    (namespace, "Namespace Global"),
+]:
+    if obj is None:
+        sys.exit(f"Prerequisite not found in {NAUTOBOT_URL}: {label}")
+
+print("Seeding prerequisites...")
+role = nb.extras.roles.get(name=ROLE_NAME)
+
+for prefix in (MGMT_PREFIX, FAILOVER_PREFIX):
+    _, created = get_or_create(
+        nb.ipam.prefixes, {"prefix": prefix, "namespace": namespace.id}, {"status": active.id}
+    )
+    log(created, "Prefix", prefix)
+
+secrets_group, created = get_or_create(nb.extras.secrets_groups, {"name": SECRETS_GROUP_NAME})
+log(created, "SecretsGroup", secrets_group.name)
+
+print("Seeding device redundancy group...")
+drg, created = get_or_create(
+    nb.dcim.device_redundancy_groups,
+    {"name": DRG_NAME},
+    {"status": active.id, "failover_strategy": "active-active", "secrets_group": secrets_group.id},
+)
+log(created, "DeviceRedundancyGroup", drg.name)
+
+lag_ids = {}
+for spec in DEVICES:
+    print(f"Seeding {spec['name']}...")
+    device, created = get_or_create(
+        nb.dcim.devices,
+        {"name": spec["name"]},
+        {
+            "device_type": device_type.id,
+            "role": role.id,
+            "location": location.id,
+            "status": active.id,
+            "device_redundancy_group": drg.id,
+            "device_redundancy_group_priority": spec["priority"],
+        },
+    )
+    log(created, "Device", device.name)
+
+    mgmt, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": "Management0"},
+        {"type": "1000base-t", "status": active.id, "mgmt_only": True, "description": "Management Interface"},
+    )
+    log(created, "Interface", f"{device.name} Management0")
+
+    mgmt_ip, created = get_or_create(
+        nb.ipam.ip_addresses, {"address": spec["mgmt_ip"], "namespace": namespace.id}, {"status": active.id}
+    )
+    log(created, "IPAddress", str(mgmt_ip.address))
+    _, created = get_or_create(nb.ipam.ip_address_to_interface, {"interface": mgmt.id, "ip_address": mgmt_ip.id})
+    log(created, "IP assignment", f"{mgmt_ip.address} -> {device.name} Management0")
+    device.update({"primary_ip4": mgmt_ip.id})
+
+    failover_parent, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": "GigabitEthernet0/3"},
+        {"type": "1000base-t", "status": active.id, "description": "Failover physical parent"},
+    )
+    log(created, "Interface", f"{device.name} GigabitEthernet0/3")
+
+    failover_link, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": "failover-link"},
+        {
+            "type": "virtual",
+            "status": active.id,
+            "parent_interface": failover_parent.id,
+            "description": "HA failover link",
+        },
+    )
+    log(created, "Interface", f"{device.name} failover-link")
+
+    failover_ip, created = get_or_create(
+        nb.ipam.ip_addresses, {"address": spec["failover_ip"], "namespace": namespace.id}, {"status": active.id}
+    )
+    log(created, "IPAddress", str(failover_ip.address))
+    _, created = get_or_create(
+        nb.ipam.ip_address_to_interface, {"interface": failover_link.id, "ip_address": failover_ip.id}
+    )
+    log(created, "IP assignment", f"{failover_ip.address} -> {device.name} failover-link")
+
+    po10, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": "Port-Channel10"},
+        {"type": "lag", "status": active.id, "description": "Multi-chassis port channel (vPC 10)"},
+    )
+    log(created, "Interface", f"{device.name} Port-Channel10")
+    lag_ids[device.name] = po10.id
+
+    for member_name in ("Ethernet1/1", "Ethernet1/2"):
+        member, created = get_or_create(
+            nb.dcim.interfaces,
+            {"device": device.id, "name": member_name},
+            {"type": "10gbase-x-sfpp", "status": active.id, "lag": po10.id, "description": "Member of Po10"},
+        )
+        log(created, "Interface", f"{device.name} {member_name}")
+        if member.lag is None:
+            member.update({"lag": po10.id})
+
+print("Seeding interface redundancy group...")
+irg, created = get_or_create(
+    nb.dcim.interface_redundancy_groups,
+    {"name": IRG_NAME},
+    {"status": active.id, "protocol": "vrrp", "protocol_group_id": "10"},
+)
+log(created, "InterfaceRedundancyGroup", irg.name)
+
+for spec in DEVICES:
+    _, created = get_or_create(
+        nb.dcim.interface_redundancy_group_associations,
+        {"interface_redundancy_group": irg.id, "interface": lag_ids[spec["name"]]},
+        {"priority": spec["priority"]},
+    )
+    log(created, "IRG association", f"{spec['name']} Port-Channel10 (priority {spec['priority']})")
+
+```
+
+## Sample Design Builder
+
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above: `jcy-drg-rt01` and `jcy-drg-rt02` tied together by a `DeviceRedundancyGroup` named `jcy-drg01:02`, sharing the same `JCY` location and `192.168.1.0/24` management prefix.
+
+TODO: Validate this by running
 
 ```jinja2
 device_redundancy_groups:
-  - "!create_or_update:name": "jcy-fw-failover"
+  - "!create_or_update:name": "jcy-drg01:02"
     status__name: "Active"
-    failover_strategy: "active-passive"
-    description: "ASA 5500 active/standby failover pair for JCY perimeter"
-    "!ref": "jcy_fw_drg"
+    failover_strategy: "active-active"
+    description: "HA pair for JCY"
+    "!ref": "jcy_drg"
 
 devices:
-    # Primary failover unit
-  - "!create_or_update:name": "jcy-fw-01"
+    # Primary unit
+  - "!create_or_update:name": "jcy-drg-rt01"
     location__name: "JCY"
     status__name: "Active"
-    device_type__model: "ASA5555-X"
-    role__name: "Firewall"
-    device_redundancy_group: "!ref:jcy_fw_drg"
+    device_type__model: "C9300"
+    role__name: "router"
+    device_redundancy_group: "!ref:jcy_drg"
     device_redundancy_group_priority: 100
     interfaces:
-      - "!create_or_update:name": "Management0/0"
+      - "!create_or_update:name": "Management0"
         type: "1000base-t"
         status__name: "Active"
         mgmt_only: true
@@ -143,17 +316,17 @@ devices:
               "!create_or_update:address": "192.168.1.20/24"
               "!create_or_update:parent": "192.168.1.0/24"
               status__name: "Active"
-              "!ref": "fw01_mgmt_ip"
+              "!ref": "rt01_mgmt_ip"
       - "!create_or_update:name": "GigabitEthernet0/3"
         type: "1000base-t"
         status__name: "Active"
         description: "Failover physical parent"
-        "!ref": "fw01_failover_parent"
+        "!ref": "rt01_failover_parent"
       - "!create_or_update:name": "failover-link"
         type: "virtual"
         status__name: "Active"
-        parent_interface: "!ref:fw01_failover_parent"
-        description: "ASA failover link"
+        parent_interface: "!ref:rt01_failover_parent"
+        description: "HA failover link"
         ip_address_assignments:
           - "!create_or_update:ip_address__address": "172.27.48.0/31"
             ip_address:
@@ -161,19 +334,19 @@ devices:
               "!create_or_update:parent": "172.27.48.0/31"
               status__name: "Active"
     primary_ip4:
-      "address": "!ref:fw01_mgmt_ip"
+      "address": "!ref:rt01_mgmt_ip"
       deferred: true
 
-    # Secondary failover unit
-  - "!create_or_update:name": "jcy-fw-02"
+    # Secondary unit
+  - "!create_or_update:name": "jcy-drg-rt02"
     location__name: "JCY"
     status__name: "Active"
-    device_type__model: "ASA5555-X"
-    role__name: "Firewall"
-    device_redundancy_group: "!ref:jcy_fw_drg"
+    device_type__model: "C9300"
+    role__name: "router"
+    device_redundancy_group: "!ref:jcy_drg"
     device_redundancy_group_priority: 50
     interfaces:
-      - "!create_or_update:name": "Management0/0"
+      - "!create_or_update:name": "Management0"
         type: "1000base-t"
         status__name: "Active"
         mgmt_only: true
@@ -184,17 +357,17 @@ devices:
               "!create_or_update:address": "192.168.1.21/24"
               "!create_or_update:parent": "192.168.1.0/24"
               status__name: "Active"
-              "!ref": "fw02_mgmt_ip"
+              "!ref": "rt02_mgmt_ip"
       - "!create_or_update:name": "GigabitEthernet0/3"
         type: "1000base-t"
         status__name: "Active"
         description: "Failover physical parent"
-        "!ref": "fw02_failover_parent"
+        "!ref": "rt02_failover_parent"
       - "!create_or_update:name": "failover-link"
         type: "virtual"
         status__name: "Active"
-        parent_interface: "!ref:fw02_failover_parent"
-        description: "ASA failover link"
+        parent_interface: "!ref:rt02_failover_parent"
+        description: "HA failover link"
         ip_address_assignments:
           - "!create_or_update:ip_address__address": "172.27.48.1/31"
             ip_address:
@@ -202,75 +375,149 @@ devices:
               "!create_or_update:parent": "172.27.48.0/31"
               status__name: "Active"
     primary_ip4:
-      "address": "!ref:fw02_mgmt_ip"
+      "address": "!ref:rt02_mgmt_ip"
       deferred: true
 ```
 
 ## GraphQL
 
-We will demonstrate how to execute the command for Primary Unit only, however you could repeat the process for a secondary unit. An example data returned from Nautobot is presented below.
+The following query retrieves a device redundancy group by name, without needing to know any of the member hostnames up front. It is built to answer the "Questions to ask of the data model" below in a single call.
 
-```python
->>> hostname = "nyc-fw-primary"
->>> gql_data = get_gql_failover_details(hostname).json
+!!! note
+    The `failover_links: interfaces(name__ie: "failover-link")` is a convention, this would work in a scenario where you defined your interface to be named `failover-link`. You can choose other methods (such as a tag or role) and would need ot update accordingly.
+
+```graphql
+query ($redundancy_group: [String]) {
+  device_redundancy_groups(name: $redundancy_group) {
+    name
+    failover_strategy
+    secrets_group {
+      name
+    }
+    controllers {
+      name
+    }
+    devices {
+      name
+      device_redundancy_group_priority
+      primary_ip4 {
+        address
+      }
+      lag_interfaces: interfaces (interface_redundancy_groups__isnull: false, lag__isnull: true) {
+        name
+        member_interfaces {
+          name
+
+        }
+      }
+      failover_links: interfaces(name__ie: "failover-link") {
+        type
+        name
+        ip_addresses {
+          host
+          mask_length
+        }
+      }
+    }
+  }
+}
 ```
+
+Query variables:
 
 ```json
 {
-    "data": {
-        "devices": [
-            {
-                "name": "nyc-fw-primary",
-                "device_redundancy_group": {
-                    "name": "nyc-firewalls",
-                    "devices": [
-                        {
-                            "name": "nyc-fw-primary",
-                            "device_redundancy_group_priority": 100,
-                            "interfaces": [
-                                {
-                                    "type": "VIRTUAL",
-                                    "name": "failover-link",
-                                    "ip_addresses": [
-                                        {
-                                            "host": "172.27.48.0",
-                                            "mask_length": 31
-                                        }
-                                    ],
-                                    "parent_interface": {
-                                        "name": "gigabitethernet0/3",
-                                        "type": "A_1000BASE_T"
-                                    }
-                                }
-                            ]
-                        },
-                        {
-                            "name": "nyc-fw-secondary",
-                            "device_redundancy_group_priority": 50,
-                            "interfaces": [
-                                {
-                                    "type": "VIRTUAL",
-                                    "name": "failover-link",
-                                    "ip_addresses": [
-                                        {
-                                            "host": "172.27.48.1",
-                                            "mask_length": 31
-                                        }
-                                    ],
-                                    "parent_interface": {
-                                        "name": "gigabitethernet0/3",
-                                        "type": "A_1000BASE_T"
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }
-        ]
-    }
+  "redundancy_group": "jcy-drg01:02"
 }
 ```
+
+An example of the data returned from Nautobot is presented below.
+
+```json
+{
+  "data": {
+    "device_redundancy_groups": [
+      {
+        "name": "jcy-drg01:02",
+        "failover_strategy": "ACTIVE_ACTIVE",
+        "secrets_group": {
+          "name": "jcy-drg-credentials"
+        },
+        "controllers": [],
+        "devices": [
+          {
+            "name": "jcy-drg-rt01",
+            "device_redundancy_group_priority": 100,
+            "primary_ip4": {
+              "address": "192.168.1.20/24"
+            },
+            "lag_interfaces": [
+              {
+                "name": "Port-Channel10",
+                "member_interfaces": [
+                  {
+                    "name": "Ethernet1/1"
+                  },
+                  {
+                    "name": "Ethernet1/2"
+                  }
+                ]
+              }
+            ],
+            "failover_links": [
+              {
+                "type": "VIRTUAL",
+                "name": "failover-link",
+                "ip_addresses": [
+                  {
+                    "host": "172.27.48.0",
+                    "mask_length": 31
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "jcy-drg-rt02",
+            "device_redundancy_group_priority": 50,
+            "primary_ip4": {
+              "address": "192.168.1.21/24"
+            },
+            "lag_interfaces": [
+              {
+                "name": "Port-Channel10",
+                "member_interfaces": [
+                  {
+                    "name": "Ethernet1/1"
+                  },
+                  {
+                    "name": "Ethernet1/2"
+                  }
+                ]
+              }
+            ],
+            "failover_links": [
+              {
+                "type": "VIRTUAL",
+                "name": "failover-link",
+                "ip_addresses": [
+                  {
+                    "host": "172.27.48.1",
+                    "mask_length": 31
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+!!! note
+    The same data is reachable starting from a member device (e.g. `query { devices(name: ["nyc-fw-primary"]) { device_redundancy_group { devices { ... } } } }`) when a hostname is what you have in hand.
 
 ## Key Charteristics
 
@@ -298,6 +545,9 @@ Given the data model, what questions would a user ask?
 - Given a member device, I would like to know which interfaces form the HA/failover/peer link, and which port on the peer they connect to (via cables).
 - Given a multi-chassis port channel (vPC/MLAG), I would like to know the corresponding LAG on the peer device (via their shared interface redundancy group).  # TODO: confirm
 - Given a controller, I would like to know whether it is deployed on a device redundancy group rather than a single device.
+
+!!! tip
+    You can answer all of these questions with the prior defined GraphQL query.
 
 ## Multi-chassis L2 Pair
 

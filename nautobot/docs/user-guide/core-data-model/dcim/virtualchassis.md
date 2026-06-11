@@ -88,28 +88,189 @@ erDiagram
     Interface }o--o| Interface : "LAG membership (lag)"
 ```
 
-## Sample API - TODO:
+## Sample API
+
+```python
+import sys
+import pynautobot
+
+NAUTOBOT_URL = "http://demo.nautobot.com"
+NAUTOBOT_TOKEN = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+ROLE_NAME = "router"
+ROOT_NAME = "jcy"
+MGMT_PREFIX = "192.168.1.0/24"
+DEVICE_TYPE_MODEL = "C9300"
+
+LOCATION_NAME = f"{ROOT_NAME.upper()}"
+VC_NAME = f"{ROOT_NAME}-vc01"
+VC_DOMAIN = f"{ROOT_NAME}-vc01"
+DEVICE_1_NAME = f"{ROOT_NAME}-vc01"
+DEVICE_2_NAME = f"{ROOT_NAME}-vc01:2"
+
+# Only the master carries a management IP; the chassis is reached through it.
+DEVICES = [
+    {"name": DEVICE_1_NAME, "position": 1, "priority": 15, "mgmt_ip": "192.168.1.10/24"},
+    {"name": DEVICE_2_NAME, "position": 2, "priority": 14, "mgmt_ip": None},
+]
+
+# Stack cabling: member 2's stack ports loop back to member 1's (ring topology).
+STACK_CABLES = [
+    ((DEVICE_2_NAME, "StackPort2/1"), (DEVICE_1_NAME, "StackPort1/2")),
+    ((DEVICE_2_NAME, "StackPort2/2"), (DEVICE_1_NAME, "StackPort1/1")),
+]
+
+nb = pynautobot.api(url=NAUTOBOT_URL, token=NAUTOBOT_TOKEN)
+
+
+def get_or_create(endpoint, lookup, defaults=None):
+    """Return (record, created) for the given endpoint, matching pynautobot filter kwargs."""
+    record = endpoint.get(**lookup)
+    if record:
+        return record, False
+    return endpoint.create(**{**lookup, **(defaults or {})}), True
+
+
+def log(created, kind, name):
+    print(f"  {'created' if created else 'exists '}  {kind}: {name}")
+
+
+active = nb.extras.statuses.get(name="Active")
+connected = nb.extras.statuses.get(name="Connected")
+location = nb.dcim.locations.get(name=LOCATION_NAME)
+device_type = nb.dcim.device_types.get(model=DEVICE_TYPE_MODEL)
+namespace = nb.ipam.namespaces.get(name="Global")
+for obj, label in [
+    (active, "Status Active"),
+    (connected, "Status Connected"),
+    (location, f"Location {LOCATION_NAME}"),
+    (device_type, f"DeviceType {DEVICE_TYPE_MODEL}"),
+    (namespace, "Namespace Global"),
+]:
+    if obj is None:
+        sys.exit(f"Prerequisite not found in {NAUTOBOT_URL}: {label}")
+
+print("Seeding prerequisites...")
+role = nb.extras.roles.get(name=ROLE_NAME)
+
+_, created = get_or_create(nb.ipam.prefixes, {"prefix": MGMT_PREFIX, "namespace": namespace.id}, {"status": active.id})
+log(created, "Prefix", MGMT_PREFIX)
+
+# The VirtualChassis is created first, without a master; the master is set after
+# both member devices exist and have joined (master must be a member).
+print("Seeding virtual chassis...")
+vc, created = get_or_create(nb.dcim.virtual_chassis, {"name": VC_NAME}, {"domain": VC_DOMAIN})
+log(created, "VirtualChassis", vc.name)
+
+interfaces = {}
+lag = None
+for spec in DEVICES:
+    print(f"Seeding {spec['name']}...")
+    device, created = get_or_create(
+        nb.dcim.devices,
+        {"name": spec["name"]},
+        {
+            "device_type": device_type.id,
+            "role": role.id,
+            "location": location.id,
+            "status": active.id,
+            "virtual_chassis": vc.id,
+            "vc_position": spec["position"],
+            "vc_priority": spec["priority"],
+        },
+    )
+    log(created, "Device", device.name)
+    if spec["position"] == 1:
+        master = device
+
+    mgmt, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": "GigabitEthernet0/0"},
+        {"type": "1000base-t", "status": active.id, "mgmt_only": True, "description": "Management Interface"},
+    )
+    log(created, "Interface", f"{device.name} GigabitEthernet0/0")
+
+    if spec["mgmt_ip"]:
+        mgmt_ip, created = get_or_create(
+            nb.ipam.ip_addresses, {"address": spec["mgmt_ip"], "namespace": namespace.id}, {"status": active.id}
+        )
+        log(created, "IPAddress", str(mgmt_ip.address))
+        _, created = get_or_create(nb.ipam.ip_address_to_interface, {"interface": mgmt.id, "ip_address": mgmt_ip.id})
+        log(created, "IP assignment", f"{mgmt_ip.address} -> {device.name} GigabitEthernet0/0")
+        device.update({"primary_ip4": mgmt_ip.id})
+
+    for port_number in (1, 2):
+        stack_port_name = f"StackPort{spec['position']}/{port_number}"
+        stack_port, created = get_or_create(
+            nb.dcim.interfaces,
+            {"device": device.id, "name": stack_port_name},
+            {"type": "cisco-stackwise-480", "status": active.id, "description": "Stack ring"},
+        )
+        log(created, "Interface", f"{device.name} {stack_port_name}")
+        interfaces[(device.name, stack_port_name)] = stack_port
+
+    if spec["position"] == 1:
+        lag, created = get_or_create(
+            nb.dcim.interfaces,
+            {"device": device.id, "name": "Port-Channel1"},
+            {"type": "lag", "status": active.id, "description": "Cross-stack uplink LAG to upstream distribution"},
+        )
+        log(created, "Interface", f"{device.name} Port-Channel1")
+
+    uplink_name = f"TenGigabitEthernet{spec['position']}/1/1"
+    uplink, created = get_or_create(
+        nb.dcim.interfaces,
+        {"device": device.id, "name": uplink_name},
+        {"type": "10gbase-x-sfpp", "status": active.id, "lag": lag.id, "description": "Uplink (Po1 member)"},
+    )
+    log(created, "Interface", f"{device.name} {uplink_name}")
+    if uplink.lag is None:
+        uplink.update({"lag": lag.id})
+
+# Master can only be set once it is a member of the chassis.
+if vc.master is None:
+    vc.update({"master": master.id})
+    log(True, "VC master", f"{vc.name} -> {master.name}")
+else:
+    log(False, "VC master", f"{vc.name} -> {master.name}")
+
+print("Seeding stack port cables...")
+for (a_device, a_name), (b_device, b_name) in STACK_CABLES:
+    side_a = nb.dcim.interfaces.get(interfaces[(a_device, a_name)].id)
+    if side_a.cable:
+        log(False, "Cable", f"{a_device} {a_name} <-> {b_device} {b_name}")
+        continue
+    nb.dcim.cables.create(
+        termination_a_type="dcim.interface",
+        termination_a_id=side_a.id,
+        termination_b_type="dcim.interface",
+        termination_b_id=interfaces[(b_device, b_name)].id,
+        status=connected.id,
+    )
+    log(True, "Cable", f"{a_device} {a_name} <-> {b_device} {b_name}")
+
+```
 
 ## Sample Design Builder
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models a two-member Cisco StackWise virtual chassis (`jcy-stackwise-01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`, and the stack ports between members are wired together using `"!connect_cable"` against the refs on switch 1.
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same two-member virtual chassis as the Sample API above (`jcy-vc01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`, and the stack ports between members are wired together using `"!connect_cable"` against the refs on switch 1.
 
-```
+```jinja2
 devices:
     # Switch 1 of the stack
-  - "!create_or_update:name": "jcy-stackwise-01"
+  - "!create_or_update:name": "jcy-vc01"
     location__name: "JCY"
     status__name: "Active"
-    device_type__model: "C9300-48P"
-    role__name: "Access Switch"
+    device_type__model: "C9300"
+    role__name: "router"
     "!ref": "sw1"
     # Virtual chassis attributes
     vc_position: 1
     vc_priority: 15
     # Virtual chassis creation with deferred assignment (Device created first then VC created with switch 1 as master)
     virtual_chassis:
-      "!create_or_update:name": "jcy-stackwise-01"
-      domain: "jcy-stackwise-01"
+      "!create_or_update:name": "jcy-vc01"
+      domain: "jcy-vc01"
       master: "!ref:sw1"
       deferred: true
       "!ref": "virtual_chassis"
@@ -130,21 +291,22 @@ devices:
       - "!create_or_update:name": "StackPort1/1"
         type: "cisco-stackwise-480"
         status__name: "Active"
+        description: "Stack ring"
         "!ref": "sw1_stackport_1"
       - "!create_or_update:name": "StackPort1/2"
         type: "cisco-stackwise-480"
         status__name: "Active"
+        description: "Stack ring"
         "!ref": "sw1_stackport_2"
-      - "!create_or_update:name": "Port-channel1"
+      - "!create_or_update:name": "Port-Channel1"
         type: "lag"
         status__name: "Active"
-        mode: "tagged"
         description: "Cross-stack uplink LAG to upstream distribution"
         "!ref": "po1"
       - "!create_or_update:name": "TenGigabitEthernet1/1/1"
         type: "10gbase-x-sfpp"
         status__name: "Active"
-        description: "Uplink"
+        description: "Uplink (Po1 member)"
         lag: "!ref:po1"
     # Deferred IP assignment to avoid dependency issues with interface creation/assignment
     primary_ip4:
@@ -152,11 +314,11 @@ devices:
       deferred: true
 
     # Switch 2 of the stack
-  - "!create_or_update:name": "jcy-stackwise-01:2"
+  - "!create_or_update:name": "jcy-vc01:2"
     location__name: "JCY"
     status__name: "Active"
-    device_type__model: "C9300-48P"
-    role__name: "Access Switch"
+    device_type__model: "C9300"
+    role__name: "router"
     # VC assignment to existing VC with switch 1 as master
     virtual_chassis: "!ref:virtual_chassis"
     # VC attributes
@@ -168,24 +330,25 @@ devices:
         type: "1000base-t"
         status__name: "Active"
         mgmt_only: true
-        description: "Management"
-        vrf: "!ref:mgmt_vrf"
+        description: "Management Interface"
       - "!create_or_update:name": "StackPort2/1"
         type: "cisco-stackwise-480"
         status__name: "Active"
+        description: "Stack ring"
         "!connect_cable":
           status__name: "Connected"
           to: "!ref:sw1_stackport_2"
       - "!create_or_update:name": "StackPort2/2"
         type: "cisco-stackwise-480"
         status__name: "Active"
+        description: "Stack ring"
         "!connect_cable":
           status__name: "Connected"
           to: "!ref:sw1_stackport_1"
       - "!create_or_update:name": "TenGigabitEthernet2/1/1"
         type: "10gbase-x-sfpp"
         status__name: "Active"
-        description: "Uplink"
+        description: "Uplink (Po1 member)"
         lag: "!ref:po1"
     # No primary IP assignment on switch 2 to avoid conflicts with switch 1 management IP
 ```
@@ -199,14 +362,23 @@ query ($vc_name: [String]) {
   virtual_chassis(name: $vc_name) {
     name
     domain
+    members {
+      name
+      vc_position
+      vc_priority
+    }
     master {
       name
-      vc_interfaces {
+      primary_ip {
+        address
+      }
+      interfaces: vc_interfaces {
         name
         type
         enabled
         mac_address
         mode
+        mgmt_only
         description
         device {
           name
@@ -228,12 +400,174 @@ Query variables:
 
 ```json
 {
-  "vc_name": "jcy-stackwise-01"
+  "vc_name": "jcy-vc01"
 }
 ```
 
+```json
+{
+  "data": {
+    "virtual_chassis": [
+      {
+        "name": "jcy-vc01",
+        "domain": "jcy-vc01",
+        "members": [
+          {
+            "name": "jcy-vc01",
+            "vc_position": 1,
+            "vc_priority": 15
+          },
+          {
+            "name": "jcy-vc01:2",
+            "vc_position": 2,
+            "vc_priority": 14
+          }
+        ],
+        "master": {
+          "name": "jcy-vc01",
+          "primary_ip": {
+            "address": "192.168.1.10/24"
+          },
+          "interfaces": [
+            {
+              "name": "GigabitEthernet0/0",
+              "type": "A_1000BASE_T",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": true,
+              "description": "Management Interface",
+              "device": {
+                "name": "jcy-vc01",
+                "vc_position": 1
+              },
+              "lag": null,
+              "ip_addresses": [
+                {
+                  "address": "192.168.1.10/24"
+                }
+              ]
+            },
+            {
+              "name": "TenGigabitEthernet1/1/1",
+              "type": "A_10GBASE_X_SFPP",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Uplink (Po1 member)",
+              "device": {
+                "name": "jcy-vc01",
+                "vc_position": 1
+              },
+              "lag": {
+                "name": "Port-Channel1"
+              },
+              "ip_addresses": []
+            },
+            {
+              "name": "StackPort1/1",
+              "type": "CISCO_STACKWISE_480",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Stack ring",
+              "device": {
+                "name": "jcy-vc01",
+                "vc_position": 1
+              },
+              "lag": null,
+              "ip_addresses": []
+            },
+            {
+              "name": "StackPort1/2",
+              "type": "CISCO_STACKWISE_480",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Stack ring",
+              "device": {
+                "name": "jcy-vc01",
+                "vc_position": 1
+              },
+              "lag": null,
+              "ip_addresses": []
+            },
+            {
+              "name": "Port-Channel1",
+              "type": "LAG",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Cross-stack uplink LAG to upstream distribution",
+              "device": {
+                "name": "jcy-vc01",
+                "vc_position": 1
+              },
+              "lag": null,
+              "ip_addresses": []
+            },
+            {
+              "name": "TenGigabitEthernet2/1/1",
+              "type": "A_10GBASE_X_SFPP",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Uplink (Po1 member)",
+              "device": {
+                "name": "jcy-vc01:2",
+                "vc_position": 2
+              },
+              "lag": {
+                "name": "Port-Channel1"
+              },
+              "ip_addresses": []
+            },
+            {
+              "name": "StackPort2/1",
+              "type": "CISCO_STACKWISE_480",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Stack ring",
+              "device": {
+                "name": "jcy-vc01:2",
+                "vc_position": 2
+              },
+              "lag": null,
+              "ip_addresses": []
+            },
+            {
+              "name": "StackPort2/2",
+              "type": "CISCO_STACKWISE_480",
+              "enabled": true,
+              "mac_address": null,
+              "mode": null,
+              "mgmt_only": false,
+              "description": "Stack ring",
+              "device": {
+                "name": "jcy-vc01:2",
+                "vc_position": 2
+              },
+              "lag": null,
+              "ip_addresses": []
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+
 !!! note
-    Because `vc_interfaces` is a property on the `Device` model, the same query can be run directly against the master device (e.g. `query { devices(name: ["jcy-stackwise-01"]) { vc_interfaces { ... } } }`) without going through `virtual_chassis` at all. Querying the `virtual_chassis` object is useful when you also need chassis-level attributes such as `domain` or want to confirm the master before traversing its interfaces.
+    Because `vc_interfaces` is a property on the `Device` model, the same query can be run directly against the master device (e.g. `query { devices(name: ["jcy-vc01"]) { vc_interfaces { ... } } }`) without going through `virtual_chassis` at all.
 
 ## Key Charteristics
 
@@ -337,7 +671,6 @@ interface TenGigabitEthernet2/1/2
  channel-group 202 mode on
 ```
 
-
 _Data Plane_
 
 Switch 1 & 2
@@ -363,6 +696,7 @@ interface TenGigabitEthernet2/0/1
 
 
 ## Multi-Chassis Stack
+
 Multi-chassis Stack Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extreme SummitStack
 
 ### Configuration Generation
